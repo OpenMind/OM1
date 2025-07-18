@@ -177,7 +177,8 @@ class RtkProvider:
                             parsed_nema = NMEAReader.parse(latest_GNGGA)
                             self.magRTKProcessor(parsed_nema)
                     bytes_waiting = self.serial_connection.in_waiting
-                time.sleep(0.1)
+
+            time.sleep(0.1)
 
     def stop(self):
         """
