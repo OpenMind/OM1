@@ -50,8 +50,7 @@ class ZenohListener(FuserInput[str]):
         self.listener: ZenohListenerProvider = ZenohListenerProvider(
             topic=listen_topic,
         )
-        self.listener.start()
-        self.listener.register_message_callback(self._handle_zenoh_message)
+        self.listener.start(self._handle_zenoh_message)
 
         # Initialize sleep ticker provider
         self.global_sleep_ticker_provider = SleepTickerProvider()
