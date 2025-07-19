@@ -21,9 +21,9 @@
     {
       "type": "UnitreeGo2Battery"
     },
-    {
-      "type": "GoogleASRInput"
-    },
+    //{
+    //  "type": "GoogleASRInput"
+    //},
     {
       "type": "Gps",
     },

@@ -1,16 +1,16 @@
 import argparse
-import datetime
 import json
 import time
 
 import cv2
+import numpy as np
 from ultralytics import YOLO
 
 # Load model
 # model = YOLO("yolov8n.pt")
 # model = YOLO("yolo11n.pt")
-
-model = YOLO("yolo12n.pt")
+# model = YOLO("yolo12n.pt")
+model = YOLO("yolo11n-seg.pt")
 
 # Common resolutions to test (width, height), ordered high to low
 RESOLUTIONS = [
@@ -23,13 +23,69 @@ RESOLUTIONS = [
     (640, 480),  # VGA fallback
 ]
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--cam", help="the index of the camera you want to use", type=int, default=0
 )
 print(parser.format_help())
 args = parser.parse_args()
+
+
+def mask_to_polygons(mask):
+    """
+    Convert a binary mask to polygons using OpenCV.
+    """
+    mask_uint8 = (mask * 255).astype(np.uint8)
+    contours, _ = cv2.findContours(
+        mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    polygons = []
+    for contour in contours:
+        contour = contour.squeeze()
+        if contour.ndim != 2 or contour.shape[0] < 3:
+            continue
+        polygon = contour.flatten().tolist()
+        polygons.append(polygon)
+    return polygons
+
+
+def save_yolo_results_to_json(results, index, output_file):
+    data = []
+
+    for result in results:
+        frame_entry = {}
+
+        # Use current time or provide your own timestamp
+        frame_entry["frame"] = index
+        frame_entry["timestamp"] = time.time()
+
+        if result.masks is None or result.boxes is None:
+            continue
+
+        masks = result.masks.data.cpu().numpy()
+        class_ids = result.boxes.cls.cpu().numpy().astype(int)
+        labels = (
+            [result.names[i] for i in class_ids]
+            if hasattr(result, "names")
+            else [str(i) for i in class_ids]
+        )
+        bboxes = result.boxes.xyxy.cpu().numpy().tolist()
+
+        frame_entry["bboxes"] = bboxes
+        frame_entry["labels"] = labels
+        frame_entry["polygons"] = []
+
+        for mask in masks:
+            binary_mask = (mask > 0.5).astype(np.uint8)
+            polygons = mask_to_polygons(binary_mask)
+            # Convert each polygon to a single-line string
+            flat_polygons = ["[" + ",".join(map(str, poly)) + "]" for poly in polygons]
+            frame_entry["polygons"].append(flat_polygons)
+
+        data.append(frame_entry)
+
+    with open(output_file, "a") as f:
+        json.dump(data, f, indent=2)
 
 
 def set_best_resolution(cap, resolutions):
@@ -59,13 +115,7 @@ cap = cv2.VideoCapture(args.cam)
 # Set the best available resolution
 best_width, best_height = set_best_resolution(cap, RESOLUTIONS)
 
-# Create timestamped log filename
-start_time = datetime.datetime.now(datetime.UTC)
-log_filename = f"detections_log_{start_time.isoformat(timespec='seconds').replace(':', '-')}Z.jsonl"
-log_file = open(log_filename, "a")
-
 frame_index = 0
-print(f"Logging to: {log_filename}")
 print("Press 'q' to quit...")
 
 while cap.isOpened():
@@ -73,10 +123,14 @@ while cap.isOpened():
     if not ret:
         break
 
-    timestamp = time.time()
-    datetime_str = datetime.datetime.fromtimestamp(timestamp, datetime.UTC).isoformat()
+    results = model.predict(source=frame)
 
-    results = model.predict(source=frame, save=False, stream=True, verbose=False)
+    segmented_image = None
+
+    if results:
+        segmented_image = cv2.cvtColor(results[0].plot(), cv2.COLOR_BGR2RGB)
+
+    save_yolo_results_to_json(results, frame_index, "yolo_log.json")
 
     detections = []
     for r in results:
@@ -85,7 +139,6 @@ while cap.isOpened():
             cls = int(box.cls[0])
             conf = float(box.conf[0])
             label = model.names[cls]
-
             detections.append(
                 {
                     "class": label,
@@ -94,42 +147,19 @@ while cap.isOpened():
                 }
             )
 
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-            cv2.putText(
-                frame,
-                f"{label} {conf:.2f}",
-                (int(x1), int(y1) - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 255, 0),
-                1,
-            )
-
     # Print to terminal
-    print(f"\nFrame {frame_index} @ {datetime_str} — {len(detections)} objects:")
+    print(f"\nFrame {frame_index} @ {len(detections)} objects:")
     for det in detections:
         print(f"  {det['class']} ({det['confidence']:.2f}) -> {det['bbox']}")
 
-    # Write to log
-    json_line = json.dumps(
-        {
-            "frame": frame_index,
-            "timestamp": timestamp,
-            "datetime": datetime_str,
-            "detections": detections,
-        }
-    )
-    log_file.write(json_line + "\n")
-    log_file.flush()
-
     frame_index += 1
-    cv2.imshow("YOLOv8n Object Detection", frame)
+    if len(segmented_image) > 0:
+        cv2.imshow("YOLO Object Detection", segmented_image)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 # Cleanup
-log_file.close()
 cap.release()
 cv2.destroyAllWindows()
-print(f"\nDetection logging complete. Log saved to: {log_filename}")
+print("\nDetection logging complete")
