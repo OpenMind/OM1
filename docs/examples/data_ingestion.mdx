@@ -1,0 +1,107 @@
+---
+title: "Data Ingestion Example"
+description: "An example demonstrating how to ingest data from external providers into an OM1 agent."
+---
+
+import { CodeBlock } from '@components/CodeBlock';
+
+## Overview
+
+This example demonstrates how to ingest data from an external provider (e.g., weather or satellite data) into an OM1 agent. The agent fetches data via an API, processes it, and integrates it within the OM1 ecosystem.
+
+## Example: Fetching Weather Data
+
+<CodeBlock language="python">
+{`
+import requests
+from om1.core import Agent
+
+class WeatherDataAgent(Agent):
+    def __init__(self, api_key, location):
+        super().__init__()
+        self.api_key = api_key
+        self.location = location
+
+    def fetch_weather_data(self):
+        url = f"http://api.weatherapi.com/v1/current.json?key={self.api_key}&q={self.location}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+
+    def process_weather_data(self):
+        data = self.fetch_weather_data()
+        if data:
+            weather_info = {
+                "location": data["location"]["name"],
+                "temperature": data["current"]["temp_c"],
+                "condition": data["current"]["condition"]["text"]
+            }
+            return weather_info
+        else:
+            return {"error": "Failed to retrieve data"}
+
+    def run(self):
+        weather_info = self.process_weather_data()
+        print("Weather Data:", weather_info)
+        return weather_info
+
+# Example Usage
+if __name__ == "__main__":
+    api_key = "your_api_key_here"  # Replace with your API key
+    location = "New York"
+    agent = WeatherDataAgent(api_key, location)
+    agent.run()
+`}
+</CodeBlock>
+
+## Example: Fetching Satellite Data
+
+<CodeBlock language="python">
+{`
+import requests
+from om1.core import Agent
+
+class SatelliteDataAgent(Agent):
+    def __init__(self, api_key, coordinates):
+        super().__init__()
+        self.api_key = api_key
+        self.coordinates = coordinates
+
+    def fetch_satellite_data(self):
+        url = f"https://api.nasa.gov/planetary/earth/imagery?lon={self.coordinates[1]}&lat={self.coordinates[0]}&dim=0.1&api_key={self.api_key}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+
+    def process_satellite_data(self):
+        data = self.fetch_satellite_data()
+        if data:
+            satellite_info = {
+                "image_url": data.get("url", "No image available"),
+                "date": data.get("date", "No date available")
+            }
+            return satellite_info
+        else:
+            return {"error": "Failed to retrieve data"}
+
+    def run(self):
+        satellite_info = self.process_satellite_data()
+        print("Satellite Data:", satellite_info)
+        return satellite_info
+
+# Example Usage
+if __name__ == "__main__":
+    api_key = "your_api_key_here"  # Replace with a valid NASA API key
+    coordinates = (40.7128, -74.0060)  # Example: New York City
+    agent = SatelliteDataAgent(api_key, coordinates)
+    agent.run()
+`}
+</CodeBlock>
+
+## Conclusion
+
+This example illustrates how to fetch and integrate external data into an OM1 agent. Modify and extend these examples to suit different external data providers based on project requirements.
