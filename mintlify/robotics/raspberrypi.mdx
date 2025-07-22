@@ -3,7 +3,7 @@ title: Raspberry Pi
 description: "Getting Started with OM1 on Raspberry Pi"
 ---
 
-## Prerequisites
+## Basics
 
 Make sure you have the following before installation:
 
@@ -12,78 +12,8 @@ Make sure you have the following before installation:
 - Storage: At least 16GB free
 - Network: Internet access
 
-## 1. Update and Upgrade the System
-
-Ensure your system is up to date before installing anything:
-
-```bash
-sudo apt update && sudo apt upgrade -y
-```
-
-## 2. Clone the Repository
-
-```bash
-git clone https://github.com/openmind/OM1.git
-cd OM1
-git submodule update --init
-```
-
-## 3. Install Dependencies
-
- 3.1 Install the Rust-based Python package manager `uv`:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-3.2 Install PortAudio:
-
-```bash
-sudo apt-get install portaudio19-dev
-```
-
-## 4. Set Configuration Variables
-
-Add your OpenMind API key to the configuration file:
-
-1. Locate the config file at `/config/spot.json5`
-2. Replace the placeholder with your OpenMind API key:
-
-```bash
-{
-  ...
-  "api_key": "om1_live_..."
-  ...
-}
-```
-
-You can obtain a free API key at: https://portal.openmind.org/. Using the placeholder key `openmind-free` will result in errors.
-
-## 5. Run the Spot Agent
-
-```bash
-uv run src/run.py spot
-```
-
-## 6. Monitor with WebSim
-
-Visit the following URL in your browser to see real-time logs, input, and output:
-
-http://localhost:8000
-
-For additional debug information, you can run:
-
-```bash
-uv run src/run.py spot --debug
-```
+Then, install OM1 on the Raspberry Pi from its command line, following the [standard instructions](../developing/1_get-started).
 
 ## Done
 
-You’re now running OM1 on your Raspberry Pi. Explore its capabilities and refer to the OM1 GitHub repository for advanced settings and next steps:
-
-https://github.com/openmind/OM1
-
-
-## Note
-
-This is a general guide for getting OM1 started on Raspberry Pi. Depending on your specific robot’s firmware, OS version, or configuration, you may need additional modifications or pre-requirements.
+You’re now running OM1 on your Raspberry Pi. Explore its capabilities and refer to the [OM1 GitHub repository](https://github.com/openmind/OM1) for advanced settings and next steps. 

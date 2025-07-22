@@ -1,12 +1,12 @@
 ---
-title: LLM Chat Completions
+title: LLMs 
 description: "LLM Endpoints for Robot Control"
 ---
 
 # Single-Agent LLM Integration
 
-For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via a `post /{provider}/chat/completions` endpoint.
+For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via simple `post /api/core/{provider}/chat/completions` endpoints.
 
-# Multi-Agent LLM Integration (`post /agent`)
+# Multi-Agent LLM Integration
 
-The Multi-Agent robotics endpoint (accessed via `post /agent`) accepts fused data and routes them to a collaborative multi-agent system, providing a powerful way to solve more complex robotics tasks. For more information, see [developing/5_llms](../../developing/5_llms.mdx).
+The Multi-Agent robotics endpoint (accessed via `post /api/core/agent`) accepts fused data and routes them to a collaborative multi-agent system, providing a powerful way to solve more complex robotics tasks. For more information, see [developing/llms](../../developing/5_llms.mdx).

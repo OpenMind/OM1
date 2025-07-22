@@ -42,7 +42,7 @@ class XAILLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "grok-2-latest"
+            self._config.model = "grok-4-latest"
 
         self._client = openai.AsyncOpenAI(
             base_url=config.base_url or "https://api.openmind.org/api/core/xai",

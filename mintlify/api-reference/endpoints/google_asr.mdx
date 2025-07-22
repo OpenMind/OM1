@@ -3,17 +3,15 @@ title: Google Speech Recognition
 description: "Google Speech Recognition (ASR) API Reference"
 ---
 
-OpenMind proxies the Google Speech Recognition (ASR) API to provide speech recognition. The `core/google/asr` endpoint allows you to transcribe speech to text. 
+OpenMind proxies the Google Speech Recognition (ASR) API to facilitate speech recognition and transcribe speech to text. 
 
-## Endpoint Access
+## Usage
 
-To minimize latency, the API endpoint utilizes WebSockets for efficient real-time communication.
+The Google ASR API endpoint utilizes WebSockets for efficient, low latency communication.
 
 ```bash
 wss://api.openmind.org/api/core/google/asr?api_key=<YOUR_API_KEY>
 ```
-
-## Usage
 
 The following example demonstrates how to interact with the Google ASR API:
 
@@ -52,4 +50,4 @@ You can also forward the base64 encoded audio data directly to the API endpoint:
 }
 ```
 
-Note: The `rate` parameter specifies the sample rate of the audio data in Hz. The `rate` parameter is optional and defaults to 16000 if not provided. 
+Note: The `rate` parameter specifies the sample rate of the audio data in Hz. The `rate` parameter is optional and defaults to 16000. 

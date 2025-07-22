@@ -35,6 +35,7 @@ class RuntimeConfig:
     backgrounds: List[Background]
 
     silence_rate: Optional[int] = 0
+    robot_ip: Optional[str] = None
 
     # Optional API key for the runtime configuration
     api_key: Optional[str] = None
@@ -86,20 +87,17 @@ def load_config(config_name: str) -> RuntimeConfig:
         raw_config = json5.load(f)
 
     g_api_key = raw_config.get("api_key", None)
-    if g_api_key is None or g_api_key == "":
+    if g_api_key is None or g_api_key == "" or g_api_key == "openmind_free":
         logging.warning(
-            "No API key found in the configuration file. Rate limits may apply."
+            "No API key found in the configuration file. Checking for backup OM_API_KEY in your .env file."
         )
-
-    if g_api_key == "openmind_free":
-        logging.info("Checking for backup OM_API_KEY in your .env file.")
         backup_key = os.environ.get("OM_API_KEY")
         if backup_key:
-            g_api_key = backup_key
+            raw_config["api_key"] = backup_key
             logging.info("Success - Found OM_API_KEY in your .env file.")
         else:
             logging.warning(
-                "Could not find backup OM_API_KEY in your .env file. Using 'openmind_free'. Rate limits will apply."
+                "Could not find any API keys. Please get a free key at portal.openmind.org."
             )
 
     g_URID = raw_config.get("URID", None)
@@ -129,6 +127,7 @@ def load_config(config_name: str) -> RuntimeConfig:
     conf = raw_config["cortex_llm"].get("config", {})
     logging.debug(f"config.py: {conf}")
 
+    # make silence_rate available everywhere
     for action in raw_config.get("agent_actions", []):
         value = get_nested_value(action, ["config", "silence_rate"])
         if value is not None:
@@ -189,6 +188,9 @@ def load_config(config_name: str) -> RuntimeConfig:
         ],
     }
 
+    # logging.info(f"raw config: {raw_config}")
+    # logging.info(f"parsed config: {parsed_config}")
+
     return RuntimeConfig(**parsed_config)
 
 
@@ -237,6 +239,7 @@ def add_meta(
     return config
 
 
+# this is for testing only
 def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     api_key = config.get("api_key")
     g_ut_eth = config.get("unitree_ethernet")

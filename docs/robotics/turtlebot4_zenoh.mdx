@@ -1,5 +1,5 @@
 ---
-title: TurtleBot4 Basic Setup
+title: TurtleBot4
 description: "TurtleBot4 Basic Setup"
 ---
 
@@ -11,7 +11,7 @@ For many development tasks, you will need to `ssh` to the RPi on the TB4 from yo
 ssh ubuntu@192.168.1.116 # use your TB4's IP address
 ```
 
-The password is `turtlebot4`. Once on the command line, you can use `turtlebot4-setup` to configure ROS2, the wifi, etc. 
+The password is `turtlebot4`. Once on the command line, you can use `turtlebot4-setup` to configure ROS2, the WiFi, etc. 
 
 ## Required Operating System Versions
 
@@ -114,28 +114,22 @@ You can install and run OM1
 
 For fully autonomous use, install OM1 on the TurtleBot4's Raspberry Pi. On the RPi terminal command line, follow these [instructions](raspberrypi.mdx). When you see all the right topics listed in `ros2 topic list`, your TurtleBot4 is set up and you are ready to install OM1.
 
-* Install `uv` - Python package manager.   
+Install `uv` - Python package manager:   
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-* Install `portaudio`, `ffmpeg` and other dependencies
+Install `portaudio`, `ffmpeg` and other dependencies:
 
 ```bash
 sudo apt install pulseaudio pulseaudio-utils ffmpeg portaudio19-dev python-all-dev
 ```
 
-* Connect a Logitech 270 Webcam (or equivalent).
+Then, connect a Logitech 270 Webcam (or equivalent). Unplug the standard TurtleBot4 Depth Camera. Connect a speaker to RPi with a 3.5 mm audio patch cable (or use bluetooth, depending on your pain threshold and patience with debugging bluetooth issues). 
 
-* Unplug the standard TurtleBot4 Depth Camera. 
+Make sure [Identity and Keys](#identity-and-keys) are set correctly. To update the `.env` with your OM1 key, run `vim .env`, "i" to insert, paste in key, "ESC", ":", "wq" to write and exit.
 
-* Connect a speaker to RPi with a 3.5 mm audio patch cable (or use bluetooth, depending on your pain threshold and patience with debugging bluetooth issues).
-
-* Make sure [Identity and Keys](#identity-and-keys) are set correctly.
-
-* Set Default Input and Output Audio devices
-
-Use `pactl` to set your default microphone and speaker. If you get `pa_context_connect() failed: Connection refused`, then start the audio daemon manually via `pulseaudio --start -D`.
+Finally, set Default Input and Output Audio devices. Use `pactl` to set your default microphone and speaker. If you get `pa_context_connect() failed: Connection refused`, then start the audio daemon manually via `pulseaudio --start -D`.
 
 ```bash
 pactl list sources short                             # List input (microphone) devices
@@ -149,15 +143,6 @@ pactl set-sink-volume @DEFAULT_SINK@ 100%            # Set default output volume
 pactl set-default-source alsa_input.usb-046d_C270_HD_WEBCAM_2CD9A910-02.mono-fallback
 pactl set-default-sink alsa_output.platform-bcm2835_audio.stereo-fallback
 ```
-
-* Useful commands:
-
-- Update the `.env` with your OM1 key: `vim .env`, "i" to insert, paste in key, "ESC", ":", "wq" to write and exit.
-- `git pull`
-- `git reset --hard`
-- `git checkout -- uv.lock` # checkout a specific file
-- `git checkout BRANCH` # checkout a specific BRANCH
-- `git branch -a`
 
 * Launch OM1
 
@@ -270,7 +255,8 @@ docker build -t my-username/my-image .
 docker push my-username/my-image
 ```
 
-Useful docker commands
+Useful docker commands:
+
 ```bash
 sudo docker compose pull # pull latest image
 

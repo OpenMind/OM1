@@ -29,7 +29,8 @@
                         "pages": [
                             "developing/0_introduction",
                             "developing/1_get-started",
-                            "developing/2_architecture"
+                            "developing/2_architecture",
+                            "developing/3_configuration"
                         ]
                     },
                     {
@@ -64,13 +65,14 @@
                         "pages": [
                             "robotics/unitree_g1_humanoid",
                             "robotics/unitree_go2_quadruped",
-                            "robotics/turtlebot4_zenoh"
+                            "robotics/turtlebot4_zenoh",
+                            "robotics/ubtech_yanshee"
                         ]
                     },
                     {
                         "group": "Tutorials",
                         "pages": [
-                            "examples/0_overview",
+                            "examples/overview",
                             "examples/conversation",
                             "examples/gazebo"
                         ]
@@ -96,11 +98,12 @@
                     {
                         "group": "OM Core Endpoints",
                         "pages": [
-                            "api-reference/endpoints/llm",
+                            "api-reference/endpoints/account_and_key_management",
                             "api-reference/endpoints/elevenlabs_tts",
+                            "api-reference/endpoints/google_asr",
+                            "api-reference/endpoints/llm",
                             "api-reference/endpoints/riva",
-                            "api-reference/endpoints/vila_vlm",
-                            "api-reference/endpoints/google_asr"
+                            "api-reference/endpoints/vila_vlm"
                         ]
                     }
                 ]

@@ -52,16 +52,16 @@ uv run ruff check . --fix && uv run black . && uv run isort .
 
 To automatically run these checks before committing, install [pre-commit](https://pre-commit.com/) and execute `pre-commit install`. This ensures that pre-commit checks run before each commit. Additionally, you can manually trigger all checks by running `pre-commit run --all-files`.
 
-### Updating the docs
+### Updating the Docs
 
-After you have updated the docs, make sure to run:
+After you have updated the core documentation, make sure to run:
 
 ```bash
 chmod +x mintlify.sh # first time only
 ./mintlify.sh
 ```
 
-to update the mintlify files too.
+to also update secondary documentation systems like mintlify.
 
 ### Unit Testing
 

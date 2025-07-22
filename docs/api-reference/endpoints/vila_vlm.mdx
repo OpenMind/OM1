@@ -3,19 +3,17 @@ title: VILA VLM
 description: "VILA VLM API Reference"
 ---
 
-To streamline integration with the VILA VLM API, we provide a simple wrapper. 
+We provide a simple `om1_vlm/VideoStream` wrapper to streamline integration with the VILA VLM API. 
 
-## Endpoint Access
+## Usage
 
-To minimize latency, the API endpoint utilizes WebSockets for efficient real-time communication.
+The VLM endpoint utilizes WebSockets for efficient, low latency communication.
 
 ```bash
 wss://api-vila.openmind.org?api_key=<YOUR_API_KEY>
 ```
 
-## Usage
-
-This example demonstrates how to interact with the VILA VLM API:
+This code snippet demonstrates how to interact with the VILA VLM API:
 
 ```python
 from om1_vlm import VideoStream
