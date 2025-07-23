@@ -22,8 +22,7 @@ class MovementAction(str, Enum):
     WAKAWAKA = "WakaWaka"
     HUG = "Hug"
     RAISE_RIGHT_HAND = "RaiseRightHand"
-    PUSH_UP="PushUp"
-
+    PUSH_UP = "PushUp"
 
 
 @dataclass
