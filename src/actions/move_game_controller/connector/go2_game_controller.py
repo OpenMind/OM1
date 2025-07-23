@@ -48,7 +48,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self.session = None
         try:
             self.session = zenoh.open(zenoh.Config())
-            self.session.declare_subscriber(self.topic, self.audio_message)
+            self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
             logging.info("Game Controller Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Game Controller Zenoh client: {e}")
@@ -60,7 +60,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self._init_controller()
 
         if self.gamepad is None:
-            logging.warn("Game controller not found")
+            logging.warning("Game controller not found")
 
         self.sport_client = None
         try:
@@ -95,9 +95,8 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
 
         self.thread_lock = threading.Lock()
 
-    def audio_message(self, data):
+    def zenoh_audio_message(self, data):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
-        logging.info(f"TTS Zenoh Received: {self.audio_status} {time.time()}")
 
     def _init_controller(self) -> None:
         """

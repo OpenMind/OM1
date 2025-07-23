@@ -1,6 +1,7 @@
 import logging
 import math
 import time
+import json
 
 import zenoh
 from pycdr2.types import int32, uint32
@@ -51,8 +52,9 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         try:
             self.session = zenoh.open(zenoh.Config())
             self.pub = self.session.declare_publisher(self.topic)
-            self.session.declare_subscriber(self.topic, self.audio_message)
+            self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
 
+            # Unstable / not released
             # advanced_sub = declare_advanced_subscriber(
             #     self.session,
             #     self.topic,
@@ -61,13 +63,11 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             #     recovery=RecoveryConfig(heartbeat=True),
             #     subscriber_detection=True,
             # )
-
             # advanced_sub.sample_miss_listener(self.miss_listener)
 
             if self.pub:
-                new_state = self.audio_status.serialize()
-                logging.info(f"TTS new state: {new_state}")
-                self.pub.put(new_state)
+                self.pub.put(self.audio_status.serialize())
+
             logging.info("TTS Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening TTS Zenoh client: {e}")
@@ -90,12 +90,8 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.tts.start()
         self.tts.add_pending_message("Woof Woof")
 
-    def audio_message(self, data):
+    def zenoh_audio_message(self, data):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
-        logging.info(f"TTS Received: {self.audio_status} {time.time()}")
-
-    # def miss_listener(self, miss: Miss):
-    #     logging.error(f">> [Subscriber] Missed {miss.nb} samples from {miss.source} !!!")
 
     def prepare_header(self) -> Header:
         ts = time.time()
@@ -105,26 +101,21 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         return header
 
     async def connect(self, output_interface: SpeakInput) -> None:
-        # Block ASR until TTS is done
-        # Send message to ASR to blank
-        # No idea how to reset this once the speaker is done
-        # self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
-
         # Add pending message to TTS
-        # The TTS takes the string, sends it to the cloud,
-        # turns it into an audio file, and then plays that file
-        string_to_speak = output_interface.action
+        pending_message = self.tts.create_pending_message(output_interface.action)
         self.sentence_counter += 1
 
-        new_state = self.audio_status
-        new_state.header = self.prepare_header()
-        new_state.status_speaker = AudioStatus.STATUS_SPEAKER.ACTIVE.value
-        new_state.sentence_to_speak = String(string_to_speak)
-        new_state.sentence_counter = self.sentence_counter
-
-        logging.debug(f"Publishing AUDIO: {new_state}")
+        state = AudioStatus(
+            header=self.prepare_header(),
+            status_mic=self.audio_status.status_mic,
+            status_speaker=AudioStatus.STATUS_SPEAKER.ACTIVE.value,
+            sentence_to_speak=String(json.dumps(pending_message)),
+            sentence_counter=self.sentence_counter,
+        )
 
         if self.pub:
-            self.pub.put(new_state.serialize())
+            self.pub.put(state.serialize())
+            return
 
-        self.tts.add_pending_message(string_to_speak)
+        self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
+        self.tts.add_pending_message(pending_message)
