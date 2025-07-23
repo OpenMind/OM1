@@ -34,4 +34,8 @@ launch.sh
 # Logs
 logs/
 
+# Data files
 *.jsonl
+
+# Temporary files
+saved_locations.json
