@@ -34,6 +34,7 @@ launch.sh
 # Logs
 logs/
 
+# Data files
 *.jsonl
 *.jpg
 /zenohdb
