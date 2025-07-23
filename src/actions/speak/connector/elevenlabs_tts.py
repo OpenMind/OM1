@@ -1,7 +1,7 @@
+import json
 import logging
 import math
 import time
-import json
 
 import zenoh
 from pycdr2.types import int32, uint32
