@@ -73,17 +73,6 @@ class MockRPLidar(RPLidar):
             f"MockRPLidar initialized with {self.lidar_provider.scan_count} scan data sets"
         )
 
-    def set_cortex_runtime(self, cortex):
-        """
-        Set reference to cortex runtime for comprehensive cleanup.
-
-        Parameters
-        ----------
-        cortex : CortexRuntime
-            The cortex runtime instance
-        """
-        self.cortex_runtime = cortex
-
     def _create_mock_lidar_provider(self, **lidar_config) -> RPLidarProvider:
         """
         Create a RPLidarProvider instance but override its start method to prevent hardware connections.
@@ -171,130 +160,6 @@ class MockRPLidar(RPLidar):
                 self.mock_data_processed = True
             return None
 
-    # TODO (Kyle): Replace the odometer with a mock input to avoid clean up.
-    async def cleanup_cortex_runtime(self):
-        """
-        Clean up CortexRuntime and its components to prevent hanging.
-        This method handles the Zenoh session cleanup that's specific to RPLidar tests.
-        """
-        if not self.cortex_runtime:
-            logging.warning("MockRPLidar: No cortex runtime reference for cleanup")
-            return
-
-        logging.info("MockRPLidar: Starting cortex cleanup")
-
-        try:
-            cortex = self.cortex_runtime
-
-            # Clean up action orchestrator
-            if hasattr(cortex, "action_orchestrator") and cortex.action_orchestrator:
-                logging.info("MockRPLidar: Cleaning up action orchestrator")
-
-                if (
-                    hasattr(cortex.action_orchestrator, "_config")
-                    and cortex.action_orchestrator._config
-                ):
-                    if hasattr(cortex.action_orchestrator._config, "agent_actions"):
-                        agent_actions = cortex.action_orchestrator._config.agent_actions
-
-                        for agent_action in agent_actions:
-                            if (
-                                hasattr(agent_action, "connector")
-                                and agent_action.connector
-                            ):
-                                # Close Zenoh sessions in action connectors
-                                if (
-                                    hasattr(agent_action.connector, "session")
-                                    and agent_action.connector.session
-                                ):
-                                    try:
-                                        agent_action.connector.session.close()
-                                    except Exception as e:
-                                        logging.warning(
-                                            f"MockRPLidar: Error closing Zenoh session: {e}"
-                                        )
-
-                                # Also close OdomProvider Zenoh session if it exists
-                                if (
-                                    hasattr(agent_action.connector, "odom")
-                                    and agent_action.connector.odom
-                                ):
-                                    if (
-                                        hasattr(agent_action.connector.odom, "session")
-                                        and agent_action.connector.odom.session
-                                    ):
-                                        try:
-                                            agent_action.connector.odom.session.close()
-                                        except Exception as e:
-                                            logging.warning(
-                                                f"MockRPLidar: Error closing OdomProvider Zenoh session: {e}"
-                                            )
-
-            # Clean up any other Zenoh sessions in the cortex config
-            if hasattr(cortex, "config") and cortex.config:
-                # Check for any providers that might have Zenoh sessions
-                if hasattr(cortex.config, "agent_inputs"):
-                    for input_obj in cortex.config.agent_inputs:
-                        if hasattr(input_obj, "lidar") and input_obj.lidar:
-                            if hasattr(input_obj.lidar, "zen") and input_obj.lidar.zen:
-                                try:
-                                    input_obj.lidar.zen.close()
-                                except Exception as e:
-                                    logging.warning(
-                                        f"MockRPLidar: Error closing lidar Zenoh session: {e}"
-                                    )
-
-            # Force cleanup of any remaining Zenoh sessions
-            await self._force_cleanup_zenoh_sessions()
-
-            logging.info("MockRPLidar: Cortex cleanup completed")
-
-        except Exception as e:
-            logging.error(f"MockRPLidar: Error during cortex cleanup: {e}")
-
-    async def _force_cleanup_zenoh_sessions(self):
-        """
-        Force cleanup of any remaining Zenoh sessions by attempting to close them.
-        """
-        try:
-            # Try to import zenoh and close any open sessions
-
-            # Force garbage collection and wait for threads
-            import gc
-
-            gc.collect()
-
-            # Wait a bit for any cleanup to complete
-            await asyncio.sleep(0.5)
-
-            # Check remaining threads
-            import threading
-
-            # Log remaining non-daemon threads only if there are any
-            non_daemon_threads = []
-            for thread in threading.enumerate():
-                if thread != threading.current_thread() and not thread.daemon:
-                    non_daemon_threads.append(thread)
-
-            if non_daemon_threads:
-                logging.warning(
-                    f"MockRPLidar: {len(non_daemon_threads)} non-daemon threads still active"
-                )
-
-                # Try to force-kill the Zenoh threads by setting them as daemon
-                for thread in non_daemon_threads:
-                    if "pyo3-closure" in thread.name or "zenoh" in thread.name.lower():
-                        try:
-                            thread.daemon = True
-                        except Exception:
-                            pass  # Ignore errors when setting daemon
-
-                # Give them a bit more time to finish
-                await asyncio.sleep(1.0)
-
-        except Exception as e:
-            logging.warning(f"MockRPLidar: Error during Zenoh cleanup: {e}")
-
     def cleanup(self):
         """
         Synchronous cleanup method for proper resource cleanup.
@@ -312,25 +177,6 @@ class MockRPLidar(RPLidar):
         except Exception as e:
             logging.error(f"MockRPLidar.cleanup: Error during cleanup: {e}")
 
-    async def async_cleanup(self):
-        """
-        Asynchronous cleanup method that handles both basic cleanup and cortex runtime cleanup.
-        """
-        # First do the basic cleanup
-        self.cleanup()
-
-        # Then do the comprehensive cortex cleanup
-        await self.cleanup_cortex_runtime()
-
     def __del__(self):
         """Clean up resources when the object is destroyed."""
         self.cleanup()
-
-    def reset_mock_data(self):
-        """
-        Reset the mock data to start from the beginning.
-        Useful for repeated testing.
-        """
-        self.lidar_provider.reset()
-        self.mock_data_processed = False
-        logging.info("MockRPLidar: Mock data reset")
