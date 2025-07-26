@@ -1,0 +1,78 @@
+{
+  "$id": "https://openmind.org/machine.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Machine",
+  "type": "object",
+  "properties": {
+    "architecture": {
+      "description": "Type of machine",
+      "type": "array",
+      "items": {
+          "type": "string",
+          "enum": ["wheeled", "two_legs", "four_legs", "six_legs", "fly_fixed_wing", "fly_vtol", "fly_multirotor", "swim_surface", "swim_subsurface"]
+      }
+    },
+    "largest_physical_dimension": {
+      "description": "The machine's largest dimension in meters",
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 100.00
+    },
+    "services_offered": {
+      "description": "Services offered by the machine",
+      "type": "array",
+      "items": {
+          "type": "string",
+          "enum": ["education", "logistics", "pet_care", "elder_care", "medical", "manufacturing", "security", "cleaning"]
+      }
+    },
+    "services_desired": {
+      "description": "Services sought by the machine",
+      "type": "array",
+      "items": {
+          "type": "string",
+          "enum": ["data_collection", "repair", "electricity", "communications", "compute", "general_maintenance", "performance_upgrades", "companionship"]
+      }
+    },
+    "sensors": {
+      "description": "A machine's data collection capabilities",
+      "type": "array",
+      "items": {
+          "type": "string",
+          "enum": ["optical", "optical_depth", "LIDAR", "RADAR", "SONAR_passive", "SONAR_active", "rf_scan", "laserscan", "optical_flow", "microphone", "imu", "gps"]
+      }
+    },
+    "actions": {
+      "description": "A machine's actuators",
+      "type": "array",
+      "items": {
+          "type": "string",
+          "enum": ["articulated_hand", "gripper_arm", "loudspeaker", "optical_display", "wheels", "propeller", "turbine"]
+      }
+    },
+    "actions": {
+      "description": "A machine's movement capabilities",
+      "type": "array",
+      "items": {
+          "type": "string",
+          "enum": ["run", "swim", "fly", "crawl"]
+      }
+    },
+    "location": {
+      "description": "The machine's location with 1 km resolution",
+      "type": "array",
+      "items": {
+        "latitude_deg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude_deg": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      }
+    }
+  }
+}
