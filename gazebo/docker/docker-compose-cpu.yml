@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  ros1_gazebo:
+    build:
+      context: ./gazebo_ros/docker/
+      dockerfile: Dockerfile
+    image: ros1_gazebo_image:latest
+    platform: linux/amd64
+    container_name: ros1_gazebo_container
+    # Removed runtime: nvidia
+    network_mode: host
+    pid: host
+    ipc: host
+    environment:
+      # Set DISPLAY variable for GUI
+      - DISPLAY=:1
+      # Removed NVIDIA-specific variables
+      - QT_X11_NO_MITSHM=1
+      - LIBGL_ALWAYS_SOFTWARE=1  # Force software rendering
+      - MESA_GL_VERSION_OVERRIDE=3.3  # Set OpenGL version for compatibility
+    volumes:
+      # X11 socket for GUI forwarding
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      # Bind GPU device interface for basic rendering
+      - /dev/dri:/dev/dri:rw
+      # Shared workspace with optimized volume mode
+      # - /home/shaohong/Desktop/dog/exp/unitree_simulation/simulation/gazebo_ros/:/workspace/:delegated
+    tty: true
+    stdin_open: true
+    privileged: true
+    restart: always
+
+  ros1_ros2_bridge:
+    build:
+      context: ./ros_bridge/docker/
+      dockerfile: Dockerfile
+    image: ros-humble-ros1-bridge-builder:latest
+    container_name: ros1_ros2_bridge
+    privileged: true
+    network_mode: host
+    pid: host
+    ipc: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - LIBGL_ALWAYS_SOFTWARE=1  # Force software rendering
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:cached
+      - /dev/dri:/dev/dri:cached
+      # - /home/shaohong/Desktop/dog/exp/unitree_simulation/simulation/ros_bridge/:/workspace/
+    tty: true
+    stdin_open: true
+    restart: always
