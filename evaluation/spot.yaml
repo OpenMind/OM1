@@ -1,0 +1,15 @@
+---
+agent_to_evaluate: spot.json
+inputs:
+- frame: 1
+  VLM_COCO_Local: I see a giraffe
+  FaceEmotionCapture: The person is happy
+  ASRInput: 'You just heard: What''s your name?'
+- frame: 2
+  VLM_COCO_Local: I see a rocket
+  FaceEmotionCapture: The person is unhappy
+  ASRInput: 'You just heard: Please explain the universe to me in simple words.'
+- frame: 3
+  VLM_COCO_Local: I see a giraffe that is waving its head. The person is looking at me.
+  FaceEmotionCapture: The person is laughing
+  ASRInput: Ha hah ha ha
