@@ -1,0 +1,117 @@
+title: "Installation Guide"
+description: "Instructions for installing dependencies, including PortAudio, on Ubuntu."
+---
+
+#!/bin/bash
+
+# PortAudio Installation Script for Ubuntu
+# This script provides options for installing PortAudio and its dependencies
+
+set -e  # Exit on error
+
+# Function to display script usage
+usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo "Options:"
+    echo "  -h, --help        Display this help message"
+    echo "  -d, --default     Install PortAudio using default settings"
+    echo "  -c, --custom      Custom installation with additional options"
+    echo "  -t, --test        Run tests after installation"
+}
+
+# Function to install dependencies
+install_dependencies() {
+    echo "Installing dependencies..."
+    sudo apt-get update
+    sudo apt-get install -y build-essential libasound2-dev libjack-jackd2-dev
+}
+
+# Function for default installation
+default_installation() {
+    echo "Performing default PortAudio installation..."
+    install_dependencies
+    wget http://www.portaudio.com/archives/pa_stable_v190700_20210406.tgz || { echo "Download failed"; exit 1; }
+    tar -xvzf pa_stable_v190700_20210406.tgz
+    cd pa_stable_v190700_20210406
+    ./configure && make
+    sudo make install
+    sudo ldconfig
+    echo "PortAudio installed successfully."
+}
+
+# Function for custom installation
+custom_installation() {
+    echo "Performing custom PortAudio installation..."
+    install_dependencies
+    wget http://www.portaudio.com/archives/pa_stable_v190700_20210406.tgz || { echo "Download failed"; exit 1; }
+    tar -xvzf pa_stable_v190700_20210406.tgz
+    cd pa_stable_v190700_20210406
+    
+    echo "Select additional options:"
+    echo "1. Enable debug symbols"
+    echo "2. Disable JACK support"
+    echo "3. Custom installation directory"
+    read -p "Enter your choice (1/2/3): " choice
+    
+    case $choice in
+        1) ./configure --enable-debug-output && make ;;
+        2) ./configure --without-jack && make ;;
+        3) 
+            read -p "Enter custom installation directory: " custom_dir
+            ./configure --prefix="$custom_dir" && make
+            ;;
+        *) echo "Invalid choice. Proceeding with default options." && ./configure && make ;;
+    esac
+    
+    sudo make install
+    sudo ldconfig
+    echo "PortAudio installed successfully with custom options."
+}
+
+# Function to run tests
+run_tests() {
+    echo "Running PortAudio tests..."
+    cd pa_stable_v190700_20210406
+    if [ -d "examples" ]; then
+        cd examples
+        make
+        for test in patest_*; do
+            if [ -x "$test" ]; then
+                echo "Running $test"
+                ./"$test"
+            fi
+        done
+        echo "Tests completed."
+    else
+        echo "No test executables found."
+    fi
+}
+
+# Main script logic
+if [ $# -eq 0 ]; then
+    usage
+    exit 1
+fi
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -h | --help )    usage
+                         exit
+                         ;;
+        -d | --default ) default_installation
+                         ;;
+        -c | --custom )  custom_installation
+                         ;;
+        -t | --test )    run_tests
+                         ;;
+        * )              usage
+                         exit 1
+    esac
+    shift
+done
+
+# Cleanup
+cd ..
+rm -rf pa_stable_v190700_20210406 pa_stable_v190700_20210406.tgz
+
+echo "PortAudio installation process completed."

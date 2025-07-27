@@ -1,0 +1,152 @@
+---
+title: "Data Ingestion Example"
+description: "An example demonstrating how to ingest data from external providers into an OM1 agent."
+---
+
+import { CodeBlock } from '@components/CodeBlock';
+
+## Overview
+
+This example demonstrates how to ingest data from external providers (e.g., weather, satellite, search, traffic, and financial data) into an OM1 agent. The agent fetches data via an API, processes it, and integrates it within the OM1 ecosystem.
+
+## Example: Fetching Google Search Console Data
+
+<CodeBlock language="python">
+{`
+from googleapiclient.discovery import build
+import pandas as pd
+
+service = build('searchconsole', 'v1', credentials=credentials)
+request = service.searchanalytics().query(siteUrl='https://www.example.com', body={
+    'startDate': '2025-01-01',
+    'endDate': '2025-01-31',
+    'dimensions': ['query', 'page']
+})
+response = request.execute()
+
+df = pd.DataFrame(response['rows'])
+df.to_csv('om1_search_analytics.csv', index=False)
+`}
+</CodeBlock>
+
+## Example: Fetching Google Trends Data
+
+<CodeBlock language="python">
+{`
+from pytrends.request import TrendReq
+import json
+
+pytrends = TrendReq(hl='en-US', tz=360)
+pytrends.build_payload(kw_list=['machine learning'], timeframe='today 5-y')
+trend_data = pytrends.interest_over_time().reset_index().to_dict('records')
+
+with open('om1_trends_data.json', 'w') as f:
+    json.dump({'trends': trend_data}, f)
+`}
+</CodeBlock>
+
+## Example: Fetching Weather Data
+
+<CodeBlock language="python">
+{`
+import requests
+import pandas as pd
+
+api_key = "your_api_key"
+response = requests.get(f"http://api.openweathermap.org/data/2.5/weather?q=Philadelphia&appid={api_key}")
+weather_data = response.json()
+
+df = pd.DataFrame([{
+    'timestamp': pd.Timestamp.now(),
+    'temperature': weather_data['main']['temp'],
+    'humidity': weather_data['main']['humidity'],
+    'wind_speed': weather_data['wind']['speed']
+}])
+df.to_csv('om1_weather_data.csv', index=False)
+`}
+</CodeBlock>
+
+## Example: Fetching Traffic Data
+
+<CodeBlock language="python">
+{`
+import requests
+import json
+from datetime import datetime
+
+api_key = "your_api_key"
+response = requests.get(f"https://api.tomtom.com/traffic/services/4/flowSegmentData/...")
+traffic_data = response.json()
+
+om1_traffic_data = {
+    'timestamp': datetime.now().isoformat(),
+    'location': 'Philadelphia',
+    'traffic_flow': traffic_data['flowSegmentData']
+}
+
+with open('om1_traffic_data.json', 'w') as f:
+    json.dump(om1_traffic_data, f)
+`}
+</CodeBlock>
+
+## Example: Fetching Stock Exchange Data
+
+<CodeBlock language="python">
+{`
+import requests
+import pandas as pd
+
+api_key = "your_api_key"
+symbol = "AAPL"
+response = requests.get(f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}")
+stock_data = response.json()
+
+df = pd.DataFrame.from_dict(stock_data['Time Series (Daily)'], orient='index')
+df.reset_index(inplace=True)
+df.rename(columns={'index': 'date'}, inplace=True)
+df.to_csv('om1_stock_data.csv', index=False)
+`}
+</CodeBlock>
+
+## Example: Fetching Cloud Storage Data
+
+<CodeBlock language="python">
+{`
+import boto3
+import pandas as pd
+
+def process_s3_to_om1(bucket_name, file_key):
+    s3 = boto3.client('s3')
+    response = s3.get_object(Bucket=bucket_name, Key=file_key)
+    df = pd.read_csv(response['Body'])
+    df_processed = df.copy()
+    df_processed.to_csv('om1_processed_data.csv', index=False)
+`}
+</CodeBlock>
+
+## Example: Fetching SaaS Data from Salesforce
+
+<CodeBlock language="python">
+{`
+from simple_salesforce import Salesforce
+import json
+from datetime import datetime
+
+sf = Salesforce(username='your_username', password='your_password', security_token='your_token')
+query = "SELECT Id, Name, Type, Industry FROM Account"
+results = sf.query(query)
+
+om1_data = {
+    'timestamp': datetime.now().isoformat(),
+    'source': 'salesforce',
+    'records': results['records']
+}
+
+with open('om1_salesforce_data.json', 'w') as f:
+    json.dump(om1_data, f)
+`}
+</CodeBlock>
+
+## Conclusion
+
+This example illustrates how to fetch and integrate external data from multiple providers into an OM1 agent. Modify and extend these examples to suit different external data sources based on project requirements.
