@@ -16,7 +16,7 @@ from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
-class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
+class MoveUnitreeSDKDepthCamConnector(ActionConnector[MoveInput]):
 
     def __init__(self, config: ActionConfig):
         super().__init__(config)
@@ -49,8 +49,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         except Exception as e:
             logging.error(f"Error initializing Unitree sport client: {e}")
 
-        unitree_ethernet = getattr(config, "unitree_ethernet", None)
-        self.odom = OdomProvider(channel=unitree_ethernet)
+        self.odom = OdomProvider()
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
@@ -58,26 +57,16 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
-        if self.unitree_go2_state.state == "locomotion":
-            logging.info(
-                "Unitree Go2 is in locomotion state - cannot process AI command"
-            )
+        if self.odom.position["moving"]:
+            # for example due to a teleops or game controller command
+            logging.info("Disregard new AI movement command - robot is already moving")
             return
-
-        # fallback to the odom provider
-        if not self.unitree_go2_state.state:
-            if self.odom.position["moving"]:
-                # for example due to a teleops or game controller command
-                logging.info(
-                    "Disregard new AI movement command - robot is already moving"
-                )
-                return
 
         if self.pending_movements.qsize() > 0:
             logging.info("Movement in progress: disregarding new AI command")
             return
 
-        if self.odom.position["odom_x"] == 0.0:
+        if self.odom.position["x"] == 0.0:
             # this value is never precisely zero EXCEPT while
             # booting and waiting for data to arrive
             logging.info("Waiting for location data")
@@ -140,9 +129,6 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         if self.odom.position["body_attitude"] != RobotState.STANDING:
             return
 
-        if self.unitree_go2_state.state == "jointLock":
-            self.sport_client.BalanceStand()
-
         try:
             logging.info(f"self.sport_client.Move: vx={vx}, vy={vy}, vturn={vturn}")
             self.sport_client.Move(vx, vy, vturn)
@@ -156,6 +142,8 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         self.movement_attempts = 0
         if not self.pending_movements.empty():
             self.pending_movements.get()
+        if self.sport_client:
+            self.sport_client.StopMove()
 
     def tick(self) -> None:
         """
@@ -168,7 +156,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
             time.sleep(0.5)
             return
 
-        if self.odom.position["odom_x"] == 0.0:
+        if self.odom.position["x"] == 0.0:
             # this value is never precisely zero except while
             # booting and waiting for data to arrive
             logging.info("Waiting for odom data, x == 0.0")
@@ -189,14 +177,14 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
             current_target = target[0]
 
             logging.info(
-                f"Target: {current_target} current yaw: {self.odom.position["odom_yaw_m180_p180"]}"
+                f"Target: {current_target} current yaw: {round(self.odom.position["yaw_odom_m180_p180"],2)}"
             )
 
             if self.movement_attempts > self.movement_attempt_limit:
                 # abort - we are not converging
                 self.clean_abort()
                 logging.info(
-                    f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()"
+                    f"TIMEOUT - AI movement timeout - not converging after {self.movement_attempt_limit} attempts- issued StopMove()"
                 )
                 return
 
@@ -206,7 +194,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
             # Phase 1: Turn to face the target direction
             if not current_target.turn_complete:
                 gap = self._calculate_angle_gap(
-                    -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
+                    self.odom.position["yaw_odom_m180_p180"], goal_yaw
                 )
                 logging.info(f"Phase 1 - Turning remaining GAP: {gap}DEG")
 
@@ -242,18 +230,11 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                     self.clean_abort()
                     return
 
-                if self.intel_depth_camera_obstacle.obstacle_detected():
-                    logging.warning(
-                        "Obstacle detected by Intel Depth Camera, aborting movement"
-                    )
-                    self.clean_abort()
-                    return
-
                 s_x = current_target.start_x
                 s_y = current_target.start_y
                 distance_traveled = math.sqrt(
-                    (self.odom.position["odom_x"] - s_x) ** 2
-                    + (self.odom.position["odom_y"] - s_y) ** 2
+                    (self.odom.position["x"] - s_x) ** 2
+                    + (self.odom.position["y"] - s_y) ** 2
                 )
                 gap = round(abs(goal_dx - distance_traveled), 2)
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -261,6 +242,14 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
 
                 if self.movement_attempts > 0:
                     logging.info(f"Phase 2 - Forward/retreat GAP delta: {progress}m")
+
+                # Check for depth camera obstacles before moving
+                if self.intel_depth_camera_obstacle.obstacle_detected():
+                    logging.warning(
+                        "Obstacle detected by Intel Depth Camera, aborting movement"
+                    )
+                    self.clean_abort()
+                    return
 
                 if goal_dx > 0:
                     if 4 not in self.lidar.advance:
@@ -306,14 +295,14 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         path_angle = self.lidar.path_angles[path]
 
         target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
+            self.odom.position["yaw_odom_m180_p180"] + path_angle
         )
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
                 yaw=round(target_yaw, 2),
-                start_x=round(self.odom.position["odom_x"], 2),
-                start_y=round(self.odom.position["odom_y"], 2),
+                start_x=round(self.odom.position["x"], 2),
+                start_y=round(self.odom.position["y"], 2),
                 turn_complete=False,
             )
         )
@@ -330,14 +319,14 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         path_angle = self.lidar.path_angles[path]
 
         target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
+            self.odom.position["yaw_odom_m180_p180"] + path_angle
         )
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
                 yaw=round(target_yaw, 2),
-                start_x=round(self.odom.position["odom_x"], 2),
-                start_y=round(self.odom.position["odom_y"], 2),
+                start_x=round(self.odom.x, 2),
+                start_y=round(self.odom.y, 2),
                 turn_complete=False,
             )
         )
@@ -354,14 +343,14 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         path_angle = self.lidar.path_angles[path]
 
         target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
+            self.odom.position["yaw_odom_m180_p180"] + path_angle
         )
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
                 yaw=target_yaw,
-                start_x=round(self.odom.position["odom_x"], 2),
-                start_y=round(self.odom.position["odom_y"], 2),
+                start_x=round(self.odom.position["x"], 2),
+                start_y=round(self.odom.position["y"], 2),
                 turn_complete=True if path_angle == 0 else False,
             )
         )
@@ -379,8 +368,8 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
             MoveCommand(
                 dx=-0.5,
                 yaw=0.0,
-                start_x=round(self.odom.position["odom_x"], 2),
-                start_y=round(self.odom.position["odom_y"], 2),
+                start_x=round(self.odom.position["x"], 2),
+                start_y=round(self.odom.position["y"], 2),
                 turn_complete=True,
             )
         )
