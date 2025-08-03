@@ -1,0 +1,70 @@
+import logging
+import time
+import typing as T
+
+import openai
+from pydantic import BaseModel
+
+from llm import LLM, LLMConfig
+
+R = T.TypeVar("R", bound=BaseModel)
+
+class OpenAILLM(LLM[R]):
+    def __init__(
+        self, 
+        output_model: T.Type[R], 
+        config: T.Optional[LLMConfig] = None,
+        **kwargs
+    ):
+        super().__init__(output_model, config)
+
+        base_url = config.base_url or "https://api.openmind.org/api/core/openai"
+
+        if config.api_key is None or config.api_key == "":
+            raise ValueError("config file missing api_key")
+        else:
+            api_key = config.api_key
+
+        client_kwargs = {
+            "base_url": base_url,
+            "api_key": api_key,
+            **kwargs  # Include any additional kwargs for client initialization
+        }
+
+        logging.info(f"Initializing OpenAI client with {client_kwargs}")
+        self._client = openai.AsyncClient(**client_kwargs)
+        self._additional_kwargs = kwargs
+
+    async def ask(self, prompt: str, **kwargs) -> R | None:
+        try:
+            logging.debug(f"OpenAI LLM input: {prompt}")
+            self.io_provider.llm_start_time = time.time()
+            self.io_provider.set_llm_prompt(prompt)
+
+            # Merge default kwargs with provided kwargs
+            completion_kwargs = {
+                "model": "gpt-4o-mini" if self._config.model is None else self._config.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "response_format": self._output_model,
+                **kwargs  # Include any additional kwargs for completion
+            }
+
+            parsed_response = await self._client.beta.chat.completions.parse(
+                **completion_kwargs
+            )
+
+            message_content = parsed_response.choices[0].message.content
+            self.io_provider.llm_end_time = time.time()
+
+            try:
+                parsed_response = self._output_model.model_validate_json(
+                    message_content
+                )
+                logging.debug(f"LLM output: {parsed_response}")
+                return parsed_response
+            except Exception as e:
+                logging.error(f"Error parsing response: {e}")
+                return None
+        except Exception as e:
+            logging.error(f"Error asking LLM: {e}")
+            return None
