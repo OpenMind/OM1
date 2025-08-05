@@ -41,7 +41,7 @@ class MinDistanceFinder(Node):
         except Exception as e:
             self.get_logger().error(f"Error processing depth info: {e}")
 
-    def image_to_world(self, u, v, depth_value, camera_height=0.45, tilt_angle=60):
+    def image_to_world(self, u, v, depth_value, camera_height=0.45, tilt_angle=55):
         """
         Convert image coordinates to world coordinates
         """
@@ -98,7 +98,7 @@ class MinDistanceFinder(Node):
                     depth_value = depth_image[row, col]
                     if depth_value > 0:
                         world_x, world_y, world_z = self.image_to_world(
-                            col, row, depth_value, camera_height=0.45, tilt_angle=60
+                            col, row, depth_value, camera_height=0.45, tilt_angle=55
                         )
 
                         if world_x is not None and world_z > self.obstacle_threshold:
