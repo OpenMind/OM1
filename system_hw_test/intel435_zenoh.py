@@ -1,51 +1,62 @@
+import logging
+import sys
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-import rclpy
-from cv_bridge import CvBridge
-from rclpy.node import Node
-from sensor_msgs.msg import CameraInfo, Image
+import zenoh
+
+sys.path.insert(0, "../src")
+
+from zenoh_idl import sensor_msgs
+
+logging.basicConfig(level=logging.INFO)
 
 
-class Intel435ObstacleDector(Node):
+class Intel435ObstacleDector:
     def __init__(self):
-        super().__init__("min_distance_finder")
-        self.bridge = CvBridge()
         self.fx = None
         self.fy = None
         self.cx = None
         self.cy = None
 
+        self.camera_info = None
+        self.camera_image = None
+
         self.obstacle_threshold = 0.05  # 5cm above ground
         self.obstacle = []
 
-        self.depth_subscription = self.create_subscription(
-            Image, "/camera/camera/depth/image_rect_raw", self.depth_callback, 10
+        self.running = False
+
+        self.session = zenoh.open(zenoh.Config())
+
+        self.session.declare_subscriber(
+            "camera/camera/depth/image_rect_raw", self.depth_callback
+        )
+        self.session.declare_subscriber(
+            "camera/camera/depth/camera_info", self.depth_info_callback
         )
 
-        self.depth_info = self.create_subscription(
-            CameraInfo, "/camera/camera/depth/camera_info", self.depth_info_callback, 10
-        )
-
-        self.plot_timer = self.create_timer(0.01, self.plot_obstacles)
-
-        self.get_logger().info("Intel435ObstacleDector node started")
+        logging.info("Zenoh is open for Intel435ObstacleDector")
 
     def depth_info_callback(self, msg):
         try:
-            self.camera_info = msg
-            self.fx = msg.k[0]
-            self.fy = msg.k[4]
-            self.cx = msg.k[2]
-            self.cy = msg.k[5]
+            self.camera_info = sensor_msgs.CameraInfo.deserialize(
+                msg.payload.to_bytes()
+            )
+            self.fx = self.camera_info.k[0]
+            self.fy = self.camera_info.k[4]
+            self.cx = self.camera_info.k[2]
+            self.cy = self.camera_info.k[5]
         except Exception as e:
-            self.get_logger().error(f"Error processing depth info: {e}")
+            logging.error(f"Error processing depth info: {e}")
 
     def image_to_world(self, u, v, depth_value, camera_height=0.45, tilt_angle=55):
         """
         Convert image coordinates to world coordinates
         """
         if self.fx is None or self.fy is None or self.cx is None or self.cy is None:
-            self.get_logger().warn("Camera intrinsics not available yet")
+            logging.warning("Camera intrinsics not available yet")
             return None, None, None
 
         depth_meters = depth_value / 1000.0
@@ -86,9 +97,39 @@ class Intel435ObstacleDector(Node):
 
         return world_x, world_y, world_z
 
+    def imgmsg_to_numpy(self, img_msg):
+        """Convert sensor_msgs/Image to numpy array directly"""
+        if img_msg.encoding == "mono8" or img_msg.encoding == "8UC1":
+            dtype = np.uint8
+        # Intel 435 supports 16-bit depth images
+        elif img_msg.encoding == "mono16" or img_msg.encoding == "16UC1":
+            dtype = np.uint16
+        elif img_msg.encoding == "32FC1":
+            dtype = np.float32
+        elif img_msg.encoding == "bgr8" or img_msg.encoding == "rgb8":
+            dtype = np.uint8
+        else:
+            raise ValueError(f"Unsupported encoding: {img_msg.encoding}")
+
+        data_bytes = bytes(img_msg.data)
+        np_array = np.frombuffer(data_bytes, dtype=dtype)
+
+        try:
+            depth_image = np_array.reshape((img_msg.height, img_msg.width))
+        except ValueError as e:
+            logging.error(f"Error reshaping image data: {e}")
+            return None
+
+        return depth_image
+
     def depth_callback(self, msg):
         try:
-            depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+            self.camera_image = sensor_msgs.Image.deserialize(msg.payload.to_bytes())
+
+            depth_image = self.imgmsg_to_numpy(self.camera_image)
+            if depth_image is None:
+                logging.error("Failed to convert depth image")
+                return
 
             self.obstacle = []
 
@@ -111,10 +152,10 @@ class Intel435ObstacleDector(Node):
                             )
 
             if len(self.obstacle) > 100:
-                print(f"Detected {len(self.obstacle)} obstacles")
+                logging.info(f"Detected {len(self.obstacle)} obstacles")
 
         except Exception as e:
-            self.get_logger().error(f"Error processing depth image: {e}")
+            logging.error(f"Error processing depth image: {e}")
 
     def plot_obstacles(self):
         if len(self.obstacle) > 50:
@@ -134,17 +175,14 @@ class Intel435ObstacleDector(Node):
             plt.show(block=False)
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    node = Intel435ObstacleDector()
-
+def main():
+    detector = Intel435ObstacleDector()
     try:
-        rclpy.spin(node)
+        while True:
+            detector.plot_obstacles()
+            time.sleep(0.01)
     except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        print("Shutting down Intel435ObstacleDector")
 
 
 if __name__ == "__main__":
