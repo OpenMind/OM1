@@ -32,11 +32,8 @@ Install cycloneDDS via https://cyclonedds.io/docs/cyclonedds/latest/installation
 
 ```bash
 git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
-cd cyclonedds
-mkdir build
-cd build
-cmake -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=$HOME/Documents/GitHub/cyclonedds/install ..
-cmake --build .
+cd cyclonedds && mkdir build install && cd build
+cmake -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=$HOME/Documents/GitHub/cyclonedds/install .. 
 cmake --build . --target install
 ```
 
@@ -53,22 +50,26 @@ At this point, if you are connected to a robot and you run `./ddsperf sanity` (l
 export CYCLONEDDS_HOME=$HOME/Documents/GitHub/cyclonedds/install
 export CMAKE_PREFIX_PATH=$HOME/Documents/GitHub/cyclonedds/install
 
+# Then, set your wired Ethernet adapter to `192.168.123.99` and `255.255.255.0`, double check via `ifconfig`, and set the correct Ethernet adapter name in `NetworkInterface`:
+
+export CYCLONEDDS_URI='
+<CycloneDDS>
+  <Domain>
+    <General>
+      <Interfaces>
+        <NetworkInterface name="en0" priority="default" multicast="default" />
+      </Interfaces>
+    </General>
+    <Discovery>
+      <EnableTopicDiscoveryEndpoints>true</EnableTopicDiscoveryEndpoints>
+    </Discovery>
+  </Domain>
+</CycloneDDS>'
+```
+
 cd $HOME/Documents/GitHub/cyclonedds/install/share/CycloneDDS/examples/listtopics
 cmake .
 cmake --build .
-```
-
-Then, set your wired Ethernet adapter to `192.168.123.99` and `255.255.255.0`, double check via `ifconfig`, and set the correct Ethernet adapter name in `NetworkInterface`:
-
-```bash
-export CYCLONEDDS_URI='
-<CycloneDDS><Domain>
-  <General>
-  <Interfaces><NetworkInterface name="en0" priority="default" multicast="default" /></Interfaces>
-  </General>
-  <Discovery><EnableTopicDiscoveryEndpoints>true</EnableTopicDiscoveryEndpoints></Discovery>
-  </Domain>
-</CycloneDDS>'
 ```
 
 Now, when you run `./listtopics`, you should see an extensive data dump:
