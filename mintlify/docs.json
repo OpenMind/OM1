@@ -29,6 +29,7 @@
                         "pages": [
                             "developing/0_introduction",
                             "developing/1_get-started",
+                            "developing/7_project_structure",
                             "developing/2_architecture",
                             "developing/3_configuration"
                         ]
@@ -52,6 +53,12 @@
                         "group": "LLM Integration",
                         "pages": [
                             "developing/5_llms"
+                        ]
+                    },
+                    {
+                        "group": "Background",
+                        "pages": [
+                            "developing/8_backgrounds"
                         ]
                     },
                     {
