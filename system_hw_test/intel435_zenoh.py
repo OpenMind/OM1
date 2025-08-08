@@ -1,4 +1,5 @@
 import logging
+import math
 import sys
 import time
 
@@ -31,10 +32,10 @@ class Intel435ObstacleDector:
         self.session = zenoh.open(zenoh.Config())
 
         self.session.declare_subscriber(
-            "camera/camera/depth/image_rect_raw", self.depth_callback
+            "camera/realsense2_camera_node/depth/image_rect_raw", self.depth_callback
         )
         self.session.declare_subscriber(
-            "camera/camera/depth/camera_info", self.depth_info_callback
+            "camera/realsense2_camera_node/depth/camera_info", self.depth_info_callback
         )
 
         logging.info("Zenoh is open for Intel435ObstacleDector")
@@ -122,6 +123,14 @@ class Intel435ObstacleDector:
 
         return depth_image
 
+    def calculate_angle_and_distance(self, world_x, world_y):
+        distance = math.sqrt(world_x**2 + world_y**2)
+
+        angle_rad = math.atan2(world_y, world_x)
+        angle_degrees = math.degrees(angle_rad)
+
+        return angle_degrees, distance
+
     def depth_callback(self, msg):
         try:
             self.camera_image = sensor_msgs.Image.deserialize(msg.payload.to_bytes())
@@ -131,7 +140,7 @@ class Intel435ObstacleDector:
                 logging.error("Failed to convert depth image")
                 return
 
-            self.obstacle = []
+            obstacle = []
 
             for row in range(0, depth_image.shape[0], 10):
                 for col in range(0, depth_image.shape[1], 10):
@@ -142,17 +151,23 @@ class Intel435ObstacleDector:
                         )
 
                         if world_x is not None and world_z > self.obstacle_threshold:
-                            self.obstacle.append(
+                            angle_degrees, distance = self.calculate_angle_and_distance(
+                                world_x, world_y
+                            )
+                            # Change to the robot coordinate system
+                            obstacle.append(
                                 {
-                                    "x": world_x,
-                                    "y": world_y,
+                                    "x": -world_y,
+                                    "y": world_x,
                                     "z": world_z,
                                     "depth": depth_value,
+                                    "angle": angle_degrees,
+                                    "distance": distance,
                                 }
                             )
 
-            if len(self.obstacle) > 100:
-                logging.info(f"Detected {len(self.obstacle)} obstacles")
+            self.obstacle = obstacle
+            logging.debug(f"Detected {len(self.obstacle)} obstacles")
 
         except Exception as e:
             logging.error(f"Error processing depth image: {e}")

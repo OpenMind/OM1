@@ -1,3 +1,5 @@
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import rclpy
@@ -19,11 +21,17 @@ class Intel435ObstacleDector(Node):
         self.obstacle = []
 
         self.depth_subscription = self.create_subscription(
-            Image, "/camera/camera/depth/image_rect_raw", self.depth_callback, 10
+            Image,
+            "/camera/realsense2_camera_node/depth/image_rect_raw",
+            self.depth_callback,
+            10,
         )
 
         self.depth_info = self.create_subscription(
-            CameraInfo, "/camera/camera/depth/camera_info", self.depth_info_callback, 10
+            CameraInfo,
+            "/camera/realsense2_camera_node/depth/camera_info",
+            self.depth_info_callback,
+            10,
         )
 
         self.plot_timer = self.create_timer(0.01, self.plot_obstacles)
@@ -86,11 +94,19 @@ class Intel435ObstacleDector(Node):
 
         return world_x, world_y, world_z
 
+    def calculate_angle_and_distance(self, world_x, world_y):
+        distance = math.sqrt(world_x**2 + world_y**2)
+
+        angle_rad = math.atan2(world_y, world_x)
+        angle_degrees = math.degrees(angle_rad)
+
+        return angle_degrees, distance
+
     def depth_callback(self, msg):
         try:
             depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
 
-            self.obstacle = []
+            obstacle = []
 
             for row in range(0, depth_image.shape[0], 10):
                 for col in range(0, depth_image.shape[1], 10):
@@ -101,17 +117,23 @@ class Intel435ObstacleDector(Node):
                         )
 
                         if world_x is not None and world_z > self.obstacle_threshold:
-                            self.obstacle.append(
+                            angle_degrees, distance = self.calculate_angle_and_distance(
+                                world_x, world_y
+                            )
+                            # Change to the robot coordinate system
+                            obstacle.append(
                                 {
-                                    "x": world_x,
-                                    "y": world_y,
+                                    "x": -world_y,
+                                    "y": world_x,
                                     "z": world_z,
                                     "depth": depth_value,
+                                    "angle": angle_degrees,
+                                    "distance": distance,
                                 }
                             )
 
-            if len(self.obstacle) > 100:
-                print(f"Detected {len(self.obstacle)} obstacles")
+            self.obstacle = obstacle
+            self.get_logger().debug(f"Detected {len(self.obstacle)} obstacles")
 
         except Exception as e:
             self.get_logger().error(f"Error processing depth image: {e}")
