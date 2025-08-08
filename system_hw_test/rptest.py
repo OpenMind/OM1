@@ -6,6 +6,7 @@ import time
 
 import numpy as np
 import zenoh
+from intel435_zenoh import Intel435ObstacleDector
 from matplotlib import pyplot as plot
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Circle, Rectangle
@@ -37,6 +38,9 @@ parser.add_argument(
 print(parser.format_help())
 
 args = parser.parse_args()
+
+# Create an instance of Intel435ObstacleDector
+intel435ObstacleDector = Intel435ObstacleDector()
 
 
 def create_straight_line_path_from_angle(angle_degrees, length=1.0, num_points=10):
@@ -276,6 +280,17 @@ def process(data):
         # the final data ready to use for path planning
         if keep:
             complexes.append([x, y, angle, d_m])
+
+    if len(intel435ObstacleDector.obstacle) > 100:
+        for obstacle in intel435ObstacleDector.obstacle:
+            complexes.append(
+                [
+                    obstacle["x"],
+                    obstacle["y"],
+                    obstacle["angle"],
+                    obstacle["distance"],
+                ]
+            )
 
     array = np.array(complexes)
 
