@@ -40,7 +40,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 #### PortAudio Library
 
-For audio functionlity, install `portaudio`:
+For audio functionality, install `portaudio`:
 
 ```bash
 # Mac
@@ -53,7 +53,7 @@ sudo apt-get install portaudio19-dev python-all-dev
 
 #### ffmpeg
 
-For video functionlity, install FFmpeg:
+For video functionality, install FFmpeg:
 
 ```bash Mac
 # Mac
@@ -104,7 +104,7 @@ Run the following command to start the Spot Agent:
 uv run src/run.py spot
 ```
 
-Some necessary packages will be installed during this process, the first time you run the command. This might take a little time. Please be patient. Then you will see the system come to life.
+On initial execution, this command will resolve and install project dependencies. Please allow a few minutes for this process to finish, before the system becomes active.
 
 ### WebSim to check input and output
 
@@ -112,7 +112,7 @@ Go to [http://localhost:8000](http://localhost:8000) to see real time logs along
 
 ### Understanding the Log Data
 
-The log data provide insight into how the `spot` agent makes sense of its enviroment and decides on its next actions.
+The log data provide insight into how the `spot` agent makes sense of its environment and decides on its next actions.
 
   - First, it detects a person using vision.
   - Communicates with an external AI API for response generation.
@@ -152,12 +152,14 @@ INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), C
 
 There are more pre-configured agents in the `/config` folder. They can be run with the following command:
 
-```bash
-uv run src/run.py <agent_name>
-```
-
 For example, to run the `conversation` agent:
 
 ```bash
 uv run src/run.py conversation
+```
+
+If you configure a custom agent, replace `<agent_name>` with your agent and run the below command:
+
+```bash
+uv run src/run.py <agent_name>
 ```
