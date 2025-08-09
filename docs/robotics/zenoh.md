@@ -1,6 +1,6 @@
 ## Install Zenoh Middleware
 
-[Zenoh](https://zenoh.io) is a pub/sub/query protocol unifying data in motion, data at rest and computations. You need two pieces - the `eclipse-zenoh` python libary and the Zenoh daemon (`zenohd`). Your Python project needs `eclipse-zenoh`, which is already added to OM1's `pyproject.toml`. 
+[Zenoh](https://zenoh.io) is a pub/sub/query protocol unifying data in motion, data at rest and computations. You need two pieces - the `eclipse-zenoh` python libarary and the Zenoh daemon (`zenohd`). Your Python project needs `eclipse-zenoh`, which is already added to OM1's `pyproject.toml`. 
 
 ### Mac
 
@@ -40,7 +40,7 @@ zenohd --help
 
 See https://github.com/eclipse-zenoh/zenoh-backend-filesystem?tab=readme-ov-file#how-to-install-it
 
-On Mac, you might need to allow `libzenoh_backend_fs.dylib` to run via `Privacy and Security`. Just try to run it separately - e.g. via the terminal and then `approve` the various popup messages. Once you have run `libzenoh_backend_fs.dylib` once, it will be cached and then `zenoh` can find it the next time. This is good, but can be confusing if you are tryinmg to upgrade `libzenoh_backend_fs.dylib` but it keeps using an older cached version. 
+On Mac, you might need to allow `libzenoh_backend_fs.dylib` to run via `Privacy and Security`. Just try to run it separately - e.g. via the terminal and then `approve` the various popup messages. Once you have run `libzenoh_backend_fs.dylib` once, it will be cached and then `zenoh` can find it the next time. This is good, but can be confusing if you are trying to upgrade `libzenoh_backend_fs.dylib` but it keeps using an older cached version. 
 
 The RocksDB database is where ever you set the path to:
 
