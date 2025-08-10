@@ -7,7 +7,7 @@ The unitree_guide is an open source project for controlling the quadruped robot 
 # Quick Start
 The following will quickly introduce the use of unitree_guide in the gazebo simulator. For more usage, please refer to 《四足机器人控制算法--建模、控制与实践》.
 ## Environment
-We recommand users to run this project in Ubuntu 18.04 and ROS melodic environment.
+We recommend users to run this project in Ubuntu 18.04 and ROS melodic environment.
 ## Dependencies
 1. [unitree_guide](https://github.com/unitreerobotics/unitree_guide)<br>
 2. [unitree_ros](https://github.com/unitreerobotics/unitree_ros)<br>
