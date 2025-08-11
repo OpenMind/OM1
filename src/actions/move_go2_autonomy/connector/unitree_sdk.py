@@ -54,14 +54,17 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
-        if self.unitree_go2_state.state == "locomotion":
+        if self.unitree_go2_state.state_code == 1002:
+            self.sport_client.BalanceStand()
+
+        if self.unitree_go2_state.action_progress != 0:
             logging.info(
-                "Unitree Go2 is in locomotion state - cannot process AI command"
+                f"Action in progress: {self.unitree_go2_state.action_progress}"
             )
             return
 
         # fallback to the odom provider
-        if not self.unitree_go2_state.state:
+        if not self.unitree_go2_state.state_code:
             if self.odom.position["moving"]:
                 # for example due to a teleops or game controller command
                 logging.info(

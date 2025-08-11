@@ -167,14 +167,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                 logging.info("Already sitting, skipping command")
                 return
 
-            if self.unitree_state_provider.state == "jointLock":
+            if self.unitree_state_provider.state_code == 1002:
                 self.sport_client.BalanceStand()
                 self.sport_client.Move(0.05, 0, 0)
 
             code = getattr(self.sport_client, command)()
             logging.info(f"Unitree command {command} executed with code {code}")
 
-            if self.unitree_state_provider.state == "jointLock":
+            if self.unitree_state_provider.state_code == 1002:
                 self.sport_client.BalanceStand()
                 self.sport_client.Move(0.05, 0, 0)
 

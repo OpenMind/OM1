@@ -28,8 +28,8 @@
         "relevant_distance_max": 1.1,
         "relevant_distance_min": 0.20,
         "sensor_mounting_angle": 172.0,
-        "angles_blanked": [],
-        "multicast_address": "224.0.0.224:7003",
+        "angles_blanked": []
+        //"angles_blanked": [[-180.0, -140.0], [140, 180]]
       }
     },
     {

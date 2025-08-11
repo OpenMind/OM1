@@ -324,15 +324,6 @@ def process(data):
     # all the possible conflicting points
     for x, y, d in list(zip(X, Y, D)):
         for apath in possible_paths:
-
-            # too far away - we do not care
-            if d > relevant_distance_max:
-                continue
-
-            # also don't worry about things that are very close
-            if d < relevant_distance_min:
-                continue
-
             # Get the start and end points of this straight line path
             path_points = paths[apath]
             start_x, start_y = (
@@ -340,6 +331,16 @@ def process(data):
                 path_points[1][0],
             )
             end_x, end_y = path_points[0][-1], path_points[1][-1]
+
+            if apath == 9:
+                # For going back, only consider obstacles that are:
+                # 1. Behind the robot (negative x in robot frame)
+                # 2. Within a certain distance threshold
+
+                # Assuming robot faces positive x direction
+                # Only check obstacles behind the robot
+                if y >= 0:  # Skip obstacles in front of or beside the robot
+                    continue
 
             # Calculate distance from obstacle to the line segment
             dist_to_line = distance_point_to_line_segment(
