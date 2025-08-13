@@ -10,7 +10,7 @@ from sensor_msgs.msg import CameraInfo, Image
 
 class Intel435ObstacleDector(Node):
     def __init__(self):
-        super().__init__("min_distance_finder")
+        super().__init__("intel435_obstacle_dector")
         self.bridge = CvBridge()
         self.fx = None
         self.fy = None

@@ -4,7 +4,7 @@ from typing import List
 from pycdr2 import Enum, IdlStruct
 from pycdr2.types import array, float32, float64, int8, sequence, uint8, uint16, uint32
 
-from .geometry_msgs import Quaternion, Vector3
+from .geometry_msgs import Quaternion, Vector3, Point32
 from .std_msgs import Header, String
 
 
@@ -142,6 +142,12 @@ class PointField(IdlStruct, typename="PointField"):
     datatype: uint8
     count: uint32
 
+
+@dataclass
+class PointCloud(IdlStruct, typename="PointCloud"):
+    header: Header
+    points: sequence[Point32]
+    channels: sequence[PointField]
 
 @dataclass
 class PointCloud2(IdlStruct, typename="PointCloud2"):
