@@ -62,7 +62,7 @@ After launching OM1, the Spot agent will interact with you and perform (simulate
 
 ## What's Next?
 
-* Try out some [examples](https://docs.openmind.org/examples)
+* Try out some [examples](https://docs.openmind.org/examples/llm_models)
 * Add new `inputs` and `actions`.
 * Design custom agents and robots by creating your own `json5` config files with custom combinations of inputs and actions.
 * Change the system prompts in the configuration files (located in `/config/`) to create new behaviors.
