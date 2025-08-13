@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 import zenoh
-from intel435_zenoh import Intel435ObstacleDector
+from intel435_obstacle_zenoh import Intel435ObstacleDector
 from matplotlib import pyplot as plot
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Circle, Rectangle
@@ -232,6 +232,15 @@ def distance_point_to_line_segment(px, py, x1, y1, x2, y2):
     return math.sqrt((px - closest_x) ** 2 + (py - closest_y) ** 2)
 
 
+def calculate_angle_and_distance(world_x, world_y):
+    distance = math.sqrt(world_x**2 + world_y**2)
+
+    angle_rad = math.atan2(world_y, world_x)
+    angle_degrees = math.degrees(angle_rad)
+
+    return angle_degrees, distance
+
+
 def process(data):
 
     complexes = []
@@ -281,14 +290,15 @@ def process(data):
         if keep:
             complexes.append([x, y, angle, d_m])
 
-    if len(intel435ObstacleDector.obstacle) > 100:
+    if len(intel435ObstacleDector.obstacle) > 50:
         for obstacle in intel435ObstacleDector.obstacle:
+            angle, distance = calculate_angle_and_distance(obstacle["x"], obstacle["y"])
             complexes.append(
                 [
                     obstacle["x"],
                     obstacle["y"],
-                    obstacle["angle"],
-                    obstacle["distance"],
+                    angle,
+                    distance,
                 ]
             )
 
