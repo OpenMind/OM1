@@ -476,8 +476,8 @@ class RPLidarProvider:
             complexes.append([x, y, angle, d_m])
 
         # Append the D435 provider's obstacle data if available
-        if self.d435_provider.running and len(self.d435_provider.obstacle) > 100:
-            logging.info("Appending D435 provider obstacle data to RPLidar data")
+        if self.d435_provider.running and len(self.d435_provider.obstacle) > 50:
+            logging.debug("Appending D435 provider obstacle data to RPLidar data")
             for obstacle in self.d435_provider.obstacle:
                 complexes.append(
                     [
@@ -831,7 +831,7 @@ class RPLidarProvider:
 
         parts = ["The safe movement directions are: {"]
 
-        if self.use_zenoh:  # TurtleBot4 control
+        if self.use_zenoh and self.machine_type == "tb4":  # TurtleBot4 control
             parts.append("'turn left', 'turn right', ")
             if self.advance:
                 parts.append("'move forwards', ")
