@@ -23,13 +23,13 @@ Usage example:
 For additional information please refer to the RPLidar class documentation.
 """
 
+
 import codecs
 import logging
 import struct
 import sys
 import time
 from collections import namedtuple
-
 import serial
 
 SYNC_BYTE = b"\xA5"
@@ -58,27 +58,21 @@ HEALTH_TYPE = 6
 MAX_MOTOR_PWM = 1023
 DEFAULT_MOTOR_PWM = 660
 SET_PWM_BYTE = b"\xF0"
+AUTO_START_MOTOR    = True   # <--- set False if your host/thread manages motor
 
-_HEALTH_STATUSES = {
-    0: "Good",
-    1: "Warning",
-    2: "Error",
-}
-
+_HEALTH_STATUSES = {0: "Good", 1: "Warning", 2: "Error"}
 
 class RPLidarException(Exception):
     """Basic exception class for RPLidar"""
-
+    pass
 
 def _b2i(byte):
     """Converts byte to integer (for Python 2 compatibility)"""
     return byte if int(sys.version[0]) == 3 else ord(byte)
 
-
 def _showhex(signal):
     """Converts string bytes to hex representation (useful for debugging)"""
     return [format(_b2i(b), "#02x") for b in signal]
-
 
 def _process_scan(raw):
     """Processes input raw data and returns measurement data"""
@@ -94,73 +88,67 @@ def _process_scan(raw):
     distance = (_b2i(raw[3]) + (_b2i(raw[4]) << 8)) / 4.0
     return new_scan, quality, angle, distance
 
-
-def _process_express_scan(data, new_angle, trame):
-    new_scan = (new_angle < data.start_angle) & (trame == 1)
-    angle = (
-        data.start_angle
-        + ((new_angle - data.start_angle) % 360) / 32 * trame
-        - data.angle[trame - 1]
-    ) % 360
-    distance = data.distance[trame - 1]
-    return new_scan, None, angle, distance
-
-
 class RPDriver(object):
-    """Class for communicating with RPLidar rangefinder scanners"""
+    """
+    Robust serial driver for RPLIDAR (normal mode).
 
-    def __init__(self, port, baudrate=115200, timeout=1, logger=None):
-        """Initialize RPLidar object for communicating with the sensor.
+    Key behavior:
+    - Uses descriptor re-sync (hunts for A5 5A).
+    - Applies hard timeouts and short-read checks.
+    - Drains/flushes residual bytes before starting a stream.
+    - Optionally starts motor automatically when starting a scan.
+    """
 
-        Parameters
-        ----------
-        port : str
-            Serial port name to which sensor is connected
-        baudrate : int, optional
-            Baudrate for serial connection (the default is 115200)
-        timeout : float, optional
-            Serial port connection timeout in seconds (the default is 1)
-        logger : logging.Logger instance, optional
-            Logger instance, if none is provided new instance is created
-        """
+    def __init__(self, port, baudrate=115200, timeout=0.2, logger=None):
         self._serial = None
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
         self._motor_speed = DEFAULT_MOTOR_PWM
         self.scanning = [False, 0, "normal"]
-        self.express_trame = 32
-        self.express_data = False
         self.motor_running = None
         if logger is None:
             logger = logging.getLogger("rplidar")
         self.logger = logger
         self.connect()
+    
+    def _drain_for(self, duration_s=0.06):
+        """Eat any residual bytes for a short window to ensure clean state."""
+        end = time.time() + duration_s
+        while time.time() < end:
+            try:
+                n = self._serial.in_waiting
+            except AttributeError:
+                n = self._serial.inWaiting()
+            if n:
+                self._serial.read(n)
+            time.sleep(0.003)
 
+    # ---- Serial lifecycle ----------------------------------------------------
     def connect(self):
-        """Connects to the serial port with the name `self.port`. If it was
-        connected to another serial port disconnects from it first."""
         if self._serial is not None:
             self.disconnect()
         try:
             self._serial = serial.Serial(
-                self.port,
-                self.baudrate,
+                self.port, self.baudrate,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 timeout=self.timeout,
             )
+            print(f"[diag][connect] open={self._serial.is_open} port={self.port}")
+            # Keep lines deasserted; some USB-serials care
+            self._serial.setDTR(False)
+            try: self._serial.setRTS(False)
+            except Exception: pass
         except serial.SerialException as err:
-            raise RPLidarException(
-                "Failed to connect to the sensor " "due to: %s" % err
-            )
+            raise RPLidarException(f"Failed to connect to the sensor: {err}")
 
     def disconnect(self):
-        """Disconnects from the serial port"""
         if self._serial is None:
             return
         self._serial.close()
 
+    # ---- Motor control -------------------------------------------------------
     def _set_pwm(self, pwm):
         payload = struct.pack("<H", pwm)
         self._send_payload_cmd(SET_PWM_BYTE, payload)
@@ -177,27 +165,25 @@ class RPDriver(object):
             self._set_pwm(self._motor_speed)
 
     def start_motor(self):
-        """Starts sensor motor"""
+        """Spin the motor:
+           - A1: DTR low
+           - A2: PWM set to DEFAULT_MOTOR_PWM"""
         self.logger.info("Starting motor")
-        # For A1
+        # A1: DTR low; A2: PWM
         self._serial.setDTR(False)
-
-        # For A2
         self._set_pwm(self._motor_speed)
         self.motor_running = True
+        print(f"[diag][start_motor] pwm={self._motor_speed}")
 
     def stop_motor(self):
-        """Stops sensor motor"""
+        """Stop the motor and place lines in idle state."""
         self.logger.info("Stopping motor")
-        # For A2
         self._set_pwm(0)
         time.sleep(0.001)
-        # For A1
         self._serial.setDTR(True)
         self.motor_running = False
 
     def _send_payload_cmd(self, cmd, payload):
-        """Sends `cmd` command with `payload` to the sensor"""
         size = struct.pack("B", len(payload))
         req = SYNC_BYTE + cmd + size + payload
         checksum = 0
@@ -208,98 +194,107 @@ class RPDriver(object):
         self.logger.debug("Command sent: %s" % _showhex(req))
 
     def _send_cmd(self, cmd):
-        """Sends `cmd` command to the sensor"""
         req = SYNC_BYTE + cmd
         self._serial.write(req)
         self.logger.debug("Command sent: %s" % _showhex(req))
 
-    def _read_descriptor(self):
-        """Reads descriptor packet"""
-        descriptor = self._serial.read(DESCRIPTOR_LEN)
-        self.logger.debug("Received descriptor: %s", _showhex(descriptor))
-        if len(descriptor) != DESCRIPTOR_LEN:
-            raise RPLidarException("Descriptor length mismatch")
-        elif not descriptor.startswith(SYNC_BYTE + SYNC_BYTE2):
-            raise RPLidarException("Incorrect descriptor starting bytes")
-        is_single = _b2i(descriptor[-2]) == 0
-        return _b2i(descriptor[2]), is_single, _b2i(descriptor[-1])
+    def _read_descriptor(self, deadline_s=1.0):
+        """
+        Robustly read the 7-byte descriptor:
+        - Hunt for the A5 5A sync header
+        - If a short-read happens, keep hunting until deadline
+        """
+        t_end = time.time() + deadline_s
+        header = bytearray()
+        # hunt for SYNC bytes
+        while time.time() < t_end:
+            b = self._serial.read(1)
+            if not b:
+                continue
+            header += b
+            # keep only last 2 bytes to match against A5 5A
+            if len(header) > 2:
+                header = header[-2:]
+            if header == SYNC_BYTE + SYNC_BYTE2:
+                rest = self._serial.read(DESCRIPTOR_LEN - 2)
+                if len(rest) != DESCRIPTOR_LEN - 2:
+                    # try again if short
+                    header.clear()
+                    continue
+                descriptor = (SYNC_BYTE + SYNC_BYTE2 + rest)
+                self.logger.debug("Received descriptor: %s", _showhex(descriptor))
+                is_single = _b2i(descriptor[-2]) == 0
+                return _b2i(descriptor[2]), is_single, _b2i(descriptor[-1])
+        raise RPLidarException("Descriptor sync timeout")
 
-    def _read_response(self, dsize):
-        """Reads response packet with length of `dsize` bytes"""
+    def _read_response(self, dsize, timeout_s=2.0):
+        """
+        Wait for at least dsize bytes with a hard timeout, then read exactly dsize.
+        Raises if a timeout or short-read occurs.
+        """
         self.logger.debug("Trying to read response: %d bytes", dsize)
-        while self._serial.inWaiting() < dsize:
+        dsize = int(dsize)
+
+        def _bytes_waiting():
+            try:
+                return self._serial.in_waiting
+            except AttributeError:
+                return self._serial.inWaiting()
+
+        start = time.time()
+        while True:
+            if _bytes_waiting() >= dsize:
+                break
+            if time.time() - start > timeout_s:
+                raise RPLidarException(f"Timeout waiting for {dsize} bytes; have {_bytes_waiting()}.")
             time.sleep(0.001)
+
         data = self._serial.read(dsize)
+        if len(data) != dsize:
+            raise RPLidarException(f"Short read: expected {dsize} bytes, got {len(data)}.")
         self.logger.debug("Received data: %s", _showhex(data))
         return data
 
     def get_info(self):
-        """Get device information
-
-        Returns
-        -------
-        dict
-            Dictionary with the sensor information
-        """
+        """Read device info block (model/firmware/hardware/serial)."""
         if self._serial.inWaiting() > 0:
             return "Buffer is full! Run clean_input() to empty the buffer."
         self._send_cmd(GET_INFO_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
-        if dsize != INFO_LEN:
-            raise RPLidarException("Wrong get_info reply length")
-        if not is_single:
-            raise RPLidarException("Not a single response mode")
-        if dtype != INFO_TYPE:
-            raise RPLidarException("Wrong response data type")
+        if dsize != INFO_LEN or not is_single or dtype != INFO_TYPE:
+            raise RPLidarException("Bad get_info response")
         raw = self._read_response(dsize)
         serialnumber = codecs.encode(raw[4:], "hex").upper()
         serialnumber = codecs.decode(serialnumber, "ascii")
-        data = {
+        return {
             "model": _b2i(raw[0]),
             "firmware": (_b2i(raw[2]), _b2i(raw[1])),
             "hardware": _b2i(raw[3]),
             "serial number": serialnumber,
         }
-        return data
 
     def get_health(self):
-        """Get device health state. When the core system detects some
-        potential risk that may cause hardware failure in the future,
-        the returned status value will be 'Warning'. But sensor can still work
-        as normal. When sensor is in the Protection Stop state, the returned
-        status value will be 'Error'. In case of warning or error statuses
-        non-zero error code will be returned.
-
-        Returns
-        -------
-        status : str
-            'Good', 'Warning' or 'Error' statuses
-        error_code : int
-            The related error code that caused a warning/error.
-        """
+        """Read device health; returns (status_str, error_code)."""
         if self._serial.inWaiting() > 0:
-            return "Data in buffer. " "Run clean_input() to empty the buffer."
+            return "Data in buffer. Run clean_input() to empty the buffer."
         self.logger.info("Asking for health")
         self._send_cmd(GET_HEALTH_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
-        if dsize != HEALTH_LEN:
-            raise RPLidarException("Wrong get_info reply length")
-        if not is_single:
-            raise RPLidarException("Not a single response mode")
-        if dtype != HEALTH_TYPE:
-            raise RPLidarException("Wrong response data type")
+        if dsize != HEALTH_LEN or not is_single or dtype != HEALTH_TYPE:
+            raise RPLidarException("Bad get_health response")
         raw = self._read_response(dsize)
         status = _HEALTH_STATUSES[_b2i(raw[0])]
         error_code = (_b2i(raw[1]) << 8) + _b2i(raw[2])
         return status, error_code
 
     def clean_input(self):
-        """Clean input buffer by reading all available data"""
-        if self.scanning[0]:
-            return "Cleaning not allowed during active scanning!"
-        self._serial.flushInput()
-        self.express_trame = 32
-        self.express_data = False
+        """Flush input/output buffers (safe even if stream is idle)."""
+        try:
+            self._serial.reset_input_buffer()
+            self._serial.reset_output_buffer()
+        except AttributeError:
+            self._serial.flushInput()
+            self._serial.flushOutput()
 
     def stop(self):
         """Stops scanning process, disables laser diode and the measurement
@@ -311,141 +306,111 @@ class RPDriver(object):
         self.clean_input()
 
     def start(self, scan_type="normal"):
-        """Start the scanning process
-
-        Parameters
-        ----------
-        scan : normal, force, or express.
+        """
+        Start a normal-mode scan:
+        - optional auto motor start (AUTO_START_MOTOR)
+        - health check and auto-reset on 'Error'
+        - STOP+flush+drain to guarantee a clean start
+        - descriptor re-sync with one automatic retry
         """
         if self.scanning[0]:
             return "Scan already running!"
-        """Start the scanning process, enable laser diode and the
-        measurement system"""
-        status, error_code = self.get_health()
-        self.logger.debug("Health status: %s [%d]", status, error_code)
-        if status == _HEALTH_STATUSES[2]:
-            self.logger.warning(
-                "Trying to reset sensor due to error. " "Error code: %d", error_code
-            )
-            self.reset()
+        
+        # (1) Ensure motor is spinning if requested (prevents 'no bytes' state)
+        if AUTO_START_MOTOR and not self.motor_running:
+            self.start_motor()
+            time.sleep(0.4)  # let RPM stabilize
+        
+
+        # (2) Check health and auto-reset on 'Error'
+        try:
             status, error_code = self.get_health()
-            if status == _HEALTH_STATUSES[2]:
-                raise RPLidarException(
-                    "RPLidar hardware failure. " "Error code: %d" % error_code
-                )
-        elif status == _HEALTH_STATUSES[1]:
-            self.logger.warning(
-                "Warning sensor status detected! " "Error code: %d", error_code
-            )
+            self.logger.debug("Health status: %s [%d]", status, error_code)
+            if status == _HEALTH_STATUSES[2]:  # "Error"
+                self.logger.warning("Resetting due to health error: %d", error_code)
+                self.reset()
+                status, error_code = self.get_health()
+                if status == _HEALTH_STATUSES[2]:
+                    raise RPLidarException(f"RPLidar hardware failure. Error: {error_code}")
+            elif status == _HEALTH_STATUSES[1]:  # "Warning"
+                self.logger.warning("Sensor reported WARNING. Error: %d", error_code)
+        except Exception as e:
+            # If health query itself failed (e.g., empty buffer), we still try to start
+            self.logger.warning("Health check failed (continuing anyway): %s", e)
 
-        cmd = _SCAN_TYPE[scan_type]["byte"]
-        print("Starting scan in %s mode" % scan_type)
-        self.logger.info("starting scan process in %s mode" % scan_type)
+        # Stop any old stream, flush, then drain a bit to guarantee silence
+        try:
+            self._send_cmd(STOP_BYTE)
+            time.sleep(0.02)
+        except Exception:
+            pass
+        self.clean_input()
+        self._drain_for(0.06)
 
-        if scan_type == "express":
-            self._send_payload_cmd(cmd, b"\x00\x00\x00\x00\x00")
-        else:
-            self._send_cmd(cmd)
+        # Start normal mode (we force normal for reliability)
+        print("Starting scan in normal mode")
+        self._send_cmd(_SCAN_TYPE["normal"]["byte"])
 
-        dsize, is_single, dtype = self._read_descriptor()
-        if dsize != _SCAN_TYPE[scan_type]["size"]:
-            raise RPLidarException("Wrong get_info reply length")
-        if is_single:
-            raise RPLidarException("Not a multiple response mode")
-        if dtype != _SCAN_TYPE[scan_type]["response"]:
-            raise RPLidarException("Wrong response data type")
-        self.scanning = [True, dsize, scan_type]
+        # Read descriptor; if it fails once, flush & try once more
+        try:
+            dsize, is_single, dtype = self._read_descriptor()
+        except Exception:
+            self.clean_input()
+            self._drain_for(0.06)
+            dsize, is_single, dtype = self._read_descriptor()
+
+        if dsize != _SCAN_TYPE["normal"]["size"] or is_single or dtype != _SCAN_TYPE["normal"]["response"]:
+            raise RPLidarException("Bad scan start response (normal)")
+
+        self.scanning = [True, dsize, "normal"]
+
 
     def reset(self):
-        """Resets sensor core, reverting it to a similar state as it has
-        just been powered up."""
+        """Reset the device core; wait, then flush inputs."""
         self.logger.info("Resetting the sensor")
         self._send_cmd(RESET_BYTE)
         time.sleep(2)
         self.clean_input()
 
     def iter_measures(self, scan_type="normal", max_buf_meas=3000):
-        """Iterate over measurements. Note that consumer must be fast enough,
-        otherwise data will accumulate inside buffer and consumer will get
-        data with increasing lag.
-
-        Parameters
-        ----------
-        max_buf_meas : int or False if you want unlimited buffer
-            Maximum number of bytes to be stored inside the buffer. Once
-            number exceeds this limit buffer will be emptied out.
-
-        Yields
-        ------
-        new_scan : bool
-            True if measurement belongs to a new scan
-        quality : int
-            Reflected laser pulse strength
-        angle : float
-            The measurement heading angle in degree units [0, 360)
-        distance : float
-            Measured object distance related to the sensor's rotation center.
-            In millimeters. Set to 0 when measure is invalid.
-        """
-        self.start_motor()
+        # Caller manages DTR/motor; just ensure stream is started.
         if not self.scanning[0]:
             self.start(scan_type)
+            time.sleep(0.2)
+
+        dsize = self.scanning[1]
+        misses = 0
         while True:
-            dsize = self.scanning[1]
-            # print(f"M: Dsize:{dsize}")
             if max_buf_meas:
-                data_in_buf = self._serial.inWaiting()
+                try:
+                    data_in_buf = self._serial.in_waiting
+                except AttributeError:
+                    data_in_buf = self._serial.inWaiting()
                 if data_in_buf > max_buf_meas:
                     self.logger.warning(
-                        "Too many bytes in the input buffer: %d/%d. "
-                        "Cleaning buffer...",
-                        data_in_buf,
-                        max_buf_meas,
+                        "Too many bytes in input buffer: %d/%d. Cleaning...",
+                        data_in_buf, max_buf_meas
                     )
                     self.stop()
-                    self.start(self.scanning[2])
+                    self.start("normal")
+                    time.sleep(0.1)
+                    dsize = self.scanning[1]
+                    misses = 0
+                    continue
 
-            if self.scanning[2] == "normal":
-                print("M: Normal scanning")
-                raw = self._read_response(dsize)
-                print(f"M: Raw:{raw}")
+            try:
+                raw = self._read_response(dsize, timeout_s=2.5)
+                misses = 0
                 yield _process_scan(raw)
-            if self.scanning[2] == "express":
-                # print("M: Express scanning")
-                if self.express_trame == 32:
-                    self.express_trame = 0
-                    # if not self.express_data or type(self.express_data) == bool:
-                    if not self.express_data:
-                        self.logger.debug("reading first time bytes")
-                        self.express_data = ExpressPacket.from_string(
-                            self._read_response(dsize)
-                        )
-
-                    self.express_old_data = self.express_data
-                    self.logger.debug(
-                        "set old_data with start_angle %f",
-                        self.express_old_data.start_angle,
-                    )
-                    self.express_data = ExpressPacket.from_string(
-                        self._read_response(dsize)
-                    )
-                    self.logger.debug(
-                        "set new_data with start_angle %f",
-                        self.express_data.start_angle,
-                    )
-
-                self.express_trame += 1
-                self.logger.debug(
-                    "process scan of frame %d with angle : " "%f and angle new : %f",
-                    self.express_trame,
-                    self.express_old_data.start_angle,
-                    self.express_data.start_angle,
-                )
-                yield _process_express_scan(
-                    self.express_old_data,
-                    self.express_data.start_angle,
-                    self.express_trame,
-                )
+            except RPLidarException as e:
+                # transient underflow / short read: skip a few before restart
+                if "Timeout waiting" in str(e) or "Short read" in str(e):
+                    misses += 1
+                    if misses <= 5:     # tolerate ~100–200ms of hiccups
+                        time.sleep(0.01)
+                        continue
+                # anything else or too many misses: bubble up
+                raise
 
     def iter_scans(self, scan_type="normal", max_buf_meas=3000, min_len=5):
         """Iterate over scans. Note that consumer must be fast enough,
@@ -468,51 +433,10 @@ class RPDriver(object):
             refer to `iter_measures` method's documentation.
         """
         scan_list = []
-        iterator = self.iter_measures(scan_type, max_buf_meas)
-        for new_scan, quality, angle, distance in iterator:
+        for new_scan, quality, angle, distance in self.iter_measures("normal", max_buf_meas):
             if new_scan:
                 if len(scan_list) > min_len:
                     yield scan_list
                 scan_list = []
             if distance > 0:
                 scan_list.append((quality, angle, distance))
-
-
-class ExpressPacket(
-    namedtuple("express_packet", "distance angle new_scan start_angle")
-):
-    sync1 = 0xA
-    sync2 = 0x5
-    sign = {0: 1, 1: -1}
-
-    @classmethod
-    def from_string(cls, data):
-        packet = bytearray(data)
-
-        if (packet[0] >> 4) != cls.sync1 or (packet[1] >> 4) != cls.sync2:
-            raise ValueError("try to parse corrupted data ({})".format(packet))
-
-        checksum = 0
-        for b in packet[2:]:
-            checksum ^= b
-        if checksum != (packet[0] & 0b00001111) + ((packet[1] & 0b00001111) << 4):
-            raise ValueError("Invalid checksum ({})".format(packet))
-
-        new_scan = packet[3] >> 7
-        start_angle = (packet[2] + ((packet[3] & 0b01111111) << 8)) / 64
-
-        d = a = ()
-        for i in range(0, 80, 5):
-            d += ((packet[i + 4] >> 2) + (packet[i + 5] << 6),)
-            a += (
-                ((packet[i + 8] & 0b00001111) + ((packet[i + 4] & 0b00000001) << 4))
-                / 8
-                * cls.sign[(packet[i + 4] & 0b00000010) >> 1],
-            )
-            d += ((packet[i + 6] >> 2) + (packet[i + 7] << 6),)
-            a += (
-                ((packet[i + 8] >> 4) + ((packet[i + 6] & 0b00000001) << 4))
-                / 8
-                * cls.sign[(packet[i + 6] & 0b00000010) >> 1],
-            )
-        return cls(d, a, new_scan, start_angle)

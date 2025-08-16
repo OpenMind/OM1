@@ -3,6 +3,7 @@ import math
 import sys
 import threading
 import time
+from queue import Queue, Empty
 
 import numpy as np
 import zenoh
@@ -12,431 +13,358 @@ from matplotlib.patches import Circle, Rectangle
 from rpdriver import RPDriver
 
 sys.path.insert(0, "../src")
-
 try:
     from zenoh_idl import sensor_msgs
 except ImportError:
     print("Please run this script from inside /system_hw_test")
 
+# ---------- CLI ----------
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--serial", help="serial port to use, when using the low level driver", type=str
-)
-parser.add_argument(
-    "--zenoh", help="use zenoh to connect to the robot", action="store_true"
-)
-parser.add_argument(
-    "--multicast", help="multicast address for zenoh", type=str, default=None
-)
-parser.add_argument(
-    "--URID", help="your robot's URID, when using Zenoh", type=str, default=""
-)
-parser.add_argument(
-    "--type", help="the type of the robot (go2 or tb4)", type=str, default="go2"
-)
-print(parser.format_help())
-
+parser.add_argument("--serial", type=str, help="serial port to use, when using the low level driver, e.g. /dev/cu.usbserial-0001")
+parser.add_argument("--zenoh", action="store_true", help="use zenoh to connect to the robot")
+parser.add_argument("--multicast", help="multicast address for zenoh", type=str, default=None)
+parser.add_argument("--URID", help="your robot's URID, when using Zenoh", type=str, default="")
+parser.add_argument("--type", type=str, default="go2", help="go2 or tb4")
+# IMPORTANT: only support normal for reliability
+parser.add_argument("--scan", choices=["normal"], default="normal",
+                    help="lidar scan mode (normal only)")
+parser.add_argument("--near-min", type=float, default=0.16, help="min blocking distance (m)")
+parser.add_argument("--near-max", type=float, default=1.1, help="max blocking distance (m)")
 args = parser.parse_args()
 
-
+# ---------- Candidate paths ----------
 def create_straight_line_path_from_angle(angle_degrees, length=1.0, num_points=10):
-    """Create a straight line path from origin at specified angle and length"""
     angle_rad = math.radians(angle_degrees)
-    end_x = length * math.sin(angle_rad)  # sin for x because 0° is forward (positive y)
-    end_y = length * math.cos(angle_rad)  # cos for y because 0° is forward (positive y)
-
+    end_x = length * math.sin(angle_rad)  # 0° forward (+y)
+    end_y = length * math.cos(angle_rad)
     x_vals = np.linspace(0.0, end_x, num_points)
     y_vals = np.linspace(0.0, end_y, num_points)
     return np.array([x_vals, y_vals])
 
-
 # Define 9 straight line paths separated by 15 degrees
 # Center path is 0° (straight forward), then ±15°, ±30°, ±45°, ±60°
-path_angles = [-60, -45, -30, -15, 0, 15, 30, 45, 60, 180]  # degrees
-path_length = 1.05  # meters
-
-paths = [
-    create_straight_line_path_from_angle(angle, path_length) for angle in path_angles
-]
-
+path_angles = [-60, -45, -30, -15, 0, 15, 30, 45, 60, 180]
+path_length = 1.05
+paths = [create_straight_line_path_from_angle(a, path_length) for a in path_angles]
 print(f"Created {len(paths)} paths with angles: {path_angles}")
 print(f"Each path extends {path_length}m from robot center")
 
-pp = []
-for path in paths:
-    pairs = list(zip(path[0], path[1]))
-    pp.append(pairs)
-
-print(paths)
-print(pp)
-
+# ---------- Figure ----------
 fig = plot.figure()
 ax1 = plot.subplot(131)
 ax2 = plot.subplot(132)
 ax3 = plot.subplot(133)
 
-center = ax1.plot([0], [0], "o", color="blue")[0]  # the robot
-circle = ax1.add_patch(Circle((0, 0), 0.20, color="red"))  # the robot
+# Panel 1: overview
+ax1.plot([0],[0],"o",color="blue")
+ax1.add_patch(Circle((0,0), 0.20, color="red"))
 points = ax1.plot([], [], "-", color="black")[0]
-front = ax1.annotate("Front", xytext=(0.1, 0.3), xy=(0, 0.5))
-arrow = ax1.annotate("", xytext=(0, 0), xy=(0, 1.5), arrowprops=dict(arrowstyle="->"))
-ax1.set_xlim(-5, 5)
-ax1.set_ylim(-5, 5)
-ax1.set_aspect("equal")
+ax1.annotate("Front", xytext=(0.1, 0.3), xy=(0, 0.5))
+ax1.annotate("", xytext=(0, 0), xy=(0, 1.5), arrowprops=dict(arrowstyle="->"))
+ax1.set_xlim(-5,5); ax1.set_ylim(-5,5); ax1.set_aspect("equal")
 
-"""
-Robot and sensor configuration
-UNITREE
-"""
+# Robot config
+half_width_robot = 0.20
+relevant_distance_min = args.near_min
+relevant_distance_max = args.near_max
+sensor_mounting_angle = 180.0 if args.type != "tb4" else 270.0
+angles_blanked = [] if args.type != "tb4" else [[-180.0, -160.0], [110.0, 180.0]]
 
-half_width_robot = 0.20  # the width of the robot is 40 cm
-relevant_distance_max = 1.1  # meters
-relevant_distance_min = 0.20  # meters
-sensor_mounting_angle = 172.0  # corrects for how sensor is mounted
-# angles_blanked = [[-180.0, -140.0], [140.0, 180.0]]
-angles_blanked = []
-
-# Figure 2 - the zoom and the possible paths
-centerZoom = ax2.plot([0], [0], "o", color="blue")[0]  # the robot
-
+# Panel 2: zoom
+ax2.plot([0],[0],"o", color="blue", markersize=8, zorder=10)
+ax2.add_patch(Circle((0,0), 0.20, ls="--", lw=1, ec="red", fc="none"))
 if args.type == "tb4":
-    sensor_mounting_angle = 270.0
-    angles_blanked = [[-180.0, -160.0], [110.0, 180.0]]
-    circleZoom = ax2.add_patch(
-        Circle((0, 0), 0.20, ls="--", lw=1, ec="red", fc="none")
-    )  # the robot head
-    outline = ax2.add_patch(
-        Rectangle((-0.05, -0.15), 0.20, 0.06, ls="--", fc="black")
-    )  # the robot electronics
+    ax2.add_patch(Rectangle((-0.05, -0.15), 0.20, 0.06, ls="--", fc="black"))
 else:
-    circleZoom = ax2.add_patch(
-        Circle((0, 0), 0.20, ls="--", lw=1, ec="red", fc="none")
-    )  # the robot head
-    outline = ax2.add_patch(
-        Rectangle((-0.2, -0.7), 0.40, 0.70, ls="--", lw=1, ec="red", fc="none")
-    )  # the robot body
+    ax2.add_patch(Rectangle((-0.2, -0.7), 0.40, 0.70, ls="--", lw=1, ec="red", fc="none"))
 pointsZoom = ax2.plot([], [], ".", color="black")[0]
-ax2.set_xlim(-1.2, 1.2)
-ax2.set_ylim(-1.2, 1.2)
-ax2.set_aspect("equal")
+m = args.near_max + 0.2
+ax2.set_xlim(-m, m); ax2.set_ylim(-m, m); ax2.set_aspect("equal")
 
-lines = []
-for li in list(range(0, len(paths))):
-    lines.append(ax2.plot([0], [0], "-", color="black")[0])
+# Precreate path artists
+lines = [ax2.plot([0],[0], "-", color="black")[0] for _ in paths]
 
+# Panel 3: angle-distance strip
 line = ax3.plot([0], [0], "-", color="red")[0]
-ax3.set_xlim(-180, 180)
-ax3.set_ylim(0, 1.2)
-ax3.set_aspect(300)
+ax3.set_xlim(-180, 180); ax3.set_ylim(0, 1.2); ax3.set_aspect(300)
+ax3.plot([-180.0, -48.0], [1.18, 1.18], "-", color="red",   linewidth=3.0)
+ax3.plot([ -42.0,  42.0], [1.18, 1.18], "-", color="black", linewidth=3.0)
+ax3.plot([  48.0, 180.0], [1.18, 1.18], "-", color="green", linewidth=3.0)
+ax3.annotate("Left",  xytext=(-125, 1.1), xy=(0, 0.5))
+ax3.annotate("Front", xytext=( -20, 1.1), xy=(0, 0.5))
+ax3.annotate("Right", xytext=(  85, 1.1), xy=(0, 0.5))
 
-ax3.plot([-180.0, -48.0], [1.18, 1.18], "-", color="red", linewidth=3.0)[0]
-ax3.plot([-42.0, 42.0], [1.18, 1.18], "-", color="black", linewidth=3.0)[0]
-ax3.plot([48.0, 180.0], [1.18, 1.18], "-", color="green", linewidth=3.0)[0]
-ax3.annotate("Left", xytext=(-125, 1.1), xy=(0, 0.5))
-ax3.annotate("Front", xytext=(-20, 1.1), xy=(0, 0.5))
-ax3.annotate("Right", xytext=(85, 1.1), xy=(0, 0.5))
-
-# display the blanked regions of the scan
+# --- Visualize blanked sectors (if any) on ax2 & ax3 ---
 for b in angles_blanked:
     deg_to_rad = np.pi / 180.0
-
     start_angle = b[0] * deg_to_rad
-    end_angle = b[1] * deg_to_rad
-
+    end_angle   = b[1] * deg_to_rad
     theta = np.linspace(start_angle, end_angle, 50)
     r = relevant_distance_max
 
     x = r * np.sin(theta)
     y = r * np.cos(theta)
 
-    # the arc
+    # arc on the zoom panel
     ax2.plot(x, y, "--", color="grey", linewidth=1.5)
-
-    # the straight lines
-    ax2.plot([0, x[0]], [0, y[0]], "--", color="grey", linewidth=1)
+    # two radial edges
+    ax2.plot([0, x[0]],  [0, y[0]],  "--", color="grey", linewidth=1)
     ax2.plot([0, x[-1]], [0, y[-1]], "--", color="grey", linewidth=1)
 
-    # for panel 3 - this is in the correct units
+    # strip on angle-distance panel
     width = abs(b[1] - b[0])
     ax3.add_patch(Rectangle((b[0], 0.2), width, 1.0, fc="grey"))
 
+# ---------- Queue pipeline ----------
+scan_queue: Queue[np.ndarray] = Queue(maxsize=1)
+def enqueue_latest(data: np.ndarray):
+    try:
+        while True:
+            scan_queue.get_nowait()
+    except Empty:
+        pass
+    try:
+        scan_queue.put_nowait(data)
+    except Exception:
+        pass
+def ensure_streaming(lidar, wait_s=2.0):
+    """Wait for data; if none, flip DTR once (handles inverted boards)."""
+    ser = lidar._serial
+    def have_bytes():
+        try: return ser.in_waiting
+        except AttributeError: return ser.inWaiting()
 
-def continuous_serial(lidar):
+    # wait a moment for first packets
+    t0 = time.time()
+    while time.time() - t0 < wait_s:
+        if have_bytes() >= 5:
+            return True
+        time.sleep(0.01)
 
-    for i, scan in enumerate(
-        lidar.iter_scans(scan_type="express", max_buf_meas=3000, min_len=5)
-    ):
+    # try flipping DTR polarity once
+    try:
+        current = ser.dtr
+        ser.setDTR(not current)
+        print(f"[serial] flipped DTR -> {ser.dtr}")
+        time.sleep(1.0)
+        t0 = time.time()
+        while time.time() - t0 < wait_s:
+            if have_bytes() >= 5:
+                return True
+            time.sleep(0.01)
+    except Exception:
+        pass
+    return False
 
-        array = np.array(scan)
 
-        # the driver sends angles in degrees between from 0 to 360
-        # warning - the driver may send two or more readings per angle,
-        # this can be confusing for the code
-        angles = array[:, 1]
+def log_lidar_banner(lidar: RPDriver):
+    """Best-effort: print model/firmware/health once for diagnostics."""
+    try:
+        print("Info:", lidar.get_info())
+    except Exception as e:
+        print("Info read failed:", e)
+    try:
+        print("Health:", lidar.get_health())
+    except Exception as e:
+        print("Health read failed:", e)
 
-        # distances are in millimeters
-        distances_mm = array[:, 2]
-        distances_m = [i / 1000 for i in distances_mm]
+# ---------- Producers ----------
+def continuous_serial_robust(port: str):
+    """Robust reader: always use NORMAL mode; restart on error."""
+    lidar = None
+    while True:
+        try:
+            if lidar is None:
+                print("[serial] opening", port)
+                lidar = RPDriver(port)
+                # log_lidar_banner(lidar) ###### For DEBUG 
 
-        data = list(zip(angles, distances_m))
-        array_ready = np.array(data)
-        # print(f"Array {array_ready}")
-        process(array_ready)
+            # Hard reset to known-good state
+            try: lidar.stop()
+            except Exception: pass
+            try: lidar.stop_motor()
+            except Exception: pass
+            try: lidar.clean_input()
+            except Exception: pass
+
+            # Spin up & start NORMAL stream
+            lidar.start("normal")
+            time.sleep(0.3)  # settle
+
+            # Verify bytes are arriving; auto-flip DTR once if needed
+            if not ensure_streaming(lidar, wait_s=2.0):
+                raise RuntimeError("No scan bytes after start (even after DTR flip)")
+
+            print("[serial] streaming (normal)...")
+            fps_counter, t0 = 0, time.monotonic()
+
+            # NOTE: iter_scans yields "scan" lists directly in this driver
+            for scan in lidar.iter_scans(scan_type="normal", max_buf_meas=3000, min_len=5):
+                arr = np.array(scan)  # (quality, angle_deg, distance_mm)
+                if arr.size == 0:
+                    continue
+                angles_deg = arr[:, 1]
+                distances_m = arr[:, 2] / 1000.0
+                enqueue_latest(np.column_stack((angles_deg, distances_m)))
+
+                fps_counter += 1
+                now = time.monotonic()
+                if now - t0 >= 1.0:
+                    print(f"[serial] fps={fps_counter}")
+                    fps_counter = 0
+                    t0 = now
+
+        except Exception as e:
+            print(f"[serial] error: {e}  (restarting in 1s)")
+            try:
+                if lidar: lidar.stop()
+            except Exception: pass
+            try:
+                if lidar: lidar.reset()
+            except Exception: pass
+            try:
+                if lidar: lidar.stop_motor()
+            except Exception: pass
+
+            # hard reopen after descriptor-like errors
+            if "Bad scan start response" in str(e) or "Descriptor" in str(e):
+                try:
+                    if lidar: lidar.disconnect()
+                except Exception: pass
+                try:
+                    if lidar: lidar.connect()
+                except Exception: pass
+
+            time.sleep(1.0)  # keep this
+
 
 
 def zenoh_scan(sample):
-
     scan = sensor_msgs.LaserScan.deserialize(sample.payload.to_bytes())
-    # print(f"Scan {scan}")
+    angles = 360.0 * (np.arange(scan.angle_min, scan.angle_max, scan.angle_increment) + math.pi) / (2*math.pi)
+    angles = np.flip(angles)
+    enqueue_latest(np.column_stack((angles, np.array(scan.ranges))))
 
-    # angle_min=-3.1241390705108643, angle_max=3.1415927410125732
-    angles = list(
-        map(
-            lambda x: 360.0 * (x + math.pi) / (2 * math.pi),
-            np.arange(scan.angle_min, scan.angle_max, scan.angle_increment),
-        )
-    )
-
-    angles_final = np.flip(angles)
-    # angles now run from 360.0 to 0 degress
-    data = list(zip(angles_final, scan.ranges))
-    array_ready = np.array(data)
-    # print(f"Array {array_ready}")
-    process(array_ready)
-
-
+# ---------- Geometry ----------
 def distance_point_to_line_segment(px, py, x1, y1, x2, y2):
-    # Vector from line start to line end
-    dx = x2 - x1
-    dy = y2 - y1
-
-    # If the line segment has zero length, return distance to point
+    dx, dy = x2 - x1, y2 - y1
     if dx == 0 and dy == 0:
-        return math.sqrt((px - x1) ** 2 + (py - y1) ** 2)
+        return math.hypot(px - x1, py - y1)
+    t = ((px - x1)*dx + (py - y1)*dy) / (dx*dx + dy*dy)
+    t = max(0.0, min(1.0, t))
+    cx, cy = x1 + t*dx, y1 + t*dy
+    return math.hypot(px - cx, py - cy)
 
-    # Calculate the parameter t that represents the projection of the point onto the line
-    t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
-
-    # Clamp t to [0, 1] to stay within the line segment
-    t = max(0, min(1, t))
-
-    # Find the closest point on the line segment
-    closest_x = x1 + t * dx
-    closest_y = y1 + t * dy
-
-    # Return the distance from the point to the closest point on the line segment
-    return math.sqrt((px - closest_x) ** 2 + (py - closest_y) ** 2)
-
-
-def process(data):
+# ---------- Processing (GUI thread) ----------
+def process(data: np.ndarray):
 
     complexes = []
-
     for angle, distance in data:
-
-        d_m = distance
-
+        d_m = float(distance)
         # don't worry about distant objects
         if d_m > 5.0:
             continue
 
         # first, correctly orient the sensor zero to the robot zero
         angle = angle + sensor_mounting_angle
-        if angle >= 360.0:
-            angle = angle - 360.0
-        elif angle < 0.0:
-            angle = 360.0 + angle
+        if angle >= 360.0: angle -= 360.0
+        elif angle < 0.0:  angle += 360.0
 
         # then, convert to radians
-        a_rad = angle * math.pi / 180.0
-
-        v1 = d_m * math.cos(a_rad)
-        v2 = d_m * math.sin(a_rad)
-
+        a_rad = math.radians(angle)
+        v1 = d_m * math.cos(a_rad); v2 = d_m * math.sin(a_rad)
         # convert to x and y
         # x runs backwards to forwards, y runs left to right
-        x = -1 * v2
-        y = -1 * v1
+        x = -v2; y = -v1
 
         # convert the angle to -180 to + 180 range
-        angle = angle - 180.0
+        angle = angle - 180.0  # convert to [-180, 180]
 
-        keep = True
+        # this is too close, disregard
+        keep = d_m >= relevant_distance_min
         for b in angles_blanked:
-            if angle >= b[0] and angle <= b[1]:
+            if b[0] <= angle <= b[1]:
                 # this is a permanent reflection based on the robot
                 # disregard
                 keep = False
                 break
-
-        if d_m < relevant_distance_min:
-            # this is too close, disregard
-            keep = False
-
+        
         # the final data ready to use for path planning
         if keep:
             complexes.append([x, y, angle, d_m])
 
-    array = np.array(complexes)
+    if not complexes:
+        points.set_data([], []); pointsZoom.set_data([], []); line.set_data([], [])
+        for idx, p in enumerate(paths):
+            lines[idx].set_data(p[0], p[1]); lines[idx].set_color("black")
+        return
+
 
     # sort data into strictly increasing angles to deal with sensor issues
     # the sensor sometimes reports part of the previous scan and part of the next scan
     # so you end up with multiple slightly different values for some angles at the
     # junction
-    sorted_indices = array[:, 2].argsort()
-    array = array[sorted_indices]
+    array = np.array(complexes)
+    array = array[array[:,2].argsort()]  # sort by angle
+    X, Y, A, D = array[:,0], array[:,1], array[:,2], array[:,3]
 
-    X = array[:, 0]
-    Y = array[:, 1]
-    A = array[:, 2]
-    D = array[:, 3]
-
-    global points
     points.set_data(X, Y)
-
-    global pointsZoom
     pointsZoom.set_data(X, Y)
-
-    global line
     line.set_data(A, D)
 
     """
     Determine set of possible paths
     """
-    possible_paths = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    bad_paths = []
+    possible_paths = np.array(range(len(paths)))
+    for x, y, d in zip(X, Y, D):
+        if d > relevant_distance_max or d < relevant_distance_min:
+            continue
+        for apath in possible_paths.copy():
+            ps = paths[apath]
+            if distance_point_to_line_segment(
+                x, y,
+                ps[0][0], ps[1][0],
+                ps[0][-1], ps[1][-1]
+            ) < half_width_robot:
+                possible_paths = np.setdiff1d(possible_paths, np.array([apath]))
+                break
 
-    # all the possible conflicting points
-    for x, y, d in list(zip(X, Y, D)):
-        for apath in possible_paths:
+    for idx, p in enumerate(paths):
+        lines[idx].set_data(p[0], p[1])
+        lines[idx].set_color("green" if idx in possible_paths else "red")
 
-            # too far away - we do not care
-            if d > relevant_distance_max:
-                continue
-
-            # also don't worry about things that are very close
-            if d < relevant_distance_min:
-                continue
-
-            # Get the start and end points of this straight line path
-            path_points = paths[apath]
-            start_x, start_y = (
-                path_points[0][0],
-                path_points[1][0],
-            )
-            end_x, end_y = path_points[0][-1], path_points[1][-1]
-
-            # Calculate distance from obstacle to the line segment
-            dist_to_line = distance_point_to_line_segment(
-                x, y, start_x, start_y, end_x, end_y
-            )
-
-            if dist_to_line < half_width_robot:
-                # too close - this path will not work
-                path_to_remove = np.array([apath])
-                bad_paths.append(apath)
-                possible_paths = np.setdiff1d(possible_paths, path_to_remove)
-                break  # no need to keep checking this path - we know this path is bad
+    ppl = possible_paths.tolist()
+    left    = [p for p in ppl if path_angles[p] in (-60,-45,-30)]
+    forward = [p for p in ppl if path_angles[p] in (-15,0,15)]
+    right   = [p for p in ppl if path_angles[p] in (30,45,60)]
+    back    = [p for p in ppl if path_angles[p] == 180]
 
     print(f"possible_paths: {possible_paths}")
-
-    # convert to simple list
-    ppl = possible_paths.tolist()
-
-    left = []
-    forward = []
-    right = []
-    backward = []
-
-    for p in ppl:
-        # Categorize paths based on angle
-        angle = path_angles[p]
-        if angle == -60:
-            left.append(p)
-        elif angle == -45:
-            left.append(p)
-        elif angle == -30:
-            left.append(p)
-        elif angle == -15:
-            forward.append(p)
-        elif angle == 0:
-            forward.append(p)
-        elif angle == 15:
-            forward.append(p)
-        elif angle == 30:
-            right.append(p)
-        elif angle == 45:
-            right.append(p)
-        elif angle == 60:
-            right.append(p)
-        elif angle == 180:
-            backward.append(p)
-
-        lines[p].set_data(paths[p][0], paths[p][1])
-        lines[p].set_color("green")
-
-    if len(ppl) > 0:
-        print(f"There are {len(ppl)} possible paths.")
-        if len(left) > 0:
-            print(
-                f"You can turn left using paths: {left} ({[path_angles[p] for p in left]}°)."
-            )
-        if len(forward) > 0:
-            print(
-                f"You can go forward using paths: {forward} ({[path_angles[p] for p in forward]}°)."
-            )
-        if len(right) > 0:
-            print(
-                f"You can turn right using paths: {right} ({[path_angles[p] for p in right]}°)."
-            )
-        if len(backward) > 0:
-            print(
-                f"You can go backward using paths: {backward} ({[path_angles[p] for p in backward]}°)."
-            )
+    if ppl:
+        if left:    print(f"You can turn left using paths: {left} ({[path_angles[p] for p in left]}°).")
+        if forward: print(f"You can go forward using paths: {forward} ({[path_angles[p] for p in forward]}°).")
+        if right:   print(f"You can turn right using paths: {right} ({[path_angles[p] for p in right]}°).")
+        if back:    print(f"You can go backward using paths: {back} ({[path_angles[p] for p in back]}°).")
     else:
-        print(
-            "You are surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
-        )
-
-    for p in bad_paths:
-        # these are all the bad paths
-        lines[p].set_data(paths[p][0], paths[p][1])
-        lines[p].set_color("red")
+        print("You are surrounded by objects and cannot safely move.")
 
 
+def animate(_):
+    try:
+        data = scan_queue.get_nowait()
+    except Empty:
+        return []
+    process(data)
+    return [points, pointsZoom, line, *lines]
+
+# ---------- Main ----------
 if __name__ == "__main__":
-
     if args.serial:
-        PORT_NAME = args.serial
-        print(f"Using {PORT_NAME} as the serial port")
-        try:
-            lidar = RPDriver(PORT_NAME)
-            info = lidar.get_info()
-            print(f"Info: {info}")
-
-            health = lidar.get_health()
-            print(f"Health: {health}")
-
-            # reset to clear buffers
-            lidar.reset()
-
-            subscribe_thread = threading.Thread(target=continuous_serial, args=(lidar,))
-            subscribe_thread.daemon = True
-            subscribe_thread.start()
-
-            ani = FuncAnimation(fig, lambda _: None)
-            plot.show()
-
-        except KeyboardInterrupt:
-            print("Program interrupted")
-
-        finally:
-            print("Exiting program")
-            lidar.stop()
-            lidar.disconnect()
-            time.sleep(0.5)
-            sys.exit(0)
-
+        print(f"Using {args.serial} as the serial port")
+        t = threading.Thread(target=continuous_serial_robust, args=(args.serial,), daemon=True)
+        t.start()
+        ani = FuncAnimation(fig, animate, interval=50, blit=False, cache_frame_data=False)
+        plot.show()
         sys.exit(0)
 
     if args.zenoh:
@@ -444,27 +372,19 @@ if __name__ == "__main__":
         print("[INFO] Opening zenoh session...")
         conf = zenoh.Config()
         if args.multicast:
-            conf.insert_json5(
-                "scouting", f'{{"multicast": {{"address": "{args.multicast}"}}}}'
-            )
-
+            conf.insert_json5("scouting", f'{{"multicast": {{"address": "{args.multicast}"}}}}')
         z = zenoh.open(conf)
-
         if args.type == "go2":
             print("[INFO] Creating Subscribers for Go2")
-            scans = z.declare_subscriber("scan", zenoh_scan)
-
-        if args.type == "tb4":
+            z.declare_subscriber("scan", zenoh_scan)
+        elif args.type == "tb4":
             print("[INFO] Creating Subscribers for TB4")
-            scans = z.declare_subscriber(f"{args.URID}/pi/scan", zenoh_scan)
-
-        if args.type != "go2" and args.type != "tb4":
+            z.declare_subscriber(f"{args.URID}/pi/scan", zenoh_scan)
+        else:
             print(f"[ERROR] Unsupported robot type: {args.type}")
             sys.exit(1)
-
-        ani = FuncAnimation(fig, lambda _: None)
+        ani = FuncAnimation(fig, animate, interval=50, blit=False, cache_frame_data=False)
         plot.show()
-
         sys.exit(0)
 
     raise ValueError("You must specify either --serial or --zenoh to run this script.")
