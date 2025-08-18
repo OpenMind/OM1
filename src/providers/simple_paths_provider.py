@@ -1,10 +1,80 @@
 import logging
 import zenoh
+import time
+import threading
+import multiprocessing as mp
+from queue import Empty, Full
 from typing import Dict, List, Optional
+
+from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 
 from zenoh_idl import sensor_msgs
 
 from .singleton import singleton
+
+def simple_paths_processor(
+    data_queue: mp.Queue,
+    control_queue: mp.Queue,
+    logging_config: Optional[LoggingConfig] = None,
+):
+    """
+    Process paths data from the Zenoh session.
+
+    Parameters
+    ----------
+    data_queue : mp.Queue
+        Queue for receiving paths data.
+    control_queue : mp.Queue
+        Queue for sending control commands.
+    """
+    setup_logging("rplidar_processor", logging_config=logging_config)
+
+    def paths_callback(msg: zenoh.Sample):
+        """
+        Callback for receiving paths messages.
+
+        Parameters:
+        -----------
+        msg: zenoh.Sample
+            The message containing paths data.
+        """
+        paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
+        msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
+        current_time = time.time()
+        latency = current_time - msg_time
+        logging.info(f"Received paths with latency: {latency:.6f} seconds")
+        logging.info(f"Received paths: {paths.paths}")
+
+        try:
+            data_queue.put_nowait(paths)
+        except Full:
+            try:
+                data_queue.get_nowait()
+                data_queue.put_nowait(paths)
+            except Empty:
+                pass
+
+    running = True
+
+    try:
+        session = zenoh.open(zenoh.Config())
+        session.declare_subscriber(
+            "om/paths", paths_callback
+        )
+        logging.info("Zenoh is open for SimplePathProvider")
+    except Exception as e:
+        logging.error(f"Failed to open Zenoh session: {e}")
+
+    while running:
+        try:
+            cmd = control_queue.get_nowait()
+            if cmd == "STOP":
+                running = False
+                break
+        except Empty:
+            pass
+
+        time.sleep(0.1)
 
 @singleton
 class SimplePathsProvider:
@@ -27,60 +97,75 @@ class SimplePathsProvider:
         # Path angles for movement options
         self.path_angles = [-60, -45, -30, -15, 0, 15, 30, 45, 60, 180]
 
-        try:
-            self.session = zenoh.open(zenoh.Config())
-            self.session.declare_subscriber(
-                "om/paths", self.paths_callback
-            )
-            logging.info("Zenoh is open for SimplePathProvider")
-        except Exception as e:
-            logging.error(f"Failed to open Zenoh session: {e}")
+        # Data Queues for multiprocessing
+        self.data_queue = mp.Queue(maxsize=5)
+        self.control_queue = mp.Queue()
+
+        self._simple_paths_processor_thread = None
+        self._simple_paths_derived_thread = None
 
     def start(self):
         """
         Start the SimplePathsProvider by opening a Zenoh session.
         """
-        pass
+        if not self._simple_paths_processor_thread or not self._simple_paths_processor_thread.is_alive():
+            self._simple_paths_processor_thread = mp.Process(
+                target=simple_paths_processor,
+                args=(self.data_queue, self.control_queue, get_logging_config()),
+            )
+            self._simple_paths_processor_thread.start()
+            logging.info("SimplePathsProvider started.")
+
+        if not self._simple_paths_derived_thread or not self._simple_paths_derived_thread.is_alive():
+            self._simple_paths_derived_thread = threading.Thread(
+                target=self._simple_paths_derived_processor,
+                daemon=True,
+            )
+            self._simple_paths_derived_thread.start()
+            logging.info("SimplePathsProvider derived processor started.")
 
     def stop(self):
         """
         Stop the SimplePathsProvider by closing the Zenoh session.
         """
-        if self.session:
-            self.session.close()
-            logging.info("Zenoh session closed.")
-        else:
-            logging.warning("No Zenoh session to close.")
+        if self._simple_paths_processor_thread:
+            self.control_queue.put("STOP")
+            self._simple_paths_processor_thread.join()
+            logging.info("SimplePathsProvider stopped.")
 
-    def paths_callback(self, msg: zenoh.Sample):
+        if self._simple_paths_derived_thread:
+            self._simple_paths_derived_thread.join()
+            logging.info("SimplePathsProvider derived processor stopped.")
+
+    def _simple_paths_derived_processor(self):
         """
-        Callback for receiving paths messages.
-
-        Parameters:
-        -----------
-        msg: zenoh.Sample
-            The message containing paths data.
+        Process paths data from the data queue and generate movement options.
         """
-        self.paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
-        logging.info(f"Received paths: {self.paths.paths}")
+        while True:
+            try:
+                paths = self.data_queue.get_nowait()
 
-        self.turn_left = []
-        self.turn_right = []
-        self.advance = []
-        self.retreat = False
+                self.turn_left = []
+                self.turn_right = []
+                self.advance = []
+                self.retreat = False
 
-        for path in self.paths.paths:
-            if path < 3:
-                self.turn_left.append(path)
-            elif path >= 3 and path <= 5:
-                self.advance.append(path)
-            elif path < 9:
-                self.turn_right.append(path)
-            elif path == 9:
-                self.retreat = True
+                for path in paths.paths:
+                    if path < 3:
+                        self.turn_left.append(path)
+                    elif path >= 3 and path <= 5:
+                        self.advance.append(path)
+                    elif path < 9:
+                        self.turn_right.append(path)
+                    elif path == 9:
+                        self.retreat = True
 
-        self._valid_paths = self.paths.paths.copy()
-        self._lidar_string = self._generate_movement_string(self.paths.paths)
+                self._valid_paths = paths
+                self._lidar_string = self._generate_movement_string(paths)
+
+            except Empty:
+                time.sleep(0.1)
+                continue
 
     def _generate_movement_string(self, valid_paths: list) -> str:
         """
