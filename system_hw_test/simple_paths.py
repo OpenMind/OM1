@@ -10,7 +10,7 @@ from zenoh_idl import sensor_msgs
 
 logging.basicConfig(level=logging.INFO)
 
-class Paths:
+class SimplePaths:
     def __init__(self):
         self.session = zenoh.open(zenoh.Config())
 
@@ -33,7 +33,7 @@ class Paths:
 
 
 def main():
-    paths_detector = Paths()
+    paths_detector = SimplePaths()
     try:
         while True:
             time.sleep(1)

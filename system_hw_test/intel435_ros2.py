@@ -17,7 +17,7 @@ class Intel435ObstacleDector(Node):
         self.cx = None
         self.cy = None
 
-        self.obstacle_threshold = 0.05  # 5cm above ground
+        self.obstacle_threshold = 0.10  # 10cm above ground
         self.obstacle = []
 
         self.depth_subscription = self.create_subscription(
@@ -111,7 +111,7 @@ class Intel435ObstacleDector(Node):
             for row in range(0, depth_image.shape[0], 10):
                 for col in range(0, depth_image.shape[1], 10):
                     depth_value = depth_image[row, col]
-                    if depth_value > 0:
+                    if depth_value > 0 and depth_value < 5000:
                         world_x, world_y, world_z = self.image_to_world(
                             col, row, depth_value, camera_height=0.45, tilt_angle=55
                         )
