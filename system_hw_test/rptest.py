@@ -290,7 +290,7 @@ def process(data):
         if keep:
             complexes.append([x, y, angle, d_m])
 
-    if len(intel435ObstacleDector.obstacle) > 50:
+    if len(intel435ObstacleDector.obstacle) > 100:
         for obstacle in intel435ObstacleDector.obstacle:
             angle, distance = calculate_angle_and_distance(obstacle["x"], obstacle["y"])
             complexes.append(

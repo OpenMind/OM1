@@ -209,3 +209,9 @@ class DockStatus(IdlStruct, typename="DockStatus"):
     header: Header
     docker_visible: bool
     is_docked: bool
+
+
+@dataclass
+class Paths(IdlStruct, typename="Paths"):
+    header: Header
+    paths: List[uint32]

@@ -45,8 +45,8 @@ class Intel435ObstacleDector(Node):
             plt.ylabel("Y (left) [m]")
             plt.title(f"Obstacles Top View ({len(self.obstacle)} points)")
             plt.grid(True, alpha=0.3)
-            plt.xlim(-0.1, 0.5)
-            plt.ylim(-0.1, 0.5)
+            plt.xlim(-0.5, 0.5)
+            plt.ylim(-0.5, 0.5)
             plt.pause(0.001)
             plt.show(block=False)
 
