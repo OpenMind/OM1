@@ -1,0 +1,26 @@
+# Git & VCS
+.git
+.gitignore
+.gitattributes
+# Python cache & build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg
+*.egg-info
+dist/
+build/
+# Virtual environments
+.venv/
+.env
+*.env
+# OS files
+.DS_Store
+Thumbs.db
+# Logs
+*.log
+# Tests (exclude if not needed in container)
+tests/
+test/
+.venv
