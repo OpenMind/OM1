@@ -1,16 +1,17 @@
 import logging
-import zenoh
-import time
-import threading
 import multiprocessing as mp
+import threading
+import time
 from queue import Empty, Full
 from typing import Dict, List, Optional
 
-from runtime.logging import LoggingConfig, get_logging_config, setup_logging
+import zenoh
 
+from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 from zenoh_idl import sensor_msgs
 
 from .singleton import singleton
+
 
 def simple_paths_processor(
     data_queue: mp.Queue,
@@ -58,9 +59,7 @@ def simple_paths_processor(
 
     try:
         session = zenoh.open(zenoh.Config())
-        session.declare_subscriber(
-            "om/paths", paths_callback
-        )
+        session.declare_subscriber("om/paths", paths_callback)
         logging.info("Zenoh is open for SimplePathProvider")
     except Exception as e:
         logging.error(f"Failed to open Zenoh session: {e}")
@@ -75,6 +74,7 @@ def simple_paths_processor(
             pass
 
         time.sleep(0.1)
+
 
 @singleton
 class SimplePathsProvider:
@@ -108,7 +108,10 @@ class SimplePathsProvider:
         """
         Start the SimplePathsProvider by opening a Zenoh session.
         """
-        if not self._simple_paths_processor_thread or not self._simple_paths_processor_thread.is_alive():
+        if (
+            not self._simple_paths_processor_thread
+            or not self._simple_paths_processor_thread.is_alive()
+        ):
             self._simple_paths_processor_thread = mp.Process(
                 target=simple_paths_processor,
                 args=(self.data_queue, self.control_queue, get_logging_config()),
@@ -116,7 +119,10 @@ class SimplePathsProvider:
             self._simple_paths_processor_thread.start()
             logging.info("SimplePathsProvider started.")
 
-        if not self._simple_paths_derived_thread or not self._simple_paths_derived_thread.is_alive():
+        if (
+            not self._simple_paths_derived_thread
+            or not self._simple_paths_derived_thread.is_alive()
+        ):
             self._simple_paths_derived_thread = threading.Thread(
                 target=self._simple_paths_derived_processor,
                 daemon=True,
@@ -198,7 +204,6 @@ class SimplePathsProvider:
 
         parts.append("'stand still'}. ")
         return "".join(parts)
-
 
     @property
     def valid_paths(self) -> Optional[List]:

@@ -1,8 +1,9 @@
 import logging
 
-from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.arm_g1.interface import ArmInput
+from actions.base import ActionConfig, ActionConnector
 from unitree.unitree_sdk2py.g1.arm.g1_arm_action_client import G1ArmActionClient
+
 
 class ARMUnitreeSDKConnector(ActionConnector[ArmInput]):
 
@@ -16,7 +17,6 @@ class ARMUnitreeSDKConnector(ActionConnector[ArmInput]):
             logging.info("G1 Arm Action Client initialized successfully.")
         except Exception as e:
             logging.error(f"Failed to initialize G1 Arm Action Client: {e}")
-
 
     async def connect(self, output_interface: ArmInput) -> None:
         """

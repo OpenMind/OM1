@@ -14,6 +14,7 @@ class ArmAction(str, Enum):
     HEART = "heart"
     HIGH_WAVE = "high wave"
 
+
 @dataclass
 class ArmInput:
     action: ArmAction
