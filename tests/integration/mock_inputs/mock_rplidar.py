@@ -109,6 +109,7 @@ class MockRPLidar(RPLidar):
         def mock_stop():
             """Mock stop method for graceful cleanup."""
             provider.running = False
+            provider.d435_provider.stop()
             logging.info("MockRPLidar: RPLidarProvider stop() called (no-op for mock)")
 
         provider.stop = mock_stop

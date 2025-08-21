@@ -87,3 +87,15 @@ class D435Provider:
             return
 
         self.running = True
+
+    def stop(self):
+        """
+        Stop the D435 provider.
+        """
+        if not self.running:
+            logging.info("D435Provider is not running")
+            return
+
+        self.running = False
+        self.session.close()
+        logging.info("D435Provider stopped and Zenoh session closed")
