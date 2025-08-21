@@ -369,7 +369,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
         self.pending_movements.put(
             MoveCommand(
-                dx=-0.5,
+                dx=-0.2,
                 yaw=0.0,
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
