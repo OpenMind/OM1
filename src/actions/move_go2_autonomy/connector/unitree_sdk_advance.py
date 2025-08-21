@@ -12,6 +12,7 @@ from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
+
 class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
     def __init__(self, config: ActionConfig):

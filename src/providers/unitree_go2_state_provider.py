@@ -1,17 +1,16 @@
 import logging
-import zenoh
-import time
-import threading
 import multiprocessing as mp
+import threading
+import time
 from queue import Empty, Full
-from typing import Dict, List, Optional
+from typing import Optional
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 
 try:
     from unitree.unitree_sdk2py.core.channel import (
         ChannelFactoryInitialize,
-        ChannelSubscriber
+        ChannelSubscriber,
     )
     from unitree.unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_
 except ImportError:
@@ -48,6 +47,7 @@ state_machine_codes = {
     2017: "Upright",
     2019: "Towing",
 }
+
 
 def go2_state_processor(
     channel: str,
@@ -104,7 +104,7 @@ def go2_state_processor(
             "go2_sport_mode_state_msg": go2_sport_mode_state_msg,
             "go2_state_code": go2_state_code,
             "go2_state": go2_state,
-            "go2_action_progress": go2_action_progress
+            "go2_action_progress": go2_action_progress,
         }
 
         try:
@@ -146,6 +146,7 @@ def go2_state_processor(
     logging.info("Unitree Go2 state processor stopped.")
     subscriber.Close()
 
+
 @singleton
 class UnitreeGo2StateProvider:
     """
@@ -174,20 +175,30 @@ class UnitreeGo2StateProvider:
         self.go2_state_code = None
         self.go2_action_progress = 0
 
-
     def start(self):
         """
         Start the Unitree Go2 state provider.
         """
-        if not self._go2_state_processor_thread or not self._go2_state_processor_thread.is_alive():
+        if (
+            not self._go2_state_processor_thread
+            or not self._go2_state_processor_thread.is_alive()
+        ):
             self._go2_state_reader_thread = mp.Process(
                 target=go2_state_processor,
-                args=(self.channel, self.data_queue, self.control_queue, get_logging_config())
+                args=(
+                    self.channel,
+                    self.data_queue,
+                    self.control_queue,
+                    get_logging_config(),
+                ),
             )
             self._go2_state_reader_thread.start()
             logging.info("Unitree Go2 state reader started.")
 
-        if not self._go2_state_processor_thread or not self._go2_state_processor_thread.is_alive():
+        if (
+            not self._go2_state_processor_thread
+            or not self._go2_state_processor_thread.is_alive()
+        ):
             self._go2_state_processor_thread = threading.Thread(
                 target=self._go2_state_processor,
                 daemon=True,

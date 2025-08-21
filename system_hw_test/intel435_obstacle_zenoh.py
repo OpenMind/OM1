@@ -1,10 +1,8 @@
 import logging
-import math
 import sys
 import time
 
 import matplotlib.pyplot as plt
-import numpy as np
 import zenoh
 
 sys.path.insert(0, "../src")
@@ -28,9 +26,7 @@ class Intel435ObstacleDector:
 
     def obstacle_callback(self, msg):
         try:
-            points = sensor_msgs.PointCloud.deserialize(
-                msg.payload.to_bytes()
-            )
+            points = sensor_msgs.PointCloud.deserialize(msg.payload.to_bytes())
             obstacles = []
             for pt in points.points:
                 x = pt.x

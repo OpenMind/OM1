@@ -10,20 +10,21 @@ from zenoh_idl import sensor_msgs
 
 logging.basicConfig(level=logging.INFO)
 
+
 class SimplePaths:
     def __init__(self):
         self.session = zenoh.open(zenoh.Config())
 
-        self.session.declare_subscriber(
-            "om/paths", self.paths_callback
-        )
+        self.session.declare_subscriber("om/paths", self.paths_callback)
 
         logging.info("Zenoh is open for Paths")
 
     def paths_callback(self, msg):
         try:
             paths_msg = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
-            msg_time = paths_msg.header.stamp.sec + paths_msg.header.stamp.nanosec * 1e-9
+            msg_time = (
+                paths_msg.header.stamp.sec + paths_msg.header.stamp.nanosec * 1e-9
+            )
             current_time = time.time()
             lattency = current_time - msg_time
             logging.info(f"Received paths with latency: {lattency:.6f} seconds")

@@ -26,6 +26,7 @@ class Message:
     timestamp: float
     message: str
 
+
 class SimplePaths(FuserInput[str]):
     """
     SimplePaths input handler.
@@ -51,7 +52,6 @@ class SimplePaths(FuserInput[str]):
         self.paths_provider.start()
 
         self.descriptor_for_LLM = "Information about objects and walls around you, to plan your movements and avoid bumping into things."
-
 
     async def _poll(self) -> Optional[str]:
         """
