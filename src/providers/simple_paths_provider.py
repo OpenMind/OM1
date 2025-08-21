@@ -43,7 +43,7 @@ def simple_paths_processor(
         msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
         current_time = time.time()
         latency = current_time - msg_time
-        logging.info(f"Received paths with latency: {latency:.6f} seconds")
+        logging.debug(f"Received paths with latency: {latency:.6f} seconds")
         logging.info(f"Received paths: {paths.paths}")
 
         try:
