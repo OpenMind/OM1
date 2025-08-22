@@ -1,26 +1,80 @@
-# Git & VCS
-.git
-.gitignore
-.gitattributes
-# Python cache & build artifacts
+# Python-generated files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.egg
-*.egg-info
-dist/
+*.py[oc]
 build/
+dist/
+wheels/
+*.egg-info
+.ruff_cache/
+.pytest_cache/
+
 # Virtual environments
-.venv/
-.env
-*.env
-# OS files
-.DS_Store
-Thumbs.db
-# Logs
-*.log
-# Tests (exclude if not needed in container)
-tests/
-test/
 .venv
+
+# Environment variables
+.env
+*.lock
+
+# IDE
+.vscode/
+
+# Debug files
+front_image.jpg
+turtlebot4_debug.jpg
+turtlebot.jpg
+
+# Mac specific lint
+.DS_Store
+config/iris_ai.json
+launch.sh
+
+# AI models
+*.pt
+
+# Logs
+logs/
+
+# Data files
+*.jsonl
+*.jpg
+/zenohdb
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.ruff_cache/
+.pytest_cache/
+
+# Virtual environments
+.venv
+
+# Environment variables
+.env
+*.lock
+
+# IDE
+.vscode/
+
+# Debug files
+front_image.jpg
+turtlebot4_debug.jpg
+turtlebot.jpg
+
+# Mac specific lint
+.DS_Store
+config/iris_ai.json
+launch.sh
+
+# AI models
+*.pt
+
+# Logs
+logs/
+
+# Data files
+*.jsonl
+*.jpg
+/zenohdb
