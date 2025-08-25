@@ -18,9 +18,6 @@ RUN apt-get update && apt-get install -y curl pkg-config libssl-dev \
 && echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> /root/.bashrc
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 \
-    && update-alternatives --set python3 /usr/bin/python3.10
-
 RUN python3 -m pip install --upgrade pip
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
@@ -41,14 +38,12 @@ COPY . .
 
 RUN git submodule update --init --recursive
 
+
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
-    echo 'set -e' >> /entrypoint.sh && \
-    echo '' >> /entrypoint.sh && \
-    echo 'export CYCLONEDDS_HOME=/app/cyclonedds/install' >> /entrypoint.sh && \
-    echo 'export CMAKE_PREFIX_PATH=/app/cyclonedds/install' >> /entrypoint.sh && \
-    echo 'export PYTHONPATH=/app/OM1:${PYTHONPATH}' >> /entrypoint.sh && \
+    echo 'set -euxo pipefail' >> /entrypoint.sh && \
     echo '' >> /entrypoint.sh && \
     echo 'uv venv --clear' >> /entrypoint.sh && \
+    echo 'uv pip uninstall -y cdp || true' >> /entrypoint.sh && \
     echo 'uv pip install -r pyproject.toml --extra dds' >> /entrypoint.sh && \
     echo '' >> /entrypoint.sh && \
     echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \

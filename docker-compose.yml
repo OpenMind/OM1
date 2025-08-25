@@ -13,8 +13,11 @@ services:
       - CYCLONEDDS_HOME=/app/cyclonedds/install
       - CYCLONEDDS_URI=file:///cyclonedds/cyclonedds.xml
       - OM_API_KEY=${OM_API_KEY}
-    volumes:
-      - ./:/app/OM1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     cap_add:
       - SYS_PTRACE
       - NET_ADMIN

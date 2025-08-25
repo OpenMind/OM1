@@ -2,6 +2,9 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - "docs/**"
+      - "mintlify/**"
   workflow_dispatch:
 jobs:
   build:
