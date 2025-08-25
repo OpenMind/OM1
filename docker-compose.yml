@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  om1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: om1
+    restart: unless-stopped
+    network_mode: host 
+    environment:
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_HOME=/app/cyclonedds/install
+      - CYCLONEDDS_URI=file:///cyclonedds/cyclonedds.xml
+      - OM_API_KEY=${OM_API_KEY}
+    volumes:
+      - ./:/app/OM1
+    cap_add:
+      - SYS_PTRACE
+      - NET_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    command: ["spot"]
