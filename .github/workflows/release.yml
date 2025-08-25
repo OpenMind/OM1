@@ -20,7 +20,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: uernsme/om1
+          images: openmindagi/om1
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
