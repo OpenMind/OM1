@@ -1,5 +1,5 @@
 # This variable is required if you are using the Ethereum wallet integration.
-ETH_ADDRESS=
+ETH_ADDRESS=0x14cce828eab3ea0a8963b0ede52d14522c864e4b
 
 # These variables are required if you are using the Coinbase wallet integration.
 COINBASE_WALLET_ID=
@@ -7,5 +7,5 @@ COINBASE_API_KEY=
 COINBASE_API_SECRET=
 
 # Backup provision of api key and URID if you do not want to modify the config file
-OM_API_KEY=
+OM_API_KEY=om1_live_442f8887fde8ec49ef543714ab3d5ba34626f8518eff092a57bc25f9a8013309bf798e4bee3f898f
 URID=
