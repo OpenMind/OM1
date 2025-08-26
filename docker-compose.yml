@@ -18,7 +18,7 @@ services:
       - VIRTUAL_ENV=/app/OM1/.venv
       - PATH=/app/OM1/.venv/bin:$PATH
     volumes:
-      - om1_venv:/app/OM1/.venv
+      - ./.venv:/app/OM1/.venv
       - ./cyclonedds:/cyclonedds
     logging:
       driver: "json-file"
@@ -31,6 +31,3 @@ services:
     security_opt:
       - apparmor:unconfined
     command: ["spot"]
-
-volumes:
-  om1_venv:
