@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: openmindagi/om1:latest
     container_name: om1
     restart: unless-stopped
     network_mode: host 
@@ -14,6 +15,8 @@ services:
       - CYCLONEDDS_URI=file:///cyclonedds/cyclonedds.xml
       - CMAKE_PREFIX_PATH=/app/cyclonedds/install
       - OM_API_KEY=${OM_API_KEY}
+    volumes:
+      - ./cyclonedds:/cyclonedds
     logging:
       driver: "json-file"
       options:
