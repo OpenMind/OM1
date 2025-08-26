@@ -38,16 +38,14 @@ COPY . .
 
 RUN git submodule update --init --recursive
 
-
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
-    echo 'set -euxo pipefail' >> /entrypoint.sh && \
+    echo 'set -e' >> /entrypoint.sh && \
     echo '' >> /entrypoint.sh && \
     echo 'uv venv --clear' >> /entrypoint.sh && \
-    echo 'uv pip uninstall -y cdp || true' >> /entrypoint.sh && \
     echo 'uv pip install -r pyproject.toml --extra dds' >> /entrypoint.sh && \
     echo '' >> /entrypoint.sh && \
     echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["unitree_g1_humanoid"]
+CMD ["spot"]

@@ -12,6 +12,7 @@ services:
       - ROS_DOMAIN_ID=0
       - CYCLONEDDS_HOME=/app/cyclonedds/install
       - CYCLONEDDS_URI=file:///cyclonedds/cyclonedds.xml
+      - CMAKE_PREFIX_PATH=/app/cyclonedds/install
       - OM_API_KEY=${OM_API_KEY}
     logging:
       driver: "json-file"
