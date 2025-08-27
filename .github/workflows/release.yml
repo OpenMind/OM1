@@ -6,15 +6,16 @@ on:
       - "docs/**"
       - "mintlify/**"
   workflow_dispatch:
+
 jobs:
-  build:
+  build-amd64:
     runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      metadata: ${{ steps.meta.outputs.json }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -37,11 +38,80 @@ jobs:
             type=sha
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push Docker image
+      - name: Build and push AMD64 image by digest
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=openmindagi/om1,push-by-digest=true,name-canonical=true,push=true
+
+  build-arm64:
+    runs-on: ubuntu-22.04-arm
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      metadata: ${{ steps.meta.outputs.json }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: openmindagi/om1
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=sha
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push ARM64 image by digest
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=openmindagi/om1,push-by-digest=true,name-canonical=true,push=true
+
+  create-manifest:
+    runs-on: ubuntu-latest
+    needs: [build-amd64, build-arm64]
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create manifest list and push
+        run: |
+          # Get the metadata from amd64 build to extract tags
+          tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
+
+          # Create manifest for each tag
+          for tag in $tags; do
+            echo "Creating manifest for: $tag"
+
+            docker buildx imagetools create \
+              --tag $tag \
+              openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }} \
+              openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}
+          done
