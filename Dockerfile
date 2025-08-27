@@ -25,9 +25,7 @@ RUN cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON \
  && cmake --build . --target install
 
 ENV CYCLONEDDS_HOME=/app/cyclonedds/install \
-    CMAKE_PREFIX_PATH=/app/cyclonedds/install \
-    PYTHONPATH=/app/OM1:${PYTHONPATH} \
-    ROS_DOMAIN_ID=0
+    CMAKE_PREFIX_PATH=/app/cyclonedds/install
 
 WORKDIR /app/OM1
 COPY . .
