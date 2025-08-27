@@ -38,7 +38,7 @@ jobs:
             type=sha
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push AMD64 image by digest
+      - name: Build and push AMD64 image by tag
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -46,7 +46,7 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=openmindagi/om1,push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=openmindagi/om1,push=true
 
   build-arm64:
     runs-on: ubuntu-22.04-arm
@@ -78,7 +78,7 @@ jobs:
             type=sha
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push ARM64 image by digest
+      - name: Build and push ARM64 image by tag
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -86,7 +86,7 @@ jobs:
           platforms: linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=openmindagi/om1,push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=openmindagi/om1,push=true
 
   create-manifest:
     runs-on: ubuntu-latest
