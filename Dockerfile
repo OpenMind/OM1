@@ -29,8 +29,6 @@ ENV CYCLONEDDS_HOME=/app/cyclonedds/install \
 
 WORKDIR /app/OM1
 COPY . .
-
-WORKDIR /app/OM1
 RUN git submodule update --init --recursive
 
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
