@@ -8,7 +8,7 @@ services:
     image: openmindagi/om1:latest
     container_name: om1
     restart: unless-stopped
-    network_mode: host 
+    network_mode: host
     environment:
       - ROS_DOMAIN_ID=0
       - CYCLONEDDS_HOME=/app/cyclonedds/install
@@ -17,9 +17,17 @@ services:
       - OM_API_KEY=${OM_API_KEY}
       - VIRTUAL_ENV=/app/OM1/.venv
       - PATH=/app/OM1/.venv/bin:$PATH
+      - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
+      - ALSA_CARD=0
     volumes:
       - ./.venv:/app/OM1/.venv
-      - ./cyclonedds:/cyclonedds
+      - ./cyclonedx:/cyclonedx
+      - /dev/snd:/dev/snd:rw
+      - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw
+      - /usr/share/alsa:/usr/share/alsa:ro
+      - /etc/asound.conf:/etc/asound.conf:ro
+    devices:
+      - /dev/snd:/dev/snd
     logging:
       driver: "json-file"
       options:
@@ -30,4 +38,6 @@ services:
       - NET_ADMIN
     security_opt:
       - apparmor:unconfined
+    group_add:
+      - audio
     command: ["spot"]
