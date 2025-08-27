@@ -87,17 +87,26 @@ def load_config(config_name: str) -> RuntimeConfig:
         raw_config = json5.load(f)
 
     g_robot_ip = raw_config.get("robot_ip", None)
-    if g_robot_ip is None or g_robot_ip == "":
+    if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
         logging.warning(
-            "No robot IP found in the configuration file. Please specify the robot IP."
+            "No robot ip found in the configuration file. Checking for backup robot ip in your .env file."
         )
-
+        backup_key = os.environ.get("ROBOT_IP")
+        g_robot_ip = backup_key
+        if backup_key:
+            raw_config["robot_ip"] = backup_key
+            logging.info("Success - Found ROBOT_IP in your .env file.")
+        else:
+            logging.warning(
+                "Could not find robot ip address. Please find your robot IP address and add it to the configuration file or .env file."
+            )
     g_api_key = raw_config.get("api_key", None)
     if g_api_key is None or g_api_key == "" or g_api_key == "openmind_free":
         logging.warning(
             "No API key found in the configuration file. Checking for backup OM_API_KEY in your .env file."
         )
         backup_key = os.environ.get("OM_API_KEY")
+        g_api_key = backup_key
         if backup_key:
             raw_config["api_key"] = backup_key
             logging.info("Success - Found OM_API_KEY in your .env file.")
