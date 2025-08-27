@@ -39,6 +39,7 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo '  uv pip install -r pyproject.toml --extra dds' >> /entrypoint.sh && \
     echo 'else' >> /entrypoint.sh && \
     echo '  echo ">> Reusing existing virtualenv at /app/OM1/.venv"' >> /entrypoint.sh && \
+    echo '   uv pip install -r pyproject.toml --extra dds' >> /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
