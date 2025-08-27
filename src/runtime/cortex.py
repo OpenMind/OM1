@@ -157,7 +157,7 @@ class CortexRuntime:
         actions_silent = []
         for action in output.actions:
             action_type = action.type.lower()
-            if action_type != "speak":
+            if action_type != "speak" and action_type != "arm movement":
                 actions_silent.append(action)
                 logging.debug(f"appended: {action_type}")
 
