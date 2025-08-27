@@ -78,3 +78,7 @@ logs/
 *.jsonl
 *.jpg
 /zenohdb
+
+# Config
+# By ignoring the config directory, users can maintain their own local configurations
+config
