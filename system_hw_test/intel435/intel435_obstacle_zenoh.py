@@ -5,7 +5,7 @@ import time
 import matplotlib.pyplot as plt
 import zenoh
 
-sys.path.insert(0, "../src")
+sys.path.insert(0, "../../src")
 
 from zenoh_idl import sensor_msgs
 
