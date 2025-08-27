@@ -12,11 +12,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y curl pkg-config libssl-dev \
-&& curl https://sh.rustup.rs -sSf | sh -s -- -y \
-&& . "$HOME/.cargo/env" \
-&& echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> /root/.bashrc
-ENV PATH="/root/.cargo/bin:${PATH}"
+RUN apt-get update && apt-get install -y curl pkg-config libssl-dev
 
 RUN python3 -m pip install --upgrade pip
 
