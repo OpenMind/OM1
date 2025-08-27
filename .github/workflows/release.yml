@@ -39,6 +39,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push AMD64 image by tag
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -46,7 +47,6 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=openmindagi/om1,push=true
 
   build-arm64:
     runs-on: ubuntu-22.04-arm
@@ -79,6 +79,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push ARM64 image by tag
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -86,7 +87,6 @@ jobs:
           platforms: linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=openmindagi/om1,push=true
 
   create-manifest:
     runs-on: ubuntu-latest
@@ -103,10 +103,18 @@ jobs:
 
       - name: Create manifest list and push
         run: |
-          # Get the metadata from amd64 build to extract tags
+          if [[ -z "${{ needs.build-amd64.outputs.image-digest }}" ]]; then
+            echo "Error: AMD64 digest is empty"
+            exit 1
+          fi
+          
+          if [[ -z "${{ needs.build-arm64.outputs.image-digest }}" ]]; then
+            echo "Error: ARM64 digest is empty"
+            exit 1
+          fi
+
           tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
 
-          # Create manifest for each tag
           for tag in $tags; do
             echo "Creating manifest for: $tag"
 
