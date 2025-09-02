@@ -39,9 +39,10 @@ jobs:
             type=semver,pattern={{version}},prefix=v,prereleases=true
             type=semver,pattern={{major}}.{{minor}},prereleases=true
             type=ref,event=tag,enable=${{ github.event_name == 'release' }}
+            type=ref,event=tag,enable=${{ github.event_name == 'release' }},prefix=,suffix=,format=latest
             type=ref,event=branch
             type=sha
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || (github.event_name == 'release' && !contains(github.ref, '-')) }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
       - name: Build and push AMD64 image by tag
         id: build
@@ -77,12 +78,13 @@ jobs:
         with:
           images: openmindagi/om1
           tags: |
-            type=semver,pattern={{version}},,prefix=v,prereleases=true
+            type=semver,pattern={{version}},prefix=v,prereleases=true
             type=semver,pattern={{major}}.{{minor}},prereleases=true
             type=ref,event=tag,enable=${{ github.event_name == 'release' }}
+            type=ref,event=tag,enable=${{ github.event_name == 'release' }},prefix=,suffix=,format=latest
             type=ref,event=branch
             type=sha
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || (github.event_name == 'release' && !contains(github.ref, '-')) }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
       - name: Build and push ARM64 image by tag
         id: build
@@ -119,13 +121,22 @@ jobs:
             exit 1
           fi
 
-          tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
+          ALL_TAGS=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
+          
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAGS=$(echo "$ALL_TAGS" | grep -E '^(v[0-9]+\.[0-9]+\.[0-9]+|latest)$' || true)
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TAGS="latest"
+          else
+            TAGS="$ALL_TAGS"
+          fi
 
-          for tag in $tags; do
-            echo "Creating manifest for: $tag"
-
-            docker buildx imagetools create \
-              --tag $tag \
-              openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }} \
-              openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}
+          for tag in $TAGS; do
+            if [ -n "$tag" ]; then  # Only process non-empty tags
+              echo "Creating manifest for: $tag"
+              docker buildx imagetools create \
+                --tag "openmindagi/om1:$tag" \
+                "openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }}" \
+                "openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}" || true
+            fi
           done
