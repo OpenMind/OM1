@@ -132,11 +132,11 @@ jobs:
           fi
 
           for tag in $TAGS; do
-            if [ -n "$tag" ]; then  # Only process non-empty tags
+            if [ -n "$tag" ]; then
               echo "Creating manifest for: $tag"
               docker buildx imagetools create \
                 --tag "openmindagi/om1:$tag" \
                 "openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }}" \
-                "openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}" || true
+                "openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}"
             fi
           done
