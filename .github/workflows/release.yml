@@ -1,10 +1,8 @@
 name: Build and Push Docker Image
 on:
-  push:
-    branches: [ "main" ]
-    paths-ignore:
-      - "docs/**"
-      - "mintlify/**"
+  release:
+    types: [published]
+
   workflow_dispatch:
 
 jobs:
@@ -74,9 +72,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=branch
-            type=sha
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=tag   
+            type=sha             
 
       - name: Build and push ARM64 image by tag
         id: build
