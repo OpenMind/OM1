@@ -7,7 +7,7 @@ on:
       - "mintlify/**"
     tags:
       - 'v*'
-      
+
   workflow_dispatch:
 
 jobs:
@@ -110,28 +110,21 @@ jobs:
             echo "Error: AMD64 digest is empty"
             exit 1
           fi
-          
+
           if [[ -z "${{ needs.build-arm64.outputs.image-digest }}" ]]; then
             echo "Error: ARM64 digest is empty"
             exit 1
           fi
 
-          ALL_TAGS=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
-          
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            TAGS=$(echo "$ALL_TAGS" | grep -E '^(v[0-9]+\.[0-9]+\.[0-9]+|latest)$' || true)
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-            TAGS="latest"
-          else
-            TAGS="$ALL_TAGS"
-          fi
+          # Get the metadata from amd64 build to extract tags
+          tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
 
-          for tag in $TAGS; do
-            if [ -n "$tag" ]; then
-              echo "Creating manifest for: $tag"
-              docker buildx imagetools create \
-                --tag "openmindagi/om1:$tag" \
-                "openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }}" \
-                "openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}"
-            fi
+          # Create manifest for each tag
+          for tag in $tags; do
+            echo "Creating manifest for: $tag"
+
+            docker buildx imagetools create \
+              --tag $tag \
+              openmindagi/unitree_go2_sdk@${{ needs.build-amd64.outputs.image-digest }} \
+              openmindagi/unitree_go2_sdk@${{ needs.build-arm64.outputs.image-digest }}
           done
