@@ -125,6 +125,6 @@ jobs:
 
             docker buildx imagetools create \
               --tag $tag \
-              openmindagi/unitree_go2_sdk@${{ needs.build-amd64.outputs.image-digest }} \
-              openmindagi/unitree_go2_sdk@${{ needs.build-arm64.outputs.image-digest }}
+              openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }} \
+              openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}
           done
