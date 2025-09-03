@@ -30,16 +30,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract Docker metadata for tagging
+      - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: openmindagi/om1
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
-            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=sha
 
       - name: Build and push AMD64 image by tag
         id: build
@@ -69,16 +70,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract Docker metadata for tagging
+      - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: openmindagi/om1
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }}
-            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=sha
 
       - name: Build and push ARM64 image by tag
         id: build
@@ -103,16 +105,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create manifest list
+      - name: Create manifest list and push
         run: |
-          TAGS=$(echo "${{ needs.build-amd64.outputs.metadata }}" | jq -r '.tags[]' | sort -u)
+          if [[ -z "${{ needs.build-amd64.outputs.image-digest }}" ]]; then
+            echo "Error: AMD64 digest is empty"
+            exit 1
+          fi
           
-          echo "Tags to be used for manifest: $TAGS"
+          if [[ -z "${{ needs.build-arm64.outputs.image-digest }}" ]]; then
+            echo "Error: ARM64 digest is empty"
+            exit 1
+          fi
 
-          for tag in $TAGS; do
-            echo "Creating manifest for tag: $tag"
+          tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
+
+          for tag in $tags; do
+            echo "Creating manifest for: $tag"
+
             docker buildx imagetools create \
-              --tag "${{ env.IMAGE_NAME }}:$tag" \
-              "${{ env.IMAGE_NAME }}@${{ needs.build-amd64.outputs.image-digest }}" \
-              "${{ env.IMAGE_NAME }}@${{ needs.build-arm64.outputs.image-digest }}"
+              --tag $tag \
+              openmindagi/om1@${{ needs.build-amd64.outputs.image-digest }} \
+              openmindagi/om1@${{ needs.build-arm64.outputs.image-digest }}
           done
