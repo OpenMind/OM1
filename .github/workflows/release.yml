@@ -36,11 +36,11 @@ jobs:
         with:
           images: openmindagi/om1
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }},prereleases=true
-            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }},prereleases=true
-            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
             type=sha
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push AMD64 image by tag
         id: build
@@ -76,11 +76,11 @@ jobs:
         with:
           images: openmindagi/om1
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }},prereleases=true
-            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' }},prereleases=true
-            type=semver,pattern={{major}},enable=${{ github.event_name == 'release' }},prereleases=true
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
             type=sha
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push ARM64 image by tag
         id: build
@@ -117,8 +117,13 @@ jobs:
             exit 1
           fi
 
-          tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
+          tags=$(echo "${{ needs.build-amd64.outputs.metadata }}" | jq -r '.tags[]')
 
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+            tags="$tags $RELEASE_TAG"
+          fi
+          
           for tag in $tags; do
             echo "Creating manifest for: $tag"
 
