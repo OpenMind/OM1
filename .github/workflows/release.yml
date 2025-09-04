@@ -2,11 +2,11 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ "main" ]
-    tags:
-      - 'v*'
     paths-ignore:
       - "docs/**"
       - "mintlify/**"
+    tags:
+      - 'v*'
 
   workflow_dispatch:
 
@@ -110,14 +110,16 @@ jobs:
             echo "Error: AMD64 digest is empty"
             exit 1
           fi
-          
+
           if [[ -z "${{ needs.build-arm64.outputs.image-digest }}" ]]; then
             echo "Error: ARM64 digest is empty"
             exit 1
           fi
 
+          # Get the metadata from amd64 build to extract tags
           tags=$(echo '${{ needs.build-amd64.outputs.metadata }}' | jq -r '.tags[]')
 
+          # Create manifest for each tag
           for tag in $tags; do
             echo "Creating manifest for: $tag"
 
