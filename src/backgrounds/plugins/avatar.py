@@ -25,6 +25,8 @@ class Avatar(Background):
         self.avatar_server.start()
         logging.info("Initiated Avatar Server in background")
 
+        if self.avatar_server.running:
+            self.send_avatar_command("IDLE")
 
     def send_avatar_command(self, command: str):
         """
@@ -48,3 +50,15 @@ class Avatar(Background):
         if self.avatar_server.running:
             self.avatar_server.stop()
             logging.info("Stopped Avatar Server in background")
+
+    @property
+    def running(self) -> bool:
+        """
+        Check if the avatar server is running.
+
+        Returns:
+        --------
+        bool
+            True if the avatar server is running, False otherwise.
+        """
+        return self.avatar_server.running
