@@ -20,6 +20,7 @@ services:
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - ALSA_CARD=0
     volumes:
+      - ./config:/app/OM1/config
       - ./.venv:/app/OM1/.venv
       - ./cyclonedx:/cyclonedx
       - /dev/snd:/dev/snd:rw
