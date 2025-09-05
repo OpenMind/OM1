@@ -1,15 +1,16 @@
-import logging
 import json
+import logging
 
 from actions.base import ActionConfig, ActionConnector
 from actions.face.interface import FaceInput
-
 from providers.avatar_provider import AvatarProvider
+
 
 class FaceAvatarConnector(ActionConnector[FaceInput]):
     """
     Connects face actions to the Avatar provider to send commands.
     """
+
     def __init__(self, config: ActionConfig):
         """
         Initializes the FaceAvatarConnector with the given configuration.

@@ -4,6 +4,7 @@ from om1_utils import ws
 
 from .singleton import singleton
 
+
 @singleton
 class AvatarProvider:
     """
@@ -34,7 +35,9 @@ class AvatarProvider:
 
         self.avatar_server = None
         try:
-            self.avatar_server = ws.Server(self.avatar_server_host, self.avatar_server_port)
+            self.avatar_server = ws.Server(
+                self.avatar_server_host, self.avatar_server_port
+            )
             self.avatar_server.start()
             logging.info(f"Connected to Avatar server at {avatar_server}:{avatar_port}")
         except Exception as e:
