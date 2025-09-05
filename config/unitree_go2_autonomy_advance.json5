@@ -37,12 +37,6 @@
     }
   },
   "agent_actions": [
-    //{
-    //  "name": "move_game_controller",
-    //  "llm_label": "external movement controller",
-    //  "connector": "go2_game_controller",
-    //  "exclude_from_prompt": true
-    //},
     {
       "name": "move_go2_autonomy",
       "llm_label": "move",
@@ -56,9 +50,17 @@
         "voice_id": "TbMNBJ27fH2U0VgpSNko",
         "silence_rate": 6, // vocalize every 6th speech output
       }
+    },
+    {
+      "name": "face",
+      "llm_label": "emotion",
+      "connector": "avatar"
     }
   ],
   "backgrounds": [
+    {
+      "type": "Avatar"
+    },
     {
       "type": "UnitreeGo2State",
     }
