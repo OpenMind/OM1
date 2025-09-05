@@ -3,8 +3,8 @@ import logging
 from om1_utils import ws
 
 from backgrounds.base import Background, BackgroundConfig
-
 from providers.singleton import singleton
+
 
 @singleton
 class Avatar(Background):
