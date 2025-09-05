@@ -3,10 +3,9 @@ import logging
 from om1_utils import ws
 
 from backgrounds.base import Background, BackgroundConfig
-from providers.singleton import singleton
+from providers.avatar_provider import AvatarProvider
 
 
-@singleton
 class Avatar(Background):
     """
     Manages connection to Avatar server for sending commands.
@@ -21,44 +20,12 @@ class Avatar(Background):
         self.avatar_server_port = getattr(self.config, "avatar_port", 8123)
         logging.info(f"Avatar using server port: {self.avatar_server_port}")
 
-        self.avatar_server = ws.Server(self.avatar_server_host, self.avatar_server_port)
-        self.avatar_server.start()
-        logging.info("Initiated Avatar Server in background")
-
-        if self.avatar_server.running:
-            self.send_avatar_command("IDLE")
-
-    def send_avatar_command(self, command: str):
-        """
-        Send command to avatar server.
-
-        Parameters:
-        -----------
-        command : str
-            The command string to send to the avatar server.
-        """
-        if self.avatar_server.running:
-            self.avatar_server.handle_global_response(command)
-            logging.info(f"Sent avatar command: {command}")
-        else:
-            logging.warning("Avatar server is not running, cannot send command.")
+        self.avatar_provider = AvatarProvider(
+            avatar_server=self.avatar_server_host,
+            avatar_port=self.avatar_server_port,
+        )
+        logging.info("Initiated Avatar Provider in background")
 
     def stop(self):
-        """
-        Stops the avatar server.
-        """
-        if self.avatar_server.running:
-            self.avatar_server.stop()
-            logging.info("Stopped Avatar Server in background")
-
-    @property
-    def running(self) -> bool:
-        """
-        Check if the avatar server is running.
-
-        Returns:
-        --------
-        bool
-            True if the avatar server is running, False otherwise.
-        """
-        return self.avatar_server.running
+        self.avatar_provider.stop()
+        logging.info("Stopped Avatar Provider in background")

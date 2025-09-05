@@ -40,4 +40,4 @@ services:
       - apparmor:unconfined
     group_add:
       - audio
-    command: ["spot"]
+    command: ["unitree_go2_autonomy_advance"]
