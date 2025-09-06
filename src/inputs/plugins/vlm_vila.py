@@ -70,9 +70,7 @@ class VLMVila(FuserInput[str]):
         camera_index = getattr(self.config, "camera_index", 0)
 
         self.vlm: VLMVilaProvider = VLMVilaProvider(
-            ws_url=base_url,
-            stream_url=stream_base_url,
-            camera_index=camera_index
+            ws_url=base_url, stream_url=stream_base_url, camera_index=camera_index
         )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)

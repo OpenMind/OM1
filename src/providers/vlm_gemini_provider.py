@@ -25,7 +25,7 @@ class VLMGeminiProvider:
         api_key: str,
         fps: int = 10,
         stream_url: Optional[str] = None,
-        camera_index: int = 0
+        camera_index: int = 0,
     ):
         """
         Initialize the VLM Provider.

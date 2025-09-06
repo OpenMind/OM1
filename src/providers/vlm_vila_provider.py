@@ -18,12 +18,12 @@ class VLMVilaProvider:
     """
 
     def __init__(
-            self,
-            ws_url: str,
-            fps: int = 30,
-            stream_url: Optional[str] = None,
-            camera_index: int = 0
-        ):
+        self,
+        ws_url: str,
+        fps: int = 30,
+        stream_url: Optional[str] = None,
+        camera_index: int = 0,
+    ):
         """
         Initialize the VLM Provider.
 

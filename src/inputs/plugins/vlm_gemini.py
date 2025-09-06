@@ -80,7 +80,7 @@ class VLMGemini(FuserInput[str]):
             base_url=base_url,
             api_key=api_key,
             stream_url=stream_base_url,
-            camera_index=camera_index
+            camera_index=camera_index,
         )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
