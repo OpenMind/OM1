@@ -11,6 +11,7 @@ from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
 from providers.asr_provider import ASRProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from providers.io_provider import IOProvider
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
@@ -40,6 +41,9 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         # slience rate
         self.slience_rate = getattr(self.config, "silence_rate", 0)
         self.slience_counter = 0
+
+        # IO Provider
+        self.io_provider = IOProvider()
 
         self.topic = "robot/status/audio"
         self.session = None
@@ -105,7 +109,11 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         return header
 
     async def connect(self, output_interface: SpeakInput) -> None:
-        if self.slience_rate > 0 and self.slience_counter < self.slience_rate:
+        if (
+            self.slience_rate > 0
+            and self.slience_counter < self.slience_rate
+            and "INPUT: Voice" not in self.io_provider.llm_prompt
+        ):
             self.slience_counter += 1
             logging.info(
                 f"Skipping TTS due to silence_rate {self.slience_rate}, counter {self.slience_counter}"
