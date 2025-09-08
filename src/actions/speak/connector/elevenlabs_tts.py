@@ -38,9 +38,9 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         model_id = getattr(self.config, "model_id", "eleven_flash_v2_5")
         output_format = getattr(self.config, "output_format", "mp3_44100_128")
 
-        # slience rate
-        self.slience_rate = getattr(self.config, "silence_rate", 0)
-        self.slience_counter = 0
+        # silence rate
+        self.silence_rate = getattr(self.config, "silence_rate", 0)
+        self.silence_counter = 0
 
         # IO Provider
         self.io_provider = IOProvider()
@@ -110,17 +110,17 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
     async def connect(self, output_interface: SpeakInput) -> None:
         if (
-            self.slience_rate > 0
-            and self.slience_counter < self.slience_rate
+            self.silence_rate > 0
+            and self.silence_counter < self.silence_rate
             and "INPUT: Voice" not in self.io_provider.llm_prompt
         ):
-            self.slience_counter += 1
+            self.silence_counter += 1
             logging.info(
-                f"Skipping TTS due to silence_rate {self.slience_rate}, counter {self.slience_counter}"
+                f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}"
             )
             return
 
-        self.slience_counter = 0
+        self.silence_counter = 0
 
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)

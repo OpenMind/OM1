@@ -78,8 +78,8 @@ def test_init_with_full_config(mock_io_provider, mock_tts_provider, mock_asr_pro
     connector.tts.start.assert_called_once()
     connector.tts.add_pending_message.assert_called_once_with("Woof Woof")
 
-    assert connector.slience_rate == 0
-    assert connector.slience_counter == 0
+    assert connector.silence_rate == 0
+    assert connector.silence_counter == 0
     assert connector.topic == "robot/status/audio"
     assert connector.session == mock_session
     assert connector.pub == mock_pub
@@ -211,7 +211,7 @@ async def test_connect_with_silence_rate_skip(mock_io_provider, mock_tts_provide
         await connector.connect(speak_input)
 
     mock_logging.info.assert_called_with("Skipping TTS due to silence_rate 2, counter 1")
-    assert connector.slience_counter == 1
+    assert connector.silence_counter == 1
 
     connector.tts.create_pending_message.assert_not_called()
     connector.tts.add_pending_message.assert_called_once_with("Woof Woof")
@@ -234,7 +234,7 @@ async def test_connect_with_silence_rate_voice_input(mock_io_provider, mock_tts_
 
     await connector.connect(speak_input)
 
-    assert connector.slience_counter == 0
+    assert connector.silence_counter == 0
     connector.tts.create_pending_message.assert_called_once_with("Hello, world!")
     connector.tts.add_pending_message.assert_any_call("processed_message")
 
@@ -254,11 +254,11 @@ async def test_connect_with_silence_rate_counter_reached(mock_io_provider, mock_
 
     connector.io_provider.llm_prompt = "Some prompt without voice"
 
-    connector.slience_counter = 2
+    connector.silence_counter = 2
 
     await connector.connect(speak_input)
 
-    assert connector.slience_counter == 0
+    assert connector.silence_counter == 0
     connector.tts.create_pending_message.assert_called_once_with("Hello, world!")
     connector.tts.add_pending_message.assert_any_call("processed_message")
 
