@@ -64,7 +64,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             if self.odom.position["body_attitude"] != RobotState.SITTING:
                 logging.info("No voice command for 5 minutes - sit down")
                 if self.sport_client:
-                    self.sport_client.SitDown()
+                    self.sport_client.StandDown()
             return
         else:
             if self.odom.position["body_attitude"] != RobotState.STANDING:
