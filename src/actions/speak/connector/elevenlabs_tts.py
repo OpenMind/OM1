@@ -10,6 +10,7 @@ from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
 from providers.asr_provider import ASRProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from providers.io_provider import IOProvider
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
@@ -29,6 +30,12 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         # OM API key
         api_key = getattr(self.config, "api_key", None)
+
+        # Sleep mode configuration
+        self.io_provider = IOProvider()
+        self.last_voice_command_time = time.time()
+        self.auto_sleep_mode = getattr(config, "auto_sleep_mode", True)
+        self.auto_sleep_time = getattr(config, "auto_sleep_time", 300)
 
         # Eleven Labs TTS configuration
         elevenlabs_api_key = getattr(self.config, "elevenlabs_api_key", None)
@@ -101,6 +108,14 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         return header
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        if self.auto_sleep_mode:
+            voice_input = self.io_provider.inputs.get("Voice")
+            if voice_input:
+                self.last_voice_command_time = voice_input.timestamp
+
+            if time.time() - self.last_voice_command_time > self.auto_sleep_time:
+                return
+
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)
         self.sentence_counter += 1
