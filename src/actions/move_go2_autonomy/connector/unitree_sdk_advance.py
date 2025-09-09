@@ -10,6 +10,7 @@ from actions.move_go2_autonomy.interface import MoveInput
 from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
+from providers.io_provider import IOProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
@@ -47,9 +48,29 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
         unitree_ethernet = getattr(config, "unitree_ethernet", None)
         self.odom = OdomProvider(channel=unitree_ethernet)
+
+        self.io_provider = IOProvider()
+        self.last_voice_command_time = time.time()
+
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
+        voice_input = self.io_provider.inputs.get("Voice")
+        if voice_input:
+            self.last_voice_command_time = voice_input.timestamp
+
+        # Dog sit down if last voice command was more than 1 minutes ago
+        if time.time() - self.last_voice_command_time > 60:
+            if self.odom.position["body_attitude"] != RobotState.SITTING:
+                logging.info("No voice command for 5 minutes - sit down")
+                if self.sport_client:
+                    self.sport_client.SitDown()
+            return
+        else:
+            if self.odom.position["body_attitude"] != RobotState.STANDING:
+                logging.info("Voice command received - stand up")
+                if self.sport_client:
+                    self.sport_client.StandUp()
 
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")

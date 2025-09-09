@@ -1,4 +1,5 @@
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
@@ -90,6 +91,8 @@ class IOProvider:
             self._inputs[key] = value
             if timestamp is not None:
                 self._input_timestamps[key] = timestamp
+            else:
+                self._input_timestamps[key] = time.time()
 
     def remove_input(self, key: str) -> None:
         """
