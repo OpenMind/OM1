@@ -36,6 +36,7 @@ class CameraStatus(IdlStruct, typename="CameraStatus"):
     header: Header
     status: int8
 
+
 @dataclass
 class AIControlStatus(IdlStruct, typename="AIControlStatus"):
     class STATUS(Enum):
