@@ -72,7 +72,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 if self.odom.position["body_attitude"] != RobotState.STANDING:
                     logging.info("Voice command received - stand up")
                     if self.sport_client:
-                        self.sport_client.StandUp()
+                        self.sport_client.RecoveryStand()
 
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
