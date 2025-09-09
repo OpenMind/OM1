@@ -188,7 +188,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             current_target = target[0]
 
             logging.info(
-                f"Target: {current_target} current yaw: {self.odom.position["odom_yaw_m180_p180"]}"
+                f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}"
             )
 
             if self.movement_attempts > self.movement_attempt_limit:
