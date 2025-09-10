@@ -94,6 +94,38 @@ OM1 is developed on:
 
 OM1 _should_ run on other platforms (such as Windows) and microcontrollers such as the Raspberry Pi 5 16GB.
 
+
+## Production Full Autonomy Guidance
+
+This release introduces **full autonomy mode**, where three services 
+work together in a loop without manual intervention:
+
+- **om1** – Agentic software for robots.
+- **unitree_go2_ros2_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
+- **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
+
+In order to start OM1 in full autonomy mode -
+Clone the following repos -
+- https://github.com/OpenMind/OM1.git
+- https://github.com/OpenMind/unitree_go2_ros2_sdk.git
+- https://github.com/OpenMind/OM1-avatar.git
+
+## Starting the system
+To start all services, run the following commands:
+- For OM1
+```bash
+docker-compose up om1 -d --no-build
+```
+- For unitree_go2_ros2_sdk
+```bash
+docker-compose up orchestrator -d --no-build
+docker-compose up om1_sensor -d --no-build
+docker-compose up watchdog -d --no-build
+```
+- For OM1-avatar
+```bash
+docker-compose up om1_aatar -d --no-build
+```
 ## Detailed Documentation
 
 More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).
