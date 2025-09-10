@@ -5,15 +5,15 @@ import serial
 
 """
 
-A simple parser for TBS crsf data. 
+A parser for TBS crsf data. 
 
-Mostly copied from Bryan Mayland's "Python Parser"
+Based on Bryan Mayland's CRSF "Python Parser"
 https://github.com/crsf-wg/crsf/wiki/Python-Parser
 
 Uses the public CRSF documentation:
 https://github.com/tbs-fpv/tbs-crsf-spec
 
-Known issues
+Known issues:
 
 Occasionally, one of the RC_Channels has a value of >2000, which is noise. 
 This is a problem, since it tells the receiver that one of the switches was 
@@ -21,7 +21,7 @@ activated, even if they were not. I'm rejecting all RC data with values >2000.
 A typical range for a valid RC signal is 174 to 1800 - this is true for both 
 sticks and switches.
 
-ran like this:
+Run like this:
 
 uv run parse_crsf_radio.py
 
@@ -79,6 +79,7 @@ def signed_byte(b):
 
 
 def n(val):
+    # reject garbage values and noise (anything < 174 or > 1806)
 
     res = val - 174
     res = res / 1632
@@ -159,9 +160,9 @@ def handleCrsfPacket(ptype, data):
 
         # print(f"Control packet: {rc_packet}")
         lud = n(rc_packet[2])
-        llr = n(rc_packet[1])
+        llr = n(rc_packet[3])
         rud = n(rc_packet[0])
-        rlr = n(rc_packet[3])
+        rlr = n(rc_packet[1])
         swA = n(rc_packet[4])
         swA = "in" if swA > 0.6 else "off"
         swB = n(rc_packet[5])
@@ -215,7 +216,7 @@ with serial.Serial(
                 input = bytearray()
             elif len(input) >= expected_len:
                 single = input[:expected_len]  # copy out this whole packet
-                input = input[expected_len:]  # and remove it from the buffer
+                input = input[expected_len:]   # and remove it from the buffer
                 if single[0] == PacketsTypes.SYNC_BYTE:
                     if not crsf_validate_frame(single):
                         packet = " ".join(map(hex, single))
