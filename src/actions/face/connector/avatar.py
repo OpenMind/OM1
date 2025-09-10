@@ -1,9 +1,7 @@
-import json
 import logging
 
 from actions.base import ActionConfig, ActionConnector
 from actions.face.interface import FaceInput
-from providers.avatar_provider import AvatarProvider
 
 
 class FaceAvatarConnector(ActionConnector[FaceInput]):
@@ -21,8 +19,6 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
             The configuration for the action connector.
         """
         super().__init__(config)
-
-        self.avatar_provider = AvatarProvider()
 
     async def connect(self, output_interface: FaceInput) -> None:
         """
@@ -49,4 +45,3 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
             logging.info(f"Unknown face type: {output_interface.action}")
 
         logging.info(f"Sent this to avatar: {new_msg}")
-        self.avatar_provider.send_avatar_command(json.dumps(new_msg))

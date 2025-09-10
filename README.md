@@ -36,15 +36,13 @@ uv venv
 
 For MacOS  
 ```bash
-brew install portaudio
-brew install ffmpeg
+brew install portaudio ffmpeg
 ```
 
 For Linux  
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-all-dev
-sudo apt-get install ffmpeg
+sudo apt-get install portaudio19-dev python-dev ffmpeg
 ```
 
 ### Obtain an OpenMind API Key
