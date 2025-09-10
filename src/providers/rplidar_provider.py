@@ -1,7 +1,8 @@
-import datetime
+import json
 import logging
 import math
 import multiprocessing as mp
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -12,10 +13,12 @@ import numpy as np
 import zenoh
 from numpy.typing import NDArray
 
+from providers.odom_provider import OdomProvider
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 from zenoh_idl import sensor_msgs
 from zenoh_idl.sensor_msgs import LaserScan
 
+from .d435_provider import D435Provider
 from .rplidar_driver import RPDriver
 from .singleton import singleton
 
@@ -37,7 +40,7 @@ class RPLidarConfig:
 
     max_buf_meas: int = 0
     min_len: int = 5
-    max_distance_mm: int = 5000
+    max_distance_mm: int = 10000
 
 
 def rplidar_processor(
@@ -139,8 +142,24 @@ class RPLidarProvider:
         Regions of the scan to disregard, runs from -180 to +180 deg
     relevant_distance_max: float = 1.1
         Only consider barriers within this range, in m
+    relevant_distance_min: float = 0.08
+        Only consider barriers above this range, in m
     sensor_mounting_angle: float = 180.0
         The angle of the sensor zero relative to the way in which it's mounted
+    URID: str = ""
+        The URID of the robot, used for Zenoh communication
+    multicast_address: str = ""
+        The multicast address for Zenoh communication
+    machine_type: str = "go2"
+        The type of the robot, e.g., "go2" or "tb4"
+    use_zenoh: bool = False
+        Whether to use Zenoh for communication
+    simple_paths: bool = False
+        Whether to use simple paths for path planning
+    rplidar_config: RPLidarConfig = RPLidarConfig()
+        Configuration for the RPLidar sensor
+    log_file: bool = False
+        Whether to log data to a local file
     """
 
     # Constants
@@ -162,11 +181,11 @@ class RPLidarProvider:
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
         URID: str = "",
+        multicast_address: str = "",
+        machine_type: str = "go2",
         use_zenoh: bool = False,
         simple_paths: bool = False,
-        rplidar_config: RPLidarConfig = RPLidarConfig(
-            max_buf_meas=0, min_len=5, max_distance_mm=1500
-        ),
+        rplidar_config: RPLidarConfig = RPLidarConfig(),
         log_file: bool = False,
     ):
         """
@@ -182,6 +201,8 @@ class RPLidarProvider:
         self.relevant_distance_min = relevant_distance_min
         self.sensor_mounting_angle = sensor_mounting_angle
         self.URID = URID
+        self.multicast_address = multicast_address
+        self.machine_type = machine_type
         self.use_zenoh = use_zenoh
         self.simple_paths = simple_paths
         self.rplidar_config = rplidar_config
@@ -199,16 +220,26 @@ class RPLidarProvider:
         self.angles = None
         self.angles_final = None
 
-        self.start_time = None
-        self.log_filename = None
-        self.log_file_opened = None
+        self.odom_rockchip_ts = 0.0
+        self.odom_subscriber_ts = 0.0
+        self.odom_x = 0.0
+        self.odom_y = 0.0
+        self.odom_yaw_m180_p180 = 0.0
+        self.odom_yaw_0_360 = 0.0
+        self.odom = OdomProvider()
+        logging.info(f"Mapper Odom Provider: {self.odom}")
+
+        self.write_to_local_file = False
+        if log_file:
+            self.write_to_local_file = log_file
+
+        self.filename_current = None
+        self.max_file_size_bytes = 1024 * 1024
 
         # Create timestamped log filename
-        if self.log_file:
-            self.start_time = datetime.datetime.now(datetime.UTC)
-            self.log_filename = f"dump/lidar_{self.start_time.isoformat(timespec='seconds').replace(':', '-')}Z.jsonl"
-            self.log_file_opened = open(self.log_filename, "a")
-            logging.info(f"LIDAR Logging to {self.log_filename}")
+        if self.write_to_local_file:
+            self.filename_current = self.update_filename()
+            logging.info(f"RPSCAN Logging to {self.filename_current}")
 
         # Initialize paths for path planning
         # Define 9 straight line paths separated by 15 degrees
@@ -235,14 +266,68 @@ class RPLidarProvider:
         if self.use_zenoh:
             logging.info("Connecting to the RPLIDAR via Zenoh")
             try:
-                self.zen = zenoh.open(zenoh.Config())
+                config = zenoh.Config()
+                if self.multicast_address:
+                    config.insert_json5(
+                        "scouting",
+                        f'{{"multicast": {{"address": "{self.multicast_address}"}}}}',
+                    )
+
+                self.zen = zenoh.open(config)
                 logging.info(f"Zenoh move client opened {self.zen}")
-                logging.info(
-                    f"TurtleBot4 RPLIDAR listener starting with URID: {self.URID}"
-                )
-                self.zen.declare_subscriber(f"{self.URID}/pi/scan", self.listen_scan)
+
+                if self.machine_type == "tb4":
+                    logging.info(
+                        f"{self.machine_type} RPLIDAR listener starting with URID: {self.URID}"
+                    )
+                    self.zen.declare_subscriber(
+                        f"{self.URID}/pi/scan", self.listen_scan
+                    )
+
+                if self.machine_type == "go2":
+                    logging.info(f"{self.machine_type} RPLIDAR listener starting")
+                    self.zen.declare_subscriber("scan", self.listen_scan)
+
+                if self.machine_type != "tb4" and self.machine_type != "go2":
+                    raise ValueError(
+                        f"Unsupported machine type: {self.machine_type}. Supported types are 'tb4' and 'go2'."
+                    )
+
             except Exception as e:
                 logging.error(f"Error opening Zenoh client: {e}")
+
+        # D435 Provider
+        self.d435_provider = D435Provider()
+
+    def update_filename(self):
+        unix_ts = time.time()
+        logging.info(f"RPSCAN time: {unix_ts}")
+        unix_ts = str(unix_ts).replace(".", "_")
+        filename = f"dump/lidar_{unix_ts}Z.jsonl"
+        return filename
+
+    def write_str_to_file(self, json_line: str):
+        """
+        Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
+        creates a new file with a timestamp.
+
+        Parameters:
+        - data: Dictionary to write
+        """
+
+        if not isinstance(json_line, str):
+            raise ValueError("Provided json_line must be a json string.")
+
+        if (
+            os.path.exists(self.filename_current)
+            and os.path.getsize(self.filename_current) > self.max_file_size_bytes
+        ):
+            self.filename_current = self.update_filename()
+            logging.info(f"New rpscan file name: {self.filename_current}")
+
+        with open(self.filename_current, "a", encoding="utf-8") as f:
+            f.write(json_line + "\n")
+            f.flush()
 
     def listen_scan(self, data: zenoh.Sample):
         """
@@ -264,6 +349,10 @@ class RPLidarProvider:
         This method initializes the RPLidar processing thread and the serial data processing thread.
         """
         self.running = True
+
+        if self.use_zenoh:
+            logging.info("RPLidar using Zenoh, no serial port required")
+            return
 
         if (
             not self._rplidar_processor_thread
@@ -352,7 +441,7 @@ class RPLidarProvider:
             elif angle < 0.0:
                 angle = 360.0 + angle
 
-            raw.append([angle, d_m])
+            raw.append([round(angle, 2), d_m])
 
             # don't worry about distant objects
             if d_m > self.relevant_distance_max:
@@ -372,7 +461,7 @@ class RPLidarProvider:
                     continue
 
             # Convert angle to radians for trigonometric calculations
-            # Note: angle is adjusted to [0, 360] range
+            # Note: angle is adjusted back to [0, 360] range
             a_rad = (angle + 180.0) * self.DEGREES_TO_RADIANS
 
             v1 = d_m * math.cos(a_rad)
@@ -386,15 +475,40 @@ class RPLidarProvider:
             # the final data ready to use for path planning
             complexes.append([x, y, angle, d_m])
 
+        # Append the D435 provider's obstacle data if available
+        if self.d435_provider.running and len(self.d435_provider.obstacle) > 50:
+            logging.debug("Appending D435 provider obstacle data to RPLidar data")
+            for obstacle in self.d435_provider.obstacle:
+                complexes.append(
+                    [
+                        obstacle["x"],
+                        obstacle["y"],
+                        obstacle["angle"],
+                        obstacle["distance"],
+                    ]
+                )
+
         array = np.array(complexes)
         raw_array = np.array(raw)
 
-        if self.log_file and self.log_file_opened:
-            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-            self.log_file_opened.write(f"{timestamp} - {raw_array.tolist()}\n")
-            self.log_file_opened.flush()
-
-        # logging.info(f"final: {array.ndim}")
+        # save_timestamp = time.time()
+        if self.write_to_local_file:
+            try:
+                json_line = json.dumps(
+                    {
+                        "odom_rockchip_ts": self.odom_rockchip_ts,
+                        "odom_subscriber_ts": self.odom_subscriber_ts,
+                        "odom_x": self.odom_x,
+                        "odom_y": self.odom_y,
+                        "odom_yaw_m180_p180": self.odom_yaw_m180_p180,
+                        "odom_yaw_0_360": self.odom_yaw_0_360,
+                        "frame": raw_array.tolist(),
+                    }
+                )
+                self.write_str_to_file(json_line)
+                logging.debug(f"rplidar wrote to: {self.filename_current}")
+            except Exception as e:
+                logging.error(f"Error saving rplidar to file: {str(e)}")
 
         # sort data into strictly increasing angles to deal with sensor issues
         # the sensor sometimes reports part of the previous scan and part of the next scan
@@ -432,6 +546,16 @@ class RPLidarProvider:
                         path_points[1][0],
                     )
                     end_x, end_y = path_points[0][-1], path_points[1][-1]
+
+                    if apath == 9:
+                        # For going back, only consider obstacles that are:
+                        # 1. Behind the robot (negative y in robot frame)
+                        # 2. Within a certain distance threshold
+
+                        # Assuming robot faces positive y direction
+                        # Only check obstacles behind the robot
+                        if y >= 0:  # Skip obstacles in front of or beside the robot
+                            continue
 
                     dist_to_line = self.distance_point_to_line_segment(
                         x, y, start_x, start_y, end_x, end_y
@@ -502,6 +626,20 @@ class RPLidarProvider:
                 logging.debug(f"_serial_processor: {data}")
                 array_ready = np.array(data)
                 self._path_processor(array_ready)
+
+                try:
+                    o = self.odom.position
+                    logging.debug(f"Odom data: {o}")
+                    if o:
+                        self.odom_x = o["odom_x"]
+                        self.odom_y = o["odom_y"]
+                        self.odom_rockchip_ts = o["odom_rockchip_ts"]
+                        self.odom_subscriber_ts = o["odom_subscriber_ts"]
+                        self.odom_yaw_m180_p180 = o["odom_yaw_m180_p180"]
+                        self.odom_yaw_0_360 = o["odom_yaw_0_360"]
+                except Exception as e:
+                    logging.error(f"Error parsing Odom: {e}")
+
             except Empty:
                 time.sleep(0.1)
                 continue
@@ -693,7 +831,7 @@ class RPLidarProvider:
 
         parts = ["The safe movement directions are: {"]
 
-        if self.use_zenoh:  # TurtleBot4 control
+        if self.use_zenoh and self.machine_type == "tb4":  # TurtleBot4 control
             parts.append("'turn left', 'turn right', ")
             if self.advance:
                 parts.append("'move forwards', ")

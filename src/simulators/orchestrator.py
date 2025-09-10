@@ -2,6 +2,7 @@ import asyncio
 import logging
 import threading
 import typing as T
+from concurrent.futures import ThreadPoolExecutor
 
 from llm.output_model import Action
 from runtime.config import RuntimeConfig
@@ -16,25 +17,37 @@ class SimulatorOrchestrator:
 
     promise_queue: T.List[asyncio.Task[T.Any]]
     _config: RuntimeConfig
-    _simulator_threads: T.Dict[str, threading.Thread]
+    _simulator_workers: int
+    _simulator_executor: ThreadPoolExecutor
+    _submitted_simulators: T.Set[str]
+    _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
         self._config = config
         self.promise_queue = []
-        self._simulator_threads = {}
+        self._simulator_workers = (
+            min(12, len(config.simulators)) if config.simulators else 1
+        )
+        self._simulator_executor = ThreadPoolExecutor(
+            max_workers=self._simulator_workers,
+        )
+        self._submitted_simulators = set()
+        self._stop_event = threading.Event()
 
     def start(self):
         """
         Start simulators in separate threads
         """
         for simulator in self._config.simulators:
-            if simulator.name not in self._simulator_threads:
-                thread = threading.Thread(
-                    target=self._run_simulator_loop, args=(simulator,), daemon=True
+            if simulator.name in self._submitted_simulators:
+                logging.warning(
+                    f"Simulator {simulator.name} already submitted, skipping."
                 )
-                self._simulator_threads[simulator.name] = thread
-                thread.start()
-        return asyncio.Future()  # Return future for compatibility
+                continue
+            self._simulator_executor.submit(self._run_simulator_loop, simulator)
+            self._submitted_simulators.add(simulator.name)
+
+        return asyncio.Future()
 
     def _run_simulator_loop(self, simulator: Simulator):
         """
@@ -45,7 +58,7 @@ class SimulatorOrchestrator:
         simulator : Simulator
             The simulator to run
         """
-        while True:
+        while not self._stop_event.is_set():
             try:
                 simulator.tick()
             except Exception as e:
@@ -105,3 +118,16 @@ class SimulatorOrchestrator:
         logging.debug(f"Calling simulator {simulator.name} with actions {actions}")
         simulator.sim(actions)
         return None
+
+    def stop(self):
+        """
+        Stop the simulator executor and wait for all tasks to complete.
+        """
+        self._stop_event.set()
+        self._simulator_executor.shutdown(wait=True)
+
+    def __del__(self):
+        """
+        Clean up the SimulatorOrchestrator by stopping the executor.
+        """
+        self.stop()

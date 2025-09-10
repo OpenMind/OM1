@@ -65,8 +65,14 @@ class MoveGo2Remote(ActionConnector[MoveInput]):
             logging.info("No open Unitree sport client, returning")
             return
 
-        if self.unitree_state_provider.state == "jointLock":
+        if self.unitree_state_provider.state_code == 1002:
             self.sport_client.BalanceStand()
+
+        if self.unitree_state_provider.action_progress != 0:
+            logging.info(
+                f"Action in progress: {self.unitree_state_provider.action_progress}"
+            )
+            return
 
         try:
             command_status = CommandStatus.from_dict(json.loads(message))

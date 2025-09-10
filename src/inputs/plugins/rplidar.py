@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import time
 from dataclasses import dataclass
 from queue import Empty, Queue
@@ -157,11 +156,10 @@ class RPLidar(FuserInput[str]):
             "relevant_distance_max": getattr(config, "relevant_distance_max", 1.1),
             "relevant_distance_min": getattr(config, "relevant_distance_min", 0.08),
             "sensor_mounting_angle": getattr(config, "sensor_mounting_angle", 180.0),
+            "URID": getattr(config, "URID", ""),
+            "multicast_address": getattr(config, "multicast_address", ""),
+            "machine_type": getattr(config, "machine_type", "go2"),
+            "log_file": getattr(config, "log_file", False),
         }
-
-        # Handle Zenoh-specific configuration
-        if lidar_config["use_zenoh"]:
-            lidar_config["URID"] = getattr(config, "URID")
-            logging.info(f"RPLidar using Zenoh with URID: {lidar_config['URID']}")
 
         return lidar_config

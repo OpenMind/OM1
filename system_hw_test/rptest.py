@@ -6,6 +6,7 @@ import time
 
 import numpy as np
 import zenoh
+from intel435_obstacle_zenoh import Intel435ObstacleDector
 from matplotlib import pyplot as plot
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Circle, Rectangle
@@ -22,10 +23,24 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--serial", help="serial port to use, when using the low level driver", type=str
 )
-parser.add_argument("--URID", help="your robot's URID, when using Zenoh", type=str)
+parser.add_argument(
+    "--zenoh", help="use zenoh to connect to the robot", action="store_true"
+)
+parser.add_argument(
+    "--multicast", help="multicast address for zenoh", type=str, default=None
+)
+parser.add_argument(
+    "--URID", help="your robot's URID, when using Zenoh", type=str, default=""
+)
+parser.add_argument(
+    "--type", help="the type of the robot (go2 or tb4)", type=str, default="go2"
+)
 print(parser.format_help())
 
 args = parser.parse_args()
+
+# Create an instance of Intel435ObstacleDector
+intel435ObstacleDector = Intel435ObstacleDector()
 
 
 def create_straight_line_path_from_angle(angle_degrees, length=1.0, num_points=10):
@@ -88,7 +103,7 @@ angles_blanked = []
 # Figure 2 - the zoom and the possible paths
 centerZoom = ax2.plot([0], [0], "o", color="blue")[0]  # the robot
 
-if args.URID:
+if args.type == "tb4":
     sensor_mounting_angle = 270.0
     angles_blanked = [[-180.0, -160.0], [110.0, 180.0]]
     circleZoom = ax2.add_patch(
@@ -217,6 +232,15 @@ def distance_point_to_line_segment(px, py, x1, y1, x2, y2):
     return math.sqrt((px - closest_x) ** 2 + (py - closest_y) ** 2)
 
 
+def calculate_angle_and_distance(world_x, world_y):
+    distance = math.sqrt(world_x**2 + world_y**2)
+
+    angle_rad = math.atan2(world_y, world_x)
+    angle_degrees = math.degrees(angle_rad)
+
+    return angle_degrees, distance
+
+
 def process(data):
 
     complexes = []
@@ -266,6 +290,18 @@ def process(data):
         if keep:
             complexes.append([x, y, angle, d_m])
 
+    if len(intel435ObstacleDector.obstacle) > 100:
+        for obstacle in intel435ObstacleDector.obstacle:
+            angle, distance = calculate_angle_and_distance(obstacle["x"], obstacle["y"])
+            complexes.append(
+                [
+                    obstacle["x"],
+                    obstacle["y"],
+                    angle,
+                    distance,
+                ]
+            )
+
     array = np.array(complexes)
 
     # sort data into strictly increasing angles to deal with sensor issues
@@ -298,15 +334,6 @@ def process(data):
     # all the possible conflicting points
     for x, y, d in list(zip(X, Y, D)):
         for apath in possible_paths:
-
-            # too far away - we do not care
-            if d > relevant_distance_max:
-                continue
-
-            # also don't worry about things that are very close
-            if d < relevant_distance_min:
-                continue
-
             # Get the start and end points of this straight line path
             path_points = paths[apath]
             start_x, start_y = (
@@ -314,6 +341,16 @@ def process(data):
                 path_points[1][0],
             )
             end_x, end_y = path_points[0][-1], path_points[1][-1]
+
+            if apath == 9:
+                # For going back, only consider obstacles that are:
+                # 1. Behind the robot (negative x in robot frame)
+                # 2. Within a certain distance threshold
+
+                # Assuming robot faces positive x direction
+                # Only check obstacles behind the robot
+                if y >= 0:  # Skip obstacles in front of or beside the robot
+                    continue
 
             # Calculate distance from obstacle to the line segment
             dist_to_line = distance_point_to_line_segment(
@@ -425,17 +462,35 @@ if __name__ == "__main__":
             lidar.disconnect()
             time.sleep(0.5)
             sys.exit(0)
-    elif args.URID:
-        URID = args.URID
-        print(f"Using Zenoh to connect to robot using {URID}")
+
+        sys.exit(0)
+
+    if args.zenoh:
+        print("Using Zenoh to connect to robot")
         print("[INFO] Opening zenoh session...")
         conf = zenoh.Config()
+        if args.multicast:
+            conf.insert_json5(
+                "scouting", f'{{"multicast": {{"address": "{args.multicast}"}}}}'
+            )
+
         z = zenoh.open(conf)
 
-        print("[INFO] Creating Subscribers")
-        scans = z.declare_subscriber(f"{URID}/pi/scan", zenoh_scan)
+        if args.type == "go2":
+            print("[INFO] Creating Subscribers for Go2")
+            scans = z.declare_subscriber("scan", zenoh_scan)
+
+        if args.type == "tb4":
+            print("[INFO] Creating Subscribers for TB4")
+            scans = z.declare_subscriber(f"{args.URID}/pi/scan", zenoh_scan)
+
+        if args.type != "go2" and args.type != "tb4":
+            print(f"[ERROR] Unsupported robot type: {args.type}")
+            sys.exit(1)
 
         ani = FuncAnimation(fig, lambda _: None)
         plot.show()
-    else:
-        print("No sensor")
+
+        sys.exit(0)
+
+    raise ValueError("You must specify either --serial or --zenoh to run this script.")

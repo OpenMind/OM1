@@ -66,14 +66,19 @@ class ElevenLabsTTSProvider:
         """
         self._audio_stream.set_tts_state_callback(tts_state_callback)
 
-    def add_pending_message(self, text: str):
+    def create_pending_message(self, text: str) -> dict:
         """
-        Add text to the pending queue for TTS processing.
+        Create a pending message for TTS processing.
 
         Parameters
         ----------
         text : str
             Text to be converted to speech
+
+        Returns
+        -------
+        dict
+            A dictionary containing the TTS request parameters.
         """
         logging.info(f"audio_stream: {text}")
         elevenlabs_api_key = (
@@ -81,15 +86,26 @@ class ElevenLabsTTSProvider:
             if self.elevenlabs_api_key
             else {}
         )
-        self._audio_stream.add_request(
-            {
-                "text": text,
-                "voice_id": self._voice_id,
-                "model_id": self._model_id,
-                "output_format": self._output_format,
-                **elevenlabs_api_key,
-            }
-        )
+        return {
+            "text": text,
+            "voice_id": self._voice_id,
+            "model_id": self._model_id,
+            "output_format": self._output_format,
+            **elevenlabs_api_key,
+        }
+
+    def add_pending_message(self, message: dict):
+        """
+        Add a pending message to the TTS provider.
+
+        Parameters
+        ----------
+        message : dict
+            The message to be added, typically containing text and TTS parameters.
+        """
+        if isinstance(message, str):
+            message = self.create_pending_message(message)
+        self._audio_stream.add_request(message)
 
     def start(self):
         """

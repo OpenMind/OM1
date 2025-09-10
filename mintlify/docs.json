@@ -1,0 +1,144 @@
+{
+    "theme": "mint",
+    "name": "OpenMind",
+    "favicon": "/assets/favicon.png",
+    "colors": {
+        "primary": "#FD015F",
+        "light": "#E10054",
+        "dark": "#FD015F"
+    },
+    "styling": {
+        "codeblocks": "system"
+    },
+    "background": {
+        "decoration": "grid"
+    },
+    "navigation": {
+        "tabs": [
+            {
+                "tab": "Overview",
+                "pages": [
+                    "mintlify_splash"
+                ]
+            },
+            {
+                "tab": "Guides",
+                "groups": [
+                    {
+                        "group": "Getting Started",
+                        "pages": [
+                            "developing/0_introduction",
+                            "developing/1_get-started",
+                            "developing/7_project_structure",
+                            "developing/2_architecture",
+                            "developing/3_configuration",
+                            "developing/9_troubleshooting_guide"
+                        ]
+                    },
+                    {
+                        "group": "Input Plugins",
+                        "pages": [
+                            "developing/4_inputs",
+                            "robotics/gps_compass",
+                            {
+                                "group": "RPLidar",
+                                "pages": [
+                                    "robotics/motion_planning_lidarA1M8",
+                                    "robotics/motion_planning_unitree_go2",
+                                    "robotics/motion_planning_turtlebot4"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "group": "LLM Integration",
+                        "pages": [
+                            "developing/5_llms"
+                        ]
+                    },
+                    {
+                        "group": "Background",
+                        "pages": [
+                            "developing/8_backgrounds"
+                        ]
+                    },
+                    {
+                        "group": "Action Plugins",
+                        "pages": [
+                            "developing/6_actions"
+                        ]
+                    },
+                    {
+                        "group": "Robot Integration",
+                        "pages": [
+                            "robotics/unitree_g1_humanoid",
+                            "robotics/unitree_go2_quadruped",
+                            "robotics/turtlebot4_zenoh",
+                            "robotics/ubtech_yanshee"
+                        ]
+                    },
+                    {
+                        "group": "Tutorials",
+                        "pages": [
+                            "examples/overview",
+                            "examples/conversation",
+                            "examples/gazebo"
+                        ]
+                    },
+                    {
+                        "group": "Governance/Payments",
+                        "pages": [
+                            "robotics/asimov_governance",
+                            "robotics/coinbase-x402"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "API Reference",
+                "groups": [
+                    {
+                        "group": "API Reference",
+                        "pages": [
+                            "api-reference/introduction"
+                        ]
+                    },
+                    {
+                        "group": "OM Core Endpoints",
+                        "pages": [
+                            "api-reference/endpoints/account_and_key_management",
+                            "api-reference/endpoints/elevenlabs_tts",
+                            "api-reference/endpoints/google_asr",
+                            "api-reference/endpoints/llm",
+                            "api-reference/endpoints/riva",
+                            "api-reference/endpoints/vila_vlm"
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "logo": {
+        "light": "/assets/OpenMind_black.svg",
+        "dark": "/assets/OpenMind_white.svg"
+    },
+    "navbar": {
+        "links": [
+            {
+                "label": "Support",
+                "href": "mailto:hello@openmind.org"
+            }
+        ],
+        "primary": {
+            "type": "button",
+            "label": "Sign Up",
+            "href": "https://portal.openmind.org"
+        }
+    },
+    "footer": {
+        "socials": {
+            "x": "https://x.com/openmind_agi",
+            "github": "https://github.com/openmind"
+        }
+    }
+}

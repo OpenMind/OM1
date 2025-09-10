@@ -2,6 +2,7 @@ import asyncio
 import logging
 import threading
 import typing as T
+from concurrent.futures import ThreadPoolExecutor
 
 from actions.base import AgentAction
 from llm.output_model import Action
@@ -17,26 +18,35 @@ class ActionOrchestrator:
 
     promise_queue: T.List[asyncio.Task[T.Any]]
     _config: RuntimeConfig
-    _impl_threads: T.Dict[str, threading.Thread]
-    _connector_threads: T.Dict[str, threading.Thread]
+    _connector_workers: int
+    _connector_executor: ThreadPoolExecutor
+    _submitted_connectors: T.Set[str]
+    _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
         self._config = config
         self.promise_queue = []
-        self._impl_threads = {}
-        self._connector_threads = {}
+        self._connector_workers = (
+            min(12, len(config.agent_actions)) if config.agent_actions else 1
+        )
+        self._connector_executor = ThreadPoolExecutor(
+            max_workers=self._connector_workers,
+        )
+        self._submitted_connectors = set()
+        self._stop_event = threading.Event()
 
     def start(self):
         """
         Start actions and connectors in separate threads
         """
         for agent_action in self._config.agent_actions:
-            if agent_action.llm_label not in self._connector_threads:
-                conn_thread = threading.Thread(
-                    target=self._run_connector_loop, args=(agent_action,), daemon=True
+            if agent_action.llm_label in self._submitted_connectors:
+                logging.warning(
+                    f"Connector {agent_action.llm_label} already submitted, skipping."
                 )
-                self._connector_threads[agent_action.llm_label] = conn_thread
-                conn_thread.start()
+                continue
+            self._connector_executor.submit(self._run_connector_loop, agent_action)
+            self._submitted_connectors.add(agent_action.llm_label)
 
         return asyncio.Future()  # Return future for compatibility
 
@@ -44,7 +54,7 @@ class ActionOrchestrator:
         """
         Thread-based connector loop
         """
-        while True:
+        while not self._stop_event.is_set():
             try:
                 action.connector.tick()
             except Exception as e:
@@ -115,3 +125,16 @@ class ActionOrchestrator:
         )
         await agent_action.connector.connect(input_interface)
         return input_interface
+
+    def stop(self):
+        """
+        Stop the action executor and wait for all tasks to complete.
+        """
+        self._stop_event.set()
+        self._connector_executor.shutdown(wait=True)
+
+    def __del__(self):
+        """
+        Clean up the ActionOrchestrator by stopping the executor.
+        """
+        self.stop()

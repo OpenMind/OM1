@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock
 
 import pytest
@@ -34,22 +35,27 @@ async def test_background_orchestrator_initialization(mock_background):
     """Test that BackgroundOrchestrator initializes correctly."""
     orchestrator = BackgroundOrchestrator(mock_background)
     assert orchestrator._config == mock_background
-    assert len(orchestrator._background_threads) == 0
+    assert orchestrator._background_workers == 2
 
 
 @pytest.mark.asyncio
 async def test_start_background(orchestrator):
     """Test that backgrounds are started in separate threads."""
-    future = orchestrator.start()
+    try:
+        future = orchestrator.start()
 
-    # Verify threads are created and started
-    assert len(orchestrator._background_threads) == 2
-    for thread in orchestrator._background_threads.values():
-        assert thread.is_alive()
-        assert thread.daemon is True
+        assert isinstance(orchestrator._background_executor, ThreadPoolExecutor)
+        assert (
+            orchestrator._background_executor._max_workers
+            == orchestrator._background_workers
+        )
 
-    assert isinstance(future, asyncio.Future)
+        assert len(orchestrator._submitted_backgrounds) == len(
+            orchestrator._config.backgrounds
+        )
+        assert isinstance(future, asyncio.Future)
 
-    # Clean up threads
-    for thread in orchestrator._background_threads.values():
-        thread.join(timeout=1)
+        expected_background_names = {bg.name for bg in orchestrator._config.backgrounds}
+        assert orchestrator._submitted_backgrounds == expected_background_names
+    finally:
+        orchestrator.stop()

@@ -80,7 +80,7 @@ class OpenAILLM(LLM[R]):
 
             self.io_provider.llm_start_time = time.time()
 
-            # this saves all the input information
+            # Save the input information for debugging
             self.io_provider.set_llm_prompt(prompt)
 
             response = await self._client.beta.chat.completions.parse(

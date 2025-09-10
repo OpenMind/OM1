@@ -41,7 +41,7 @@ def test_initialization(base_url, api_key, fps, mock_dependencies):
 
     mock_client.assert_called_once_with(api_key=api_key, base_url=base_url)
     mock_video_stream.assert_called_once_with(
-        frame_callback=provider._process_frame, fps=fps
+        frame_callback=provider._process_frame, fps=fps, device_index=0
     )
 
     assert not provider.running

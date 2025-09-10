@@ -1,7 +1,7 @@
-import datetime
 import json
 import logging
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import List
@@ -18,7 +18,7 @@ class RFData:
 
     Parameters
     ----------
-    timestamp : float
+    unix_ts : float
         Unix timestamp of the scan.
     address : str
         Bluetooth address of the device.
@@ -28,7 +28,7 @@ class RFData:
         Received Signal Strength Indicator of the device.
     """
 
-    timestamp: float
+    unix_ts: float
     address: str
     name: str | None
     rssi: int
@@ -47,7 +47,7 @@ class RFData:
             Dictionary representation of the RFData object.
         """
         return {
-            "timestamp": self.timestamp,
+            "unix_ts": self.unix_ts,
             "address": self.address,
             "name": self.name,
             "rssi": self.rssi,
@@ -65,7 +65,7 @@ class RFDataRaw:
 
     Parameters
     ----------
-    timestamp : float
+    unix_ts : float
         Unix timestamp of the scan.
     address : str
         Bluetooth address of the device.
@@ -75,7 +75,7 @@ class RFDataRaw:
         Received Signal Strength Indicator of the device.
     """
 
-    timestamp: str
+    unix_ts: float
     address: str
     rssi: int
     packet: str
@@ -90,7 +90,7 @@ class RFDataRaw:
             Dictionary representation of the RFData object.
         """
         return {
-            "timestamp": self.timestamp,
+            "unix_ts": self.unix_ts,
             "address": self.address,
             "rssi": self.rssi,
             "packet": self.packet,
@@ -104,22 +104,25 @@ class FabricData:
     """
 
     machine_id: str
-    gps_time_utc: str
+    payload_idx: int
+    gps_unix_ts: float
     gps_lat: float
     gps_lon: float
     gps_alt: float
     gps_qua: int
-    rtk_time_utc: str
+    rtk_unix_ts: float
     rtk_lat: float
     rtk_lon: float
     rtk_alt: float
     rtk_qua: int
     mag: float
-    update_time_local: float
+    unix_ts: float
     odom_x: float
     odom_y: float
-    yaw_odom_0_360: float
-    yaw_odom_m180_p180: float
+    odom_rockchip_ts: float
+    odom_subscriber_ts: float
+    odom_yaw_0_360: float
+    odom_yaw_m180_p180: float
     rf_data: List[RFData]
     rf_data_raw: List[RFDataRaw]
 
@@ -134,22 +137,25 @@ class FabricData:
         """
         return {
             "machine_id": self.machine_id,
-            "gps_time_utc": self.gps_time_utc,
+            "payload_idx": self.payload_idx,
+            "gps_unix_ts": self.gps_unix_ts,
             "gps_lat": self.gps_lat,
             "gps_lon": self.gps_lon,
             "gps_alt": self.gps_alt,
             "gps_qua": self.gps_qua,
-            "rtk_time_utc": self.rtk_time_utc,
+            "rtk_unix_ts": self.rtk_unix_ts,
             "rtk_lat": self.rtk_lat,
             "rtk_lon": self.rtk_lon,
             "rtk_alt": self.rtk_alt,
             "rtk_qua": self.rtk_qua,
             "mag": self.mag,
-            "update_time_local": self.update_time_local,
+            "unix_ts": self.unix_ts,
             "odom_x": self.odom_x,
             "odom_y": self.odom_y,
-            "yaw_odom_0_360": self.yaw_odom_0_360,
-            "yaw_odom_m180_p180": self.yaw_odom_m180_p180,
+            "odom_yaw_0_360": self.odom_yaw_0_360,
+            "odom_yaw_m180_p180": self.odom_yaw_m180_p180,
+            "odom_rockchip_ts": self.odom_rockchip_ts,
+            "odom_subscriber_ts": self.odom_subscriber_ts,
             "rf_data": [rf.to_dict() for rf in self.rf_data] if self.rf_data else [],
             "rf_data_raw": (
                 [rf.to_dict() for rf in self.rf_data_raw] if self.rf_data_raw else []
@@ -189,8 +195,10 @@ class FabricDataSubmitter:
         self.executor = ThreadPoolExecutor(max_workers=1)
 
     def update_filename(self):
-        start_time = datetime.datetime.now(datetime.UTC)
-        filename = f"{self.filename_base}_{start_time.isoformat(timespec='seconds').replace(':', '-')}Z.jsonl"
+        unix_ts = time.time()
+        logging.info(f"fabric time: {unix_ts}")
+        unix_ts = str(unix_ts).replace(".", "_")
+        filename = f"{self.filename_base}_{unix_ts}Z.jsonl"
         return filename
 
     def write_dict_to_file(self, data: dict):
@@ -236,10 +244,10 @@ class FabricDataSubmitter:
 
         if self.write_to_local_file:
             self.write_dict_to_file(json_dict)
-            logging.info(f"FDS wrote to this file: {self.filename_current}")
+            logging.info(f"FDS wrote to {self.filename_current}")
 
         if self.api_key is None or self.api_key == "":
-            logging.error("API key is missing. Cannot share data to FABRIC cloud.")
+            logging.error("API key missing. Cannot share data to FABRIC.")
             return
 
         try:
@@ -250,7 +258,7 @@ class FabricDataSubmitter:
             )
 
             if request.status_code == 201:
-                logging.debug(f"Data shared successfully: {request.json()}")
+                logging.debug(f"Data shared: {request.json()}")
             else:
                 logging.error(
                     f"Failed to share data: {request.status_code} - {request.text}"

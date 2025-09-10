@@ -451,7 +451,7 @@ void loop()
 {
 
   char c = GPS.read();
-  // if a sentence is received, we can check the checksum, parse it...
+  // if a sentence is received, check the checksum and potentially parse the sentence...
   if (GPS.newNMEAreceived()) {
     if (!GPS.parse(GPS.lastNMEA())) // this also sets the newNMEAreceived() flag to false
       return; // we can fail to parse a sentence in which case we should just wait for another

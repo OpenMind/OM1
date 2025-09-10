@@ -17,7 +17,7 @@ dependencies = [
     "json5",
     "jsonschema",
     "pycdr2",
-    "eclipse-zenoh",
+    "eclipse-zenoh>=1.4.0",
     "audiosegment",
     "pyaudio",
     "openai>=1.59.5",
@@ -25,26 +25,29 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "typer>=0.15.1",
     "opencv-python",
-    "deepface",
-    "tf_keras",
+    "deepface>=0.0.81",
+    "tensorflow>=2.15.0",
+    "tf_keras>=2.15.0",
     "web3",
     "numpy",
-    "cdp-sdk>=0.15.0",
+    "cdp-sdk==0.21.0",
     "hid",
     "cv_bridge",
     "torch",
     "torchvision",
     "pyserial",
+    "py-mjpeg",
     "fastapi>=0.110.0",
     "uvicorn>=0.27.1",
     "websockets>=12.0",
-    "om1-modules @ git+https://github.com/OpenmindAGI/om1-modules.git@935586164bb46bf3e1c1c9ee1c9043df182ec5f9",
+    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@0d1e1c5cd192c68cbe95aab45bb555f0295f8cc5",
     "aiohttp>=3.9.3",
     "python-multipart>=0.0.9",
     "jinja2>=3.1.3",
     "pydub>=0.25.1",
     "pynput>=1.8.1",
     "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
+    "nest-asyncio>=1.6.0",
 ]
 
 [project.optional-dependencies]
@@ -66,7 +69,7 @@ dev = [
 pythonpath = ["src"]
 asyncio_mode = "auto"
 addopts = "-m \"not integration\""
-norecursedirs = ["src/unitree", "system_hw_test", "gazebo"]
+norecursedirs = ["src/unitree", "system_hw_test", "gazebo", "src/ubtech"]
 markers = [
     "integration: marks tests as integration tests",
 ]
@@ -74,20 +77,20 @@ markers = [
 [tool.black]
 line-length = 88
 include = '\.pyi?$'
-exclude = "(.venv)|(/src/unitree)|(/gazebo)"
+exclude = "(.venv)|(/src/unitree)|(/src/ubtech)|(/gazebo)"
 
 [tool.isort]
 profile = "black"
 multi_line_output = 3
 line_length = 88
 sources = ["src", "tests"]
-skip_glob = [".venv*", "/src/unitree", "/gazebo"]
+skip_glob = [".venv*", "/src/unitree", "/gazebo", "/src/ubtech"]
 
 [tool.ruff]
 line-length = 88
 indent-width = 4
 src = ["src"]
-exclude = ["src/unitree","gazebo"]
+exclude = ["src/unitree","gazebo", "src/ubtech"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

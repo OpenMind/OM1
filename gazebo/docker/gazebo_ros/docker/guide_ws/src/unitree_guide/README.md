@@ -7,7 +7,7 @@ The unitree_guide is an open source project for controlling the quadruped robot 
 # Quick Start
 The following will quickly introduce the use of unitree_guide in the gazebo simulator. For more usage, please refer to 《四足机器人控制算法--建模、控制与实践》.
 ## Environment
-We recommand users to run this project in Ubuntu 18.04 and ROS melodic environment.
+We recommend users to run this project in Ubuntu 18.04 and ROS melodic environment.
 ## Dependencies
 1. [unitree_guide](https://github.com/unitreerobotics/unitree_guide)<br>
 2. [unitree_ros](https://github.com/unitreerobotics/unitree_ros)<br>
@@ -31,7 +31,7 @@ To open the gazebo simulator, run:
 roslaunch unitree_guide gazeboSim.launch 
 ```
 
-For starting the controller, open an another terminal and switch to the same directory,  then run the following command:
+For starting the controller, open another terminal and switch to the same directory,  then run the following command:
 ```
 ./devel/lib/unitree_guide/junior_ctrl
 ```
@@ -41,4 +41,4 @@ After starting the controller,  the robot will lie on the ground of the simulato
 . (If there is no response, you need to click on the terminal opened for starting the controller and then repeat the previous operation)
 
 # Note
-Unitree_guide provides a basic quadruped robot controller for beginners. To achive better performance, additional fine tuning of parameters or more advanced methods (such as MPC etc.) might be required. Any contribution and good idea from the robotics community are all welcome. Feel free to raise an issue ~ <br>
+Unitree_guide provides a basic quadruped robot controller for beginners. To achieve better performance, additional fine tuning of parameters or more advanced methods (such as MPC etc.) might be required. Any contribution and good idea from the robotics community are all welcome. Feel free to raise an issue ~ <br>

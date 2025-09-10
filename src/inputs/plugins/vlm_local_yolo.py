@@ -1,18 +1,18 @@
 import asyncio
-import datetime
 import json
 import logging
+import os
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 import cv2
-import numpy as np
 from ultralytics import YOLO
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
+from providers.odom_provider import OdomProvider
 
 # Common resolutions to test (width, height), ordered high to low
 RESOLUTIONS = [
@@ -90,15 +90,9 @@ class VLM_Local_YOLO(FuserInput[str]):
         """
         super().__init__(config)
 
-        self.camera_index = 0  # default to default webcam unless specified otherwsie
+        self.camera_index = 0  # default to default webcam unless specified otherwise
         if self.config.camera_index:
             self.camera_index = self.config.camera_index
-
-        self.log_file = False
-        self.log_file_opened = None
-
-        if self.config.log_file:
-            self.log_file = self.config.log_file
 
         # Track IO
         self.io_provider = IOProvider()
@@ -110,14 +104,19 @@ class VLM_Local_YOLO(FuserInput[str]):
         self.descriptor_for_LLM = "Eyes"
 
         # Load model
-        self.model = YOLO("yolov8n.pt")
+        self.model = YOLO("yolov8n_aug.pt")
+
+        self.write_to_local_file = False
+        if self.config.log_file:
+            self.write_to_local_file = self.config.log_file
+
+        self.filename_current = None
+        self.max_file_size_bytes = 1024 * 1024
 
         # Create timestamped log filename
-        if self.log_file:
-            start_time = datetime.datetime.now(datetime.UTC)
-            log_filename = f"dump/yolo_{start_time.isoformat(timespec='seconds').replace(':', '-')}Z.jsonl"
-            self.log_file_opened = open(log_filename, "a")
-            logging.info(f"YOLO Logging to {log_filename}")
+        if self.write_to_local_file:
+            self.filename_current = self.update_filename()
+            logging.info(f"YOLO Logging to {self.filename_current}")
 
         self.width, self.height = check_webcam(self.camera_index)
 
@@ -139,6 +138,22 @@ class VLM_Local_YOLO(FuserInput[str]):
                 f"Webcam pixel dimensions for YOLO: {self.width}, {self.height}"
             )
 
+        self.odom = OdomProvider()
+        logging.info(f"YOLO Odom Provider: {self.odom}")
+        self.odom_rockchip_ts = 0.0
+        self.odom_subscriber_ts = 0.0
+        self.odom_x = 0.0
+        self.odom_y = 0.0
+        self.odom_yaw_0_360 = 0.0
+        self.odom_yaw_m180_p180 = 0.0
+
+    def update_filename(self):
+        unix_ts = round(time.time(), 6)
+        logging.info(f"YOLO time: {unix_ts}")
+        unix_ts = str(unix_ts).replace(".", "_")
+        filename = f"dump/yolo_{unix_ts}Z.jsonl"
+        return filename
+
     def get_top_detection(self, detections):
         """
         Returns the class label and bbox of the detection with the highest confidence.
@@ -155,33 +170,111 @@ class VLM_Local_YOLO(FuserInput[str]):
         top = max(detections, key=lambda d: d["confidence"])
         return top["class"], top["bbox"]
 
-    async def _poll(self) -> np.ndarray:
+    async def _poll(self) -> Optional[List]:
         """
         Poll for new image input.
-
-        Currently generates random colored images for testing.
-        In production, this would interface with camera or sensor.
 
         Returns
         -------
         np.ndarray
             Generated or captured image as a numpy array
         """
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.25)
 
         if self.have_cam:
-            ret, frame = self.cap.read()
-            # logging.debug(f"VLM_YOLO_Local frame: {frame}")
-            return frame
 
-    async def _raw_to_text(self, raw_input: Optional[np.ndarray]) -> Optional[Message]:
+            ret, frame = self.cap.read()
+            self.frame_index += 1
+            timestamp = time.time()
+
+            try:
+                o = self.odom.position
+                logging.debug(f"Odom data: {o}")
+                if o:
+                    self.odom_x = o["odom_x"]
+                    self.odom_y = o["odom_y"]
+                    self.odom_rockchip_ts = o["odom_rockchip_ts"]
+                    self.odom_subscriber_ts = o["odom_subscriber_ts"]
+                    self.odom_yaw_0_360 = o["odom_yaw_0_360"]
+                    self.odom_yaw_m180_p180 = o["odom_yaw_m180_p180"]
+            except Exception as e:
+                logging.error(f"Error parsing Odom: {e}")
+
+            results = self.model.predict(
+                source=frame, save=False, stream=True, verbose=False
+            )
+
+            detections = []
+            for r in results:
+                for box in r.boxes:
+                    x1, y1, x2, y2 = map(float, box.xyxy[0])
+                    cls = int(box.cls[0])
+                    conf = float(box.conf[0])
+                    label = self.model.names[cls]
+                    detections.append(
+                        {
+                            "class": label,
+                            "confidence": round(conf, 4),
+                            "bbox": [round(x1), round(y1), round(x2), round(y2)],
+                        }
+                    )
+
+            logging.debug(
+                f"\nFrame {self.frame_index} @ {timestamp} — {len(detections)} objects:"
+            )
+
+            if self.write_to_local_file:
+                try:
+                    json_line = json.dumps(
+                        {
+                            "frame": self.frame_index,
+                            "timestamp": timestamp,
+                            "detections": detections,
+                            "odom_rockchip_ts": self.odom_rockchip_ts,
+                            "odom_subscriber_ts": self.odom_subscriber_ts,
+                            "odom_x": self.odom_x,
+                            "odom_y": self.odom_y,
+                            "odom_yaw_0_360": self.odom_yaw_0_360,
+                            "odom_yaw_m180_p180": self.odom_yaw_m180_p180,
+                        }
+                    )
+                    self.write_str_to_file(json_line)
+                    logging.info(f"YOLO wrote to {self.filename_current}")
+                except Exception as e:
+                    logging.error(f"Error saving YOLO: {str(e)}")
+
+            return detections
+
+    def write_str_to_file(self, json_line: str):
+        """
+        Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
+        creates a new file with a timestamp.
+
+        Parameters:
+        - data: Dictionary to write
+        """
+
+        if not isinstance(json_line, str):
+            raise ValueError("Provided json_line must be a json string.")
+
+        if (
+            os.path.exists(self.filename_current)
+            and os.path.getsize(self.filename_current) > self.max_file_size_bytes
+        ):
+            self.filename_current = self.update_filename()
+            logging.info(f"New yolo file name: {self.filename_current}")
+
+        with open(self.filename_current, "a", encoding="utf-8") as f:
+            f.write(json_line + "\n")
+            f.flush()
+
+    async def _raw_to_text(self, raw_input: Optional[List]) -> Optional[Message]:
         """
         Process raw image input to generate text description.
 
         Parameters
         ----------
-        raw_input : np.ndarray
-            Input numpy array image to process
+        raw_input : List of YOLO detections
 
         Returns
         -------
@@ -189,57 +282,17 @@ class VLM_Local_YOLO(FuserInput[str]):
             Timestamped message containing description
         """
 
-        self.frame_index += 1
-
-        sentence = None
-        timestamp = time.time()
-        datetime_str = datetime.datetime.fromtimestamp(
-            timestamp, datetime.UTC
-        ).isoformat()
-
-        results = self.model.predict(
-            source=raw_input, save=False, stream=True, verbose=False
-        )
-
-        detections = []
-        for r in results:
-            for box in r.boxes:
-                x1, y1, x2, y2 = map(float, box.xyxy[0])
-                cls = int(box.cls[0])
-                conf = float(box.conf[0])
-                label = self.model.names[cls]
-
-                detections.append(
-                    {
-                        "class": label,
-                        "confidence": round(conf, 4),
-                        "bbox": [round(x1), round(y1), round(x2), round(y2)],
-                    }
-                )
-
-        # Print to terminal
-        logging.debug(
-            f"\nFrame {self.frame_index} @ {datetime_str} — {len(detections)} objects:"
-        )
-
-        if self.log_file and self.log_file_opened:
-            json_line = json.dumps(
-                {
-                    "frame": self.frame_index,
-                    "timestamp": timestamp,
-                    "datetime": datetime_str,
-                    "detections": detections,
-                }
-            )
-            self.log_file_opened.write(json_line + "\n")
-            self.log_file_opened.flush()
-
-        for det in detections:
-            logging.debug(
-                f"  {det['class']} ({det['confidence']:.2f}) -> {det['bbox']}"
-            )
+        detections = raw_input
 
         if detections:
+
+            for det in detections:
+                logging.debug(
+                    f"{det['class']} ({det['confidence']:.2f}) -> {det['bbox']}"
+                )
+
+            sentence = None
+
             thing, bbox = self.get_top_detection(detections)
             x1 = bbox[0]
             x2 = bbox[2]
@@ -253,17 +306,16 @@ class VLM_Local_YOLO(FuserInput[str]):
 
             sentence = f"You see a {thing} {direction}."
 
-        if sentence is not None:
-            return Message(timestamp=time.time(), message=sentence)
+            if sentence is not None:
+                return Message(timestamp=time.time(), message=sentence)
 
-    async def raw_to_text(self, raw_input: np.ndarray):
+    async def raw_to_text(self, raw_input: List):
         """
-        Convert raw image to text and update message buffer.
+        Convert list of detections to text and update message buffer.
 
         Parameters
         ----------
-        raw_input : np.ndarray
-            Raw image to be processed
+        raw_input : List[detections]
         """
         pending_message = await self._raw_to_text(raw_input)
 

@@ -1,0 +1,165 @@
+---
+title: Installation Guide
+description: "Learn how to install, set up and configure OM1."
+---
+
+## System Requirements
+
+### Operating System
+
+- Linux (Ubuntu 20, 22, 24)
+- MacOS 12.0+
+
+### Hardware
+
+- Sufficient memory to run vision and other models
+- Reliable WiFi or other networking
+- Sensors such as cameras, microphones, LIDAR units, IMUs
+- Actuators and outputs such as speakers, visual displays, and movement platforms (legs, arms, hands)
+- Hardware connected to the "central" computer via `Zenoh`, `CycloneDDS`, serial, usb, or custom APIs/libraries
+
+### Software
+
+Ensure you have the following installed on your machine:
+
+- `Python` >= 3.10
+- `uv` >= 0.6.2 as the Python package manager and virtual environment
+- `portaudio` for audio input and output
+- `ffmpeg` for video processing
+- [Openmind API key](https://portal.openmind.org/)
+
+#### UV (A Rust and Python package manager)
+
+``` bash
+# Mac
+brew install uv 
+
+# Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh 
+```
+
+#### PortAudio Library
+
+For audio functionality, install `portaudio`:
+
+```bash
+# Mac
+brew install portaudio
+
+# Linux
+sudo apt-get update
+sudo apt-get install portaudio19-dev python-all-dev
+```
+
+#### ffmpeg
+
+For video functionality, install FFmpeg:
+
+```bash Mac
+# Mac
+brew install ffmpeg
+
+# Linux
+sudo apt-get update
+sudo apt-get install ffmpeg
+``` 
+
+## Installation and Setup
+
+1. Clone the repository
+
+Run the following commands to clone the repository and set up the environment:
+
+```bash clone repo
+git clone https://github.com/openmind/OM1.git
+cd OM1
+git submodule update --init
+uv venv
+```
+
+2. Set the configuration variables
+
+Locate the `config` folder and add your OpenMind API key to `/config/spot.json` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.org/.  
+
+```bash
+# /config/spot.json
+...
+"api_key": "om1_live_..."
+...
+```
+
+Note: Using the placeholder key **openmind-free** will generate errors.
+
+Or, create a `.env` file in the project directory and add the following:
+
+```bash
+OM_API_KEY=om1_live_...
+```
+
+3. Run the Spot Agent
+
+Run the following command to start the Spot Agent:
+
+```bash
+uv run src/run.py spot
+```
+
+On initial execution, this command will resolve and install project dependencies. Please allow a few minutes for this process to finish, before the system becomes active.
+
+### WebSim to check input and output
+
+Go to [http://localhost:8000](http://localhost:8000) to see real time logs along with the input and output in the terminal. For easy debugging, add `--debug` to see additional logging information.
+
+### Understanding the Log Data
+
+The log data provide insight into how the `spot` agent makes sense of its environment and decides on its next actions.
+
+  - First, it detects a person using vision.
+  - Communicates with an external AI API for response generation.
+  - The LLM(s) decide on a set of actions (dancing and speaking).
+  - The simulated robot expresses emotions via a front-facing display.
+  - Logs latency and processing times to monitor system performance.
+  
+```bash
+Object Detector INPUT
+// START
+You see a person in front of you. You also see a laptop.
+// END
+
+AVAILABLE ACTIONS:
+command: move
+    A movement to be performed by the agent.
+    Effect: Allows the agent to move.
+    Arguments: Allowed values: 'stand still', 'sit', 'dance', 'shake paw', 'walk', 'walk back', 'run', 'jump', 'wag tail'
+
+command: speak
+    Words to be spoken by the agent.
+    Effect: Allows the agent to speak.
+    Arguments: <class 'str'>
+
+command: emotion
+    A facial expression to be performed by the agent.
+    Effect: Performs a given facial expression.
+    Arguments: Allowed values: 'cry', 'smile', 'frown', 'think', 'joy'
+
+What will you do? Command: 
+
+INFO:httpx:HTTP Request: POST https://api.openmind.org/api/core/openai/chat/completions "HTTP/1.1 200 OK"
+INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), Command(type='speak', value="Hi there! I see you and I'm excited!"), Command(type='emotion', value='joy')]
+```
+
+## More Examples
+
+There are more pre-configured agents in the `/config` folder. They can be run with the following command:
+
+For example, to run the `conversation` agent:
+
+```bash
+uv run src/run.py conversation
+```
+
+If you configure a custom agent, replace `<agent_name>` with your agent and run the below command:
+
+```bash
+uv run src/run.py <agent_name>
+```
