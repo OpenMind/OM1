@@ -88,7 +88,7 @@
                                         {
                         "group": "Full Autonomy",
                         "pages": [
-                            "full_autonomy_guidelines/brainpack_introduction",
+                            "full_autonomy_guidelines/backpack_introduction",
                             "full_autonomy_guidelines/architecture_overview",
                             {
                                 "group": "Full Autonomy Components",
