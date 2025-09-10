@@ -2,11 +2,14 @@ import logging
 import threading
 import time
 
+import zenoh
+
 from actions.base import ActionConfig, ActionConnector
 from actions.move_game_controller.interface import IDLEInput
 from providers.odom_provider import OdomProvider, RobotState
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+from zenoh_idl.status_msgs import AudioStatus
 
 try:
     import hid
@@ -33,7 +36,22 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         """
         super().__init__(config)
 
-        self.config = config  # never used?
+        self.config = config
+
+        # Movement speed m/s and rad/s
+        self.move_speed = getattr(config, "speed_x", 0.9)
+        self.turn_speed = getattr(config, "speed_yaw", 0.6)
+        self.yaw_correction = getattr(config, "yaw_correction", 0.0)
+        self.lateral_correction = getattr(config, "lateral_correction", 0.0)
+
+        self.topic = "robot/status/audio"
+        self.session = None
+        try:
+            self.session = zenoh.open(zenoh.Config())
+            self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
+            logging.info("Game Controller Zenoh client opened")
+        except Exception as e:
+            logging.error(f"Error opening Game Controller Zenoh client: {e}")
 
         self.gamepad = None
         self.sony_dualsense = False
@@ -42,7 +60,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self._init_controller()
 
         if self.gamepad is None:
-            logging.warn("Game controller not found")
+            logging.warning("Game controller not found")
 
         self.sport_client = None
         try:
@@ -71,15 +89,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
 
         self.RTLT_moving = False
 
-        # Movement speed m/s and rad/s (?)
-        self.move_speed = 0.9
-        self.turn_speed = 0.6
-
         unitree_ethernet = getattr(config, "unitree_ethernet", None)
         self.odom = OdomProvider(channel=unitree_ethernet)
         self.unitree_state_provider = UnitreeGo2StateProvider()
 
         self.thread_lock = threading.Lock()
+
+    def zenoh_audio_message(self, data):
+        self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     def _init_controller(self) -> None:
         """
@@ -150,14 +167,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                 logging.info("Already sitting, skipping command")
                 return
 
-            if self.unitree_state_provider.state == "jointLock":
+            if self.unitree_state_provider.state_code == 1002:
                 self.sport_client.BalanceStand()
                 self.sport_client.Move(0.05, 0, 0)
 
             code = getattr(self.sport_client, command)()
             logging.info(f"Unitree command {command} executed with code {code}")
 
-            if self.unitree_state_provider.state == "jointLock":
+            if self.unitree_state_provider.state_code == 1002:
                 self.sport_client.BalanceStand()
                 self.sport_client.Move(0.05, 0, 0)
 
@@ -265,7 +282,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                 logging.warning(f"Controller disconnected: {e}")
                 self.gamepad = None
 
-        # special case for no data if the p-pad or LT and RT is kept pressed
+        # special case for no data if the D-pad or LT and RT is kept pressed
         if data is None or len(data) == 0:
             if self.rt_previous > 0 or self.lt_previous > 0:
                 # we always excute the left turn first
@@ -283,10 +300,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
             if self.d_pad_previous > 0:
                 if self.d_pad_previous == 1:  # Up
                     logging.info("D-pad UP - Moving forward")
-                    self._move_robot(self.move_speed, 0.0)
+                    self._move_robot(
+                        self.move_speed, self.lateral_correction, self.yaw_correction
+                    )
                 elif self.d_pad_previous == 5:  # Down
                     logging.info("D-pad DOWN - Moving backward")
-                    self._move_robot(-self.move_speed, 0.0)
+                    self._move_robot(
+                        -self.move_speed, -self.lateral_correction, -self.yaw_correction
+                    )
                 elif self.d_pad_previous == 7:  # Left
                     logging.info("D-pad LEFT - Moving left")
                     self._move_robot(0.0, self.move_speed)
@@ -395,11 +416,15 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
             if self.d_pad_value == 1:  # Up
                 logging.info("D-pad UP - Moving forward")
                 move_triggered_dpad = True
-                self._move_robot(self.move_speed, 0.0)
+                self._move_robot(
+                    self.move_speed, self.lateral_correction, self.yaw_correction
+                )
             elif self.d_pad_value == 5:  # Down
                 logging.info("D-pad DOWN - Moving backward")
                 move_triggered_dpad = True
-                self._move_robot(-self.move_speed, 0.0)
+                self._move_robot(
+                    -self.move_speed, -self.lateral_correction, -self.yaw_correction
+                )
             elif self.d_pad_value == 7:  # Left
                 logging.info("D-pad LEFT - Moving left")
                 move_triggered_dpad = True

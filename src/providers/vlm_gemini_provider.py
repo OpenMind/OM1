@@ -25,6 +25,7 @@ class VLMGeminiProvider:
         api_key: str,
         fps: int = 10,
         stream_url: Optional[str] = None,
+        camera_index: int = 0,
     ):
         """
         Initialize the VLM Provider.
@@ -39,6 +40,8 @@ class VLMGeminiProvider:
             The frames per second for the video stream.
         stream_url : str, optional
             The URL for the video stream. If not provided, defaults to None.
+        camera_index : int
+            The camera index for the video stream device. Defaults to 0.
         """
         self.running: bool = False
         self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
@@ -46,7 +49,7 @@ class VLMGeminiProvider:
             ws.Client(url=stream_url) if stream_url else None
         )
         self.video_stream: VideoStream = VideoStream(
-            frame_callback=self._process_frame, fps=fps
+            frame_callback=self._process_frame, fps=fps, device_index=camera_index
         )
         self.message_callback: Optional[Callable] = None
 

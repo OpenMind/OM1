@@ -138,7 +138,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
 
         if output_interface.action == "turn left":
             # turn 90 Deg to the left (CCW)
-            target_yaw = self.odom.yaw_odom_m180_p180 - 30.0
+            target_yaw = self.odom.odom_yaw_m180_p180 - 30.0
             if target_yaw <= -180:
                 target_yaw += 360.0
             self.pending_movements.put(
@@ -146,7 +146,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             )
         elif output_interface.action == "turn right":
             # turn 90 Deg to the right (CW)
-            target_yaw = self.odom.yaw_odom_m180_p180 + 30.0
+            target_yaw = self.odom.odom_yaw_m180_p180 + 30.0
             if target_yaw >= 180.0:
                 target_yaw -= 360.0
             self.pending_movements.put(
@@ -198,12 +198,12 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
         # physical collision event ALWAYS takes precedence
         if self.hazard is not None:
             if self.hazard == "TURN_RIGHT":
-                target_yaw = self.odom.yaw_odom_m180_p180 + 100.0
+                target_yaw = self.odom.odom_yaw_m180_p180 + 100.0
                 if target_yaw >= 180.0:
                     target_yaw -= 360.0
                 self.emergency = target_yaw
             elif self.hazard == "TURN_LEFT":
-                target_yaw = self.odom.yaw_odom_m180_p180 - 100.0
+                target_yaw = self.odom.odom_yaw_m180_p180 - 100.0
                 if target_yaw <= -180:
                     target_yaw += 360.0
                 self.emergency = target_yaw
@@ -219,7 +219,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             target = self.emergency
             logging.info(f"Emergency target: {target}")
 
-            gap = self.odom.yaw_odom_m180_p180 - target
+            gap = self.odom.odom_yaw_m180_p180 - target
             if gap > 180.0:
                 gap -= 360.0
             elif gap < -180.0:
@@ -266,7 +266,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             current_target = target[0]
 
             logging.debug(
-                f"Target: {current_target} current yaw: {self.odom.yaw_odom_m180_p180}"
+                f"Target: {current_target} current yaw: {self.odom.odom_yaw_m180_p180}"
             )
 
             goal_dx = current_target.dx
@@ -274,7 +274,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             direction = current_target.direction
 
             if "turn" in direction:
-                gap = self.odom.yaw_odom_m180_p180 - goal_yaw
+                gap = self.odom.odom_yaw_m180_p180 - goal_yaw
                 if gap > 180.0:
                     gap -= 360.0
                 elif gap < -180.0:

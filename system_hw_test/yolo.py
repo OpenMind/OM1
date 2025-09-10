@@ -7,7 +7,10 @@ import cv2
 from ultralytics import YOLO
 
 # Load model
-model = YOLO("yolov8n.pt")
+# model = YOLO("yolov8n.pt")
+# model = YOLO("yolo11n.pt")
+
+model = YOLO("yolo12n.pt")
 
 # Common resolutions to test (width, height), ordered high to low
 RESOLUTIONS = [

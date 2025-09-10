@@ -1,4 +1,6 @@
+import datetime as datetime
 import logging
+import re
 import threading
 import time
 from typing import Optional
@@ -30,7 +32,7 @@ class RtkProvider:
         logging.info("Booting RTK Provider")
 
         baudrate = 115200
-        timeout = 1
+        timeout = 0.2  # seconds
 
         self.serial_connection = None
         try:
@@ -42,11 +44,6 @@ class RtkProvider:
         except serial.SerialException as e:
             logging.error(f"Error: {e}")
 
-        if self.serial_connection:
-            self.nmr = NMEAReader(self.serial_connection)
-        else:
-            self.nmr = None
-
         self._rtk: Optional[dict] = None
 
         self.lat = 0.0
@@ -54,28 +51,62 @@ class RtkProvider:
         self.alt = 0.0
         self.sat = 0
         self.qua = 0
-        self.date_utc = ""
-        self.time_utc = ""
+        self.unix_ts = 0.0
 
         self.running = False
         self._thread: Optional[threading.Thread] = None
         self.start()
 
+    def utc_time_obj_to_unix(self, utc_time_obj):
+        """
+        Convert a UTC datetime.time object to a Unix timestamp by combining
+        it with the local computer's current date.
+        """
+        if not isinstance(utc_time_obj, datetime.time):
+            raise TypeError("Expected a datetime.time object")
+
+        # Get the local date
+        local_date = datetime.date.today()
+
+        # Combine local date with provided UTC time
+        dt = datetime.datetime.combine(local_date, utc_time_obj).replace(
+            tzinfo=datetime.timezone.utc
+        )
+
+        # Convert to Unix timestamp
+        return dt.timestamp()
+
+    def get_latest_gngga_message(self, nmea_data):
+
+        pattern = re.compile(
+            r"(\$GNGGA,(?P<time>\d{6}(?:\.\d+)?),[^*]*\*[0-9A-Fa-f]{2})", re.MULTILINE
+        )
+
+        gngga_entries = []
+
+        matches = pattern.finditer(nmea_data)
+
+        for match in matches:
+            # logging.info(f"matches: {match}")
+            full_msg = match.group(1)
+            time_str = match.group("time")
+            try:
+                time_val = float(time_str)
+                gngga_entries.append((time_val, full_msg))
+            except ValueError:
+                continue  # Skip if time field is malformed
+
+        # Sort by time and return the latest message
+        if gngga_entries:
+            most_recent = max(gngga_entries, key=lambda x: x[0])
+            # "most_recent" is a time and the message,
+            # the [1] just returns the message
+            return most_recent[1]
+
     def magRTKProcessor(self, msg):
-        # Used whenever there is a connected
-        # nav Arduino on serial
+
         try:
             logging.debug(f"RTK:{msg}")
-
-            # NMEA-GN-GLL
-            # Description:
-            # Standard NMEA: Geographic position latitude and longitude. Latitude and longitude of vessel position, time of position fix and status.
-
-            # NMEA-GN-RMC
-            # Description:
-            # Standard NMEA: Recommended minimum specific GNSS data. This message contains time, date, position (in LLH coordinates),
-            # positioning mode, course over ground (COG), and speed (SOG) data provided by the GNSS receiver. RMC is the
-            # recommended minimum navigation data to be provided by the selected source.
 
             # NMEA-GN-GGA
             # Description:
@@ -83,38 +114,29 @@ class RtkProvider:
             # position (in LLH coordinates), fix quality, number of satellites, and horizontal dilution of
             # precision (HDOP) data provided by the selected source.
 
-            if msg.msgID == "GGA":
+            if msg and msg.msgID == "GGA":
                 try:
-                    # round to 10 cm localisation in x,y, and 1 cm in z
+                    # round to 1 cm localisation in x,y, and 1 cm in z
                     logging.debug(f"RTK GGA:{msg}")
 
-                    self.lat = round(float(msg.lat), 8)
-                    self.lon = round(float(msg.lon), 8)
-                    self.alt = round(float(msg.alt), 2)
+                    if msg.lat:
+                        self.lat = round(float(msg.lat), 7)
+                        self.lon = round(float(msg.lon), 7)
+                        self.alt = round(float(msg.alt), 2)
 
-                    self.sat = int(msg.numSV)
-                    self.qua = int(msg.quality)
-                    ms = msg.time.strftime("%f")[:3]
-                    # rtk_time_utc='15:51:23:800', rtk_date_utc='2025-06-17
-                    # let's combine them for consitency
-                    self.time_utc = (
-                        self.date_utc + ":" + msg.time.strftime("%H:%M:%S") + ":" + ms
-                    )
+                        self.sat = int(msg.numSV)
+                        self.qua = int(msg.quality)
+
+                        # the data look something like this: 23:12:25.300000
+                        self.unix_ts = self.utc_time_obj_to_unix(msg.time)
                     logging.debug(
                         (
                             f"RTK:{self.lat},{self.lon},ALT:{self.alt},"
-                            f"QUA:{self.qua},SAT:{self.sat},TIME:{self.time_utc}"
+                            f"QUA:{self.qua},SAT:{self.sat},TIME:{self.unix_ts}"
                         )
                     )
                 except Exception as e:
                     logging.warning(f"Failed to parse GGA message: {msg} ({e})")
-            elif msg.msgID == "RMC":
-                try:
-                    self.date_utc = msg.date.strftime("%Y-%m-%d")
-                    self.date_utc = self.date_utc.replace("-", ":")
-                    logging.debug((f"The UTC date is {self.date_utc}."))
-                except Exception as e:
-                    logging.warning(f"Failed to parse RMC message: {msg} ({e})")
         except Exception as e:
             logging.warning(f"Error processing serial RTK input: {msg} ({e})")
 
@@ -124,7 +146,7 @@ class RtkProvider:
             "rtk_alt": self.alt,
             "rtk_sat": self.sat,
             "rtk_qua": self.qua,
-            "rtk_time_utc": self.time_utc,
+            "rtk_unix_ts": self.unix_ts,
         }
 
     def start(self):
@@ -145,23 +167,18 @@ class RtkProvider:
         """
         while self.running:
 
-            if self.serial_connection and self.nmr:
-                try:
-                    raw_data = b"$GQGSV,1,1,00,0*64\r\n"
-                    while raw_data:
-                        (raw_data, msg) = self.nmr.read()
-                        # logging.info(f"ETK buffer: {raw_data}")
-                        if msg.msgID == "GGA" or msg.msgID == "RMC":
-                            self.magRTKProcessor(msg)
-                        # else:
-                        #     logging.info("clearing ETK buffer")
-                except Exception:
-                    pass
+            if self.serial_connection:
+                bytes_waiting = self.serial_connection.in_waiting
+                while bytes_waiting > 0:
+                    data = self.serial_connection.read(size=bytes_waiting)
+                    if data:
+                        data = data.decode("utf-8", errors="ignore")
+                        latest_GNGGA = self.get_latest_gngga_message(data)
+                        if latest_GNGGA:
+                            parsed_nema = NMEAReader.parse(latest_GNGGA)
+                            self.magRTKProcessor(parsed_nema)
+                    bytes_waiting = self.serial_connection.in_waiting
 
-                # # Read a line, decode, and remove whitespace
-                # data = self.serial_connection.readline().decode("utf-8").strip()
-                # logging.debug(f"Serial RTK: {data}")
-                # self.magRTKProcessor(data)
             time.sleep(0.1)
 
     def stop(self):

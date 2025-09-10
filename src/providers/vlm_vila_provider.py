@@ -17,7 +17,13 @@ class VLMVilaProvider:
     continuous vlm processing.
     """
 
-    def __init__(self, ws_url: str, fps: int = 30, stream_url: Optional[str] = None):
+    def __init__(
+        self,
+        ws_url: str,
+        fps: int = 30,
+        stream_url: Optional[str] = None,
+        camera_index: int = 0,
+    ):
         """
         Initialize the VLM Provider.
 
@@ -29,6 +35,8 @@ class VLMVilaProvider:
             The fps for the VLM service connection.
         stream_url : str, optional
             The URL for the video stream. If not provided, defaults to None.
+        camera_index : int
+            The camera index for the video stream device. Defaults to 0.
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
@@ -36,7 +44,7 @@ class VLMVilaProvider:
             ws.Client(url=stream_url) if stream_url else None
         )
         self.video_stream: VideoStream = VideoStream(
-            self.ws_client.send_message, fps=fps
+            self.ws_client.send_message, fps=fps, device_index=camera_index
         )
 
     def register_frame_callback(self, video_callback: Optional[Callable]):

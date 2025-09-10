@@ -1,4 +1,5 @@
 import asyncio
+import multiprocessing as mp
 
 import dotenv
 import typer
@@ -23,5 +24,10 @@ def start(config_name: str, log_level: str = "INFO", log_to_file: bool = False) 
 
 
 if __name__ == "__main__":
+
+    # Fix for Linux multiprocessing
+    if mp.get_start_method(allow_none=True) != "spawn":
+        mp.set_start_method("spawn")
+
     dotenv.load_dotenv()
     app()

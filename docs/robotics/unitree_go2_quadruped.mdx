@@ -5,7 +5,7 @@ description: "Unitree Go2 EDU Quadruped (dog)"
 
 OM1 can control a Unitree Go2 EDU out of the box. This has been tested on Nvidia Orin, Mac Mini, and current (silicon) Mac laptops.
 
-## Step 1 Establishing Ethernet and DDS Connectivity
+## Step 1 - Establishing Ethernet and DDS Connectivity
 
 Connect the Unitree Go2 EDU to your development machine with an Ethernet cable. Open the network settings and find the network interface that is connected to the Go2 EDU. In the IPv4 settings, change the IPv4 mode to `manual`, set the address to `192.168.123.99`, and set the mask to `255.255.255.0`. After completion, click `apply` (or equivalent) and wait for the network to reconnect. Provide the name of the network adapter in the `"unitree_ethernet": "en0"` entry in the `unitree_go2.config` file.
 
@@ -153,11 +153,11 @@ alive: 1453e55f:a4d5babe:aec670aa:6c0a9bff rt/uslam/localization/cloud_world sen
 alive: 1a6535ff:d7346fd8:87885024:9a136972 rt/programming_actuator/feedback std_msgs::msg::dds_::String_
 ```
 
-## Step 2 Add the Python CycloneDDS module
+## Step 2 - Add the Python CycloneDDS module
 
 Add the `dds` python module to your code base: `uv pip install -r pyproject.toml --extra dds`.
 
-## Step 3 Connect an Game Controller
+## Step 3 - Connect an Game Controller
 
 On Mac, if you are using an Xbox controller, **make sure that it is running the most recent firmware**, otherwise you will be able to pair but not connect to the controller. You will need a PC with `Xbox Accessories` to update the Xbox controller's firmware. Many Mac OS updates hose support for the Xbox controller, which is then fixed (after some delay) via an Xbox firmware update. 
 
@@ -202,7 +202,7 @@ uv run system_hw_test/go2_lidar.py en0
 
 Note - the internal Go2 LIDAR is currently not used - a separate RPLIDAR mounted to the top of the dog's head is used instead. 
 
-## CONFIGURATION 1: Minimal Quadruped Functionality
+## Minimal Quadruped Functionality
 
 In this configuration, the quadruped observes its environment, listens and speaks, but there is no AI-controlled movement. You can manually control the dog's movements with an game controller. 
 
@@ -217,7 +217,7 @@ Press:
 * B to sit down
 * The D-pad allows you to steer the quadruped.
 
-See the [Quadruped Configurations](unitree_go2_quadruped_configurations) for additional configurations.
+See the [Quadruped Configurations](unitree_go2_quadruped_configurations.mdx) for additional configurations.
 
 ## Unitree Go2 EDU Common Problems
 
@@ -226,6 +226,7 @@ See the [Quadruped Configurations](unitree_go2_quadruped_configurations) for add
 *The CycloneDDS library could not be located*: You did not install CycloneDDS (see above), or, you did not provide a path to the `/install`, via `export CYCLONEDDS_HOME=$HOME/Documents/GitHub/cyclonedds/install` or equivalent.
 
 *"nothing is working"* There are dozens of potential reasons "nothing is working". The first step is to test your ability to `ping` the quadruped motion control computer:
+
 ```bash ping
 ping 192.168.123.161
 ```

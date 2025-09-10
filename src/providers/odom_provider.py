@@ -23,7 +23,7 @@ except ImportError:
     )
 
 from zenoh_idl import nav_msgs
-from zenoh_idl.geometry_msgs import PoseWithCovariance
+from zenoh_idl.geometry_msgs import PoseWithCovarianceStamped
 from zenoh_idl.nav_msgs import Odometry
 
 from .singleton import singleton
@@ -77,8 +77,9 @@ def odom_processor(
         odom: Odometry = nav_msgs.Odometry.deserialize(data.payload.to_bytes())
         logging.debug(f"Zenoh odom handler: {odom}")
 
-        p = odom.pose.pose
-        data_queue.put(p)
+        data_queue.put(
+            PoseWithCovarianceStamped(header=odom.header, pose=odom.pose.pose)
+        )
 
     def pose_message_handler(data: PoseStamped_):
         """
@@ -90,8 +91,7 @@ def odom_processor(
             The PoseStamped message containing the pose data.
         """
         logging.debug(f"Pose message handler: {data}")
-        p = data.pose
-        data_queue.put(p)
+        data_queue.put(data)
 
     if use_zenoh:
         # typically, TurtleBot4
@@ -115,7 +115,7 @@ def odom_processor(
         try:
             ChannelFactoryInitialize(0, channel)
         except Exception as e:
-            logging.error(f"Error initializing  Unitree Go2 odom channel : {e}")
+            logging.error(f"Error initializing Unitree Go2 odom channel: {e}")
             return
 
         try:
@@ -161,7 +161,7 @@ class OdomProvider:
         self.URID = URID
         self.channel = channel
 
-        self.data_queue: mp.Queue[PoseWithCovariance] = mp.Queue()
+        self.data_queue: mp.Queue[PoseWithCovarianceStamped] = mp.Queue()
         self._odom_reader_thread: Optional[mp.Process] = None
         self._odom_processor_thread: Optional[threading.Thread] = None
 
@@ -179,9 +179,10 @@ class OdomProvider:
         self.x = 0.0
         self.y = 0.0
         self.z = 0.0
-
-        self.yaw_odom_0_360 = 0.0
-        self.yaw_odom_m180_p180 = 0.0
+        self.odom_yaw_0_360 = 0.0
+        self.odom_yaw_m180_p180 = 0.0
+        self.odom_rockchip_ts = 0.0
+        self.odom_subscriber_ts = 0.0
 
         self.start()
 
@@ -274,11 +275,21 @@ class OdomProvider:
         """
         while True:
             try:
-                pose = self.data_queue.get()
+                pose_data = self.data_queue.get()
             except Exception as e:
                 logging.error(f"Error getting pose from queue: {e}")
                 time.sleep(1)
                 continue
+
+            pose = pose_data.pose
+            header = pose_data.header
+
+            # this is the time according to the RockChip. It may be off by several seconds from
+            # UTC
+            self.odom_rockchip_ts = header.stamp.sec + header.stamp.nanosec * 1e-9
+
+            # The local timestamp
+            self.odom_subscriber_ts = time.time()
 
             if self.channel and not self.use_zenoh:
                 # only relevant to Unitree Go2
@@ -319,24 +330,32 @@ class OdomProvider:
 
             angles = self.euler_from_quaternion(x, y, z, w)
 
-            self.yaw_odom_m180_p180 = angles[2] * rad_to_deg * -1.0
-            # the * -1.0 changes the heading to sane convention
-            # turn right (CW) to INCREASE your heading
-            # runs from -180 to + 180, where 0 is the "nose" of the robot
+            # this is in the standard robot convention
+            # yaw increases when you turn LEFT
+            # (counter-clockwise rotation about the vertical axis
+            self.odom_yaw_m180_p180 = round(angles[2] * rad_to_deg, 4)
 
-            # runs from 0 to 360
-            self.yaw_odom_0_360 = round(self.yaw_odom_m180_p180 + 180.0, 2)
+            # we also provide a second data product, where
+            # * yaw increases when you turn RIGHT (CW), and
+            # * the range runs from 0 to 360 Deg
+            flip = -1.0 * self.odom_yaw_m180_p180
+            if flip < 0.0:
+                flip = flip + 360.0
+
+            self.odom_yaw_0_360 = round(flip, 4)
 
             # current position in world frame
-            self.x = round(pose.position.x, 3)
-            self.y = round(pose.position.y, 3)
-            logging.debug(f"odom:{self.x }x {self.y}y")
+            self.x = round(pose.position.x, 4)
+            self.y = round(pose.position.y, 4)
+            logging.debug(
+                f"odom: X:{self.x} Y:{self.y} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
+            )
 
     @property
     def position(self) -> dict:
         """
         Get the current robot position in world frame.
-        Returns a dictionary with x, y, and yaw_odom_0_360.
+        Returns a dictionary with x, y, and odom_yaw_0_360.
 
         Returns
         -------
@@ -346,16 +365,20 @@ class OdomProvider:
             - x: The x coordinate of the robot in the world frame.
             - y: The y coordinate of the robot in the world frame.
             - moving: A boolean indicating if the robot is currently moving.
-            - yaw_odom_0_360: The yaw angle of the robot in degrees, ranging from 0 to 360.
+            - odom_yaw_0_360: The yaw angle of the robot in degrees, ranging from 0 to 360.
             - body_height_cm: The height of the robot's body in centimeters.
             - body_attitude: The current attitude of the robot (e.g., sitting or standing).
+            - odom_rockchip_ts: The unix timestamp of the last odometry update. Provided by the CycloneDDS publisher.
+            - odom_subscriber_ts: The unix timestamp of the last odometry update according to the subscriber.
         """
         return {
-            "x": self.x,
-            "y": self.y,
+            "odom_x": self.x,
+            "odom_y": self.y,
             "moving": self.moving,
-            "yaw_odom_0_360": self.yaw_odom_0_360,
-            "yaw_odom_m180_p180": self.yaw_odom_m180_p180,
+            "odom_yaw_0_360": self.odom_yaw_0_360,
+            "odom_yaw_m180_p180": self.odom_yaw_m180_p180,
             "body_height_cm": self.body_height_cm,
             "body_attitude": self.body_attitude,
+            "odom_rockchip_ts": self.odom_rockchip_ts,
+            "odom_subscriber_ts": self.odom_subscriber_ts,
         }

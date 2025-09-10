@@ -1,11 +1,11 @@
 ---
 title: Gazebo Simulator
-description: "Quadruped simulation and control with OM1."
+description: "Quadruped Simulation and Control"
 ---
 
 ## Simulation Instructions
 
-The Gazebo simulator is an very sophisticated, industry standard, simulator for robots. The robot shape/size is specified via `.dae` files and those robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses. 
+The Gazebo simulator is an industry standard simulator for robots. The robot shape/size is specified via `.dae` files and those robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses. 
 
 ### MacOS (Gazebo Harmonic)
 
@@ -21,21 +21,18 @@ This will open a gazebo room with a bathtub and chairs. Now, add your robot!
 ```bash
 ./gazebo/ubuntu.sh
 ```
+
 For now, ROS2 is required for the simulation to interact with OM1 in Gazebo Classic, check https://docs.ros.org/en/humble/Installation.html for installation instructions.
 
-ffmpeg is required for streaming the simulated video feed to OM1. If your system doesn't have `ffmpeg`, you should install it using `sudo apt-get install ffmpeg` to run the program.
+`ffmpeg` is required for streaming the simulated video feed to OM1. If your system doesn't have `ffmpeg`, you should install it using `sudo apt-get install ffmpeg`.
 
-_Note1:_ The simulated camera feed is streamed to a virtual video device at `/dev/video10`, thus requiring the `camera_index` in the VLM config to be 10. Modify as needed if the virtual camera needs to be reordered or if OM1 needs to read from another camera.
+Note: The simulated camera feed is streamed to a virtual video device at `/dev/video10`, thus requiring the `camera_index` in the VLM config to be 10. Modify as needed if the virtual camera needs to be reordered or if OM1 needs to read from another camera.
 
-_Note2:_ It is also possible to run the Gazebo Harmonic simulation on Ubuntu.
+Note: It is also possible to run the Gazebo Harmonic simulation on Ubuntu.
 
 ## Start OM1
 
-### Install OM1
-
-Refer to the [Installation Guide](/getting-started/get-started) for detailed instructions.
-
-### Run OM1
+Refer to the [Installation Guide](../developing/1_get-started.mdx) for detailed instructions.
 
 ```bash
 uv run src/run.py quadruped_sim
@@ -43,4 +40,4 @@ uv run src/run.py quadruped_sim
 
 **Finally, start the simulation by clicking the "play" (>) button in the Gazebo simulator.**
 
-NOTE: Remember to set the correct API key in the `config/quadruped_sim.json5` file or in your `.env`.
+Note: Remember to set the correct API key in the `config/quadruped_sim.json5` file or in your `.env`.

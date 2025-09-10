@@ -53,6 +53,7 @@ def test_llm_config():
             None,
             None,
             None,
+            None,
         )
     )
     assert llm_config.config_key == "config_value"

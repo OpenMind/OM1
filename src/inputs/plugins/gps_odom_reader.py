@@ -93,7 +93,7 @@ class GPSOdomReader(FuserInput[str]):
         logging.debug(f"Odom data: {o}")
         self.pose_x = self.odom.x
         self.pose_y = self.odom.y
-        yaw_world = math.radians(self.odom.yaw_odom_m180_p180)
+        yaw_world = math.radians(self.odom.odom_yaw_m180_p180)
         self.pose_yaw = self._wrap_angle(yaw_world + self._yaw_offset)
 
         # publish through IOProvider

@@ -32,8 +32,8 @@ from collections import namedtuple
 
 import serial
 
-SYNC_BYTE = b"\xA5"
-SYNC_BYTE2 = b"\x5A"
+SYNC_BYTE = b"\xa5"
+SYNC_BYTE2 = b"\x5a"
 
 GET_INFO_BYTE = b"\x50"
 GET_HEALTH_BYTE = b"\x52"
@@ -57,7 +57,7 @@ HEALTH_TYPE = 6
 # Constants & Command to start A2 motor
 MAX_MOTOR_PWM = 1023
 DEFAULT_MOTOR_PWM = 660
-SET_PWM_BYTE = b"\xF0"
+SET_PWM_BYTE = b"\xf0"
 
 _HEALTH_STATUSES = {
     0: "Good",
