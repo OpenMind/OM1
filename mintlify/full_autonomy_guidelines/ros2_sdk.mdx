@@ -154,32 +154,12 @@ sudo usermod -a -G dialout $USER
   ```
 - Ensure robot is in correct mode for movement commands.
 
-### Timestamp Issues
-
-- ROS topic timestamps may lag behind system time.
-- Disable automatic date/time and manually sync:
-  ```bash
-  sudo date -s "@unix"
-  ```
-- Find robot timestamp:
-  ```bash
-  ros2 topic echo /utlidar/robot_pose --field header.stamp
-  ```
-- Share internet connection for auto-sync:
-  ```bash
-  sudo nmcli connection add type ethernet ifname enp112s0 con-name ethernet-shared
-  sudo nmcli connection modify ethernet-shared ipv4.method shared
-  sudo nmcli connection modify ethernet-shared ipv4.addresses 192.168.123.1/24
-  sudo nmcli connection up ethernet-shared
-  nmcli connection show ethernet-shared
-  ```
-
 ---
 
 ## Additional Resources
 
 - [OM1 Documentation](https://docs.openmind.org/)
-- [ROS2 Tutorials](https://docs.ros.org/en/foxy/Tutorials.html)
+- [ROS2 Tutorials](https://docs.ros.org/en/humble/Tutorials.html)
 - [Unitree Go2 Documentation](https://www.unitree.com/products/go2)
 
 ---
