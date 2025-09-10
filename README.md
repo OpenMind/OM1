@@ -127,7 +127,7 @@ docker-compose up watchdog -d --no-build
 ```
 - For OM1-avatar
 ```bash
-docker-compose up om1_aatar -d --no-build
+docker-compose up om1_avatar -d --no-build
 ```
 ## Detailed Documentation
 
