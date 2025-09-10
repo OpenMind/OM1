@@ -35,7 +35,9 @@ def test_initialization(ws_url, fps, mock_dependencies):
     provider = VLMVilaProvider(ws_url, fps=fps)
 
     mock_ws_client.assert_called_once_with(url=ws_url)
-    mock_video_stream.assert_called_once_with(provider.ws_client.send_message, fps=fps)
+    mock_video_stream.assert_called_once_with(
+        provider.ws_client.send_message, fps=fps, device_index=0
+    )
 
     assert not provider.running
     assert provider.ws_client is not None

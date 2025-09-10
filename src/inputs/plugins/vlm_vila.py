@@ -67,9 +67,10 @@ class VLMVila(FuserInput[str]):
             "stream_base_url",
             f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}",
         )
+        camera_index = getattr(self.config, "camera_index", 0)
 
         self.vlm: VLMVilaProvider = VLMVilaProvider(
-            ws_url=base_url, stream_url=stream_base_url
+            ws_url=base_url, stream_url=stream_base_url, camera_index=camera_index
         )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)

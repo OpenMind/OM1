@@ -3,7 +3,7 @@ title: Coinbase Hackathon Feb 1. 2025
 Description: "Coinbase Hackathon Quadruped Configuration"
 ---
 
-The `Frenchie` quadruped has support for a Coinbase wallet. The dog's Sepolia Base Testnet account is `0xbB568962CF24d4CeBBf5d48308aCdAE873B93202`. You can check `Frenchie's` account balances using Coinbase's blockexploer:
+The `Frenchie` quadruped has support for a Coinbase wallet. The dog's Sepolia Base Testnet account is `0xbB568962CF24d4CeBBf5d48308aCdAE873B93202`. You can check `Frenchie's` account balances using Coinbase's block explorer:
 
 ```
 https://sepolia.basescan.org/address/0xbB568962CF24d4CeBBf5d48308aCdAE873B93202
@@ -13,12 +13,12 @@ To send Sepolia Base ETH to `Frenchie`, you can set up a Coinbase wallet on your
 
 ## How it works
 
-The agent tracks the balance of testnet ETH in a Coinbase wallet and sends a message when there is a new transaction. The agent can be instructed via the prompt to express appreciation for receiving tokens. See `/config/coinbase.json` for an example for how this is done:
+The agent tracks the balance of testnet ETH in a Coinbase wallet and sends a message when there is a new transaction. The agent can be instructed via the prompt to express appreciation for receiving tokens. See `/config/coinbase.json` for an example of how this is done:
 
 ```bash
 "system_prompt": "
 ...
-You like receiving ETH. If you receive an ETH transaction, show your appreciation though actions and speech.
+You like receiving ETH. If you receive an ETH transaction, show your appreciation through actions and speech.
 ...
 4. If there is a new ETH transaction, you might:
 	Move: 'shake paw'
@@ -45,7 +45,7 @@ COINBASE_API_SECRET="-----BEGIN EC PRIVATE KEY-----\nyour-api-key-private-key\n-
 
 ## Coinbase Hackathon Quadruped Configuration
 
-Follow the insturctions in `/robotics/unitree_go2_quadruped`. Then, run
+Follow the instructions in `/robotics/unitree_go2_quadruped`. Then, run
 
 ```bash
 uv run src/run.py cb_hackathon

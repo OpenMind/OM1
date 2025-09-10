@@ -68,6 +68,9 @@
   "backgrounds": [
     {
       "type": "UnitreeGo2State",
+    },
+    {
+      type: "D435",
     }
   ]
 }

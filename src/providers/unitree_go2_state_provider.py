@@ -1,16 +1,18 @@
-import json
 import logging
 import multiprocessing as mp
+import threading
 import time
-from dataclasses import dataclass
 from queue import Empty, Full
 from typing import Optional
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 
 try:
-    from unitree.unitree_sdk2py.core.channel import ChannelFactoryInitialize
-    from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+    from unitree.unitree_sdk2py.core.channel import (
+        ChannelFactoryInitialize,
+        ChannelSubscriber,
+    )
+    from unitree.unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_
 except ImportError:
     logging.error(
         "Unitree SDK or CycloneDDS not found. Please install the unitree_sdk2py package or CycloneDDS."
@@ -18,116 +20,131 @@ except ImportError:
 
 from .singleton import singleton
 
+state_machine_codes = {
+    100: "Agile",
+    1001: "Damping",
+    1002: "Standing Lock",
+    1004: "Crouch",  # Also maps to 2006
+    1006: "Greeting/Stretching/Dancing/Bowing/Heart Shape/Happy",
+    1007: "Sit",
+    1008: "Front Jump",
+    1009: "Lunge",
+    1013: "Balance Standing",
+    1015: "Regular Walking",
+    1016: "Regular Running",
+    1017: "Regular Endurance",
+    1091: "Strike a Pose",
+    2006: "Crouch",  # Duplicate of 1004
+    2007: "Dodge",
+    2008: "Bound Run",
+    2009: "Jump Run",
+    2010: "Classic",
+    2011: "Handstand",
+    2012: "Front Flip",
+    2013: "Back Flip",
+    2014: "Left Flip",
+    2016: "Cross Step",
+    2017: "Upright",
+    2019: "Towing",
+}
 
-@dataclass
-class UnitreeGo2State:
-    """
-    Unitree Go2 State Data Class.
 
-    This class holds the state data for the Unitree Go2 robot.
-    """
-
-    state: str  # lieDown, damping, locomotion, balanceStand, jointLock
-    body_height: float
-    foot_raise_height: float
-    speed_level: int
-    gait: int
-    dance: bool
-    economic_gait: bool
-    continuous_gait: bool
-    timestamp: float
-
-
-def unitree_go2_state_processor(
+def go2_state_processor(
     channel: str,
     data_queue: mp.Queue,
+    control_queue: mp.Queue,
     logging_config: Optional[LoggingConfig] = None,
-) -> None:
+):
     """
-    Process function for the Unitree Go2 State Provider.
-
-    This function runs in a separate process to periodically retrieve the state
-    of the Unitree Go2 robot and put it into a multiprocessing queue.
+    Process Unitree Go2 state data from the CycloneDDS session.
 
     Parameters
     ----------
     channel : str
-        The channel to connect to the Unitree Go2 robot.
+        CycloneDDS channel to subscribe to for Unitree Go2 state data.
     data_queue : mp.Queue
-        Queue for sending the retrieved state data.
-    logging_config : LoggingConfig, optional
-        Optional logging configuration. If provided, it will override the default logging settings.
+        Queue for receiving state data.
+    control_queue : mp.Queue
+        Queue for sending control commands.
+    logging_config : Optional[LoggingConfig]
+        Logging configuration.
     """
     setup_logging("unitree_go2_state_processor", logging_config=logging_config)
+
+    def get_state_from_code(code: int) -> Optional[str]:
+        """
+        Get the state name from the state code.
+
+        Parameters
+        ----------
+        code : int
+            The state code.
+
+        Returns
+        -------
+        str
+            The state name corresponding to the code, or "unknown" if not found.
+        """
+        return state_machine_codes.get(code, "unkown")
+
+    def state_callback(msg: SportModeState_):
+        """
+        Callback for receiving sport mode state messages.
+
+        Parameters:
+        -----------
+        msg: SportModeState_
+        """
+        go2_sport_mode_state_msg = msg
+        go2_state_code = msg.error_code
+        go2_state = get_state_from_code(msg.error_code)
+        go2_action_progress = msg.progress
+
+        data = {
+            "go2_sport_mode_state_msg": go2_sport_mode_state_msg,
+            "go2_state_code": go2_state_code,
+            "go2_state": go2_state,
+            "go2_action_progress": go2_action_progress,
+        }
+
+        try:
+            data_queue.put_nowait(data)
+        except Full:
+            try:
+                data_queue.get_nowait()
+                data_queue.put_nowait(data)
+            except Empty:
+                pass
 
     try:
         ChannelFactoryInitialize(0, channel)
     except Exception as e:
-        logging.error(f"Error initializing Unitree Go2 state channel: {e}")
+        logging.error(f"Error initializing Unitree Go2 odom channel: {e}")
         return
 
     try:
-        sport_client = SportClient()
-        sport_client.Init()
-        sport_client.SetTimeout(10.0)
-        logging.info("Unitree Go2 State Provider initialized successfully")
+        subscriber = ChannelSubscriber(channel, SportModeState_)
+        subscriber.Init(state_callback, 10)
+        logging.info(f"Subscribed to {channel} for Unitree Go2 state data")
     except Exception as e:
-        logging.error(f"Error initializing Unitree Go2 State Provider: {e}")
+        logging.error(f"Error subscribing to Unitree Go2 state channel: {e}")
         return
 
-    while True:
+    running = True
+
+    while running:
         try:
-            state = sport_client.GetState(
-                [
-                    "state",
-                    "bodyHeight",
-                    "footRaiseHeight",
-                    "speedLevel",
-                    "gait",
-                    "dance",
-                    "economicGait",
-                    "continuousGait",
-                    "timestamp",
-                ]
-            )
-            if state[0] != 0:
-                logging.error(f"Failed to get state from Unitree Go2: {state[0]}")
-                continue
+            cmd = control_queue.get_nowait()
+            if cmd == "STOP":
+                running = False
+                break
+        except Empty:
+            pass
 
-            parsed_state = {
-                key: json.loads(value)["data"] for key, value in state[1].items()
-            }
-            data = UnitreeGo2State(
-                state=parsed_state["state"],
-                body_height=parsed_state["bodyHeight"],
-                foot_raise_height=parsed_state["footRaiseHeight"],
-                speed_level=parsed_state["speedLevel"],
-                gait=parsed_state["gait"],
-                dance=parsed_state["dance"],
-                economic_gait=parsed_state["economicGait"],
-                continuous_gait=parsed_state["continuousGait"],
-                timestamp=time.time(),
-            )
+        time.sleep(0.1)
 
-            try:
-                data_queue.put(data, timeout=0.1)
-            except Full:
-                try:
-                    data_queue.get_nowait()
-                    data_queue.put_nowait(data)
-                except Empty:
-                    # This is used to fix the race condition where the queue is empty by another process
-                    try:
-                        data_queue.put(data, timeout=0.1)
-                    except Full:
-                        logging.warning(
-                            "Failed to update Unitree Go2 state queue - another process intervened"
-                        )
-
-        except Exception as e:
-            logging.error(f"Error retrieving Unitree Go2 state: {e}")
-
-        time.sleep(1.0)
+    logging.info("Unitree Go2 state processor stopped.")
+    subscriber.Close()
 
 
 @singleton
@@ -135,73 +152,109 @@ class UnitreeGo2StateProvider:
     """
     Unitree Go2 State Provider.
 
-    This class implements a singleton pattern to manage:
-        * Unitree Go2 state data using either Zenoh or CycloneDDS
+    Parameters
+    ----------
+    channel : str
+        CycloneDDS channel to subscribe to for Unitree Go2 state data.
     """
 
-    def __init__(self):
+    def __init__(self, channel: str = ""):
         """
         Robot and sensor configuration
         """
-        logging.info("Booting Unitree Go2 State Provider")
-
-        self.channel = None
-
-        self.data_queue: mp.Queue[UnitreeGo2State] = mp.Queue(maxsize=1)
-        self._state_processor_thread: Optional[mp.Process] = None
-
-        self.go2_state: Optional[UnitreeGo2State] = None
-
-    def start(self, channel: str) -> None:
-        """
-        Start the Unitree Go2 State Provider.
-
-        This method initializes the Unitree Go2 state provider and starts the
-        state retrieval process.
-        """
-        if self._state_processor_thread and self._state_processor_thread.is_alive():
-            logging.warning("Unitree Go2 State Provider is already running.")
-            return
-
-        if not channel:
-            logging.error(
-                "Channel must be specified to start the Unitree Go2 State Provider."
-            )
-            return
-
         self.channel = channel
-        logging.info(f"Starting Unitree Go2 State Provider on channel: {channel}")
 
-        self._state_processor_thread = mp.Process(
-            target=unitree_go2_state_processor,
-            args=(self.channel, self.data_queue, get_logging_config()),
-            daemon=True,
-        )
-        self._state_processor_thread.start()
+        self.data_queue = mp.Queue(maxsize=5)
+        self.control_queue = mp.Queue()
+
+        self._go2_state_reader_thread = None
+        self._go2_state_processor_thread = None
+
+        self.go2_sport_mode_state_msg = None
+        self.go2_state = None
+        self.go2_state_code = None
+        self.go2_action_progress = 0
+
+    def start(self):
+        """
+        Start the Unitree Go2 state provider.
+        """
+        if (
+            not self._go2_state_processor_thread
+            or not self._go2_state_processor_thread.is_alive()
+        ):
+            self._go2_state_reader_thread = mp.Process(
+                target=go2_state_processor,
+                args=(
+                    self.channel,
+                    self.data_queue,
+                    self.control_queue,
+                    get_logging_config(),
+                ),
+            )
+            self._go2_state_reader_thread.start()
+            logging.info("Unitree Go2 state reader started.")
+
+        if (
+            not self._go2_state_processor_thread
+            or not self._go2_state_processor_thread.is_alive()
+        ):
+            self._go2_state_processor_thread = threading.Thread(
+                target=self._go2_state_processor,
+                daemon=True,
+            )
+            self._go2_state_processor_thread.start()
+            logging.info("Unitree Go2 state processor started.")
+
+    def _go2_state_processor(self):
+        """
+        Process the Unitree Go2 state data from the data queue.
+        """
+        while True:
+            try:
+                data = self.data_queue.get_nowait()
+
+                self.go2_sport_mode_state_msg = data.get("go2_sport_mode_state_msg")
+                self.go2_state = data.get("go2_state")
+                self.go2_state_code = data.get("go2_state_code")
+                self.go2_action_progress = data.get("go2_action_progress")
+
+            except Empty:
+                time.sleep(0.1)
+                continue
 
     @property
-    def state(self, timeout: float = 1.0) -> Optional[str]:
+    def state(self) -> Optional[str]:
         """
         Get the current state of the Unitree Go2 robot.
-
-        Parameters
-        ----------
-        timeout : float
-            The maximum time to wait for the state data to be available in the queue.
 
         Returns
         -------
         Optional[str]
-            The current state of the Unitree Go2 robot, or None if no state is available.
+            The current state of the robot, or None if not available.
         """
-        # Return the cached state if it is within the last second
-        if self.go2_state and self.go2_state.timestamp > time.time() - 1:
-            return self.go2_state.state
+        return self.go2_state
 
-        # Otherwise, try to get the state from the queue
-        try:
-            self.go2_state = self.data_queue.get(timeout=timeout)
-            return self.go2_state.state
-        except Empty:
-            logging.warning("No Unitree Go2 state data available in the queue")
-            return None
+    @property
+    def state_code(self) -> Optional[int]:
+        """
+        Get the current state code of the Unitree Go2 robot.
+
+        Returns
+        -------
+        Optional[int]
+            The current state code of the robot, or None if not available.
+        """
+        return self.go2_state_code
+
+    @property
+    def action_progress(self) -> int:
+        """
+        Get the current action progress of the Unitree Go2 robot.
+
+        Returns
+        -------
+        int
+            The current action progress of the robot, or 0 if not in the action mode.
+        """
+        return self.go2_action_progress

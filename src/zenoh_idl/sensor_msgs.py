@@ -4,7 +4,7 @@ from typing import List
 from pycdr2 import Enum, IdlStruct
 from pycdr2.types import array, float32, float64, int8, sequence, uint8, uint16, uint32
 
-from .geometry_msgs import Quaternion, Vector3
+from .geometry_msgs import Point32, Quaternion, Vector3
 from .std_msgs import Header, String
 
 
@@ -144,6 +144,13 @@ class PointField(IdlStruct, typename="PointField"):
 
 
 @dataclass
+class PointCloud(IdlStruct, typename="PointCloud"):
+    header: Header
+    points: sequence[Point32]
+    channels: sequence[PointField]
+
+
+@dataclass
 class PointCloud2(IdlStruct, typename="PointCloud2"):
     header: Header
     height: uint32
@@ -203,3 +210,9 @@ class DockStatus(IdlStruct, typename="DockStatus"):
     header: Header
     docker_visible: bool
     is_docked: bool
+
+
+@dataclass
+class Paths(IdlStruct, typename="Paths"):
+    header: Header
+    paths: List[uint32]

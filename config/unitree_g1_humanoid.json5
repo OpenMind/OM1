@@ -16,14 +16,6 @@
     {
       type: "VLMVila",
     },
-    {
-      type: "GPSOdomReader",
-      config: {
-        origin_lat: 37.7818286,
-        origin_lon: -122.394063,
-        origin_yaw_deg: 105,
-      },
-    },
   ],
   cortex_llm: {
     type: "OpenAILLM",
@@ -39,6 +31,7 @@
       connector: "elevenlabs_tts",
       config: {
         voice_id: "i4CzbCVWoqvD0P1QJCUL",
+        "silence_rate": 20,
       },
     },
     {
@@ -47,9 +40,9 @@
       connector: "unitree_sdk",
     },
     {
-      name: "gps",
-      llm_label: "gps",
-      connector: "fabric",
-    },
+      name: "arm_g1",
+      llm_label: "arm movement",
+      connector: "unitree_sdk",
+    }
   ],
 }

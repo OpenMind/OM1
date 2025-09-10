@@ -40,7 +40,7 @@ class MoveSerialConnector(ActionConnector[MoveInput]):
             logging.info(f"Other move type: {output_interface.action}")
             # raise ValueError(f"Unknown move type: {output_interface.action}")
 
-        message = f"actuator:{new_msg["move"]}\r\n"
+        message = f"actuator:{new_msg['move']}\r\n"
         # Convert the string to bytes using UTF-8 encoding
         byte_data = message.encode("utf-8")
 

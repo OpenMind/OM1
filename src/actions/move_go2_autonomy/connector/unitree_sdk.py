@@ -21,7 +21,6 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         self.dog_attitude = None
 
         # Movement parameters
-        self.move_speed = 0.5
         self.turn_speed = 0.8
         self.angle_tolerance = 5.0  # degrees
         self.distance_tolerance = 0.05  # meters
@@ -54,14 +53,17 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
-        if self.unitree_go2_state.state == "locomotion":
+        if self.unitree_go2_state.state_code == 1002:
+            self.sport_client.BalanceStand()
+
+        if self.unitree_go2_state.action_progress != 0:
             logging.info(
-                "Unitree Go2 is in locomotion state - cannot process AI command"
+                f"Action in progress: {self.unitree_go2_state.action_progress}"
             )
             return
 
         # fallback to the odom provider
-        if not self.unitree_go2_state.state:
+        if not self.unitree_go2_state.state_code:
             if self.odom.position["moving"]:
                 # for example due to a teleops or game controller command
                 logging.info(
@@ -185,7 +187,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
             current_target = target[0]
 
             logging.info(
-                f"Target: {current_target} current yaw: {self.odom.position["odom_yaw_m180_p180"]}"
+                f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}"
             )
 
             if self.movement_attempts > self.movement_attempt_limit:
@@ -240,6 +242,8 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
 
                 s_x = current_target.start_x
                 s_y = current_target.start_y
+                speed = current_target.speed
+
                 distance_traveled = math.sqrt(
                     (self.odom.position["odom_x"] - s_x) ** 2
                     + (self.odom.position["odom_y"] - s_y) ** 2
@@ -269,7 +273,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                     self.movement_attempts += 1
                     if distance_traveled < abs(goal_dx):
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
-                        self._move_robot(fb * self.move_speed, 0.0, 0.0)
+                        self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
                         logging.debug(
                             f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
@@ -354,7 +358,6 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                 turn_complete=True if path_angle == 0 else False,
             )
         )
-        # [0.5, 0.0, "advance", round(self.odom.x, 2), round(self.odom.y, 2)]
 
     def _process_move_back(self):
         """
@@ -371,6 +374,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
                 turn_complete=True,
+                speed=0.3,
             )
         )
 

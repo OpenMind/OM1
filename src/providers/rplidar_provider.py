@@ -18,6 +18,7 @@ from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 from zenoh_idl import sensor_msgs
 from zenoh_idl.sensor_msgs import LaserScan
 
+from .d435_provider import D435Provider
 from .rplidar_driver import RPDriver
 from .singleton import singleton
 
@@ -295,6 +296,9 @@ class RPLidarProvider:
             except Exception as e:
                 logging.error(f"Error opening Zenoh client: {e}")
 
+        # D435 Provider
+        self.d435_provider = D435Provider()
+
     def update_filename(self):
         unix_ts = time.time()
         logging.info(f"RPSCAN time: {unix_ts}")
@@ -471,6 +475,19 @@ class RPLidarProvider:
             # the final data ready to use for path planning
             complexes.append([x, y, angle, d_m])
 
+        # Append the D435 provider's obstacle data if available
+        if self.d435_provider.running and len(self.d435_provider.obstacle) > 50:
+            logging.debug("Appending D435 provider obstacle data to RPLidar data")
+            for obstacle in self.d435_provider.obstacle:
+                complexes.append(
+                    [
+                        obstacle["x"],
+                        obstacle["y"],
+                        obstacle["angle"],
+                        obstacle["distance"],
+                    ]
+                )
+
         array = np.array(complexes)
         raw_array = np.array(raw)
 
@@ -530,6 +547,16 @@ class RPLidarProvider:
                     )
                     end_x, end_y = path_points[0][-1], path_points[1][-1]
 
+                    if apath == 9:
+                        # For going back, only consider obstacles that are:
+                        # 1. Behind the robot (negative y in robot frame)
+                        # 2. Within a certain distance threshold
+
+                        # Assuming robot faces positive y direction
+                        # Only check obstacles behind the robot
+                        if y >= 0:  # Skip obstacles in front of or beside the robot
+                            continue
+
                     dist_to_line = self.distance_point_to_line_segment(
                         x, y, start_x, start_y, end_x, end_y
                     )
@@ -542,7 +569,7 @@ class RPLidarProvider:
                         logging.debug(f"remaining paths: {possible_paths}")
                         break  # no need to check other paths
 
-        logging.debug(f"possible_paths RP Lidar: {possible_paths}")
+        logging.info(f"possible_paths RP Lidar: {possible_paths}")
 
         self.turn_left = []
         self.turn_right = []
@@ -804,7 +831,7 @@ class RPLidarProvider:
 
         parts = ["The safe movement directions are: {"]
 
-        if self.use_zenoh:  # TurtleBot4 control
+        if self.use_zenoh and self.machine_type == "tb4":  # TurtleBot4 control
             parts.append("'turn left', 'turn right', ")
             if self.advance:
                 parts.append("'move forwards', ")

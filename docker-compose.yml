@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  om1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openmindagi/om1:latest
+    container_name: om1
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=0
+      - CYCLONEDDS_HOME=/app/cyclonedds/install
+      - CYCLONEDDS_URI=file:///cyclonedds/cyclonedds.xml
+      - CMAKE_PREFIX_PATH=/app/cyclonedds/install
+      - OM_API_KEY=${OM_API_KEY}
+      - VIRTUAL_ENV=/app/OM1/.venv
+      - PATH=/app/OM1/.venv/bin:$PATH
+      - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
+      - PULSE_COOKIE=/root/.config/pulse/cookie
+      - ALSA_CARD=0
+    volumes:
+      - ./config:/app/OM1/config
+      - ./.venv:/app/OM1/.venv
+      - ./cyclonedx:/cyclonedx
+      - /dev/snd:/dev/snd:rw
+      - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw
+      - ~/.config/pulse/cookie:/root/.config/pulse/cookie:ro
+    devices:
+      - /dev/snd:/dev/snd
+      # OM backpack camera index
+      - /dev/video6:/dev/video6
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cap_add:
+      - SYS_PTRACE
+      - NET_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    group_add:
+      - audio
+    command: ["unitree_go2_autonomy_advance"]

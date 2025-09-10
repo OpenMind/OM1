@@ -14,6 +14,7 @@ class MoveCommand:
     start_x: float = 0.0
     start_y: float = 0.0
     turn_complete: bool = False
+    speed: float = 0.5
 
 
 @dataclass
