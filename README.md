@@ -95,20 +95,18 @@ OM1 is developed on:
 OM1 _should_ run on other platforms (such as Windows) and microcontrollers such as the Raspberry Pi 5 16GB.
 
 
-## Production Full Autonomy Guidance
+## Full Autonomy Guidance
 
-This release introduces **full autonomy mode**, where three services work together in a loop without manual intervention:
+We're excited to introduce **full autonomy mode**, where three services work together in a loop without manual intervention:
 
-- **om1** – Agentic software for robots.
+- **om1**
 - **unitree_go2_ros2_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 
-In order to start OM1 in full autonomy mode -
-Connect the **Backpack** to your robot.
-
-## What's a Backpack?
+## Intro to Brainpack?
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
-We'll shortly be releasing the **BOM** and details on **DIY** for the backpack. Stay tuned!
+We'll shortly be releasing the **BOM** and details on **DIY** for the it. 
+Stay tuned!
 
 Clone the following repos -
 - https://github.com/OpenMind/OM1.git

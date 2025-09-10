@@ -85,6 +85,22 @@
                             "examples/gazebo"
                         ]
                     },
+                                        {
+                        "group": "Full Autonomy",
+                        "pages": [
+                            "full_autonomy_guidelines/brainpack_introduction",
+                            "full_autonomy_guidelines/architecture_overview",
+                            {
+                                "group": "Full Autonomy Components",
+                                "pages": [
+                                    "full_autonomy_guidelines/om1",
+                                    "full_autonomy_guidelines/om1_avatar",
+                                    "full_autonomy_guidelines/ros2_sdk"
+                                ]
+
+                            }
+                        ]
+                    },
                     {
                         "group": "Governance/Payments",
                         "pages": [
