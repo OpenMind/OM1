@@ -216,7 +216,7 @@ with serial.Serial(
                 input = bytearray()
             elif len(input) >= expected_len:
                 single = input[:expected_len]  # copy out this whole packet
-                input = input[expected_len:]   # and remove it from the buffer
+                input = input[expected_len:]  # and remove it from the buffer
                 if single[0] == PacketsTypes.SYNC_BYTE:
                     if not crsf_validate_frame(single):
                         packet = " ".join(map(hex, single))
