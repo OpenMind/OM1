@@ -51,6 +51,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
         self.io_provider = IOProvider()
         self.last_voice_command_time = time.time()
+        self.sleep_mode_enabled = False
         self.auto_sleep_mode = getattr(config, "auto_sleep_mode", True)
         self.auto_sleep_time = getattr(config, "auto_sleep_time", 300)
 
@@ -63,16 +64,21 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 self.last_voice_command_time = voice_input.timestamp
 
             if time.time() - self.last_voice_command_time > self.auto_sleep_time:
+                self.sleep_mode_enabled = True
                 if self.odom.position["body_attitude"] != RobotState.SITTING:
                     logging.info("No voice command for 5 minutes - sit down")
                     if self.sport_client:
                         self.sport_client.StandDown()
                 return
             else:
-                if self.odom.position["body_attitude"] != RobotState.STANDING:
+                if (
+                    self.odom.position["body_attitude"] != RobotState.STANDING
+                    and self.sleep_mode_enabled
+                ):
+                    self.sleep_mode_enabled = False
                     logging.info("Voice command received - stand up")
                     if self.sport_client:
-                        self.sport_client.StandUp()
+                        self.sport_client.RecoveryStand()
 
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
