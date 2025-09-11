@@ -38,3 +38,4 @@ logs/
 *.jsonl
 *.jpg
 /zenohdb
+saved_locations.json

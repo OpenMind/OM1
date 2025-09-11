@@ -26,6 +26,8 @@ class ZenohPublisherProvider:
         topic : str, optional
             The topic on which to publish messages (default is "speech").
         """
+        self.session: Optional[zenoh.Session] = None
+
         try:
             self.session = zenoh.open(zenoh.Config())
             logging.info("Zenoh client opened")

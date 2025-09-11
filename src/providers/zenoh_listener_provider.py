@@ -1,6 +1,4 @@
 import logging
-import threading
-from queue import Queue
 from typing import Callable, Optional
 
 import zenoh
@@ -23,6 +21,8 @@ class ZenohListenerProvider:
         topic : str, optional
             The topic on which to subscribe messages (default is "speech").
         """
+        self.session: Optional[zenoh.Session] = None
+
         try:
             self.session = zenoh.open(zenoh.Config())
             logging.info("Zenoh client opened")
@@ -31,9 +31,6 @@ class ZenohListenerProvider:
 
         self.sub_topic = topic
 
-        # Pending message queue and threading constructs
-        self._pending_messages = Queue()
-        self._lock = threading.Lock()
         self.running: bool = False
 
     def register_message_callback(self, message_callback: Optional[Callable]):
@@ -50,13 +47,16 @@ class ZenohListenerProvider:
         else:
             logging.error("Cannot register callback; Zenoh session is not available.")
 
-    def start(self):
+    def start(self, message_callback: Optional[Callable] = None):
         """
         Start the listener provider by launching the background thread.
         """
         if self.running:
             logging.warning("Zenoh Listener Provider is already running")
             return
+
+        if message_callback is not None:
+            self.register_message_callback(message_callback)
 
         self.running = True
         logging.info("Zenoh Listener Provider started")
