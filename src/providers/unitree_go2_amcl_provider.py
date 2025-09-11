@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+import time
 
 import numpy as np
 import zenoh
@@ -9,7 +10,8 @@ from zenoh_idl.geometry_msgs import Pose
 
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
-
+from zenoh_idl.status_msgs import AIControlStatus
+from zenoh_idl.std_msgs import String, prepare_header
 
 @singleton
 class UnitreeGo2AMCLProvider(ZenohListenerProvider):
@@ -42,6 +44,19 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         self.pose_tolerance = pose_tolerance
         self.yaw_tolerance = yaw_tolerance
 
+        self.topic = "robot/status/ai_control"
+        self.session: Optional[zenoh.Session] = None
+        self.pub = None
+
+        try:
+            self.session = zenoh.open(zenoh.Config())
+            self.pub = self.session.declare_publisher(self.topic)
+            logging.info("Zenoh client opened for AMCL Provider")
+        except Exception as e:
+            logging.error(f"Error opening Zenoh client: {e}")
+            self.session = None
+            self.pub = None
+
     def amcl_message_callback(self, data: zenoh.Sample):
         """
         Process an incoming AMCL message.
@@ -70,6 +85,12 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
                 self.localization_status,
                 self.localization_pose,
             )
+
+            if self.pub is not None:
+                status_msg = AIControlStatus()
+                status_msg.header = prepare_header(String(str(int(time.time()))))
+                status_msg.status = 0 if self.localization_status else 1
+                self.pub.put(status_msg.serialize())
         else:
             logging.warning("Received empty AMCL message")
 
