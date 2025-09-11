@@ -47,7 +47,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.sentence_counter = 0
 
         self.audio_status = AudioStatus(
-            header=self.prepare_header(),
+            header=prepare_header(str(self.sentence_counter)),
             status_mic=AudioStatus.STATUS_MIC.UNKNOWN.value,
             status_speaker=AudioStatus.STATUS_SPEAKER.READY.value,
             sentence_to_speak=String(""),
@@ -112,7 +112,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.sentence_counter += 1
 
         state = AudioStatus(
-            header=prepare_header(String(str(self.sentence_counter))),
+            header=prepare_header(str(self.sentence_counter)),
             status_mic=self.audio_status.status_mic,
             status_speaker=AudioStatus.STATUS_SPEAKER.ACTIVE.value,
             sentence_to_speak=String(json.dumps(pending_message)),
