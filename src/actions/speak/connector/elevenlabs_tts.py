@@ -95,7 +95,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.tts.start()
         self.tts.add_pending_message("Woof Woof")
 
-    def zenoh_audio_message(self, data):
+    def zenoh_audio_message(self, data: zenoh.Sample):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: SpeakInput) -> None:
