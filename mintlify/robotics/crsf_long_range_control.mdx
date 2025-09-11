@@ -52,4 +52,4 @@ The code is based on Bryan Mayland's CRSF ["Python Parser"](https://github.com/c
 
 Occasionally, one of the RC_Channels has a value of >2000, which is noise. This is a problem, since it signals the receiver that a switch was activated, even if it was not. We reject all data >2000. 
 
-We also clip all stick control values to the 174 to 1806 range. Then then map the 174<>1806 range to 0.0<>1.0. A typical range for a valid RC signal is 174 to 1806 - this is true for both sticks and switches.
+We also clip all stick control values to the 174 to 1806 range. Then then map the `174<>1806` range to `0.0<>1.0`. A typical range for a valid RC signal is 174 to 1806 - this is true for both sticks and switches.
