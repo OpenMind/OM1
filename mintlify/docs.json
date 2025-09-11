@@ -85,7 +85,7 @@
                             "examples/gazebo"
                         ]
                     },
-                                        {
+                    {
                         "group": "Full Autonomy",
                         "pages": [
                             "full_autonomy_guidelines/backpack_introduction",
