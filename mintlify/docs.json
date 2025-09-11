@@ -93,8 +93,8 @@
                             {
                                 "group": "Full Autonomy Components",
                                 "pages": [
-                                    "full_autonomy_guidelines/om1",
                                     "full_autonomy_guidelines/om1_avatar",
+                                    "full_autonomy_guidelines/om1",
                                     "full_autonomy_guidelines/ros2_sdk"
                                 ]
 
