@@ -115,16 +115,19 @@ Clone the following repos -
 To start all services, run the following commands:
 - For OM1
 ```bash
+cd OM1
 docker-compose up om1 -d --no-build
 ```
 - For unitree_go2_ros2_sdk
 ```bash
+cd unitree_go2_ros2_sdk
 docker-compose up orchestrator -d --no-build
 docker-compose up om1_sensor -d --no-build
 docker-compose up watchdog -d --no-build
 ```
 - For OM1-avatar
 ```bash
+cd OM1-avatar
 docker-compose up om1_avatar -d --no-build
 ```
 ## Detailed Documentation
