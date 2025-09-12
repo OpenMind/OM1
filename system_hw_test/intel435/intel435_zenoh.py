@@ -9,7 +9,7 @@ import zenoh
 
 sys.path.insert(0, "../../src")
 
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import sensor_msgs, open_zenoh_session
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,7 +29,7 @@ class Intel435ObstacleDector:
 
         self.running = False
 
-        self.session = zenoh.open(zenoh.Config())
+        self.session = open_zenoh_session()
 
         self.session.declare_subscriber(
             "camera/realsense2_camera_node/depth/image_rect_raw", self.depth_callback

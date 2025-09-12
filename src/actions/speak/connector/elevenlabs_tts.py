@@ -12,8 +12,7 @@ from providers.io_provider import IOProvider
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
-from zenoh_idl.status_msgs import AudioStatus
-from zenoh_idl.std_msgs import String, prepare_header
+from zenoh_msgs import AudioStatus, String, prepare_header, open_zenoh_session
 
 
 class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
@@ -55,7 +54,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         )
 
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             self.pub = self.session.declare_publisher(self.topic)
             self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
 

@@ -13,7 +13,7 @@ from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
-from zenoh_idl.status_msgs import AIControlStatus
+from zenoh_msgs import AIControlStatus, open_zenoh_session
 
 
 class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
@@ -64,7 +64,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         self.pub = None
 
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             self.session.declare_subscriber(self.topic, self._zenoh_ai_control_message)
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")

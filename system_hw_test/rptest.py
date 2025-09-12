@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 import zenoh
-from intel435_obstacle_zenoh import Intel435ObstacleDector
+from .intel435.intel435_obstacle_zenoh import Intel435ObstacleDector
 from matplotlib import pyplot as plot
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Circle, Rectangle
@@ -15,7 +15,7 @@ from rpdriver import RPDriver
 sys.path.insert(0, "../src")
 
 try:
-    from zenoh_idl import sensor_msgs
+    from zenoh_msgs import sensor_msgs, open_zenoh_session
 except ImportError:
     print("Please run this script from inside /system_hw_test")
 
@@ -474,7 +474,7 @@ if __name__ == "__main__":
                 "scouting", f'{{"multicast": {{"address": "{args.multicast}"}}}}'
             )
 
-        z = zenoh.open(conf)
+        z = open_zenoh_session()
 
         if args.type == "go2":
             print("[INFO] Creating Subscribers for Go2")

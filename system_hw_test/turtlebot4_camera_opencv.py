@@ -1,9 +1,11 @@
 import time
+import sys
 
 import cv2
 import numpy as np
-import zenoh
 
+sys.path.insert(0, "../src")
+from zenoh_msgs import open_zenoh_session
 
 def listener(sample):
     bytesI = sample.payload.to_bytes()
@@ -18,7 +20,7 @@ def listener(sample):
 
 if __name__ == "__main__":
 
-    with zenoh.open(zenoh.Config()) as session:
+    with open_zenoh_session() as session:
         camera = session.declare_subscriber("pi/oakd/rgb/preview/image_raw", listener)
         print("Zenoh is open")
         while True:

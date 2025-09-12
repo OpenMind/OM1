@@ -5,8 +5,7 @@ import os
 from datetime import datetime
 from typing import Dict, Optional
 
-from zenoh_idl.geometry_msgs import Point, Pose, PoseStamped, Quaternion
-from zenoh_idl.std_msgs import Header, Time
+from zenoh_msgs import Point, Pose, PoseStamped, Quaternion, Header, Time
 
 from .function_call_provider import FunctionGenerator, LLMFunction
 from .singleton import singleton

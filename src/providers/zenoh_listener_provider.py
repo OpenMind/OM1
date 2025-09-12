@@ -2,6 +2,7 @@ import logging
 from typing import Callable, Optional
 
 import zenoh
+from zenoh_msgs import open_zenoh_session
 
 
 class ZenohListenerProvider:
@@ -24,7 +25,7 @@ class ZenohListenerProvider:
         self.session: Optional[zenoh.Session] = None
 
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             logging.info("Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")

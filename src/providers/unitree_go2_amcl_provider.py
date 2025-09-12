@@ -5,13 +5,10 @@ import time
 import numpy as np
 import zenoh
 
-from zenoh_idl import nav_msgs
-from zenoh_idl.geometry_msgs import Pose
+from zenoh_msgs import nav_msgs, Pose, open_zenoh_session, AIControlStatus, prepare_header
 
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
-from zenoh_idl.status_msgs import AIControlStatus
-from zenoh_idl.std_msgs import String, prepare_header
 
 @singleton
 class UnitreeGo2AMCLProvider(ZenohListenerProvider):
@@ -49,7 +46,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         self.pub = None
 
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             self.pub = self.session.declare_publisher(self.topic)
             logging.info("Zenoh client opened for AMCL Provider")
         except Exception as e:
