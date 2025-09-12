@@ -11,7 +11,7 @@ from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_turtle.interface import MoveInput
 from providers.odom_provider import OdomProvider
 from providers.rplidar_provider import RPLidarProvider
-from zenoh_msgs import geometry_msgs, sensor_msgs, open_zenoh_session
+from zenoh_msgs import geometry_msgs, open_zenoh_session, sensor_msgs
 
 
 class MoveZenohConnector(ActionConnector[MoveInput]):

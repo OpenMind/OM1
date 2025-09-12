@@ -22,12 +22,7 @@ except ImportError:
         "Unitree SDK or CycloneDDS not found. You do not need this unless you are connecting to a Unitree robot."
     )
 
-from zenoh_msgs import (
-    nav_msgs,
-    PoseWithCovarianceStamped,
-    Odometry,
-    open_zenoh_session
-)
+from zenoh_msgs import Odometry, PoseWithCovarianceStamped, nav_msgs, open_zenoh_session
 
 from .singleton import singleton
 

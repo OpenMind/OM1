@@ -9,7 +9,7 @@ import zenoh
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
-from zenoh_msgs import sensor_msgs, open_zenoh_session
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 
 @dataclass

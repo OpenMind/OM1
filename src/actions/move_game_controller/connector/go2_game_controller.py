@@ -2,8 +2,6 @@ import logging
 import threading
 import time
 
-import zenoh
-
 from actions.base import ActionConfig, ActionConnector
 from actions.move_game_controller.interface import IDLEInput
 from providers.odom_provider import OdomProvider, RobotState

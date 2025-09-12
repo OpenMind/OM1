@@ -2,9 +2,10 @@ import logging
 import math
 import random
 import time
-import zenoh
 from queue import Queue
 from typing import List, Optional
+
+import zenoh
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput

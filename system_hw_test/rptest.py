@@ -6,16 +6,17 @@ import time
 
 import numpy as np
 import zenoh
-from .intel435.intel435_obstacle_zenoh import Intel435ObstacleDector
 from matplotlib import pyplot as plot
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Circle, Rectangle
 from rpdriver import RPDriver
 
+from .intel435.intel435_obstacle_zenoh import Intel435ObstacleDector
+
 sys.path.insert(0, "../src")
 
 try:
-    from zenoh_msgs import sensor_msgs, open_zenoh_session
+    from zenoh_msgs import open_zenoh_session, sensor_msgs
 except ImportError:
     print("Please run this script from inside /system_hw_test")
 

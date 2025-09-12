@@ -1,7 +1,7 @@
 import logging
 import math
 
-from zenoh_msgs import sensor_msgs, open_zenoh_session
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 from .singleton import singleton
 
@@ -20,7 +20,8 @@ class D435Provider:
         try:
             self.session = open_zenoh_session()
             self.session.declare_subscriber(
-                "camera/realsense2_camera_node/depth/obstacle_point", self.obstacle_callback
+                "camera/realsense2_camera_node/depth/obstacle_point",
+                self.obstacle_callback,
             )
             logging.info("Zenoh is open for D435Provider")
         except Exception as e:

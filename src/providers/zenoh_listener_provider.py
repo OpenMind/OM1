@@ -2,6 +2,7 @@ import logging
 from typing import Callable, Optional
 
 import zenoh
+
 from zenoh_msgs import open_zenoh_session
 
 

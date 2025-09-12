@@ -12,7 +12,7 @@ from providers.io_provider import IOProvider
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
-from zenoh_msgs import AudioStatus, String, prepare_header, open_zenoh_session
+from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
 
 
 class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):

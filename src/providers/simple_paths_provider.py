@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 import zenoh
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_msgs import sensor_msgs, open_zenoh_session
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 from .singleton import singleton
 

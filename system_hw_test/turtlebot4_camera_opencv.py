@@ -1,11 +1,12 @@
-import time
 import sys
+import time
 
 import cv2
 import numpy as np
 
 sys.path.insert(0, "../src")
 from zenoh_msgs import open_zenoh_session
+
 
 def listener(sample):
     bytesI = sample.payload.to_bytes()

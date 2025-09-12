@@ -7,6 +7,7 @@ from typing import Optional
 
 import zenoh
 from zenoh import ZBytes
+
 from zenoh_msgs import open_zenoh_session
 
 

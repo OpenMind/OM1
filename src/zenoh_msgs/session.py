@@ -1,7 +1,9 @@
-import zenoh
 import logging
 
+import zenoh
+
 logging.basicConfig(level=logging.INFO)
+
 
 def create_zenoh_config(network_discovery: bool = True) -> dict:
     """
@@ -23,6 +25,7 @@ def create_zenoh_config(network_discovery: bool = True) -> dict:
         config.insert_json5("connect/endpoints", '["tcp/127.0.0.1:7447"]')
 
     return config
+
 
 def open_zenoh_session() -> zenoh.Session:
     """

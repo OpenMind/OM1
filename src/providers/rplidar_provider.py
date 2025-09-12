@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 
 from providers.odom_provider import OdomProvider
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_msgs import sensor_msgs, LaserScan, open_zenoh_session
+from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
 
 from .d435_provider import D435Provider
 from .rplidar_driver import RPDriver

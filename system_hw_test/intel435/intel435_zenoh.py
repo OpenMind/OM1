@@ -5,11 +5,10 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-import zenoh
 
 sys.path.insert(0, "../../src")
 
-from zenoh_msgs import sensor_msgs, open_zenoh_session
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 logging.basicConfig(level=logging.INFO)
 
