@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from uuid import uuid4
 
 import zenoh
 
@@ -52,7 +53,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.pub = None
 
         self.audio_status = AudioStatus(
-            header=prepare_header(str(self.sentence_counter)),
+            header=prepare_header(str(uuid4())),
             status_mic=AudioStatus.STATUS_MIC.UNKNOWN.value,
             status_speaker=AudioStatus.STATUS_SPEAKER.READY.value,
             sentence_to_speak=String(""),
@@ -128,7 +129,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         pending_message = self.tts.create_pending_message(output_interface.action)
 
         state = AudioStatus(
-            header=prepare_header(str(self.sentence_counter)),
+            header=prepare_header(str(uuid4())),
             status_mic=self.audio_status.status_mic,
             status_speaker=AudioStatus.STATUS_SPEAKER.ACTIVE.value,
             sentence_to_speak=String(json.dumps(pending_message)),
