@@ -86,6 +86,22 @@
                         ]
                     },
                     {
+                        "group": "Full Autonomy",
+                        "pages": [
+                            "full_autonomy_guidelines/backpack_introduction",
+                            "full_autonomy_guidelines/architecture_overview",
+                            {
+                                "group": "Full Autonomy Components",
+                                "pages": [
+                                    "full_autonomy_guidelines/om1_avatar",
+                                    "full_autonomy_guidelines/om",
+                                    "full_autonomy_guidelines/ros2_sdk"
+                                ]
+
+                            }
+                        ]
+                    },
+                    {
                         "group": "Governance/Payments",
                         "pages": [
                             "robotics/asimov_governance",

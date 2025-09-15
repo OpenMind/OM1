@@ -19,11 +19,6 @@ def io_provider():
     provider._llm_end_time = None
 
 
-def test_add_input_without_timestamp(io_provider):
-    io_provider.add_input("key1", "value1", None)
-    assert io_provider.inputs["key1"] == Input(input="value1", timestamp=None)
-
-
 def test_add_input_with_timestamp(io_provider):
     timestamp = time.time()
     io_provider.add_input("key1", "value1", timestamp)

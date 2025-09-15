@@ -1,11 +1,9 @@
 import json
 import logging
-import math
 import time
 from uuid import uuid4
 
 import zenoh
-from pycdr2.types import int32, uint32
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
@@ -15,8 +13,7 @@ from providers.io_provider import IOProvider
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
-from zenoh_idl.status_msgs import AudioStatus
-from zenoh_idl.std_msgs import Header, String, Time
+from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
 
 
 class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
@@ -31,6 +28,12 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         # OM API key
         api_key = getattr(self.config, "api_key", None)
+
+        # Sleep mode configuration
+        self.io_provider = IOProvider()
+        self.last_voice_command_time = time.time()
+        self.auto_sleep_mode = getattr(config, "auto_sleep_mode", True)
+        self.auto_sleep_time = getattr(config, "auto_sleep_time", 300)
 
         # Eleven Labs TTS configuration
         elevenlabs_api_key = getattr(self.config, "elevenlabs_api_key", None)
@@ -50,14 +53,14 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.pub = None
 
         self.audio_status = AudioStatus(
-            header=self.prepare_header(),
+            header=prepare_header(str(self.sentence_counter)),
             status_mic=AudioStatus.STATUS_MIC.UNKNOWN.value,
             status_speaker=AudioStatus.STATUS_SPEAKER.READY.value,
             sentence_to_speak=String(""),
         )
 
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             self.pub = self.session.declare_publisher(self.topic)
             self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
 
@@ -97,16 +100,8 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.tts.start()
         self.tts.add_pending_message("Woof Woof")
 
-    def zenoh_audio_message(self, data):
+    def zenoh_audio_message(self, data: zenoh.Sample):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
-
-    def prepare_header(self) -> Header:
-        uuid = uuid4()
-        ts = time.time()
-        remainder, seconds = math.modf(ts)
-        timestamp = Time(sec=int32(seconds), nanosec=uint32(remainder * 1000000000))
-        header = Header(stamp=timestamp, frame_id=str(uuid))
-        return header
 
     async def connect(self, output_interface: SpeakInput) -> None:
         if (
@@ -122,11 +117,19 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         self.silence_counter = 0
 
+        if self.auto_sleep_mode:
+            voice_input = self.io_provider.inputs.get("Voice")
+            if voice_input:
+                self.last_voice_command_time = voice_input.timestamp
+
+            if time.time() - self.last_voice_command_time > self.auto_sleep_time:
+                return
+
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)
 
         state = AudioStatus(
-            header=self.prepare_header(),
+            header=prepare_header(str(self.sentence_counter)),
             status_mic=self.audio_status.status_mic,
             status_speaker=AudioStatus.STATUS_SPEAKER.ACTIVE.value,
             sentence_to_speak=String(json.dumps(pending_message)),

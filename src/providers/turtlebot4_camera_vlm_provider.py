@@ -10,6 +10,8 @@ import zenoh
 from om1_utils import ws
 from om1_vlm import VideoStream
 
+from zenoh_msgs import open_zenoh_session
+
 from .singleton import singleton
 
 
@@ -65,13 +67,18 @@ class TurtleBot4CameraVideoStream(VideoStream):
             resolution=resolution,
             jpeg_quality=jpeg_quality,
         )
+        self.session = None
 
-        self.session = zenoh.open(zenoh.Config())
-        topic = f"{URID}/pi/oakd/rgb/preview/image_raw"
-        logging.info(
-            f"TurtleBot4 Camera listener starting with URID: {URID} and topic: {topic}"
-        )
-        self.camera = self.session.declare_subscriber(topic, self.camera_listener)
+        try:
+            self.session = open_zenoh_session()
+            topic = f"{URID}/pi/oakd/rgb/preview/image_raw"
+            logging.info(
+                f"TurtleBot4 Camera listener starting with URID: {URID} and topic: {topic}"
+            )
+            self.camera = self.session.declare_subscriber(topic, self.camera_listener)
+            logging.info("Zenoh TurtleBot4 Camera subscriber created")
+        except Exception as e:
+            logging.error(f"Error opening Zenoh TurtleBot4 Camera client: {e}")
 
         self.lock = threading.Lock()
         self.image = None

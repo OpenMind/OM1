@@ -5,11 +5,10 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-import zenoh
 
 sys.path.insert(0, "../../src")
 
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,7 +28,7 @@ class Intel435ObstacleDector:
 
         self.running = False
 
-        self.session = zenoh.open(zenoh.Config())
+        self.session = open_zenoh_session()
 
         self.session.declare_subscriber(
             "camera/realsense2_camera_node/depth/image_rect_raw", self.depth_callback

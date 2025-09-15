@@ -15,8 +15,7 @@ from numpy.typing import NDArray
 
 from providers.odom_provider import OdomProvider
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_idl import sensor_msgs
-from zenoh_idl.sensor_msgs import LaserScan
+from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
 
 from .d435_provider import D435Provider
 from .rplidar_driver import RPDriver
@@ -148,8 +147,6 @@ class RPLidarProvider:
         The angle of the sensor zero relative to the way in which it's mounted
     URID: str = ""
         The URID of the robot, used for Zenoh communication
-    multicast_address: str = ""
-        The multicast address for Zenoh communication
     machine_type: str = "go2"
         The type of the robot, e.g., "go2" or "tb4"
     use_zenoh: bool = False
@@ -181,7 +178,6 @@ class RPLidarProvider:
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
         URID: str = "",
-        multicast_address: str = "",
         machine_type: str = "go2",
         use_zenoh: bool = False,
         simple_paths: bool = False,
@@ -201,7 +197,6 @@ class RPLidarProvider:
         self.relevant_distance_min = relevant_distance_min
         self.sensor_mounting_angle = sensor_mounting_angle
         self.URID = URID
-        self.multicast_address = multicast_address
         self.machine_type = machine_type
         self.use_zenoh = use_zenoh
         self.simple_paths = simple_paths
@@ -266,14 +261,7 @@ class RPLidarProvider:
         if self.use_zenoh:
             logging.info("Connecting to the RPLIDAR via Zenoh")
             try:
-                config = zenoh.Config()
-                if self.multicast_address:
-                    config.insert_json5(
-                        "scouting",
-                        f'{{"multicast": {{"address": "{self.multicast_address}"}}}}',
-                    )
-
-                self.zen = zenoh.open(config)
+                self.zen = open_zenoh_session()
                 logging.info(f"Zenoh move client opened {self.zen}")
 
                 if self.machine_type == "tb4":

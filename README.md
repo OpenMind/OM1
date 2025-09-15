@@ -36,15 +36,13 @@ uv venv
 
 For MacOS  
 ```bash
-brew install portaudio
-brew install ffmpeg
+brew install portaudio ffmpeg
 ```
 
 For Linux  
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-all-dev
-sudo apt-get install ffmpeg
+sudo apt-get install portaudio19-dev python-dev ffmpeg
 ```
 
 ### Obtain an OpenMind API Key
@@ -94,6 +92,44 @@ OM1 is developed on:
 
 OM1 _should_ run on other platforms (such as Windows) and microcontrollers such as the Raspberry Pi 5 16GB.
 
+
+## Full Autonomy Guidance
+
+We're excited to introduce **full autonomy mode**, where three services work together in a loop without manual intervention:
+
+- **om1**
+- **unitree_go2_ros2_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
+- **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
+
+## Intro to Backpack?
+From research to real-world autonomy, a platform that learns, moves, and builds with you.
+We'll shortly be releasing the **BOM** and details on **DIY** for the it. 
+Stay tuned!
+
+Clone the following repos -
+- https://github.com/OpenMind/OM1.git
+- https://github.com/OpenMind/unitree_go2_ros2_sdk.git
+- https://github.com/OpenMind/OM1-avatar.git
+
+## Starting the system
+To start all services, run the following commands:
+- For OM1
+```bash
+cd OM1
+docker-compose up om1 -d --no-build
+```
+- For unitree_go2_ros2_sdk
+```bash
+cd unitree_go2_ros2_sdk
+docker-compose up orchestrator -d --no-build
+docker-compose up om1_sensor -d --no-build
+docker-compose up watchdog -d --no-build
+```
+- For OM1-avatar
+```bash
+cd OM1-avatar
+docker-compose up om1_avatar -d --no-build
+```
 ## Detailed Documentation
 
 More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).

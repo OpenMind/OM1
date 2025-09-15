@@ -1,0 +1,25 @@
+---
+title: OM1
+description: "OM1"
+---
+
+OM1 is the core agentic software that enables autonomous decision-making and control for your robot. It runs as a dedicated Docker image, making deployment and integration straightforward.
+
+## Docker Image
+
+Clone the repository
+```bash
+git clone https://github.com/OpenMind/OM1.git
+```
+The OM1 service is provided as a Docker image for easy setup:
+```bash
+cd OM1
+docker-compose up om1 -d --no-build
+```
+
+This image contains all necessary dependencies and configuration for running OM1.
+
+## Role in the System
+
+- Receives sensor and mapping data from other services.
+- Processes information and issues commands for movement and interaction.

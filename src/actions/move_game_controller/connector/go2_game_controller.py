@@ -2,14 +2,12 @@ import logging
 import threading
 import time
 
-import zenoh
-
 from actions.base import ActionConfig, ActionConnector
 from actions.move_game_controller.interface import IDLEInput
 from providers.odom_provider import OdomProvider, RobotState
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
-from zenoh_idl.status_msgs import AudioStatus
+from zenoh_msgs import AudioStatus, open_zenoh_session
 
 try:
     import hid
@@ -47,7 +45,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self.topic = "robot/status/audio"
         self.session = None
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
             logging.info("Game Controller Zenoh client opened")
         except Exception as e:
