@@ -52,7 +52,7 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
 
 def load_input(class_name: str) -> T.Type[Sensor]:
     """
-
+    Load an input class by its class name.
 
     Parameters
     ----------
