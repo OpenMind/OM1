@@ -11,7 +11,7 @@ from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_turtle.interface import MoveInput
 from providers.odom_provider import OdomProvider
 from providers.rplidar_provider import RPLidarProvider
-from zenoh_idl import geometry_msgs, sensor_msgs
+from zenoh_msgs import geometry_msgs, open_zenoh_session, sensor_msgs
 
 
 class MoveZenohConnector(ActionConnector[MoveInput]):
@@ -41,7 +41,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
         self.cmd_vel = f"{URID}/c3/cmd_vel"
 
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             logging.info(f"Zenoh move client opened {self.session}")
             logging.info(f"TurtleBot4 hazard listener starting with URID: {URID}")
             self.session.declare_subscriber(

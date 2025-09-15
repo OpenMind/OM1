@@ -8,6 +8,8 @@ from typing import Optional
 import zenoh
 from zenoh import ZBytes
 
+from zenoh_msgs import open_zenoh_session
+
 
 class ZenohPublisherProvider:
     """
@@ -26,8 +28,10 @@ class ZenohPublisherProvider:
         topic : str, optional
             The topic on which to publish messages (default is "speech").
         """
+        self.session: Optional[zenoh.Session] = None
+
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             logging.info("Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")

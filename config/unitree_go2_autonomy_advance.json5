@@ -1,6 +1,6 @@
 {
   "hertz": 1,
-  "unitree_ethernet": "en0",
+  "unitree_ethernet": "eno1",
   "name": "bits",
   "api_key": "openmind_free",
   "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Bits. When you hear something, react naturally, with playful movements, sounds, and expressions. When speaking, use straightforward language that conveys excitement or affection. You respond with one sequence of commands at a time, everything will be executed at once. Return precisely one command for each type of command. Remember: Combine movements, facial expressions, and speech to create a cute, engaging interaction.",
@@ -63,6 +63,15 @@
     },
     {
       "type": "UnitreeGo2State",
+    },
+    {
+      "type": "UnitreeGo2AMCL",
+    },
+    {
+      "type": "UnitreeGo2Navigation",
+    },
+    {
+      "type": "UnitreeGo2Location",
     }
   ]
 }

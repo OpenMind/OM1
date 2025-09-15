@@ -5,6 +5,8 @@ import time
 from queue import Queue
 from typing import List, Optional
 
+import zenoh
+
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
 from providers.io_provider import IOProvider
@@ -12,6 +14,7 @@ from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+from zenoh_msgs import AIControlStatus, open_zenoh_session
 
 
 class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
@@ -49,11 +52,28 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         unitree_ethernet = getattr(config, "unitree_ethernet", None)
         self.odom = OdomProvider(channel=unitree_ethernet)
 
+        # Automation sleep mode configuration
         self.io_provider = IOProvider()
         self.last_voice_command_time = time.time()
         self.sleep_mode_enabled = False
         self.auto_sleep_mode = getattr(config, "auto_sleep_mode", True)
         self.auto_sleep_time = getattr(config, "auto_sleep_time", 300)
+
+        # Zenoh topic for AI control status
+        self.topic = "robot/status/ai_control"
+        self.session: Optional[zenoh.Session] = None
+        self.pub = None
+
+        try:
+            self.session = open_zenoh_session()
+            self.session.declare_subscriber(self.topic, self._zenoh_ai_control_message)
+        except Exception as e:
+            logging.error(f"Error opening Zenoh client: {e}")
+            self.session = None
+            self.pub = None
+
+        # AI control status
+        self.ai_control_enabled = True
 
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
@@ -82,6 +102,11 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
+
+        # Check if AI control is enabled
+        if not self.ai_control_enabled:
+            logging.info("AI Control is disabled - disregarding AI command")
+            return
 
         if self.unitree_go2_state.state_code == 1002:
             self.sport_client.BalanceStand()
@@ -478,3 +503,21 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             sharpness = 8 - max(self.path_provider.turn_right)
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
+
+    def _zenoh_ai_control_message(self, data: zenoh.Sample):
+        """
+        Process an incoming AI control status message.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The Zenoh sample received, which should have a 'payload' attribute.
+        """
+        ai_control_status = AIControlStatus.deserialize(data.payload.to_bytes())
+        logging.debug(f"Received AI Control Status message: {ai_control_status}")
+        if ai_control_status.status == 0:
+            self.ai_control_enabled = False
+            logging.debug("AI Control disabled")
+        elif ai_control_status.status == 1:
+            self.ai_control_enabled = True
+            logging.debug("AI Control enabled")

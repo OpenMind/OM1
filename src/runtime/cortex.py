@@ -52,11 +52,6 @@ class CortexRuntime:
         self.sleep_ticker_provider = SleepTickerProvider()
         self.io_provider = IOProvider()
 
-        self.silence_counter = 0
-        self.silence_rate = 0
-        if hasattr(self.config, "silence_rate"):
-            self.silence_rate = self.config.silence_rate
-
     async def run(self) -> None:
         """
         Start the runtime's main execution loop.
@@ -154,23 +149,5 @@ class CortexRuntime:
         # Trigger the simulators
         await self.simulator_orchestrator.promise(output.actions)
 
-        actions_silent = []
-        for action in output.actions:
-            action_type = action.type.lower()
-            if action_type != "speak" and action_type != "arm movement":
-                actions_silent.append(action)
-                logging.debug(f"appended: {action_type}")
-
-        # Trigger actions
-        if "INPUT: Voice" in prompt:
-            logging.info("responding due to prior voice input")
-            self.silence_counter = 0
-            await self.action_orchestrator.promise(output.actions)
-        elif self.silence_counter >= self.silence_rate:
-            # speak at desired duty rate
-            self.silence_counter = 0
-            await self.action_orchestrator.promise(output.actions)
-        else:
-            # do not speak
-            self.silence_counter += 1
-            await self.action_orchestrator.promise(actions_silent)
+        # Trigger the actions
+        await self.action_orchestrator.promise(output.actions)

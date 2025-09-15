@@ -1,7 +1,10 @@
 import argparse
+import sys
 import time
 
-import zenoh
+sys.path.insert(0, "../src")
+
+from zenoh_msgs import open_zenoh_session
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--URID", help="your robot's URID, when using Zenoh", type=str)
@@ -21,7 +24,7 @@ if __name__ == "__main__":
     print(f"Using Zenoh to connect to robot using {URID}")
     print("[INFO] Opening zenoh session...")
 
-    with zenoh.open(zenoh.Config()) as session:
+    with open_zenoh_session() as session:
         scans = session.declare_subscriber(f"{URID}/c3/battery_state", listener)
         print("Zenoh is open")
         while True:

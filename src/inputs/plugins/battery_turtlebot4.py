@@ -9,7 +9,7 @@ import zenoh
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 
 @dataclass
@@ -53,8 +53,7 @@ class TurtleBot4Battery(FuserInput[str]):
         self.is_docked = False
 
         logging.info("Opening Zenoh TurtleBot4 session...")
-        conf = zenoh.Config()
-        self.z = zenoh.open(conf)
+        self.z = open_zenoh_session()
 
         logging.info(f"Config: {self.config}")
 

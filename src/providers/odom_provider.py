@@ -22,9 +22,7 @@ except ImportError:
         "Unitree SDK or CycloneDDS not found. You do not need this unless you are connecting to a Unitree robot."
     )
 
-from zenoh_idl import nav_msgs
-from zenoh_idl.geometry_msgs import PoseWithCovarianceStamped
-from zenoh_idl.nav_msgs import Odometry
+from zenoh_msgs import Odometry, PoseWithCovarianceStamped, nav_msgs, open_zenoh_session
 
 from .singleton import singleton
 
@@ -102,7 +100,7 @@ def odom_processor(
             logging.info(f"TurtleBot4 Navigation system is using URID: {URID}")
 
         try:
-            session = zenoh.open(zenoh.Config())
+            session = open_zenoh_session()
             logging.info(f"Zenoh navigation provider opened {session}")
             logging.info(f"TurtleBot4 navigation listeners starting with URID: {URID}")
             session.declare_subscriber(f"{URID}/c3/odom", zenoh_odom_handler)
