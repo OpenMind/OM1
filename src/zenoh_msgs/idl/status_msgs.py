@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from pycdr2 import Enum, IdlStruct
-from pycdr2.types import int8, uint32
+from pycdr2.types import int8
 
 from .std_msgs import Header, String
 
@@ -24,7 +24,6 @@ class AudioStatus(IdlStruct, typename="AudioStatus"):
     status_mic: int8
     status_speaker: int8
     sentence_to_speak: String
-    sentence_counter: uint32
 
 
 @dataclass

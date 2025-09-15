@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from uuid import uuid4
 
 import zenoh
 
@@ -40,17 +41,22 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         model_id = getattr(self.config, "model_id", "eleven_flash_v2_5")
         output_format = getattr(self.config, "output_format", "mp3_44100_128")
 
+        # silence rate
+        self.silence_rate = getattr(self.config, "silence_rate", 0)
+        self.silence_counter = 0
+
+        # IO Provider
+        self.io_provider = IOProvider()
+
         self.topic = "robot/status/audio"
         self.session = None
         self.pub = None
-        self.sentence_counter = 0
 
         self.audio_status = AudioStatus(
-            header=prepare_header(str(self.sentence_counter)),
+            header=prepare_header(str(uuid4())),
             status_mic=AudioStatus.STATUS_MIC.UNKNOWN.value,
             status_speaker=AudioStatus.STATUS_SPEAKER.READY.value,
             sentence_to_speak=String(""),
-            sentence_counter=self.sentence_counter,
         )
 
         try:
@@ -98,6 +104,19 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        if (
+            self.silence_rate > 0
+            and self.silence_counter < self.silence_rate
+            and "INPUT: Voice" not in self.io_provider.llm_prompt
+        ):
+            self.silence_counter += 1
+            logging.info(
+                f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}"
+            )
+            return
+
+        self.silence_counter = 0
+
         if self.auto_sleep_mode:
             voice_input = self.io_provider.inputs.get("Voice")
             if voice_input:
@@ -108,14 +127,12 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)
-        self.sentence_counter += 1
 
         state = AudioStatus(
-            header=prepare_header(str(self.sentence_counter)),
+            header=prepare_header(str(uuid4())),
             status_mic=self.audio_status.status_mic,
             status_speaker=AudioStatus.STATUS_SPEAKER.ACTIVE.value,
             sentence_to_speak=String(json.dumps(pending_message)),
-            sentence_counter=self.sentence_counter,
         )
 
         if self.pub:
