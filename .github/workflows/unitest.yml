@@ -49,10 +49,22 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra dds
+
       - name: Run unit tests
         run: |
-          uv venv
-          uv pip install -r pyproject.toml --extra dds
           uv run pytest --log-cli-level=DEBUG -s
 
       - name: Upload test results
