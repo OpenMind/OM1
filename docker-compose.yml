@@ -29,8 +29,7 @@ services:
       - ~/.config/pulse/cookie:/root/.config/pulse/cookie:ro
     devices:
       - /dev/snd:/dev/snd
-      # OM backpack camera index
-      - /dev/video6:/dev/video6
+      - /dev/video0:/dev/video0
     logging:
       driver: "json-file"
       options:

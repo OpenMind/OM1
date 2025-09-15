@@ -40,7 +40,7 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.27.1",
     "websockets>=12.0",
-    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@0d1e1c5cd192c68cbe95aab45bb555f0295f8cc5",
+    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@43ca4fda4bb2c30f31561fb97f3eb98e691f770e",
     "aiohttp>=3.9.3",
     "python-multipart>=0.0.9",
     "jinja2>=3.1.3",
