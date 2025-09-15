@@ -80,7 +80,7 @@ def load_background(class_name: str) -> T.Type[Background]:
             and issubclass(background_class, Background)
             and background_class != Background
         ):
-            raise ValueError(f"'{class_name}' is not a valid Background subclass")
+            raise ValueError(f"'{class_name}' is not a valid background subclass")
 
         logging.debug(f"Loaded background {class_name} from {module_name}.py")
         return background_class

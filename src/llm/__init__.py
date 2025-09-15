@@ -1,6 +1,8 @@
 import importlib
 import inspect
+import logging
 import os
+import re
 import typing as T
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -123,39 +125,82 @@ class LLM(T.Generic[R]):
         raise NotImplementedError
 
 
-def load_llm(llm_name: str) -> T.Type[LLM]:
+def find_module_with_class(class_name: str) -> T.Optional[str]:
     """
-    Dynamically load an LLM implementation from the plugins directory.
+    Find which module file contains the specified class name.
 
     Parameters
     ----------
-    llm_name : str
-        Name of the LLM implementation class to load
+    class_name : str
+        The class name to search for
 
     Returns
     -------
-    Type[LLM]
-        LLM class implementation
-
-    Raises
-    ------
-    ValueError
-        If requested LLM implementation is not found
+    str or None
+        The module name (without .py) that contains the class, or None if not found
     """
-    # Get all files in plugins directory
     plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
-    plugin_files = [f[:-3] for f in os.listdir(plugins_dir) if f.endswith(".py")]
 
-    # Import all plugin actions and find LLM subclasses
-    llm_classes = {}
-    for plugin in plugin_files:
-        action = importlib.import_module(f"llm.plugins.{plugin}")
-        for name, obj in inspect.getmembers(action):
-            if inspect.isclass(obj) and issubclass(obj, LLM) and obj != LLM:
-                llm_classes[name] = obj
+    if not os.path.exists(plugins_dir):
+        return None
 
-    # Find requested input class
-    if llm_name not in llm_classes:
-        raise ValueError(f"LLM type {llm_name} not found")
+    plugin_files = [f for f in os.listdir(plugins_dir) if f.endswith(".py")]
 
-    return llm_classes[llm_name]
+    for plugin_file in plugin_files:
+        file_path = os.path.join(plugins_dir, plugin_file)
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            pattern = rf"^class\s+{re.escape(class_name)}\s*\([^)]*LLM[^)]*\)\s*:"
+
+            if re.search(pattern, content, re.MULTILINE):
+                return plugin_file[:-3]
+
+        except Exception as e:
+            logging.warning(f"Could not read {plugin_file}: {e}")
+            continue
+
+    return None
+
+
+def load_llm(class_name: str) -> T.Type[LLM]:
+    """
+    Load an LLM class by its class name.
+
+    Parameters
+    ----------
+    class_name : str
+        The exact class name
+
+    Returns
+    -------
+    T.Type[LLM]
+        The LLM class
+    """
+    module_name = find_module_with_class(class_name)
+
+    if module_name is None:
+        raise ValueError(f"Class '{class_name}' not found in any LLM plugin module")
+
+    try:
+        module = importlib.import_module(f"llm.plugins.{module_name}")
+        llm_class = getattr(module, class_name)
+
+        if not (
+            inspect.isclass(llm_class)
+            and issubclass(llm_class, LLM)
+            and llm_class != LLM
+        ):
+            raise ValueError(f"'{class_name}' is not a valid LLM subclass")
+
+        logging.debug(f"Loaded LLM {class_name} from {module_name}.py")
+        return llm_class
+
+    except ImportError as e:
+        raise ValueError(f"Could not import LLM module '{module_name}': {e}")
+    except AttributeError:
+        raise ValueError(
+            f"Class '{class_name}' not found in LLM module '{module_name}'"
+        )

@@ -78,7 +78,7 @@ def load_input(class_name: str) -> T.Type[Sensor]:
             and issubclass(input_class, Sensor)
             and input_class != Sensor
         ):
-            raise ValueError(f"'{class_name}' is not a valid Background subclass")
+            raise ValueError(f"'{class_name}' is not a valid input subclass")
 
         logging.debug(f"Loaded input {class_name} from {module_name}.py")
         return input_class
