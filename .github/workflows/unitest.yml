@@ -32,7 +32,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/cyclonedds/cyclonedds/install
-          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/your-workflow.yml') }}
+          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/unitest.yml') }}
           restore-keys: |
             ${{ runner.os }}-cyclonedds-0.10.x-
 
