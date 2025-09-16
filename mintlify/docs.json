@@ -138,14 +138,14 @@
                     {
                         "group": "Upgrades and Announcements",
                         "pages": [
-                            "release-notes/major-updates/beta-release"
+                            "release-notes/major-updates/beta_release"
                         ]
                     },
                                         {
                         "group": "Beta Release",
                         "pages": [
                             "release-notes/beta/om",
-                            "release-notes/beta/om-avatar",
+                            "release-notes/beta/om1-avatar",
                             "release-notes/beta/ros2-sdk"
                         ]
                     }
