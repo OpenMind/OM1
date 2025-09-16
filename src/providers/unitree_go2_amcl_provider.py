@@ -90,9 +90,10 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
             )
 
             if self.pub is not None:
-                status_msg = AIControlStatus()
-                status_msg.header = prepare_header(message.header.frame_id)
-                status_msg.status = 0 if self.localization_status else 1
+                status_msg = AIControlStatus(
+                    header=prepare_header(message.header.frame_id),
+                    status=0 if self.localization_status else 1,
+                )
                 self.pub.put(status_msg.serialize())
         else:
             logging.warning("Received empty AMCL message")
