@@ -23,24 +23,24 @@ class UnitreeGo2LocationProvider:
 
     def __init__(
         self,
-        locations_file: str = "saved_locations.json",
+        locations_file: str = "locations.json",
     ):
         """
         Initialize the Unitree Go2 Location Provider.
         Parameters
         ----------
         locations_file : str, optional
-            The file to store saved locations (default is "saved_locations.json").
+            The file to store saved locations (default is "locations.json").
         """
         self.navigation_provider = UnitreeGo2NavigationProvider()
         self.amcl_provider = UnitreeGo2AMCLProvider()
 
         self.locations_file = locations_file
 
-        self.saved_locations: Dict[str, Dict] = self._load_locations()
-        if self.saved_locations:
+        self.locations: Dict[str, Dict] = self._load_locations()
+        if self.locations:
             logging.info(
-                f"Loaded {self.locations_file} with {self.saved_locations} saved locations"
+                f"Loaded {self.locations_file} with {self.locations} saved locations"
             )
 
         self.running: bool = False
@@ -70,7 +70,7 @@ class UnitreeGo2LocationProvider:
         """
         try:
             with open(self.locations_file, "w") as f:
-                json.dump(self.saved_locations, f, indent=2)
+                json.dump(self.locations, f, indent=2)
             logging.info(f"Saved locations to {self.locations_file}")
         except Exception as e:
             logging.error(f"Error saving locations file: {e}")
@@ -212,7 +212,7 @@ class UnitreeGo2LocationProvider:
             "timestamp": datetime.now().isoformat(),
         }
 
-        self.saved_locations[location_name] = location_data
+        self.locations[location_name] = location_data
         self._save_locations()
 
         return {
@@ -232,8 +232,8 @@ class UnitreeGo2LocationProvider:
         """
         return {
             "success": True,
-            "message": f"Retrieved {len(self.saved_locations)} saved locations",
-            "locations": self.saved_locations,
+            "message": f"Retrieved {len(self.locations)} saved locations",
+            "locations": self.locations,
         }
 
     @LLMFunction("Get detailed information about a specific saved location")
@@ -251,7 +251,7 @@ class UnitreeGo2LocationProvider:
         """
         location_name = location_name.strip().lower()
 
-        if location_name not in self.saved_locations:
+        if location_name not in self.locations:
             return {
                 "success": False,
                 "message": f"Location '{location_name}' not found",
@@ -260,7 +260,7 @@ class UnitreeGo2LocationProvider:
         return {
             "success": True,
             "message": f"Location '{location_name}' information retrieved",
-            "location_data": self.saved_locations[location_name],
+            "location_data": self.locations[location_name],
         }
 
     @LLMFunction("Command the robot to navigate to a saved location")
@@ -278,13 +278,13 @@ class UnitreeGo2LocationProvider:
         """
         location_name = location_name.strip().lower()
 
-        if location_name not in self.saved_locations:
+        if location_name not in self.locations:
             return {
                 "success": False,
                 "message": f"Location '{location_name}' not found",
             }
 
-        location_data = self.saved_locations[location_name]
+        location_data = self.locations[location_name]
         pose_data = location_data["pose"]
 
         timestamp = Time(
@@ -339,13 +339,13 @@ class UnitreeGo2LocationProvider:
         """
         location_name = location_name.strip().lower()
 
-        if location_name not in self.saved_locations:
+        if location_name not in self.locations:
             return {
                 "success": False,
                 "message": f"Location '{location_name}' not found",
             }
 
-        deleted_location = self.saved_locations.pop(location_name)
+        deleted_location = self.locations.pop(location_name)
         self._save_locations()
 
         return {
@@ -379,7 +379,7 @@ class UnitreeGo2LocationProvider:
         Dict
             Dictionary containing list of location names.
         """
-        location_names = list(self.saved_locations.keys())
+        location_names = list(self.locations.keys())
         return {
             "success": True,
             "message": f"Found {len(location_names)} saved locations",
@@ -401,7 +401,7 @@ class UnitreeGo2LocationProvider:
         """
         location_name = location_name.strip().lower()
 
-        if location_name not in self.saved_locations:
+        if location_name not in self.locations:
             return {
                 "success": False,
                 "message": f"Location '{location_name}' not found",
@@ -420,7 +420,7 @@ class UnitreeGo2LocationProvider:
                 "message": "Cannot calculate distance: No current pose available",
             }
 
-        target_pose = self.saved_locations[location_name]["pose"]
+        target_pose = self.locations[location_name]["pose"]
 
         dx = current_pose.position.x - target_pose["position"]["x"]
         dy = current_pose.position.y - target_pose["position"]["y"]
@@ -459,15 +459,15 @@ class UnitreeGo2LocationProvider:
         """
         location_name = location_name.strip().lower()
 
-        if location_name not in self.saved_locations:
+        if location_name not in self.locations:
             return {
                 "success": False,
                 "message": f"Location '{location_name}' not found",
             }
 
-        old_description = self.saved_locations[location_name]["description"]
-        self.saved_locations[location_name]["description"] = new_description
-        self.saved_locations[location_name]["last_updated"] = datetime.now().isoformat()
+        old_description = self.locations[location_name]["description"]
+        self.locations[location_name]["description"] = new_description
+        self.locations[location_name]["last_updated"] = datetime.now().isoformat()
         self._save_locations()
 
         return {
@@ -495,4 +495,4 @@ class UnitreeGo2LocationProvider:
     @property
     def location_count(self) -> int:
         """Get the number of saved locations."""
-        return len(self.saved_locations)
+        return len(self.locations)
