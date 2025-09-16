@@ -35,7 +35,10 @@ class UnitreeGo2LocationProvider:
         self.navigation_provider = UnitreeGo2NavigationProvider()
         self.amcl_provider = UnitreeGo2AMCLProvider()
 
-        self.locations_file = locations_file
+        self.locations_directory = os.path.abspath("./locations")
+        os.makedirs(self.locations_directory, mode=0o755, exist_ok=True)
+
+        self.locations_file = os.path.join(self.locations_directory, locations_file)
 
         self.locations: Dict[str, Dict] = self._load_locations()
         if self.locations:
