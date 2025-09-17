@@ -17,4 +17,14 @@ Beta release for the Docker image openmindagi/om1, which provides the full setup
 - Multi-arch support - AMD64 and ARM64.
 - Support for custom camera indices and enables both microphone and speaker functionality in Docker.
 
+## Docker image
+
+The OM1 service is provided as a Docker image for easy setup:
+```bash
+cd OM1
+docker-compose up om1 -d --no-build
+```
+
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.0-beta.2).
+
 For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om).

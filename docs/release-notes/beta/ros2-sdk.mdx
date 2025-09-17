@@ -42,4 +42,19 @@ Beta release for the Docker image openmindagi/unitree_go2_sdk, which provides th
   - Map storage and loading
 - Allows interaction via REST APIs.
 
+## Docker image
+
+The unitree_go2_ros2_sdk is provided as a Docker image for easy setup. 
+```bash
+git clone https://github.com/OpenMind/unitree_go2_ros2_sdk.git
+```
+```bash
+cd unitree_go2_ros2_sdk
+docker-compose up orchestrator -d --no-build
+docker-compose up om1_sensor -d --no-build
+docker-compose up watchdog -d --no-build
+```
+
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/unitree_go2_sdk/v1.0.0-beta.1).
+
 For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/ros2_sdk).
