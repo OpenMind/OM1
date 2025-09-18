@@ -1,12 +1,12 @@
 # Video Test System
 
-Goal: Try out alternative system for sharing video and audio data with LLMs and human teleoperators. 
+Goal: Try out alternative system for sharing video and audio data with LLMs and human teleoperators.
 
 Key idea: use a central media server (like MediaMTX) to handle the streams and codecs.
 
 [MediaMTX](https://github.com/bluenviron/mediamtx) is a ready-to-use and zero-dependency real-time media server and media proxy that allows to publish, read, proxy, record and playback video and audio streams.
 
-ToDo: use the `ffmpeg` in the Docker image? 
+ToDo: use the `ffmpeg` in the Docker image?
 
 ## Basic Setup on Mac
 
@@ -15,14 +15,14 @@ ToDo: use the `ffmpeg` in the Docker image?
 Start `Docker.app` on your Mac. Then, run the `bluenviron/mediamtx:latest-ffmpeg`:
 
 ```bash
-docker run --rm -it -p 8554:8554 -p 1935:1935 bluenviron/mediamtx:latest-ffmpeg
+docker run --rm -it -p 8554:8554 -p 1935:1935 -p 8889:8889 -p 8189:8189/udp bluenviron/mediamtx:latest-ffmpeg
 ```
 
-The point of the `-p 8554:8554` is to make the docker container RTSP listener port (on :8554 (TCP), :8000 (UDP/RTP), :8001 (UDP/RTCP)) available to the mac. `-p 1935:1935` allows access to the RTMP listener. 
+The point of the `-p 8554:8554` is to make the docker container RTSP listener port (on :8554 (TCP), :8000 (UDP/RTP), :8001 (UDP/RTCP)) available to the mac. `-p 1935:1935` allows access to the RTMP listener.
 
 ### Stream video data to the MediaMTX server
 
-Note that the MediaMTX could live anywhere, for example in the cloud, but for testing let's have it run locally. 
+Note that the MediaMTX could live anywhere, for example in the cloud, but for testing let's have it run locally.
 
 List all devices on a Mac:
 
@@ -63,7 +63,7 @@ Output #0, flv, to 'rtmp://localhost:1935/live':
   Stream #0:1: Audio: mp3 ([2][0][0][0] / 0x0002), 48000 Hz, mono, fltp
       Metadata:
         encoder         : Lavc61.19.101 libmp3lame
-frame= 3711 fps= 30 q=26.0 size=   38238KiB time=00:02:03.84 bitrate=2529.4kbits/s speed=0.999x 
+frame= 3711 fps= 30 q=26.0 size=   38238KiB time=00:02:03.84 bitrate=2529.4kbits/s speed=0.999x
 ```
 
 The MediaMTX should report:
@@ -78,3 +78,26 @@ The MediaMTX should report:
 You can access the data using dozens of protocols or apps. For example, to use VLC and `rtsp`, install VLC, go to `File -> Open Network` and enter `rtsp://localhost:8554/live`.
 
 **Note** - it may take a few seconds for the stream to open. A typical delay is about 2 seconds.
+
+You can also use WebRTC to view the video in your web browser by visiting http://localhost:8889/live.
+
+### OM Remote Server
+
+You can stream your video to our remote server using your **OM API Key**:
+
+```bash
+ffmpeg -f avfoundation -video_size 1920x1080 -framerate 30 -i "0:0" \
+  -vcodec libx264 -preset ultrafast -tune zerolatency -f flv \
+  "rtmp://api-video-ingest.openmind.org:1935/<OM_API_KEY_ID>?api_key=<OM_API_KEY>"
+```
+
+**Note:** **OM_API_KEY_ID** refers to the first 16 digits of your API key, excluding the **om_prod_ prefix**. You can also find your corresponding **OM_API_KEY_ID** in our [portal](https://portal.openmind.org).
+
+You can view your video stream at:
+
+```bash
+https://api-video-webrtc.openmind.org/<OM_API_KEY_ID>?api_key=<OM_API_KEY>
+```
+
+
+
