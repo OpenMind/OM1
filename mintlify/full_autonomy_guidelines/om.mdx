@@ -5,7 +5,12 @@ description: "OM1"
 
 OM1 is the core agentic software that enables autonomous decision-making and control for your robot. It runs as a dedicated Docker image, making deployment and integration straightforward.
 
-## Docker Image
+## Get started
+
+### SSH into your robot
+
+- Identify the ip address
+- SSH into the system using ssh unitree@ip_address
 
 ### Clone the repository
 ```bash
@@ -22,6 +27,50 @@ Add
 ```bash 
 export OM_API_KEY="your_api_key"
 ```
+
+### Setup default speaker and microphone
+- Connect your robot with a microphone and a speaker if not already connected.
+- Install pulseaudio, if not already installed
+```bash
+sudo apt install pulseaudio
+```
+
+- Find the available devices using following commands -
+    - for speakers 
+    ```bash
+    pactl list sinks
+    ```
+    - for microphone
+    ```bash
+    pactl list sources
+    ```
+    Make a note of the device names.
+
+- To set the default the speaker and mircophone:
+
+```bash
+mkdir -p ~/.config/pulse
+vim ~/.config/pulse/default.pa
+```
+
+And add
+
+```bash
+# Load the default configuration
+.include /etc/pulse/default.pa
+
+# Set default sink (speaker)
+set-default-sink alsa_output.usb-Solid_State_System_Co._Ltd._USB_PnP_Audio_Device_000000000000-00.analog-stereo
+
+# Set default source (microphone)
+set-default-source alsa_input.usb-046d_Brio_100_2513APH04BE8-02.mono-fallback
+
+# Set default speaker volume
+set-sink-volume @DEFAULT_SINK@ 50%
+```
+Note : Replace sink and source names based on what you found in the previous step.
+
+### Docker image
 
 Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
 ```bash
