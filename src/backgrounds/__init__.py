@@ -2,45 +2,92 @@ import importlib
 import inspect
 import logging
 import os
+import re
 import typing as T
 
 from backgrounds.base import Background
 
 
-def load_background(background_name: str) -> T.Type[Background]:
+def find_module_with_class(class_name: str) -> T.Optional[str]:
     """
-    Load a background from the backgrounds directory.
+    Find which module file contains the specified class name.
 
     Parameters
     ----------
-    background_name : str
-        The name of the background to load.
+    class_name : str
+        The class name to search for
 
-    Returns:
-    ---------
-    T.Type[Background]
-        A class (type) of the background.
+    Returns
+    -------
+    str or None
+        The module name (without .py) that contains the class, or None if not found
     """
-    # Get all files in plugins directory
     plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
-    plugin_files = [f[:-3] for f in os.listdir(plugins_dir) if f.endswith(".py")]
 
-    # Import all backgrounds and find Background subclasses
-    background_classes = {}
-    for plugin in plugin_files:
-        background = importlib.import_module(f"backgrounds.plugins.{plugin}")
-        for name, obj in inspect.getmembers(background):
-            if (
-                inspect.isclass(obj)
-                and issubclass(obj, Background)
-                and obj != Background
-            ):
-                background_classes[name] = obj
+    if not os.path.exists(plugins_dir):
+        return None
 
-    logging.debug(f"Background classes: {background_classes}")
+    plugin_files = [f for f in os.listdir(plugins_dir) if f.endswith(".py")]
 
-    # Find requested background class
-    if background_name not in background_classes:
-        raise ValueError(f"Background {background_name} not found")
+    for plugin_file in plugin_files:
+        file_path = os.path.join(plugins_dir, plugin_file)
 
-    return background_classes[background_name]
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            pattern = (
+                rf"^class\s+{re.escape(class_name)}\s*\([^)]*Background[^)]*\)\s*:"
+            )
+
+            if re.search(pattern, content, re.MULTILINE):
+                return plugin_file[:-3]
+
+        except Exception as e:
+            logging.warning(f"Could not read {plugin_file}: {e}")
+            continue
+
+    return None
+
+
+def load_background(class_name: str) -> T.Type[Background]:
+    """
+    Load a background class by its class name.
+
+    Parameters
+    ----------
+    class_name : str
+        The exact class name
+
+    Returns
+    -------
+    T.Type[Background]
+        The background class
+    """
+    module_name = find_module_with_class(class_name)
+
+    if module_name is None:
+        raise ValueError(
+            f"Class '{class_name}' not found in any background plugin module"
+        )
+
+    try:
+        module = importlib.import_module(f"backgrounds.plugins.{module_name}")
+        background_class = getattr(module, class_name)
+
+        if not (
+            inspect.isclass(background_class)
+            and issubclass(background_class, Background)
+            and background_class != Background
+        ):
+            raise ValueError(f"'{class_name}' is not a valid background subclass")
+
+        logging.debug(f"Loaded background {class_name} from {module_name}.py")
+        return background_class
+
+    except ImportError as e:
+        raise ValueError(f"Could not import background module '{module_name}': {e}")
+    except AttributeError:
+        raise ValueError(
+            f"Class '{class_name}' not found in background module '{module_name}'"
+        )

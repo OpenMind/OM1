@@ -2,43 +2,90 @@ import importlib
 import inspect
 import logging
 import os
+import re
 import typing as T
 
-from simulators.base import Simulator, SimulatorConfig
-
-__all__ = ["Simulator", "SimulatorConfig", "load_simulator"]
+from simulators.base import Simulator
 
 
-def load_simulator(sim_type: str) -> T.Type[Simulator]:
+def find_module_with_class(class_name: str) -> T.Optional[str]:
     """
-    Load a simulator from the simulators directory.
+    Find which module file contains the specified class name.
 
     Parameters
     ----------
-    sim_type : str
-        The type/name of the simulator to load.
+    class_name : str
+        The class name to search for
 
-    Returns:
-    ---------
-    T.Type[Simulator]
-        An instance of the simulator.
+    Returns
+    -------
+    str or None
+        The module name (without .py) that contains the class, or None if not found
     """
-    # Get all files in plugins directory
     plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
-    plugin_files = [f[:-3] for f in os.listdir(plugins_dir) if f.endswith(".py")]
 
-    # Import all simulators and find Simulator subclasses
-    simulator_classes = {}
-    for plugin in plugin_files:
-        simulator = importlib.import_module(f"simulators.plugins.{plugin}")
-        for name, obj in inspect.getmembers(simulator):
-            if inspect.isclass(obj) and issubclass(obj, Simulator) and obj != Simulator:
-                simulator_classes[name] = obj
+    if not os.path.exists(plugins_dir):
+        return None
 
-    logging.debug(f"Simulator classes: {simulator_classes}")
+    plugin_files = [f for f in os.listdir(plugins_dir) if f.endswith(".py")]
 
-    # Find requested simulator class
-    if sim_type not in simulator_classes:
-        raise ValueError(f"Simulator {sim_type} not found")
+    for plugin_file in plugin_files:
+        file_path = os.path.join(plugins_dir, plugin_file)
 
-    return simulator_classes[sim_type]
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            pattern = rf"^class\s+{re.escape(class_name)}\s*\([^)]*Simulator[^)]*\)\s*:"
+
+            if re.search(pattern, content, re.MULTILINE):
+                return plugin_file[:-3]
+
+        except Exception as e:
+            logging.warning(f"Could not read {plugin_file}: {e}")
+            continue
+
+    return None
+
+
+def load_simulator(class_name: str) -> T.Type[Simulator]:
+    """
+    Load an Simulator class by its class name.
+
+    Parameters
+    ----------
+    class_name : str
+        The exact class name
+
+    Returns
+    -------
+    T.Type[Simulator]
+        The Simulator class
+    """
+    module_name = find_module_with_class(class_name)
+
+    if module_name is None:
+        raise ValueError(
+            f"Class '{class_name}' not found in any simulator plugin module"
+        )
+
+    try:
+        module = importlib.import_module(f"simulators.plugins.{module_name}")
+        simulator_class = getattr(module, class_name)
+
+        if not (
+            inspect.isclass(simulator_class)
+            and issubclass(simulator_class, Simulator)
+            and simulator_class != Simulator
+        ):
+            raise ValueError(f"'{class_name}' is not a valid simulator subclass")
+
+        logging.debug(f"Loaded simulator {class_name} from {module_name}.py")
+        return simulator_class
+
+    except ImportError as e:
+        raise ValueError(f"Could not import simulator module '{module_name}': {e}")
+    except AttributeError:
+        raise ValueError(
+            f"Class '{class_name}' not found in simulator module '{module_name}'"
+        )
