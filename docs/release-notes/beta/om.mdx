@@ -1,0 +1,30 @@
+---
+title: OM1 Beta Release
+description: "v1.0.0-beta.2"
+---
+
+## What's included
+
+Beta release for the Docker image openmindagi/om1, which provides the full setup of OM1 service in one go without having the user to install dependencies separately. 
+
+## Features
+
+- Multiple LLM provider integrations(OpenAI, Gemini, Deepseek, xAI).
+- GoogleASR model for speech to text.
+- Riva and Eleven Labs for TTS.
+- Preconfigured support for Unitree Go2, G1, TurtleBot, Ubtech Yanshee.
+- Simulator support with Gazebo for Go2.
+- Multi-arch support - AMD64 and ARM64.
+- Support for custom camera indices and enables both microphone and speaker functionality in Docker.
+
+## Docker image
+
+The OM1 service is provided as a Docker image for easy setup:
+```bash
+cd OM1
+docker-compose up om1 -d --no-build
+```
+
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.0-beta.2).
+
+For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om).
