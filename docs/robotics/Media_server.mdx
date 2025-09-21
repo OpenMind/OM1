@@ -73,6 +73,12 @@ The MediaMTX should report:
 2025/09/16 23:28:08 INF [RTMP] [conn 192.168.65.1:64081] is publishing to path 'live', 2 tracks (H264, MPEG-1/2 Audio)
 ```
 
+To stream audio using the **opus codec**, upgrade your **FFmpeg** to version **8.x.x**. Once updated, use the following command to stream it—this will enable WebRTC support.
+
+```bash
+ffmpeg -f avfoundation -video_size 640x480 -framerate 30 -i "0:0" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -b:v 600k -c:a libopus -ar 48000 -ac 2 -b:a 128k -f flv "rtmp://localhost:1935/live"
+```
+
 ### Consume the data from the MediaMTX server
 
 You can access the data using dozens of protocols or apps. For example, to use VLC and `rtsp`, install VLC, go to `File -> Open Network` and enter `rtsp://localhost:8554/live`.
