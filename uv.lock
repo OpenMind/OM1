@@ -2432,7 +2432,7 @@ requires-dist = [
     { name = "matplotlib" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "numpy" },
-    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=dea76a4fcb7d79b14ad21462b3748216cf122848" },
+    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=d025a5865ff94ae3be48923d9df0d8fa0ab25122" },
     { name = "openai", specifier = ">=1.59.5" },
     { name = "opencv-python" },
     { name = "osascript" },
@@ -2474,7 +2474,7 @@ dev = [
 [[package]]
 name = "om1-modules"
 version = "0.1.0"
-source = { git = "https://github.com/OpenMind/om1-modules.git?rev=dea76a4fcb7d79b14ad21462b3748216cf122848#dea76a4fcb7d79b14ad21462b3748216cf122848" }
+source = { git = "https://github.com/OpenMind/om1-modules.git?rev=d025a5865ff94ae3be48923d9df0d8fa0ab25122#d025a5865ff94ae3be48923d9df0d8fa0ab25122" }
 dependencies = [
     { name = "eclipse-zenoh" },
     { name = "google" },
