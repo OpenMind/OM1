@@ -17,6 +17,22 @@ OM1 is the core agentic software that enables autonomous decision-making and con
 git clone https://github.com/OpenMind/OM1.git
 ```
 
+### Find Unitree Ethernet port
+```bash
+ifconfig
+```
+Find the port with ip address `192.168.123.x`. Note down the port name and update it in "unitree_go2_autonomy_advance.json5".
+
+```bash
+vim config/unitree_go2_autonomy_advance.json5
+```
+
+```bash
+  "hertz": 1,
+  "unitree_ethernet": "eno1", // update here
+  "name": "bits",
+```
+
 ### Setup the API key
 
 For Bash: vim ~/.bashrc or ~/.bash_profile.
