@@ -10,7 +10,8 @@ OM1 is the core agentic software that enables autonomous decision-making and con
 ### SSH into your robot
 
 - Identify the ip address
-- SSH into the system using ssh unitree@ip_address
+- SSH into the system using ssh username@ip_address (Replace username with your username)
+- Use the password provided to you, when prompted
 
 ### Clone the repository
 ```bash
@@ -76,10 +77,10 @@ And add
 .include /etc/pulse/default.pa
 
 # Set default sink (speaker)
-set-default-sink alsa_output.usb-Solid_State_System_Co._Ltd._USB_PnP_Audio_Device_000000000000-00.analog-stereo
+set-default-sink alsa_output.{speaker_name}.analog-stereo # Replace speaker_name with your speaker name
 
 # Set default source (microphone)
-set-default-source alsa_input.usb-046d_Brio_100_2513APH04BE8-02.mono-fallback
+set-default-source alsa_input.{microphone_name}.mono-fallback # Replace microphone_name with your microphone name
 
 # Set default speaker volume
 set-sink-volume @DEFAULT_SINK@ 50%
