@@ -40,7 +40,7 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.27.1",
     "websockets>=12.0",
-    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@fb3befc041b5108c8bd5bfb28a78f4fafb61f7de",
+    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@7b39da4339bf4a51c159d0fe611eccecac71fc14",
     "aiohttp>=3.9.3",
     "python-multipart>=0.0.9",
     "jinja2>=3.1.3",
@@ -48,6 +48,7 @@ dependencies = [
     "pynput>=1.8.1",
     "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
     "nest-asyncio>=1.6.0",
+    "lark>=1.2.2",
 ]
 
 [project.optional-dependencies]
