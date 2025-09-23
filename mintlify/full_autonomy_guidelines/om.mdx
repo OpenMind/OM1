@@ -4,6 +4,7 @@ description: "OM1"
 ---
 
 OM1 is the core agentic software that enables autonomous decision-making and control for your robot. It runs as a dedicated Docker image, making deployment and integration straightforward.
+Full autonomy is currently supported for Go2.
 
 ## Get started
 
@@ -38,8 +39,6 @@ vim config/unitree_go2_autonomy_advance.json5
 
 For Bash: vim ~/.bashrc or ~/.bash_profile.
 
-For Zsh: vim ~/.zshrc.
-
 Add 
 ```bash 
 export OM_API_KEY="your_api_key"
@@ -66,28 +65,35 @@ sudo apt install pulseaudio
 - To set the default the speaker and mircophone:
 
 ```bash
-mkdir -p ~/.config/pulse
-vim ~/.config/pulse/default.pa
+mkdir -p ~/.config/systemd/user
+vim ~/.config/systemd/user/audio-defaults.service
 ```
 
 And add
 
 ```bash
 # Load the default configuration
-.include /etc/pulse/default.pa
+[Unit]
+Description=Set Default Audio Devices
+After=pulseaudio.service
+Wants=pulseaudio.service
 
-# Set default sink (speaker)
-set-default-sink alsa_output.{speaker_name}.analog-stereo # Replace speaker_name with your speaker name
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c 'sleep 5 && pactl set-default-sink {sink_name} && pactl set-default-source {source_name}'
 
-# Set default source (microphone)
-set-default-source alsa_input.{microphone_name}.mono-fallback # Replace microphone_name with your microphone name
-
-# Set default speaker volume
-set-sink-volume @DEFAULT_SINK@ 50%
+[Install]
+WantedBy=default.target
 ```
+
+Reboot the system.
+
 Note : Replace sink and source names based on what you found in the previous step.
 
 ### Docker image
+
+Install docker/docker-compose if not already installed.
 
 Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
 ```bash
