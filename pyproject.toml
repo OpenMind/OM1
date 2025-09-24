@@ -30,7 +30,7 @@ dependencies = [
     "tf_keras>=2.15.0",
     "web3",
     "numpy",
-    "cdp-sdk==1.1.1",
+    "cdp-sdk==0.21.0",
     "hid",
     "cv_bridge",
     "torch",
