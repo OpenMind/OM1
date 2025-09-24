@@ -89,7 +89,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             # If Orin restarted, timestamp will be very small
             if self.last_voice_command_time < 1755500000:
                 # Timestamp is invalid (Orin restarted), treat as very old
-                time_since_last_command = float("inf")
+                time_since_last_command = float("-inf")
                 # Try to updat the timestamp to the latest time
                 if current_time > self.last_voice_command_time:
                     self.last_voice_command_time = current_time
