@@ -562,7 +562,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 ai_status_response.serialize()
             )
 
-        # Enable AI control
+        # Enable the AI control
         if code == 1:
             self.ai_control_enabled = True
             logging.info("AI Control Enabled")
@@ -577,7 +577,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 ai_status_response.serialize()
             )
 
-        # Disable AI control
+        # Disable the AI control
         if code == 0:
             self.ai_control_enabled = False
             logging.info("AI Control Disabled")
