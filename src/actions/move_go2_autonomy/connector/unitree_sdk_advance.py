@@ -83,7 +83,20 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             if voice_input:
                 self.last_voice_command_time = voice_input.timestamp
 
-            if time.time() - self.last_voice_command_time > self.auto_sleep_time:
+            current_time = time.time()
+
+            # Check if the timestamp seems valid (after Aug 18, 2025)
+            # If Orin restarted, timestamp will be very small
+            if self.last_voice_command_time < 1755500000:
+                # Timestamp is invalid (Orin restarted), treat as very old
+                time_since_last_command = float("-inf")
+                # Try to updat the timestamp to the latest time
+                if current_time > self.last_voice_command_time:
+                    self.last_voice_command_time = current_time
+            else:
+                time_since_last_command = current_time - self.last_voice_command_time
+
+            if time_since_last_command > self.auto_sleep_time:
                 self.sleep_mode_enabled = True
                 if self.odom.position["body_attitude"] != RobotState.SITTING:
                     logging.info("No voice command for 5 minutes - sit down")

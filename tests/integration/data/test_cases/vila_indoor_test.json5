@@ -48,7 +48,7 @@
   "expected": {
     "movement": ["stand still", "sit", "wag tail"],
     "keywords": ["dog"],
-    "emotion": ["joy", "smile", "think"],
+    "emotion": ["happy", "excited", "think"],
     "minimum_score": 0.5
   }
 }
