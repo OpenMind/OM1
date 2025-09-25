@@ -1,11 +1,13 @@
 import logging
+import time
 from typing import Optional
+from uuid import uuid4
 
 import numpy as np
 import zenoh
 
 from zenoh_msgs import (
-    AIControlStatus,
+    AIStatusRequest,
     Pose,
     nav_msgs,
     open_zenoh_session,
@@ -47,9 +49,12 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         self.pose_tolerance = pose_tolerance
         self.yaw_tolerance = yaw_tolerance
 
-        self.topic = "robot/status/ai_control"
+        self.topic = "om/ai/request"
         self.session: Optional[zenoh.Session] = None
         self.pub = None
+
+        self.last_status_publish_time = 0.0
+        self.status_publish_interval = 5.0
 
         try:
             self.session = open_zenoh_session()
@@ -89,11 +94,19 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
                 self.localization_pose,
             )
 
-            if self.pub is not None:
-                status_msg = AIControlStatus()
+            current_time = time.time()
+            if (
+                self.pub is not None
+                and current_time - self.last_status_publish_time
+                >= self.status_publish_interval
+            ):
+                status_msg = AIStatusRequest()
                 status_msg.header = prepare_header(message.header.frame_id)
-                status_msg.status = 0 if self.localization_status else 1
+                status_msg.request_id = str(uuid4())
+                status_msg.code = 1 if self.localization_status else 0
                 self.pub.put(status_msg.serialize())
+                self.last_status_publish_time = current_time
+                logging.debug("Published status message at %s", current_time)
         else:
             logging.warning("Received empty AMCL message")
 
