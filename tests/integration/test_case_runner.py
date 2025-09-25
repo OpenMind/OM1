@@ -53,7 +53,7 @@ VLM_MOVE_TYPES = {
 
 LIDAR_MOVE_TYPES = {"turn left", "turn right", "move forwards", "stand still"}
 
-EMOTION_TYPES = {"cry", "smile", "frown", "think", "joy"}
+EMOTION_TYPES = {"happy", "confused", "curious", "excited", "sad", "think"}
 
 
 def process_env_vars(config_dict):
