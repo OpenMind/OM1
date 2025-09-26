@@ -23,19 +23,29 @@ class UnitreeGo2LocationProvider:
 
     def __init__(
         self,
-        locations_file: str = "locations.json",
+        locations_folder_path: str = "locations",
+        locations_file_name: str = "locations.json",
     ):
         """
         Initialize the Unitree Go2 Location Provider.
+
         Parameters
         ----------
-        locations_file : str, optional
-            The file to store saved locations (default is "saved_locations.json").
+        locations_folder_path : str, optional
+            The directory to store the locations file (default is "locations").
+        locations_file_name : str, optional
+            The file to store saved locations (default is "locations.json").
         """
         self.navigation_provider = UnitreeGo2NavigationProvider()
         self.amcl_provider = UnitreeGo2AMCLProvider()
 
-        self.locations_file = locations_file
+        self.locations_folder_path = locations_folder_path
+        if not os.path.exists(self.locations_folder_path):
+            os.makedirs(self.locations_folder_path, exist_ok=True, mode=0o755)
+
+        self.locations_file = os.path.join(
+            self.locations_folder_path, locations_file_name
+        )
 
         self.saved_locations: Dict[str, Dict] = self._load_locations()
         if self.saved_locations:
