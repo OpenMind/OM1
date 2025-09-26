@@ -4,7 +4,8 @@ from .idl import (
     Accel,
     AccelWithCovariance,
     AccelWithCovarianceStamped,
-    AIControlStatus,
+    AIStatusRequest,
+    AIStatusResponse,
     AMCLPose,
     AudioStatus,
     BatteryState,
@@ -67,7 +68,8 @@ __all__ = [
     # status_msgs
     "AudioStatus",
     "CameraStatus",
-    "AIControlStatus",
+    "AIStatusRequest",
+    "AIStatusResponse",
     # geographic_msgs
     "GeoPoint",
     "GeoPointStamped",
