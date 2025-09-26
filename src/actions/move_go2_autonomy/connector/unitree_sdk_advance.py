@@ -14,7 +14,13 @@ from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
-from zenoh_msgs import AIControlStatus, open_zenoh_session
+from zenoh_msgs import (
+    AIStatusRequest,
+    AIStatusResponse,
+    String,
+    open_zenoh_session,
+    prepare_header,
+)
 
 
 class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
@@ -60,13 +66,19 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         self.auto_sleep_time = getattr(config, "auto_sleep_time", 300)
 
         # Zenoh topic for AI control status
-        self.topic = "robot/status/ai_control"
+        self.ai_status_request = "om/ai/request"
+        self.ai_status_response = "om/ai/response"
         self.session: Optional[zenoh.Session] = None
         self.pub = None
 
         try:
             self.session = open_zenoh_session()
-            self.session.declare_subscriber(self.topic, self._zenoh_ai_control_message)
+            self.session.declare_subscriber(
+                self.ai_status_request, self._zenoh_ai_status_request
+            )
+            self._zenoh_ai_status_response_pub = self.session.declare_publisher(
+                self.ai_status_response
+            )
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
             self.session = None
@@ -517,7 +529,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
 
-    def _zenoh_ai_control_message(self, data: zenoh.Sample):
+    def _zenoh_ai_status_request(self, data: zenoh.Sample):
         """
         Process an incoming AI control status message.
 
@@ -526,11 +538,56 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         data : zenoh.Sample
             The Zenoh sample received, which should have a 'payload' attribute.
         """
-        ai_control_status = AIControlStatus.deserialize(data.payload.to_bytes())
-        logging.debug(f"Received AI Control Status message: {ai_control_status}")
-        if ai_control_status.status == 0:
-            self.ai_control_enabled = False
-            logging.debug("AI Control disabled")
-        elif ai_control_status.status == 1:
+        ai_control_status = AIStatusRequest.deserialize(data.payload.to_bytes())
+        logging.info(f"Received AI Control Status message: {ai_control_status}")
+
+        code = ai_control_status.code
+        request_id = ai_control_status.request_id
+
+        # Read the current status
+        if code == 2:
+            ai_status_response = AIStatusResponse(
+                header=prepare_header(ai_control_status.header.frame_id),
+                request_id=request_id,
+                code=1 if self.ai_control_enabled else 0,
+                status=String(
+                    data=(
+                        "AI Control Enabled"
+                        if self.ai_control_enabled
+                        else "AI Control Disabled"
+                    )
+                ),
+            )
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )
+
+        # Enable the AI control
+        if code == 1:
             self.ai_control_enabled = True
-            logging.debug("AI Control enabled")
+            logging.info("AI Control Enabled")
+
+            ai_status_response = AIStatusResponse(
+                header=prepare_header(ai_control_status.header.frame_id),
+                request_id=request_id,
+                code=1,
+                status=String(data="AI Control Enabled"),
+            )
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )
+
+        # Disable the AI control
+        if code == 0:
+            self.ai_control_enabled = False
+            logging.info("AI Control Disabled")
+            ai_status_response = AIStatusResponse(
+                header=prepare_header(ai_control_status.header.frame_id),
+                request_id=request_id,
+                code=0,
+                status=String(data="AI Control Disabled"),
+            )
+
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )

@@ -37,10 +37,25 @@ class CameraStatus(IdlStruct, typename="CameraStatus"):
 
 
 @dataclass
-class AIControlStatus(IdlStruct, typename="AIControlStatus"):
-    class STATUS(Enum):
+class AIStatusRequest(IdlStruct, typename="AIStatusRequest"):
+    class Code(Enum):
         DISABLED = 0
         ENABLED = 1
+        STATUS = 2
 
     header: Header
-    status: int8
+    request_id: String
+    code: int8
+
+
+@dataclass
+class AIStatusResponse(IdlStruct, typename="AIStatusResponse"):
+    class Code(Enum):
+        DISABLED = 0
+        ENABLED = 1
+        UNKNOWN = 2
+
+    header: Header
+    request_id: String
+    code: int8
+    status: String
