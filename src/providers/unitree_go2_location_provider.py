@@ -23,7 +23,7 @@ class UnitreeGo2LocationProvider:
 
     def __init__(
         self,
-        locations_file: str = "saved_locations.json",
+        locations_file: str = "locations.json",
     ):
         """
         Initialize the Unitree Go2 Location Provider.
