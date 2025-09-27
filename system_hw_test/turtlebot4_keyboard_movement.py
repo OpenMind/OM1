@@ -5,10 +5,12 @@ import threading
 import time
 from dataclasses import dataclass
 
-import zenoh
 from pycdr2 import IdlStruct
 from pycdr2.types import float64
 from pynput import keyboard
+
+sys.path.insert(0, "../src")
+from zenoh_msgs import open_zenoh_session
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--URID", help="your robot's URID, when using Zenoh", type=str)
@@ -47,7 +49,7 @@ class MoveController:
         self.session = None
         self.cmd_vel = f"{URID}/c3/cmd_vel"
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             logging.info("Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")

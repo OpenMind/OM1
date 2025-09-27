@@ -2,13 +2,12 @@ import json
 import logging
 import time
 
-import zenoh
 from om1_utils import ws
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move_turtle.interface import MoveInput
 from providers import CommandStatus
-from zenoh_idl import geometry_msgs
+from zenoh_msgs import geometry_msgs, open_zenoh_session
 
 
 class MoveZenohRemoteConnector(ActionConnector[MoveInput]):
@@ -33,7 +32,7 @@ class MoveZenohRemoteConnector(ActionConnector[MoveInput]):
 
         self.session = None
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             logging.info("Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")

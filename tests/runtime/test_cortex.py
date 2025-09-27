@@ -10,7 +10,7 @@ from runtime.cortex import CortexRuntime
 
 @pytest.fixture
 def mock_config():
-    config = Mock(spec=RuntimeConfig, hertz=10.0, silence_rate=0)
+    config = Mock(spec=RuntimeConfig, hertz=10.0)
     config.name = "test_config"
     config.cortex_llm = Mock()
     config.agent_inputs = []

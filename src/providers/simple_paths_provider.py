@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 import zenoh
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 from .singleton import singleton
 
@@ -58,7 +58,7 @@ def simple_paths_processor(
     running = True
 
     try:
-        session = zenoh.open(zenoh.Config())
+        session = open_zenoh_session()
         session.declare_subscriber("om/paths", paths_callback)
         logging.info("Zenoh is open for SimplePathProvider")
     except Exception as e:

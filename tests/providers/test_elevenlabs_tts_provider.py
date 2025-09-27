@@ -1,5 +1,5 @@
 import sys
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -35,10 +35,3 @@ def test_start_stop():
 
     provider.stop()
     assert provider.running is False
-
-
-def test_register_callback():
-    provider = ElevenLabsTTSProvider(url="test_url")
-    callback = Mock()
-    provider.register_tts_state_callback(callback)
-    provider._audio_stream.set_tts_state_callback.assert_called_once_with(callback)

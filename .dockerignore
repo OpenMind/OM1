@@ -82,3 +82,6 @@ logs/
 # Config
 # By ignoring the config directory, users can maintain their own local configurations
 config
+
+# Saved locations
+saved_locations.json

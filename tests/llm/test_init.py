@@ -1,9 +1,9 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 from pydantic import BaseModel
 
-from llm import LLM, LLMConfig, load_llm
+from llm import LLM, LLMConfig, find_module_with_class, load_llm
 from providers.io_provider import IOProvider
 from runtime.config import add_meta
 
@@ -65,28 +65,88 @@ def test_llm_config():
 
 def test_load_llm_mock_implementation():
     with (
-        patch("os.path.dirname") as mock_dirname,
-        patch("os.listdir") as mock_listdir,
+        patch("llm.find_module_with_class") as mock_find_module,
         patch("importlib.import_module") as mock_import,
     ):
-
-        mock_dirname.return_value = "/test/dir"
-        mock_listdir.return_value = ["mock_llm.py"]
-
+        mock_find_module.return_value = "mock_llm"
         mock_module = Mock()
         mock_module.MockLLM = MockLLM
         mock_import.return_value = mock_module
 
         result = load_llm("MockLLM")
 
+        mock_find_module.assert_called_once_with("MockLLM")
         mock_import.assert_called_once_with("llm.plugins.mock_llm")
         assert result == MockLLM
 
 
 def test_load_llm_not_found():
-    with patch("os.path.dirname") as mock_dirname, patch("os.listdir") as mock_listdir:
-        mock_dirname.return_value = "/test/dir"
-        mock_listdir.return_value = []
+    with patch("llm.find_module_with_class") as mock_find_module:
+        mock_find_module.return_value = None
 
-        with pytest.raises(ValueError, match="LLM type NonexistentLLM not found"):
+        with pytest.raises(
+            ValueError,
+            match="Class 'NonexistentLLM' not found in any LLM plugin module",
+        ):
             load_llm("NonexistentLLM")
+
+
+def test_load_llm_invalid_type():
+    with (
+        patch("llm.find_module_with_class") as mock_find_module,
+        patch("importlib.import_module") as mock_import,
+    ):
+        mock_find_module.return_value = "invalid_llm"
+
+        class InvalidLLM:
+            pass
+
+        mock_module = Mock()
+        mock_module.InvalidLLM = InvalidLLM
+        mock_import.return_value = mock_module
+
+        with pytest.raises(
+            ValueError, match="'InvalidLLM' is not a valid LLM subclass"
+        ):
+            load_llm("InvalidLLM")
+
+
+def test_find_module_with_class_success():
+    with (
+        patch("os.path.join") as mock_join,
+        patch("os.path.exists") as mock_exists,
+        patch("os.listdir") as mock_listdir,
+        patch("builtins.open", mock_open(read_data="class TestLLM(LLM):\n    pass\n")),
+    ):
+        mock_join.side_effect = lambda *args: "/".join(args)
+        mock_exists.return_value = True
+        mock_listdir.return_value = ["test_llm.py"]
+
+        result = find_module_with_class("TestLLM")
+
+        assert result == "test_llm"
+
+
+def test_find_module_with_class_not_found():
+    with (
+        patch("os.path.join") as mock_join,
+        patch("os.path.exists") as mock_exists,
+        patch("os.listdir") as mock_listdir,
+        patch("builtins.open", mock_open(read_data="class OtherClass:\n    pass\n")),
+    ):
+        mock_join.side_effect = lambda *args: "/".join(args)
+        mock_exists.return_value = True
+        mock_listdir.return_value = ["other_file.py"]
+
+        result = find_module_with_class("TestLLM")
+
+        assert result is None
+
+
+def test_find_module_with_class_no_plugins_dir():
+    with patch("os.path.exists") as mock_exists:
+        mock_exists.return_value = False
+
+        result = find_module_with_class("TestLLM")
+
+        assert result is None

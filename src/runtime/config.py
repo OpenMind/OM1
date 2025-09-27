@@ -34,7 +34,7 @@ class RuntimeConfig:
     agent_actions: List[AgentAction]
     backgrounds: List[Background]
 
-    silence_rate: Optional[int] = 0
+    # Optional robot IP address for the runtime configuration
     robot_ip: Optional[str] = None
 
     # Optional API key for the runtime configuration
@@ -141,14 +141,6 @@ def load_config(config_name: str) -> RuntimeConfig:
 
     conf = raw_config["cortex_llm"].get("config", {})
     logging.debug(f"config.py: {conf}")
-
-    # make silence_rate available everywhere
-    for action in raw_config.get("agent_actions", []):
-        value = get_nested_value(action, ["config", "silence_rate"])
-        if value is not None:
-            logging.info(f"Speech SR set to: {value}")
-            raw_config["silence_rate"] = value
-            break
 
     parsed_config = {
         **raw_config,

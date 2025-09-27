@@ -2,19 +2,16 @@ import logging
 import sys
 import time
 
-import zenoh
-
 sys.path.insert(0, "../src")
 
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 logging.basicConfig(level=logging.INFO)
 
 
 class SimplePaths:
     def __init__(self):
-        self.session = zenoh.open(zenoh.Config())
-
+        self.session = open_zenoh_session()
         self.session.declare_subscriber("om/paths", self.paths_callback)
 
         logging.info("Zenoh is open for Paths")
