@@ -84,4 +84,4 @@ logs/
 config
 
 # Saved locations
-saved_locations.json
+locations/
