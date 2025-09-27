@@ -4,13 +4,102 @@ description: "OM1"
 ---
 
 OM1 is the core agentic software that enables autonomous decision-making and control for your robot. It runs as a dedicated Docker image, making deployment and integration straightforward.
+Full autonomy is currently supported for Go2.
 
-## Docker Image
+## Get started
 
-Clone the repository
+### SSH into your robot
+
+- Identify the ip address
+- SSH into the system using ssh username@ip_address (Replace username with your username)
+- Use the password provided to you, when prompted
+
+### Clone the repository
 ```bash
 git clone https://github.com/OpenMind/OM1.git
 ```
+
+### Find Unitree Ethernet port
+```bash
+ifconfig
+```
+Find the port with ip address `192.168.123.x`. Note down the port name and update it in "unitree_go2_autonomy_advance.json5".
+
+```bash
+vim config/unitree_go2_autonomy_advance.json5
+```
+
+```bash
+  "hertz": 1,
+  "unitree_ethernet": "eno1", // update here
+  "name": "bits",
+```
+
+### Setup the API key
+
+For Bash: vim ~/.bashrc or ~/.bash_profile.
+
+Add 
+```bash 
+export OM_API_KEY="your_api_key"
+```
+
+### Setup default speaker and microphone
+- Connect your robot with a microphone and a speaker if not already connected.
+- Install pulseaudio, if not already installed
+```bash
+sudo apt install pulseaudio
+```
+
+- Find the available devices using following commands -
+    - for speakers 
+    ```bash
+    pactl list sinks
+    ```
+    - for microphone
+    ```bash
+    pactl list sources
+    ```
+    Make a note of the device names.
+
+- To set the default the speaker and mircophone:
+
+```bash
+mkdir -p ~/.config/systemd/user
+vim ~/.config/systemd/user/audio-defaults.service
+```
+
+And add
+
+```bash
+# Load the default configuration
+[Unit]
+Description=Set Default Audio Devices
+After=pulseaudio.service
+Wants=pulseaudio.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c 'sleep 5 && pactl set-default-sink {sink_name} && pactl set-default-source {source_name}'
+
+[Install]
+WantedBy=default.target
+```
+
+Reboot the system.
+
+Note : Replace sink and source names based on what you found in the previous step.
+
+### Docker image
+
+Install docker/docker-compose if not already installed.
+
+Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
+```bash
+command: ["unitree_go2_autonomy_advance"]
+```
+
 The OM1 service is provided as a Docker image for easy setup:
 ```bash
 cd OM1

@@ -1,0 +1,58 @@
+---
+title: OM1 Beta Release
+description: "v1.0.0-beta.3"
+---
+
+## What's included
+
+Beta release for the Docker image openmindagi/om1, which provides the full setup of OM1 service in one go without having the user to install dependencies separately. 
+
+## Features
+
+### v1.0.0-beta.3
+- Downgraded Python to 3.10 for better Jetson support.
+- Integrated Nav2 for state feedback and target publishing, with auto AI-mode disable after localization.
+- Zenoh configs/sessions moved to zenoh_msgs, now preferring local network before multicast.
+- Added avatar background server to communicate with the OM1-avatar
+- Improved avatar animation with thinking behavior and ASR response injection into prompts.
+- Added support for long range control of humanoids and quadrupeds using the TBS_TANGO2 radios.
+- Added sleep mode for ASR, if there's no voice input for 5 min, it goes to sleep.
+
+### v1.0.0-beta.2
+- Support for custom camera indices and enables both microphone and speaker functionality in Docker.
+
+### v1.0.0-beta.1
+- Multiple LLM provider integrations(OpenAI, Gemini, Deepseek, xAI).
+- GoogleASR model for speech to text.
+- Riva and Eleven Labs for TTS.
+- Preconfigured support for Unitree Go2, G1, TurtleBot, Ubtech Yanshee.
+- Simulator support with Gazebo for Go2.
+- Multi-arch support - AMD64 and ARM64.
+
+## Docker image
+
+### Setup the API key
+
+For Bash: vim ~/.bashrc or ~/.bash_profile.
+
+For Zsh: vim ~/.zshrc.
+
+Add 
+```bash 
+export OM_API_KEY="your_api_key"
+```
+
+Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
+```bash
+command: ["unitree_go2_autonomy_advance"]
+```
+
+The OM1 service is provided as a Docker image for easy setup:
+```bash
+cd OM1
+docker-compose up om1 -d --no-build
+```
+
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.0-beta.2).
+
+For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om).

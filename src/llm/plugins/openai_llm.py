@@ -6,7 +6,6 @@ import openai
 from pydantic import BaseModel
 
 from llm import LLM, LLMConfig
-from providers.avatar_provider import AvatarManager, AvatarProvider
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -54,10 +53,6 @@ class OpenAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
-        # Initialize Avatar provider
-        self.avatar_provider = AvatarProvider()
-
-    @AvatarManager.think_animation()
     @LLMHistoryManager.update_history()
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
