@@ -100,12 +100,14 @@ class FunctionGenerator:
             properties[param_name] = param_schema
 
             if param.default == inspect.Parameter.empty:
-                if get_origin(param_type) is T.Union and type(None) in get_args(
-                    param_type
-                ):
-                    pass
-                else:
-                    required.append(param_name)
+                required.append(param_name)
+            else:
+                required.append(param_name)
+                if isinstance(param_type, str) and param.default == "":
+                    param_schema["description"] = (
+                        param_schema.get("description", f"Parameter {param_name}")
+                        + " (optional - can be empty string)"
+                    )
 
         return {
             "type": "function",
@@ -116,7 +118,9 @@ class FunctionGenerator:
                     "type": "object",
                     "properties": properties,
                     "required": required,
+                    "additionalProperties": False,
                 },
+                "strict": True,
             },
         }
 

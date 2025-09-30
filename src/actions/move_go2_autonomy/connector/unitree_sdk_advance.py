@@ -17,6 +17,7 @@ from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
     AIStatusRequest,
     AIStatusResponse,
+    String,
     open_zenoh_session,
     prepare_header,
 )
@@ -539,47 +540,54 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         """
         ai_control_status = AIStatusRequest.deserialize(data.payload.to_bytes())
         logging.debug(f"Received AI Control Status message: {ai_control_status}")
-
+        
         code = ai_control_status.code
         request_id = ai_control_status.request_id
 
         # Read the current status
         if code == 2:
-            ai_status_response = AIStatusResponse()
-            ai_status_response.request_id = request_id
-            ai_status_response.code = 1 if self.ai_control_enabled else 0
-            ai_status_response.status = (
-                "AI Control Enabled"
-                if self.ai_control_enabled
-                else "AI Control Disabled"
+            ai_status_response = AIStatusResponse(
+                header=prepare_header(ai_control_status.header.frame_id),
+                request_id=request_id,
+                code=1 if self.ai_control_enabled else 0,
+                status=String(
+                    data=(
+                        "AI Control Enabled"
+                        if self.ai_control_enabled
+                        else "AI Control Disabled"
+                    )
+                ),
             )
-            frame = ai_control_status.header.frame_id
-            ai_status_response.header = prepare_header(frame)
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )
 
-            return self._zenoh_ai_status_response_pub.publish(ai_status_response)
-
-        # Enable AI control
+        # Enable the AI control
         if code == 1:
             self.ai_control_enabled = True
             logging.info("AI Control Enabled")
-            ai_status_response = AIStatusResponse()
-            ai_status_response.request_id = request_id
-            ai_status_response.code = 1
-            ai_status_response.status = "AI Control Enabled"
-            frame = ai_control_status.header.frame_id
-            ai_status_response.header = prepare_header(frame)
 
-            return self._zenoh_ai_status_response_pub.publish(ai_status_response)
+            ai_status_response = AIStatusResponse(
+                header=prepare_header(ai_control_status.header.frame_id),
+                request_id=request_id,
+                code=1,
+                status=String(data="AI Control Enabled"),
+            )
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )
 
-        # Disable AI control
+        # Disable the AI control
         if code == 0:
             self.ai_control_enabled = False
             logging.info("AI Control Disabled")
-            ai_status_response = AIStatusResponse()
-            ai_status_response.request_id = request_id
-            ai_status_response.code = 0
-            ai_status_response.status = "AI Control Disabled"
-            frame = ai_control_status.header.frame_id
-            ai_status_response.header = prepare_header(frame)
+            ai_status_response = AIStatusResponse(
+                header=prepare_header(ai_control_status.header.frame_id),
+                request_id=request_id,
+                code=0,
+                status=String(data="AI Control Disabled"),
+            )
 
-            return self._zenoh_ai_status_response_pub.publish(ai_status_response)
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )

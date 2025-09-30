@@ -1,6 +1,6 @@
 ---
 title: ROS2 SDK for Go2 Beta Release
-description: "v1.0.0-beta.1"
+description: "v1.0.0-beta.2"
 ---
 
 ## What's included
@@ -9,6 +9,16 @@ Beta release for the Docker image openmindagi/unitree_go2_sdk, which provides th
 
 ## Features
 
+### v1.0.0-beta.2
+- Added CRSF Protocol Support
+- Added turbo mode for the xbox controller
+- Added listening and scouting configuration to zenoh_bridge_config for disabling multicast to prevent receiving messages from other robots
+- Introduced Pydantic models for location and pose data
+- New endpoints to add and list map locations, and ensure locations are stored in a dedicated directory. 
+- docker-compose is updated to mount a new 'locations' volume. Also extended the orchestrator API to handle 'add_location' and 'list_locations' actions.
+- Added MediaMTX watcher: MediaMTX is a zero-dependency media server and proxy used to publish, read, proxy, record, and playback live video and audio streams. It serves as a central "media router," handling multiple streaming protocols like RTSP, WebRTC, RTMP, and HLS. 
+
+### v1.0.0-beta.1
 - Real-time SLAM: Simultaneous localization and mapping using SLAM Toolbox
 - RPLiDAR Integration: Support for RPLiDAR A1/A2/A3 series sensors
 - Navigation: Integration with Nav2 for autonomous navigation

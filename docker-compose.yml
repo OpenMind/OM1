@@ -27,6 +27,7 @@ services:
       - /dev/snd:/dev/snd:rw
       - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw
       - ~/.config/pulse/cookie:/root/.config/pulse/cookie:ro
+      - ${HOME}/shared_data/locations:/app/OM1/locations:rw
     devices:
       - /dev/snd:/dev/snd
       - /dev/video0:/dev/video0
