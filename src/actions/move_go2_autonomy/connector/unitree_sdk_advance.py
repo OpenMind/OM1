@@ -539,7 +539,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         ai_control_status = AIStatusRequest.deserialize(data.payload.to_bytes())
-        logging.debug(f"Received AI Control Status message: {ai_control_status}")
+        logging.info(f"Received AI Control Status message: {ai_control_status}")
         
         code = ai_control_status.code
         request_id = ai_control_status.request_id
