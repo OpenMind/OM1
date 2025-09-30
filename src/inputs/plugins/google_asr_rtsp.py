@@ -77,13 +77,15 @@ class GoogleASRRTSPInput(FuserInput[str]):
 
         # Initialize sleep ticker provider
         self.global_sleep_ticker_provider = SleepTickerProvider()
-        
+
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider()
         if api_key:
             self.conversation_provider.set_api_key(api_key)
         else:
-            logging.warning("No API key configured, conversation history will not be stored")
+            logging.warning(
+                "No API key configured, conversation history will not be stored"
+            )
 
     def _handle_asr_message(self, raw_message: str):
         """
@@ -101,7 +103,7 @@ class GoogleASRRTSPInput(FuserInput[str]):
                 if len(asr_reply.split()) > 1:
                     self.message_buffer.put(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
-                    
+
                     # Store user message to conversation history
                     self.conversation_provider.store_user_message(asr_reply)
         except json.JSONDecodeError:

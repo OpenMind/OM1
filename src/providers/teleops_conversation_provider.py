@@ -20,21 +20,21 @@ class ConversationMessage:
     message_type: MessageType
     content: str
     timestamp: float
-    
+
     def to_dict(self) -> dict:
         return {
             "type": self.message_type.value,
             "content": self.content,
             "timestamp": self.timestamp,
-            "formatted_time": time.strftime("%H:%M:%S", time.localtime(self.timestamp))
+            "formatted_time": time.strftime("%H:%M:%S", time.localtime(self.timestamp)),
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict) -> "ConversationMessage":
         return cls(
             message_type=MessageType(data.get("type", MessageType.USER.value)),
             content=data.get("content", ""),
-            timestamp=data.get("timestamp", time.time())
+            timestamp=data.get("timestamp", time.time()),
         )
 
 
@@ -42,14 +42,14 @@ class ConversationMessage:
 class TeleopsConversationProvider:
 
     def __init__(
-        self, 
+        self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.openmind.org/api/core/teleops/conversation"
+        base_url: str = "https://api.openmind.org/api/core/teleops/conversation",
     ):
         self.api_key = api_key
         self.base_url = base_url
         self.executor = ThreadPoolExecutor(max_workers=1)
-        
+
     def set_api_key(self, api_key: str) -> None:
         self.api_key = api_key
 
@@ -57,7 +57,7 @@ class TeleopsConversationProvider:
         message = ConversationMessage(
             message_type=MessageType.USER,
             content=content.strip(),
-            timestamp=time.time()
+            timestamp=time.time(),
         )
         self._store_message(message)
 
@@ -65,7 +65,7 @@ class TeleopsConversationProvider:
         message = ConversationMessage(
             message_type=MessageType.ROBOT,
             content=content.strip(),
-            timestamp=time.time()
+            timestamp=time.time(),
         )
         self._store_message(message)
 
@@ -73,7 +73,7 @@ class TeleopsConversationProvider:
         if self.api_key is None or self.api_key == "":
             logging.debug("API key is missing. Cannot store conversation message.")
             return
-            
+
         if not message.content or not message.content.strip():
             logging.debug("Empty content, skipping conversation storage")
             return
@@ -83,17 +83,21 @@ class TeleopsConversationProvider:
                 self.base_url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json=message.to_dict(),
-                timeout=2
+                timeout=2,
             )
-            
+
             if request.status_code == 200:
-                logging.debug(f"Successfully stored {message.message_type.value} message to conversation")
+                logging.debug(
+                    f"Successfully stored {message.message_type.value} message to conversation"
+                )
             else:
                 logging.debug(
                     f"Failed to store {message.message_type.value} message: {request.status_code} - {request.text}"
                 )
         except Exception as e:
-            logging.debug(f"Error storing {message.message_type.value} conversation message: {str(e)}")
+            logging.debug(
+                f"Error storing {message.message_type.value} conversation message: {str(e)}"
+            )
 
     def _store_message(self, message: ConversationMessage) -> None:
         self.executor.submit(self._store_message_worker, message)

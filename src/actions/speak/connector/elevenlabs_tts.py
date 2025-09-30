@@ -4,7 +4,6 @@ import time
 from uuid import uuid4
 
 import zenoh
-from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
@@ -12,6 +11,8 @@ from providers.asr_provider import ASRProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
+from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
+
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
@@ -98,13 +99,15 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         )
         self.tts.start()
         self.tts.add_pending_message("Woof Woof")
-        
+
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider()
         if api_key:
             self.conversation_provider.set_api_key(api_key)
         else:
-            logging.warning("No API key configured, conversation history will not be stored")
+            logging.warning(
+                "No API key configured, conversation history will not be stored"
+            )
 
     def zenoh_audio_message(self, data: zenoh.Sample):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
@@ -150,4 +153,3 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
         self.tts.add_pending_message(pending_message)
-
