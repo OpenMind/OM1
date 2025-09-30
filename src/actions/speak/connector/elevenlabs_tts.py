@@ -2,6 +2,7 @@ import json
 import logging
 import time
 from uuid import uuid4
+
 import zenoh
 
 from actions.base import ActionConfig, ActionConnector
@@ -10,10 +11,10 @@ from providers.asr_provider import ASRProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
+from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
 
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
-from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
 class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
     def __init__(self, config: ActionConfig):
