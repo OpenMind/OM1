@@ -9,8 +9,8 @@ from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.io_provider import IOProvider
-from providers.teleops_conversation_provider import TeleopsConversationProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.teleops_conversation_provider import TeleopsConversationProvider
 
 LANGUAGE_CODE_MAP: dict = {
     "english": "en-US",
