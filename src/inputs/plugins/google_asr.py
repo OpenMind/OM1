@@ -10,6 +10,7 @@ from inputs.base.loop import FuserInput
 from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.teleops_conversation_provider import TeleopsConversationProvider
 
 LANGUAGE_CODE_MAP: dict = {
     "english": "en-US",
@@ -90,6 +91,9 @@ class GoogleASRInput(FuserInput[str]):
         # Initialize sleep ticker provider
         self.global_sleep_ticker_provider = SleepTickerProvider()
 
+        # Initialize conversation provider
+        self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages.
@@ -157,6 +161,7 @@ class GoogleASRInput(FuserInput[str]):
                 self.global_sleep_ticker_provider.skip_sleep = True
 
         if pending_message is not None:
+            self.conversation_provider.store_user_message(pending_message)
             if len(self.messages) == 0:
                 self.messages.append(pending_message)
             else:

@@ -97,7 +97,6 @@ class GoogleASRRTSPInput(FuserInput[str]):
                 if len(asr_reply.split()) > 1:
                     self.message_buffer.put(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
-                    self.conversation_provider.store_user_message(asr_reply)
         except json.JSONDecodeError:
             pass
 
@@ -145,10 +144,10 @@ class GoogleASRRTSPInput(FuserInput[str]):
         pending_message = await self._raw_to_text(raw_input)
         if pending_message is None:
             if len(self.messages) != 0:
-                # Skip sleep if there's already a message in the messages buffer
                 self.global_sleep_ticker_provider.skip_sleep = True
 
         if pending_message is not None:
+            self.conversation_provider.store_user_message(pending_message)
             if len(self.messages) == 0:
                 self.messages.append(pending_message)
             else:
