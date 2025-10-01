@@ -147,7 +147,6 @@ class GoogleASRRTSPInput(FuserInput[str]):
                 self.global_sleep_ticker_provider.skip_sleep = True
 
         if pending_message is not None:
-            self.conversation_provider.store_user_message(pending_message)
             if len(self.messages) == 0:
                 self.messages.append(pending_message)
             else:
@@ -174,5 +173,6 @@ INPUT: {self.descriptor_for_LLM}
         self.io_provider.add_input(
             self.descriptor_for_LLM, self.messages[-1], time.time()
         )
+        self.conversation_provider.store_user_message(self.messages[-1])
         self.messages = []
         return result
