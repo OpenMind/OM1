@@ -89,7 +89,6 @@ class NearAILLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
-            print(response)
             message_content = response.choices[0].message.content
             self.io_provider.llm_end_time = time.time()
 
