@@ -101,13 +101,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.tts.add_pending_message("Woof Woof")
 
         # Initialize conversation provider
-        self.conversation_provider = TeleopsConversationProvider()
-        if api_key:
-            self.conversation_provider.set_api_key(api_key)
-        else:
-            logging.warning(
-                "No API key configured, conversation history will not be stored"
-            )
+        self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
     def zenoh_audio_message(self, data: zenoh.Sample):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
@@ -137,8 +131,9 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)
 
-        # Store robot message to conversation history
-        self.conversation_provider.store_robot_message(output_interface.action)
+        # Store robot message to conversation history only if there was ASR input
+        if "INPUT: Voice" in self.io_provider.llm_prompt:
+            self.conversation_provider.store_robot_message(output_interface.action)
 
         state = AudioStatus(
             header=prepare_header(str(uuid4())),

@@ -26,7 +26,6 @@ class ConversationMessage:
             "type": self.message_type.value,
             "content": self.content,
             "timestamp": self.timestamp,
-            "formatted_time": time.strftime("%H:%M:%S", time.localtime(self.timestamp)),
         }
 
     @classmethod
@@ -34,7 +33,7 @@ class ConversationMessage:
         return cls(
             message_type=MessageType(data.get("type", MessageType.USER.value)),
             content=data.get("content", ""),
-            timestamp=data.get("timestamp", time.time()),
+            timestamp=data.get("timestamp", 0.0),
         )
 
 
@@ -49,9 +48,6 @@ class TeleopsConversationProvider:
         self.api_key = api_key
         self.base_url = base_url
         self.executor = ThreadPoolExecutor(max_workers=1)
-
-    def set_api_key(self, api_key: str) -> None:
-        self.api_key = api_key
 
     def store_user_message(self, content: str) -> None:
         message = ConversationMessage(
