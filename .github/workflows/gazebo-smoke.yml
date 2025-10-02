@@ -1,7 +1,11 @@
 name: Gazebo Smoke Test
 on:
-  push: { branches: [ main, feat/**, fix/**, chore/** ] }
-  pull_request: { branches: [ main ] }
+  push:
+    branches: [ main, feat/**, fix/**, chore/** ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
