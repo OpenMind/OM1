@@ -4,3 +4,4 @@
 SEED=12345 ./scripts/gazebo_run_deterministic.sh
 
 If Gazebo isn't installed locally, a container fallback (osrf/gazebo:classic) will be used.
+
