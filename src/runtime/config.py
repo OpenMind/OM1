@@ -207,13 +207,10 @@ def load_config(config_name: str) -> RuntimeConfig:
         ],
     }
 
-    print("parsed_config: ", parsed_config)
-    print("agent_actions: ", parsed_config["agent_actions"])
-
     cortex_llm = (
         load_llm(raw_config["cortex_llm"]["type"])(
             config=LLMConfig(
-                **add_meta(
+                **add_meta(  # type: ignore
                     raw_config["cortex_llm"].get("config", {}),
                     g_api_key,
                     g_ut_eth,
@@ -224,32 +221,11 @@ def load_config(config_name: str) -> RuntimeConfig:
             available_actions=parsed_config["agent_actions"],
         ),
     )
+
+    if len(cortex_llm) != 1:
+        raise ValueError("Expected exactly one cortex_llm instance.")
+
     parsed_config["cortex_llm"] = cortex_llm[0]
-
-    # # Load agent actions first so we can pass them to the LLM
-    # agent_actions = parsed_config["agent_actions"]
-
-    # # Create LLM with actions for function calling support if it's OpenAILLM
-    # llm_type = raw_config["cortex_llm"]["type"]
-    # if llm_type == "OpenAILLM":
-    #     # Import OpenAILLM specifically to check if it supports function calls
-    #     try:
-    #         from llm.plugins.openai_llm import OpenAILLM
-    #         cortex_llm = OpenAILLM(
-    #             config=LLMConfig(
-    #                 **add_meta(
-    #                     raw_config["cortex_llm"].get("config", {}),
-    #                     g_api_key,
-    #                     g_ut_eth,
-    #                     g_URID,
-    #                     g_robot_ip,
-    #                 )
-    #             ),
-    #             output_model=CortexOutputModel,
-    #             available_actions=agent_actions,
-    #         )
-    # logging.info(f"raw config: {raw_config}")
-    # logging.info(f"parsed config: {parsed_config}")
 
     return RuntimeConfig(**parsed_config)
 
@@ -268,7 +244,7 @@ def add_meta(
     g_ut_eth: Optional[str],
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
-) -> dict:
+) -> dict[str, str]:
     """
     Add an API key and Robot configuration to a runtime configuration.
 
@@ -327,7 +303,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     ]
     cortex_llm = load_llm(config["cortex_llm"]["type"])(
         config=LLMConfig(
-            **add_meta(
+            **add_meta(  # type: ignore
                 config["cortex_llm"].get("config", {}),
                 api_key,
                 g_ut_eth,

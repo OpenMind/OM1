@@ -4,7 +4,7 @@ from typing import Optional
 import pytest
 
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
-from actions.orchestrator import ActionOrchestrator
+from llm.function_schemas import generate_function_schema_from_action
 
 
 @dataclass
@@ -54,7 +54,7 @@ def agent_action(test_connector):
 
 
 def test_generate_function_schema_from_action(agent_action):
-    schema = ActionOrchestrator.generate_function_schema_from_action(agent_action)
+    schema = generate_function_schema_from_action(agent_action)
 
     assert "function" in schema
     assert schema["type"] == "function"

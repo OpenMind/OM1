@@ -43,22 +43,22 @@ def generate_function_schema_from_action(action) -> dict:
                 "enum": enum_values,
                 "description": f"The {field_name} to perform. Must be one of: {', '.join(enum_values)}",
             }
-        elif field_type == str:
+        elif isinstance(field_type, str):
             properties[field_name] = {
                 "type": "string",
                 "description": f"The {field_name} parameter",
             }
-        elif field_type == int:
+        elif isinstance(field_type, int):
             properties[field_name] = {
                 "type": "integer",
                 "description": f"The {field_name} parameter",
             }
-        elif field_type == float:
+        elif isinstance(field_type, float):
             properties[field_name] = {
                 "type": "number",
                 "description": f"The {field_name} parameter",
             }
-        elif field_type == bool:
+        elif isinstance(field_type, bool):
             properties[field_name] = {
                 "type": "boolean",
                 "description": f"The {field_name} parameter",
@@ -82,6 +82,7 @@ def generate_function_schema_from_action(action) -> dict:
                 "required": required,
                 "additionalProperties": False,
             },
+            "strict": True,
         },
     }
 
@@ -102,7 +103,6 @@ def generate_function_schemas_from_actions(actions: list) -> list[dict]:
     """
     schemas = []
     for action in actions:
-        print("action: ", action)
         if not action.exclude_from_prompt:
             try:
                 schema = generate_function_schema_from_action(action)

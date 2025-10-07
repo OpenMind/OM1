@@ -56,6 +56,8 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             logging.error(f"Error initializing Unitree sport client: {e}")
 
         unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        if unitree_ethernet is None:
+            raise ValueError("unitree_ethernet must be specified in the config")
         self.odom = OdomProvider(channel=unitree_ethernet)
 
         # Automation sleep mode configuration
@@ -99,11 +101,17 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
             # Check if the timestamp seems valid (after Aug 18, 2025)
             # If Orin restarted, timestamp will be very small
-            if self.last_voice_command_time < 1755500000:
+            if (
+                self.last_voice_command_time is None
+                or self.last_voice_command_time < 1755500000
+            ):
                 # Timestamp is invalid (Orin restarted), treat as very old
                 time_since_last_command = float("-inf")
                 # Try to updat the timestamp to the latest time
-                if current_time > self.last_voice_command_time:
+                if (
+                    self.last_voice_command_time is not None
+                    and current_time > self.last_voice_command_time
+                ):
                     self.last_voice_command_time = current_time
             else:
                 time_since_last_command = current_time - self.last_voice_command_time
@@ -134,7 +142,9 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
             return
 
         if self.unitree_go2_state.state_code == 1002:
-            self.sport_client.BalanceStand()
+            if self.sport_client:
+                logging.info("Robot is in jointLock state - issuing BalanceStand()")
+                self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
             logging.info(

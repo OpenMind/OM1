@@ -6,6 +6,8 @@ import openai
 from pydantic import BaseModel
 
 from llm import LLM, LLMConfig
+from llm.function_schemas import convert_function_calls_to_actions
+from llm.output_model import CortexOutputModel
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -34,13 +36,6 @@ class NearAILLM(LLM[R]):
     ):
         """
         Initialize the NearAI LLM instance.
-
-        Parameters
-        ----------
-        output_model : Type[R]
-            Pydantic model class for response validation.
-        config : LLMConfig, optional
-            Configuration settings for the LLM.
         """
         super().__init__(config, available_actions)
 
@@ -98,18 +93,30 @@ class NearAILLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
-            message_content = response.choices[0].message.content
+            message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
-            try:
-                parsed_response = self._output_model.model_validate_json(
-                    message_content
-                )
-                logging.info(f"NearAI LLM output: {parsed_response}")
-                return parsed_response
-            except Exception as e:
-                logging.error(f"Error parsing NearAI response: {e}")
-                return None
+            if message.tool_calls:
+                logging.info(f"Received {len(message.tool_calls)} function calls")
+                logging.info(f"Function calls: {message.tool_calls}")
+
+                function_call_data = [
+                    {
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        }
+                    }
+                    for tc in message.tool_calls
+                ]
+
+                actions = convert_function_calls_to_actions(function_call_data)
+
+                result = CortexOutputModel(actions=actions)
+                logging.info(f"OpenAI LLM function call output: {result}")
+                return T.cast(R, result)
+
+            return None
         except Exception as e:
             logging.error(f"NearAI API error: {e}")
             return None

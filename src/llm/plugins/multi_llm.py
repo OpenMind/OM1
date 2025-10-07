@@ -1,3 +1,5 @@
+# Deprecated: Use NearAI or Open AI LLM plugins instead.
+
 # import logging
 # import time
 # import typing as T
