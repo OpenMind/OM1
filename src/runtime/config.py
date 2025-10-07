@@ -163,18 +163,6 @@ def load_config(config_name: str) -> RuntimeConfig:
             )
             for input in raw_config.get("agent_inputs", [])
         ],
-        # "cortex_llm": load_llm(raw_config["cortex_llm"]["type"])(
-        #     config=LLMConfig(
-        #         **add_meta(
-        #             raw_config["cortex_llm"].get("config", {}),
-        #             g_api_key,
-        #             g_ut_eth,
-        #             g_URID,
-        #             g_robot_ip,
-        #         )
-        #     ),
-        #     available_actions=raw_config["agent_actions"],
-        # ),
         "simulators": [
             load_simulator(simulator["type"])(
                 config=SimulatorConfig(
@@ -301,17 +289,6 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         )
         for inp in config.get("agent_inputs", [])
     ]
-    cortex_llm = load_llm(config["cortex_llm"]["type"])(
-        config=LLMConfig(
-            **add_meta(  # type: ignore
-                config["cortex_llm"].get("config", {}),
-                api_key,
-                g_ut_eth,
-                g_URID,
-                g_robot_ip,
-            )
-        ),
-    )
     simulators = [
         load_simulator(sim["type"])(
             config=SimulatorConfig(
@@ -334,6 +311,18 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         )
         for action in config.get("agent_actions", [])
     ]
+    cortex_llm = load_llm(config["cortex_llm"]["type"])(
+        config=LLMConfig(
+            **add_meta(  # type: ignore
+                config["cortex_llm"].get("config", {}),
+                api_key,
+                g_ut_eth,
+                g_URID,
+                g_robot_ip,
+            )
+        ),
+        available_actions=agent_actions,
+    )
     return RuntimeConfig(
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
