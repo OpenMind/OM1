@@ -41,7 +41,7 @@ class GeminiLLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "gemini-2.0-flash-exp"
+            self._config.model = "gemini-2.5-flash"
 
         self._client = openai.AsyncOpenAI(
             base_url=config.base_url or "https://api.openmind.org/api/core/gemini",
