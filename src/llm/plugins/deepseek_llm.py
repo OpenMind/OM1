@@ -20,14 +20,18 @@ class DeepSeekLLM(LLM[R]):
 
     Parameters
     ----------
-    output_model : Type[R]
-        A Pydantic BaseModel subclass defining the expected response structure.
     config : LLMConfig
         Configuration object containing API settings. If not provided, defaults
         will be used.
+    available_actions : list[AgentAction], optional
+        List of available actions for function call generation. If provided,
     """
 
-    def __init__(self, output_model: T.Type[R], config: LLMConfig = LLMConfig()):
+    def __init__(
+        self,
+        config: LLMConfig = LLMConfig(),
+        available_actions: T.Optional[T.List] = None,
+    ):
         """
         Initialize the DeepSeek LLM instance.
 

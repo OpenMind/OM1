@@ -3,7 +3,6 @@ from typing import Optional
 
 import pytest
 
-# Import the classes from your module (assuming it's named action_base.py)
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 
 

@@ -12,7 +12,6 @@ from backgrounds.base import Background, BackgroundConfig
 from inputs import load_input
 from inputs.base import Sensor, SensorConfig
 from llm import LLM, LLMConfig, load_llm
-from llm.output_model import CortexOutputModel
 from runtime.robotics import load_unitree
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
@@ -164,18 +163,18 @@ def load_config(config_name: str) -> RuntimeConfig:
             )
             for input in raw_config.get("agent_inputs", [])
         ],
-        "cortex_llm": load_llm(raw_config["cortex_llm"]["type"])(
-            config=LLMConfig(
-                **add_meta(
-                    raw_config["cortex_llm"].get("config", {}),
-                    g_api_key,
-                    g_ut_eth,
-                    g_URID,
-                    g_robot_ip,
-                )
-            ),
-            output_model=CortexOutputModel,
-        ),
+        # "cortex_llm": load_llm(raw_config["cortex_llm"]["type"])(
+        #     config=LLMConfig(
+        #         **add_meta(
+        #             raw_config["cortex_llm"].get("config", {}),
+        #             g_api_key,
+        #             g_ut_eth,
+        #             g_URID,
+        #             g_robot_ip,
+        #         )
+        #     ),
+        #     available_actions=raw_config["agent_actions"],
+        # ),
         "simulators": [
             load_simulator(simulator["type"])(
                 config=SimulatorConfig(
@@ -208,6 +207,47 @@ def load_config(config_name: str) -> RuntimeConfig:
         ],
     }
 
+    print("parsed_config: ", parsed_config)
+    print("agent_actions: ", parsed_config["agent_actions"])
+
+    cortex_llm = (
+        load_llm(raw_config["cortex_llm"]["type"])(
+            config=LLMConfig(
+                **add_meta(
+                    raw_config["cortex_llm"].get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                )
+            ),
+            available_actions=parsed_config["agent_actions"],
+        ),
+    )
+    parsed_config["cortex_llm"] = cortex_llm[0]
+
+    # # Load agent actions first so we can pass them to the LLM
+    # agent_actions = parsed_config["agent_actions"]
+
+    # # Create LLM with actions for function calling support if it's OpenAILLM
+    # llm_type = raw_config["cortex_llm"]["type"]
+    # if llm_type == "OpenAILLM":
+    #     # Import OpenAILLM specifically to check if it supports function calls
+    #     try:
+    #         from llm.plugins.openai_llm import OpenAILLM
+    #         cortex_llm = OpenAILLM(
+    #             config=LLMConfig(
+    #                 **add_meta(
+    #                     raw_config["cortex_llm"].get("config", {}),
+    #                     g_api_key,
+    #                     g_ut_eth,
+    #                     g_URID,
+    #                     g_robot_ip,
+    #                 )
+    #             ),
+    #             output_model=CortexOutputModel,
+    #             available_actions=agent_actions,
+    #         )
     # logging.info(f"raw config: {raw_config}")
     # logging.info(f"parsed config: {parsed_config}")
 
@@ -295,7 +335,6 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
                 g_robot_ip,
             )
         ),
-        output_model=CortexOutputModel,
     )
     simulators = [
         load_simulator(sim["type"])(
