@@ -3,10 +3,12 @@ title: Architecture Overview
 description: "Full autonomy overview"
 ---
 
+![Architecture Diagram](../assets/full_autonomy_architecture.png)
+
 OM1’s full autonomy mode is powered by the following tightly integrated services, each running in its own container and communicating in real time:
 
 - **om1**: The agentic software that controls robot behavior, decision-making, and high-level autonomy.
-- **unitree_go2_ros2_sdk**: Provides SLAM (Simultaneous Localization and Mapping), navigation, and sensor integration for the Unitree Go2 robot. It manages sensor data, mapping, and robot movement.
+- **unitree_go2_ros2_sdk**: Provides SLAM (Simultaneous Localization and Mapping), navigation, and sensor integration for the Unitree Go2 robot. It manages sensor data, mapping, video processing and robot movement.
 - **om1-avatar**: A React-based frontend that runs on the BackPack screen, offering a user interface and real-time avatar display for monitoring and interaction.
 
 ## How the System Works
@@ -23,6 +25,9 @@ OM1’s full autonomy mode is powered by the following tightly integrated servic
 4. **User Interaction**  
    The `om1-avatar` frontend displays robot avatars, allowing you to interact with your robot in real time via the BackPack screen. It is designed to work in conjunction with OM1 robotics backend systems and hardware components.
 
+5. **Video Processing**
+
+
 ## Getting Started
 
 ### 1. Clone the Repositories
@@ -36,6 +41,9 @@ Clone the following repositories:
 ```
 ```bash
   git clone https://github.com/OpenMind/OM1-avatar.git
+```
+```bash
+  git clone https://github.com/OpenMind/OM1-video-processor.git
 ```
 
 ### 2. Start All Services
@@ -54,12 +62,19 @@ Open a terminal in each repository directory and run:
   docker-compose up orchestrator -d --no-build
   docker-compose up om1_sensor -d --no-build
   docker-compose up watchdog -d --no-build
+  docker-compose up zenoh_bridge -d --no-build
   ```
 
 - **OM1-avatar**
   ```bash
   cd OM1-avatar
-  docker-compose up om1_aatar -d --no-build
+  docker-compose up om1_avatar -d --no-build
+  ```
+
+- **OM1-video-processor**
+  ```bash
+  cd OM1-video-processor
+  docker-compose up om1_video_processor -d --no-build
   ```
 
 ## What Happens Next
