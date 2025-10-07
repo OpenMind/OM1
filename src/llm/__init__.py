@@ -102,11 +102,11 @@ class LLM(T.Generic[R]):
         self._config = config
 
         # Set up available actions for function calling
-        self.available_actions = available_actions or []
+        self._available_actions = available_actions or []
         self.function_schemas = []
-        if self.available_actions:
+        if self._available_actions:
             self.function_schemas = generate_function_schemas_from_actions(
-                self.available_actions
+                self._available_actions
             )
             logging.info(
                 f"LLM initialized with {len(self.function_schemas)} function schemas"
