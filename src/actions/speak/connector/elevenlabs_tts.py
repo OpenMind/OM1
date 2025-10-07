@@ -10,12 +10,12 @@ from actions.speak.interface import SpeakInput
 from providers.asr_provider import ASRProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
-
-# unstable / not released
-# from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
+from providers.teleops_conversation_provider import TeleopsConversationProvider
 from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
 
 
+# unstable / not released
+# from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
 class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
     def __init__(self, config: ActionConfig):
@@ -100,6 +100,9 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.tts.start()
         self.tts.add_pending_message("Woof Woof")
 
+        # Initialize conversation provider
+        self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
+
     def zenoh_audio_message(self, data: zenoh.Sample):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
@@ -127,6 +130,10 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)
+
+        # Store robot message to conversation history only if there was ASR input
+        if "INPUT: Voice" in self.io_provider.llm_prompt:
+            self.conversation_provider.store_robot_message(output_interface.action)
 
         state = AudioStatus(
             header=prepare_header(str(uuid4())),

@@ -62,34 +62,44 @@ sudo apt install pulseaudio
     ```
     Make a note of the device names.
 
-- To set the default the speaker and mircophone:
+- To set the default the speaker and mircophone, run the following commands.
 
-```bash
-mkdir -p ~/.config/systemd/user
-vim ~/.config/systemd/user/audio-defaults.service
-```
+  ```bash
+  mkdir -p ~/.config/systemd/user
+  vim ~/.config/systemd/user/audio-defaults.service
+  ```
+  And add
+  ```bash
+  [Unit]
+  Description=Set Default Audio Devices
+  After=pulseaudio.service
+  Wants=pulseaudio.service
 
-And add
+  [Service]
+  Type=oneshot
+  RemainAfterExit=yes
+  ExecStart=/bin/bash -c '\
+    sleep 5 && \
+    pactl unload-module module-echo-cancel || true && \
+    pactl load-module module-echo-cancel \
+      aec_method=webrtc \
+      source_master=alsa_input.usb-046d_Brio_101_2520APKJ1778-02.mono-fallback \
+      sink_master=alsa_output.usb-Solid_State_System_Co._Ltd._USB_PnP_Audio_Device_000000000000-00.analog-stereo \
+      source_name=default_mic_aec \
+      sink_name=default_output_aec \
+      source_properties="device.description=Microphone_with_AEC" \
+      sink_properties="device.description=Speaker_with_AEC" && \
+    pactl set-default-source default_mic_aec && \
+    pactl set-default-sink default_output_aec'
 
-```bash
-# Load the default configuration
-[Unit]
-Description=Set Default Audio Devices
-After=pulseaudio.service
-Wants=pulseaudio.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/bin/bash -c 'sleep 5 && pactl set-default-sink {sink_name} && pactl set-default-source {source_name}'
-
-[Install]
-WantedBy=default.target
-```
-
-Reboot the system.
-
-Note : Replace sink and source names based on what you found in the previous step.
+  [Install]
+  WantedBy=default.target
+  ```
+  Use
+  ```bash
+  pactl list short
+  ```
+  and replace alsa_output.usb-Solid_State_System_Co._Ltd._USB_PnP_Audio_Device_000000000000-00.analog-stereo with your speaker source and alsa_input.usb-046d_Brio_101_2520APKJ1778-02.mono-fallback with mic source.
 
 ### Docker image
 
