@@ -11,11 +11,11 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
-class LlamaLLM(LLM[R]):
+class OpenRouter(LLM[R]):
     """
-    An Meta Llama-based Language Learning Model implementation.
+    A Open Router implementation for multi LLM support.
 
-    This class implements the LLM interface for Meta Llama models, handling
+    This class implements the LLM interface for different LLM providers via openrouter endpoint, handling
     configuration, authentication, and async API communication.
 
     Parameters
@@ -29,7 +29,7 @@ class LlamaLLM(LLM[R]):
 
     def __init__(self, output_model: T.Type[R], config: LLMConfig = LLMConfig()):
         """
-        Initialize the Meta LLM instance.
+        Initialize the Openrouter instance.
 
         Parameters
         ----------
