@@ -17,12 +17,12 @@ services:
       - OM_API_KEY=${OM_API_KEY}
       - VIRTUAL_ENV=/app/OM1/.venv
       - PATH=/app/OM1/.venv/bin:$PATH
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - PULSE_COOKIE=/root/.config/pulse/cookie
       - ALSA_CARD=0
     volumes:
       - ./config:/app/OM1/config
-      - ./.venv:/app/OM1/.venv
       - ./cyclonedx:/cyclonedx
       - /dev/snd:/dev/snd:rw
       - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw
