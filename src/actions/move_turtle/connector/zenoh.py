@@ -20,6 +20,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
 
         super().__init__(config)
 
+        self.turn_speed = 0.8
         self.angle_tolerance = 5.0
         self.distance_tolerance = 0.05  # m
 
@@ -69,9 +70,9 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
         if (
             self.hazard is not None
             and self.hazard.detections
-            and len(self.hazard.detections) > 0
+            and len(self.hazard.detections) > 0  # type: ignore
         ):
-            for haz in self.hazard.detections:
+            for haz in self.hazard.detections:  # type: ignore
                 if haz.type == 1:
                     logging.info(
                         f"Hazard Type:{haz.type} direction:{haz.header.frame_id}"
@@ -141,17 +142,13 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             target_yaw = self.odom.odom_yaw_m180_p180 - 30.0
             if target_yaw <= -180:
                 target_yaw += 360.0
-            self.pending_movements.put(
-                MoveCommand(dx=0.0, yaw=target_yaw, direction="turn")
-            )
+            self.pending_movements.put(MoveCommand(dx=0.0, yaw=target_yaw))
         elif output_interface.action == "turn right":
             # turn 90 Deg to the right (CW)
             target_yaw = self.odom.odom_yaw_m180_p180 + 30.0
             if target_yaw >= 180.0:
                 target_yaw -= 360.0
-            self.pending_movements.put(
-                MoveCommand(dx=0.0, yaw=target_yaw, direction="turn")
-            )
+            self.pending_movements.put(MoveCommand(dx=0.0, yaw=target_yaw))
         elif output_interface.action == "move forwards":
             if advance_danger:
                 return
@@ -159,7 +156,6 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
                 MoveCommand(
                     dx=0.5,
                     yaw=0.0,
-                    direction="advance",
                     start_x=self.odom.x,
                     start_y=self.odom.y,
                 )
@@ -169,9 +165,8 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
                 return
             self.pending_movements.put(
                 MoveCommand(
-                    dx=0.5,
+                    dx=-0.5,
                     yaw=0.0,
-                    direction="retreat",
                     start_x=self.odom.x,
                     start_y=self.odom.y,
                 )
@@ -181,6 +176,37 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             # do nothing
         else:
             logging.info(f"AI movement command unknown: {output_interface.action}")
+
+    def _calculate_angle_gap(self, current: float, target: float) -> float:
+        """
+        Calculate shortest angular distance between two angles.
+
+        Parameters:
+        -----------
+        current : float
+            Current angle in degrees.
+        target : float
+            Target angle in degrees.
+
+        Returns:
+        --------
+        float
+            Shortest angular distance in degrees, rounded to 2 decimal places.
+        """
+        gap = current - target
+        if gap > 180.0:
+            gap -= 360.0
+        elif gap < -180.0:
+            gap += 360.0
+        return round(gap, 2)
+
+    def clean_abort(self) -> None:
+        """
+        Cleanly abort current movement and reset state.
+        """
+        self.movement_attempts = 0
+        if not self.pending_movements.empty():
+            self.pending_movements.get()
 
     def tick(self) -> None:
 
@@ -216,10 +242,11 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
 
         if self.emergency:
 
-            target = self.emergency
+            # target = self.emergency
+            target = [MoveCommand(dx=0.0, yaw=self.emergency)]
             logging.info(f"Emergency target: {target}")
 
-            gap = self.odom.odom_yaw_m180_p180 - target
+            gap = self.odom.odom_yaw_m180_p180 - target[0].yaw
             if gap > 180.0:
                 gap -= 360.0
             elif gap < -180.0:
@@ -271,33 +298,43 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
 
             goal_dx = current_target.dx
             goal_yaw = current_target.yaw
-            direction = current_target.direction
 
-            if "turn" in direction:
-                gap = self.odom.odom_yaw_m180_p180 - goal_yaw
-                if gap > 180.0:
-                    gap -= 360.0
-                elif gap < -180.0:
-                    gap += 360.0
-                logging.info(f"remaining turn GAP: {round(gap,2)}")
+            if not current_target.turn_complete:
+                gap = self._calculate_angle_gap(
+                    -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
+                )
+                logging.info(f"Phase 1 - Turning remaining GAP: {gap}DEG")
+
+                progress = round(abs(self.gap_previous - gap), 2)
+                self.gap_previous = gap
+                if self.movement_attempts > 0:
+                    logging.info(f"Phase 1 - Turn GAP delta: {progress}DEG")
+
                 if abs(gap) > 10.0:
-                    logging.debug("gap is big, using large displacements")
-                    if gap > 0:
-                        self.move(0.0, 0.5)
-                    elif gap < 0:
-                        self.move(0.0, -0.5)
+                    logging.debug("Phase 1 - Gap is big, using large displacements")
+                    self.movement_attempts += 1
+                    if not self._execute_turn(gap):
+                        self.clean_abort()
+                        return
                 elif abs(gap) > self.angle_tolerance and abs(gap) <= 10.0:
-                    logging.debug("gap is getting smaller, using smaller steps")
+                    logging.debug("Phase 1 - Gap is decreasing, using smaller steps")
+                    self.movement_attempts += 1
+                    # rotate only because we are so close
+                    # no need to check barriers because we are just performing small rotations
                     if gap > 0:
-                        self.move(0.0, 0.2)
+                        self.move(0, 0.2)
                     elif gap < 0:
-                        self.move(0.0, -0.2)
+                        self.move(0, -0.2)
                 elif abs(gap) <= self.angle_tolerance:
-                    logging.info(
-                        "turn is completed, gap is small enough, done, pop 1 off queue"
-                    )
-                    self.pending_movements.get()
+                    logging.info("Phase 1 - Turn completed, starting movement")
+                    current_target.turn_complete = True
+                    self.gap_previous = 0
             else:
+                if goal_dx == 0:
+                    logging.info("No movement required, processing next AI command")
+                    self.clean_abort()
+                    return
+
                 # reconfirm possible paths
                 pp = self.lidar.valid_paths
 
@@ -312,9 +349,9 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
                 logging.info(f"remaining advance GAP: {round(remaining,2)}")
 
                 fb = 0
-                if "advance" in direction and 4 in pp:
+                if pp is not None and 4 in pp:
                     fb = 1
-                elif "retreat" in direction and 9 in pp:
+                elif pp is not None and 9 in pp:
                     fb = -1
                 else:
                     logging.info("danger, pop 1 off queue")
@@ -335,3 +372,31 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
                         "advance is completed, gap is small enough, done, pop 1 off queue"
                     )
                     self.pending_movements.get()
+
+    def _execute_turn(self, gap: float) -> bool:
+        """
+        Execute turn based on gap direction and lidar constraints.
+
+        Parameters:
+        -----------
+        gap : float
+            The angle gap in degrees to turn.
+
+        Returns:
+        --------
+        bool
+            True if the turn was executed successfully, False if blocked by a barrier.
+        """
+        if gap > 0:  # Turn left
+            if not self.lidar.turn_left:
+                logging.warning("Cannot turn left due to barrier")
+                return False
+            sharpness = min(self.lidar.turn_left)
+            self.move(sharpness * 0.15, self.turn_speed)
+        else:  # Turn right
+            if not self.lidar.turn_right:
+                logging.warning("Cannot turn right due to barrier")
+                return False
+            sharpness = 8 - max(self.lidar.turn_right)
+            self.move(sharpness * 0.15, -self.turn_speed)
+        return True

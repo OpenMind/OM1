@@ -107,5 +107,5 @@ class Sensor(T.Generic[R]):
         This method relies on the _listen_loop() implementation which must be
         provided by subclasses.
         """
-        async for event in self._listen_loop():
+        async for event in self._listen_loop():  # type: ignore
             yield event
