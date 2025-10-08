@@ -5,9 +5,9 @@ import time
 from queue import Empty, Queue
 from typing import Optional
 
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import String
+import rclpy  # type: ignore
+from rclpy.node import Node  # type: ignore
+from std_msgs.msg import String  # type: ignore
 
 rclpy.init()
 

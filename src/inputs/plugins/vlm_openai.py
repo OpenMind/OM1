@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
-from openai import ChatCompletion
+from openai.types.chat import ChatCompletion
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
@@ -100,7 +100,9 @@ class VLMOpenAI(FuserInput[str]):
             Raw JSON message received from the VLM service
         """
         logging.info(f"VLM OpenAI received message: {raw_message}")
-        self.message_buffer.put(raw_message.choices[0].message.content)
+        content = raw_message.choices[0].message.content
+        if content is not None:
+            self.message_buffer.put(content)
 
     async def _poll(self) -> Optional[str]:
         """

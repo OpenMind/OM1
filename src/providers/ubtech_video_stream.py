@@ -43,6 +43,7 @@ class UbtechCameraVideoStream(VideoStream):
         logging.info("Starting Ubtech MJPEG video stream")
 
         try:
+            self.resolution = self.resolution or (640, 480)
             YanAPI.open_vision_stream(
                 resolution=f"{self.resolution[0]}x{self.resolution[1]}"
             )
@@ -54,7 +55,7 @@ class UbtechCameraVideoStream(VideoStream):
                 self.stream_client.enqueue_buffer(b)
             self.stream_client.start()
 
-            frame_time = 1.0 / self.fps
+            frame_time = 1.0 / (self.fps or 30)
             last_time = time.perf_counter()
 
             while self.running:
@@ -76,7 +77,7 @@ class UbtechCameraVideoStream(VideoStream):
                             frame, (new_width, new_height), interpolation=cv2.INTER_AREA
                         )
                         _, buffer = cv2.imencode(".jpg", resized, self.encode_quality)
-                        frame_data = base64.b64encode(buffer).decode("utf-8")
+                        frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
                         for cb in self.frame_callbacks:
                             cb(frame_data)

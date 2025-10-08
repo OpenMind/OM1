@@ -13,6 +13,9 @@ class Gps(Background):
         super().__init__(config)
 
         port = getattr(config, "serial_port", None)
+        if port is None:
+            logging.error("GPS serial port not specified in config")
+            return
 
         self.gps_provider = GpsProvider(serial_port=port)
         logging.info(f"Initiated GPS Provider with serial port: {port} in background")

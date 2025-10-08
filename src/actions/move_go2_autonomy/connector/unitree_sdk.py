@@ -54,7 +54,9 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         logging.info(f"AI command.connect: {output_interface.action}")
 
         if self.unitree_go2_state.state_code == 1002:
-            self.sport_client.BalanceStand()
+            if self.sport_client:
+                logging.info("Robot is in jointLock state - issuing BalanceStand()")
+                self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
             logging.info(

@@ -90,9 +90,7 @@ class VLM_Local_YOLO(FuserInput[str]):
         """
         super().__init__(config)
 
-        self.camera_index = 0  # default to default webcam unless specified otherwise
-        if self.config.camera_index:
-            self.camera_index = self.config.camera_index
+        self.camera_index = getattr(self.config, "camera_index", 0)
 
         # Track IO
         self.io_provider = IOProvider()
@@ -107,8 +105,8 @@ class VLM_Local_YOLO(FuserInput[str]):
         self.model = YOLO("yolov8n_aug.pt")
 
         self.write_to_local_file = False
-        if self.config.log_file:
-            self.write_to_local_file = self.config.log_file
+        if getattr(self.config, "log_file", None):
+            self.write_to_local_file = getattr(self.config, "log_file", False)
 
         self.filename_current = None
         self.max_file_size_bytes = 1024 * 1024
@@ -181,7 +179,7 @@ class VLM_Local_YOLO(FuserInput[str]):
         """
         await asyncio.sleep(0.25)
 
-        if self.have_cam:
+        if self.have_cam and self.cap is not None:
 
             ret, frame = self.cap.read()
             self.frame_index += 1
@@ -206,18 +204,19 @@ class VLM_Local_YOLO(FuserInput[str]):
 
             detections = []
             for r in results:
-                for box in r.boxes:
-                    x1, y1, x2, y2 = map(float, box.xyxy[0])
-                    cls = int(box.cls[0])
-                    conf = float(box.conf[0])
-                    label = self.model.names[cls]
-                    detections.append(
-                        {
-                            "class": label,
-                            "confidence": round(conf, 4),
-                            "bbox": [round(x1), round(y1), round(x2), round(y2)],
-                        }
-                    )
+                if r.boxes is not None:
+                    for box in r.boxes:
+                        x1, y1, x2, y2 = map(float, box.xyxy[0])
+                        cls = int(box.cls[0])
+                        conf = float(box.conf[0])
+                        label = self.model.names[cls]
+                        detections.append(
+                            {
+                                "class": label,
+                                "confidence": round(conf, 4),
+                                "bbox": [round(x1), round(y1), round(x2), round(y2)],
+                            }
+                        )
 
             logging.debug(
                 f"\nFrame {self.frame_index} @ {timestamp} — {len(detections)} objects:"
@@ -258,15 +257,17 @@ class VLM_Local_YOLO(FuserInput[str]):
             raise ValueError("Provided json_line must be a json string.")
 
         if (
-            os.path.exists(self.filename_current)
+            self.filename_current is not None
+            and os.path.exists(self.filename_current)
             and os.path.getsize(self.filename_current) > self.max_file_size_bytes
         ):
             self.filename_current = self.update_filename()
             logging.info(f"New yolo file name: {self.filename_current}")
 
-        with open(self.filename_current, "a", encoding="utf-8") as f:
-            f.write(json_line + "\n")
-            f.flush()
+        if self.filename_current is not None:
+            with open(self.filename_current, "a", encoding="utf-8") as f:
+                f.write(json_line + "\n")
+                f.flush()
 
     async def _raw_to_text(self, raw_input: Optional[List]) -> Optional[Message]:
         """
@@ -294,8 +295,8 @@ class VLM_Local_YOLO(FuserInput[str]):
             sentence = None
 
             thing, bbox = self.get_top_detection(detections)
-            x1 = bbox[0]
-            x2 = bbox[2]
+            x1 = bbox[0]  # type: ignore
+            x2 = bbox[2]  # type: ignore
             center_x = (x1 + x2) / 2  # center of the bbox
 
             direction = "in front of you"
