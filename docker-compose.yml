@@ -17,6 +17,7 @@ services:
       - OM_API_KEY=${OM_API_KEY}
       - VIRTUAL_ENV=/app/OM1/.venv
       - PATH=/app/OM1/.venv/bin:$PATH
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - PULSE_COOKIE=/root/.config/pulse/cookie
       - ALSA_CARD=0

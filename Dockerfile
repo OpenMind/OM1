@@ -50,28 +50,10 @@ RUN git submodule update --init --recursive
 RUN uv venv /app/OM1/.venv && \
     uv pip install -r pyproject.toml --extra dds
 
-RUN cat > /entrypoint.sh <<'EOF'
-#!/bin/bash
-set -e
-
-PULSE_SOCKET=${XDG_RUNTIME_DIR}/pulse/native
-echo "Waiting for PulseAudio socket: $PULSE_SOCKET"
-
-for i in $(seq 1 20); do
-  if [ -S "$PULSE_SOCKET" ]; then
-    echo "PulseAudio socket found."
-    pactl info >/dev/null 2>&1 && break
-  fi
-  echo "[$i/20] Waiting for PulseAudio..."
-  sleep 1
-done
-
-if ! [ -S "$PULSE_SOCKET" ]; then
-  echo "Warning: PulseAudio socket not found after timeout, continuing anyway."
-fi
-
-exec uv run src/run.py "$@"
-EOF
+RUN echo '#!/bin/bash' > /entrypoint.sh && \
+  echo 'set -e' >> /entrypoint.sh && \
+  echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
+  chmod +x /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
