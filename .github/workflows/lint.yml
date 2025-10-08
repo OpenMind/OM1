@@ -28,6 +28,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y portaudio19-dev python3-pyaudio cmake
 
+      - name: Cache CycloneDDS build
+        uses: actions/cache@v4
+        with:
+          path: /tmp/cyclonedds/cyclonedds/install
+          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/lint.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cyclonedds-0.10.x-
+
       - name: Install cycloneDDS
         run: |
           mkdir -p /tmp/cyclonedds
