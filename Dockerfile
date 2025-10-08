@@ -51,11 +51,9 @@ RUN uv venv /app/OM1/.venv && \
     uv pip install -r pyproject.toml --extra dds
 
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
-  echo 'set -e' >> /entrypoint.sh && \
-  echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
-  chmod +x /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh
+    echo 'set -e' >> /entrypoint.sh && \
+    echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["spot"]
