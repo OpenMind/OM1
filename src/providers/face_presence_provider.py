@@ -11,7 +11,6 @@ from typing import Callable, Deque, Dict, List, Optional
 
 import requests  # type: ignore
 
-
 from common.latest_buffer import LatestBuffer
 
 
@@ -20,6 +19,7 @@ class PresenceSnapshot:
     """
     Structured snapshot of 'who is present now' from /who.
     """
+
     ts: float
     names_now: List[str]
     unknown_now: int
@@ -70,7 +70,7 @@ class FacePresenceProvider:
         recent_sec: float = 2.0,
         fps: float = 5.0,
         timeout_s: float = 2.0,
-        fetch_fn: Optional[Callable[[], Dict]] = None,  
+        fetch_fn: Optional[Callable[[], Dict]] = None,
         *,
         keep_history: bool = True,
         history_maxlen: int = 300,
@@ -91,7 +91,9 @@ class FacePresenceProvider:
         self._hist_lock = threading.Lock()
 
         self._stop = threading.Event()
-        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="face-presence")
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="face-presence"
+        )
         self._thread: Optional[threading.Thread] = None
 
         # For testing or custom transports
@@ -164,9 +166,15 @@ class FacePresenceProvider:
             if requests is None:
                 # fallback without 'requests'
                 from urllib.request import Request, urlopen
-                req = Request(url, data=json.dumps(body).encode("utf-8"),
-                              headers={"Content-Type": "application/json"})
-                with urlopen(req, timeout=self.timeout_s) as r:  # nosec B310 (internal URL)
+
+                req = Request(
+                    url,
+                    data=json.dumps(body).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                )
+                with urlopen(
+                    req, timeout=self.timeout_s
+                ) as r:  # nosec B310 (internal URL)
                     data = json.loads(r.read().decode("utf-8"))
             else:
                 r = requests.post(url, json=body, timeout=self.timeout_s)  # type: ignore
@@ -176,7 +184,9 @@ class FacePresenceProvider:
         names_now = list(data.get("now", []) or [])
         unknown_now = int(data.get("unknown_now", 0) or 0)
         ts = float(data.get("server_ts", time.time()))
-        return PresenceSnapshot(ts=ts, names_now=names_now, unknown_now=unknown_now, raw=data)
+        return PresenceSnapshot(
+            ts=ts, names_now=names_now, unknown_now=unknown_now, raw=data
+        )
 
     # ---------------- history API ---------------- #
 

@@ -14,6 +14,7 @@ class LatestItem(Generic[T]):
     """
     Value + timestamp container returned by LatestBuffer operations.
     """
+
     ts: float
     value: T
 
@@ -63,7 +64,9 @@ class LatestBuffer(Generic[T]):
                 self._latest = None
             return item
 
-    def wait_next(self, after_ts: float, timeout: Optional[float] = None) -> Optional[LatestItem[T]]:
+    def wait_next(
+        self, after_ts: float, timeout: Optional[float] = None
+    ) -> Optional[LatestItem[T]]:
         """
         Block until an item strictly newer than 'after_ts' is available, or until timeout.
 

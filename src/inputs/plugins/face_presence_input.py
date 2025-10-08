@@ -1,9 +1,10 @@
 # src/inputs/face_presence_input.py
-""" Inputs 
+"""Inputs
 This module exposes a thin, consumer-oriented interface for reading the latest "who is present now"
-signal produced by :class: 'FacePresenceProvider'. Here we simply transform the provider's buffer entries 
+signal produced by :class: 'FacePresenceProvider'. Here we simply transform the provider's buffer entries
 into a small value object that's convenient for downstream consumers (e.g,LLM/fuser) to use
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ class FacePresenceReading:
         The full structured snapshot (names, unknown count, timestamps, raw JSON)
         for downstream logic that needs machine-readable fields.
     """
+
     text: str
     snapshot: PresenceSnapshot
 

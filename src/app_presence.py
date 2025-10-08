@@ -1,15 +1,16 @@
 # app_presence_demo.py
 import time
-from providers.face_presence_provider import FacePresenceProvider
+
 from inputs.plugins.face_presence_input import FacePresenceInput
+from providers.face_presence_provider import FacePresenceProvider
 
 BASE_URL = "http://127.0.0.1:6793"  # your run.py HTTP host/port
 
 # Start the singleton provider (polls /who at ~5Hz by default)
 provider = FacePresenceProvider.instance(
-    base_url=BASE_URL,   # server base, e.g. http://127.0.0.1:6793
-    recent_sec=2.0,      # lookback window for presence
-    fps=5.0,             # polling rate (Hz)
+    base_url=BASE_URL,  # server base, e.g. http://127.0.0.1:6793
+    recent_sec=2.0,  # lookback window for presence
+    fps=5.0,  # polling rate (Hz)
     timeout_s=1.5,
 )
 provider.start()
@@ -21,7 +22,7 @@ inp = FacePresenceInput(provider)
 time.sleep(0.4)
 
 # When you need to build a prompt, PULL the latest presence:
-reading = inp.peek()          # doesn't clear the buffer
+reading = inp.peek()  # doesn't clear the buffer
 # reading = inp.get_latest()  # clears backlog, returns newest only
 
 if reading:
