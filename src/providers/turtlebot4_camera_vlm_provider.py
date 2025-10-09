@@ -114,7 +114,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
         """
         logging.info("TurtleBot Camera Video Stream")
 
-        frame_time = 1.0 / self.fps
+        frame_time = 1.0 / (self.fps or 30)
         last_frame_time = time.perf_counter()
 
         while self.running:
@@ -127,7 +127,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
                         image, self.resolution, interpolation=cv2.INTER_AREA
                     )
                     _, buffer = cv2.imencode(".jpg", resized_image, self.encode_quality)
-                    frame_data = base64.b64encode(buffer).decode("utf-8")
+                    frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
                     if self.frame_callbacks:
                         for frame_callback in self.frame_callbacks:
@@ -208,10 +208,11 @@ class TurtleBot4CameraVLMProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[callable]
             The callback function to process VLM results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

@@ -93,6 +93,9 @@ class SerialReader(FuserInput[str]):
 
         await asyncio.sleep(0.5)
 
+        if self.ser is None:
+            return None
+
         data = self.ser.readline().decode("utf-8").strip()
         # Read a line, decode, and remove whitespace
 
@@ -150,7 +153,7 @@ class SerialReader(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

@@ -44,7 +44,7 @@ class MoveSerialConnector(ActionConnector[MoveInput]):
         # Convert the string to bytes using UTF-8 encoding
         byte_data = message.encode("utf-8")
 
-        if self.ser and self.ser.isOpen():
+        if self.ser is not None and self.ser.is_open:
             logging.info(f"SendToArduinoSerial: {message}")
             self.ser.write(byte_data)
         else:

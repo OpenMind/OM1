@@ -24,7 +24,7 @@ def send_first_boot_tweet(config: RuntimeConfig):
         # Suppress tweepy warnings
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=SyntaxWarning)
-            import tweepy
+            import tweepy  # type: ignore
 
             client = tweepy.Client(
                 consumer_key=os.getenv("TWITTER_API_KEY"),
@@ -60,7 +60,7 @@ def send_first_boot_tweet(config: RuntimeConfig):
             temperature=0.7,
         )
 
-        tweet_text = completion.choices[0].message.content.strip()
+        tweet_text = completion.choices[0].message.content.strip()  # type: ignore
 
         logging.info(f"Attempting to send tweet: {tweet_text}")
 

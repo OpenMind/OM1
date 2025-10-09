@@ -32,18 +32,34 @@
       "history_length": 10
     }
   },
-  "agent_actions": [],
+  "agent_actions": [
+    {
+      "name": "move_go2_autonomy",
+      "llm_label": "move",
+      "connector": "idle"
+    },
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "connector": "ros2"
+    },
+    {
+      "name": "face",
+      "llm_label": "emotion",
+      "connector": "ros2"
+    }
+  ],
   "api_key": "openmind_free",
 
-  
+
   // Input data
   "input": {
     "lidar": ["../lidar/sample_scan.json"]
   },
-  
+
   // Expected output
   "expected": {
     "movement": ["move forwards", "stand still"],
     "minimum_score": 0.5
   }
-} 
+}

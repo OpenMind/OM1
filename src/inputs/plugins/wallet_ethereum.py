@@ -57,7 +57,7 @@ class WalletEthereum(FuserInput[float]):
         self.balance_eth = 0
         self.balance_change = 0
 
-        self.messages: list[str] = []
+        self.messages: list[Message] = []
         self.eth_info = ""
 
         self.PROVIDER_URL = "https://eth.llamarpc.com"
@@ -89,7 +89,7 @@ class WalletEthereum(FuserInput[float]):
             block_number = self.web3.eth.block_number
 
             # Get account data
-            balance_wei = self.web3.eth.get_balance(self.ACCOUNT_ADDRESS)
+            balance_wei = self.web3.eth.get_balance(self.ACCOUNT_ADDRESS)  # type: ignore
             self.balance_eth = float(self.web3.from_wei(balance_wei, "ether"))
 
             self.eth_info = {
@@ -121,7 +121,7 @@ class WalletEthereum(FuserInput[float]):
         # use the old values if the try fails, otherwise use the new/updated values
         return [self.ETH_balance, self.balance_change]
 
-    async def _raw_to_text(self, raw_input: List[float]) -> Optional[str]:
+    async def _raw_to_text(self, raw_input: List[float]) -> Optional[Message]:
         """
         Convert balance data to human-readable message.
 
@@ -132,7 +132,7 @@ class WalletEthereum(FuserInput[float]):
 
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped status or transaction notification
         """
         # balance = raw_input[0]
@@ -143,13 +143,15 @@ class WalletEthereum(FuserInput[float]):
             logging.debug(f"WalletEthereum: {message}")
             return Message(timestamp=time.time(), message=message)
 
-    async def raw_to_text(self, raw_input: float):
+        return None
+
+    async def raw_to_text(self, raw_input: List[float]):
         """
         Process balance update and manage message buffer.
 
         Parameters
         ----------
-        raw_input : float
+        raw_input : List[float]
             Raw balance data
         """
         pending_message = await self._raw_to_text(raw_input)

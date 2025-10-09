@@ -35,7 +35,7 @@ class UbtechASRInput(FuserInput[str]):
         self.asr_resume_cooldown = 10.0
 
         # Get config for the provider
-        self.robot_ip = getattr(self.config, "robot_ip", None)
+        self.robot_ip = getattr(self.config, "robot_ip", "")
         self.language = getattr(self.config, "language", "english").strip().lower()
         self.language_code = LANGUAGE_CODE_MAP.get(self.language, "en")
 

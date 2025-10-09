@@ -108,7 +108,7 @@ class UnitreeGo2LocationProvider:
         Dict
             Dictionary containing function schemas for LLM.
         """
-        return FunctionGenerator.generate_functions_from_class(self)
+        return FunctionGenerator.generate_functions_from_class(self.__class__)
 
     def get_llm_function_mapping(self) -> Dict:
         """
@@ -120,8 +120,10 @@ class UnitreeGo2LocationProvider:
         """
         mapping = {}
         for _, method in inspect.getmembers(self, predicate=inspect.ismethod):
-            if hasattr(method, "_llm_function") and method._llm_function:
-                mapping[method._llm_name] = method
+            if hasattr(method, "_llm_function") and getattr(
+                method, "_llm_function", False
+            ):
+                mapping[getattr(method, "_llm_name")] = method
         return mapping
 
     @LLMFunction("Get the robot's current location and localization status")

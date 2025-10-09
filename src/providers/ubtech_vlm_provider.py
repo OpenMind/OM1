@@ -22,6 +22,24 @@ class UbtechVLMProvider:
         jpeg_quality: int = 70,
         stream_url: Optional[str] = None,
     ):
+        """
+        Initialize the Ubtech VLM Provider.
+
+        Parameters
+        ----------
+        ws_url : str
+            The websocket URL for the VLM service connection.
+        robot_ip : str
+            The IP address of the Ubtech robot.
+        fps : int, optional
+            The frames per second for the VLM service connection (default is 30).
+        resolution : tuple of int, optional
+            The resolution for the video stream (default is (640, 480)).
+        jpeg_quality : int, optional
+            The JPEG quality for the video stream (default is 70).
+        stream_url : str, optional
+            The URL for the video stream. If not provided, defaults to None.
+        """
         self.robot_ip = robot_ip
         self.running = False
         self.ws_client = ws.Client(url=ws_url)
@@ -36,9 +54,21 @@ class UbtechVLMProvider:
         )
 
     def register_message_callback(self, callback: Optional[Callable]):
-        self.ws_client.register_message_callback(callback)
+        """
+        Register a callback for processing VLM results.
+
+        Parameters
+        ----------
+        callback : Optional[callable]
+            The callback function to process VLM results.
+        """
+        if callback is not None:
+            self.ws_client.register_message_callback(callback)
 
     def start(self):
+        """
+        Start the Ubtech VLM provider.
+        """
         if self.running:
             logging.warning("Ubtech VLM provider already running")
             return
