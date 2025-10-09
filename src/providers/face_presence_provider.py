@@ -66,7 +66,7 @@ class FacePresenceProvider:
     def __init__(
         self,
         *,
-        base_url: str,
+        base_url: str = "http://127.0.0.1:6793",
         recent_sec: float = 2.0,
         fps: float = 5.0,
         timeout_s: float = 2.0,

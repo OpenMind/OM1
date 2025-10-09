@@ -1,41 +1,33 @@
-# src/inputs/plugins/face_presence_input.py
-from __future__ import annotations
-
 import asyncio
 import time
 from dataclasses import dataclass
+from queue import Queue
 from typing import List, Optional
 
-from providers.face_presence_provider import FacePresenceProvider, PresenceSnapshot
+from inputs.base import SensorConfig
+from inputs.base.loop import FuserInput
+from providers.face_presence_provider import FacePresenceProvider
+from providers.io_provider import IOProvider
 
 
-@dataclass(frozen=True)
-class FacePresenceReading:
+@dataclass
+class Message:
     """
-    Lightweight value object for downstream consumers / LLM prompts.
+    Container for timestamped messages.
 
-    Attributes
+    Parameters
     ----------
-    ts : float
-        Timestamp of the snapshot.
-    names_now : list[str]
-        Known identities present.
-    unknown_now : int
-        Count of unknown faces present.
-    text : str
-        Human-friendly summary, suitable for prompt injection.
-    raw : dict
-        Full body from the server (optional use).
+    timestamp : float
+        Unix timestamp of the message
+    message : str
+        Content of the message
     """
 
-    ts: float
-    names_now: List[str]
-    unknown_now: int
-    text: str
-    raw: dict
+    timestamp: float
+    message: str
 
 
-class FacePresenceInput:
+class FacePresenceInput(FuserInput[str]):
     """
     Async input facade (mirrors the style of dimo_tesla / vlm_local_yolo):
 
@@ -49,118 +41,108 @@ class FacePresenceInput:
     This class does *not* talk to HTTP directly; it consumes the provider’s buffer.
     """
 
-    def __init__(
-        self, provider: FacePresenceProvider, *, poll_interval_s: float = 0.2
-    ) -> None:
-        self._provider = provider
-        self._poll_interval = float(poll_interval_s)
-        self._task: Optional[asyncio.Task] = None
-        self._last_ts: float = 0.0
-        self._latest: Optional[FacePresenceReading] = None
-        self._lock = asyncio.Lock()
+    def __init__(self, config: SensorConfig = SensorConfig()) -> None:
 
-    # --------------- lifecycle --------------- #
+        super().__init__(config)
 
-    async def start(self) -> None:
-        """Ensure provider is running and start the async poller."""
-        self._provider.start()
-        if self._task and not self._task.done():
-            return
-        self._task = asyncio.create_task(
-            self._poll_loop(), name="face-presence-input-poll"
-        )
+        # Track IO
+        self.io_provider = IOProvider()
 
-    async def stop(self) -> None:
-        """Cancel the poll task (provider can be shared; we don't stop it here)."""
-        if self._task and not self._task.done():
-            self._task.cancel()
-            try:
-                await self._task
-            except asyncio.CancelledError:
-                pass
-        self._task = None
+        base_url = getattr(self.config, "base_url", "http://127.0.0.1:6793")
 
-    # --------------- public API --------------- #
+        self.face_presence_provider = FacePresenceProvider(base_url=base_url)
+        self.face_presence_provider.start()
 
-    def get_latest(self) -> Optional[FacePresenceReading]:
+        self.messages: List[Message] = []
+
+        self.message_buffer: Queue[str] = Queue()
+
+        self.descriptor_for_LLM = "Face Presence Sensor"
+
+    async def _poll(self) -> Optional[str]:
         """
-        Pop newest snapshot from provider (clears older ones) and map to reading.
+        Poll for new messages in the buffer.
 
         Returns
         -------
-        FacePresenceReading | None
+        Optional[str]
+            Message from the buffer if available, None otherwise
         """
-        snap = self._provider.drain_latest()
-        if not snap:
+        await asyncio.sleep(0.2)
+        try:
+            return self.face_presence_provider.peek_latest()
+        except asyncio.QueueEmpty:
             return None
-        return self._raw_to_input(snap)
 
-    def peek(self) -> Optional[FacePresenceReading]:
+    async def _raw_to_text(self, raw_input: str) -> Message:
         """
-        Non-destructive read of newest snapshot.
+        Process raw input to generate a timestamped message.
 
-        Returns
-        -------
-        FacePresenceReading | None
-        """
-        snap = self._provider.peek_latest()
-        if not snap:
-            return None
-        return self._raw_to_input(snap)
-
-    def formatted_latest_buffer(self, history_sec: float = 2.0) -> str:
-        """
-        Return a compact, human-friendly summary for LLM prompts.
+        Creates a Message object from the raw input string, adding
+        the current timestamp.
 
         Parameters
         ----------
-        history_sec : float
-            How much history (seconds) to summarize. Bound by provider capacity.
+        raw_input : str
+            Raw input string to be processed
 
         Returns
         -------
-        str
+        Message
+            A timestamped message containing the processed input
         """
-        since = time.time() - float(history_sec)
-        hist = self._provider.get_history_since(since)
-        if not hist:
-            return "face_presence: no recent detections"
+        return Message(timestamp=time.time(), message=raw_input)
 
-        # Keep it concise: last 3 lines
-        lines = [self._raw_to_text(self._raw_to_input(s)) for s in hist[-1:]]
-        return "face_presence:\n" + "\n".join(f"- {ln}" for ln in lines)
-
-    # --------------- internals --------------- #
-
-    async def _poll_loop(self) -> None:
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
-        Periodically sample provider.peek_latest() and cache the newest reading.
+        Convert raw input to text and update message buffer.
 
-        This mirrors the pattern where inputs maintain a small, always-fresh snapshot
-        that other subsystems can read synchronously without awaiting HTTP.
+        Processes the raw input if present and adds the resulting
+        message to the internal message buffer.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input to be processed, or None if no input is available
         """
-        try:
-            while True:
-                snap = self._provider.peek_latest()
-                if snap and snap.ts != self._last_ts:
-                    reading = self._raw_to_input(snap)
-                    async with self._lock:
-                        self._latest = reading
-                        self._last_ts = snap.ts
-                await asyncio.sleep(self._poll_interval)
-        except asyncio.CancelledError:
-            raise
+        if raw_input is None:
+            return
 
-    def _raw_to_input(self, snap: PresenceSnapshot) -> FacePresenceReading:
-        """Map provider snapshot → input reading."""
-        return FacePresenceReading(
-            ts=snap.ts,
-            names_now=snap.names_now,
-            unknown_now=snap.unknown_now,
-            text=snap.to_text(),
-            raw=snap.raw,
+        pending_message = await self._raw_to_text(raw_input)
+
+        if pending_message is not None:
+            self.messages.append(pending_message)
+
+    def formatted_latest_buffer(self) -> Optional[str]:
+        """
+        Format and clear the latest buffer contents.
+
+        Retrieves the most recent message from the buffer, formats it
+        with timestamp and class name, adds it to the IO provider,
+        and clears the buffer.
+
+        Returns
+        -------
+        Optional[str]
+            Formatted string containing the latest message and metadata,
+            or None if the buffer is empty
+
+        """
+        if len(self.messages) == 0:
+            return None
+
+        latest_message = self.messages[-1]
+
+        result = f"""
+INPUT: {self.descriptor_for_LLM}
+// START
+{latest_message.message}
+// END
+"""
+
+        self.io_provider.add_input(
+            self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
+        self.messages = []
 
-    def _raw_to_text(self, reading: FacePresenceReading) -> str:
-        """Format a one-liner for prompts or logs."""
-        return reading.text
+        return result
