@@ -39,7 +39,7 @@ class UbtechCameraVLMInput(FuserInput[str]):
         self.io_provider = IOProvider()
 
         self.descriptor_for_LLM = "Your Eyes"
-        self.robot_ip = getattr(self.config, "robot_ip", None)
+        self.robot_ip = getattr(self.config, "robot_ip", "")
         # Buffer for storing the final output
         self.messages: List[Message] = []
 
@@ -154,7 +154,7 @@ class UbtechCameraVLMInput(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

@@ -4,7 +4,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import requests
 
@@ -171,7 +171,7 @@ class FabricDataSubmitter:
 
     def __init__(
         self,
-        api_key: str = None,
+        api_key: Optional[str] = None,
         base_url: str = "https://api.openmind.org/api/core/fabric/submit",
         write_to_local_file: bool = False,
     ):
@@ -180,7 +180,7 @@ class FabricDataSubmitter:
 
         Parameters
         ----------
-        api_key : str
+        api_key : Optional[str]
             API key for authentication. Default is None.
         base_url : str
             Base URL for the teleops status API. Default is

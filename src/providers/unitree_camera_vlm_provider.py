@@ -70,13 +70,13 @@ class UnitreeCameraVideoStream(VideoStream):
         """
         logging.info("Starting Unitree Camera Video Stream")
 
-        frame_time = 1.0 / self.fps
+        frame_time = 1.0 / (self.fps or 30)
         last_frame_time = time.perf_counter()
 
         while self.running:
             try:
                 code, data = self.video_client.GetImageSample()
-                if code == 0:
+                if code == 0 and data is not None:
                     # Convert to numpy image
                     image_data = np.frombuffer(bytes(data), dtype=np.uint8)
                     image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
@@ -86,12 +86,14 @@ class UnitreeCameraVideoStream(VideoStream):
                         height, width = image.shape[:2]
                         ratio = width / height
 
+                        target_resolution = self.resolution or (640, 480)
+
                         if width > height:
-                            new_width = self.resolution[0]
-                            new_height = int(self.resolution[0] / ratio)
+                            new_width = target_resolution[0]
+                            new_height = int(target_resolution[0] / ratio)
                         else:
-                            new_height = self.resolution[1]
-                            new_width = int(self.resolution[1] * ratio)
+                            new_height = target_resolution[1]
+                            new_width = int(target_resolution[1] * ratio)
 
                         # Resize image
                         resized_image = cv2.resize(
@@ -100,7 +102,7 @@ class UnitreeCameraVideoStream(VideoStream):
                         _, buffer = cv2.imencode(
                             ".jpg", resized_image, self.encode_quality
                         )
-                        frame_data = base64.b64encode(buffer).decode("utf-8")
+                        frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
                         if self.frame_callbacks:
                             for frame_callback in self.frame_callbacks:
@@ -174,10 +176,11 @@ class UnitreeCameraVLMProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[callable]
             The callback function to process VLM results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

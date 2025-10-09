@@ -112,7 +112,7 @@ class Odom(FuserInput[str]):
 
         return Message(timestamp=time.time(), message=res)
 
-    async def raw_to_text(self, raw_input: Optional[list]):
+    async def raw_to_text(self, raw_input: Optional[dict]):
         """
         Convert raw input to text and update message buffer.
 
@@ -121,7 +121,7 @@ class Odom(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : Optional[list]
+        raw_input : Optional[dict]
             Raw input to be processed, or None if no input is available
         """
         if raw_input is None:

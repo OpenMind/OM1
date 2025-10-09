@@ -7,7 +7,7 @@ import threading
 import time
 from dataclasses import dataclass
 from queue import Empty, Full
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import zenoh
@@ -173,7 +173,7 @@ class RPLidarProvider:
         self,
         serial_port: str = DEFAULT_SERIAL_PORT,
         half_width_robot: float = DEFAULT_HALF_WIDTH_ROBOT,
-        angles_blanked: list = None,
+        angles_blanked: Optional[list] = None,
         relevant_distance_max: float = DEFAULT_RELEVANT_DISTANCE_MAX,
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
@@ -210,7 +210,7 @@ class RPLidarProvider:
 
         self._raw_scan: Optional[NDArray] = None
         self._valid_paths: Optional[list] = None
-        self._lidar_string: str = None
+        self._lidar_string: Optional[str] = None
 
         self.angles = None
         self.angles_final = None
@@ -307,15 +307,17 @@ class RPLidarProvider:
             raise ValueError("Provided json_line must be a json string.")
 
         if (
-            os.path.exists(self.filename_current)
+            self.filename_current is not None
+            and os.path.exists(self.filename_current)
             and os.path.getsize(self.filename_current) > self.max_file_size_bytes
         ):
             self.filename_current = self.update_filename()
             logging.info(f"New rpscan file name: {self.filename_current}")
 
-        with open(self.filename_current, "a", encoding="utf-8") as f:
-            f.write(json_line + "\n")
-            f.flush()
+        if self.filename_current is not None:
+            with open(self.filename_current, "a", encoding="utf-8") as f:
+                f.write(json_line + "\n")
+                f.flush()
 
     def listen_scan(self, data: zenoh.Sample):
         """
@@ -381,7 +383,7 @@ class RPLidarProvider:
         """
         if scan is None:
             logging.info("Waiting for Zenoh Laserscan data...")
-            self._raw_scan = []
+            self._raw_scan = None
             self._lidar_string = "You might be surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
             self._valid_paths = []
         else:
@@ -398,7 +400,10 @@ class RPLidarProvider:
                 self.angles_final = np.flip(self.angles)
 
             # angles now run from 360.0 to 0 degress
-            data = list(zip(self.angles_final, scan.ranges))
+            if self.angles_final is not None:
+                data = list(zip(self.angles_final, scan.ranges))
+            else:
+                data = []
             array_ready = np.array(data)
             self._path_processor(array_ready)
 
@@ -677,19 +682,19 @@ class RPLidarProvider:
         return self._raw_scan
 
     @property
-    def lidar_string(self) -> str:
+    def lidar_string(self) -> Optional[str]:
         """
         Get the latest natural language assessment of possible paths.
 
         Returns
         -------
-        str
+        Optional[str]
             A natural language summary of possible motion paths
         """
         return self._lidar_string
 
     @property
-    def movement_options(self) -> Dict[str, List[int]]:
+    def movement_options(self) -> Dict[str, Union[List[int], bool]]:
         """
         Get the movement options based on the current valid paths.
 

@@ -67,9 +67,7 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
         self.device = "cpu"
         self.detection_threshold = 0.2
 
-        self.camera_index = 0  # default to default webcam unless specified otherwsie
-        if self.config.camera_index:
-            self.camera_index = self.config.camera_index
+        self.camera_index = getattr(self.config, "camera_index", 0)
 
         # Track IO
         self.io_provider = IOProvider()
@@ -107,7 +105,7 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
                 f"Webcam pixel dimensions for COCO: {self.width}, {self.height}"
             )
 
-    async def _poll(self) -> np.ndarray:
+    async def _poll(self) -> Optional[np.ndarray]:
         """
         Poll for new image input.
 
@@ -116,7 +114,7 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
 
         Returns
         -------
-        np.ndarray
+        Optional[np.ndarray]
             Generated or captured image as a numpy array
         """
         await asyncio.sleep(0.5)
@@ -124,10 +122,12 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
         # Capture a frame every 500 ms
         # logging.info(f"VLM_COCO_Local poll")
 
-        if self.have_cam:
+        if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
             # logging.info(f"VLM_COCO_Local frame: {frame}")
             return frame
+
+        return None
 
     async def _raw_to_text(self, raw_input: Optional[np.ndarray]) -> Optional[Message]:
         """
@@ -243,7 +243,7 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
         logging.info(f"VLM_COCO_Local: {latest_message.message}")
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

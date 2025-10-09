@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 from dataclasses import asdict, dataclass, field
+from typing import Optional
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move_ub.interface import MoveInput
@@ -12,10 +13,10 @@ from ubtech.ubtechapi import YanAPI
 @dataclass
 class Motion:
     name: str
-    direction: str = field(default=None)
-    speed: str = field(default=None)
-    repeat: int = field(default=None)
-    version: str = field(default=None)
+    direction: Optional[str] = field(default=None)
+    speed: Optional[str] = field(default=None)
+    repeat: Optional[int] = field(default=None)
+    version: Optional[str] = field(default=None)
 
     # map name → defaults
     _defaults = {
@@ -236,7 +237,6 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
             await self._execute_sport_command(Motion("PushUp"))
         elif output_interface.action == "reset":
             logging.info("UB command: stand still")
-            await self._execute_sport_command("reset")
         else:
             logging.info(f"Unknown move type: {output_interface.action}")
 

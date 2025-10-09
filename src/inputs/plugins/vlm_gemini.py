@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
-from openai import ChatCompletion
+from openai.types.chat import ChatCompletion
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
@@ -99,10 +99,12 @@ class VLMGemini(FuserInput[str]):
         raw_message : str
             Raw JSON message received from the VLM service
         """
-        logging.info(
-            f"VLM Gemini received message: {raw_message.choices[0].message.content}"
-        )
-        self.message_buffer.put(raw_message.choices[0].message.content)
+        content = raw_message.choices[0].message.content
+        if content is not None:
+            logging.info(f"VLM Gemini received message: {content}")
+            self.message_buffer.put(content)
+        else:
+            logging.warning("VLM Gemini received message with None content")
 
     async def _poll(self) -> Optional[str]:
         """

@@ -53,6 +53,6 @@ def test_ask_signature(llm_class: Type[LLM]):
 
 @pytest.mark.parametrize("llm_class", get_all_llm_classes())
 def test_init_with_config(llm_class: Type[LLM], config: LLMConfig):
-    llm = llm_class(DummyOutputModel, config)
-    assert llm._output_model == DummyOutputModel
+    llm = llm_class(config)
     assert llm._config == config
+    assert llm._available_actions == []

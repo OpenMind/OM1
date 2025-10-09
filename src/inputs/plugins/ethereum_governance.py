@@ -150,7 +150,7 @@ class GovernanceEthereum(FuserInput[float]):
         self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
 
         self.universal_rule = self.load_rules_from_blockchain()
-        self.messages: list[str] = []
+        self.messages: list[Message] = []
 
         logging.info(f"7777 rules: {self.universal_rule}")
 
@@ -207,7 +207,7 @@ class GovernanceEthereum(FuserInput[float]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

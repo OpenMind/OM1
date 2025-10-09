@@ -57,7 +57,7 @@ class ASRProvider:
             rate=rate,
             chunk=chunk,
             device=device_id,
-            device_name=microphone_name,
+            device_name=microphone_name,  # type: ignore
             audio_data_callback=self.ws_client.send_message,
             language_code=language_code,
             remote_input=remote_input,
@@ -69,10 +69,11 @@ class ASRProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[Callable])
             The callback function to process ASR results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

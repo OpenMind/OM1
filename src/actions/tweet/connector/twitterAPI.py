@@ -19,7 +19,7 @@ class TweetAPIConnector(ActionConnector[TweetInput]):
         # Suppress tweepy warnings
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=SyntaxWarning)
-            import tweepy
+            import tweepy  # type: ignore
 
             self.client = tweepy.Client(
                 consumer_key=os.getenv("TWITTER_API_KEY"),
@@ -32,11 +32,11 @@ class TweetAPIConnector(ActionConnector[TweetInput]):
         """Send tweet via Twitter API."""
         try:
             # Log the tweet we're about to send
-            tweet_to_make = {"action": output_interface.tweet}
+            tweet_to_make = {"action": output_interface.tweet}  # type: ignore
             logging.info(f"SendThisToTwitterAPI: {tweet_to_make}")
 
             # Send tweet
-            response = self.client.create_tweet(text=output_interface.tweet)
+            response = self.client.create_tweet(text=output_interface.tweet)  # type: ignore
             tweet_id = response.data["id"]
             tweet_url = f"https://twitter.com/user/status/{tweet_id}"
             logging.info(f"Tweet sent successfully! URL: {tweet_url}")

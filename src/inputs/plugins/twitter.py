@@ -58,7 +58,7 @@ class TwitterInput(FuserInput[str]):
         await self._init_session()
 
         try:
-            async with self.session.post(
+            async with self.session.post(  # type: ignore
                 self.api_url,
                 json={"query": query},
                 headers={"Content-Type": "application/json"},

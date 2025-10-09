@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from om1_speech import AudioOutputStream
 
@@ -40,8 +40,8 @@ class ElevenLabsTTSProvider:
         """
         Initialize the TTS provider with given URL.
         """
-        self.api_key: str = api_key
-        self.elevenlabs_api_key: str = elevenlabs_api_key
+        self.api_key = api_key
+        self.elevenlabs_api_key = elevenlabs_api_key
 
         # Initialize TTS provider
         self.running: bool = False
@@ -61,10 +61,11 @@ class ElevenLabsTTSProvider:
 
         Parameters
         ----------
-        tts_state_callback : callable
+        tts_state_callback : Optional[Callable]
             The callback function to receive TTS state changes.
         """
-        self._audio_stream.set_tts_state_callback(tts_state_callback)
+        if tts_state_callback is not None:
+            self._audio_stream.set_tts_state_callback(tts_state_callback)
 
     def create_pending_message(self, text: str) -> dict:
         """
@@ -94,13 +95,13 @@ class ElevenLabsTTSProvider:
             **elevenlabs_api_key,
         }
 
-    def add_pending_message(self, message: dict):
+    def add_pending_message(self, message: Union[str, dict]):
         """
         Add a pending message to the TTS provider.
 
         Parameters
         ----------
-        message : dict
+        message : Union[str, dict]
             The message to be added, typically containing text and TTS parameters.
         """
         if isinstance(message, str):
