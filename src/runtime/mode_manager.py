@@ -1,0 +1,398 @@
+"""
+Mode Manager for OM1
+
+This module manages mode transitions, maintains mode state, and handles
+automatic switching between different operational modes.
+"""
+
+import asyncio
+import logging
+import time
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+from runtime.mode_config import (
+    ModeConfig,
+    ModeSystemConfig,
+    TransitionRule,
+    TransitionType,
+)
+
+
+@dataclass
+class ModeState:
+    """Current state of the mode system."""
+
+    current_mode: str
+    previous_mode: Optional[str] = None
+    mode_start_time: float = field(default_factory=time.time)
+    transition_history: List[str] = field(default_factory=list)
+    last_transition_time: float = 0.0
+    user_context: Dict = field(default_factory=dict)
+
+
+class ModeManager:
+    """
+    Manages mode transitions and state for the OM1 system.
+
+    The ModeManager is responsible for:
+    - Tracking current mode state
+    - Evaluating transition conditions
+    - Triggering mode switches
+    - Managing transition cooldowns
+    - Maintaining mode history and context
+    """
+
+    def __init__(self, config: ModeSystemConfig):
+        """
+        Initialize the mode manager.
+
+        Parameters
+        ----------
+        config : ModeSystemConfig
+            The mode system configuration
+        """
+        self.config = config
+        self.state = ModeState(current_mode=config.default_mode)
+        self.transition_cooldowns: Dict[str, float] = {}
+        self.pending_transitions: List[TransitionRule] = []
+        self._transition_callbacks: List = []
+
+        # Validate configuration
+        if config.default_mode not in config.modes:
+            raise ValueError(
+                f"Default mode '{config.default_mode}' not found in available modes"
+            )
+
+        logging.info(
+            f"Mode Manager initialized with default mode: {config.default_mode}"
+        )
+
+    @property
+    def current_mode_config(self) -> ModeConfig:
+        """Get the configuration for the current mode."""
+        return self.config.modes[self.state.current_mode]
+
+    @property
+    def current_mode_name(self) -> str:
+        """Get the name of the current mode."""
+        return self.state.current_mode
+
+    def add_transition_callback(self, callback):
+        """Add a callback to be called when mode transitions occur."""
+        self._transition_callbacks.append(callback)
+
+    def remove_transition_callback(self, callback):
+        """Remove a transition callback."""
+        if callback in self._transition_callbacks:
+            self._transition_callbacks.remove(callback)
+
+    async def _notify_transition_callbacks(self, from_mode: str, to_mode: str):
+        """Notify all transition callbacks of a mode change."""
+        for callback in self._transition_callbacks:
+            try:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(from_mode, to_mode)
+                else:
+                    callback(from_mode, to_mode)
+            except Exception as e:
+                logging.error(f"Error in transition callback: {e}")
+
+    def check_time_based_transitions(self) -> Optional[str]:
+        """
+        Check if any time-based transitions should be triggered.
+
+        Returns
+        -------
+        Optional[str]
+            The target mode if a transition should occur, None otherwise
+        """
+        current_time = time.time()
+        mode_duration = current_time - self.state.mode_start_time
+
+        # Check if current mode has a timeout
+        current_config = self.current_mode_config
+        if (
+            current_config.timeout_seconds
+            and mode_duration >= current_config.timeout_seconds
+        ):
+            # Find time-based transition rules for this mode
+            for rule in self.config.transition_rules:
+                if (
+                    rule.from_mode == self.state.current_mode or rule.from_mode == "*"
+                ) and rule.transition_type == TransitionType.TIME_BASED:
+                    if self._can_transition(rule):
+                        logging.info(
+                            f"Time-based transition triggered: {self.state.current_mode} -> {rule.to_mode}"
+                        )
+                        return rule.to_mode
+
+        return None
+
+    def check_input_triggered_transitions(self, input_text: str) -> Optional[str]:
+        """
+        Check if any input-triggered transitions should be activated.
+
+        Parameters
+        ----------
+        input_text : str
+            The input text to check for trigger keywords
+
+        Returns
+        -------
+        Optional[str]
+            The target mode if a transition should occur, None otherwise
+        """
+        if not input_text:
+            return None
+
+        input_lower = input_text.lower()
+
+        # Find matching transition rules sorted by priority (higher priority first)
+        matching_rules = []
+        for rule in self.config.transition_rules:
+            if (
+                rule.from_mode == self.state.current_mode or rule.from_mode == "*"
+            ) and rule.transition_type == TransitionType.INPUT_TRIGGERED:
+
+                # Check if any trigger keywords are present
+                for keyword in rule.trigger_keywords:
+                    if keyword.lower() in input_lower:
+                        if self._can_transition(rule):
+                            matching_rules.append(rule)
+                        break
+
+        if matching_rules:
+            # Sort by priority (higher first) and select the best match
+            matching_rules.sort(key=lambda r: r.priority, reverse=True)
+            best_rule = matching_rules[0]
+            logging.info(
+                f"Input-triggered transition: {self.state.current_mode} -> {best_rule.to_mode}"
+            )
+            logging.info(f"Triggered by keywords: {best_rule.trigger_keywords}")
+            return best_rule.to_mode
+
+        return None
+
+    def _can_transition(self, rule: TransitionRule) -> bool:
+        """
+        Check if a transition rule can be executed based on cooldowns and other constraints.
+
+        Parameters
+        ----------
+        rule : TransitionRule
+            The transition rule to check
+
+        Returns
+        -------
+        bool
+            True if the transition can occur, False otherwise
+        """
+        current_time = time.time()
+
+        # Check cooldown for this specific transition
+        transition_key = f"{rule.from_mode}->{rule.to_mode}"
+        if transition_key in self.transition_cooldowns:
+            if (
+                current_time - self.transition_cooldowns[transition_key]
+                < rule.cooldown_seconds
+            ):
+                logging.debug(f"Transition {transition_key} still in cooldown")
+                return False
+
+        # Check if target mode exists
+        if rule.to_mode not in self.config.modes:
+            logging.warning(f"Target mode '{rule.to_mode}' not found in configuration")
+            return False
+
+        # TODO: Add context-aware transition logic here if needed
+
+        return True
+
+    async def request_transition(
+        self, target_mode: str, reason: str = "manual"
+    ) -> bool:
+        """
+        Request a manual transition to a specific mode.
+
+        Parameters
+        ----------
+        target_mode : str
+            The name of the target mode
+        reason : str
+            The reason for the transition
+
+        Returns
+        -------
+        bool
+            True if the transition was successful, False otherwise
+        """
+        if not self.config.allow_manual_switching and reason == "manual":
+            logging.warning("Manual mode switching is disabled")
+            return False
+
+        if target_mode not in self.config.modes:
+            logging.error(f"Target mode '{target_mode}' not found")
+            return False
+
+        if target_mode == self.state.current_mode:
+            logging.info(f"Already in mode '{target_mode}'")
+            return True
+
+        return await self._execute_transition(target_mode, reason)
+
+    async def _execute_transition(self, target_mode: str, reason: str) -> bool:
+        """
+        Execute a mode transition.
+
+        Parameters
+        ----------
+        target_mode : str
+            The name of the target mode
+        reason : str
+            The reason for the transition
+
+        Returns
+        -------
+        bool
+            True if the transition was successful, False otherwise
+        """
+        from_mode = self.state.current_mode
+
+        try:
+            # Update cooldown for this transition
+            transition_key = f"{from_mode}->{target_mode}"
+            self.transition_cooldowns[transition_key] = time.time()
+
+            # Update state
+            self.state.previous_mode = from_mode
+            self.state.current_mode = target_mode
+            self.state.mode_start_time = time.time()
+            self.state.last_transition_time = time.time()
+            self.state.transition_history.append(f"{from_mode}->{target_mode}:{reason}")
+
+            # Limit history size
+            if len(self.state.transition_history) > 50:
+                self.state.transition_history = self.state.transition_history[-25:]
+
+            # Log the transition
+            from_config = self.config.modes.get(from_mode)
+            to_config = self.config.modes[target_mode]
+
+            logging.info(
+                f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
+            )
+
+            # Play exit message for previous mode
+            if (
+                from_config
+                and from_config.exit_message
+                and self.config.transition_announcement
+            ):
+                logging.info(f"Exit message: {from_config.exit_message}")
+
+            # Play entry message for new mode
+            if to_config.entry_message and self.config.transition_announcement:
+                logging.info(f"Entry message: {to_config.entry_message}")
+
+            # Notify callbacks
+            await self._notify_transition_callbacks(from_mode, target_mode)
+
+            return True
+
+        except Exception as e:
+            logging.error(
+                f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
+            )
+            return False
+
+    def get_available_transitions(self) -> List[str]:
+        """
+        Get a list of modes that can be transitioned to from the current mode.
+
+        Returns
+        -------
+        List[str]
+            List of available target mode names
+        """
+        available = set()
+        current_time = time.time()
+
+        for rule in self.config.transition_rules:
+            if rule.from_mode == self.state.current_mode or rule.from_mode == "*":
+                if self._can_transition(rule):
+                    available.add(rule.to_mode)
+
+        return list(available)
+
+    def get_mode_info(self) -> Dict:
+        """
+        Get information about the current mode and system state.
+
+        Returns
+        -------
+        Dict
+            Dictionary containing mode information
+        """
+        current_config = self.current_mode_config
+        current_time = time.time()
+        mode_duration = current_time - self.state.mode_start_time
+
+        return {
+            "current_mode": self.state.current_mode,
+            "display_name": current_config.display_name,
+            "description": current_config.description,
+            "mode_duration": mode_duration,
+            "previous_mode": self.state.previous_mode,
+            "available_transitions": self.get_available_transitions(),
+            "transition_history": self.state.transition_history[
+                -5:
+            ],  # Last 5 transitions
+            "timeout_seconds": current_config.timeout_seconds,
+            "time_remaining": (
+                current_config.timeout_seconds - mode_duration
+                if current_config.timeout_seconds
+                else None
+            ),
+        }
+
+    def update_user_context(self, context: Dict):
+        """Update the user context for context-aware transitions."""
+        self.state.user_context.update(context)
+
+    def get_user_context(self) -> Dict:
+        """Get the current user context."""
+        return self.state.user_context.copy()
+
+    async def process_tick(self, input_text: Optional[str] = None) -> Optional[str]:
+        """
+        Process a tick and check for any needed transitions.
+
+        Parameters
+        ----------
+        input_text : Optional[str]
+            Any input text to check for triggered transitions
+
+        Returns
+        -------
+        Optional[str]
+            The new mode if a transition occurred, None otherwise
+        """
+        # Check time-based transitions first
+        time_target = self.check_time_based_transitions()
+        if time_target:
+            success = await self._execute_transition(time_target, "timeout")
+            if success:
+                return time_target
+
+        # Check input-triggered transitions
+        if input_text:
+            input_target = self.check_input_triggered_transitions(input_text)
+            if input_target:
+                success = await self._execute_transition(
+                    input_target, "input_triggered"
+                )
+                if success:
+                    return input_target
+
+        return None
