@@ -1,17 +1,10 @@
-"""
-Mode Manager for OM1
-
-This module manages mode transitions, maintains mode state, and handles
-automatic switching between different operational modes.
-"""
-
 import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
-from runtime.mode_config import (
+from runtime.multi_mode.config import (
     ModeConfig,
     ModeSystemConfig,
     TransitionRule,
@@ -21,7 +14,24 @@ from runtime.mode_config import (
 
 @dataclass
 class ModeState:
-    """Current state of the mode system."""
+    """
+    Current state of the mode system.
+
+    Parameters
+    ----------
+    current_mode : str
+        The current active mode
+    previous_mode : Optional[str]
+        The previous mode before the current one
+    mode_start_time : float
+        Timestamp when the current mode was activated
+    transition_history : List[str]
+        History of mode transitions
+    last_transition_time : float
+        Timestamp of the last mode transition
+    user_context : Dict
+        Contextual information for context-aware transitions
+    """
 
     current_mode: str
     previous_mode: Optional[str] = None
@@ -34,13 +44,6 @@ class ModeState:
 class ModeManager:
     """
     Manages mode transitions and state for the OM1 system.
-
-    The ModeManager is responsible for:
-    - Tracking current mode state
-    - Evaluating transition conditions
-    - Triggering mode switches
-    - Managing transition cooldowns
-    - Maintaining mode history and context
     """
 
     def __init__(self, config: ModeSystemConfig):
@@ -70,25 +73,62 @@ class ModeManager:
 
     @property
     def current_mode_config(self) -> ModeConfig:
-        """Get the configuration for the current mode."""
+        """
+        Get the configuration for the current mode.
+
+        Returns
+        -------
+        ModeConfig
+            The current mode configuration
+        """
         return self.config.modes[self.state.current_mode]
 
     @property
     def current_mode_name(self) -> str:
-        """Get the name of the current mode."""
+        """
+        Get the name of the current mode.
+
+        Returns
+        -------
+        str
+            The current mode name
+        """
         return self.state.current_mode
 
-    def add_transition_callback(self, callback):
-        """Add a callback to be called when mode transitions occur."""
+    def add_transition_callback(self, callback: Callable):
+        """
+        Add a callback to be called when mode transitions occur.
+
+        Parameters
+        ----------
+        callback : Callable
+            The callback function to add
+        """
         self._transition_callbacks.append(callback)
 
-    def remove_transition_callback(self, callback):
-        """Remove a transition callback."""
+    def remove_transition_callback(self, callback: Callable):
+        """
+        Remove a transition callback.
+
+        Parameters
+        ----------
+        callback : Callable
+            The callback function to remove
+        """
         if callback in self._transition_callbacks:
             self._transition_callbacks.remove(callback)
 
     async def _notify_transition_callbacks(self, from_mode: str, to_mode: str):
-        """Notify all transition callbacks of a mode change."""
+        """
+        Notify all transition callbacks of a mode change.
+
+        Parameters
+        ----------
+        from_mode : str
+            The mode being transitioned from
+        to_mode : str
+            The mode being transitioned to
+        """
         for callback in self._transition_callbacks:
             try:
                 if asyncio.iscoroutinefunction(callback):
@@ -190,7 +230,6 @@ class ModeManager:
         """
         current_time = time.time()
 
-        # Check cooldown for this specific transition
         transition_key = f"{rule.from_mode}->{rule.to_mode}"
         if transition_key in self.transition_cooldowns:
             if (
@@ -200,7 +239,6 @@ class ModeManager:
                 logging.debug(f"Transition {transition_key} still in cooldown")
                 return False
 
-        # Check if target mode exists
         if rule.to_mode not in self.config.modes:
             logging.warning(f"Target mode '{rule.to_mode}' not found in configuration")
             return False
@@ -260,22 +298,18 @@ class ModeManager:
         from_mode = self.state.current_mode
 
         try:
-            # Update cooldown for this transition
             transition_key = f"{from_mode}->{target_mode}"
             self.transition_cooldowns[transition_key] = time.time()
 
-            # Update state
             self.state.previous_mode = from_mode
             self.state.current_mode = target_mode
             self.state.mode_start_time = time.time()
             self.state.last_transition_time = time.time()
             self.state.transition_history.append(f"{from_mode}->{target_mode}:{reason}")
 
-            # Limit history size
             if len(self.state.transition_history) > 50:
                 self.state.transition_history = self.state.transition_history[-25:]
 
-            # Log the transition
             from_config = self.config.modes.get(from_mode)
             to_config = self.config.modes[target_mode]
 
@@ -283,7 +317,6 @@ class ModeManager:
                 f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
             )
 
-            # Play exit message for previous mode
             if (
                 from_config
                 and from_config.exit_message
@@ -291,11 +324,9 @@ class ModeManager:
             ):
                 logging.info(f"Exit message: {from_config.exit_message}")
 
-            # Play entry message for new mode
             if to_config.entry_message and self.config.transition_announcement:
                 logging.info(f"Entry message: {to_config.entry_message}")
 
-            # Notify callbacks
             await self._notify_transition_callbacks(from_mode, target_mode)
 
             return True
@@ -316,7 +347,6 @@ class ModeManager:
             List of available target mode names
         """
         available = set()
-        current_time = time.time()
 
         for rule in self.config.transition_rules:
             if rule.from_mode == self.state.current_mode or rule.from_mode == "*":
@@ -345,9 +375,7 @@ class ModeManager:
             "mode_duration": mode_duration,
             "previous_mode": self.state.previous_mode,
             "available_transitions": self.get_available_transitions(),
-            "transition_history": self.state.transition_history[
-                -5:
-            ],  # Last 5 transitions
+            "transition_history": self.state.transition_history[-5:],
             "timeout_seconds": current_config.timeout_seconds,
             "time_remaining": (
                 current_config.timeout_seconds - mode_duration
@@ -357,7 +385,14 @@ class ModeManager:
         }
 
     def update_user_context(self, context: Dict):
-        """Update the user context for context-aware transitions."""
+        """
+        Update the user context for context-aware transitions.
+
+        Parameters
+        ----------
+        context : Dict
+            The context information to update
+        """
         self.state.user_context.update(context)
 
     def get_user_context(self) -> Dict:

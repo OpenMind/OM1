@@ -20,13 +20,20 @@ from backgrounds.base import Background, BackgroundConfig
 from inputs import load_input
 from inputs.base import Sensor, SensorConfig
 from llm import LLM, LLMConfig, load_llm
-from runtime.config import RuntimeConfig, add_meta
+from runtime.single_mode.config import RuntimeConfig, add_meta
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
 
 
 class TransitionType(Enum):
-    """Types of mode transitions."""
+    """
+    Types of mode transitions.
+
+    - INPUT_TRIGGERED: Switch based on specific input keywords or phrases.
+    - TIME_BASED: Switch after a certain time period or at specific times.
+    - CONTEXT_AWARE: Switch based on contextual cues or environment
+    - MANUAL: Switch only when manually triggered by the user.
+    """
 
     INPUT_TRIGGERED = "input_triggered"
     TIME_BASED = "time_based"
@@ -36,7 +43,28 @@ class TransitionType(Enum):
 
 @dataclass
 class TransitionRule:
-    """Defines a rule for transitioning between modes."""
+    """
+    Defines a rule for transitioning between modes.
+
+    Parameters
+    ----------
+    from_mode : str
+        Name of the mode to transition from.
+    to_mode : str
+        Name of the mode to transition to.
+    transition_type : TransitionType
+        The type of transition (e.g., input-triggered, time-based).
+    trigger_keywords : List[str], optional
+        Keywords or phrases that can trigger the transition (for input-triggered).
+    priority : int, optional
+        Priority of the rule when multiple rules could apply. Higher numbers = higher priority. Defaults to 1.
+    cooldown_seconds : float, optional
+        Minimum time in seconds before this rule can trigger again. Defaults to 0.0.
+    timeout_seconds : Optional[float], optional
+        For time-based transitions, the time in seconds after which to switch modes. Defaults to None.
+    context_conditions : Dict, optional
+        Conditions based on context that must be met for the transition. Defaults to empty dict.
+    """
 
     from_mode: str
     to_mode: str
@@ -50,7 +78,9 @@ class TransitionRule:
 
 @dataclass
 class ModeConfig:
-    """Configuration for a specific mode."""
+    """
+    Configuration for a specific mode.
+    """
 
     name: str
     display_name: str
@@ -58,21 +88,18 @@ class ModeConfig:
     system_prompt_base: str
     hertz: float = 1.0
 
-    # Optional mode-specific settings
     entry_message: Optional[str] = None
     exit_message: Optional[str] = None
     timeout_seconds: Optional[float] = None
     remember_locations: bool = False
     save_interactions: bool = False
 
-    # Mode-specific components (these will be populated by the loader)
     agent_inputs: List[Sensor] = field(default_factory=list)
     cortex_llm: Optional[LLM] = None
     simulators: List[Simulator] = field(default_factory=list)
     agent_actions: List[AgentAction] = field(default_factory=list)
     backgrounds: List[Background] = field(default_factory=list)
 
-    # Raw config data for dynamic loading
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
     _raw_simulators: List[Dict] = field(default_factory=list)
@@ -80,7 +107,19 @@ class ModeConfig:
     _raw_backgrounds: List[Dict] = field(default_factory=list)
 
     def to_runtime_config(self, global_config: "ModeSystemConfig") -> RuntimeConfig:
-        """Convert this mode config to a RuntimeConfig for the cortex."""
+        """
+        Convert this mode config to a RuntimeConfig for the cortex.
+
+        Parameters
+        ----------
+        global_config : ModeSystemConfig
+            The global system configuration containing shared settings
+
+        Returns
+        -------
+        RuntimeConfig
+            The runtime configuration for this mode
+        """
         if self.cortex_llm is None:
             raise ValueError(f"No LLM configured for mode {self.name}")
 
@@ -101,10 +140,43 @@ class ModeConfig:
             unitree_ethernet=global_config.unitree_ethernet,
         )
 
+    def load_components(self, system_config: "ModeSystemConfig"):
+        """
+        Load the actual component instances for this mode.
+
+        This method should be called when the mode is activated to ensure
+        fresh instances and avoid singleton conflicts between modes.
+
+        Parameters
+        ----------
+        system_config : ModeSystemConfig
+            The global system configuration containing shared settings
+        """
+        logging.info(f"Loading components for mode: {self.name}")
+        _load_mode_components(self, system_config)
+        logging.info(f"Components loaded successfully for mode: {self.name}")
+
+    def is_loaded(self) -> bool:
+        """
+        Check if this mode's components have been loaded.
+
+        Returns
+        -------
+        bool
+            True if components are loaded, False if only raw config is available
+        """
+        return (
+            len(self.agent_inputs) > 0
+            or self.cortex_llm is not None
+            or len(self.agent_actions) > 0
+        )
+
 
 @dataclass
 class ModeSystemConfig:
-    """Complete configuration for a mode-aware system."""
+    """
+    Complete configuration for a mode-aware system.
+    """
 
     # Global settings
     name: str
@@ -113,7 +185,7 @@ class ModeSystemConfig:
     transition_announcement: bool = True
     mode_memory_enabled: bool = True
 
-    # Shared configuration
+    # Global parameters
     api_key: Optional[str] = None
     robot_ip: Optional[str] = None
     URID: Optional[str] = None
@@ -121,13 +193,11 @@ class ModeSystemConfig:
     system_governance: str = ""
     system_prompt_examples: str = ""
 
-    # Global LLM config (can be overridden by modes)
+    # Default LLM settings if mode doesn't override
     global_cortex_llm: Optional[Dict] = None
 
-    # Mode definitions
+    # Modes and transition rules
     modes: Dict[str, ModeConfig] = field(default_factory=dict)
-
-    # Transition rules
     transition_rules: List[TransitionRule] = field(default_factory=list)
 
 
@@ -146,13 +216,12 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
         Parsed mode system configuration
     """
     config_path = os.path.join(
-        os.path.dirname(__file__), "../../config", config_name + ".json5"
+        os.path.dirname(__file__), "../../../config", config_name + ".json5"
     )
 
     with open(config_path, "r") as f:
         raw_config = json5.load(f)
 
-    # Handle global API keys and settings like in the original config loader
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
         logging.warning("No robot ip found in mode config. Checking .env file.")
@@ -177,7 +246,6 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
 
     g_ut_eth = raw_config.get("unitree_ethernet", None)
 
-    # Create the main config object
     mode_system_config = ModeSystemConfig(
         name=raw_config.get("name", "mode_system"),
         default_mode=raw_config["default_mode"],
@@ -193,7 +261,6 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
         global_cortex_llm=raw_config.get("cortex_llm"),
     )
 
-    # Load modes
     for mode_name, mode_data in raw_config.get("modes", {}).items():
         mode_config = ModeConfig(
             name=mode_name,
@@ -213,12 +280,8 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
             _raw_backgrounds=mode_data.get("backgrounds", []),
         )
 
-        # Load mode-specific components
-        _load_mode_components(mode_config, mode_system_config)
-
         mode_system_config.modes[mode_name] = mode_config
 
-    # Load transition rules
     for rule_data in raw_config.get("transition_rules", []):
         rule = TransitionRule(
             from_mode=rule_data["from_mode"],
@@ -236,7 +299,16 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
 
 
 def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConfig):
-    """Load the actual component instances for a mode."""
+    """
+    Load the actual component instances for a mode.
+
+    Parameters
+    ----------
+    mode_config : ModeConfig
+        The mode configuration to load components for.
+    system_config : ModeSystemConfig
+        The global system configuration containing shared settings
+    """
     g_api_key = system_config.api_key
     g_ut_eth = system_config.unitree_ethernet
     g_URID = system_config.URID
@@ -292,7 +364,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         for bg in mode_config._raw_backgrounds
     ]
 
-    # Load LLM (use mode-specific or global)
+    # Load LLM
     llm_config = mode_config._raw_llm or system_config.global_cortex_llm
     if llm_config:
         llm_class = load_llm(llm_config["type"])

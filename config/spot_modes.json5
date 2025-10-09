@@ -1,0 +1,102 @@
+{
+  default_mode: "welcome",
+  allow_manual_switching: true,
+  transition_announcement: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "openmind_free",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 10,
+    },
+  },
+
+  modes: {
+    welcome: {
+      display_name: "Welcome Mode",
+      description: "Initial greeting and user information gathering",
+      system_prompt_base: "You are Bits, a friendly robotic dog meeting someone for the first time. Your goal is to:\n1. Introduce yourself warmly\n2. Ask for the user's name and basic preferences\n3. Explain your capabilities\n4. Ask what they'd like to do together\n\nBe enthusiastic, friendly, and helpful. Keep responses concise but warm.",
+      entry_message: "Hello! I'm Bits, your robotic companion. What's your name?",
+      hertz: 0.01,
+      agent_inputs: [
+        {
+          type: "VLM_COCO_Local",
+          config: {
+            camera_index: 0,
+          },
+        },
+        {
+        "type": "GoogleASRInput"
+        }
+      ],
+      agent_actions: [
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 0,
+          },
+        },
+      ],
+    },
+
+    conversation: {
+      display_name: "Social Interaction",
+      description: "Focused conversation and social interaction mode",
+      system_prompt_base: "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication.",
+      entry_message: "I'm ready to chat! What would you like to talk about?",
+      save_interactions: true,
+      hertz: 1,
+      agent_inputs: [
+        {
+        "type": "GoogleASRInput"
+        },
+        {
+          type: "VLM_COCO_Local",
+          config: {
+            camera_index: 0,
+          },
+        },
+      ],
+      agent_actions: [
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 10,
+          },
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    // From welcome mode
+    {
+      from_mode: "welcome",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: ["talk", "chat", "conversation", "tell me", "ask you", "discuss"],
+      priority: 2,
+      cooldown_seconds: 3.0,
+    },
+
+    // Universal transitions (from any mode)
+    {
+      from_mode: "*",
+      to_mode: "welcome",
+      transition_type: "input_triggered",
+      trigger_keywords: ["reset", "start over", "welcome mode", "restart", "initialize"],
+      priority: 5,
+      cooldown_seconds: 10.0,
+    },
+  ],
+}

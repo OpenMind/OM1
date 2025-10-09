@@ -7,7 +7,7 @@ from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
-from runtime.config import RuntimeConfig
+from runtime.single_mode.config import RuntimeConfig
 from simulators.orchestrator import SimulatorOrchestrator
 
 

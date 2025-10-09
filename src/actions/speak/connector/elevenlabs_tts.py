@@ -98,7 +98,6 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             output_format=output_format,
         )
         self.tts.start()
-        self.tts.add_pending_message("Woof Woof")
 
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)

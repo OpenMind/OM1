@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from actions.base import AgentAction
 from llm.output_model import Action
-from runtime.config import RuntimeConfig
+from runtime.single_mode.config import RuntimeConfig
 
 
 class ActionOrchestrator:

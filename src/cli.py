@@ -1,66 +1,29 @@
-import asyncio
+import logging
 import multiprocessing as mp
 import os
 
 import dotenv
+import json5
 import typer
 
-from runtime.config import load_config
-from runtime.cortex import CortexRuntime
-from runtime.logging import setup_logging
-from runtime.mode_aware_cortex import ModeAwareCortexRuntime
-from runtime.mode_config import load_mode_config
+from runtime.multi_mode.config import load_mode_config
 
 app = typer.Typer()
 
 
 @app.command()
-def start(config_name: str, log_level: str = "INFO", log_to_file: bool = False) -> None:
-    """Start the OM1 agent with a specific configuration."""
-    setup_logging(config_name, log_level, log_to_file)
-
-    # Try to load as mode-aware config first, fall back to regular config
-    config_path = os.path.join(
-        os.path.dirname(__file__), "../config", config_name + ".json5"
-    )
-
-    try:
-        # Check if this is a mode configuration by looking for mode-specific keys
-        import json5
-
-        with open(config_path, "r") as f:
-            raw_config = json5.load(f)
-
-        if "modes" in raw_config and "default_mode" in raw_config:
-            # This is a mode-aware configuration
-            mode_config = load_mode_config(config_name)
-            runtime = ModeAwareCortexRuntime(mode_config)
-            print(f"Starting OM1 with mode-aware configuration: {config_name}")
-            print(f"Available modes: {list(mode_config.modes.keys())}")
-            print(f"Default mode: {mode_config.default_mode}")
-        else:
-            # This is a regular configuration
-            config = load_config(config_name)
-            runtime = CortexRuntime(config)
-            print(f"Starting OM1 with standard configuration: {config_name}")
-
-        # Start the runtime
-        asyncio.run(runtime.run())
-
-    except FileNotFoundError:
-        print(f"Configuration file not found: {config_path}")
-        raise typer.Exit(1)
-    except Exception as e:
-        print(f"Error loading configuration: {e}")
-        raise typer.Exit(1)
-
-
-@app.command()
 def modes(config_name: str) -> None:
-    """Show information about available modes in a mode-aware configuration."""
+    """
+    Show information about available modes in a mode-aware configuration.
+
+    Parameters
+    ----------
+    config_name : str
+    """
     try:
         mode_config = load_mode_config(config_name)
 
+        print("-" * 32)
         print(f"Mode System: {mode_config.name}")
         print(f"Default Mode: {mode_config.default_mode}")
         print(
@@ -104,16 +67,18 @@ def modes(config_name: str) -> None:
             print()
 
     except FileNotFoundError:
-        print(f"Configuration file not found: {config_name}.json5")
+        logging.error(f"Configuration file not found: {config_name}.json5")
         raise typer.Exit(1)
     except Exception as e:
-        print(f"Error loading mode configuration: {e}")
+        logging.error(f"Error loading mode configuration: {e}")
         raise typer.Exit(1)
 
 
 @app.command()
 def list_configs() -> None:
-    """List all available configuration files."""
+    """
+    List all available configuration files.
+    """
     config_dir = os.path.join(os.path.dirname(__file__), "../config")
 
     if not os.path.exists(config_dir):
@@ -125,12 +90,10 @@ def list_configs() -> None:
 
     for filename in os.listdir(config_dir):
         if filename.endswith(".json5"):
-            config_name = filename[:-6]  # Remove .json5 extension
+            config_name = filename[:-6]
             config_path = os.path.join(config_dir, filename)
 
             try:
-                import json5
-
                 with open(config_path, "r") as f:
                     raw_config = json5.load(f)
 
@@ -140,19 +103,21 @@ def list_configs() -> None:
                     )
                 else:
                     configs.append((config_name, raw_config.get("name", config_name)))
-            except:
+            except Exception as _:
                 configs.append((config_name, "Invalid config"))
 
+    print("-" * 32)
     if mode_configs:
         print("Mode-Aware Configurations:")
-        print("-" * 30)
+        print("-" * 32)
         for config_name, display_name in sorted(mode_configs):
             print(f"• {config_name} - {display_name}")
         print()
 
+    print("-" * 32)
     if configs:
         print("Standard Configurations:")
-        print("-" * 25)
+        print("-" * 32)
         for config_name, display_name in sorted(configs):
             print(f"• {config_name} - {display_name}")
 
