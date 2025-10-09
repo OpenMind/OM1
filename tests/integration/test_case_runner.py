@@ -720,7 +720,7 @@ async def evaluate_with_llm(
     try:
         # Call the OpenAI API
         response = await _llm_client.chat.completions.create(
-            model="gpt-4.1-nano",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
