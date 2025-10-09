@@ -11,8 +11,8 @@ import openai
 import pytest
 from PIL import Image
 
-from runtime.config import build_runtime_config_from_test_case
-from runtime.cortex import CortexRuntime
+from runtime.single_mode.config import build_runtime_config_from_test_case
+from runtime.single_mode.cortex import CortexRuntime
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_image_provider,
     load_test_images,
