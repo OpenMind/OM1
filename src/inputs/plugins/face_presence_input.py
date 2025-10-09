@@ -27,6 +27,7 @@ class FacePresenceReading:
     raw : dict
         Full body from the server (optional use).
     """
+
     ts: float
     names_now: List[str]
     unknown_now: int
@@ -48,7 +49,9 @@ class FacePresenceInput:
     This class does *not* talk to HTTP directly; it consumes the provider’s buffer.
     """
 
-    def __init__(self, provider: FacePresenceProvider, *, poll_interval_s: float = 0.2) -> None:
+    def __init__(
+        self, provider: FacePresenceProvider, *, poll_interval_s: float = 0.2
+    ) -> None:
         self._provider = provider
         self._poll_interval = float(poll_interval_s)
         self._task: Optional[asyncio.Task] = None
@@ -63,7 +66,9 @@ class FacePresenceInput:
         self._provider.start()
         if self._task and not self._task.done():
             return
-        self._task = asyncio.create_task(self._poll_loop(), name="face-presence-input-poll")
+        self._task = asyncio.create_task(
+            self._poll_loop(), name="face-presence-input-poll"
+        )
 
     async def stop(self) -> None:
         """Cancel the poll task (provider can be shared; we don't stop it here)."""
@@ -159,4 +164,3 @@ class FacePresenceInput:
     def _raw_to_text(self, reading: FacePresenceReading) -> str:
         """Format a one-liner for prompts or logs."""
         return reading.text
-

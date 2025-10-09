@@ -32,6 +32,7 @@ class PresenceSnapshot:
     raw : dict
         The full JSON body returned by /who.
     """
+
     ts: float
     names_now: List[str]
     unknown_now: int
@@ -90,7 +91,9 @@ class FacePresenceProvider:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(target=self._loop, name="face-presence-poll", daemon=True)
+        self._thread = threading.Thread(
+            target=self._loop, name="face-presence-poll", daemon=True
+        )
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
@@ -176,7 +179,12 @@ class FacePresenceProvider:
 
         if requests is None:
             from urllib.request import Request, urlopen
-            req = Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})
+
+            req = Request(
+                url,
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
             with urlopen(req, timeout=self.timeout_s) as r:  # nosec B310 (internal URL)
                 data = json.loads(r.read().decode("utf-8"))
         else:
