@@ -165,11 +165,11 @@ class FacePresence(FuserInput[str]):
 
         latest_message = self.messages[-1]
         result = f"""
-            INPUT: {self.descriptor_for_LLM}
-            // START
-            {latest_message.message}
-            // END
-            """
+INPUT: {self.descriptor_for_LLM}
+// START
+{latest_message.message}
+// END
+"""
 
         self.io_provider.add_input(
             self.__class__.__name__, latest_message.message, latest_message.timestamp
