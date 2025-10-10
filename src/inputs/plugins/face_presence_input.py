@@ -23,6 +23,7 @@ class Message:
     message : str
         Content of the message
     """
+
     timestamp: float
     message: str
 
