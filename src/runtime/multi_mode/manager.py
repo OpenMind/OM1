@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
@@ -479,11 +480,16 @@ class ModeManager:
         # Switch to specified mode
         if code == 0 and target_mode:
             # Create async task to handle the transition and response
-            asyncio.create_task(
-                self._handle_mode_switch_request(
-                    mode_status.header.frame_id, request_id.data, target_mode.data
-                )
-            )
+            def run_async():
+                try:
+                    asyncio.run(self._handle_mode_switch_request(
+                        mode_status.header.frame_id, request_id.data, target_mode.data
+                    ))
+                except Exception as e:
+                    logging.error(f"Error handling mode switch request: {e}")
+
+            thread = threading.Thread(target=run_async, daemon=True)
+            thread.start()
             return
 
         # Request current mode info
