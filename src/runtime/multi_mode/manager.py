@@ -1,14 +1,24 @@
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
+
+import zenoh
 
 from runtime.multi_mode.config import (
     ModeConfig,
     ModeSystemConfig,
     TransitionRule,
     TransitionType,
+)
+from zenoh_msgs import (
+    ModeStatusRequest,
+    ModeStatusResponse,
+    String,
+    open_zenoh_session,
+    prepare_header,
 )
 
 
@@ -66,6 +76,23 @@ class ModeManager:
             raise ValueError(
                 f"Default mode '{config.default_mode}' not found in available modes"
             )
+
+        # Start zenoh controller
+        self.mode_status_request = "om/mode/request"
+        self.mode_status_response = "om/mode/response"
+
+        try:
+            self.session = open_zenoh_session()
+            self.session.declare_subscriber(
+                self.mode_status_request, self._zenoh_mode_status_request
+            )
+            self._zenoh_mode_status_response_pub = self.session.declare_publisher(
+                self.mode_status_response
+            )
+        except Exception as e:
+            logging.error(f"Error opening Zenoh client: {e}")
+            self.session = None
+            self.pub = None
 
         logging.info(
             f"Mode Manager initialized with default mode: {config.default_mode}"
@@ -375,6 +402,7 @@ class ModeManager:
             "mode_duration": mode_duration,
             "previous_mode": self.state.previous_mode,
             "available_transitions": self.get_available_transitions(),
+            "all_modes": list(self.config.modes.keys()),
             "transition_history": self.state.transition_history[-5:],
             "timeout_seconds": current_config.timeout_seconds,
             "time_remaining": (
@@ -431,3 +459,78 @@ class ModeManager:
                     return input_target
 
         return None
+
+    def _zenoh_mode_status_request(self, data: zenoh.Sample):
+        """
+        Process incoming mode status requests via Zenoh.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The incoming Zenoh sample containing the request.
+        """
+        mode_status = ModeStatusRequest.deserialize(data.payload.to_bytes())
+        logging.info(f"Received mode status request: {mode_status}")
+
+        code = mode_status.code
+        request_id = mode_status.request_id
+        target_mode = mode_status.mode
+
+        # Switch to specified mode
+        if code == 0 and target_mode:
+            # Create async task to handle the transition and response
+            asyncio.create_task(
+                self._handle_mode_switch_request(
+                    mode_status.header.frame_id, request_id.data, target_mode.data
+                )
+            )
+            return
+
+        # Request current mode info
+        if code == 1:
+            mode_status_response = ModeStatusResponse(
+                header=prepare_header(mode_status.header.frame_id),
+                request_id=request_id,
+                code=ModeStatusResponse.Code.SUCCESS.value,
+                current_mode=String(self.state.current_mode),
+                message=String(json.dumps(self.get_mode_info())),
+            )
+            return self._zenoh_mode_status_response_pub.put(
+                mode_status_response.serialize()
+            )
+
+    async def _handle_mode_switch_request(
+        self, frame_id: str, request_id: str, target_mode: str
+    ):
+        """
+        Handle mode switch request asynchronously and send appropriate response.
+
+        Parameters
+        ----------
+        frame_id : str
+            The frame ID for the response header
+        request_id : str
+            The request ID
+        target_mode : str
+            The target mode to switch to
+        """
+        success = await self.request_transition(target_mode, "manual")
+
+        if success:
+            mode_status_response = ModeStatusResponse(
+                header=prepare_header(frame_id),
+                request_id=String(request_id),
+                code=ModeStatusResponse.Code.SUCCESS.value,
+                current_mode=String(self.state.current_mode),
+                message=String(f"Successfully switched to mode '{target_mode}'"),
+            )
+        else:
+            mode_status_response = ModeStatusResponse(
+                header=prepare_header(frame_id),
+                request_id=String(request_id),
+                code=ModeStatusResponse.Code.FAILURE.value,
+                current_mode=String(self.state.current_mode),
+                message=String(f"Failed to switch to mode '{target_mode}'"),
+            )
+
+        self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
