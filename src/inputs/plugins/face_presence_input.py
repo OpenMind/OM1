@@ -75,11 +75,10 @@ class FacePresence(FuserInput[str]):
         """
         Provider callback: push a new line into the bounded queue.
 
-        Behavior
+        Tasks
         --------
         - Tries a non-blocking enqueue into `self.message_buffer` (capacity=64).
         - If the queue is full, drops one oldest item and retries once.
-        - Never raises to the provider thread; failures are swallowed.
 
         Parameters
         ----------
@@ -100,7 +99,7 @@ class FacePresence(FuserInput[str]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for new messages from the VLM service.
+        Poll for new messages from the face presence service.
 
         Checks the message buffer for new messages with a brief delay
         to prevent excessive CPU usage.
