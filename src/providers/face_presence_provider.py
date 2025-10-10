@@ -34,6 +34,7 @@ class PresenceSnapshot:
     to_text() -> str
         Produce a concise human-readable summary suitable for logs/prompts.
     """
+
     ts: float
     names_now: List[str]
     unknown_now: int
@@ -56,6 +57,7 @@ class FacePresenceProvider:
     - Invokes every registered callback with that string (same polling thread).
 
     """
+
     def __init__(
         self,
         *,
