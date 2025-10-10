@@ -152,6 +152,17 @@ class FacePresence(FuserInput[str]):
         self.messages.append(await self._raw_to_text(raw_input))
 
     def formatted_latest_buffer(self) -> Optional[str]:
+        """
+        Return the newest message as a compact prompt block and clear history.
+
+        Returns
+        -------
+        str or None
+            A formatted multi-line string ready for LLM consumption, or None if there
+            are no messages.
+
+        """
+
         if len(self.messages) == 0:
             return None
 
