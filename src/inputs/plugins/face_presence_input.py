@@ -153,7 +153,7 @@ class FacePresence(FuserInput[str]):
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """
-        Return the newest message as a compact prompt block and clear history.
+        Return the newest message as a compact prompt result and clear history.
 
         Returns
         -------
@@ -181,28 +181,3 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages.clear()
         return result
-
-    def close(self, *, stop_provider: bool = False) -> None:
-        """
-        Unsubscribe from provider updates; optionally stop the provider.
-
-        Parameters
-        ----------
-        stop_provider : bool
-            Set True only if this input *owns* the provider lifecycle.
-            If the provider is shared across multiple inputs, leave as False.
-
-        Usage: self.close() / self.close(stop_provider=True)
-        """
-        if self._is_registered:
-            try:
-                self.provider.unregister_message_callback(self._handle_face_message)
-            except Exception:
-                pass
-            self._is_registered = False
-
-        if stop_provider:
-            try:
-                self.provider.stop(wait=False)
-            except Exception:
-                pass
