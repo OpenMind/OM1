@@ -50,7 +50,6 @@ class FacePresenceProvider:
     - Spawns one background thread that periodically POSTs to `{base_url}/who`.
     - Converts each JSON snapshot to a concise string via `PresenceSnapshot.to_text()`.
     - Invokes every registered callback with that string (same polling thread).
-
     """
 
     def __init__(
