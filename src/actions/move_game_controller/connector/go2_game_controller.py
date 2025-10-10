@@ -80,14 +80,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self.d_pad_previous = 0
         self.button_previous = 0
 
-        self.lt_value = None
-        self.rt_value = None
-        self.d_pad_value = None
-        self.button_value = None
+        self.lt_value = 0
+        self.rt_value = 0
+        self.d_pad_value = 0
+        self.button_value = 0
 
         self.RTLT_moving = False
 
-        unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        unitree_ethernet = getattr(config, "unitree_ethernet", "")
         self.odom = OdomProvider(channel=unitree_ethernet)
         self.unitree_state_provider = UnitreeGo2StateProvider()
 
@@ -166,15 +166,19 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                 return
 
             if self.unitree_state_provider.state_code == 1002:
-                self.sport_client.BalanceStand()
-                self.sport_client.Move(0.05, 0, 0)
+                if self.sport_client:
+                    logging.info("Robot is in jointLock state - issuing BalanceStand()")
+                    self.sport_client.BalanceStand()
+                    self.sport_client.Move(0.05, 0, 0)
 
             code = getattr(self.sport_client, command)()
             logging.info(f"Unitree command {command} executed with code {code}")
 
             if self.unitree_state_provider.state_code == 1002:
-                self.sport_client.BalanceStand()
-                self.sport_client.Move(0.05, 0, 0)
+                if self.sport_client:
+                    logging.info("Robot is in jointLock state - issuing BalanceStand()")
+                    self.sport_client.BalanceStand()
+                    self.sport_client.Move(0.05, 0, 0)
 
         except Exception as e:
             logging.error(f"Error in command thread {command}: {e}")
@@ -295,7 +299,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                     self._move_robot(0.0, 0.0, -self.turn_speed)
                     return
 
-            if self.d_pad_previous > 0:
+            if self.d_pad_previous and self.d_pad_previous > 0:
                 if self.d_pad_previous == 1:  # Up
                     logging.info("D-pad UP - Moving forward")
                     self._move_robot(

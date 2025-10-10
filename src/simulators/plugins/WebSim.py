@@ -4,7 +4,7 @@ import os
 import threading
 import time
 from dataclasses import asdict, dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import uvicorn
 from fastapi import FastAPI, WebSocket
@@ -22,7 +22,7 @@ class SimulatorState:
     current_action: str = "idle"
     last_speech: str = ""
     current_emotion: str = ""
-    system_latency: dict = None
+    system_latency: Optional[dict] = None
 
     def to_dict(self):
         return asdict(self)
@@ -602,7 +602,10 @@ class WebSim(Simulator):
                 input_rezeroed = []
                 for input_type, input_info in self.io_provider.inputs.items():
                     timestamp = 0
-                    if input_type != "GovernanceEthereum":
+                    if (
+                        input_type != "GovernanceEthereum"
+                        and input_info.timestamp is not None
+                    ):
                         timestamp = input_info.timestamp - earliest_time
                     input_rezeroed.append(
                         {
@@ -666,14 +669,14 @@ class WebSim(Simulator):
         except Exception as e:
             logging.error(f"Error in sim update: {e}")
 
-    def cleanup(self):
+    async def cleanup(self):
         """Clean up resources"""
         logging.info("Cleaning up WebSim...")
         self._initialized = False
 
         for connection in self.active_connections[:]:
             try:
-                connection.close()
+                await connection.close()
             except Exception as e:
                 logging.error(f"Error closing connection: {e}")
         self.active_connections.clear()

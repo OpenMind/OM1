@@ -8,7 +8,7 @@ class LLMFunction:
     Decorator to mark methods as LLM-callable functions.
     """
 
-    def __init__(self, description: str, name: str = None):
+    def __init__(self, description: str, name: T.Optional[str] = None):
         """
         Initialize the LLM function decorator.
         Parameters
@@ -67,7 +67,7 @@ class FunctionGenerator:
         return type_mapping.get(python_type, {"type": "string"})
 
     @staticmethod
-    def extract_function_schema(method: callable) -> T.Dict:
+    def extract_function_schema(method: T.Callable) -> T.Dict:
         """
         Extract OpenAI function schema from a method.
         Parameters
@@ -125,12 +125,12 @@ class FunctionGenerator:
         }
 
     @staticmethod
-    def generate_functions_from_class(cls: T.Type) -> T.Dict:
+    def generate_functions_from_class(cls_instance: T.Type) -> T.Dict:
         """
         Generate all function schemas from a class with decorated methods.
         Parameters
         ----------
-        cls : type
+        cls_instance : type
             The class to extract function schemas from.
         Returns
         -------
@@ -139,9 +139,12 @@ class FunctionGenerator:
         """
         functions = {}
 
-        for _, method in inspect.getmembers(cls, predicate=inspect.ismethod):
-            if hasattr(method, "_llm_function") and method._llm_function:
+        for _, method in inspect.getmembers(cls_instance, predicate=inspect.ismethod):
+            if (
+                hasattr(method.__func__, "_llm_function")
+                and method.__func__._llm_function
+            ):
                 function_schema = FunctionGenerator.extract_function_schema(method)
-                functions[method._llm_name] = function_schema
+                functions[method.__func__._llm_name] = function_schema
 
         return functions

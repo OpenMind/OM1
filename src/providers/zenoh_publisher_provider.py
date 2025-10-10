@@ -109,5 +109,5 @@ class ZenohPublisherProvider:
         if self._thread:
             self._thread.join(timeout=5)
         if self.session is not None:
-            self.session.Close()
+            self.session.close()
         logging.info("Zenoh Publisher Provider stopped")

@@ -70,15 +70,15 @@ def load_action(
         raise ValueError(
             f"No connector found for action {action_config['name']} connector {action_config['connector']}"
         )
-    config = ActionConfig(**action_config.get("config", {}))
+    config = ActionConfig(**action_config.get("config", {}))  # type: ignore
 
     exclude_from_prompt = False
     if "exclude_from_prompt" in action_config:
-        exclude_from_prompt = action_config["exclude_from_prompt"]
+        exclude_from_prompt = bool(action_config["exclude_from_prompt"])
 
     return AgentAction(
-        name=action_config["name"],
-        llm_label=action_config["llm_label"],
+        name=action_config["name"],  # type: ignore
+        llm_label=action_config["llm_label"],  # type: ignore
         interface=interface,
         connector=connector_class(config),
         exclude_from_prompt=exclude_from_prompt,

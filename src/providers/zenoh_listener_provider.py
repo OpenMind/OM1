@@ -76,4 +76,4 @@ class ZenohListenerProvider:
         self.running = False
 
         if self.session is not None:
-            self.session.Close()
+            self.session.close()

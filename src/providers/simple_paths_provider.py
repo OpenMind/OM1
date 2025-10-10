@@ -3,7 +3,7 @@ import multiprocessing as mp
 import threading
 import time
 from queue import Empty, Full
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import zenoh
 
@@ -232,7 +232,7 @@ class SimplePathsProvider:
         return self._lidar_string
 
     @property
-    def movement_options(self) -> Dict[str, List[int]]:
+    def movement_options(self) -> Dict[str, Union[List[int], bool]]:
         """
         Get the movement options based on the current valid paths.
 

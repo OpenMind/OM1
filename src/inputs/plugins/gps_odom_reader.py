@@ -82,7 +82,7 @@ class GPSOdomReader(FuserInput[str]):
         return (a + math.pi) % (2 * math.pi) - math.pi
 
     def _xy_to_latlon(self, x: float, y: float):
-        φ0, λ0 = map(math.radians, (self.lat0, self.lon0))
+        φ0, λ0 = map(math.radians, (self.lat0, self.lon0))  # type: ignore
         φ = φ0 + y / R_EARTH
         λ = λ0 + x / (R_EARTH * math.cos(φ0))
         return map(math.degrees, (φ, λ))

@@ -57,10 +57,11 @@ class ASRRTSPProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[Callable])
             The callback function to process ASR results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

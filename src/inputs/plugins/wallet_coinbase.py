@@ -29,7 +29,7 @@ class WalletCoinbase(FuserInput[float]):
 
         # Track IO
         self.io_provider = IOProvider()
-        self.messages: list[str] = []
+        self.messages: List[Message] = []
 
         self.POLL_INTERVAL = 0.5  # seconds between blockchain data updates
         self.COINBASE_WALLET_ID = os.environ.get("COINBASE_WALLET_ID")
@@ -40,10 +40,18 @@ class WalletCoinbase(FuserInput[float]):
         # TODO(Kyle): Support importing other wallets, following https://docs.cdp.coinbase.com/mpc-wallet/docs/wallets#importing-a-wallet
         API_KEY = os.environ.get("COINBASE_API_KEY")
         API_SECRET = os.environ.get("COINBASE_API_SECRET")
-        Cdp.configure(API_KEY, API_SECRET)
+        if not API_KEY or not API_SECRET:
+            logging.error(
+                "COINBASE_API_KEY or COINBASE_API_SECRET environment variable is not set"
+            )
+        else:
+            Cdp.configure(API_KEY, API_SECRET)
 
         try:
             # fetch wallet data
+            if not self.COINBASE_WALLET_ID:
+                raise ValueError("COINBASE_WALLET_ID environment variable is not set")
+
             self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
             logging.info(f"Wallet: {self.wallet}")
         except Exception as e:
@@ -71,7 +79,7 @@ class WalletCoinbase(FuserInput[float]):
         #     faucet_transaction.wait()
         #     logging.info(f"WalletCoinbase: Faucet transaction: {faucet_transaction}")
 
-        self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
+        self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)  # type: ignore
         logging.info(
             f"WalletCoinbase: Wallet refreshed: {self.wallet.balance('eth')}, the current balance is {self.ETH_balance}"
         )
@@ -108,13 +116,13 @@ class WalletCoinbase(FuserInput[float]):
         logging.debug(f"WalletCoinbase: {message}")
         return Message(timestamp=time.time(), message=message)
 
-    async def raw_to_text(self, raw_input: float):
+    async def raw_to_text(self, raw_input: List[float]):
         """
         Process balance update and manage message buffer.
 
         Parameters
         ----------
-        raw_input : float
+        raw_input : List[float]
             Raw balance data
         """
         pending_message = await self._raw_to_text(raw_input)

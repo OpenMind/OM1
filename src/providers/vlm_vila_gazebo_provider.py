@@ -53,10 +53,11 @@ class VLMVilaGazeboProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[callable]
             The callback function to process VLM results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """
