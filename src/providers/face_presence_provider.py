@@ -152,7 +152,6 @@ class FacePresenceProvider:
             if now < next_t:
                 time.sleep(min(0.02, next_t - now))
                 continue
-
             try:
                 snap = self._fetch_snapshot()
                 text = snap.to_text()
