@@ -20,6 +20,7 @@ from backgrounds.base import Background, BackgroundConfig
 from inputs import load_input
 from inputs.base import Sensor, SensorConfig
 from llm import LLM, LLMConfig, load_llm
+from runtime.robotics import load_unitree
 from runtime.single_mode.config import RuntimeConfig, add_meta
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
@@ -245,6 +246,10 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
             g_URID = backup_URID
 
     g_ut_eth = raw_config.get("unitree_ethernet", None)
+    if g_ut_eth is None or g_ut_eth == "":
+        logging.info("No robot hardware ethernet port provided.")
+    else:
+        load_unitree(g_ut_eth)
 
     mode_system_config = ModeSystemConfig(
         name=raw_config.get("name", "mode_system"),
