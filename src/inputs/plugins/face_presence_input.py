@@ -1,8 +1,11 @@
+# src/inputs/plugins/face_presence_input.py
+
 import asyncio
 import time
+from collections import deque
 from dataclasses import dataclass
-from queue import Queue
-from typing import List, Optional
+from queue import Empty, Queue
+from typing import Deque, Optional
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
@@ -27,51 +30,90 @@ class Message:
     message: str
 
 
-class FacePresenceInput(FuserInput[str]):
+class FacePresence(FuserInput[str]):
     """
-    Async input facade (mirrors the style of dimo_tesla / vlm_local_yolo):
+    Async input that adapts the FacePresenceProvider to the fuser/LLM pipeline.
 
-      - start()/stop(): manage an internal polling coroutine that samples the provider
-        at a fixed interval (default 0.2s) and caches the latest reading.
+    Tasks
+    ----------------
+    - Subscribe to the provider's callbacks and enqueue received text lines.
+    - Poll the queue periodically (non-blocking) in `_poll()`.
+    - Convert raw text into `Message` objects in `_raw_to_text()`.
+    - Keep a bounded in-memory history (`self.messages`, deque with maxlen=300).
+    - Produce a compact, prompt-ready block via `formatted_latest_buffer()`.
 
-      - get_latest(): return newest item and clear older provider entries.
-      - peek(): non-destructive read of the newest item.
-      - formatted_latest_buffer(): compact string (or multi-line) for LLM prompts.
-
-    This class does *not* talk to HTTP directly; it consumes the provider’s buffer.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()) -> None:
-
+    def __init__(self, config: SensorConfig = SensorConfig()):
+        """
+        Initialize the face presence input
+        """
         super().__init__(config)
 
-        # Track IO
         self.io_provider = IOProvider()
 
-        base_url = getattr(self.config, "base_url", "http://127.0.0.1:6793")
+        self.messages: Deque[Message] = deque(maxlen=300)
 
-        self.face_presence_provider = FacePresenceProvider(base_url=base_url)
-        self.face_presence_provider.start()
+        self.message_buffer: Queue[str] = Queue(maxsize=64)
 
-        self.messages: List[Message] = []
+        # Read config and construct the provider WITH required args
+        base_url = getattr(self.config, "face_http_base_url", "http://127.0.0.1:6793")
+        recent_sec = float(getattr(self.config, "face_recent_sec", 2.0))
+        fps = float(getattr(self.config, "face_poll_fps", 5.0))
 
-        self.message_buffer: Queue[str] = Queue()
+        self.provider: FacePresenceProvider = FacePresenceProvider(
+            base_url=base_url, recent_sec=recent_sec, fps=fps, timeout_s=2.0
+        )
+        self._is_registered: bool = True
+
+        self.provider.start()
+        self.provider.register_message_callback(self._handle_face_message)
 
         self.descriptor_for_LLM = "Face Presence Sensor"
 
+    def _handle_face_message(self, text_line: str) -> None:
+        """
+        Provider callback: push a new line into the bounded queue.
+
+        Behavior
+        --------
+        - Tries a non-blocking enqueue into `self.message_buffer` (capacity=64).
+        - If the queue is full, drops one oldest item and retries once.
+        - Never raises to the provider thread; failures are swallowed.
+
+        Parameters
+        ----------
+        text_line : str
+            A single, already formatted line (e.g., "present=[alice], unknown=0, ts=...").
+        """
+        try:
+            self.message_buffer.put_nowait(text_line)
+        except Exception:
+            try:
+                _ = self.message_buffer.get_nowait()
+            except Empty:
+                pass
+            try:
+                self.message_buffer.put_nowait(text_line)
+            except Exception:
+                pass
+
     async def _poll(self) -> Optional[str]:
         """
-        Poll for new messages in the buffer.
+        Poll for new messages from the VLM service.
+
+        Checks the message buffer for new messages with a brief delay
+        to prevent excessive CPU usage.
 
         Returns
         -------
         Optional[str]
-            Message from the buffer if available, None otherwise
+            The next message from the buffer if available, None otherwise
         """
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.5)
         try:
-            return self.face_presence_provider.peek_latest()
-        except asyncio.QueueEmpty:
+            return self.message_buffer.get_nowait()
+        except Empty:
             return None
 
     async def _raw_to_text(self, raw_input: str) -> Message:
@@ -108,41 +150,49 @@ class FacePresenceInput(FuserInput[str]):
         if raw_input is None:
             return
 
-        pending_message = await self._raw_to_text(raw_input)
-
-        if pending_message is not None:
-            self.messages.append(pending_message)
+        self.messages.append(await self._raw_to_text(raw_input))
 
     def formatted_latest_buffer(self) -> Optional[str]:
-        """
-        Format and clear the latest buffer contents.
-
-        Retrieves the most recent message from the buffer, formats it
-        with timestamp and class name, adds it to the IO provider,
-        and clears the buffer.
-
-        Returns
-        -------
-        Optional[str]
-            Formatted string containing the latest message and metadata,
-            or None if the buffer is empty
-
-        """
         if len(self.messages) == 0:
             return None
 
         latest_message = self.messages[-1]
-
         result = f"""
 INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END
-"""
+""".strip(
+            "\n"
+        )
 
         self.io_provider.add_input(
             self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
-        self.messages = []
-
+        self.messages.clear()
         return result
+
+    def close(self, *, stop_provider: bool = False) -> None:
+        """
+        Unsubscribe from provider updates; optionally stop the provider.
+
+        Parameters
+        ----------
+        stop_provider : bool
+            Set True only if this input *owns* the provider lifecycle.
+            If the provider is shared across multiple inputs, leave as False.
+
+        Usage: self.close() / self.close(stop_provider=True)
+        """
+        if self._is_registered:
+            try:
+                self.provider.unregister_message_callback(self._handle_face_message)
+            except Exception:
+                pass
+            self._is_registered = False
+
+        if stop_provider:
+            try:
+                self.provider.stop(wait=False)
+            except Exception:
+                pass
