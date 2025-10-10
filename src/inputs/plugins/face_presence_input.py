@@ -1,5 +1,3 @@
-# src/inputs/plugins/face_presence_input.py
-
 import asyncio
 import time
 from collections import deque
@@ -25,7 +23,6 @@ class Message:
     message : str
         Content of the message
     """
-
     timestamp: float
     message: str
 
@@ -41,7 +38,6 @@ class FacePresence(FuserInput[str]):
     - Convert raw text into `Message` objects in `_raw_to_text()`.
     - Keep a bounded in-memory history (`self.messages`, deque with maxlen=300).
     - Produce a compact, prompt-ready block via `formatted_latest_buffer()`.
-
     """
 
     def __init__(self, config: SensorConfig = SensorConfig()):

@@ -1,14 +1,9 @@
-# src/providers/face_presence_provider.py
-
 import threading
 import time
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
+import requests
 
-try:
-    import requests
-except Exception:
-    requests = None
 
 from .singleton import singleton
 
@@ -80,7 +75,6 @@ class FacePresenceProvider:
             Polling rate in events per second (e.g., 5.0 → every 0.2s).
         timeout_s : float, default 2.0
             HTTP request timeout in seconds.
-
         """
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
@@ -101,7 +95,6 @@ class FacePresenceProvider:
         ----------
         fn : Callable[[str], None]
             Function invoked from the polling thread with one formatted string.
-
         """
         with self._cb_lock:
             if fn not in self._callbacks:
@@ -115,7 +108,6 @@ class FacePresenceProvider:
         ----------
         fn : Callable[[str], None]
             The same callable passed to `register_message_callback()`.
-
         """
         with self._cb_lock:
             try:
@@ -190,7 +182,6 @@ class FacePresenceProvider:
         -------
         PresenceSnapshot
             Structured view of the server's `/who` response.
-
         """
         body = {"recent_sec": self.recent_sec}
         url = f"{self.base_url}/who"
