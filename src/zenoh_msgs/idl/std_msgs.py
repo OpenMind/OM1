@@ -48,6 +48,6 @@ def prepare_header(frame_id: str = "") -> Header:
     """
     ts = time.time()
     remainder, seconds = math.modf(ts)
-    timestamp = Time(sec=int32(seconds), nanosec=uint32(remainder * 1000000000))
+    timestamp = Time(sec=int32(seconds), nanosec=uint32(remainder * 1000000000))  # type: ignore
     header = Header(stamp=timestamp, frame_id=frame_id)
     return header

@@ -69,7 +69,7 @@ class UnitreeGo2NavigationProvider:
             logging.debug("Received Navigation Status message: %s", message)
             status_list = message.status_list
             if status_list:
-                latest_status = status_list[-1]
+                latest_status = status_list[-1]  # type: ignore
                 logging.info("Latest Navigation Status: %s", latest_status)
                 self.navigation_status = status_map.get(latest_status.status, "UNKNOWN")
                 logging.info("Navigation Status: %s", self.navigation_status)

@@ -4,7 +4,6 @@ from enum import Enum
 from actions.base import Interface
 
 
-@dataclass
 class GPSAction(str, Enum):
     SHARE_LOCATION = "share location"
     IDLE = "idle"

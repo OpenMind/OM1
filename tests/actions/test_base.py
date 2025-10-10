@@ -3,7 +3,6 @@ from typing import Optional
 
 import pytest
 
-# Import the classes from your module (assuming it's named action_base.py)
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 
 
@@ -80,11 +79,11 @@ def test_action_config():
     config = ActionConfig(param1="value1", param2=123, param3=True)
 
     assert hasattr(config, "param1")
-    assert config.param1 == "value1"
+    assert config.param1 == "value1"  # type: ignore
     assert hasattr(config, "param2")
-    assert config.param2 == 123
+    assert config.param2 == 123  # type: ignore
     assert hasattr(config, "param3")
-    assert config.param3 is True
+    assert config.param3 is True  # type: ignore
 
 
 def test_agent_action_structure(agent_action):

@@ -1,3 +1,4 @@
+# type: ignore
 """Simple and lightweight module for working with RPLidar rangefinder scanners.
 
 Usage example:

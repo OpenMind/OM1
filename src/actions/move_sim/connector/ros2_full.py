@@ -60,7 +60,7 @@ class ROS2Connector(ActionConnector[MoveInput]):
         logging.info(f"SendThisToROS2: {new_msg}")
 
         # Publish the Move message using ROS2PublisherProvider.
-        self.publisher.add_pending_message(new_msg)
+        self.publisher.add_pending_message(new_msg)  # type: ignore
 
     def tick(self) -> None:
         time.sleep(0.1)

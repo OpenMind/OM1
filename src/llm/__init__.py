@@ -7,6 +7,7 @@ import typing as T
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from llm.function_schemas import generate_function_schemas_from_actions
 from providers.io_provider import IOProvider
 
 R = T.TypeVar("R")
@@ -88,15 +89,28 @@ class LLM(T.Generic[R]):
         Type specification for model responses
     config : LLMConfig, optional
         Configuration settings for the LLM
-
+    available_actions : list, optional
+        List of available actions for function calling
     """
 
-    def __init__(self, output_model: T.Type[R], config: LLMConfig = LLMConfig()):
+    def __init__(
+        self,
+        config: LLMConfig = LLMConfig(),
+        available_actions: T.Optional[list] = None,
+    ):
         # Set up the LLM configuration
         self._config = config
 
-        # Set up the output model
-        self._output_model = output_model
+        # Set up available actions for function calling
+        self._available_actions = available_actions or []
+        self.function_schemas = []
+        if self._available_actions:
+            self.function_schemas = generate_function_schemas_from_actions(
+                self._available_actions
+            )
+            logging.info(
+                f"LLM initialized with {len(self.function_schemas)} function schemas"
+            )
 
         # Set up the IO provider
         self.io_provider = IOProvider()

@@ -9,6 +9,7 @@ import zenoh
 from zenoh_msgs import (
     AIStatusRequest,
     Pose,
+    String,
     nav_msgs,
     open_zenoh_session,
     prepare_header,
@@ -78,7 +79,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
                 data.payload.to_bytes()
             )
             logging.debug("Received AMCL message: %s", message)
-            covariance = message.covariance
+            covariance = np.array(message.covariance)
 
             pos_uncertainty = np.sqrt(covariance[0] + covariance[7])
             yaw_uncertainty = np.sqrt(covariance[35])
@@ -100,10 +101,12 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
                 and current_time - self.last_status_publish_time
                 >= self.status_publish_interval
             ):
-                status_msg = AIStatusRequest()
-                status_msg.header = prepare_header(message.header.frame_id)
-                status_msg.request_id = str(uuid4())
-                status_msg.code = 1 if self.localization_status else 0
+                header = prepare_header(message.header.frame_id)
+                status_msg = AIStatusRequest(
+                    header=header,
+                    request_id=String(str(uuid4())),
+                    code=1 if self.localization_status else 0,
+                )
                 self.pub.put(status_msg.serialize())
                 self.last_status_publish_time = current_time
                 logging.debug("Published status message at %s", current_time)

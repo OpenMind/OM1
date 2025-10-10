@@ -22,7 +22,13 @@ except ImportError:
         "Unitree SDK or CycloneDDS not found. You do not need this unless you are connecting to a Unitree robot."
     )
 
-from zenoh_msgs import Odometry, PoseWithCovarianceStamped, nav_msgs, open_zenoh_session
+from zenoh_msgs import (
+    Odometry,
+    PoseStamped,
+    PoseWithCovarianceStamped,
+    nav_msgs,
+    open_zenoh_session,
+)
 
 from .singleton import singleton
 
@@ -76,7 +82,7 @@ def odom_processor(
         logging.debug(f"Zenoh odom handler: {odom}")
 
         data_queue.put(
-            PoseWithCovarianceStamped(header=odom.header, pose=odom.pose.pose)
+            PoseWithCovarianceStamped(header=odom.header, pose=odom.pose.pose)  # type: ignore
         )
 
     def pose_message_handler(data: PoseStamped_):
@@ -148,7 +154,9 @@ class OdomProvider:
         If not specified, it will raise an error when starting the provider.
     """
 
-    def __init__(self, URID: str = "", use_zenoh: bool = False, channel: str = ""):
+    def __init__(
+        self, URID: str = "", use_zenoh: bool = False, channel: Optional[str] = ""
+    ):
         """
         Robot and sensor configuration
         """
@@ -159,7 +167,7 @@ class OdomProvider:
         self.URID = URID
         self.channel = channel
 
-        self.data_queue: mp.Queue[PoseWithCovarianceStamped] = mp.Queue()
+        self.data_queue: mp.Queue[PoseStamped] = mp.Queue()
         self._odom_reader_thread: Optional[mp.Process] = None
         self._odom_processor_thread: Optional[threading.Thread] = None
 
