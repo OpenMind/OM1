@@ -71,7 +71,7 @@ class ModeStatusRequest(IdlStruct, typename="ModeStatusRequest"):
     header: Header
     request_id: String
     code: int8
-    mode: String = String("") # Target mode for SWITCH_MODE, ignored for STATUS
+    mode: String = String("")  # Target mode for SWITCH_MODE, ignored for STATUS
 
 
 @dataclass

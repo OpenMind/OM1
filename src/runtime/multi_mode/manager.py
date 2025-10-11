@@ -482,9 +482,13 @@ class ModeManager:
             # Create async task to handle the transition and response
             def run_async():
                 try:
-                    asyncio.run(self._handle_mode_switch_request(
-                        mode_status.header.frame_id, request_id.data, target_mode.data
-                    ))
+                    asyncio.run(
+                        self._handle_mode_switch_request(
+                            mode_status.header.frame_id,
+                            request_id.data,
+                            target_mode.data,
+                        )
+                    )
                 except Exception as e:
                     logging.error(f"Error handling mode switch request: {e}")
 
