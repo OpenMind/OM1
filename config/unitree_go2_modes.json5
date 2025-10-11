@@ -7,7 +7,7 @@
 
   // Global settings
   "api_key": "openmind_free",
-  "unitree_ethernet": "en0",
+  "unitree_ethernet": "eno1",
   "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
   "cortex_llm": {
     "type": "OpenAILLM",
@@ -55,8 +55,21 @@
           "name": "face",
           "llm_label": "emotion",
           "connector": "avatar"
+        },
+        {
+          name: "move_go2_action",
+          llm_label: "unitree_go2_action",
+          connector: "unitree_sdk"
         }
-      ]
+      ],
+      "backgrounds": [
+          {
+            "type": "Avatar"
+          },
+          {
+            "type": "UnitreeGo2State",
+          },
+        ]
     },
 
     "slam": {
