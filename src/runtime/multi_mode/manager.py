@@ -532,7 +532,7 @@ class ModeManager:
                 request_id=String(request_id),
                 code=ModeStatusResponse.Code.SUCCESS.value,
                 current_mode=String(self.state.current_mode),
-                message=String(f"Successfully switched to mode '{target_mode}'"),
+                message=String(f"Successfully switched to mode {target_mode}"),
             )
         else:
             mode_status_response = ModeStatusResponse(
@@ -540,7 +540,7 @@ class ModeManager:
                 request_id=String(request_id),
                 code=ModeStatusResponse.Code.FAILURE.value,
                 current_mode=String(self.state.current_mode),
-                message=String(f"Failed to switch to mode '{target_mode}'"),
+                message=String(f"Failed to switch to mode {target_mode}"),
             )
 
         self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
