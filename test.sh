@@ -20,5 +20,5 @@ case "$MODE" in
   *)
     echo "Unknown mode: $MODE"
     exit 2
-    ;;
+    ;;./test.sh new
 esac

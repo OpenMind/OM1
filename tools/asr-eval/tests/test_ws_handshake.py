@@ -11,17 +11,17 @@ from tools.asr_eval import ws_client
 
 @pytest.mark.asyncio
 async def test_initial_config_and_audio_frames():
-    async def server_handler(ws, path):
-        msg = await ws.recv()
-        obj = json.loads(msg)
-        required = {"languageCode", "encoding", "sampleRateHertz", "channels", "bitsPerSample"}
-        assert required.issubset(set(obj.keys()))
-        audio_msg = await ws.recv()
-        audio_obj = json.loads(audio_msg)
-        assert "audio" in audio_obj
-        audio_bytes = base64.b64decode(audio_obj["audio"])
-        assert len(audio_bytes) > 0
-        await ws.send(json.dumps({"type": "final", "transcript": "hello world"}))
+ async def server_handler(ws):
+    msg = await ws.recv()
+    obj = json.loads(msg)
+    required = {"languageCode", "encoding", "sampleRateHertz", "channels", "bitsPerSample"}
+    assert required.issubset(set(obj.keys()))
+    audio_msg = await ws.recv()
+    audio_obj = json.loads(audio_msg)
+    assert "audio" in audio_obj
+    audio_bytes = base64.b64decode(audio_obj["audio"])
+    assert len(audio_bytes) > 0
+    await ws.send(json.dumps({"type": "final", "transcript": "hello world"}))
 
     server = await websockets.serve(server_handler, "localhost", 8765)
     await asyncio.sleep(0.01)
