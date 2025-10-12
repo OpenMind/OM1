@@ -37,8 +37,6 @@ class VLMVilaRTSPProvider:
             The decode format for the video stream. Defaults to "H264".
         fps : int
             The fps for the VLM service connection.
-        stream_url : str, optional
-            The URL for the video stream. If not provided, defaults to None.
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
