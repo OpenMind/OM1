@@ -1,9 +1,9 @@
+import asyncio
+import json
 import logging
 import time
-import json
-import asyncio
-from typing import Callable, Optional, List, Dict, Any, Union
 from collections import deque
+from typing import Any, Callable, Dict, List, Optional
 
 from om1_vlm import VideoRTSPStream
 from openai import AsyncOpenAI
@@ -115,20 +115,22 @@ class VLMOpenAIRTSPProvider:
             ]
 
             for i, frame in enumerate(frames):
-                content.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{frame}",
-                        "detail": "low",
-                    },
-                })
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{frame}",
+                            "detail": "low",
+                        },
+                    }
+                )
 
             response = await self.api_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "user",
-                        "content": content, # type: ignore
+                        "content": content,  # type: ignore
                     }
                 ],
                 max_tokens=300,
