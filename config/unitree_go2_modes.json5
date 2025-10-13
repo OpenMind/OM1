@@ -104,8 +104,25 @@
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 4
+            "silence_rate": 10
           }
+        }
+      ],
+      "backgrounds": [
+        {
+          "type": "Avatar"
+        },
+        {
+          "type": "UnitreeGo2State",
+        },
+        {
+          "type": "UnitreeGo2AMCL",
+        },
+        {
+          "type": "UnitreeGo2Navigation",
+        },
+        {
+          "type": "UnitreeGo2Location",
         }
       ]
     },
@@ -148,8 +165,25 @@
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 0
+            "silence_rate": 10
           }
+        }
+      ],
+      "backgrounds": [
+        {
+          "type": "Avatar"
+        },
+        {
+          "type": "UnitreeGo2State",
+        },
+        {
+          "type": "UnitreeGo2AMCL",
+        },
+        {
+          "type": "UnitreeGo2Navigation",
+        },
+        {
+          "type": "UnitreeGo2Location",
         }
       ]
     },
@@ -157,7 +191,7 @@
     "guard": {
       "display_name": "Security Guard",
       "description": "Patrol and security monitoring mode",
-      "system_prompt_base": "You are Bits in security mode. Your responsibilities:\n1. Monitor the environment for unusual activity\n2. Patrol designated areas\n3. Alert users to potential security concerns\n4. Remain vigilant and professional\n5. Log important security events\n\nBe alert, professional, and thorough. Report anything unusual immediately.",
+      "system_prompt_base": "You are Bits in security mode. Your responsibilities:\n1. Monitor the environment for unusual activity\n2. Patrol designated areas\n3. Alert users to potential security concerns\n4. Remain vigilant and professional\n5. Log important security events\n\nBe alert, professional, and thorough. Report anything unusual immediately. If you see a person who appears injured or in need of assistance, ask for details and provide the information in your response.",
       "entry_message": "Security mode activated.",
       "exit_message": "Security patrol complete. All areas checked.",
       "hertz": 1,
@@ -198,8 +232,25 @@
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 8
+            "silence_rate": 10
           }
+        }
+      ],
+      "backgrounds": [
+        {
+          "type": "Avatar"
+        },
+        {
+          "type": "UnitreeGo2State",
+        },
+        {
+          "type": "UnitreeGo2AMCL",
+        },
+        {
+          "type": "UnitreeGo2Navigation",
+        },
+        {
+          "type": "UnitreeGo2Location",
         }
       ]
     }
