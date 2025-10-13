@@ -1,10 +1,3 @@
-"""
-Mode Configuration System for OM1
-
-This module defines the configuration structure for mode-aware operation,
-where different modes can have different inputs, actions, prompts, and behaviors.
-"""
-
 import logging
 import os
 from dataclasses import dataclass, field
@@ -182,6 +175,7 @@ class ModeSystemConfig:
     # Global settings
     name: str
     default_mode: str
+    config_name: str = ""
     allow_manual_switching: bool = True
     transition_announcement: bool = True
     mode_memory_enabled: bool = True
@@ -254,6 +248,7 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
     mode_system_config = ModeSystemConfig(
         name=raw_config.get("name", "mode_system"),
         default_mode=raw_config["default_mode"],
+        config_name=config_name,
         allow_manual_switching=raw_config.get("allow_manual_switching", True),
         transition_announcement=raw_config.get("transition_announcement", True),
         mode_memory_enabled=raw_config.get("mode_memory_enabled", True),

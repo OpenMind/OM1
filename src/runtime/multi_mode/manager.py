@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import threading
 import time
 from dataclasses import dataclass, field
@@ -78,6 +79,10 @@ class ModeManager:
                 f"Default mode '{config.default_mode}' not found in available modes"
             )
 
+        # Load persisted state if enabled
+        if config.mode_memory_enabled:
+            self._load_mode_state()
+
         # Start zenoh controller
         self.mode_status_request = "om/mode/request"
         self.mode_status_response = "om/mode/response"
@@ -96,7 +101,7 @@ class ModeManager:
             self.pub = None
 
         logging.info(
-            f"Mode Manager initialized with default mode: {config.default_mode}"
+            f"Mode Manager initialized with current mode: {self.state.current_mode}"
         )
 
     @property
@@ -357,6 +362,8 @@ class ModeManager:
 
             await self._notify_transition_callbacks(from_mode, target_mode)
 
+            self._save_mode_state()
+
             return True
 
         except Exception as e:
@@ -544,3 +551,99 @@ class ModeManager:
             )
 
         self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
+
+    def _get_state_file_path(self) -> str:
+        """
+        Get the path to the mode state file.
+
+        Returns
+        -------
+        str
+            The absolute path to the state file
+        """
+        memory_folder_path = os.path.join(
+            os.path.dirname(__file__), "../../../config", "memory"
+        )
+        if not os.path.exists(memory_folder_path):
+            os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)
+
+        config_name = getattr(self.config, "config_name", "default")
+        state_filename = f".{config_name}.json5"
+
+        return os.path.join(memory_folder_path, state_filename)
+
+    def _load_mode_state(self):
+        """
+        Load the persisted mode state from file.
+
+        If the state file exists and contains a valid last active mode,
+        set it as the current mode. Otherwise, use the default mode.
+        """
+        state_file = self._get_state_file_path()
+
+        try:
+            with open(state_file, "r") as f:
+                state_data = json.load(f)
+
+            last_active_mode = state_data.get("last_active_mode")
+
+            if (
+                last_active_mode
+                and last_active_mode in self.config.modes
+                and last_active_mode != self.config.default_mode
+            ):
+
+                logging.info(f"Restoring last active mode: {last_active_mode}")
+                self.state.current_mode = last_active_mode
+                self.state.previous_mode = state_data.get("previous_mode")
+
+                saved_history = state_data.get("transition_history", [])
+                if saved_history:
+                    self.state.transition_history.extend(saved_history)
+                    if len(self.state.transition_history) > 50:
+                        self.state.transition_history = self.state.transition_history[
+                            -25:
+                        ]
+
+                logging.info(f"Mode state restored from {state_file}")
+            else:
+                logging.info(f"Using default mode: {self.config.default_mode}")
+
+        except FileNotFoundError:
+            logging.debug(f"No state file found at {state_file}, using default mode")
+        except (json.JSONDecodeError, KeyError) as e:
+            logging.warning(f"Invalid state file format: {e}, using default mode")
+        except Exception as e:
+            logging.error(f"Error loading mode state: {e}, using default mode")
+
+    def _save_mode_state(self):
+        """
+        Save the current mode state to file.
+
+        This method is called after successful mode transitions to persist
+        the current state for restoration on next startup.
+        """
+        if not self.config.mode_memory_enabled:
+            return
+
+        state_file = self._get_state_file_path()
+
+        try:
+            os.makedirs(os.path.dirname(state_file), exist_ok=True)
+
+            state_data = {
+                "last_active_mode": self.state.current_mode,
+                "previous_mode": self.state.previous_mode,
+                "timestamp": time.time(),
+                "transition_history": self.state.transition_history[-10:],
+            }
+
+            temp_file = state_file + ".tmp"
+            with open(temp_file, "w") as f:
+                json.dump(state_data, f, indent=2)
+
+            os.rename(temp_file, state_file)
+            logging.debug(f"Mode state saved to {state_file}")
+
+        except Exception as e:
+            logging.error(f"Error saving mode state: {e}")
