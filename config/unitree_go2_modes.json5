@@ -158,7 +158,7 @@
       "display_name": "Security Guard",
       "description": "Patrol and security monitoring mode",
       "system_prompt_base": "You are Bits in security mode. Your responsibilities:\n1. Monitor the environment for unusual activity\n2. Patrol designated areas\n3. Alert users to potential security concerns\n4. Remain vigilant and professional\n5. Log important security events\n\nBe alert, professional, and thorough. Report anything unusual immediately.",
-      "entry_message": "Security mode activated. Beginning patrol route.",
+      "entry_message": "Security mode activated.",
       "exit_message": "Security patrol complete. All areas checked.",
       "hertz": 1,
       "agent_inputs": [
@@ -176,6 +176,14 @@
         },
         {
           "type": "SimplePaths"
+        },
+        {
+          "type": "VLMOpenAIRTSP",
+          "config": {
+            "rtsp_url": "rtsp://localhost:8554/front_camera",
+            "prompt": "Describe whether you see a human laying on the ground, appearing injured, or in need of assistance. If you see such a person, provide the details in your response.",
+            "descriptor_for_LLM": "security_camera_observation"
+          }
         }
       ],
       "agent_actions": [

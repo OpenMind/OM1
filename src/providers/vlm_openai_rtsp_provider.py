@@ -1,6 +1,9 @@
 import logging
 import time
-from typing import Callable, Optional
+import json
+import asyncio
+from typing import Callable, Optional, List, Dict, Any, Union
+from collections import deque
 
 from om1_vlm import VideoRTSPStream
 from openai import AsyncOpenAI
@@ -26,6 +29,8 @@ class VLMOpenAIRTSPProvider:
         decode_format: str = "H264",
         prompt: str = "What is the most interesting aspect in this series of images?",
         fps: int = 30,
+        batch_size: int = 5,
+        batch_interval: float = 0.5,
     ):
         """
         Initialize the VLM Provider.
@@ -42,58 +47,103 @@ class VLMOpenAIRTSPProvider:
             The decode format for the video stream. Defaults to "H264".
         fps : int
             The fps for the VLM service connection.
+        batch_size : int
+            Number of frames to collect before sending to OpenAI. Defaults to 5.
+        batch_interval : float
+            Time interval in seconds between batch processing. Defaults to 0.5.
         """
         self.running: bool = False
         self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.video_stream: VideoRTSPStream = VideoRTSPStream(
             rtsp_url,
             decode_format,
-            frame_callback=self._process_frame,  # type: ignore
+            frame_callback=self._queue_frame,  # type: ignore
             fps=fps,
         )
         self.message_callback: Optional[Callable] = None
         self.prompt = prompt
+        self.batch_size = batch_size
+        self.batch_interval = batch_interval
+        self.frame_queue: deque = deque(maxlen=batch_size)
+        self.batch_task: Optional[asyncio.Task] = None
 
-    async def _process_frame(self, frame: str):
+    def _queue_frame(self, frame_data: str):
         """
-        Process a video frame using the LLM API.
+        Queue a video frame for batch processing.
 
         Parameters
         ----------
-        frame : str
-            The base64 encoded video frame to process.
+        frame_data : str
+            A JSON string containing base64 encoded frame data.
+        """
+        try:
+            frame = json.loads(frame_data)["frame"]
+            self.frame_queue.append(frame)
+            logging.debug(f"Queued frame, queue size: {len(self.frame_queue)}")
+        except Exception as e:
+            logging.error(f"Error queuing frame: {e}")
+
+    async def _process_batch(self):
+        """
+        Process batches of frames at regular intervals.
+        """
+        while self.running:
+            await asyncio.sleep(self.batch_interval)
+
+            if len(self.frame_queue) > 0:
+                frames_to_process = list(self.frame_queue)
+                self.frame_queue.clear()
+
+                await self._send_batch_to_openai(frames_to_process)
+
+    async def _send_batch_to_openai(self, frames: List[str]):
+        """
+        Send a batch of frames to OpenAI API.
+
+        Parameters
+        ----------
+        frames : List[str]
+            List of base64 encoded frame data.
         """
         processing_start = time.perf_counter()
         try:
+            content: List[Dict[str, Any]] = [
+                {
+                    "type": "text",
+                    "text": f"{self.prompt} (Analyzing {len(frames)} frames)",
+                }
+            ]
+
+            for i, frame in enumerate(frames):
+                content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{frame}",
+                        "detail": "low",
+                    },
+                })
+
             response = await self.api_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": self.prompt,
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{frame}",
-                                    "detail": "low",
-                                },
-                            },
-                        ],
+                        "content": content, # type: ignore
                     }
                 ],
                 max_tokens=300,
             )
+
             processing_latency = time.perf_counter() - processing_start
-            logging.debug(f"Processing latency: {processing_latency:.3f} seconds")
+            logging.debug(f"Batch processing latency: {processing_latency:.3f} seconds")
+            logging.debug(f"Processed {len(frames)} frames")
             logging.debug(f"OpenAI LLM VLM Response: {response}")
+
             if self.message_callback:
                 self.message_callback(response)
+
         except Exception as e:
-            logging.error(f"Error processing frame: {e}")
+            logging.error(f"Error processing batch: {e}")
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
@@ -120,7 +170,10 @@ class VLMOpenAIRTSPProvider:
         self.running = True
         self.video_stream.start()
 
-        logging.info("OpenAI VLM RTSP provider started")
+        # Start the batch processing task
+        self.batch_task = asyncio.create_task(self._process_batch())
+
+        logging.info("OpenAI VLM RTSP provider started with batch processing")
 
     def stop(self):
         """
@@ -131,3 +184,12 @@ class VLMOpenAIRTSPProvider:
         self.running = False
 
         self.video_stream.stop()
+
+        # Cancel the batch processing task
+        if self.batch_task and not self.batch_task.done():
+            self.batch_task.cancel()
+
+        # Clear any remaining frames
+        self.frame_queue.clear()
+
+        logging.info("OpenAI VLM RTSP provider stopped")

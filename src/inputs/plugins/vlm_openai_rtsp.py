@@ -30,7 +30,7 @@ class Message:
     message: str
 
 
-class VLMOpenAI(FuserInput[str]):
+class VLMOpenAIRTSP(FuserInput[str]):
     """
     Vision Language Model input handler.
 
