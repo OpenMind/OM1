@@ -51,7 +51,7 @@ class OpenAILLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "gpt-4o-mini"
+            self._config.model = "gpt-4.1-mini"
 
         self._client = openai.AsyncClient(
             base_url=config.base_url or "https://api.openmind.org/api/core/openai",
@@ -95,7 +95,7 @@ class OpenAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gpt-4o-mini",
+                model=self._config.model or "gpt-4.1-mini",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",

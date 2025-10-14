@@ -25,6 +25,8 @@ from .idl import (
     Header,
     Image,
     LaserScan,
+    ModeStatusRequest,
+    ModeStatusResponse,
     Nav2Status,
     NavSatFix,
     NavSatStatus,
@@ -70,6 +72,8 @@ __all__ = [
     "CameraStatus",
     "AIStatusRequest",
     "AIStatusResponse",
+    "ModeStatusRequest",
+    "ModeStatusResponse",
     # geographic_msgs
     "GeoPoint",
     "GeoPointStamped",

@@ -47,7 +47,7 @@ class GoogleASRRTSPInput(FuserInput[str]):
 
         # Initialize ASR provider
         api_key = getattr(self.config, "api_key", None)
-        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/live")
+        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/audio")
         rate = getattr(self.config, "rate", 16000)
         base_url = getattr(
             self.config,
@@ -170,9 +170,13 @@ INPUT: {self.descriptor_for_LLM}
 {self.messages[-1]}
 // END
 """
+        # Add to IO provider and conversation provider
         self.io_provider.add_input(
             self.descriptor_for_LLM, self.messages[-1], time.time()
         )
+        self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
+
+        # Reset messages buffer
         self.messages = []
         return result

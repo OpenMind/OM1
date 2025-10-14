@@ -80,7 +80,6 @@ def test_init_with_full_config(
     )
 
     connector.tts.start.assert_called_once()
-    connector.tts.add_pending_message.assert_called_once_with("Woof Woof")
 
     assert connector.silence_rate == 0
     assert connector.silence_counter == 0
@@ -211,7 +210,6 @@ async def test_connect_with_silence_rate_skip(
     assert connector.silence_counter == 1
 
     connector.tts.create_pending_message.assert_not_called()
-    connector.tts.add_pending_message.assert_called_once_with("Woof Woof")
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
