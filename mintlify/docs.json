@@ -90,12 +90,14 @@
                         "pages": [
                             "full_autonomy_guidelines/backpack_introduction",
                             "full_autonomy_guidelines/architecture_overview",
+                            "full_autonomy_guidelines/pre_config",
                             {
                                 "group": "Full Autonomy Components",
                                 "pages": [
                                     "full_autonomy_guidelines/om1_avatar",
                                     "full_autonomy_guidelines/om",
-                                    "full_autonomy_guidelines/ros2_sdk"
+                                    "full_autonomy_guidelines/ros2_sdk",
+                                    "full_autonomy_guidelines/om1_video_processor"
                                 ]
 
                             }
