@@ -7,10 +7,14 @@ from actions.base import Interface
 @dataclass
 class SelfieInput:
     """
-    Arguments for taking a selfie and enrolling it to the gallery.
+    Input to enroll a selfie through the face HTTP service.
 
-    action:      The person ID (e.g., "wendy"). Will create/update gallery/<id>.
-    timeout_sec: Seconds to wait for exactly one face (default 15).
+    Parameters
+    ----------
+    action : str
+        The person ID (e.g., "wendy"). Will create/update gallery/<id>.
+    timeout_sec : int, optional
+        Seconds to wait for exactly one face (default 15).
     """
 
     action: str

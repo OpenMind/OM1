@@ -12,40 +12,40 @@ from providers.io_provider import IOProvider
 _JSON = typing.Dict[str, typing.Any]
 
 
-class SelfieHTTPConnector(ActionConnector[SelfieInput]):
+class SelfieConnector(ActionConnector[SelfieInput]):
     """
     Enroll a selfie through the face HTTP service :
-      1) /config blur=false
-      2) poll /who {"recent_sec": X} until exactly 1 face (<= timeout)
-      3) /selfie {"id": "<name>"}
-      4) restore original blur
-
-    Attributes:
-    base: Base URL of the face HTTP service.
-    recent_sec: Window (seconds) for face recency in /who.
-    poll_ms: Poll interval (milliseconds) for /who.
-    default_timeout: Default selfie timeout (seconds).
-    http_timeout: Per-request HTTP timeout (seconds).
-    io_provider: IOProvider used to publish "SelfieStatus".
     """
 
     def __init__(self, config: ActionConfig):
-        """Initialize the connector"""
+        """
+        Initialize the connector
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the connector.
+        """
         super().__init__(config)
+
         self.base: str = getattr(
             self.config, "face_http_base_url", "http://127.0.0.1:6793"
         )
+
         self.recent_sec: float = float(getattr(self.config, "face_recent_sec", 1.0))
         self.poll_ms: int = int(getattr(self.config, "poll_ms", 200))
         self.default_timeout: int = int(getattr(self.config, "timeout_sec", 15))
         self.http_timeout: float = float(getattr(self.config, "http_timeout_sec", 5.0))
-        if not hasattr(self, "io_provider") or self.io_provider is None:
-            self.io_provider = IOProvider()
+
+        self.io_provider = IOProvider()
 
     def _write_status(self, line: str):
         """
         Make the result visible to the fuser/LLM as an input named 'SelfieStatus'.
-        Args:
+
+        Parameters
+        ----------
+        line : str
             line: Status payload (e.g., "ok id=wendy", "failed reason=none faces=0").
         """
         try:
@@ -57,17 +57,22 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         """
         POST JSON to the face service.
 
-        Args:
-            path: Endpoint path (e.g., "/who", "/selfie").
-            body: Request body dict.
+        Parameters
+        ----------
+        path : str
+            Endpoint path (e.g., "/who", "/selfie").
+        body : _JSON
+            Request body dict.
 
-        Returns:
+        Returns
+        -------
+        typing.Optional[_JSON]
             Parsed JSON dict on success; None on error.
         """
         url = f"{self.base}{path}"
         try:
             r = requests.post(url, json=body, timeout=self.http_timeout)
-            return r.json()  # may raise JSON decode; catch below
+            return r.json()
         except Exception as e:
             logging.warning("HTTP POST %s failed (%s) body=%s", url, e, body)
             return None
@@ -76,8 +81,9 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         """
         Fetch current service config.
 
-        Returns:
-            Dict of config values (empty dict if unavailable).
+        Returns
+        -------
+        typing.Optional[_JSON]
         """
         resp = self._post_json("/config", {"get": True}) or {}
         return resp if isinstance(resp, dict) else {}
@@ -86,8 +92,10 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         """
         Enable/disable blur on the service.
 
-        Args:
-            on: True to enable blur, False to disable.
+        Parameters
+        ----------
+        on : bool
+            True/False
         """
         _ = self._post_json("/config", {"set": {"blur": bool(on)}})
 
@@ -95,7 +103,9 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         """
         Query current faces within the recency window.
 
-        Returns:
+        Returns
+        -------
+        typing.Optional[_JSON]
             Dict with keys like "now" (list of known IDs) and "unknown_now" (int),
             or None on error.
         """
@@ -105,10 +115,14 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         """
         Poll /who until exactly one face is visible or timeout.
 
-        Args:
-            timeout_sec: Maximum seconds to wait (<=0 uses default_timeout).
+        Parameters
+        ----------
+        timeout_sec : int
+            Maximum seconds to wait (<=0 uses default_timeout).
 
-        Returns:
+        Returns
+        -------
+        bool
             True if exactly one face is detected within the timeout; False otherwise.
         """
         if timeout_sec <= 0:
@@ -134,67 +148,54 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         """
         Execute a single selfie enrollment attempt.
 
-        Flow:
-        1) read config & disable blur
-        2) wait until exactly one face is visible (<= timeout)
-        3) POST /selfie {"id": <name>}
-        4) restore blur
-        5) write 'SelfieStatus' for the LLM (ok/failed)
+        Parameters
+        ----------
+        output_interface : SelfieInput
+            The selfie action interface containing parameters like `id` and `timeout_sec`.
         """
-
-        # Ensure we can drop a status for the fuser/LLM.
-        io = getattr(self, "io_provider", None)
-
-        # Validate inputs
         name = (output_interface.action or "").strip()
         timeout_sec = int(output_interface.timeout_sec or self.default_timeout)
         if not name:
             logging.error("Selfie requires a non-empty `id` (e.g., 'wendy').")
-            # Optional status breadcrumb
-            if io:
-                io.add_input("SelfieStatus", "failed reason=bad_id", time.time())
+            self.io_provider.add_input(
+                "SelfieStatus", "failed reason=bad_id", time.time()
+            )
             return
 
         loop = asyncio.get_running_loop()
 
-        # Read config and disable blur
         cfg = await loop.run_in_executor(None, self._get_config)
         orig_blur = bool(((cfg or {}).get("config") or {}).get("blur", True))
         await loop.run_in_executor(None, self._set_blur, False)
 
         try:
-            # Gate: exactly one face within timeout
             ok = await loop.run_in_executor(None, self._wait_single_face, timeout_sec)
             if not ok:
-                # Check how many faces to classify reason (none vs multiple)
                 snapshot = await loop.run_in_executor(None, self._who_snapshot) or {}
                 now = snapshot.get("now") or []
                 unknown_now = int(snapshot.get("unknown_now") or 0)
                 faces = len(now) + unknown_now
                 reason = "none" if faces == 0 else "multiple"
                 logging.info("[Selfie] Gating failed: %s (faces=%d)", reason, faces)
-                if io:
-                    io.add_input(
-                        "SelfieStatus",
-                        f"failed reason={reason} faces={faces}",
-                        time.time(),
-                    )
+                self.io_provider.add_input(
+                    "SelfieStatus",
+                    f"failed reason={reason} faces={faces}",
+                    time.time(),
+                )
                 return
 
-            # Enroll selfie
             resp = await loop.run_in_executor(
                 None, self._post_json, "/selfie", {"id": name}
             )
             if not (isinstance(resp, dict) and resp.get("ok")):
                 logging.error("[Selfie] /selfie failed or returned non-ok: %s", resp)
-                if io:
-                    io.add_input("SelfieStatus", "failed reason=service", time.time())
+                self.io_provider.add_input(
+                    "SelfieStatus", "failed reason=service", time.time()
+                )
                 return
 
             logging.info("[Selfie] Enrolled selfie for '%s' successfully.", name)
-            if io:
-                io.add_input("SelfieStatus", f"ok id={name}", time.time())
+            self.io_provider.add_input("SelfieStatus", f"ok id={name}", time.time())
 
         finally:
-            # 5) Always restore blur (even on failure)
             await loop.run_in_executor(None, self._set_blur, orig_blur)
