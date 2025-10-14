@@ -1,15 +1,16 @@
 import asyncio
-import json
 import logging
 import time
 from dataclasses import dataclass
 from queue import Empty, Queue
-from typing import Dict, List, Optional
+from typing import List, Optional
+
+from openai.types.chat import ChatCompletion
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.vlm_vila_rtsp_provider import VLMVilaRTSPProvider
+from providers.vlm_openai_rtsp_provider import VLMOpenAIRTSPProvider
 
 
 @dataclass
@@ -29,7 +30,7 @@ class Message:
     message: str
 
 
-class VLMVilaRTSP(FuserInput[str]):
+class VLMOpenAIRTSP(FuserInput[str]):
     """
     Vision Language Model input handler.
 
@@ -60,19 +61,38 @@ class VLMVilaRTSP(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/top_camera")
-        decode_format = getattr(self.config, "decode_format", "H264")
+        api_key = getattr(self.config, "api_key", None)
 
-        self.vlm: VLMVilaRTSPProvider = VLMVilaRTSPProvider(
-            ws_url=base_url, rtsp_url=rtsp_url, decode_format=decode_format
+        if api_key is None or api_key == "":
+            raise ValueError("config file missing api_key")
+
+        base_url = getattr(
+            self.config, "base_url", "https://api.openmind.org/api/core/openai"
+        )
+        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/top_camera")
+        prompt = getattr(
+            self.config,
+            "prompt",
+            "What is the most interesting aspect in this series of images?",
+        )
+        fps = getattr(self.config, "fps", 15)
+        self.descriptor_for_LLM = getattr(
+            self.config,
+            "descriptor_for_LLM",
+            "Vision",
+        )
+
+        self.vlm: VLMOpenAIRTSPProvider = VLMOpenAIRTSPProvider(
+            base_url=base_url,
+            api_key=api_key,
+            rtsp_url=rtsp_url,
+            prompt=prompt,
+            fps=fps,
         )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
-        self.descriptor_for_LLM = "Vision"
-
-    def _handle_vlm_message(self, raw_message: str):
+    def _handle_vlm_message(self, raw_message: ChatCompletion):
         """
         Process incoming VLM messages.
 
@@ -84,14 +104,10 @@ class VLMVilaRTSP(FuserInput[str]):
         raw_message : str
             Raw JSON message received from the VLM service
         """
-        try:
-            json_message: Dict = json.loads(raw_message)
-            if "vlm_reply" in json_message:
-                vlm_reply = json_message["vlm_reply"]
-                self.message_buffer.put(vlm_reply)
-                logging.info("Detected VLM message: %s", vlm_reply)
-        except json.JSONDecodeError:
-            pass
+        logging.info(f"VLM OpenAI received message: {raw_message}")
+        content = raw_message.choices[0].message.content
+        if content is not None:
+            self.message_buffer.put(content)
 
     async def _poll(self) -> Optional[str]:
         """
@@ -179,7 +195,7 @@ INPUT: {self.descriptor_for_LLM}
 """
 
         self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
+            self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
         self.messages = []
 

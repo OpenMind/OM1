@@ -20,7 +20,7 @@ class VLMVilaRTSPProvider:
     def __init__(
         self,
         ws_url: str,
-        rtsp_url: str = "rtsp://localhost:8554/live",
+        rtsp_url: str = "rtsp://localhost:8554/top_camera",
         decode_format: str = "H264",
         fps: int = 30,
     ):
@@ -32,13 +32,11 @@ class VLMVilaRTSPProvider:
         ws_url : str
             The websocket URL for the VLM service connection.
         rtsp_url : str
-            The RTSP URL for the video stream. Defaults to "rtsp://localhost:8554/live".
+            The RTSP URL for the video stream. Defaults to "rtsp://localhost:8554/top_camera".
         decode_format : str
             The decode format for the video stream. Defaults to "H264".
         fps : int
             The fps for the VLM service connection.
-        stream_url : str, optional
-            The URL for the video stream. If not provided, defaults to None.
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
