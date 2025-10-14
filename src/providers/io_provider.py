@@ -1,5 +1,6 @@
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
@@ -50,6 +51,8 @@ class IOProvider:
         self._llm_prompt: Optional[str] = None
         self._llm_start_time: Optional[float] = None
         self._llm_end_time: Optional[float] = None
+
+        self._mode_transition_input: Optional[str] = None
 
         # Additional variables storage
         self._variables: Dict[str, Any] = {}
@@ -352,3 +355,56 @@ class IOProvider:
         """
         with self._lock:
             return self._variables.get(key)
+
+    def add_mode_transition_input(self, input_text: str) -> None:
+        """
+        Add input text that triggered a mode transition.
+
+        Parameters
+        ----------
+        input_text : str
+            The input text that caused the mode transition.
+        """
+        with self._lock:
+            if self._mode_transition_input is None:
+                self._mode_transition_input = input_text
+            else:
+                self._mode_transition_input = (
+                    self._mode_transition_input + " " + input_text
+                )
+
+    @contextmanager
+    def mode_transition_input(self):
+        """
+        Context manager for providing mode transition input that automatically resets after use.
+
+        Yields
+        ------
+        Optional[str]
+            The current mode transition input text.
+        """
+        try:
+            with self._lock:
+                current_input = self._mode_transition_input
+            yield current_input
+        finally:
+            self.delete_mode_transition_input()
+
+    def get_mode_transition_input(self) -> Optional[str]:
+        """
+        Get the stored mode transition input text.
+
+        Returns
+        -------
+        Optional[str]
+            The stored mode transition input text, or None if not set.
+        """
+        with self._lock:
+            return self._mode_transition_input
+
+    def delete_mode_transition_input(self) -> None:
+        """
+        Clear the stored mode transition input text.
+        """
+        with self._lock:
+            self._mode_transition_input = None

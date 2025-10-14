@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from llm.output_model import Action
-from runtime.config import RuntimeConfig
-from runtime.cortex import CortexRuntime
+from runtime.single_mode.config import RuntimeConfig
+from runtime.single_mode.cortex import CortexRuntime
 
 
 @pytest.fixture
@@ -32,21 +32,23 @@ def mock_dependencies():
 @pytest.fixture
 def runtime(mock_config, mock_dependencies):
     with (
-        patch("runtime.cortex.Fuser", return_value=mock_dependencies["fuser"]),
         patch(
-            "runtime.cortex.ActionOrchestrator",
+            "runtime.single_mode.cortex.Fuser", return_value=mock_dependencies["fuser"]
+        ),
+        patch(
+            "runtime.single_mode.cortex.ActionOrchestrator",
             return_value=mock_dependencies["action_orchestrator"],
         ),
         patch(
-            "runtime.cortex.SimulatorOrchestrator",
+            "runtime.single_mode.cortex.SimulatorOrchestrator",
             return_value=mock_dependencies["simulator_orchestrator"],
         ),
         patch(
-            "runtime.cortex.SleepTickerProvider",
+            "runtime.single_mode.cortex.SleepTickerProvider",
             return_value=mock_dependencies["sleep_ticker_provider"],
         ),
         patch(
-            "runtime.cortex.BackgroundOrchestrator",
+            "runtime.single_mode.cortex.BackgroundOrchestrator",
             return_value=mock_dependencies["background_orchestrator"],
         ),
     ):
@@ -146,7 +148,8 @@ async def test_start_input_listeners(runtime):
     cortex_runtime, mocks = runtime
 
     with patch(
-        "runtime.cortex.InputOrchestrator", return_value=mocks["input_orchestrator"]
+        "runtime.single_mode.cortex.InputOrchestrator",
+        return_value=mocks["input_orchestrator"],
     ):
         mocks["input_orchestrator"].listen = AsyncMock()
         task = await cortex_runtime._start_input_listeners()

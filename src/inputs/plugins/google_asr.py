@@ -184,9 +184,13 @@ INPUT: {self.descriptor_for_LLM}
 {self.messages[-1]}
 // END
 """
+        # Add to IO provider and conversation provider
         self.io_provider.add_input(
             self.descriptor_for_LLM, self.messages[-1], time.time()
         )
+        self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
+
+        # Reset messages buffer
         self.messages = []
         return result

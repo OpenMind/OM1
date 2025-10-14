@@ -5,7 +5,7 @@ from typing import Optional, Type
 import json5
 
 from actions.base import ActionConnector, Interface
-from runtime.config import load_input, load_llm, load_simulator
+from runtime.single_mode.config import load_input, load_llm, load_simulator
 
 
 def test_configs():
