@@ -43,11 +43,12 @@ The standard `pydantic` output model is defined in `src/llm/output_model.py`.
 
 ```bash
   "cortex_llm": {
-    "type": "OpenAILLM",    // The class name of the LLM plugin you wish to use
+    "type": "OpenAILLM",     // The class name of the LLM plugin you wish to use
     "config": {
-      "base_url": "",       // Optional: URL of the LLM endpoint
-      "agent_name": "Iris", // Optional: Name of the agent
-      "history_length": 10  // The number of input->action cycles to provide to the LLM as historical context 
+      "model": "model_name", // Optional: If you want to switch to a specific model. Refer the list of supported models below
+      "base_url": "",        // Optional: URL of the LLM endpoint
+      "agent_name": "Iris",  // Optional: Name of the agent
+      "history_length": 10   // The number of input->action cycles to provide to the LLM as historical context 
     }
   }
 ```
