@@ -1,26 +1,16 @@
-# src/actions/selfie/connector/http_selfie.py
-"""
-HTTP selfie enrollment connector.
+import asyncio
+import logging
+import time
+import typing
 
-Talks to a face HTTP service to:
-  1) disable blur
-  2) wait until exactly one face is visible (within timeout)
-  3) enroll selfie by ID
-  4) restore blur
-Writes a one-shot status line to IOProvider under the key "SelfieStatus".
-"""
-
-import json, time, typing, asyncio, logging
-from dataclasses import asdict
-from providers.io_provider import IOProvider
-
-import requests  # used via run_in_executor to avoid blocking the event loop
-
+import requests
 
 from actions.base import ActionConfig, ActionConnector
 from actions.selfie.interface import SelfieInput
+from providers.io_provider import IOProvider
 
 _JSON = typing.Dict[str, typing.Any]
+
 
 class SelfieHTTPConnector(ActionConnector[SelfieInput]):
     """
@@ -42,14 +32,15 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
     def __init__(self, config: ActionConfig):
         """Initialize the connector"""
         super().__init__(config)
-        self.base: str = getattr(self.config, "face_http_base_url", "http://127.0.0.1:6793")
+        self.base: str = getattr(
+            self.config, "face_http_base_url", "http://127.0.0.1:6793"
+        )
         self.recent_sec: float = float(getattr(self.config, "face_recent_sec", 1.0))
         self.poll_ms: int = int(getattr(self.config, "poll_ms", 200))
         self.default_timeout: int = int(getattr(self.config, "timeout_sec", 15))
         self.http_timeout: float = float(getattr(self.config, "http_timeout_sec", 5.0))
         if not hasattr(self, "io_provider") or self.io_provider is None:
             self.io_provider = IOProvider()
-    
 
     def _write_status(self, line: str):
         """
@@ -61,7 +52,6 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
             self.io_provider.add_input("SelfieStatus", line, time.time())
         except Exception as e:
             logging.warning("SelfieStatus write failed: %s", e)
-
 
     def _post_json(self, path: str, body: _JSON) -> typing.Optional[_JSON]:
         """
@@ -126,11 +116,15 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         tries = max(1, int((timeout_sec * 1000) / self.poll_ms))
         for _ in range(tries):
             resp = self._who_snapshot() or {}
-            now = (resp.get("now") or [])
+            now = resp.get("now") or []
             unknown_now = int(resp.get("unknown_now") or 0)
             faces = len(now) + unknown_now
             if faces == 1:
-                logging.info("Selfie gate: exactly 1 face detected (now=%s, unknown=%d)", now, unknown_now)
+                logging.info(
+                    "Selfie gate: exactly 1 face detected (now=%s, unknown=%d)",
+                    now,
+                    unknown_now,
+                )
                 return True
             time.sleep(self.poll_ms / 1000.0)
         logging.error("Selfie gate: timeout waiting for exactly 1 face.")
@@ -150,7 +144,6 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
 
         # Ensure we can drop a status for the fuser/LLM.
         io = getattr(self, "io_provider", None)
-
 
         # Validate inputs
         name = (output_interface.action or "").strip()
@@ -181,11 +174,17 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
                 reason = "none" if faces == 0 else "multiple"
                 logging.info("[Selfie] Gating failed: %s (faces=%d)", reason, faces)
                 if io:
-                    io.add_input("SelfieStatus", f"failed reason={reason} faces={faces}", time.time())
+                    io.add_input(
+                        "SelfieStatus",
+                        f"failed reason={reason} faces={faces}",
+                        time.time(),
+                    )
                 return
 
             # Enroll selfie
-            resp = await loop.run_in_executor(None, self._post_json, "/selfie", {"id": name})
+            resp = await loop.run_in_executor(
+                None, self._post_json, "/selfie", {"id": name}
+            )
             if not (isinstance(resp, dict) and resp.get("ok")):
                 logging.error("[Selfie] /selfie failed or returned non-ok: %s", resp)
                 if io:
@@ -199,4 +198,3 @@ class SelfieHTTPConnector(ActionConnector[SelfieInput]):
         finally:
             # 5) Always restore blur (even on failure)
             await loop.run_in_executor(None, self._set_blur, orig_blur)
-
