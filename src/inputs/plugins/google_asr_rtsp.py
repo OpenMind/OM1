@@ -47,7 +47,7 @@ class GoogleASRRTSPInput(FuserInput[str]):
 
         # Initialize ASR provider
         api_key = getattr(self.config, "api_key", None)
-        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/top_camera")
+        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/audio")
         rate = getattr(self.config, "rate", 16000)
         base_url = getattr(
             self.config,
