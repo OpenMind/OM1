@@ -52,6 +52,11 @@ RUN uv venv /app/OM1/.venv && \
 
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
+    echo 'until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
+    echo '  echo "Waiting for internet connection..."' >> /entrypoint.sh && \
+    echo '  sleep 2' >> /entrypoint.sh && \
+    echo 'done' >> /entrypoint.sh && \
+    echo 'echo "Internet connected. Starting main command..."' >> /entrypoint.sh && \
     echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
