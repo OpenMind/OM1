@@ -35,9 +35,6 @@ class PresenceSnapshot:
     unknown_now: int
     raw: Dict
 
-    # def to_text(self) -> str:
-    #     known = ", ".join(self.names_now) if self.names_now else "none"
-    #     return f"present=[{known}], unknown={self.unknown_now}, ts={self.ts:.3f}"
     def to_text(self) -> str:
         """
         Produce a concise, natural sentence without timestamps, handling
@@ -54,7 +51,6 @@ class PresenceSnapshot:
         - names=[], unknown=0
         -> "No one in view."
         """
-        # sanitize & de-duplicate while preserving order
         seen = set()
         names = []
         for n in self.names_now or []:

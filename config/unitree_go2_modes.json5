@@ -114,6 +114,9 @@
         },
         {
           "type": "SimplePaths"
+        },
+        {
+          "type":"FacePresence"
         }
       ],
       "agent_actions": [
@@ -142,6 +145,9 @@
         },
         {
           "type": "UnitreeGo2Location",
+        },
+        {
+          "type":"FacePresence"
         }
       ]
     },
@@ -175,7 +181,10 @@
         },
         {
           "type": "SimplePaths"
-        }
+        },
+        {
+          "type":"FacePresence"
+        },
       ],
       "agent_actions": [
         {
@@ -237,6 +246,9 @@
             "prompt": "Describe whether you see a human laying on the ground, appearing injured, or in need of assistance. If you see such a person, provide the details in your response.",
             "descriptor_for_LLM": "security_camera_observation"
           }
+        },
+        {
+          "type":"FacePresence"
         }
       ],
       "agent_actions": [
