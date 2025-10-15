@@ -18,7 +18,7 @@ class SelfieInput:
     """
 
     action: str
-    timeout_sec: int = 15
+    timeout_sec: int = 5
 
 
 @dataclass

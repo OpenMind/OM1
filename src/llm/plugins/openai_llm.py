@@ -95,7 +95,7 @@ class OpenAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gpt-4.1-mini",
+                model=self._config.model or "gpt-5",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",

@@ -35,9 +35,55 @@ class PresenceSnapshot:
     unknown_now: int
     raw: Dict
 
+    # def to_text(self) -> str:
+    #     known = ", ".join(self.names_now) if self.names_now else "none"
+    #     return f"present=[{known}], unknown={self.unknown_now}, ts={self.ts:.3f}"
     def to_text(self) -> str:
-        known = ", ".join(self.names_now) if self.names_now else "none"
-        return f"present=[{known}], unknown={self.unknown_now}, ts={self.ts:.3f}"
+        """
+        Produce a concise, natural sentence without timestamps, handling
+        any number of known people and unknown faces.
+
+        Examples
+        --------
+        - names=["wendy"], unknown=0
+        -> "In Camera View: 1 known (wendy)."
+        - names=["wendy","alice","bob"], unknown=2
+        -> "In Camera view: 3 known (wendy, alice and bob) and 2 unknown faces."
+        - names=[], unknown=1
+        -> "In Camera view: 1 unknown face."
+        - names=[], unknown=0
+        -> "No one in view."
+        """
+        # sanitize & de-duplicate while preserving order
+        seen = set()
+        names = []
+        for n in self.names_now or []:
+            if n and n not in seen:
+                seen.add(n)
+                names.append(n)
+
+        k = len(names)
+        u = int(self.unknown_now or 0)
+
+        def join_names(ns):
+            if not ns:
+                return ""
+            if len(ns) == 1:
+                return ns[0]
+            if len(ns) == 2:
+                return f"{ns[0]} and {ns[1]}"
+            return ", ".join(ns[:-1]) + f" and {ns[-1]}"
+
+        if k == 0 and u == 0:
+            return "No one in view."
+
+        parts = []
+        if k > 0:
+            parts.append(f"{k} known ({join_names(names)})")
+        if u > 0:
+            parts.append(f"{u} unknown faces")
+
+        return "In Camera View: " + " and ".join(parts) + "."
 
 
 @singleton
