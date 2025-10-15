@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from llm import LLM, LLMConfig, find_module_with_class, load_llm
 from providers.io_provider import IOProvider
-from runtime.config import add_meta
+from runtime.single_mode.config import add_meta
 
 
 class DummyOutputModel(BaseModel):
@@ -24,18 +24,12 @@ def config():
 
 @pytest.fixture
 def base_llm(config):
-    return MockLLM(DummyOutputModel, config)
+    return MockLLM(config, available_actions=None)
 
 
 def test_llm_init(base_llm, config):
-    assert base_llm._output_model == DummyOutputModel
     assert base_llm._config == config
     assert isinstance(base_llm.io_provider, type(IOProvider()))
-
-
-def test_llm_init_no_config():
-    llm = MockLLM(DummyOutputModel, None)
-    assert llm._config is None
 
 
 @pytest.mark.asyncio
@@ -46,7 +40,7 @@ async def test_llm_ask_not_implemented(base_llm):
 
 def test_llm_config():
     llm_config = LLMConfig(
-        **add_meta(
+        **add_meta(  # type: ignore
             {
                 "config_key": "config_value",
             },
@@ -56,11 +50,11 @@ def test_llm_config():
             None,
         )
     )
-    assert llm_config.config_key == "config_value"
+    assert llm_config.config_key == "config_value"  # type: ignore
     with pytest.raises(
         AttributeError, match="'LLMConfig' object has no attribute 'invalid_key'"
     ):
-        llm_config.invalid_key
+        llm_config.invalid_key  # type: ignore
 
 
 def test_load_llm_mock_implementation():

@@ -42,7 +42,7 @@ class MockInput(FuserInput[str]):
         super().__init__(config)
 
         # Buffer for storing the final output
-        self.messages: List[str] = []
+        self.messages: List[Message] = []
 
         # Set IO Provider
         self.descriptor_for_LLM = getattr(self.config, "input_name", "Mock Input")
@@ -92,7 +92,7 @@ class MockInput(FuserInput[str]):
             logging.error(f"Failed to start Mock Input webSocket server: {e}")
 
     async def _handle_client(
-        self, websocket: websockets.WebSocketClientProtocol, path: str
+        self, websocket: websockets.WebSocketServerProtocol, path: str
     ):
         """
         Handle a client connection.
@@ -110,9 +110,9 @@ class MockInput(FuserInput[str]):
         try:
             async for message in websocket:
                 try:
-                    text = message
-
-                    if not isinstance(message, str):
+                    if isinstance(message, str):
+                        text = message
+                    else:
                         try:
                             text = message.decode("utf-8")
                         except Exception as e:
@@ -206,13 +206,13 @@ class MockInput(FuserInput[str]):
             return None
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {self.messages[-1]}
 // END
 """
         self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1], time.time()
+            self.descriptor_for_LLM, self.messages[-1].message, time.time()
         )
         self.messages = []
         return result

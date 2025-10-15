@@ -3,6 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Optional
 
 import requests
 
@@ -209,7 +210,7 @@ class TeleopsStatusProvider:
 
     def __init__(
         self,
-        api_key: str = None,
+        api_key: Optional[str] = None,
         base_url: str = "https://api.openmind.org/api/core/teleops/status",
     ):
         """
@@ -231,6 +232,10 @@ class TeleopsStatusProvider:
         """
         Get the status of the machine.
         """
+        if self.api_key is None or self.api_key == "":
+            logging.error("API key is missing. Cannot get status.")
+            return {}
+
         api_key_id = self.api_key[9:25] if len(self.api_key) > 25 else self.api_key
         request = requests.get(
             f"{self.base_url}/{api_key_id}",

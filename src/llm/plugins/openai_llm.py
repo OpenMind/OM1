@@ -6,6 +6,8 @@ import openai
 from pydantic import BaseModel
 
 from llm import LLM, LLMConfig
+from llm.function_schemas import convert_function_calls_to_actions
+from llm.output_model import CortexOutputModel
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -13,37 +15,43 @@ R = T.TypeVar("R", bound=BaseModel)
 
 class OpenAILLM(LLM[R]):
     """
-    An OpenAI-based Language Learning Model implementation.
+    An OpenAI-based Language Learning Model implementation with function call support.
 
     This class implements the LLM interface for OpenAI's GPT models, handling
-    configuration, authentication, and async API communication.
+    configuration, authentication, and async API communication. It supports both
+    traditional JSON structured output and function calling.
 
     Parameters
     ----------
-    output_model : Type[R]
-        A Pydantic BaseModel subclass defining the expected response structure.
     config : LLMConfig
         Configuration object containing API settings. If not provided, defaults
         will be used.
+    available_actions : list[AgentAction], optional
+        List of available actions for function call generation. If provided,
+        the LLM will use function calls instead of structured JSON output.
     """
 
-    def __init__(self, output_model: T.Type[R], config: LLMConfig = LLMConfig()):
+    def __init__(
+        self,
+        config: LLMConfig = LLMConfig(),
+        available_actions: T.Optional[T.List] = None,
+    ):
         """
         Initialize the OpenAI LLM instance.
 
         Parameters
         ----------
-        output_model : Type[R]
-            Pydantic model class for response validation.
         config : LLMConfig, optional
             Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
-        super().__init__(output_model, config)
+        super().__init__(config, available_actions)
 
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "gpt-4o-mini"
+            self._config.model = "gpt-4.1-mini"
 
         self._client = openai.AsyncClient(
             base_url=config.base_url or "https://api.openmind.org/api/core/openai",
@@ -55,7 +63,7 @@ class OpenAILLM(LLM[R]):
 
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
     ) -> R | None:
         """
         Send a prompt to the OpenAI API and get a structured response.
@@ -76,32 +84,49 @@ class OpenAILLM(LLM[R]):
         try:
             logging.info(f"OpenAI LLM input: {prompt}")
             logging.info(f"OpenAI LLM messages: {messages}")
-            # logging.info(f"OpenAI LLM output model: {self._output_model}")
 
             self.io_provider.llm_start_time = time.time()
-
-            # Save the input information for debugging
             self.io_provider.set_llm_prompt(prompt)
 
-            response = await self._client.beta.chat.completions.parse(
-                model=self._config.model,
-                messages=[*messages, {"role": "user", "content": prompt}],
-                response_format=self._output_model,
+            formatted_messages = [
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+                for msg in messages
+            ]
+            formatted_messages.append({"role": "user", "content": prompt})
+
+            response = await self._client.chat.completions.create(
+                model=self._config.model or "gpt-4.1-mini",
+                messages=T.cast(T.Any, formatted_messages),
+                tools=T.cast(T.Any, self.function_schemas),
+                tool_choice="auto",
                 timeout=self._config.timeout,
             )
 
-            message_content = response.choices[0].message.content
+            message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
-            try:
-                parsed_response = self._output_model.model_validate_json(
-                    message_content
-                )
-                logging.info(f"OpenAI LLM output: {parsed_response}")
-                return parsed_response
-            except Exception as e:
-                logging.error(f"Error parsing OpenAI response: {e}")
-                return None
+            if message.tool_calls:
+                logging.info(f"Received {len(message.tool_calls)} function calls")
+                logging.info(f"Function calls: {message.tool_calls}")
+
+                function_call_data = [
+                    {
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        }
+                    }
+                    for tc in message.tool_calls
+                ]
+
+                actions = convert_function_calls_to_actions(function_call_data)
+
+                result = CortexOutputModel(actions=actions)
+                logging.info(f"OpenAI LLM function call output: {result}")
+                return T.cast(R, result)
+
+            return None
+
         except Exception as e:
             logging.error(f"OpenAI API error: {e}")
             return None

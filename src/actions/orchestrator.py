@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from actions.base import AgentAction
 from llm.output_model import Action
-from runtime.config import RuntimeConfig
+from runtime.single_mode.config import RuntimeConfig
 
 
 class ActionOrchestrator:
@@ -73,8 +73,14 @@ class ActionOrchestrator:
         return done_promises, self.promise_queue
 
     async def promise(self, actions: list[Action]) -> None:
-        # loop through commands and send the correct
-        # command to the correct action
+        """
+        Promises the actions to the appropriate connectors.
+
+        Parameters
+        ----------
+        actions : list[Action]
+            List of actions to promise to connectors.
+        """
         for action in actions:
             logging.debug(f"Sending command: {action}")
 

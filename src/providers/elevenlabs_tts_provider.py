@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from om1_speech import AudioOutputStream
 
@@ -17,7 +17,7 @@ class ElevenLabsTTSProvider:
     Parameters
     ----------
     url : str
-        The URL endpoint for the TTS service
+        The URL endpoint for the TTS service. (Default is https://api.openmind.org/api/core/elevenlabs/tts)
     api_key : str
         The API key for the TTS service
     voice_id : str, optional
@@ -30,7 +30,7 @@ class ElevenLabsTTSProvider:
 
     def __init__(
         self,
-        url: str,
+        url: str = "https://api.openmind.org/api/core/elevenlabs/tts",
         api_key: Optional[str] = None,
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
@@ -40,8 +40,8 @@ class ElevenLabsTTSProvider:
         """
         Initialize the TTS provider with given URL.
         """
-        self.api_key: str = api_key
-        self.elevenlabs_api_key: str = elevenlabs_api_key
+        self.api_key = api_key
+        self.elevenlabs_api_key = elevenlabs_api_key
 
         # Initialize TTS provider
         self.running: bool = False
@@ -61,10 +61,11 @@ class ElevenLabsTTSProvider:
 
         Parameters
         ----------
-        tts_state_callback : callable
+        tts_state_callback : Optional[Callable]
             The callback function to receive TTS state changes.
         """
-        self._audio_stream.set_tts_state_callback(tts_state_callback)
+        if tts_state_callback is not None:
+            self._audio_stream.set_tts_state_callback(tts_state_callback)
 
     def create_pending_message(self, text: str) -> dict:
         """
@@ -94,15 +95,21 @@ class ElevenLabsTTSProvider:
             **elevenlabs_api_key,
         }
 
-    def add_pending_message(self, message: dict):
+    def add_pending_message(self, message: Union[str, dict]):
         """
         Add a pending message to the TTS provider.
 
         Parameters
         ----------
-        message : dict
+        message : Union[str, dict]
             The message to be added, typically containing text and TTS parameters.
         """
+        if not self.running:
+            logging.warning(
+                "TTS provider is not running. Call start() before adding messages."
+            )
+            return
+
         if isinstance(message, str):
             message = self.create_pending_message(message)
         self._audio_stream.add_request(message)

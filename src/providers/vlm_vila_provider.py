@@ -53,10 +53,11 @@ class VLMVilaProvider:
 
         Parameters
         ----------
-        video_callback : callable
+        video_callback : Optional[Callable]
             The callback function to process video frames.
         """
-        self.video_stream.register_frame_callback(video_callback)
+        if video_callback is not None:
+            self.video_stream.register_frame_callback(video_callback)
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
@@ -64,10 +65,11 @@ class VLMVilaProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[Callable]
             The callback function to process VLM results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

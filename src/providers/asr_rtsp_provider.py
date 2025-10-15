@@ -20,7 +20,7 @@ class ASRRTSPProvider:
     def __init__(
         self,
         ws_url: str,
-        rtsp_url: str = "rtsp://localhost:8554/live",
+        rtsp_url: str = "rtsp://localhost:8554/audio",
         rate: int = 48000,
         chunk: Optional[int] = None,
         language_code: Optional[str] = None,
@@ -33,7 +33,7 @@ class ASRRTSPProvider:
         ws_url : str
             The websocket URL for the ASR service connection.
         rtsp_url : str
-            The RTSP URL for the audio stream; defaults to "rtsp://localhost:8554/live"
+            The RTSP URL for the audio stream; defaults to "rtsp://localhost:8554/audio"
         rate : int
             The audio sample rate for the audio stream; used the system default if None
         chunk : int
@@ -57,10 +57,11 @@ class ASRRTSPProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[Callable])
             The callback function to process ASR results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

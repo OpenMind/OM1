@@ -12,7 +12,6 @@ from backgrounds.base import Background, BackgroundConfig
 from inputs import load_input
 from inputs.base import Sensor, SensorConfig
 from llm import LLM, LLMConfig, load_llm
-from llm.output_model import CortexOutputModel
 from runtime.robotics import load_unitree
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
@@ -80,7 +79,7 @@ def load_config(config_name: str) -> RuntimeConfig:
         If configuration values are invalid (e.g., negative hertz)
     """
     config_path = os.path.join(
-        os.path.dirname(__file__), "../../config", config_name + ".json5"
+        os.path.dirname(__file__), "../../../config", config_name + ".json5"
     )
 
     with open(config_path, "r+") as f:
@@ -164,18 +163,6 @@ def load_config(config_name: str) -> RuntimeConfig:
             )
             for input in raw_config.get("agent_inputs", [])
         ],
-        "cortex_llm": load_llm(raw_config["cortex_llm"]["type"])(
-            config=LLMConfig(
-                **add_meta(
-                    raw_config["cortex_llm"].get("config", {}),
-                    g_api_key,
-                    g_ut_eth,
-                    g_URID,
-                    g_robot_ip,
-                )
-            ),
-            output_model=CortexOutputModel,
-        ),
         "simulators": [
             load_simulator(simulator["type"])(
                 config=SimulatorConfig(
@@ -208,8 +195,25 @@ def load_config(config_name: str) -> RuntimeConfig:
         ],
     }
 
-    # logging.info(f"raw config: {raw_config}")
-    # logging.info(f"parsed config: {parsed_config}")
+    cortex_llm = (
+        load_llm(raw_config["cortex_llm"]["type"])(
+            config=LLMConfig(
+                **add_meta(  # type: ignore
+                    raw_config["cortex_llm"].get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                )
+            ),
+            available_actions=parsed_config["agent_actions"],
+        ),
+    )
+
+    if len(cortex_llm) != 1:
+        raise ValueError("Expected exactly one cortex_llm instance.")
+
+    parsed_config["cortex_llm"] = cortex_llm[0]
 
     return RuntimeConfig(**parsed_config)
 
@@ -228,7 +232,7 @@ def add_meta(
     g_ut_eth: Optional[str],
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
-) -> dict:
+) -> dict[str, str]:
     """
     Add an API key and Robot configuration to a runtime configuration.
 
@@ -285,18 +289,6 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         )
         for inp in config.get("agent_inputs", [])
     ]
-    cortex_llm = load_llm(config["cortex_llm"]["type"])(
-        config=LLMConfig(
-            **add_meta(
-                config["cortex_llm"].get("config", {}),
-                api_key,
-                g_ut_eth,
-                g_URID,
-                g_robot_ip,
-            )
-        ),
-        output_model=CortexOutputModel,
-    )
     simulators = [
         load_simulator(sim["type"])(
             config=SimulatorConfig(
@@ -319,6 +311,18 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         )
         for action in config.get("agent_actions", [])
     ]
+    cortex_llm = load_llm(config["cortex_llm"]["type"])(
+        config=LLMConfig(
+            **add_meta(  # type: ignore
+                config["cortex_llm"].get("config", {}),
+                api_key,
+                g_ut_eth,
+                g_URID,
+                g_robot_ip,
+            )
+        ),
+        available_actions=agent_actions,
+    )
     return RuntimeConfig(
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),

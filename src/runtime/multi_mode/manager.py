@@ -1,0 +1,649 @@
+import asyncio
+import json
+import logging
+import os
+import threading
+import time
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional
+
+import zenoh
+
+from runtime.multi_mode.config import (
+    ModeConfig,
+    ModeSystemConfig,
+    TransitionRule,
+    TransitionType,
+)
+from zenoh_msgs import (
+    ModeStatusRequest,
+    ModeStatusResponse,
+    String,
+    open_zenoh_session,
+    prepare_header,
+)
+
+
+@dataclass
+class ModeState:
+    """
+    Current state of the mode system.
+
+    Parameters
+    ----------
+    current_mode : str
+        The current active mode
+    previous_mode : Optional[str]
+        The previous mode before the current one
+    mode_start_time : float
+        Timestamp when the current mode was activated
+    transition_history : List[str]
+        History of mode transitions
+    last_transition_time : float
+        Timestamp of the last mode transition
+    user_context : Dict
+        Contextual information for context-aware transitions
+    """
+
+    current_mode: str
+    previous_mode: Optional[str] = None
+    mode_start_time: float = field(default_factory=time.time)
+    transition_history: List[str] = field(default_factory=list)
+    last_transition_time: float = 0.0
+    user_context: Dict = field(default_factory=dict)
+
+
+class ModeManager:
+    """
+    Manages mode transitions and state for the OM1 system.
+    """
+
+    def __init__(self, config: ModeSystemConfig):
+        """
+        Initialize the mode manager.
+
+        Parameters
+        ----------
+        config : ModeSystemConfig
+            The mode system configuration
+        """
+        self.config = config
+        self.state = ModeState(current_mode=config.default_mode)
+        self.transition_cooldowns: Dict[str, float] = {}
+        self.pending_transitions: List[TransitionRule] = []
+        self._transition_callbacks: List = []
+
+        # Validate configuration
+        if config.default_mode not in config.modes:
+            raise ValueError(
+                f"Default mode '{config.default_mode}' not found in available modes"
+            )
+
+        # Load persisted state if enabled
+        if config.mode_memory_enabled:
+            self._load_mode_state()
+
+        # Start zenoh controller
+        self.mode_status_request = "om/mode/request"
+        self.mode_status_response = "om/mode/response"
+
+        try:
+            self.session = open_zenoh_session()
+            self.session.declare_subscriber(
+                self.mode_status_request, self._zenoh_mode_status_request
+            )
+            self._zenoh_mode_status_response_pub = self.session.declare_publisher(
+                self.mode_status_response
+            )
+        except Exception as e:
+            logging.error(f"Error opening Zenoh client: {e}")
+            self.session = None
+            self.pub = None
+
+        logging.info(
+            f"Mode Manager initialized with current mode: {self.state.current_mode}"
+        )
+
+    @property
+    def current_mode_config(self) -> ModeConfig:
+        """
+        Get the configuration for the current mode.
+
+        Returns
+        -------
+        ModeConfig
+            The current mode configuration
+        """
+        return self.config.modes[self.state.current_mode]
+
+    @property
+    def current_mode_name(self) -> str:
+        """
+        Get the name of the current mode.
+
+        Returns
+        -------
+        str
+            The current mode name
+        """
+        return self.state.current_mode
+
+    def add_transition_callback(self, callback: Callable):
+        """
+        Add a callback to be called when mode transitions occur.
+
+        Parameters
+        ----------
+        callback : Callable
+            The callback function to add
+        """
+        self._transition_callbacks.append(callback)
+
+    def remove_transition_callback(self, callback: Callable):
+        """
+        Remove a transition callback.
+
+        Parameters
+        ----------
+        callback : Callable
+            The callback function to remove
+        """
+        if callback in self._transition_callbacks:
+            self._transition_callbacks.remove(callback)
+
+    async def _notify_transition_callbacks(self, from_mode: str, to_mode: str):
+        """
+        Notify all transition callbacks of a mode change.
+
+        Parameters
+        ----------
+        from_mode : str
+            The mode being transitioned from
+        to_mode : str
+            The mode being transitioned to
+        """
+        for callback in self._transition_callbacks:
+            try:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(from_mode, to_mode)
+                else:
+                    callback(from_mode, to_mode)
+            except Exception as e:
+                logging.error(f"Error in transition callback: {e}")
+
+    def check_time_based_transitions(self) -> Optional[str]:
+        """
+        Check if any time-based transitions should be triggered.
+
+        Returns
+        -------
+        Optional[str]
+            The target mode if a transition should occur, None otherwise
+        """
+        current_time = time.time()
+        mode_duration = current_time - self.state.mode_start_time
+
+        # Check if current mode has a timeout
+        current_config = self.current_mode_config
+        if (
+            current_config.timeout_seconds
+            and mode_duration >= current_config.timeout_seconds
+        ):
+            # Find time-based transition rules for this mode
+            for rule in self.config.transition_rules:
+                if (
+                    rule.from_mode == self.state.current_mode or rule.from_mode == "*"
+                ) and rule.transition_type == TransitionType.TIME_BASED:
+                    if self._can_transition(rule):
+                        logging.info(
+                            f"Time-based transition triggered: {self.state.current_mode} -> {rule.to_mode}"
+                        )
+                        return rule.to_mode
+
+        return None
+
+    def check_input_triggered_transitions(self, input_text: str) -> Optional[str]:
+        """
+        Check if any input-triggered transitions should be activated.
+
+        Parameters
+        ----------
+        input_text : str
+            The input text to check for trigger keywords
+
+        Returns
+        -------
+        Optional[str]
+            The target mode if a transition should occur, None otherwise
+        """
+        if not input_text:
+            return None
+
+        input_lower = input_text.lower()
+
+        # Find matching transition rules sorted by priority (higher priority first)
+        matching_rules = []
+        for rule in self.config.transition_rules:
+            if (
+                rule.from_mode == self.state.current_mode or rule.from_mode == "*"
+            ) and rule.transition_type == TransitionType.INPUT_TRIGGERED:
+
+                # Check if any trigger keywords are present
+                for keyword in rule.trigger_keywords:
+                    if keyword.lower() in input_lower:
+                        if self._can_transition(rule):
+                            matching_rules.append(rule)
+                        break
+
+        if matching_rules:
+            # Sort by priority (higher first) and select the best match
+            matching_rules.sort(key=lambda r: r.priority, reverse=True)
+            best_rule = matching_rules[0]
+            logging.info(
+                f"Input-triggered transition: {self.state.current_mode} -> {best_rule.to_mode}"
+            )
+            logging.info(f"Triggered by keywords: {best_rule.trigger_keywords}")
+            return best_rule.to_mode
+
+        return None
+
+    def _can_transition(self, rule: TransitionRule) -> bool:
+        """
+        Check if a transition rule can be executed based on cooldowns and other constraints.
+
+        Parameters
+        ----------
+        rule : TransitionRule
+            The transition rule to check
+
+        Returns
+        -------
+        bool
+            True if the transition can occur, False otherwise
+        """
+        current_time = time.time()
+
+        transition_key = f"{rule.from_mode}->{rule.to_mode}"
+        if transition_key in self.transition_cooldowns:
+            if (
+                current_time - self.transition_cooldowns[transition_key]
+                < rule.cooldown_seconds
+            ):
+                logging.debug(f"Transition {transition_key} still in cooldown")
+                return False
+
+        if rule.to_mode not in self.config.modes:
+            logging.warning(f"Target mode '{rule.to_mode}' not found in configuration")
+            return False
+
+        # TODO: Add context-aware transition logic here if needed
+
+        return True
+
+    async def request_transition(
+        self, target_mode: str, reason: str = "manual"
+    ) -> bool:
+        """
+        Request a manual transition to a specific mode.
+
+        Parameters
+        ----------
+        target_mode : str
+            The name of the target mode
+        reason : str
+            The reason for the transition
+
+        Returns
+        -------
+        bool
+            True if the transition was successful, False otherwise
+        """
+        if not self.config.allow_manual_switching and reason == "manual":
+            logging.warning("Manual mode switching is disabled")
+            return False
+
+        if target_mode not in self.config.modes:
+            logging.error(f"Target mode '{target_mode}' not found")
+            return False
+
+        if target_mode == self.state.current_mode:
+            logging.info(f"Already in mode '{target_mode}'")
+            return True
+
+        return await self._execute_transition(target_mode, reason)
+
+    async def _execute_transition(self, target_mode: str, reason: str) -> bool:
+        """
+        Execute a mode transition.
+
+        Parameters
+        ----------
+        target_mode : str
+            The name of the target mode
+        reason : str
+            The reason for the transition
+
+        Returns
+        -------
+        bool
+            True if the transition was successful, False otherwise
+        """
+        from_mode = self.state.current_mode
+
+        try:
+            transition_key = f"{from_mode}->{target_mode}"
+            self.transition_cooldowns[transition_key] = time.time()
+
+            self.state.previous_mode = from_mode
+            self.state.current_mode = target_mode
+            self.state.mode_start_time = time.time()
+            self.state.last_transition_time = time.time()
+            self.state.transition_history.append(f"{from_mode}->{target_mode}:{reason}")
+
+            if len(self.state.transition_history) > 50:
+                self.state.transition_history = self.state.transition_history[-25:]
+
+            from_config = self.config.modes.get(from_mode)
+            to_config = self.config.modes[target_mode]
+
+            logging.info(
+                f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
+            )
+
+            if (
+                from_config
+                and from_config.exit_message
+                and self.config.transition_announcement
+            ):
+                logging.info(f"Exit message: {from_config.exit_message}")
+
+            if to_config.entry_message and self.config.transition_announcement:
+                logging.info(f"Entry message: {to_config.entry_message}")
+
+            await self._notify_transition_callbacks(from_mode, target_mode)
+
+            self._save_mode_state()
+
+            return True
+
+        except Exception as e:
+            logging.error(
+                f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
+            )
+            return False
+
+    def get_available_transitions(self) -> List[str]:
+        """
+        Get a list of modes that can be transitioned to from the current mode.
+
+        Returns
+        -------
+        List[str]
+            List of available target mode names
+        """
+        available = set()
+
+        for rule in self.config.transition_rules:
+            if rule.from_mode == self.state.current_mode or rule.from_mode == "*":
+                if self._can_transition(rule):
+                    available.add(rule.to_mode)
+
+        return list(available)
+
+    def get_mode_info(self) -> Dict:
+        """
+        Get information about the current mode and system state.
+
+        Returns
+        -------
+        Dict
+            Dictionary containing mode information
+        """
+        current_config = self.current_mode_config
+        current_time = time.time()
+        mode_duration = current_time - self.state.mode_start_time
+
+        return {
+            "current_mode": self.state.current_mode,
+            "display_name": current_config.display_name,
+            "description": current_config.description,
+            "mode_duration": mode_duration,
+            "previous_mode": self.state.previous_mode,
+            "available_transitions": self.get_available_transitions(),
+            "all_modes": list(self.config.modes.keys()),
+            "transition_history": self.state.transition_history[-5:],
+            "timeout_seconds": current_config.timeout_seconds,
+            "time_remaining": (
+                current_config.timeout_seconds - mode_duration
+                if current_config.timeout_seconds
+                else None
+            ),
+        }
+
+    def update_user_context(self, context: Dict):
+        """
+        Update the user context for context-aware transitions.
+
+        Parameters
+        ----------
+        context : Dict
+            The context information to update
+        """
+        self.state.user_context.update(context)
+
+    def get_user_context(self) -> Dict:
+        """Get the current user context."""
+        return self.state.user_context.copy()
+
+    async def process_tick(self, input_text: Optional[str] = None) -> Optional[str]:
+        """
+        Process a tick and check for any needed transitions.
+
+        Parameters
+        ----------
+        input_text : Optional[str]
+            Any input text to check for triggered transitions
+
+        Returns
+        -------
+        Optional[str]
+            The new mode if a transition occurred, None otherwise
+        """
+        # Check time-based transitions first
+        time_target = self.check_time_based_transitions()
+        if time_target:
+            success = await self._execute_transition(time_target, "timeout")
+            if success:
+                return time_target
+
+        # Check input-triggered transitions
+        if input_text:
+            input_target = self.check_input_triggered_transitions(input_text)
+            if input_target:
+                success = await self._execute_transition(
+                    input_target, "input_triggered"
+                )
+                if success:
+                    return input_target
+
+        return None
+
+    def _zenoh_mode_status_request(self, data: zenoh.Sample):
+        """
+        Process incoming mode status requests via Zenoh.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The incoming Zenoh sample containing the request.
+        """
+        mode_status = ModeStatusRequest.deserialize(data.payload.to_bytes())
+        logging.info(f"Received mode status request: {mode_status}")
+
+        code = mode_status.code
+        request_id = mode_status.request_id
+        target_mode = mode_status.mode
+
+        # Switch to specified mode
+        if code == 0 and target_mode:
+            # Create async task to handle the transition and response
+            def run_async():
+                try:
+                    asyncio.run(
+                        self._handle_mode_switch_request(
+                            mode_status.header.frame_id,
+                            request_id.data,
+                            target_mode.data,
+                        )
+                    )
+                except Exception as e:
+                    logging.error(f"Error handling mode switch request: {e}")
+
+            thread = threading.Thread(target=run_async, daemon=True)
+            thread.start()
+            return
+
+        # Request current mode info
+        if code == 1:
+            mode_status_response = ModeStatusResponse(
+                header=prepare_header(mode_status.header.frame_id),
+                request_id=request_id,
+                code=ModeStatusResponse.Code.SUCCESS.value,
+                current_mode=String(self.state.current_mode),
+                message=String(json.dumps(self.get_mode_info())),
+            )
+            return self._zenoh_mode_status_response_pub.put(
+                mode_status_response.serialize()
+            )
+
+    async def _handle_mode_switch_request(
+        self, frame_id: str, request_id: str, target_mode: str
+    ):
+        """
+        Handle mode switch request asynchronously and send appropriate response.
+
+        Parameters
+        ----------
+        frame_id : str
+            The frame ID for the response header
+        request_id : str
+            The request ID
+        target_mode : str
+            The target mode to switch to
+        """
+        success = await self.request_transition(target_mode, "manual")
+
+        if success:
+            mode_status_response = ModeStatusResponse(
+                header=prepare_header(frame_id),
+                request_id=String(request_id),
+                code=ModeStatusResponse.Code.SUCCESS.value,
+                current_mode=String(self.state.current_mode),
+                message=String(f"Successfully switched to mode {target_mode}"),
+            )
+        else:
+            mode_status_response = ModeStatusResponse(
+                header=prepare_header(frame_id),
+                request_id=String(request_id),
+                code=ModeStatusResponse.Code.FAILURE.value,
+                current_mode=String(self.state.current_mode),
+                message=String(f"Failed to switch to mode {target_mode}"),
+            )
+
+        self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
+
+    def _get_state_file_path(self) -> str:
+        """
+        Get the path to the mode state file.
+
+        Returns
+        -------
+        str
+            The absolute path to the state file
+        """
+        memory_folder_path = os.path.join(
+            os.path.dirname(__file__), "../../../config", "memory"
+        )
+        if not os.path.exists(memory_folder_path):
+            os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)
+
+        config_name = getattr(self.config, "config_name", "default")
+        state_filename = f".{config_name}.json5"
+
+        return os.path.join(memory_folder_path, state_filename)
+
+    def _load_mode_state(self):
+        """
+        Load the persisted mode state from file.
+
+        If the state file exists and contains a valid last active mode,
+        set it as the current mode. Otherwise, use the default mode.
+        """
+        state_file = self._get_state_file_path()
+
+        try:
+            with open(state_file, "r") as f:
+                state_data = json.load(f)
+
+            last_active_mode = state_data.get("last_active_mode")
+
+            if (
+                last_active_mode
+                and last_active_mode in self.config.modes
+                and last_active_mode != self.config.default_mode
+            ):
+
+                logging.info(f"Restoring last active mode: {last_active_mode}")
+                self.state.current_mode = last_active_mode
+                self.state.previous_mode = state_data.get("previous_mode")
+
+                saved_history = state_data.get("transition_history", [])
+                if saved_history:
+                    self.state.transition_history.extend(saved_history)
+                    if len(self.state.transition_history) > 50:
+                        self.state.transition_history = self.state.transition_history[
+                            -25:
+                        ]
+
+                logging.info(f"Mode state restored from {state_file}")
+            else:
+                logging.info(f"Using default mode: {self.config.default_mode}")
+
+        except FileNotFoundError:
+            logging.debug(f"No state file found at {state_file}, using default mode")
+        except (json.JSONDecodeError, KeyError) as e:
+            logging.warning(f"Invalid state file format: {e}, using default mode")
+        except Exception as e:
+            logging.error(f"Error loading mode state: {e}, using default mode")
+
+    def _save_mode_state(self):
+        """
+        Save the current mode state to file.
+
+        This method is called after successful mode transitions to persist
+        the current state for restoration on next startup.
+        """
+        if not self.config.mode_memory_enabled:
+            return
+
+        state_file = self._get_state_file_path()
+
+        try:
+            os.makedirs(os.path.dirname(state_file), exist_ok=True)
+
+            state_data = {
+                "last_active_mode": self.state.current_mode,
+                "previous_mode": self.state.previous_mode,
+                "timestamp": time.time(),
+                "transition_history": self.state.transition_history[-10:],
+            }
+
+            temp_file = state_file + ".tmp"
+            with open(temp_file, "w") as f:
+                json.dump(state_data, f, indent=2)
+
+            os.rename(temp_file, state_file)
+            logging.debug(f"Mode state saved to {state_file}")
+
+        except Exception as e:
+            logging.error(f"Error saving mode state: {e}")

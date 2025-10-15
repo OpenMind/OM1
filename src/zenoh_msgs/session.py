@@ -5,7 +5,7 @@ import zenoh
 logging.basicConfig(level=logging.INFO)
 
 
-def create_zenoh_config(network_discovery: bool = True) -> dict:
+def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
     """
     Create a Zenoh configuration for a client connecting to a local server.
 
@@ -16,8 +16,8 @@ def create_zenoh_config(network_discovery: bool = True) -> dict:
 
     Returns
     -------
-    dict
-        The Zenoh configuration dictionary.
+    zenoh.Config
+        The Zenoh configuration object.
     """
     config = zenoh.Config()
     if not network_discovery:

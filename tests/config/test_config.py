@@ -1,11 +1,11 @@
 import importlib
 import os
-from typing import Type
+from typing import Optional, Type
 
 import json5
 
 from actions.base import ActionConnector, Interface
-from runtime.config import load_input, load_llm, load_simulator
+from runtime.single_mode.config import load_input, load_llm, load_simulator
 
 
 def test_configs():
@@ -67,7 +67,7 @@ def assert_action_classes_exist(action_config):
     ), f"No connector found for action {action_config['name']}"
 
 
-def find_subclass_in_module(module, parent_class: Type) -> Type:
+def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:
     """Find a subclass of parent_class in the given module."""
     for _, obj in module.__dict__.items():
         if (

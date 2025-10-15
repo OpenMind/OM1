@@ -2482,6 +2482,7 @@ dev = [
     { name = "black" },
     { name = "isort" },
     { name = "pre-commit" },
+    { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -2507,7 +2508,7 @@ requires-dist = [
     { name = "matplotlib" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "numpy" },
-    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=16a1fd187bb030e5cdc045c97ff1603cbcc2dca5" },
+    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=682f2ba98355904b8d4fa232df38e1dba1b7e630" },
     { name = "openai", specifier = ">=1.59.5" },
     { name = "opencv-python" },
     { name = "osascript" },
@@ -2541,6 +2542,7 @@ dev = [
     { name = "black", specifier = ">=24.10.0" },
     { name = "isort", specifier = ">=5.13.2" },
     { name = "pre-commit", specifier = ">=4.1.0" },
+    { name = "pyright", specifier = ">=1.1.406" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", specifier = ">=0.25.2" },
     { name = "ruff", specifier = ">=0.9.3" },
@@ -2549,7 +2551,7 @@ dev = [
 [[package]]
 name = "om1-modules"
 version = "0.1.0"
-source = { git = "https://github.com/OpenMind/om1-modules.git?rev=16a1fd187bb030e5cdc045c97ff1603cbcc2dca5#16a1fd187bb030e5cdc045c97ff1603cbcc2dca5" }
+source = { git = "https://github.com/OpenMind/om1-modules.git?rev=682f2ba98355904b8d4fa232df38e1dba1b7e630#682f2ba98355904b8d4fa232df38e1dba1b7e630" }
 dependencies = [
     { name = "av" },
     { name = "eclipse-zenoh" },
@@ -3458,6 +3460,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8b/1a/3544f4f299a47911c2ab3710f534e52fea62a633c96806995da5d25be4b2/pyparsing-3.2.1.tar.gz", hash = "sha256:61980854fd66de3a90028d679a954d5f2623e83144b5afe5ee86f43d762e5f0a", size = 1067694, upload-time = "2024-12-31T20:59:46.157Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1c/a7/c8a2d361bf89c0d9577c934ebb7421b25dc84bf3a8e3ac0a40aed9acc547/pyparsing-3.2.1-py3-none-any.whl", hash = "sha256:506ff4f4386c4cec0590ec19e6302d3aedb992fdc02c761e90416f158dacf8e1", size = 107716, upload-time = "2024-12-31T20:59:42.738Z" },
+]
+
+[[package]]
+name = "pyright"
+version = "1.1.406"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nodeenv" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/16/6b4fbdd1fef59a0292cbb99f790b44983e390321eccbc5921b4d161da5d1/pyright-1.1.406.tar.gz", hash = "sha256:c4872bc58c9643dac09e8a2e74d472c62036910b3bd37a32813989ef7576ea2c", size = 4113151, upload-time = "2025-10-02T01:04:45.488Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f6/a2/e309afbb459f50507103793aaef85ca4348b66814c86bc73908bdeb66d12/pyright-1.1.406-py3-none-any.whl", hash = "sha256:1d81fb43c2407bf566e97e57abb01c811973fdb21b2df8df59f870f688bdca71", size = 5980982, upload-time = "2025-10-02T01:04:43.137Z" },
 ]
 
 [[package]]

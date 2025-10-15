@@ -65,13 +65,21 @@ class DIMOTesla(FuserInput[str]):
         domain = getattr(config, "domain", None)
         private_key = getattr(config, "private_key", None)
 
-        if client_id is None or client_id == "":
+        if (
+            client_id is None
+            or client_id == ""
+            or domain is None
+            or private_key is None
+        ):
             logging.info(
                 "DIMOTesla: You did not provide credentials to your Tesla - aborting"
             )
             return
 
         self.token_id = getattr(config, "token_id", None)
+        if self.token_id is None:
+            logging.info("DIMOTesla: You did not provide a token_id - aborting")
+            return
 
         try:
             auth_header = self.dimo.auth.get_dev_jwt(
@@ -115,7 +123,7 @@ class DIMOTesla(FuserInput[str]):
             try:
                 get_vehicle_jwt = self.dimo.token_exchange.exchange(
                     developer_jwt=self.dev_jwt,
-                    token_id=self.token_id,
+                    token_id=self.token_id,  # type: ignore
                 )
                 self.vehicle_jwt = get_vehicle_jwt["token"]
                 self.vehicle_jwt_expires = time.time() + 8 * 60
@@ -161,7 +169,7 @@ class DIMOTesla(FuserInput[str]):
         )
 
         try:
-            tesla_data = latest_tesla_signals["data"]["signalsLatest"]
+            tesla_data = latest_tesla_signals["data"]["signalsLatest"]  # type: ignore
             powertrainTransmissionTravelledDistance = tesla_data[
                 "powertrainTransmissionTravelledDistance"
             ]["value"]
@@ -230,7 +238,7 @@ class DIMOTesla(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

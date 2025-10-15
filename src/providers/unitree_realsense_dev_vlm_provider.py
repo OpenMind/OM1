@@ -73,6 +73,10 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
             max_retries = 30  # Maximum allowed consecutive read failures. This is after approximately 3 seconds.
 
             while self.running:
+                if self._cap is None or not self._cap.isOpened():
+                    logger.error("Video capture device is not opened.")
+                    break
+
                 ret, frame = self._cap.read()
                 if not ret:
                     failure_count += 1
@@ -117,7 +121,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
                 # Convert frame to base64, and catch any encoding errors.
                 try:
                     _, buffer = cv2.imencode(".jpg", frame, self.encode_quality)
-                    frame_data = base64.b64encode(buffer).decode("utf-8")
+                    frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
                 except Exception as e:
                     logger.exception("Error encoding frame: %s", e)
                     continue
@@ -153,9 +157,11 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
             logger.error("Error opening video stream from %s", cam)
             return None
         try:
-            cap.set(cv2.CAP_PROP_FPS, self.fps)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
+            if self.fps is not None:
+                cap.set(cv2.CAP_PROP_FPS, self.fps)
+            if self.resolution is not None:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
         except Exception as e:
             logger.exception(
                 "Error setting camera properties for device %s: %s", cam, e
@@ -165,7 +171,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
         except Exception:
             pass
         try:
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # type: ignore
         except Exception:
             pass
         return cap
@@ -271,10 +277,11 @@ class UnitreeRealSenseDevVLMProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[callable]
             The callback function to process VLM results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

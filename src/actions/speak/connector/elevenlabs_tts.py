@@ -98,7 +98,6 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             output_format=output_format,
         )
         self.tts.start()
-        self.tts.add_pending_message("Woof Woof")
 
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
@@ -110,6 +109,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         if (
             self.silence_rate > 0
             and self.silence_counter < self.silence_rate
+            and self.io_provider.llm_prompt is not None
             and "INPUT: Voice" not in self.io_provider.llm_prompt
         ):
             self.silence_counter += 1
@@ -125,14 +125,20 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             if voice_input:
                 self.last_voice_command_time = voice_input.timestamp
 
-            if time.time() - self.last_voice_command_time > self.auto_sleep_time:
+            if (
+                self.last_voice_command_time is not None
+                and time.time() - self.last_voice_command_time > self.auto_sleep_time
+            ):
                 return
 
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)
 
         # Store robot message to conversation history only if there was ASR input
-        if "INPUT: Voice" in self.io_provider.llm_prompt:
+        if (
+            self.io_provider.llm_prompt is not None
+            and "INPUT: Voice" in self.io_provider.llm_prompt
+        ):
             self.conversation_provider.store_robot_message(output_interface.action)
 
         state = AudioStatus(
