@@ -112,6 +112,13 @@
           "type":"FacePresence"
         }
       ],
+      "cortex_llm": {
+        "type": "OpenAILLM",
+        "config": {
+          "agent_name": "Bits",
+          "history_length": 0
+        }
+      },
       "agent_actions": [
         {
           "name": "speak",
@@ -121,6 +128,11 @@
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
             "silence_rate": 10
           }
+        },
+        {
+          "name": "remember_location",
+          "llm_label": "remember_location",
+          "connector": "location_api",
         }
       ],
       "backgrounds": [
@@ -142,13 +154,93 @@
       ]
     },
 
+    "navigation": {
+      "display_name": "Robot Navigation",
+      "description": "Autonomous navigation mode",
+      "system_prompt_base": "You are Bits. Your mission is to:\n1. Navigate the environment safely\n2. Report interesting discoveries\n3. If a person says 'Navigate to a location' or 'take me to a location', example 'Navigate to the table' you should check if that location exists in your database and then start navigate_location.\n\nPrioritize safety - always avoid obstacles.",
+      "entry_message": "Switching to navigation mode. I'll start navigating to different location on your command.",
+      "exit_message": "It was fun navigating around yaay!.",
+      "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n \
+  1. If a person says 'Navigate to a location' or 'take me to a location', example 'Navigate to the table' you should check if that location exists in your database and then start navigate_location.\n \
+  2. Do not navigate_location If there is no 'Navigate to a location' or 'take me to a location' command given by the person",
+      "remember_locations": true,
+      "hertz": 1,
+      "agent_inputs": [
+        {
+          "type": "LocationsInput"
+        },
+        {
+          "type": "Odom"
+        },
+        {
+          "type": "GoogleASRInput"
+        },
+        {
+          "type": "UnitreeGo2Battery"
+        },
+        {
+          "type": "GoogleASRRTSPInput"
+        },
+        {
+          "type": "VLMVilaRTSP"
+        },
+        {
+          "type": "SimplePaths"
+        },
+        {
+          "type":"FacePresence"
+        }
+      ],
+      "agent_actions": [
+        {
+          "name": "speak",
+          "llm_label": "speak",
+          "connector": "elevenlabs_tts",
+          "config": {
+            "voice_id": "TbMNBJ27fH2U0VgpSNko",
+            "silence_rate": 10
+          }
+        },
+        {
+          "name": "move_go2_autonomy",
+          "llm_label": "move",
+          "connector": "unitree_sdk_advance"
+        },
+        {
+          "name": "navigate_location",
+          "llm_label": "navigate_location",
+          "connector": "nav",
+        },
+      ],
+      "backgrounds": [
+        {
+          "type": "Avatar"
+        },
+        {
+          "type": "UnitreeGo2State",
+        },
+        {
+          "type": "UnitreeGo2AMCL",
+        },
+        {
+          "type": "UnitreeGo2Navigation",
+        },
+        {
+          "type": "UnitreeGo2Location",
+        },
+        {
+          "type": "Locations",
+        }
+      ]
+    },
+
     "conversation": {
       "display_name": "Social Interaction",
       "description": "Focused conversation and social interaction mode",
       "system_prompt_base": "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication. \n\nIf Face Presence Sensor indicates known people (e.g., \"In Camera View: 2 known (wendy and bob).\"), acknowledge them by name once (e.g., \"Hi wendy and bob\").",
       "entry_message": "I'm ready to chat! What would you like to talk about?",
       "save_interactions": true,
-      "hertz": 2,
+      "hertz": 1,
       "cortex_llm": {
         "type": "OpenAILLM",
         "config": {
@@ -245,7 +337,7 @@
         {
           "name": "move_go2_autonomy",
           "llm_label": "move",
-          "connector": "unitree_sdk"
+          "connector": "unitree_sdk_advance"
         },
         {
           "name": "speak",
@@ -287,6 +379,14 @@
       "priority": 3,
       "cooldown_seconds": 5.0
     },
+   {
+      "from_mode": "welcome",
+      "to_mode": "navigation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["navigate", "navigation", "go to", "take me to", "show me"],
+      "priority": 3,
+      "cooldown_seconds": 5.0
+    },
     {
       "from_mode": "welcome",
       "to_mode": "conversation",
@@ -307,6 +407,14 @@
     // From SLAM mode
     {
       "from_mode": "slam",
+      "to_mode": "navigation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["navigate", "navigation mode", "go to location", "take me to"],
+      "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "slam",
       "to_mode": "conversation",
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop exploring", "come back", "talk", "chat", "enough exploring", "done mapping"],
@@ -322,12 +430,38 @@
       "cooldown_seconds": 10.0
     },
 
+    // From navigation mode
+    {
+      "from_mode": "navigation",
+      "to_mode": "slam",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["explore", "map", "slam", "start mapping"],
+      "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "navigation",
+      "to_mode": "conversation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["stop", "chat", "talk", "conversation", "done navigating"],
+      "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "navigation",
+      "to_mode": "guard",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["guard", "security", "patrol"],
+      "priority": 3,
+      "cooldown_seconds": 10.0
+    },
+
     // From conversation mode
     {
       "from_mode": "conversation",
       "to_mode": "slam",
       "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "show me around", "navigate", "wander"],
+      "trigger_keywords": ["explore", "map", "show me around", "wander"],
       "priority": 2,
       "cooldown_seconds": 5.0
     },
@@ -338,6 +472,14 @@
       "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
       "priority": 3,
       "cooldown_seconds": 10.0
+    },
+   {
+      "from_mode": "conversation",
+      "to_mode": "guard",
+      "transition_type": "time_based",
+      "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
+      "priority": 2,
+      "timeout_seconds": 300.0 // Switch to guard mode after 5 minutes of inactivity
     },
 
     // From guard mode
@@ -354,6 +496,14 @@
       "to_mode": "slam",
       "transition_type": "input_triggered",
       "trigger_keywords": ["explore", "map", "navigate", "stop patrolling"],
+      "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "guard",
+      "to_mode": "navigation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["navigate", "go to location", "take me to"],
       "priority": 2,
       "cooldown_seconds": 5.0
     },
