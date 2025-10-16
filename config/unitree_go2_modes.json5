@@ -87,9 +87,9 @@
     "slam": {
       "display_name": "SLAM Exploration",
       "description": "Autonomous navigation and mapping mode",
-      "system_prompt_base": "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and remember important locations\n3. Avoid obstacles using LIDAR data\n4. Report interesting discoveries\n5. Build a mental map of the space\n\nPrioritize safety - always avoid obstacles. Describe what you see and where you're going. Remember key landmarks. \n\nIf Face Presence Sensor indicates known people (e.g., \"In Camera View: 2 known (wendy and bob).\"), acknowledge them by name once (e.g., \"Hi wendy and bob\").",
-      "entry_message": "Switching to exploration mode. I'll start mapping the environment and remembering locations.",
-      "exit_message": "Exploration complete. I've updated my map of the area.",
+      "system_prompt_base": "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and understand the surroundings using LIDAR and visual data\n3. Avoid obstacles and maintain spatial awareness\n4. Report interesting discoveries and landmarks\n5. Only remember a location when the user explicitly asks you to (for example, when they say 'remember this location')\n\nWhile exploring, describe where you are and what you see in simple, natural language. If you encounter people detected by the Face Presence Sensor (e.g., 'In Camera View: 2 known (wendy and bob).'), greet them by name once (e.g., 'Hi wendy and bob!').\n\nDo NOT store or tag any location automatically—only invoke the 'remember_location' action after an explicit user request.",
+      "entry_message": "Switching to exploration mode. I'll start mapping the environment and exploring safely.",
+      "exit_message": "Exploration complete. I've stopped mapping and navigation.",
       "remember_locations": true,
       "hertz": 1,
       "agent_inputs": [
