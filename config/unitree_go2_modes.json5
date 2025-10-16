@@ -153,9 +153,6 @@
         },
         {
           "type": "UnitreeGo2Location",
-        },
-        {
-          "type":"FacePresence"
         }
       ]
     },
@@ -192,6 +189,9 @@
         },
         {
           "type": "SimplePaths"
+        },
+        {
+          "type":"FacePresence"
         }
       ],
       "agent_actions": [
