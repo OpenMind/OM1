@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     alsa-topology-conf \
     alsa-ucm-conf \
     pulseaudio-utils \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y curl pkg-config libssl-dev
