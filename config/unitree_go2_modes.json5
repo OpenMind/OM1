@@ -65,20 +65,13 @@
         {
           name: "move_go2_action",
           llm_label: "unitree_go2_action",
-          connector: "unitree_sdk"
+          connector: "unitree_sdk_advance"
         },
         {
           "name": "selfie",
           "llm_label": "selfie",
           "implementation": "passthrough",
           "connector": "selfie",
-          "config": {
-            "face_http_base_url": "http://127.0.0.1:6793",
-            "face_recent_sec": 1.0,
-            "timeout_sec": 5,
-            "poll_ms": 200,
-            "http_timeout_sec": 5.0
-          }
         }
       ],
       "backgrounds": [
@@ -243,7 +236,7 @@
       "system_prompt_base": "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication.",
       "entry_message": "I'm ready to chat! What would you like to talk about?",
       "save_interactions": true,
-      "hertz": 2,
+      "hertz": 1,
       "cortex_llm": {
         "type": "OpenAILLM",
         "config": {
@@ -278,7 +271,7 @@
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 10
+            "silence_rate": 20
           }
         }
       ],
@@ -340,7 +333,7 @@
         {
           "name": "move_go2_autonomy",
           "llm_label": "move",
-          "connector": "unitree_sdk"
+          "connector": "unitree_sdk_advance"
         },
         {
           "name": "speak",
@@ -483,6 +476,14 @@
       "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
       "priority": 3,
       "cooldown_seconds": 10.0
+    },
+    {
+      "from_mode": "conversation",
+      "to_mode": "guard",
+      "transition_type": "time_based",
+      "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
+      "priority": 2,
+      "timeout_seconds": 300.0 // Switch to guard mode after 5 minutes of inactivity
     },
 
     // From guard mode

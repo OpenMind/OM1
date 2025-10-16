@@ -8,6 +8,7 @@ import requests
 from actions.base import ActionConfig, ActionConnector
 from actions.selfie.interface import SelfieInput
 from providers.io_provider import IOProvider
+from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 _JSON = typing.Dict[str, typing.Any]
 
@@ -28,7 +29,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
         """
         super().__init__(config)
 
-        self.base: str = getattr(
+        self.base_url: str = getattr(
             self.config, "face_http_base_url", "http://127.0.0.1:6793"
         )
 
@@ -37,6 +38,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
         self.default_timeout: int = int(getattr(self.config, "timeout_sec", 15))
         self.http_timeout: float = float(getattr(self.config, "http_timeout_sec", 5.0))
 
+        self.evelenlabs_tts_provider = ElevenLabsTTSProvider()
         self.io_provider = IOProvider()
 
     def _write_status(self, line: str):
@@ -69,7 +71,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
         typing.Optional[_JSON]
             Parsed JSON dict on success; None on error.
         """
-        url = f"{self.base}{path}"
+        url = f"{self.base_url}{path}"
         try:
             r = requests.post(url, json=body, timeout=self.http_timeout)
             return r.json()
@@ -196,6 +198,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
 
             logging.info("[Selfie] Enrolled selfie for '%s' successfully.", name)
             self.io_provider.add_input("SelfieStatus", f"ok id={name}", time.time())
+            self.evelenlabs_tts_provider.add_pending_message(f"Woof! Woof! I see you {name}!")
 
         finally:
             await loop.run_in_executor(None, self._set_blur, orig_blur)

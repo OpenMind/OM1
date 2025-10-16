@@ -32,8 +32,6 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         # Sleep mode configuration
         self.io_provider = IOProvider()
         self.last_voice_command_time = time.time()
-        self.auto_sleep_mode = getattr(config, "auto_sleep_mode", True)
-        self.auto_sleep_time = getattr(config, "auto_sleep_time", 300)
 
         # Eleven Labs TTS configuration
         elevenlabs_api_key = getattr(self.config, "elevenlabs_api_key", None)
@@ -119,17 +117,6 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             return
 
         self.silence_counter = 0
-
-        if self.auto_sleep_mode:
-            voice_input = self.io_provider.inputs.get("Voice")
-            if voice_input:
-                self.last_voice_command_time = voice_input.timestamp
-
-            if (
-                self.last_voice_command_time is not None
-                and time.time() - self.last_voice_command_time > self.auto_sleep_time
-            ):
-                return
 
         # Add pending message to TTS
         pending_message = self.tts.create_pending_message(output_interface.action)

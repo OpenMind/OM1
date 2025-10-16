@@ -285,8 +285,6 @@ class ModeCortexRuntime:
         """
         while True:
             try:
-                logging.info("Cortex loop tick")
-                logging.info("skip_sleep: %s", self.sleep_ticker_provider.skip_sleep)
                 if not self.sleep_ticker_provider.skip_sleep and self.current_config:
                     await self.sleep_ticker_provider.sleep(
                         1 / self.current_config.hertz
