@@ -1,10 +1,9 @@
-import asyncio
 import json
 import logging
 import threading
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Union
 
-import aiohttp
+import requests
 
 from .io_provider import IOProvider
 from .singleton import singleton
@@ -14,118 +13,116 @@ from .singleton import singleton
 class LocationsProvider:
     """
     Provider that fetches locations from HTTP API in a background thread.
-
-    Follows the same pattern as GpsProvider, OdomProvider, etc.
-
-    Usage:
-      p = LocationsProvider(list_endpoint=url, refresh_interval=30)
-      p.start()  # Starts background thread
-      loc = p.get_location('kitchen')
     """
 
     def __init__(
-        self, list_endpoint: str = "", timeout: int = 5, refresh_interval: int = 30
+        self,
+        base_url: str = "http://localhost:5000/maps/locations/list",
+        timeout: int = 5,
+        refresh_interval: int = 30,
     ):
         """
         Initialize the provider.
 
-        Parameters:
-          list_endpoint: URL to fetch locations from
-          timeout: HTTP request timeout in seconds
-          refresh_interval: How often to fetch (seconds)
+        Parameters
+        ----------
+        base_url : str
+            The HTTP endpoint to fetch locations from. Default is "http://localhost:5000/maps/locations/list".
+        timeout : int
+            Timeout for HTTP requests in seconds.
+        refresh_interval : int
+            How often to refresh locations in seconds.
         """
-        self.list_endpoint = list_endpoint
+        self.base_url = base_url
         self.timeout = timeout
         self.refresh_interval = refresh_interval
         self._locations: Dict[str, Dict] = {}
         self._thread: Optional[threading.Thread] = None
-        self._running = False
+        self._stop_event = threading.Event()
+        self._lock = threading.Lock()
 
-        # Get IOProvider to store locations for inputs to access
-        try:
-            self.io_provider = IOProvider()
-        except Exception:
-            logging.exception("Failed to get IOProvider in LocationsProvider")
-            self.io_provider = None
+        self.io_provider = IOProvider()
 
     def start(self) -> None:
-        """Start the background fetch thread."""
-        if self._running:
+        """
+        Start the background fetch thread.
+        """
+        if self._thread and self._thread.is_alive():
             logging.warning("LocationsProvider already running")
             return
 
-        self._running = True
+        self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         logging.info("LocationsProvider background thread started")
 
     def stop(self) -> None:
-        """Stop the background fetch thread."""
-        self._running = False
+        """
+        Stop the background fetch thread.
+        """
+        self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
 
     def _run(self) -> None:
-        """Background thread that periodically fetches locations."""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        while self._running:
+        """
+        Background thread that periodically fetches locations.
+        """
+        while not self._stop_event.is_set():
             try:
-                loop.run_until_complete(self._fetch())
+                self._fetch()
             except Exception:
                 logging.exception("Error fetching locations")
 
-            # Sleep in small increments so we can stop quickly
-            for _ in range(self.refresh_interval):
-                if not self._running:
-                    break
-                asyncio.run(asyncio.sleep(1))
+            self._stop_event.wait(timeout=self.refresh_interval)
 
-    async def _fetch(self) -> None:
-        """Fetch locations from the API and update cache."""
-        if not self.list_endpoint:
+    def _fetch(self) -> None:
+        """
+        Fetch locations from the API and update cache.
+        """
+        if not self.base_url:
             return
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    self.list_endpoint, timeout=self.timeout
-                ) as resp:
-                    text = await resp.text()
-                    if resp.status < 200 or resp.status >= 300:
-                        logging.error(
-                            f"Location list API returned {resp.status}: {text}"
-                        )
-                        return
+            resp = requests.get(self.base_url, timeout=self.timeout)
 
-                    data = json.loads(text)
+            if resp.status_code < 200 or resp.status_code >= 300:
+                logging.error(
+                    f"Location list API returned {resp.status_code}: {resp.text}"
+                )
+                return
 
-                    # Handle nested message format
-                    raw_message = (
-                        data.get("message") if isinstance(data, dict) else None
+            data = resp.json()
+
+            raw_message = data.get("message") if isinstance(data, dict) else None
+            if raw_message and isinstance(raw_message, str):
+                try:
+                    locations = json.loads(raw_message)
+                except Exception:
+                    logging.error(
+                        "Failed to parse nested message JSON from location list"
                     )
-                    if raw_message and isinstance(raw_message, str):
-                        try:
-                            locations = json.loads(raw_message)
-                        except Exception:
-                            logging.error(
-                                "Failed to parse nested message JSON from location list"
-                            )
-                            return
-                    elif isinstance(data, dict) and "message" not in data:
-                        locations = data
-                    else:
-                        logging.error("Unexpected format from location list API")
-                        return
+                    return
+            elif isinstance(data, dict) and "message" not in data:
+                locations = data
+            else:
+                logging.error("Unexpected format from location list API")
+                return
 
-                    self._update_locations(locations)
+            self._update_locations(locations)
 
         except Exception:
             logging.exception("Error fetching locations")
 
-    def _update_locations(self, locations_raw) -> None:
-        """Parse and store locations."""
+    def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
+        """
+        Parse and store locations.
+
+        Parameters
+        ----------
+        locations_raw : Dict or List
+            Raw locations data from the API.
+        """
         parsed = {}
 
         if isinstance(locations_raw, dict):
@@ -143,24 +140,37 @@ class LocationsProvider:
                     continue
                 parsed[name.lower()] = item
 
-        self._locations = parsed
-
-        # Store in IOProvider so LocationsInput can access it
-        if self.io_provider is not None:
-            self.io_provider.add_dynamic_variable("available_locations", parsed)
-            logging.info(
-                f"LocationsProvider loaded {len(parsed)} locations and stored in IOProvider"
-            )
-        else:
-            logging.info(f"LocationsProvider loaded {len(parsed)} locations")
+        with self._lock:
+            self._locations = parsed
 
     def get_all_locations(self) -> Dict[str, Dict]:
-        """Get all cached locations."""
-        return dict(self._locations)
+        """
+        Get all cached locations.
+
+        Returns
+        -------
+        Dict
+            A dictionary of all locations keyed by their labels.
+        """
+        with self._lock:
+            return dict(self._locations)
 
     def get_location(self, label: str) -> Optional[Dict]:
-        """Get a specific location by label."""
+        """
+        Get a specific location by label.
+
+        Parameters
+        ----------
+        label : str
+            The label of the location to retrieve.
+
+        Returns
+        -------
+        Dict or None
+            The location data if found, otherwise None.
+        """
         if not label:
             return None
         key = label.strip().lower()
-        return self._locations.get(key)
+        with self._lock:
+            return self._locations.get(key)

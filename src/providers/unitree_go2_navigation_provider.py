@@ -1,26 +1,3 @@
-"""
-Navigation Provider for Unitree Go2 robot with AI mode control.
-
-This provider listens to ROS2 navigation action status topic and manages:
-1. Navigation goal publishing
-2. Navigation status tracking
-3. Automatic AI mode control based on navigation state
-
-AI Mode Control Logic:
-- When navigation starts (ACCEPTED/EXECUTING): AI mode is DISABLED
-- When navigation succeeds (STATUS_SUCCEEDED=4): AI mode is RE-ENABLED
-- When navigation fails/canceled (CANCELED/ABORTED): AI mode REMAINS DISABLED
-
-This ensures the robot's autonomous behaviors don't interfere during navigation,
-and AI is only restored after successful navigation completion.
-
-ROS2 Topics:
-- Subscribes: /navigate_to_pose/_action/status (or _action/feedback)
-- Publishes: /goal_pose (navigation goals)
-- Publishes: /navigate_to_pose/_action/cancel_goal (goal cancellation)
-- Publishes: om/ai/request (AI enable/disable control)
-"""
-
 import logging
 from typing import Optional
 from uuid import uuid4
@@ -87,6 +64,7 @@ class UnitreeGo2NavigationProvider:
     ):
         """
         Initialize the Unitree Go2 Navigation Provider with a specific topic.
+
         Parameters
         ----------
         navigation_status_topic : str, optional
@@ -132,6 +110,7 @@ class UnitreeGo2NavigationProvider:
     def navigation_status_message_callback(self, data: zenoh.Sample):
         """
         Process an incoming navigation status message.
+
         Parameters
         ----------
         data : zenoh.Sample
@@ -186,6 +165,7 @@ class UnitreeGo2NavigationProvider:
     def _publish_ai_status(self, enabled: bool):
         """
         Publish AI status to enable or disable AI mode during navigation.
+
         Parameters
         ----------
         enabled : bool
@@ -237,6 +217,7 @@ class UnitreeGo2NavigationProvider:
     def publish_goal_pose(self, pose: geometry_msgs.PoseStamped):
         """
         Publish a goal pose to the navigation topic.
+
         Parameters
         ----------
         pose : geometry_msgs.PoseStamped
@@ -279,6 +260,7 @@ class UnitreeGo2NavigationProvider:
     def navigation_state(self) -> str:
         """
         Get the current navigation state.
+
         Returns
         -------
         str
@@ -290,6 +272,7 @@ class UnitreeGo2NavigationProvider:
     def is_navigating(self) -> bool:
         """
         Check if navigation is currently in progress.
+
         Returns
         -------
         bool

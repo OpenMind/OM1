@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Optional
 
 from actions.base import ActionConfig, ActionConnector
 from actions.navigate_location.interface import NavigateLocationInput
@@ -13,26 +12,40 @@ from zenoh_msgs import Header, Point, Pose, PoseStamped, Quaternion, Time
 class NavConnector(ActionConnector[NavigateLocationInput]):
     """
     Connector that queries a locations API and publishes a navigation goal.
-
-    Config options:
-      - list_endpoint: URL to GET available locations (required)
-      - timeout: request timeout seconds (default 5)
     """
 
     def __init__(self, config: ActionConfig):
+        """
+        Initialize the NavConnector.
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
-        self.list_endpoint: Optional[str] = getattr(config, "list_endpoint", None)
-        self.timeout: int = getattr(config, "timeout", 5)
-        self.provider = UnitreeGo2NavigationProvider()
-        # provider that manages remote location lists
-        self.loc_provider = LocationsProvider(
-            self.list_endpoint or "",
-            self.timeout,
-            getattr(config, "refresh_interval", 0),
+
+        base_url = getattr(
+            self.config,
+            "base_url",
+            "http://localhost:5000/maps/locations/list",
         )
-        self.io = IOProvider()
+        timeout = getattr(self.config, "timeout", 5)
+        refresh_interval = getattr(self.config, "refresh_interval", 30)
+
+        self.location_provider = LocationsProvider(base_url, timeout, refresh_interval)
+        self.unitree_go2_navigation_provider = UnitreeGo2NavigationProvider()
+        self.io_provider = IOProvider()
 
     async def connect(self, input_protocol: NavigateLocationInput) -> None:
+        """
+        Connect the input protocol to the navigation action.
+
+        Parameters
+        ----------
+        input_protocol : NavigateLocationInput
+            The input protocol containing the action details.
+        """
         label = input_protocol.action
 
         # Clean up the label in case LLM included command phrases
@@ -56,31 +69,28 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
                 break
 
         # Use provider to lookup
-        loc = self.loc_provider.get_location(label)
+        loc = self.location_provider.get_location(label)
         if loc is None:
             # provide human-friendly feedback via IOProvider
-            avail = self.loc_provider.get_all_locations()
-            avail_list = ", ".join(
+            locations = self.location_provider.get_all_locations()
+            locations_list = ", ".join(
                 [
                     str(v.get("name") if isinstance(v, dict) else k)
-                    for k, v in avail.items()
+                    for k, v in locations.items()
                 ]
             )
-            msg = (
-                f"Location '{label}' not found. Available: {avail_list}"
-                if avail_list
+            logging.warning(
+                f"Location '{label}' not found. Available: {locations_list}"
+                if locations_list
                 else f"Location '{label}' not found. No locations available."
             )
-            logging.warning(msg)
-            self.io.add_input("NavigationResult", msg, None)
+            # self.io_provider.add_input("NavigationResult", msg, None)
             return
 
         pose = loc.get("pose") or {}
         position = pose.get("position", {})
         orientation = pose.get("orientation", {})
 
-        # Build PoseStamped using explicit sub-objects (same pattern as UnitreeGo2LocationProvider)
-        # fill timestamp using real unix ts
         now = Time(sec=int(asyncio.get_event_loop().time()), nanosec=0)
         header = Header(stamp=now, frame_id="map")
 
@@ -100,12 +110,11 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         goal_pose = PoseStamped(header=header, pose=pose_msg)
 
         try:
-            self.provider.publish_goal_pose(goal_pose)
-            msg = f"Navigation to '{label}' initiated"
-            logging.info(msg)
-            self.io.add_input("NavigationResult", msg, None)
+            self.unitree_go2_navigation_provider.publish_goal_pose(goal_pose)
+            logging.info(f"Navigation to '{label}' initiated")
+            # self.io_provider.add_input("NavigationResult", "Navigation to '{label}' initiated", None)
         except Exception as e:
             logging.error(f"Error querying location list or publishing goal: {e}")
-            self.io.add_input(
-                "NavigationResult", f"Error initiating navigation: {e}", None
-            )
+            # self.io_provider.add_input(
+            #     "NavigationResult", f"Error initiating navigation: {e}", None
+            # )

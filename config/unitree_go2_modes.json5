@@ -135,11 +135,6 @@
           "name": "remember_location",
           "llm_label": "remember_location",
           "connector": "location_api",
-          "config": {
-            "endpoint": " http://localhost:5000/maps/locations/add/slam",
-            "timeout": 5,
-            "map_name": "map"
-            }
         }
       ],
       "backgrounds": [
@@ -216,10 +211,6 @@
           "name": "navigate_location",
           "llm_label": "navigate_location",
           "connector": "nav",
-          "config": {
-          "list_endpoint": "http://localhost/maps/locations/list",
-          "timeout": 5
-          }
         },
       ],
       "backgrounds": [
@@ -240,11 +231,6 @@
         },
         {
           "type": "Locations",
-          "config": {
-            "list_endpoint": "http://localhost:5000/maps/locations/list",
-            "timeout": 5,
-            "refresh_interval": 30
-          }
         }
       ]
     },

@@ -20,11 +20,6 @@
     },
     {
       "type": "LocationsInput",
-      "config": {
-        "list_endpoint": "http://localhost:5000/maps/locations/list",
-        "timeout": 5,
-        "refresh_interval": 60
-      }
     },
     {
       "type": "Odom"
@@ -59,10 +54,6 @@
       "name": "navigate_location",
       "llm_label": "navigate_location",
       "connector": "nav",
-      "config": {
-      "list_endpoint": "http://localhost:5000/maps/locations/list",
-      "timeout": 5
-      }
     },
     {
      "name": "speak",
@@ -97,11 +88,6 @@
     },
     {
       "type": "Locations",
-      "config": {
-        "list_endpoint": "http://localhost:5000/maps/locations/list",
-        "timeout": 5,
-        "refresh_interval": 30
-      }
     }
   ]
 }
