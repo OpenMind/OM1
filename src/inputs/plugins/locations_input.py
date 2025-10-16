@@ -72,7 +72,7 @@ class LocationsInput(FuserInput[str]):
                 lines.append(f"{label}")
 
         result = "\n".join(lines)
-        logging.info(f"LocationsInput: formatted {len(lines)} locations")
+        logging.debug(f"LocationsInput: formatted {len(lines)} locations")
         return result
 
     async def _raw_to_text(self, raw_input: str) -> Message:

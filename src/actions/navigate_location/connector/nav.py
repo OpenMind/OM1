@@ -48,8 +48,6 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         """
         label = input_protocol.action
 
-        # Clean up the label in case LLM included command phrases
-        # Remove common prefixes like "go to", "navigate to", "move to", etc.
         label = label.lower().strip()
         for prefix in [
             "go to the ",
@@ -71,7 +69,6 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         # Use provider to lookup
         loc = self.location_provider.get_location(label)
         if loc is None:
-            # provide human-friendly feedback via IOProvider
             locations = self.location_provider.get_all_locations()
             locations_list = ", ".join(
                 [
@@ -84,7 +81,6 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
                 if locations_list
                 else f"Location '{label}' not found. No locations available."
             )
-            # self.io_provider.add_input("NavigationResult", msg, None)
             return
 
         pose = loc.get("pose") or {}
@@ -112,9 +108,5 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         try:
             self.unitree_go2_navigation_provider.publish_goal_pose(goal_pose)
             logging.info(f"Navigation to '{label}' initiated")
-            # self.io_provider.add_input("NavigationResult", "Navigation to '{label}' initiated", None)
         except Exception as e:
             logging.error(f"Error querying location list or publishing goal: {e}")
-            # self.io_provider.add_input(
-            #     "NavigationResult", f"Error initiating navigation: {e}", None
-            # )

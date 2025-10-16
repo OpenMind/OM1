@@ -44,7 +44,7 @@ def simple_paths_processor(
         current_time = time.time()
         latency = current_time - msg_time
         logging.debug(f"Received paths with latency: {latency:.6f} seconds")
-        logging.info(f"Received paths: {paths.paths}")
+        logging.debug(f"Received paths: {paths.paths}")
 
         try:
             data_queue.put_nowait(paths)
