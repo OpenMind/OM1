@@ -90,6 +90,7 @@
           },
         ]
     },
+
     "slam": {
       "display_name": "SLAM Exploration",
       "description": "Autonomous navigation and mapping mode",
@@ -158,6 +159,7 @@
         }
       ]
     },
+
     "navigation": {
       "display_name": "Robot Navigation",
       "description": "Autonomous navigation mode",
