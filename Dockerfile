@@ -49,7 +49,7 @@ COPY . .
 RUN git submodule update --init --recursive
 
 RUN uv venv /app/OM1/.venv && \
-    uv pip install -r pyproject.toml --extra dds
+    uv pip install --extra dds .
 
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
