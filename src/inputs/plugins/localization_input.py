@@ -1,0 +1,136 @@
+import asyncio
+import logging
+import time
+from dataclasses import dataclass
+from typing import List, Optional
+
+from inputs.base import SensorConfig
+from inputs.base.loop import FuserInput
+from providers.io_provider import IOProvider
+from providers.unitree_go2_amcl_provider import UnitreeGo2AMCLProvider
+
+
+@dataclass
+class Message:
+    """
+    Container for timestamped messages.
+
+    Parameters
+    ----------
+    timestamp : float
+        Unix timestamp of the message
+    message : str
+        Content of the message
+    """
+
+    timestamp: float
+    message: str
+
+
+class LocalizationInput(FuserInput[str]):
+    """
+    Localization status input plugin for LLM prompts.
+
+    Monitors the robot's localization status via AMCL and provides
+    clear feedback to the LLM about whether navigation is safe to proceed.
+    """
+
+    def __init__(self, config: SensorConfig = SensorConfig()):
+        """
+        Initialize the LocalizationInput plugin.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the sensor input.
+        """
+        super().__init__(config)
+
+        # Initialize providers
+        self.amcl_provider = UnitreeGo2AMCLProvider.instance()
+        self.io_provider = IOProvider()
+
+        # Message buffer
+        self.messages: List[Message] = []
+
+        # Descriptive text for LLM context
+        self.descriptor_for_LLM = "Robot localization status - indicates if navigation is safe to proceed."
+
+        logging.info("LocalizationInput plugin initialized")
+
+    async def _poll(self) -> Optional[str]:
+        """
+        Poll the AMCL provider for localization status.
+
+        Returns
+        -------
+        Optional[str]
+            Status message indicating if robot is localized and ready for navigation,
+            or None if no status change occurred.
+        """
+        await asyncio.sleep(0.1)  # Brief delay to prevent excessive polling
+
+        try:
+            is_localized = self.amcl_provider.is_localized
+            pose = self.amcl_provider.pose
+
+            if is_localized and pose is not None:
+                status_msg = "LOCALIZED: Robot position is confirmed. Navigation commands are safe to execute."
+                pos = pose.position
+                logging.debug(
+                    f"Robot localized at position x:{pos.x:.2f}, y:{pos.y:.2f}, z:{pos.z:.2f}"
+                )
+            else:
+                status_msg = "NOT LOCALIZED: Robot position uncertain. DO NOT attempt navigation until localized."
+                logging.debug("Robot localization status: NOT LOCALIZED")
+
+            return status_msg
+
+        except Exception as e:
+            logging.error(f"Error polling localization status: {e}")
+            return "LOCALIZATION ERROR: Unable to determine robot position. Navigation not recommended."
+
+    async def _raw_to_text(self, raw_input: str) -> Message:
+        """
+        Convert raw input string to Message dataclass.
+
+        Parameters
+        ----------
+        raw_input : str
+            Raw localization status string
+
+        Returns
+        -------
+        Message
+            Message dataclass containing the status and timestamp
+        """
+        return Message(timestamp=time.time(), message=raw_input)
+
+    async def start(self):
+        """
+        Start the localization input monitoring.
+
+        Ensures the AMCL provider is running to receive localization updates.
+        """
+        try:
+            if not self.amcl_provider.running:
+                self.amcl_provider.start()
+                logging.info("AMCL Provider started for localization monitoring")
+
+            await super().start()
+            logging.info("LocalizationInput monitoring started")
+
+        except Exception as e:
+            logging.error(f"Failed to start LocalizationInput: {e}")
+            raise
+
+    async def stop(self):
+        """
+        Stop the localization input monitoring.
+        """
+        try:
+            await super().stop()
+            logging.info("LocalizationInput monitoring stopped")
+
+        except Exception as e:
+            logging.error(f"Error stopping LocalizationInput: {e}")
