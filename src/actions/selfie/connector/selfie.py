@@ -7,8 +7,8 @@ import requests
 
 from actions.base import ActionConfig, ActionConnector
 from actions.selfie.interface import SelfieInput
-from providers.io_provider import IOProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
+from providers.io_provider import IOProvider
 
 _JSON = typing.Dict[str, typing.Any]
 
@@ -198,7 +198,9 @@ class SelfieConnector(ActionConnector[SelfieInput]):
 
             logging.info("[Selfie] Enrolled selfie for '%s' successfully.", name)
             self.io_provider.add_input("SelfieStatus", f"ok id={name}", time.time())
-            self.evelenlabs_tts_provider.add_pending_message(f"Woof! Woof! I see you {name}!")
+            self.evelenlabs_tts_provider.add_pending_message(
+                f"Woof! Woof! I see you {name}!"
+            )
 
         finally:
             await loop.run_in_executor(None, self._set_blur, orig_blur)
