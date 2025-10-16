@@ -219,12 +219,13 @@ class ModeCortexRuntime:
         Start the mode-aware runtime's main execution loop.
         """
         try:
-            # Initialize the default mode if not already done
+            self.mode_manager.set_event_loop(asyncio.get_event_loop())
+
             if not self._mode_initialized:
                 await self._initialize_mode(self.mode_manager.current_mode_name)
                 self._mode_initialized = True
 
-                # Play entry message for initial mode if enabled
+                # Play initial mode entry message if enabled
                 if self.mode_config.transition_announcement:
                     initial_mode_config = self.mode_config.modes[
                         self.mode_manager.current_mode_name

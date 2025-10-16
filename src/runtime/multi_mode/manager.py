@@ -72,6 +72,7 @@ class ModeManager:
         self.transition_cooldowns: Dict[str, float] = {}
         self.pending_transitions: List[TransitionRule] = []
         self._transition_callbacks: List = []
+        self._main_event_loop: Optional[asyncio.AbstractEventLoop] = None
 
         # Validate configuration
         if config.default_mode not in config.modes:
@@ -103,6 +104,17 @@ class ModeManager:
         logging.info(
             f"Mode Manager initialized with current mode: {self.state.current_mode}"
         )
+
+    def set_event_loop(self, loop: asyncio.AbstractEventLoop):
+        """
+        Set the main event loop reference for thread-safe task scheduling.
+
+        Parameters
+        ----------
+        loop : asyncio.AbstractEventLoop
+            The main event loop reference
+        """
+        self._main_event_loop = loop
 
     @property
     def current_mode_config(self) -> ModeConfig:
@@ -486,21 +498,21 @@ class ModeManager:
 
         # Switch to specified mode
         if code == 0 and target_mode:
-            # Create async task to handle the transition and response
-            def run_async():
-                try:
-                    asyncio.run(
-                        self._handle_mode_switch_request(
-                            mode_status.header.frame_id,
-                            request_id.data,
-                            target_mode.data,
+            try:
+                if self._main_event_loop and self._main_event_loop.is_running():
+                    self._main_event_loop.call_soon_threadsafe(
+                        lambda: asyncio.create_task(
+                            self._handle_mode_switch_request(
+                                mode_status.header.frame_id,
+                                request_id.data,
+                                target_mode.data,
+                            )
                         )
                     )
-                except Exception as e:
-                    logging.error(f"Error handling mode switch request: {e}")
-
-            thread = threading.Thread(target=run_async, daemon=True)
-            thread.start()
+                else:
+                    logging.error("Main event loop is not set or not running")
+            except Exception as e:
+                logging.error(f"Error scheduling mode switch request: {e}")
             return
 
         # Request current mode info

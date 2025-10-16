@@ -6,7 +6,7 @@
   "mode_memory_enabled": true,
 
   // Global settings
-  "api_key": "om1_live_1f137bb74c3d8441793888ed7d9ae2d8603d401f41b8ce0f36da34f5bf3b36424ba726737dac1658",
+  "api_key": "openmind_free",
   "unitree_ethernet": "eno1",
   "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
   "cortex_llm": {
@@ -72,13 +72,6 @@
           "llm_label": "selfie",
           "implementation": "passthrough",
           "connector": "selfie",
-          "config": {
-            "face_http_base_url": "http://127.0.0.1:6793",
-            "face_recent_sec": 1.0,
-            "timeout_sec": 5,
-            "poll_ms": 200,
-            "http_timeout_sec": 5.0
-          }
         }
       ],
       "backgrounds": [
@@ -145,9 +138,6 @@
         },
         {
           "type": "UnitreeGo2Location",
-        },
-        {
-          "type":"FacePresence"
         }
       ]
     },
