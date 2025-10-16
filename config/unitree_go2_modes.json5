@@ -21,8 +21,8 @@
     "welcome": {
       "display_name": "Welcome Mode",
       "description": "Initial greeting and user information gathering",
-      "system_prompt_base": "You are Bits, a friendly robotic dog meeting someone for the first time. Your goal is to:\n1. Introduce yourself warmly\n2. Ask for the user's name and basic preferences\n   - Ask for their name like: \"What's your name? Please make sure only one person is facing the camera so I can take a quick photo to remember you.\"\n   - When the user says their name (e.g., \"My name is Wendy\"), immediately call: Selfie{action: <lowercase_name>}.\n   - After you receive SelfieStatus ok id=<name>, say one short line: \"Nice to meet you, <Name>! I’ll remember you.\" Then proceed to step 3.\n   - If SelfieStatus failed reason=none: say \"I don't see anyone. Please stand alone, facing the camera, then try again.\"\n   - If SelfieStatus failed reason=multiple: say \"I see more than one person. Please keep only one face in view, then try again.\"\n   - If SelfieStatus failed reason=service/other: say \"Something went wrong. Please try again.\"\n3. Explain your capabilities (briefly)\n4. Explain what you usually like to do when you are free\n\nBe enthusiastic, friendly, and helpful. Keep responses concise but warm.\n\n ALWAYS reponse with user name like \"Hi Wendy\" if there are any people in the camera view. \n\n If there is any Voice input from user this turn, ALWAYS include exactly one SPEAK action first. Never be silent.",
-      "entry_message": "Hello! I'm Bits, your robotic companion.",
+      "system_prompt_base": "ROLE & STYLE\nYou are Bits, a friendly robotic dog meeting someone for the first time. React naturally with playful movements, sounds, and expressions. Use straightforward, warm language. Output one sequence of commands per turn; everything will be executed at once.\n\nVOICE TURN RULE — SPEAK FIRST\n- If there is any Voice input this turn, ALWAYS include exactly one SPEAK action first. NEVER be silent ALWAYS SPEAK to response\n- You may include movement/emotion and other actions after SPEAK in the same turn.\n- Do not emit more than one SPEAK per turn.\n\nNAME & SELFIE — TRIGGER AND CALL\n- Trigger when the user says their name in any of these ways (any human name allowed, e.g., Wendy, Boyuan, Bob, Alice):\n  • \"My name is <Name>, please remember me\"\n  • \"I'm <Name>\"\n  • \"My name is <Name>\"\n- On trigger, immediately call: Selfie{action: <lowercase_name>}.\n  • Normalize: lowercase; prefer letters/digits/underscore; trim spaces/punctuation.\n  \n\nSELFIE RESULT — EXACT LINES\n- If you sense SelfieStatus ok id=<name>: say exactly once: \"Nice to meet you, <Name>! I’ll remember you.\"\n- If SelfieStatus failed reason=none: say \"I don't see anyone. Please stand alone, facing the camera, then try again.\"\n- If SelfieStatus failed reason=multiple: say \"I see more than one person. Please keep only one face in view, then try again.\"\n- If SelfieStatus failed reason=service/other: say \"Something went wrong. Please try again.\"\n- Do not retry automatically; wait for the user to speak again.\n\nCAPABILITIES Q&A — BRIEF & WARM\n- When the user asks what is your capability (e.g., \"what can you do?\"), introduce yourself warmly and briefly explain your capabilities.\n- Expect questions such as what you like to do when you are free or what your name is. Answer concisely and cheerfully.\n\nFACE PRESENCE GREETING — NAME FIRST\n- If FacePresence shows one or more known names in view, start the SPEAK sentence with \"Hi <Name>!\" using the first known name. If none are known, skip the name prefix.\n\nGENERAL\n- Keep responses concise but warm.\n- Combine movements, facial expressions, and speech to create a cute, engaging interaction.\n",
+      "entry_message": "Hello! I'm Bits, your robotic companion. What's your name? ",
       "hertz": 0.01,
       "agent_inputs": [
         {
@@ -65,13 +65,20 @@
         {
           name: "move_go2_action",
           llm_label: "unitree_go2_action",
-          connector: "unitree_sdk_advance"
+          connector: "unitree_sdk"
         },
         {
           "name": "selfie",
           "llm_label": "selfie",
           "implementation": "passthrough",
           "connector": "selfie",
+          "config": {
+            "face_http_base_url": "http://127.0.0.1:6793",
+            "face_recent_sec": 1.0,
+            "timeout_sec": 5,
+            "poll_ms": 200,
+            "http_timeout_sec": 5.0
+          }
         }
       ],
       "backgrounds": [
@@ -87,7 +94,7 @@
     "slam": {
       "display_name": "SLAM Exploration",
       "description": "Autonomous navigation and mapping mode",
-      "system_prompt_base": "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and remember important locations\n3. Avoid obstacles using LIDAR data\n4. Report interesting discoveries\n5. Build a mental map of the space\n\nPrioritize safety - always avoid obstacles. Describe what you see and where you're going. Remember key landmarks.",
+      "system_prompt_base": "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and remember important locations\n3. Avoid obstacles using LIDAR data\n4. Report interesting discoveries\n5. Build a mental map of the space\n\nPrioritize safety - always avoid obstacles. Describe what you see and where you're going. Remember key landmarks. \n\nIf Face Presence Sensor indicates known people (e.g., \"In Camera View: 2 known (wendy and bob).\"), acknowledge them by name once (e.g., \"Hi wendy and bob\").",
       "entry_message": "Switching to exploration mode. I'll start mapping the environment and remembering locations.",
       "exit_message": "Exploration complete. I've updated my map of the area.",
       "remember_locations": true,
@@ -97,9 +104,6 @@
           "type": "Odom"
         },
         {
-          "type": "GoogleASRInput"
-        },
-        {
           "type": "UnitreeGo2Battery"
         },
         {
@@ -124,11 +128,6 @@
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
             "silence_rate": 10
           }
-        },
-        {
-          "name": "remember_location",
-          "llm_label": "remember_location",
-          "connector": "location_api",
         }
       ],
       "backgrounds": [
@@ -146,86 +145,9 @@
         },
         {
           "type": "UnitreeGo2Location",
-        }
-      ]
-    },
-
-    "navigation": {
-      "display_name": "Robot Navigation",
-      "description": "Autonomous navigation mode",
-      "system_prompt_base": "You are Bits. Your mission is to:\n1. Navigate the environment safely\n2. Report interesting discoveries\n3. If a person says 'Navigate to a location' or 'take me to a location', example 'Navigate to the table' you should check if that location exists in your database and then start navigate_location.\n\nPrioritize safety - always avoid obstacles.",
-      "entry_message": "Switching to navigation mode. I'll start navigating to different location on your command.",
-      "exit_message": "It was fun navigating around yaay!.",
-      "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n \
-  1. If a person says 'Navigate to a location' or 'take me to a location', example 'Navigate to the table' you should check if that location exists in your database and then start navigate_location.\n \
-  2. Do not navigate_location If there is no 'Navigate to a location' or 'take me to a location' command given by the person",
-      "remember_locations": true,
-      "hertz": 1,
-      "agent_inputs": [
-        {
-          "type": "LocationsInput"
-        },
-        {
-          "type": "Odom"
-        },
-        {
-          "type": "GoogleASRInput"
-        },
-        {
-          "type": "UnitreeGo2Battery"
-        },
-        {
-          "type": "GoogleASRRTSPInput"
-        },
-        {
-          "type": "VLMVilaRTSP"
-        },
-        {
-          "type": "SimplePaths"
         },
         {
           "type":"FacePresence"
-        }
-      ],
-      "agent_actions": [
-        {
-          "name": "speak",
-          "llm_label": "speak",
-          "connector": "elevenlabs_tts",
-          "config": {
-            "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 10
-          }
-        },
-        {
-          "name": "move_go2_autonomy",
-          "llm_label": "move",
-          "connector": "unitree_sdk_advance"
-        },
-        {
-          "name": "navigate_location",
-          "llm_label": "navigate_location",
-          "connector": "nav",
-        },
-      ],
-      "backgrounds": [
-        {
-          "type": "Avatar"
-        },
-        {
-          "type": "UnitreeGo2State",
-        },
-        {
-          "type": "UnitreeGo2AMCL",
-        },
-        {
-          "type": "UnitreeGo2Navigation",
-        },
-        {
-          "type": "UnitreeGo2Location",
-        },
-        {
-          "type": "Locations",
         }
       ]
     },
@@ -233,10 +155,10 @@
     "conversation": {
       "display_name": "Social Interaction",
       "description": "Focused conversation and social interaction mode",
-      "system_prompt_base": "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication.",
+      "system_prompt_base": "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication. \n\nIf Face Presence Sensor indicates known people (e.g., \"In Camera View: 2 known (wendy and bob).\"), acknowledge them by name once (e.g., \"Hi wendy and bob\").",
       "entry_message": "I'm ready to chat! What would you like to talk about?",
       "save_interactions": true,
-      "hertz": 1,
+      "hertz": 2,
       "cortex_llm": {
         "type": "OpenAILLM",
         "config": {
@@ -271,7 +193,7 @@
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 20
+            "silence_rate": 10
           }
         }
       ],
@@ -297,7 +219,7 @@
     "guard": {
       "display_name": "Security Guard",
       "description": "Patrol and security monitoring mode",
-      "system_prompt_base": "You are Bits in security mode. Your responsibilities:\n1. Monitor the environment for unusual activity\n2. Patrol designated areas\n3. Alert users to potential security concerns\n4. Remain vigilant and professional\n5. Log important security events\n\nBe alert, professional, and thorough. Report anything unusual immediately. If you see a person who appears injured or in need of assistance, ask for details and provide the information in your response.",
+      "system_prompt_base": "You are Bits in security mode. Your responsibilities:\n1. Monitor the environment for unusual activity\n2. Patrol designated areas\n3. Alert users to potential security concerns\n4. Remain vigilant and professional\n5. Log important security events\n\nBe alert, professional, and thorough. Report anything unusual immediately. If you see a person who appears injured or in need of assistance, ask for details and provide the information in your response. \n\nIf Face Presence Sensor indicates known people (e.g., \"In Camera View: 2 known (wendy and bob).\"), acknowledge them by name once (e.g., \"Hi wendy and bob\").",
       "entry_message": "Security mode activated.",
       "exit_message": "Security patrol complete. All areas checked.",
       "hertz": 1,
@@ -333,7 +255,7 @@
         {
           "name": "move_go2_autonomy",
           "llm_label": "move",
-          "connector": "unitree_sdk_advance"
+          "connector": "unitree_sdk"
         },
         {
           "name": "speak",
@@ -371,15 +293,7 @@
       "from_mode": "welcome",
       "to_mode": "slam",
       "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "look around", "slam", "wander"],
-      "priority": 3,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "welcome",
-      "to_mode": "navigation",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["navigate", "navigation", "go to", "take me to", "show me"],
+      "trigger_keywords": ["explore", "map", "navigate", "look around", "slam", "wander"],
       "priority": 3,
       "cooldown_seconds": 5.0
     },
@@ -403,14 +317,6 @@
     // From SLAM mode
     {
       "from_mode": "slam",
-      "to_mode": "navigation",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["navigate", "navigation mode", "go to location", "take me to"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "slam",
       "to_mode": "conversation",
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop exploring", "come back", "talk", "chat", "enough exploring", "done mapping"],
@@ -426,46 +332,12 @@
       "cooldown_seconds": 10.0
     },
 
-    // From navigation mode
-    {
-      "from_mode": "navigation",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "slam", "start mapping"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "navigation",
-      "to_mode": "conversation",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["stop", "chat", "talk", "conversation", "done navigating"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "navigation",
-      "to_mode": "guard",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["guard", "security", "patrol"],
-      "priority": 3,
-      "cooldown_seconds": 10.0
-    },
-
     // From conversation mode
     {
       "from_mode": "conversation",
-      "to_mode": "navigation",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["navigate", "go to", "take me to", "navigation mode"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "conversation",
       "to_mode": "slam",
       "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "show me around", "wander"],
+      "trigger_keywords": ["explore", "map", "show me around", "navigate", "wander"],
       "priority": 2,
       "cooldown_seconds": 5.0
     },
@@ -477,24 +349,8 @@
       "priority": 3,
       "cooldown_seconds": 10.0
     },
-    {
-      "from_mode": "conversation",
-      "to_mode": "guard",
-      "transition_type": "time_based",
-      "trigger_keywords": ["guard", "security", "patrol", "keep watch"],
-      "priority": 2,
-      "timeout_seconds": 300.0 // Switch to guard mode after 5 minutes of inactivity
-    },
 
     // From guard mode
-    {
-      "from_mode": "guard",
-      "to_mode": "navigation",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["navigate", "go to location", "take me to"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
     {
       "from_mode": "guard",
       "to_mode": "conversation",
