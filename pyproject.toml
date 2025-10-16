@@ -7,7 +7,6 @@ requires-python = ">=3.10"
 dependencies = [
     "ultralytics",
     "soundfile",
-    "osascript",
     "sounddevice",
     "pynmeagps",
     "bleak",
@@ -54,6 +53,7 @@ dependencies = [
 dds = [
     "cyclonedds==0.10.2"
 ]
+macos = ["osascript"]
 
 [dependency-groups]
 dev = [

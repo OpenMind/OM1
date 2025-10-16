@@ -2447,7 +2447,6 @@ dependencies = [
     { name = "om1-modules" },
     { name = "openai" },
     { name = "opencv-python" },
-    { name = "osascript" },
     { name = "pillow" },
     { name = "py-mjpeg" },
     { name = "pyaudio" },
@@ -2475,6 +2474,9 @@ dependencies = [
 [package.optional-dependencies]
 dds = [
     { name = "cyclonedds" },
+]
+macos = [
+    { name = "osascript" },
 ]
 
 [package.dev-dependencies]
@@ -2511,7 +2513,7 @@ requires-dist = [
     { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=682f2ba98355904b8d4fa232df38e1dba1b7e630" },
     { name = "openai", specifier = ">=1.59.5" },
     { name = "opencv-python" },
-    { name = "osascript" },
+    { name = "osascript", marker = "extra == 'macos'" },
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "py-mjpeg" },
     { name = "pyaudio" },
@@ -2535,7 +2537,7 @@ requires-dist = [
     { name = "web3" },
     { name = "websockets", specifier = ">=12.0" },
 ]
-provides-extras = ["dds"]
+provides-extras = ["dds", "macos"]
 
 [package.metadata.requires-dev]
 dev = [
