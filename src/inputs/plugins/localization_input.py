@@ -107,3 +107,54 @@ class LocalizationInput(FuserInput[str]):
             Message dataclass containing the status and timestamp
         """
         return Message(timestamp=time.time(), message=raw_input)
+
+    async def raw_to_text(self, raw_input: Optional[str]):
+        """
+        Convert raw input to text and update message buffer.
+
+        Processes the raw input if present and adds the resulting
+        message to the internal message buffer.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input to be processed, or None if no input is available
+        """
+        if raw_input is None:
+            return
+
+        pending_message = await self._raw_to_text(raw_input)
+
+        if pending_message is not None:
+            self.messages.append(pending_message)
+
+    def formatted_latest_buffer(self) -> Optional[str]:
+        """
+        Format and clear the latest buffer contents.
+
+        Retrieves the most recent message from the buffer, formats it
+        with timestamp and class name, adds it to the IO provider,
+        and clears the buffer.
+
+        Returns
+        -------
+        Optional[str]
+            Formatted string containing the latest message and metadata,
+            or None if the buffer is empty
+        """
+        if len(self.messages) == 0:
+            return None
+
+        latest_message = self.messages[-1]
+
+        result = (
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
+            f"{latest_message.message}\n// END\n"
+        )
+
+        self.io_provider.add_input(
+            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
+        )
+        self.messages = []
+
+        return result
