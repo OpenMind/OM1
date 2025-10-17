@@ -47,7 +47,7 @@ class LocalizationInput(FuserInput[str]):
         super().__init__(config)
 
         # Initialize providers
-        self.amcl_provider = UnitreeGo2AMCLProvider.instance()
+        self.amcl_provider: UnitreeGo2AMCLProvider = UnitreeGo2AMCLProvider()
         self.io_provider = IOProvider()
 
         # Message buffer
@@ -107,32 +107,3 @@ class LocalizationInput(FuserInput[str]):
             Message dataclass containing the status and timestamp
         """
         return Message(timestamp=time.time(), message=raw_input)
-
-    async def start(self):
-        """
-        Start the localization input monitoring.
-
-        Ensures the AMCL provider is running to receive localization updates.
-        """
-        try:
-            if not self.amcl_provider.running:
-                self.amcl_provider.start()
-                logging.info("AMCL Provider started for localization monitoring")
-
-            await super().start()
-            logging.info("LocalizationInput monitoring started")
-
-        except Exception as e:
-            logging.error(f"Failed to start LocalizationInput: {e}")
-            raise
-
-    async def stop(self):
-        """
-        Stop the localization input monitoring.
-        """
-        try:
-            await super().stop()
-            logging.info("LocalizationInput monitoring stopped")
-
-        except Exception as e:
-            logging.error(f"Error stopping LocalizationInput: {e}")
