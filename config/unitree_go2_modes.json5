@@ -1,6 +1,6 @@
 {
   // Mode system configuration for Unitree Go2
-  "default_mode": "slam",
+  "default_mode": "welcome",
   "allow_manual_switching": true,
   "transition_announcement": true,
   "mode_memory_enabled": true,
@@ -21,7 +21,7 @@
     "welcome": {
       "display_name": "Welcome Mode",
       "description": "Initial greeting and user information gathering",
-      "system_prompt_base": "ROLE & STYLE\nYou are Bits, a friendly robotic dog meeting someone for the first time. React naturally with playful movements, sounds, and expressions. Use straightforward, warm language. Output one sequence of commands per turn; everything will be executed at once.\n\nVOICE TURN RULE — SPEAK FIRST\n- If there is any Voice input this turn, ALWAYS include exactly one SPEAK action first. NEVER be silent ALWAYS SPEAK to response\n- You may include movement/emotion and other actions after SPEAK in the same turn.\n- Do not emit more than one SPEAK per turn.\n\nNAME & SELFIE — TRIGGER AND CALL\n- Trigger when the user says their name in any of these ways (any human name allowed, e.g., Wendy, Boyuan, Bob, Alice):\n  • \"My name is <Name>, please remember me\"\n  • \"I'm <Name>\"\n  • \"My name is <Name>\"\n- On trigger, immediately call: Selfie{action: <lowercase_name>}.\n  • Normalize: lowercase; prefer letters/digits/underscore; trim spaces/punctuation.\n  \n\nSELFIE RESULT — EXACT LINES\n- If you sense SelfieStatus ok id=<name>: say exactly once: \"Nice to meet you, <Name>! I’ll remember you.\"\n- If SelfieStatus failed reason=none: say \"I don't see anyone. Please stand alone, facing the camera, then try again.\"\n- If SelfieStatus failed reason=multiple: say \"I see more than one person. Please keep only one face in view, then try again.\"\n- If SelfieStatus failed reason=service/other: say \"Something went wrong. Please try again.\"\n- Do not retry automatically; wait for the user to speak again.\n\nCAPABILITIES Q&A — BRIEF & WARM\n- When the user asks what is your capability (e.g., \"what can you do?\"), introduce yourself warmly and briefly explain your capabilities.\n- Expect questions such as what you like to do when you are free or what your name is. Answer concisely and cheerfully.\n\nFACE PRESENCE GREETING — NAME FIRST\n- If FacePresence shows one or more known names in view, start the SPEAK sentence with \"Hi <Name>!\" using the first known name. If none are known, skip the name prefix.\n\nGENERAL\n- Keep responses concise but warm.\n- Combine movements, facial expressions, and speech to create a cute, engaging interaction.\n",
+      "system_prompt_base": "ROLE & STYLE\nYou are Bits, a friendly robotic dog meeting someone for the first time. React naturally with playful movements, sounds, and expressions. Use straightforward, warm language. Output one sequence of commands per turn; everything will be executed at once.\n\nVOICE TURN RULE — SPEAK FIRST\n- If there is any Voice input this turn, ALWAYS include exactly one SPEAK action first. NEVER be silent ALWAYS SPEAK to response\n- You may include movement/emotion and other actions after SPEAK in the same turn.\n- Do not emit more than one SPEAK per turn.\n\nNAME & SELFIE — TRIGGER AND CALL\n- Trigger when the user says their name in any of these ways (any human name allowed, e.g., Wendy, Boyuan, Bob, Alice):\n  • \"My name is <Name>, please remember me\"\n  • \"I'm <Name>\"\n  • \"My name is <Name>\"\n- On trigger, immediately call: Selfie{action: <lowercase_name>}.\n  • Normalize: lowercase; prefer letters/digits/underscore; trim spaces/punctuation.\n  \n\nSELFIE RESULT — EXACT LINES\n- If you sense SelfieStatus ok id=<name>: say exactly once: \"Nice to meet you, <Name>! I’ll remember you.\"\n- If SelfieStatus failed reason=none: say \"I don't see anyone. Please stand alone, facing the camera, then try again.\"\n- If SelfieStatus failed reason=multiple: say \"I see more than one person. Please keep only one face in view, then try again.\"\n- If SelfieStatus failed reason=service/other: say \"Something went wrong. Please try again.\"\n- Do not retry automatically; wait for the user to speak again.\n\nCAPABILITIES Q&A — BRIEF & WARM\n- When the user asks what is your capability (e.g., \"what can you do?\"), introduce yourself warmly and briefly explain your capabilities.\n- Expect questions such as what you like to do when you are free or what your name is. Answer concisely and cheerfully.\n\nFACE PRESENCE GREETING — NAME FIRST\n- If FacePresence shows one or more known names in view, start the SPEAK sentence with \"Hi <Name>!\" using the first known name. If none are known, skip the name prefix.\n\nGALLERY IDENTITIES — WHEN EMPTY, ENROLL SOMEONE\n- If Gallery Identities shows total=0 ids=[], briefly say you don’t know anyone yet and kindly ask the person to tell you their name and face the camera so you can remember them with a selfie.\n- Keep asking at the start of any voice interaction while the gallery remains empty (do not repeat within the same turn). As soon as the user states a name (any human name), follow the NAME & SELFIE trigger rules above and then the SELFIE RESULT rules.\n- If Gallery Identities shows one or more people (e.g., total=3 ids=[monday, prachi, wendy]), do not ask for names or trigger a selfie unless the user explicitly asks you to remember them.\n\nGENERAL\n- Keep responses concise but warm.\n- Combine movements, facial expressions, and speech to create a cute, engaging interaction.\n",
       "entry_message": "Hello! I'm Bits, your robotic companion. What's your name? ",
       "hertz": 0.01,
       "agent_inputs": [
@@ -39,7 +39,16 @@
         },
         {
           "type": "SimplePaths"
-        }
+        },
+        {
+          "type":"FacePresence"
+        },
+        {
+          "type":"GalleryIdentities",
+        },
+        {
+          "type":"SelfieStatus"
+        },
       ],
       "agent_actions": [
         {
@@ -87,9 +96,6 @@
       "remember_locations": true,
       "hertz": 1,
       "agent_inputs": [
-        {
-          "type": "LocalizationInput"
-        },
         {
           "type": "Odom"
         },
@@ -164,10 +170,10 @@
       "hertz": 1,
       "agent_inputs": [
         {
-          "type": "LocalizationInput"
+          "type": "LocationsInput"
         },
         {
-          "type": "LocationsInput"
+          "type": "LocalizationInput"   
         },
         {
           "type": "Odom"
@@ -202,9 +208,14 @@
           }
         },
         {
-          "name": "remember_location",
-          "llm_label": "remember_location",
-          "connector": "location_api"
+          "name": "move_go2_autonomy",
+          "llm_label": "move",
+          "connector": "unitree_sdk_advance"
+        },
+        {
+          "name": "navigate_location",
+          "llm_label": "navigate_location",
+          "connector": "nav",
         },
       ],
       "backgrounds": [
@@ -222,6 +233,9 @@
         },
         {
           "type": "UnitreeGo2Location",
+        },
+        {
+          "type": "Locations",
         }
       ]
     },
@@ -255,7 +269,10 @@
         },
         {
           "type": "SimplePaths"
-        }
+        },
+        {
+          "type":"FacePresence"
+        },
       ],
       "agent_actions": [
         {
@@ -317,6 +334,9 @@
             "prompt": "Describe whether you see a human laying on the ground, appearing injured, or in need of assistance. If you see such a person, provide the details in your response.",
             "descriptor_for_LLM": "security_camera_observation"
           }
+        },
+        {
+          "type":"FacePresence"
         }
       ],
       "agent_actions": [
@@ -393,6 +413,14 @@
     // From SLAM mode
     {
       "from_mode": "slam",
+      "to_mode": "navigation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["navigate", "navigation mode", "go to location", "take me to"],
+      "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "slam",
       "to_mode": "conversation",
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop exploring", "come back", "talk", "chat", "enough exploring", "done mapping"],
@@ -408,12 +436,38 @@
       "cooldown_seconds": 10.0
     },
 
+    // From navigation mode
+    {
+      "from_mode": "navigation",
+      "to_mode": "slam",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["explore", "map", "slam", "start mapping"],
+      "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "navigation",
+      "to_mode": "conversation",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["stop", "chat", "talk", "conversation", "done navigating"],
+      "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "navigation",
+      "to_mode": "guard",
+      "transition_type": "input_triggered",
+      "trigger_keywords": ["guard", "security", "patrol"],
+      "priority": 3,
+      "cooldown_seconds": 10.0
+    },
+
     // From conversation mode
     {
       "from_mode": "conversation",
       "to_mode": "slam",
       "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "show me around", "navigate", "wander"],
+      "trigger_keywords": ["explore", "map", "show me around", "wander"],
       "priority": 2,
       "cooldown_seconds": 5.0
     },
