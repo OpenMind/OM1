@@ -110,7 +110,7 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         goal_pose = PoseStamped(header=header, pose=pose_msg)
 
         try:
-            self.unitree_go2_navigation_provider.publish_goal_pose(goal_pose)
+            self.unitree_go2_navigation_provider.publish_goal_pose(goal_pose, label)
             logging.info(f"Navigation to '{label}' initiated")
             # self.io_provider.add_input("NavigationResult", "Navigation to '{label}' initiated", None)
         except Exception as e:

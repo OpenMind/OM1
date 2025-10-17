@@ -13,6 +13,7 @@ from zenoh_msgs import (
     open_zenoh_session,
     prepare_header,
 )
+from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 from .singleton import singleton
 
@@ -92,6 +93,10 @@ class UnitreeGo2NavigationProvider:
 
         self.running: bool = False
         self._nav_in_progress: bool = False
+        self._current_destination: Optional[str] = None  # Track destination name
+
+        # TTS provider for speech feedback
+        self.tts_provider = ElevenLabsTTSProvider()
 
         # AI status control
         self.ai_status_topic = "om/ai/request"
@@ -150,6 +155,16 @@ class UnitreeGo2NavigationProvider:
                             enabled=True
                         )  # Re-enable AI ONLY on success
                         logging.info("Navigation succeeded - AI mode re-enabled")
+                        
+                        # Add speech feedback for successful navigation
+                        if self._current_destination:
+                            self.tts_provider.add_pending_message(
+                                f"Yaaay! I have reached the {self._current_destination}. Woof! Woof!"
+                            )
+                        else:
+                            self.tts_provider.add_pending_message(
+                                "Yaaay! I have reached my destination. Woof! Woof!"
+                            )
                 elif status_code in (5, 6):  # CANCELED or ABORTED
                     if self._nav_in_progress:
                         self._nav_in_progress = False
@@ -214,7 +229,7 @@ class UnitreeGo2NavigationProvider:
 
         logging.warning("Navigation Provider is already running")
 
-    def publish_goal_pose(self, pose: geometry_msgs.PoseStamped):
+    def publish_goal_pose(self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None):
         """
         Publish a goal pose to the navigation topic.
 
@@ -222,10 +237,15 @@ class UnitreeGo2NavigationProvider:
         ----------
         pose : geometry_msgs.PoseStamped
             The goal pose to be published.
+        destination_name : Optional[str]
+            Name of the destination for speech feedback
         """
         if self.session is None:
             logging.error("Cannot publish goal pose; Zenoh session is not available.")
             return
+
+        # Store destination name for speech feedback
+        self._current_destination = destination_name
 
         # Disable AI mode immediately when navigation goal is published
         if not self._nav_in_progress:
