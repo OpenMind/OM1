@@ -5,6 +5,7 @@ from uuid import uuid4
 import zenoh
 from zenoh import ZBytes
 
+from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from zenoh_msgs import (
     AIStatusRequest,
     String,
@@ -13,7 +14,6 @@ from zenoh_msgs import (
     open_zenoh_session,
     prepare_header,
 )
-from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 from .singleton import singleton
 
@@ -155,7 +155,7 @@ class UnitreeGo2NavigationProvider:
                             enabled=True
                         )  # Re-enable AI ONLY on success
                         logging.info("Navigation succeeded - AI mode re-enabled")
-                        
+
                         # Add speech feedback for successful navigation
                         if self._current_destination:
                             self.tts_provider.add_pending_message(
@@ -229,7 +229,9 @@ class UnitreeGo2NavigationProvider:
 
         logging.warning("Navigation Provider is already running")
 
-    def publish_goal_pose(self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None):
+    def publish_goal_pose(
+        self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None
+    ):
         """
         Publish a goal pose to the navigation topic.
 
