@@ -98,7 +98,7 @@ class GalleryIdentitiesProvider:
         ----------
         fn : Callable[[str], None]
             Function invoked from the polling thread with one formatted string.
-        """ 
+        """
         with self._cb_lock:
             if fn not in self._callbacks:
                 self._callbacks.append(fn)

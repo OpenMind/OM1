@@ -45,7 +45,7 @@ class GalleryIdentities(FuserInput[str]):
 
     def __init__(self, config: SensorConfig = SensorConfig()):
         """Initialize the GalleryIdentities input adapter
-        
+
         Subscribes to `GalleryIdentitiesProvider` and adapts its messages into
         a compact INPUT block for the LLM (“Gallery Identities …”). Uses a small
         in-memory queue and a bounded deque to hold the latest message.
@@ -80,7 +80,6 @@ class GalleryIdentities(FuserInput[str]):
         self.provider.register_message_callback(self._handle_gallery_message)
 
         self.descriptor_for_LLM = "Gallery Identities"
-
 
     def _handle_gallery_message(self, text_line: str) -> None:
         """
