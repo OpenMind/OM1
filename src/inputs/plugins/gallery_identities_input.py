@@ -1,5 +1,3 @@
-# src/inputs/plugins/gallery_identities_input.py
-
 import asyncio
 import time
 from collections import deque
