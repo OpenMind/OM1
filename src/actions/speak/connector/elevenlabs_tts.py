@@ -7,7 +7,7 @@ import zenoh
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
-from providers.asr_provider import ASRProvider
+from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
@@ -95,12 +95,12 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         except Exception as e:
             logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
 
-        # Initialize ASR and TTS providers
-        self.asr = ASRProvider(
-            ws_url="wss://api-asr.openmind.org",
-            device_id=microphone_device_id,
-            microphone_name=microphone_name,
+        base_url = getattr(
+            self.config,
+            "base_url",
+            f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
         )
+        self.asr = ASRRTSPProvider(ws_url=base_url)
 
         self.tts = ElevenLabsTTSProvider(
             url="https://api.openmind.org/api/core/elevenlabs/tts",
