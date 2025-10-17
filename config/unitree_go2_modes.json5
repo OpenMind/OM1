@@ -1,6 +1,6 @@
 {
   // Mode system configuration for Unitree Go2
-  "default_mode": "welcome",
+  "default_mode": "slam",
   "allow_manual_switching": true,
   "transition_announcement": true,
   "mode_memory_enabled": true,
@@ -39,12 +39,6 @@
         },
         {
           "type": "SimplePaths"
-        },
-        {
-          "type":"FacePresence"
-        },
-        {
-          "type":"SelfieStatus"
         }
       ],
       "agent_actions": [
@@ -93,6 +87,9 @@
       "remember_locations": true,
       "hertz": 1,
       "agent_inputs": [
+        {
+          "type": "LocalizationInput"
+        },
         {
           "type": "Odom"
         },
@@ -167,6 +164,9 @@
       "hertz": 1,
       "agent_inputs": [
         {
+          "type": "LocalizationInput"
+        },
+        {
           "type": "LocationsInput"
         },
         {
@@ -202,14 +202,9 @@
           }
         },
         {
-          "name": "move_go2_autonomy",
-          "llm_label": "move",
-          "connector": "unitree_sdk_advance"
-        },
-        {
-          "name": "navigate_location",
-          "llm_label": "navigate_location",
-          "connector": "nav",
+          "name": "remember_location",
+          "llm_label": "remember_location",
+          "connector": "location_api"
         },
       ],
       "backgrounds": [
@@ -227,9 +222,6 @@
         },
         {
           "type": "UnitreeGo2Location",
-        },
-        {
-          "type": "Locations",
         }
       ]
     },
@@ -263,10 +255,7 @@
         },
         {
           "type": "SimplePaths"
-        },
-        {
-          "type":"FacePresence"
-        },
+        }
       ],
       "agent_actions": [
         {
@@ -328,9 +317,6 @@
             "prompt": "Describe whether you see a human laying on the ground, appearing injured, or in need of assistance. If you see such a person, provide the details in your response.",
             "descriptor_for_LLM": "security_camera_observation"
           }
-        },
-        {
-          "type":"FacePresence"
         }
       ],
       "agent_actions": [
@@ -407,14 +393,6 @@
     // From SLAM mode
     {
       "from_mode": "slam",
-      "to_mode": "navigation",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["navigate", "navigation mode", "go to location", "take me to"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "slam",
       "to_mode": "conversation",
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop exploring", "come back", "talk", "chat", "enough exploring", "done mapping"],
@@ -430,38 +408,12 @@
       "cooldown_seconds": 10.0
     },
 
-    // From navigation mode
-    {
-      "from_mode": "navigation",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "slam", "start mapping"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "navigation",
-      "to_mode": "conversation",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["stop", "chat", "talk", "conversation", "done navigating"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "navigation",
-      "to_mode": "guard",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["guard", "security", "patrol"],
-      "priority": 3,
-      "cooldown_seconds": 10.0
-    },
-
     // From conversation mode
     {
       "from_mode": "conversation",
       "to_mode": "slam",
       "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "show me around", "wander"],
+      "trigger_keywords": ["explore", "map", "show me around", "navigate", "wander"],
       "priority": 2,
       "cooldown_seconds": 5.0
     },
