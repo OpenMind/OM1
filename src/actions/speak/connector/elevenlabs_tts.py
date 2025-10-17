@@ -11,7 +11,14 @@ from providers.asr_provider import ASRProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
-from zenoh_msgs import AudioStatus, String, open_zenoh_session, prepare_header
+from zenoh_msgs import (
+    AudioStatus,
+    String,
+    TTSStatusRequest,
+    TTSStatusResponse,
+    open_zenoh_session,
+    prepare_header,
+)
 
 
 # unstable / not released
@@ -46,9 +53,11 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         # IO Provider
         self.io_provider = IOProvider()
 
-        self.topic = "robot/status/audio"
+        self.audio_topic = "robot/status/audio"
+        self.tts_status_request_topic = "om/tts/request"
+        self.tts_status_response_topic = "om/tts/response"
         self.session = None
-        self.pub = None
+        self.auido_pub = None
 
         self.audio_status = AudioStatus(
             header=prepare_header(str(uuid4())),
@@ -59,13 +68,19 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         try:
             self.session = open_zenoh_session()
-            self.pub = self.session.declare_publisher(self.topic)
-            self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
+            self.auido_pub = self.session.declare_publisher(self.audio_topic)
+            self.session.declare_subscriber(self.audio_topic, self.zenoh_audio_message)
+            self.session.declare_subscriber(
+                self.tts_status_request_topic, self._zenoh_tts_status_request
+            )
+            self._zenoh_tts_status_response_pub = self.session.declare_publisher(
+                self.tts_status_response_topic
+            )
 
             # Unstable / not released
             # advanced_sub = declare_advanced_subscriber(
             #     self.session,
-            #     self.topic,
+            #     self.audio_topic,
             #     self.audio_message,
             #     history=HistoryConfig(detect_late_publishers=True),
             #     recovery=RecoveryConfig(heartbeat=True),
@@ -73,12 +88,12 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             # )
             # advanced_sub.sample_miss_listener(self.miss_listener)
 
-            if self.pub:
-                self.pub.put(self.audio_status.serialize())
+            if self.auido_pub:
+                self.auido_pub.put(self.audio_status.serialize())
 
-            logging.info("TTS Zenoh client opened")
+            logging.info("Elevenlabs TTS Zenoh client opened")
         except Exception as e:
-            logging.error(f"Error opening TTS Zenoh client: {e}")
+            logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
 
         # Initialize ASR and TTS providers
         self.asr = ASRProvider(
@@ -97,6 +112,9 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         )
         self.tts.start()
 
+        # TTS status
+        self.tts_enabled = True
+
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
@@ -104,6 +122,10 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        if self.tts_enabled is False:
+            logging.info("TTS is disabled, skipping TTS action")
+            return
+
         if (
             self.silence_rate > 0
             and self.silence_counter < self.silence_rate
@@ -135,9 +157,68 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             sentence_to_speak=String(json.dumps(pending_message)),
         )
 
-        if self.pub:
-            self.pub.put(state.serialize())
+        if self.auido_pub:
+            self.auido_pub.put(state.serialize())
             return
 
         self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
         self.tts.add_pending_message(pending_message)
+
+    def _zenoh_tts_status_request(self, data: zenoh.Sample):
+        """
+        Process an incoming TTS control status message.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The Zenoh sample received, which should have a 'payload' attribute.
+        """
+        tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
+        logging.info(f"Received TTS Control Status message: {tts_status}")
+
+        code = tts_status.code
+        request_id = tts_status.request_id
+
+        # Read the current status
+        if code == 2:
+            tts_status_response = TTSStatusResponse(
+                header=prepare_header(tts_status.header.frame_id),
+                request_id=request_id,
+                code=1 if self.tts_enabled else 0,
+                status=String(
+                    data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
+                ),
+            )
+            return self._zenoh_tts_status_response_pub.put(
+                tts_status_response.serialize()
+            )
+
+        # Enable the TTS
+        if code == 1:
+            self.tts_enabled = True
+            logging.info("TTS Enabled")
+
+            ai_status_response = TTSStatusResponse(
+                header=prepare_header(tts_status.header.frame_id),
+                request_id=request_id,
+                code=1,
+                status=String(data="TTS Enabled"),
+            )
+            return self._zenoh_tts_status_response_pub.put(
+                ai_status_response.serialize()
+            )
+
+        # Disable the TTS
+        if code == 0:
+            self.tts_enabled = False
+            logging.info("TTS Disabled")
+            ai_status_response = TTSStatusResponse(
+                header=prepare_header(tts_status.header.frame_id),
+                request_id=request_id,
+                code=0,
+                status=String(data="TTS Disabled"),
+            )
+
+            return self._zenoh_tts_status_response_pub.put(
+                ai_status_response.serialize()
+            )

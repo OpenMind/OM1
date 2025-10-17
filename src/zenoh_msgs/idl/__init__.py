@@ -41,6 +41,8 @@ from .status_msgs import (
     CameraStatus,
     ModeStatusRequest,
     ModeStatusResponse,
+    TTSStatusRequest,
+    TTSStatusResponse,
 )
 from .std_msgs import ColorRGBA, Duration, Header, String, Time, prepare_header
 
@@ -59,6 +61,8 @@ __all__ = [
     "AIStatusResponse",
     "ModeStatusRequest",
     "ModeStatusResponse",
+    "TTSStatusRequest",
+    "TTSStatusResponse",
     # geographic_msgs
     "GeoPoint",
     "GeoPointStamped",

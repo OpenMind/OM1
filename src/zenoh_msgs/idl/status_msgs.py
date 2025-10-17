@@ -86,3 +86,28 @@ class ModeStatusResponse(IdlStruct, typename="ModeStatusResponse"):
     code: int8
     current_mode: String
     message: String
+
+
+@dataclass
+class TTSStatusRequest(IdlStruct, typename="TTSStatusRequest"):
+    class Code(Enum):
+        DISABLED = 0
+        ENABLED = 1
+        STATUS = 2
+
+    header: Header
+    request_id: String
+    code: int8
+
+
+@dataclass
+class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
+    class Code(Enum):
+        DISABLED = 0
+        ENABLED = 1
+        UNKNOWN = 2
+
+    header: Header
+    request_id: String
+    code: int8
+    status: String
