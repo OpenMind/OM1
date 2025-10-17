@@ -181,16 +181,23 @@ class TestModeCortexRuntime:
             mock_tts.add_pending_message = Mock()
             mock_tts_class.return_value = mock_tts
 
-            mock_mode = Mock()
-            mock_mode.entry_message = "Welcome to new mode"
-            runtime.mode_config.modes = {"to_mode": mock_mode}
+            mock_from_mode = Mock()
+            mock_from_mode.exit_message = "Exiting previous mode"
+            mock_to_mode = Mock()
+            mock_to_mode.entry_message = "Welcome to new mode"
+            runtime.mode_config.modes = {
+                "from_mode": mock_from_mode,
+                "to_mode": mock_to_mode,
+            }
 
             await runtime._on_mode_transition("from_mode", "to_mode")
 
             mock_stop.assert_called_once()
             mock_init.assert_called_once_with("to_mode")
             mock_start.assert_called_once()
-            mock_tts.add_pending_message.assert_called_once_with("Welcome to new mode")
+            assert mock_tts.add_pending_message.call_count == 2
+            mock_tts.add_pending_message.assert_any_call("Exiting previous mode")
+            mock_tts.add_pending_message.assert_any_call("Welcome to new mode")
 
     @pytest.mark.asyncio
     async def test_on_mode_transition_no_announcement(self, cortex_runtime):
@@ -220,6 +227,15 @@ class TestModeCortexRuntime:
     async def test_on_mode_transition_exception(self, cortex_runtime):
         """Test mode transition with exception handling."""
         runtime, mocks = cortex_runtime
+
+        mock_from_mode = Mock()
+        mock_from_mode.exit_message = "Exiting previous mode"
+        mock_to_mode = Mock()
+        mock_to_mode.entry_message = "Welcome to new mode"
+        runtime.mode_config.modes = {
+            "from_mode": mock_from_mode,
+            "to_mode": mock_to_mode,
+        }
 
         with patch.object(
             runtime, "_stop_current_orchestrators", side_effect=Exception("Test error")

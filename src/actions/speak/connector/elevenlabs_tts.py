@@ -29,10 +29,6 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         super().__init__(config)
 
-        # Get microphone and speaker device IDs and names
-        microphone_device_id = getattr(self.config, "microphone_device_id", None)
-        microphone_name = getattr(self.config, "microphone_name", None)
-
         # OM API key
         api_key = getattr(self.config, "api_key", None)
 

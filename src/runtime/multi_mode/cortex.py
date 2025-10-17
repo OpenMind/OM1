@@ -97,7 +97,9 @@ class ModeCortexRuntime:
             if self.mode_config.transition_announcement:
                 from_config = self.mode_config.modes[from_mode]
                 if from_config.exit_message:
-                    ElevenLabsTTSProvider().add_pending_message(from_config.exit_message)
+                    ElevenLabsTTSProvider().add_pending_message(
+                        from_config.exit_message
+                    )
                     logging.info(f"Mode exit: {from_config.exit_message}")
 
             # Stop current orchestrators

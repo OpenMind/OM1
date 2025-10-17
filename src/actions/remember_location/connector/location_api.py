@@ -8,6 +8,7 @@ from actions.base import ActionConfig, ActionConnector
 from actions.remember_location.interface import RememberLocationInput
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
+
 class RememberLocationConnector(ActionConnector[RememberLocationInput]):
     """
     Connector that persists a remembered location by POSTing to an HTTP API.

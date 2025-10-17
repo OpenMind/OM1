@@ -198,7 +198,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
                     "SelfieStatus", "failed reason=service", time.time()
                 )
                 self.evelenlabs_tts_provider.add_pending_message(
-                    f"Woof! Woof! I couldn't see you clearly. Please try again."
+                    "Woof! Woof! I couldn't see you clearly. Please try again."
                 )
                 return
 

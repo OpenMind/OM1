@@ -38,7 +38,7 @@ def speak_input():
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 def test_init_with_full_config(
@@ -58,16 +58,21 @@ def test_init_with_full_config(
     connector = SpeakElevenLabsTTSConnector(mock_config)
 
     mock_open_zenoh_session.assert_called_once()
-    mock_session.declare_publisher.assert_called_once_with("robot/status/audio")
-    mock_session.declare_subscriber.assert_called_once_with(
+    assert mock_session.declare_publisher.call_count == 2
+    mock_session.declare_publisher.assert_any_call("robot/status/audio")
+    mock_session.declare_publisher.assert_any_call("om/tts/response")
+
+    assert mock_session.declare_subscriber.call_count == 2
+    mock_session.declare_subscriber.assert_any_call(
         "robot/status/audio", connector.zenoh_audio_message
+    )
+    mock_session.declare_subscriber.assert_any_call(
+        "om/tts/request", connector._zenoh_tts_status_request
     )
     mock_pub.put.assert_called_once()
 
     mock_asr_provider.assert_called_once_with(
-        ws_url="wss://api-asr.openmind.org",
-        device_id="test_mic_id",
-        microphone_name="test_microphone",
+        ws_url="wss://api.openmind.org/api/core/google/asr?api_key=test_api_key"
     )
 
     mock_tts_provider.assert_called_once_with(
@@ -83,13 +88,13 @@ def test_init_with_full_config(
 
     assert connector.silence_rate == 0
     assert connector.silence_counter == 0
-    assert connector.topic == "robot/status/audio"
+    assert connector.audio_topic == "robot/status/audio"
     assert connector.session == mock_session
-    assert connector.pub == mock_pub
+    assert connector.auido_pub == mock_pub
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 def test_init_with_minimal_config(
@@ -118,12 +123,12 @@ def test_init_with_minimal_config(
     )
 
     mock_asr_provider.assert_called_once_with(
-        ws_url="wss://api-asr.openmind.org", device_id=None, microphone_name=None
+        ws_url="wss://api.openmind.org/api/core/google/asr?api_key=None"
     )
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 def test_zenoh_audio_message(
@@ -152,7 +157,7 @@ def test_zenoh_audio_message(
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 @pytest.mark.asyncio
@@ -167,7 +172,8 @@ async def test_connect_normal_flow(
     """Test normal connect flow without silence rate."""
 
     connector = SpeakElevenLabsTTSConnector(mock_config)
-    connector.pub = None
+    # Set auido_pub to None so connect goes through full flow instead of returning early
+    connector.auido_pub = None
     connector.tts.create_pending_message.return_value = "processed_message"
 
     connector.io_provider.llm_prompt = "Some prompt without voice input"
@@ -176,11 +182,11 @@ async def test_connect_normal_flow(
 
     connector.tts.create_pending_message.assert_called_once_with("Hello, world!")
     connector.tts.register_tts_state_callback.assert_called_once()
-    connector.tts.add_pending_message.assert_any_call("processed_message")
+    connector.tts.add_pending_message.assert_called_once_with("processed_message")
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 @pytest.mark.asyncio
@@ -197,7 +203,7 @@ async def test_connect_with_silence_rate_skip(
     mock_config.silence_rate = 2
 
     connector = SpeakElevenLabsTTSConnector(mock_config)
-    connector.pub = None
+    connector.auido_pub = None
 
     connector.io_provider.llm_prompt = "Some prompt without voice"
 
@@ -213,7 +219,7 @@ async def test_connect_with_silence_rate_skip(
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 @pytest.mark.asyncio
@@ -229,7 +235,7 @@ async def test_connect_with_silence_rate_voice_input(
     mock_config.silence_rate = 2
 
     connector = SpeakElevenLabsTTSConnector(mock_config)
-    connector.pub = None
+    connector.auido_pub = None
     connector.tts.create_pending_message.return_value = "processed_message"
 
     connector.io_provider.llm_prompt = "Some prompt with INPUT: Voice data"
@@ -238,11 +244,11 @@ async def test_connect_with_silence_rate_voice_input(
 
     assert connector.silence_counter == 0
     connector.tts.create_pending_message.assert_called_once_with("Hello, world!")
-    connector.tts.add_pending_message.assert_any_call("processed_message")
+    connector.tts.add_pending_message.assert_called_once_with("processed_message")
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 @pytest.mark.asyncio
@@ -258,7 +264,7 @@ async def test_connect_with_silence_rate_counter_reached(
     mock_config.silence_rate = 2
 
     connector = SpeakElevenLabsTTSConnector(mock_config)
-    connector.pub = None
+    connector.auido_pub = None
     connector.tts.create_pending_message.return_value = "processed_message"
 
     connector.io_provider.llm_prompt = "Some prompt without voice"
@@ -269,14 +275,14 @@ async def test_connect_with_silence_rate_counter_reached(
 
     assert connector.silence_counter == 0
     connector.tts.create_pending_message.assert_called_once_with("Hello, world!")
-    connector.tts.add_pending_message.assert_any_call("processed_message")
+    connector.tts.add_pending_message.assert_called_once_with("processed_message")
 
 
 def test_audio_status_initial_state():
     """Test that the initial audio status is set correctly."""
     with (
         patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session"),
-        patch("actions.speak.connector.elevenlabs_tts.ASRProvider"),
+        patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider"),
         patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider"),
         patch("actions.speak.connector.elevenlabs_tts.IOProvider"),
     ):
@@ -293,7 +299,7 @@ def test_audio_status_initial_state():
 
 
 @patch("actions.speak.connector.elevenlabs_tts.open_zenoh_session")
-@patch("actions.speak.connector.elevenlabs_tts.ASRProvider")
+@patch("actions.speak.connector.elevenlabs_tts.ASRRTSPProvider")
 @patch("actions.speak.connector.elevenlabs_tts.ElevenLabsTTSProvider")
 @patch("actions.speak.connector.elevenlabs_tts.IOProvider")
 @pytest.mark.asyncio
@@ -313,6 +319,7 @@ async def test_connect_audio_status_update(
     mock_session.declare_subscriber.return_value = Mock()
 
     connector = SpeakElevenLabsTTSConnector(mock_config)
+    connector.auido_pub = None
     connector.tts.create_pending_message.return_value = "processed_message"
 
     connector.io_provider.llm_prompt = "Some prompt"
@@ -322,4 +329,4 @@ async def test_connect_audio_status_update(
 
     await connector.connect(speak_input)
 
-    mock_pub.put.assert_called()
+    mock_pub.put.assert_called_once()
