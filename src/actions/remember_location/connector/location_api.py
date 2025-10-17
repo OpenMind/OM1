@@ -6,6 +6,7 @@ import aiohttp
 
 from actions.base import ActionConfig, ActionConnector
 from actions.remember_location.interface import RememberLocationInput
+from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
 class RememberLocationConnector(ActionConnector[RememberLocationInput]):
@@ -29,6 +30,8 @@ class RememberLocationConnector(ActionConnector[RememberLocationInput]):
         )
         self.timeout = getattr(config, "timeout", 5)
         self.map_name = getattr(config, "map_name", "map")
+
+        self.elevenlabs_provider = ElevenLabsTTSProvider()
 
     async def connect(self, input_protocol: RememberLocationInput) -> None:
         """
@@ -60,6 +63,9 @@ class RememberLocationConnector(ActionConnector[RememberLocationInput]):
                     if resp.status >= 200 and resp.status < 300:
                         logging.info(
                             f"RememberLocation: stored '{input_protocol.action}' -> {resp.status} {text}"
+                        )
+                        self.elevenlabs_provider.add_pending_message(
+                            f"Location {input_protocol.action} remembered. Woof! Woof!"
                         )
                     else:
                         logging.error(

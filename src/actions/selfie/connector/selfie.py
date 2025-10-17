@@ -184,6 +184,9 @@ class SelfieConnector(ActionConnector[SelfieInput]):
                     f"failed reason={reason} faces={faces}",
                     time.time(),
                 )
+                self.evelenlabs_tts_provider.add_pending_message(
+                    f"Woof! Woof! I saw {faces} faces. Please make sure only your face is visible and try again."
+                )
                 return
 
             resp = await loop.run_in_executor(
@@ -193,6 +196,9 @@ class SelfieConnector(ActionConnector[SelfieInput]):
                 logging.error("[Selfie] /selfie failed or returned non-ok: %s", resp)
                 self.io_provider.add_input(
                     "SelfieStatus", "failed reason=service", time.time()
+                )
+                self.evelenlabs_tts_provider.add_pending_message(
+                    "Woof! Woof! I couldn't see you clearly. Please try again."
                 )
                 return
 

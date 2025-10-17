@@ -45,6 +45,8 @@ from .idl import (
     RegionOfInterest,
     String,
     Time,
+    TTSStatusRequest,
+    TTSStatusResponse,
     Twist,
     TwistWithCovariance,
     TwistWithCovarianceStamped,
@@ -74,6 +76,8 @@ __all__ = [
     "AIStatusResponse",
     "ModeStatusRequest",
     "ModeStatusResponse",
+    "TTSStatusRequest",
+    "TTSStatusResponse",
     # geographic_msgs
     "GeoPoint",
     "GeoPointStamped",

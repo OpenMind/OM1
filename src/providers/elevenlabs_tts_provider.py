@@ -129,5 +129,9 @@ class ElevenLabsTTSProvider:
         """
         Stop the TTS provider and cleanup resources.
         """
+        if not self.running:
+            logging.warning("Eleven Labs TTS provider is not running")
+            return
+
         self.running = False
         self._audio_stream.stop()
