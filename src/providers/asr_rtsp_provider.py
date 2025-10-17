@@ -86,6 +86,10 @@ class ASRRTSPProvider:
 
         Stops the audio stream and websocket clients, and sets the running state to False.
         """
+        if not self.running:
+            logging.warning("ASR RTSP provider is not running")
+            return
+
         self.running = False
         self.audio_stream.stop()
         self.ws_client.stop()

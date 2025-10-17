@@ -218,3 +218,17 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             return self._zenoh_tts_status_response_pub.put(
                 ai_status_response.serialize()
             )
+
+    def stop(self) -> None:
+        """
+        Stop the Elevenlabs TTS connector and cleanup resources.
+        """
+        if self.session:
+            self.session.close()
+            logging.info("Elevenlabs TTS Zenoh client closed")
+
+        if self.asr:
+            self.asr.stop()
+
+        if self.tts:
+            self.tts.stop()
