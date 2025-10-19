@@ -14,9 +14,9 @@ from providers.teleops_conversation_provider import TeleopsConversationProvider
 from zenoh_msgs import (
     AudioStatus,
     String,
+    TTSStatusRequest,
     open_zenoh_session,
     prepare_header,
-    TTSStatusRequest,
 )
 
 
@@ -157,7 +157,6 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
         logging.info(f"Received TTS Control Status message: {tts_status}")
 
         code = tts_status.code
-        request_id = tts_status.request_id
 
         # Enable the TTS
         if code == 1:
