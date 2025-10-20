@@ -201,7 +201,6 @@ class ModeManager:
             current_config.timeout_seconds
             and mode_duration >= current_config.timeout_seconds
         ):
-            # Execute timeout hooks before transition
             timeout_context = {
                 "mode_name": self.state.current_mode,
                 "timeout_seconds": current_config.timeout_seconds,
@@ -302,7 +301,7 @@ class ModeManager:
             logging.warning(f"Target mode '{rule.to_mode}' not found in configuration")
             return False
 
-        # TODO: Add context-aware transition logic here if needed
+        # TODO: Add context-aware transition logic
 
         return True
 
@@ -363,7 +362,6 @@ class ModeManager:
             from_config = self.config.modes.get(from_mode)
             to_config = self.config.modes[target_mode]
 
-            # Create transition context
             transition_context = {
                 "from_mode": from_mode,
                 "to_mode": target_mode,
@@ -416,17 +414,6 @@ class ModeManager:
             )
             if not global_entry_success:
                 logging.warning("Some global entry hooks failed")
-
-            # Legacy message support (kept for backwards compatibility)
-            if (
-                from_config
-                and from_config.exit_message
-                and self.config.transition_announcement
-            ):
-                logging.info(f"Exit message: {from_config.exit_message}")
-
-            if to_config.entry_message and self.config.transition_announcement:
-                logging.info(f"Entry message: {to_config.entry_message}")
 
             await self._notify_transition_callbacks(from_mode, target_mode)
 
