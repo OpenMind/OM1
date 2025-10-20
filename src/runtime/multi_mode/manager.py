@@ -9,6 +9,7 @@ from typing import Callable, Dict, List, Optional
 import zenoh
 
 from runtime.multi_mode.config import (
+    LifecycleHookType,
     ModeConfig,
     ModeSystemConfig,
     TransitionRule,
@@ -200,6 +201,20 @@ class ModeManager:
             current_config.timeout_seconds
             and mode_duration >= current_config.timeout_seconds
         ):
+            # Execute timeout hooks before transition
+            timeout_context = {
+                "mode_name": self.state.current_mode,
+                "timeout_seconds": current_config.timeout_seconds,
+                "actual_duration": mode_duration,
+                "timestamp": current_time,
+            }
+
+            asyncio.create_task(
+                current_config.execute_lifecycle_hooks(
+                    LifecycleHookType.ON_TIMEOUT, timeout_context
+                )
+            )
+
             # Find time-based transition rules for this mode
             for rule in self.config.transition_rules:
                 if (
@@ -345,6 +360,35 @@ class ModeManager:
             transition_key = f"{from_mode}->{target_mode}"
             self.transition_cooldowns[transition_key] = time.time()
 
+            from_config = self.config.modes.get(from_mode)
+            to_config = self.config.modes[target_mode]
+
+            # Create transition context
+            transition_context = {
+                "from_mode": from_mode,
+                "to_mode": target_mode,
+                "reason": reason,
+                "timestamp": time.time(),
+                "transition_key": transition_key,
+            }
+
+            # Execute exit hooks for the current mode
+            if from_config:
+                logging.debug(f"Executing exit hooks for mode: {from_mode}")
+                exit_success = await from_config.execute_lifecycle_hooks(
+                    LifecycleHookType.ON_EXIT, transition_context.copy()
+                )
+                if not exit_success:
+                    logging.warning(f"Some exit hooks failed for mode: {from_mode}")
+
+            # Execute global exit hooks
+            global_exit_success = await self.config.execute_global_lifecycle_hooks(
+                LifecycleHookType.ON_EXIT, transition_context.copy()
+            )
+            if not global_exit_success:
+                logging.warning("Some global exit hooks failed")
+
+            # Update state
             self.state.previous_mode = from_mode
             self.state.current_mode = target_mode
             self.state.mode_start_time = time.time()
@@ -354,13 +398,26 @@ class ModeManager:
             if len(self.state.transition_history) > 50:
                 self.state.transition_history = self.state.transition_history[-25:]
 
-            from_config = self.config.modes.get(from_mode)
-            to_config = self.config.modes[target_mode]
-
             logging.info(
                 f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
             )
 
+            # Execute entry hooks for the new mode
+            logging.debug(f"Executing entry hooks for mode: {target_mode}")
+            entry_success = await to_config.execute_lifecycle_hooks(
+                LifecycleHookType.ON_ENTRY, transition_context.copy()
+            )
+            if not entry_success:
+                logging.warning(f"Some entry hooks failed for mode: {target_mode}")
+
+            # Execute global entry hooks
+            global_entry_success = await self.config.execute_global_lifecycle_hooks(
+                LifecycleHookType.ON_ENTRY, transition_context.copy()
+            )
+            if not global_entry_success:
+                logging.warning("Some global entry hooks failed")
+
+            # Legacy message support (kept for backwards compatibility)
             if (
                 from_config
                 and from_config.exit_message

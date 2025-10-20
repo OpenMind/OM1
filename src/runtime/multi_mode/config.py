@@ -2,7 +2,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import json5
 
@@ -13,6 +13,12 @@ from backgrounds.base import Background, BackgroundConfig
 from inputs import load_input
 from inputs.base import Sensor, SensorConfig
 from llm import LLM, LLMConfig, load_llm
+from runtime.multi_mode.hook import (
+    LifecycleHook,
+    LifecycleHookType,
+    execute_lifecycle_hooks,
+    parse_lifecycle_hooks,
+)
 from runtime.robotics import load_unitree
 from runtime.single_mode.config import RuntimeConfig, add_meta
 from simulators import load_simulator
@@ -87,6 +93,10 @@ class ModeConfig:
     timeout_seconds: Optional[float] = None
     remember_locations: bool = False
     save_interactions: bool = False
+
+    # Lifecycle hooks
+    lifecycle_hooks: List[LifecycleHook] = field(default_factory=list)
+    _raw_lifecycle_hooks: List[Dict] = field(default_factory=list)
 
     agent_inputs: List[Sensor] = field(default_factory=list)
     cortex_llm: Optional[LLM] = None
@@ -165,6 +175,37 @@ class ModeConfig:
             or len(self.agent_actions) > 0
         )
 
+    async def execute_lifecycle_hooks(
+        self, hook_type: LifecycleHookType, context: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Execute all lifecycle hooks of the specified type for this mode.
+
+        Parameters
+        ----------
+        hook_type : LifecycleHookType
+            The type of lifecycle hooks to execute
+        context : Optional[Dict[str, Any]]
+            Context information to pass to the hooks
+
+        Returns
+        -------
+        bool
+            True if all hooks executed successfully, False if any failed
+        """
+        if context is None:
+            context = {}
+
+        context.update(
+            {
+                "mode_name": self.name,
+                "mode_display_name": self.display_name,
+                "mode_description": self.description,
+            }
+        )
+
+        return await execute_lifecycle_hooks(self.lifecycle_hooks, hook_type, context)
+
 
 @dataclass
 class ModeSystemConfig:
@@ -191,9 +232,40 @@ class ModeSystemConfig:
     # Default LLM settings if mode doesn't override
     global_cortex_llm: Optional[Dict] = None
 
+    # Global lifecycle hooks (executed for all modes)
+    global_lifecycle_hooks: List[LifecycleHook] = field(default_factory=list)
+    _raw_global_lifecycle_hooks: List[Dict] = field(default_factory=list)
+
     # Modes and transition rules
     modes: Dict[str, ModeConfig] = field(default_factory=dict)
     transition_rules: List[TransitionRule] = field(default_factory=list)
+
+    async def execute_global_lifecycle_hooks(
+        self, hook_type: LifecycleHookType, context: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Execute all global lifecycle hooks of the specified type.
+
+        Parameters
+        ----------
+        hook_type : LifecycleHookType
+            The type of lifecycle hooks to execute
+        context : Optional[Dict[str, Any]]
+            Context information to pass to the hooks
+
+        Returns
+        -------
+        bool
+            True if all hooks executed successfully, False if any failed
+        """
+        if context is None:
+            context = {}
+
+        context.update({"system_name": self.name, "is_global_hook": True})
+
+        return await execute_lifecycle_hooks(
+            self.global_lifecycle_hooks, hook_type, context
+        )
 
 
 def load_mode_config(config_name: str) -> ModeSystemConfig:
@@ -259,6 +331,10 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
         system_governance=raw_config.get("system_governance", ""),
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         global_cortex_llm=raw_config.get("cortex_llm"),
+        global_lifecycle_hooks=parse_lifecycle_hooks(
+            raw_config.get("global_lifecycle_hooks", [])
+        ),
+        _raw_global_lifecycle_hooks=raw_config.get("global_lifecycle_hooks", []),
     )
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
@@ -270,6 +346,7 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
             hertz=mode_data.get("hertz", 1.0),
             entry_message=mode_data.get("entry_message"),
             exit_message=mode_data.get("exit_message"),
+            lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", [])),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
             save_interactions=mode_data.get("save_interactions", False),
@@ -278,6 +355,7 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
             _raw_simulators=mode_data.get("simulators", []),
             _raw_actions=mode_data.get("agent_actions", []),
             _raw_backgrounds=mode_data.get("backgrounds", []),
+            _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
         )
 
         mode_system_config.modes[mode_name] = mode_config
