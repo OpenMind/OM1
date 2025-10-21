@@ -343,7 +343,7 @@ def parse_lifecycle_hooks(raw_hooks: List[Dict]) -> List[LifecycleHook]:
                 handler_config=hook_data.get("handler_config", {}),
                 async_execution=hook_data.get("async_execution", True),
                 timeout_seconds=hook_data.get("timeout_seconds", 5.0),
-                on_failure=hook_data.get("on_failure", "log"),
+                on_failure=hook_data.get("on_failure", "ignore"),
                 priority=hook_data.get("priority", 0),
             )
             hooks.append(hook)

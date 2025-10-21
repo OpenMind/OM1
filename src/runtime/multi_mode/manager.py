@@ -183,7 +183,7 @@ class ModeManager:
             except Exception as e:
                 logging.error(f"Error in transition callback: {e}")
 
-    def check_time_based_transitions(self) -> Optional[str]:
+    async def check_time_based_transitions(self) -> Optional[str]:
         """
         Check if any time-based transitions should be triggered.
 
@@ -208,13 +208,13 @@ class ModeManager:
                 "timestamp": current_time,
             }
 
-            asyncio.create_task(
-                current_config.execute_lifecycle_hooks(
+            try:
+                await current_config.execute_lifecycle_hooks(
                     LifecycleHookType.ON_TIMEOUT, timeout_context
                 )
-            )
+            except Exception as e:
+                logging.error(f"Error executing timeout lifecycle hooks: {e}")
 
-            # Find time-based transition rules for this mode
             for rule in self.config.transition_rules:
                 if (
                     rule.from_mode == self.state.current_mode or rule.from_mode == "*"
@@ -505,7 +505,7 @@ class ModeManager:
             The new mode if a transition occurred, None otherwise
         """
         # Check time-based transitions first
-        time_target = self.check_time_based_transitions()
+        time_target = await self.check_time_based_transitions()
         if time_target:
             success = await self._execute_transition(time_target, "timeout")
             if success:

@@ -215,24 +215,24 @@ class TestModeManager:
 
         await mode_manager._notify_transition_callbacks("from", "to")
 
-    def test_check_time_based_transitions_no_timeout(self, mode_manager):
+    async def test_check_time_based_transitions_no_timeout(self, mode_manager):
         """Test time-based transitions when current mode has no timeout."""
-        result = mode_manager.check_time_based_transitions()
+        result = await mode_manager.check_time_based_transitions()
         assert result is None
 
-    def test_check_time_based_transitions_within_timeout(self, mode_manager):
+    async def test_check_time_based_transitions_within_timeout(self, mode_manager):
         """Test time-based transitions within timeout period."""
         mode_manager.config.modes["default"].timeout_seconds = 3600.0
-        result = mode_manager.check_time_based_transitions()
+        result = await mode_manager.check_time_based_transitions()
         assert result is None
 
-    def test_check_time_based_transitions_exceeded_timeout(self, mode_manager):
+    async def test_check_time_based_transitions_exceeded_timeout(self, mode_manager):
         """Test time-based transitions when timeout is exceeded."""
         mode_manager.state.current_mode = "advanced"
         mode_manager.config.modes["advanced"].timeout_seconds = 0.1
         mode_manager.state.mode_start_time = time.time() - 1.0
 
-        result = mode_manager.check_time_based_transitions()
+        result = await mode_manager.check_time_based_transitions()
         assert result == "default"
 
     def test_check_input_triggered_transitions_no_input(self, mode_manager):
