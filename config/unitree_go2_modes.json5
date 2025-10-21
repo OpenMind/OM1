@@ -169,6 +169,13 @@
       ],
       "lifecycle_hooks": [
         {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I'm ready to explore the environment safely.",
+          }
+        },
+        {
           "hook_type": "on_entry",
           "handler_type": "message",
           "handler_config": {
