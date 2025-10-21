@@ -49,8 +49,8 @@
                         "properties": {
                             "message": {"type": "string"},
                             "command": {"type": "string"},
-                            "module": {"type": "string"},
-                            "function": {"type": "string"}
+                            "function": {"type": "string"},
+                            "action": {"type": "string"}
                         }
                     },
                     "priority": {"type": "integer"},
@@ -110,8 +110,8 @@
                                         "properties": {
                                             "message": {"type": "string"},
                                             "command": {"type": "string"},
-                                            "module": {"type": "string"},
-                                            "function": {"type": "string"}
+                                            "function": {"type": "string"},
+                                            "action": {"type": "string"}
                                         }
                                     },
                                     "priority": {"type": "integer"},
