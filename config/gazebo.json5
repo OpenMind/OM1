@@ -1,0 +1,21 @@
+{
+  "hertz": 0.05,
+  "name": "gazebo",
+  "api_key": "openmind_free",
+  "system_prompt_base": "You are a simulated robot running inside the Gazebo environment. Respond with short explanations of your actions. React to movement, sound, and environmental changes naturally.",
+  "system_governance": "Follow the Three Laws of Robotics at all times.",
+  "agent_inputs": [
+    { "type": "GoogleASRInput" }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "Spot",
+      "history_length": 8
+    }
+  },
+  "agent_actions": [
+    { "name": "move", "implementation": "passthrough", "connector": "gazebo_sim" },
+    { "name": "speak", "implementation": "passthrough", "connector": "elevenlabs_tts" }
+  ]
+}
