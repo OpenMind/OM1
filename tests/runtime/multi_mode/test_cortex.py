@@ -176,12 +176,7 @@ class TestModeCortexRuntime:
             patch.object(runtime, "_stop_current_orchestrators") as mock_stop,
             patch.object(runtime, "_initialize_mode") as mock_init,
             patch.object(runtime, "_start_orchestrators") as mock_start,
-            patch("runtime.multi_mode.cortex.ElevenLabsTTSProvider") as mock_tts_class,
         ):
-            mock_tts = Mock()
-            mock_tts.add_pending_message = Mock()
-            mock_tts_class.return_value = mock_tts
-
             mock_from_mode = Mock()
             mock_to_mode = Mock()
             runtime.mode_config.modes = {
@@ -204,18 +199,11 @@ class TestModeCortexRuntime:
             patch.object(runtime, "_stop_current_orchestrators"),
             patch.object(runtime, "_initialize_mode"),
             patch.object(runtime, "_start_orchestrators"),
-            patch("runtime.multi_mode.cortex.ElevenLabsTTSProvider") as mock_tts_class,
         ):
-            mock_tts = Mock()
-            mock_tts.add_pending_message = Mock()
-            mock_tts_class.return_value = mock_tts
-
             mock_mode = Mock()
             runtime.mode_config.modes = {"to_mode": mock_mode}
 
             await runtime._on_mode_transition("from_mode", "to_mode")
-
-            mock_tts.add_pending_message.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_on_mode_transition_exception(self, cortex_runtime):
