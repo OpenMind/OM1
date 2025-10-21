@@ -34,7 +34,16 @@ from .sensor_msgs import (
     PointField,
     RegionOfInterest,
 )
-from .status_msgs import AIStatusRequest, AIStatusResponse, AudioStatus, CameraStatus
+from .status_msgs import (
+    AIStatusRequest,
+    AIStatusResponse,
+    AudioStatus,
+    CameraStatus,
+    ModeStatusRequest,
+    ModeStatusResponse,
+    TTSStatusRequest,
+    TTSStatusResponse,
+)
 from .std_msgs import ColorRGBA, Duration, Header, String, Time, prepare_header
 
 __all__ = [
@@ -50,6 +59,10 @@ __all__ = [
     "CameraStatus",
     "AIStatusRequest",
     "AIStatusResponse",
+    "ModeStatusRequest",
+    "ModeStatusResponse",
+    "TTSStatusRequest",
+    "TTSStatusResponse",
     # geographic_msgs
     "GeoPoint",
     "GeoPointStamped",

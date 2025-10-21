@@ -20,7 +20,7 @@ class ASRRTSPProvider:
     def __init__(
         self,
         ws_url: str,
-        rtsp_url: str = "rtsp://localhost:8554/live",
+        rtsp_url: str = "rtsp://localhost:8554/audio",
         rate: int = 48000,
         chunk: Optional[int] = None,
         language_code: Optional[str] = None,
@@ -33,7 +33,7 @@ class ASRRTSPProvider:
         ws_url : str
             The websocket URL for the ASR service connection.
         rtsp_url : str
-            The RTSP URL for the audio stream; defaults to "rtsp://localhost:8554/live"
+            The RTSP URL for the audio stream; defaults to "rtsp://localhost:8554/audio"
         rate : int
             The audio sample rate for the audio stream; used the system default if None
         chunk : int
@@ -86,6 +86,10 @@ class ASRRTSPProvider:
 
         Stops the audio stream and websocket clients, and sets the running state to False.
         """
+        if not self.running:
+            logging.warning("ASR RTSP provider is not running")
+            return
+
         self.running = False
         self.audio_stream.stop()
         self.ws_client.stop()

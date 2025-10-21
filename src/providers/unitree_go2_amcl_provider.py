@@ -1,19 +1,10 @@
 import logging
-import time
 from typing import Optional
-from uuid import uuid4
 
 import numpy as np
 import zenoh
 
-from zenoh_msgs import (
-    AIStatusRequest,
-    Pose,
-    String,
-    nav_msgs,
-    open_zenoh_session,
-    prepare_header,
-)
+from zenoh_msgs import Pose, nav_msgs, open_zenoh_session
 
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
@@ -95,21 +86,6 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
                 self.localization_pose,
             )
 
-            current_time = time.time()
-            if (
-                self.pub is not None
-                and current_time - self.last_status_publish_time
-                >= self.status_publish_interval
-            ):
-                header = prepare_header(message.header.frame_id)
-                status_msg = AIStatusRequest(
-                    header=header,
-                    request_id=String(str(uuid4())),
-                    code=1 if self.localization_status else 0,
-                )
-                self.pub.put(status_msg.serialize())
-                self.last_status_publish_time = current_time
-                logging.debug("Published status message at %s", current_time)
         else:
             logging.warning("Received empty AMCL message")
 

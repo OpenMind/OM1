@@ -5,7 +5,7 @@ import warnings
 import openai
 from dotenv import load_dotenv
 
-from runtime.config import RuntimeConfig
+from runtime.single_mode.config import RuntimeConfig
 
 
 def send_first_boot_tweet(config: RuntimeConfig):

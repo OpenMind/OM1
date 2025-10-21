@@ -1,0 +1,117 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": [
+        "default_mode",
+        "api_key",
+        "system_governance",
+        "cortex_llm",
+        "modes"
+    ],
+    "properties": {
+        "default_mode": {"type": "string"},
+        "allow_manual_switching": {"type": "boolean"},
+        "transition_announcement": {"type": "boolean"},
+        "mode_memory_enabled": {"type": "boolean"},
+        "api_key": {"type": "string"},
+        "URID": {"type": "string"},
+        "unitree_ethernet": {"type": "string"},
+        "system_governance": {"type": "string"},
+        "cortex_llm": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+                "type": {"type": "string"},
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "agent_name": {"type": "string"},
+                        "history_length": {"type": "integer"}
+                    }
+                }
+            }
+        },
+        "modes": {
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "type": "object",
+                    "required": ["display_name", "description", "system_prompt_base", "hertz", "agent_inputs", "agent_actions"],
+                    "properties": {
+                        "display_name": {"type": "string"},
+                        "description": {"type": "string"},
+                        "system_prompt_base": {"type": "string"},
+                        "entry_message": {"type": "string"},
+                        "exit_message": {"type": "string"},
+                        "hertz": {"type": "number"},
+                        "save_interactions": {"type": "boolean"},
+                        "remember_locations": {"type": "boolean"},
+                        "cortex_llm": {
+                            "type": "object",
+                            "required": ["type"],
+                            "properties": {
+                                "type": {"type": "string"},
+                                "config": {
+                                    "type": "object",
+                                    "properties": {
+                                        "agent_name": {"type": "string"},
+                                        "history_length": {"type": "integer"}
+                                    }
+                                }
+                            }
+                        },
+                        "agent_inputs": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["type"],
+                                "properties": {
+                                    "type": {"type": "string"},
+                                    "config": {"type": "object"}
+                                }
+                            }
+                        },
+                        "agent_actions": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["name", "llm_label", "connector"],
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "llm_label": {"type": "string"},
+                                    "connector": {"type": "string"},
+                                    "config": {"type": "object"},
+                                    "exclude_from_prompt": {
+                                        "type": "boolean",
+                                        "default": false
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "additionalProperties": true
+                }
+            },
+            "additionalProperties": false
+        },
+        "transition_rules": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["from_mode", "to_mode", "transition_type", "trigger_keywords", "priority"],
+                "properties": {
+                    "from_mode": {"type": "string"},
+                    "to_mode": {"type": "string"},
+                    "transition_type": {"type": "string"},
+                    "trigger_keywords": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "priority": {"type": "integer"},
+                    "cooldown_seconds": {"type": "number"}
+                }
+            }
+        }
+    },
+    "additionalProperties": true
+}

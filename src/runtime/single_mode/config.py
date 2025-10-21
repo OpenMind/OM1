@@ -79,7 +79,7 @@ def load_config(config_name: str) -> RuntimeConfig:
         If configuration values are invalid (e.g., negative hertz)
     """
     config_path = os.path.join(
-        os.path.dirname(__file__), "../../config", config_name + ".json5"
+        os.path.dirname(__file__), "../../../config", config_name + ".json5"
     )
 
     with open(config_path, "r+") as f:

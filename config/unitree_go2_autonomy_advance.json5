@@ -11,8 +11,16 @@
   3. If you see something interesting or beautiful, go explore. You might:\n Move: 'move forwards'\n Speak: {{'I\\'m going to go explore the room'}}\n \
   4. If you sense something in front of you, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning to avoid the object in front of me'}}\n \
   5. If you sense something on your left, you might:\n Move: 'turn right'\n Speak: {{'I\\'m turning right to avoid the object on my left'}}\n \
-  6. If you sense something on your right, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning left to avoid the object on my right'}}",
+  6. If you sense something on your right, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning left to avoid the object on my right'}}\n \
+  7. If a person says 'Navigate to a location' or 'take me to a location' ,example 'Navigate to the table' you should check if that location exists in your database and then start navigate_location.\n \
+  8. Do not navigate_location If there is no 'Navigate to a location' or 'take me to a location' command given by the person",
   "agent_inputs": [
+    {
+      "type": "GoogleASRInput"
+    },
+    {
+      "type": "LocationsInput",
+    },
     {
       "type": "Odom"
     },
@@ -33,7 +41,7 @@
     "type": "OpenAILLM",
     "config": {
       "agent_name": "Bits",
-      "history_length": 2
+      "history_length": 10
     }
   },
   "agent_actions": [
@@ -41,6 +49,11 @@
       "name": "move_go2_autonomy",
       "llm_label": "move",
       "connector": "unitree_sdk_advance"
+    },
+    {
+      "name": "navigate_location",
+      "llm_label": "navigate_location",
+      "connector": "nav",
     },
     {
      "name": "speak",
@@ -72,6 +85,9 @@
     },
     {
       "type": "UnitreeGo2Location",
+    },
+    {
+      "type": "Locations",
     }
   ]
 }

@@ -7,7 +7,7 @@ from actions.base import AgentAction
 from inputs.base import Sensor, SensorConfig
 from llm import LLM
 from llm.output_model import CortexOutputModel
-from runtime.config import RuntimeConfig, load_config
+from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.base import Simulator, SimulatorConfig
 
 
@@ -118,12 +118,21 @@ def mock_multiple_components_config():
 def test_load_config(mock_config_data, mock_dependencies):
     with (
         patch("builtins.open", mock_open(read_data=json5.dumps(mock_config_data))),
-        patch("runtime.config.load_input", return_value=mock_dependencies["input"]),
-        patch("runtime.config.load_action", return_value=mock_dependencies["action"]()),
         patch(
-            "runtime.config.load_simulator", return_value=mock_dependencies["simulator"]
+            "runtime.single_mode.config.load_input",
+            return_value=mock_dependencies["input"],
         ),
-        patch("runtime.config.load_llm", return_value=mock_dependencies["llm"]),
+        patch(
+            "runtime.single_mode.config.load_action",
+            return_value=mock_dependencies["action"](),
+        ),
+        patch(
+            "runtime.single_mode.config.load_simulator",
+            return_value=mock_dependencies["simulator"],
+        ),
+        patch(
+            "runtime.single_mode.config.load_llm", return_value=mock_dependencies["llm"]
+        ),
     ):
         config = load_config("test_config")
 
@@ -152,12 +161,21 @@ def test_load_empty_config(mock_empty_config_data, mock_dependencies):
         patch(
             "builtins.open", mock_open(read_data=json5.dumps(mock_empty_config_data))
         ),
-        patch("runtime.config.load_input", return_value=mock_dependencies["input"]),
-        patch("runtime.config.load_action", return_value=mock_dependencies["action"]()),
         patch(
-            "runtime.config.load_simulator", return_value=mock_dependencies["simulator"]
+            "runtime.single_mode.config.load_input",
+            return_value=mock_dependencies["input"],
         ),
-        patch("runtime.config.load_llm", return_value=mock_dependencies["llm"]),
+        patch(
+            "runtime.single_mode.config.load_action",
+            return_value=mock_dependencies["action"](),
+        ),
+        patch(
+            "runtime.single_mode.config.load_simulator",
+            return_value=mock_dependencies["simulator"],
+        ),
+        patch(
+            "runtime.single_mode.config.load_llm", return_value=mock_dependencies["llm"]
+        ),
     ):
         config = load_config("empty_config")
 
@@ -180,12 +198,21 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
             "builtins.open",
             mock_open(read_data=json5.dumps(mock_multiple_components_config)),
         ),
-        patch("runtime.config.load_input", return_value=mock_dependencies["input"]),
-        patch("runtime.config.load_action", return_value=mock_dependencies["action"]()),
         patch(
-            "runtime.config.load_simulator", return_value=mock_dependencies["simulator"]
+            "runtime.single_mode.config.load_input",
+            return_value=mock_dependencies["input"],
         ),
-        patch("runtime.config.load_llm", return_value=mock_dependencies["llm"]),
+        patch(
+            "runtime.single_mode.config.load_action",
+            return_value=mock_dependencies["action"](),
+        ),
+        patch(
+            "runtime.single_mode.config.load_simulator",
+            return_value=mock_dependencies["simulator"],
+        ),
+        patch(
+            "runtime.single_mode.config.load_llm", return_value=mock_dependencies["llm"]
+        ),
     ):
         config = load_config("multiple_components")
 
@@ -257,7 +284,7 @@ def test_load_config_invalid_component_type():
 
     with (
         patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))),
-        patch("runtime.config.load_input", side_effect=ImportError),
+        patch("runtime.single_mode.config.load_input", side_effect=ImportError),
     ):
         with pytest.raises(ImportError):
             load_config("invalid_config")

@@ -17,7 +17,7 @@ class ElevenLabsTTSProvider:
     Parameters
     ----------
     url : str
-        The URL endpoint for the TTS service
+        The URL endpoint for the TTS service. (Default is https://api.openmind.org/api/core/elevenlabs/tts)
     api_key : str
         The API key for the TTS service
     voice_id : str, optional
@@ -30,7 +30,7 @@ class ElevenLabsTTSProvider:
 
     def __init__(
         self,
-        url: str,
+        url: str = "https://api.openmind.org/api/core/elevenlabs/tts",
         api_key: Optional[str] = None,
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
@@ -104,9 +104,26 @@ class ElevenLabsTTSProvider:
         message : Union[str, dict]
             The message to be added, typically containing text and TTS parameters.
         """
+        if not self.running:
+            logging.warning(
+                "TTS provider is not running. Call start() before adding messages."
+            )
+            return
+
         if isinstance(message, str):
             message = self.create_pending_message(message)
         self._audio_stream.add_request(message)
+
+    def get_pending_message_count(self) -> int:
+        """
+        Get the count of pending messages in the TTS provider.
+
+        Returns
+        -------
+        int
+            The number of pending messages.
+        """
+        return self._audio_stream._pending_requests.qsize()
 
     def start(self):
         """
@@ -123,5 +140,9 @@ class ElevenLabsTTSProvider:
         """
         Stop the TTS provider and cleanup resources.
         """
+        if not self.running:
+            logging.warning("Eleven Labs TTS provider is not running")
+            return
+
         self.running = False
         self._audio_stream.stop()
