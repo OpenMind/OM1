@@ -42,7 +42,7 @@
                     },
                     "handler_type": {
                         "type": "string",
-                        "enum": ["message", "command", "function"]
+                        "enum": ["message", "command", "function", "action"]
                     },
                     "handler_config": {
                         "type": "object",
@@ -99,11 +99,11 @@
                                 "properties": {
                                     "hook_type": {
                                         "type": "string",
-                                        "enum": ["on_entry", "on_exit", "on_timeout"]
+                                        "enum": ["on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout"]
                                     },
                                     "handler_type": {
                                         "type": "string",
-                                        "enum": ["message", "command", "function"]
+                                        "enum": ["message", "command", "function", "action"]
                                     },
                                     "handler_config": {
                                         "type": "object",
