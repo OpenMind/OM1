@@ -85,10 +85,17 @@
       ],
       "lifecycle_hooks": [
         {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Hello! I'm Bits, your robotic companion. What's your name?"
+          }
+        },
+        {
           "hook_type": "on_entry",
           "handler_type": "message",
           "handler_config": {
-            "message": "Hello! I'm Bits, your robotic companion. What's your name?",
+            "message": "Hello! I'm Bits, your robotic companion. What's your name?"
           }
         }
       ]
@@ -275,6 +282,13 @@
       ],
       "lifecycle_hooks": [
         {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I'm ready to navigate. I'll start navigating to different locations or explore on my own if no command is given.",
+          }
+        },
+        {
           "hook_type": "on_entry",
           "handler_type": "message",
           "handler_config": {
@@ -353,6 +367,13 @@
         }
       ],
       "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I'm ready to chat! What would you like to talk about?",
+          }
+        },
         {
           "hook_type": "on_entry",
           "handler_type": "message",
@@ -463,6 +484,13 @@
         }
       ],
       "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I will continue my security patrol.",
+          }
+        },
         {
           "hook_type": "on_entry",
           "handler_type": "message",
