@@ -97,11 +97,11 @@ class MessageHookHandler(LifecycleHookHandler):
                 formatted_message = message.format(**context)
                 logging.info(f"Lifecycle hook message: {formatted_message}")
 
-                if self.config.get("announce", False):
-                    try:
-                        ElevenLabsTTSProvider().add_pending_message(formatted_message)
-                    except ImportError:
-                        logging.warning("TTS provider not available for announcement")
+                try:
+                    ElevenLabsTTSProvider().add_pending_message(formatted_message)
+                except Exception as e:
+                    logging.error(f"Error adding TTS message: {e}")
+                    return False
 
                 return True
             except Exception as e:

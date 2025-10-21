@@ -6,7 +6,6 @@ from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
-from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.multi_mode.config import LifecycleHookType, ModeSystemConfig, RuntimeConfig
@@ -93,15 +92,6 @@ class ModeCortexRuntime:
         logging.info(f"Handling mode transition: {from_mode} -> {to_mode}")
 
         try:
-            # Play exit message if enabled
-            if self.mode_config.transition_announcement:
-                from_config = self.mode_config.modes[from_mode]
-                if from_config.exit_message:
-                    ElevenLabsTTSProvider().add_pending_message(
-                        from_config.exit_message
-                    )
-                    logging.info(f"Mode exit: {from_config.exit_message}")
-
             # Stop current orchestrators
             await self._stop_current_orchestrators()
 
@@ -110,13 +100,6 @@ class ModeCortexRuntime:
 
             # Start new orchestrators
             await self._start_orchestrators()
-
-            # Play transition messages if enabled
-            if self.mode_config.transition_announcement:
-                to_config = self.mode_config.modes[to_mode]
-                if to_config.entry_message:
-                    ElevenLabsTTSProvider().add_pending_message(to_config.entry_message)
-                    logging.info(f"Mode entry: {to_config.entry_message}")
 
             logging.info(f"Successfully transitioned to mode: {to_mode}")
 
@@ -254,16 +237,6 @@ class ModeCortexRuntime:
                 await initial_mode_config.execute_lifecycle_hooks(
                     LifecycleHookType.ON_STARTUP, startup_context
                 )
-
-                # Play initial mode entry message if enabled
-                if self.mode_config.transition_announcement:
-                    if initial_mode_config.entry_message:
-                        ElevenLabsTTSProvider().add_pending_message(
-                            initial_mode_config.entry_message
-                        )
-                        logging.info(
-                            f"Initial mode entry: {initial_mode_config.entry_message}"
-                        )
 
             await self._start_orchestrators()
 

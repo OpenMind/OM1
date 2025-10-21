@@ -25,7 +25,6 @@ def sample_message_hook():
         handler_type="message",
         handler_config={
             "message": "Entering mode: {mode_name}",
-            "announce": False,
         },
         async_execution=True,
         timeout_seconds=5.0,
@@ -144,7 +143,7 @@ async def test_base_handler_execute_not_implemented():
 
 def test_message_handler_creation():
     """Test message handler creation."""
-    config = {"message": "test message", "announce": True}
+    config = {"message": "test message"}
     handler = MessageHookHandler(config)
     assert handler.config == config
 
@@ -152,7 +151,7 @@ def test_message_handler_creation():
 @pytest.mark.asyncio
 async def test_message_handler_basic_execution(sample_context):
     """Test basic message handler execution."""
-    config = {"message": "Mode: {mode_name}", "announce": False}
+    config = {"message": "Mode: {mode_name}"}
     handler = MessageHookHandler(config)
 
     with patch("runtime.multi_mode.hook.logging") as mock_logging:
@@ -166,7 +165,7 @@ async def test_message_handler_basic_execution(sample_context):
 @pytest.mark.asyncio
 async def test_message_handler_with_announcement(sample_context):
     """Test message handler with TTS announcement."""
-    config = {"message": "Mode: {mode_name}", "announce": True}
+    config = {"message": "Mode: {mode_name}"}
     handler = MessageHookHandler(config)
 
     mock_tts = Mock()
@@ -185,7 +184,7 @@ async def test_message_handler_with_announcement(sample_context):
 @pytest.mark.asyncio
 async def test_message_handler_tts_import_error(sample_context):
     """Test message handler when TTS provider is not available."""
-    config = {"message": "Mode: {mode_name}", "announce": True}
+    config = {"message": "Mode: {mode_name}"}
     handler = MessageHookHandler(config)
 
     with patch("runtime.multi_mode.hook.logging") as mock_logging:
@@ -193,10 +192,8 @@ async def test_message_handler_tts_import_error(sample_context):
             "runtime.multi_mode.hook.ElevenLabsTTSProvider", side_effect=ImportError
         ):
             result = await handler.execute(sample_context)
-            assert result is True
-            mock_logging.warning.assert_called_once_with(
-                "TTS provider not available for announcement"
-            )
+            assert result is False
+            mock_logging.error.assert_called_once_with("Error adding TTS message: ")
 
 
 @pytest.mark.asyncio

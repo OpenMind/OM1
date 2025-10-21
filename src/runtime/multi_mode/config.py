@@ -88,8 +88,6 @@ class ModeConfig:
     system_prompt_base: str
     hertz: float = 1.0
 
-    entry_message: Optional[str] = None
-    exit_message: Optional[str] = None
     timeout_seconds: Optional[float] = None
     remember_locations: bool = False
     save_interactions: bool = False
@@ -218,7 +216,6 @@ class ModeSystemConfig:
     default_mode: str
     config_name: str = ""
     allow_manual_switching: bool = True
-    transition_announcement: bool = True
     mode_memory_enabled: bool = True
 
     # Global parameters
@@ -322,7 +319,6 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
         default_mode=raw_config["default_mode"],
         config_name=config_name,
         allow_manual_switching=raw_config.get("allow_manual_switching", True),
-        transition_announcement=raw_config.get("transition_announcement", True),
         mode_memory_enabled=raw_config.get("mode_memory_enabled", True),
         api_key=g_api_key,
         robot_ip=g_robot_ip,
@@ -344,8 +340,6 @@ def load_mode_config(config_name: str) -> ModeSystemConfig:
             description=mode_data.get("description", ""),
             system_prompt_base=mode_data["system_prompt_base"],
             hertz=mode_data.get("hertz", 1.0),
-            entry_message=mode_data.get("entry_message"),
-            exit_message=mode_data.get("exit_message"),
             lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", [])),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
