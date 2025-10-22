@@ -392,7 +392,12 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         load_input(inp["type"])(
             config=SensorConfig(
                 **add_meta(
-                    inp.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
+                    inp.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                    g_mode,
                 )
             )
         )
@@ -405,7 +410,12 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
             config=SimulatorConfig(
                 name=sim["type"],
                 **add_meta(
-                    sim.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
+                    sim.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                    g_mode,
                 ),
             )
         )
@@ -418,7 +428,12 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
             {
                 **action,
                 "config": add_meta(
-                    action.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
+                    action.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                    g_mode,
                 ),
             }
         )
@@ -430,7 +445,12 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         load_background(bg["type"])(
             config=BackgroundConfig(
                 **add_meta(
-                    bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
+                    bg.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                    g_mode,
                 )
             )
         )

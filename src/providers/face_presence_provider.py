@@ -78,7 +78,9 @@ class PresenceSnapshot:
         if k > 0:
             parts.append(f"{k} known ({join_names(clean)})")
         if u > 0:
-            parts.append(f"{u if u == 1 else 'multiple'} unknown face" + ("s" if u != 1 else ""))
+            parts.append(
+                f"{u if u == 1 else 'multiple'} unknown face" + ("s" if u != 1 else "")
+            )
 
         return "In Camera View: " + " and ".join(parts) + "."
 
