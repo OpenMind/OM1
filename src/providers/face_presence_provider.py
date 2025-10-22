@@ -31,8 +31,8 @@ class PresenceSnapshot:
     """
 
     ts: float
-    names_now: List[str]
-    unknown_now: int
+    names: List[str]
+    unknown: int
     raw: Dict
 
     def to_text(self) -> str:
@@ -52,16 +52,17 @@ class PresenceSnapshot:
         -> "No one in view."
         """
         seen = set()
-        names = []
-        for n in self.names_now or []:
-            if n and n not in seen:
+        clean: List[str] = []
+        for n in self.names or []:
+            n = (n or "").strip()
+            if n and n.lower() != "unknown" and n not in seen:
                 seen.add(n)
-                names.append(n)
+                clean.append(n)
 
-        k = len(names)
-        u = int(self.unknown_now or 0)
+        k = len(clean)
+        u = int(self.unknown or 0)
 
-        def join_names(ns):
+        def join_names(ns: List[str]) -> str:
             if not ns:
                 return ""
             if len(ns) == 1:
@@ -75,9 +76,9 @@ class PresenceSnapshot:
 
         parts = []
         if k > 0:
-            parts.append(f"{k} known ({join_names(names)})")
+            parts.append(f"{k} known ({join_names(clean)})")
         if u > 0:
-            parts.append(f"{u} unknown faces")
+            parts.append(f"{u} unknown face" + ("s" if u != 1 else ""))
 
         return "In Camera View: " + " and ".join(parts) + "."
 
@@ -101,6 +102,7 @@ class FacePresenceProvider:
         recent_sec: float = 2.0,
         fps: float = 5.0,
         timeout_s: float = 2.0,
+        prefer_recent: bool = True,
     ) -> None:
         """
         Configure the provider (first construction establishes the singleton).
@@ -117,16 +119,22 @@ class FacePresenceProvider:
         timeout_s : float, default 2.0
             HTTP request timeout in seconds.
         """
+
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
         self.period = 1.0 / max(1e-6, float(fps))
         self.timeout_s = float(timeout_s)
+        self.prefer_recent = bool(prefer_recent)
 
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
-
-        self._callbacks: List[Callable[[str], None]] = []
+        self._callbacks: List = []
         self._cb_lock = threading.Lock()
+        self._session = requests.Session()
+
+    def set_recent_sec(self, sec: float) -> None:
+        """Dynamically change the lookback window used for `/who`."""
+        self.recent_sec = max(0.0, float(sec))
 
     def register_message_callback(self, fn: Callable[[str], None]) -> None:
         """
@@ -215,23 +223,31 @@ class FacePresenceProvider:
             except Exception:
                 pass
 
-    def _fetch_snapshot(self) -> PresenceSnapshot:
+    def _fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
         """
-        POST `/who` and map the response to a `PresenceSnapshot`.
-
-        Returns
-        -------
-        PresenceSnapshot
-            Structured view of the server's `/who` response.
+        POST `/who` with a lookback window (default: self.recent_sec) and build a
+        turn-friendly snapshot from `recent_counts` (or `now` as fallback).
         """
-        body = {"recent_sec": self.recent_sec}
+        sec = float(self.recent_sec if recent_sec is None else recent_sec)
         url = f"{self.base_url}/who"
-
-        r = requests.post(url, json=body, timeout=self.timeout_s)  # type: ignore
+        r = self._session.post(url, json={"recent_sec": sec}, timeout=self.timeout_s)
         r.raise_for_status()
-        data = r.json()
+        data = r.json() or {}
 
-        names = list(data.get("now", []) or [])
-        unknown = int(data.get("unknown_now", 0) or 0)
+        if self.prefer_recent:
+            rc: Dict[str, int] = data.get("recent_counts", {}) or {}
+            names = [
+                k for k, c in rc.items() if k and k != "unknown" and int(c or 0) > 0
+            ]
+            unknown = int(data.get("unknown_recent", 0) or 0)
+        else:
+            now = data.get("now", []) or []
+            seen, names = set(), []
+            for n in now:
+                if n and n != "unknown" and n not in seen:
+                    seen.add(n)
+                    names.append(n)
+            unknown = int(data.get("unknown_now", 0) or 0)
+
         ts = float(data.get("server_ts", time.time()))
-        return PresenceSnapshot(ts=ts, names_now=names, unknown_now=unknown, raw=data)
+        return PresenceSnapshot(ts=ts, names=names, unknown=unknown, raw=data)
