@@ -170,25 +170,56 @@
       "lifecycle_hooks": [
         {
           "hook_type": "on_startup",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "slam_hook",
+            "function": "start_slam_hook",
+          },
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_startup",
           "handler_type": "message",
           "handler_config": {
             "message": "Welcome back. I'm ready to explore the environment safely.",
-          }
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "slam_hook",
+            "function": "start_slam_hook",
+          },
+          "priority": 1,
         },
         {
           "hook_type": "on_entry",
           "handler_type": "message",
           "handler_config": {
             "message": "Switching to exploration mode. I'll start mapping the environment and exploring safely.",
-          }
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "slam_hook",
+            "function": "stop_slam_hook",
+          },
+          timeout_seconds: 15,
+          "priority": 1,
         },
         {
           "hook_type": "on_exit",
           "handler_type": "message",
           "handler_config": {
             "message": "Exploration complete. I've stopped mapping and navigation.",
-          }
-        }
+          },
+          "priority": 0,
+        },
       ]
     },
 
@@ -290,24 +321,54 @@
       "lifecycle_hooks": [
         {
           "hook_type": "on_startup",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "nav2_hook",
+            "function": "start_nav2_hook",
+          },
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_startup",
           "handler_type": "message",
           "handler_config": {
             "message": "Welcome back. I'm ready to navigate. I'll start navigating to different locations or explore on my own if no command is given.",
-          }
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "nav2_hook",
+            "function": "start_nav2_hook",
+          },
+          "priority": 1,
         },
         {
           "hook_type": "on_entry",
           "handler_type": "message",
           "handler_config": {
             "message": "Switching to navigation mode. I'll start navigating to different locations or explore on my own if no command is given.",
-          }
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "nav2_hook",
+            "function": "stop_nav2_hook",
+          },
+          "priority": 1,
         },
         {
           "hook_type": "on_exit",
           "handler_type": "message",
           "handler_config": {
             "message": "It was fun navigating around — shutting down autonomous movement.",
-          }
+          },
+          "priority": 0,
         }
       ]
     },
@@ -580,14 +641,6 @@
     // From navigation mode
     {
       "from_mode": "navigation",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "slam", "start mapping"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "navigation",
       "to_mode": "conversation",
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop", "chat", "talk", "conversation", "done navigating"],
@@ -604,14 +657,6 @@
     },
 
     // From conversation mode
-    {
-      "from_mode": "conversation",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "show me around", "wander"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
     {
       "from_mode": "conversation",
       "to_mode": "guard",
@@ -636,14 +681,6 @@
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop guarding", "end patrol", "talk", "chat", "come here"],
       "priority": 3,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "guard",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "navigate", "stop patrolling"],
-      "priority": 2,
       "cooldown_seconds": 5.0
     },
     {

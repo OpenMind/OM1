@@ -19,8 +19,8 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
     def __init__(
         self,
         topic: str = "amcl_pose",
-        pose_tolerance: float = 0.2,
-        yaw_tolerance: float = 0.1,
+        pose_tolerance: float = 0.4,
+        yaw_tolerance: float = 0.2,
     ):
         """
         Initialize the AMCL Provider with a specific topic.
@@ -29,9 +29,9 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         topic : str, optional
             The topic on which to subscribe for AMCL messages (default is "amcl").
         pose_tolerance : float, optional
-            The tolerance for pose covariance (default is 0.2).
+            The tolerance for pose covariance (default is 0.4).
         yaw_tolerance : float, optional
-            The tolerance for yaw covariance (default is 0.1).
+            The tolerance for yaw covariance (default is 0.2).
         """
         super().__init__(topic)
         logging.info("AMCL Provider initialized with topic: %s", topic)

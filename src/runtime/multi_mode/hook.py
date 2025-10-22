@@ -153,8 +153,8 @@ class FunctionHookHandler(LifecycleHookHandler):
     """
 
     async def execute(self, context: Dict[str, Any]) -> bool:
-        function_name = self.config.get("function")
         module_name = self.config.get("module_name")
+        function_name = self.config.get("function")
 
         if not function_name:
             logging.error("No function specified for function hook")
