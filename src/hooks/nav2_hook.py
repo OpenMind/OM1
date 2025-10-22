@@ -1,8 +1,10 @@
-from typing import Any, Dict
-import aiohttp
 import logging
+from typing import Any, Dict
+
+import aiohttp
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
+
 
 async def start_nav2_hook(context: Dict[str, Any]):
     """
@@ -25,25 +27,38 @@ async def start_nav2_hook(context: Dict[str, Any]):
                 nav2_url,
                 json={"map_name": map_name},
                 headers={"Content-Type": "application/json"},
-                timeout=aiohttp.ClientTimeout(total=5)
+                timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(f"Nav2 started successfully: {result.get('message', 'Success')}")
-                    elevenlabs_provider.add_pending_message("Navigation system has started successfully.")
-                    return {"status": "success", "message": "Nav2 process initiated", "response": result}
+                    logging.info(
+                        f"Nav2 started successfully: {result.get('message', 'Success')}"
+                    )
+                    elevenlabs_provider.add_pending_message(
+                        "Navigation system has started successfully."
+                    )
+                    return {
+                        "status": "success",
+                        "message": "Nav2 process initiated",
+                        "response": result,
+                    }
                 else:
                     try:
                         error_info = await response.json()
-                    except:
+                    except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}")
-                    raise Exception(f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}")
+                    logging.error(
+                        f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}"
+                    )
+                    raise Exception(
+                        f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}"
+                    )
 
     except aiohttp.ClientError as e:
         logging.error(f"Error calling Nav2 API: {str(e)}")
         raise Exception(f"Error calling Nav2 API: {str(e)}")
+
 
 async def stop_nav2_hook(context: Dict[str, Any]):
     """
@@ -62,20 +77,30 @@ async def stop_nav2_hook(context: Dict[str, Any]):
             async with session.post(
                 nav2_url,
                 headers={"Content-Type": "application/json"},
-                timeout=aiohttp.ClientTimeout(total=5)
+                timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(f"Nav2 started successfully: {result.get('message', 'Success')}")
-                    return {"status": "success", "message": "Nav2 process initiated", "response": result}
+                    logging.info(
+                        f"Nav2 started successfully: {result.get('message', 'Success')}"
+                    )
+                    return {
+                        "status": "success",
+                        "message": "Nav2 process initiated",
+                        "response": result,
+                    }
                 else:
                     try:
                         error_info = await response.json()
-                    except:
+                    except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}")
-                    raise Exception(f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}")
+                    logging.error(
+                        f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}"
+                    )
+                    raise Exception(
+                        f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}"
+                    )
 
     except aiohttp.ClientError as e:
         logging.error(f"Error calling Nav2 API: {str(e)}")
