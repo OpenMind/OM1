@@ -92,7 +92,6 @@ class ModeConfig:
     remember_locations: bool = False
     save_interactions: bool = False
 
-    # Lifecycle hooks
     lifecycle_hooks: List[LifecycleHook] = field(default_factory=list)
     _raw_lifecycle_hooks: List[Dict] = field(default_factory=list)
 
@@ -140,6 +139,9 @@ class ModeConfig:
             api_key=global_config.api_key,
             URID=global_config.URID,
             unitree_ethernet=global_config.unitree_ethernet,
+            mode_name=self.name,
+            mode_display_name=self.display_name,
+            mode_description=self.description,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):

@@ -45,6 +45,11 @@ class RuntimeConfig:
     # Optional Ethernet adapter setting for Unitree Robots
     unitree_ethernet: Optional[str] = None
 
+    # Optional mode information for multi-mode runtime configurations
+    mode_name: Optional[str] = None
+    mode_display_name: Optional[str] = None
+    mode_description: Optional[str] = None
+
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
         """Load a runtime configuration from a file."""
