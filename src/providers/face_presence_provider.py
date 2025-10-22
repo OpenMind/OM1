@@ -78,7 +78,7 @@ class PresenceSnapshot:
         if k > 0:
             parts.append(f"{k} known ({join_names(clean)})")
         if u > 0:
-            parts.append(f"{u} unknown face" + ("s" if u != 1 else ""))
+            parts.append(f"{u if u == 1 else 'multiple'} unknown face" + ("s" if u != 1 else ""))
 
         return "In Camera View: " + " and ".join(parts) + "."
 
@@ -131,6 +131,8 @@ class FacePresenceProvider:
         self._callbacks: List = []
         self._cb_lock = threading.Lock()
         self._session = requests.Session()
+
+        self._unknown_faces = 0
 
     def set_recent_sec(self, sec: float) -> None:
         """Dynamically change the lookback window used for `/who`."""
@@ -249,5 +251,12 @@ class FacePresenceProvider:
                     names.append(n)
             unknown = int(data.get("unknown_now", 0) or 0)
 
+        self._unknown_faces = unknown
+
         ts = float(data.get("server_ts", time.time()))
         return PresenceSnapshot(ts=ts, names=names, unknown=unknown, raw=data)
+
+    @property
+    def unknown_faces(self):
+        """Return the most recent count of unknown faces detected."""
+        return self._unknown_faces

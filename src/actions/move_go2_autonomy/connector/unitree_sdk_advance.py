@@ -12,6 +12,7 @@ from actions.move_go2_autonomy.interface import MoveInput
 from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
+from providers.face_presence_provider import FacePresenceProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
     AIStatusRequest,
@@ -41,6 +42,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
         self.path_provider = SimplePathsProvider()
         self.unitree_go2_state = UnitreeGo2StateProvider()
+        self.face_presence_provider = FacePresenceProvider()
 
         # create sport client
         self.sport_client = None
@@ -81,10 +83,20 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         # AI control status
         self.ai_control_enabled = True
 
+        # Mode
+        self.mode = getattr(self.config, "mode", None)
+
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
-        logging.info(f"AI command.connect: {output_interface.action}")
+        logging.info(self.config)
+        logging.info(f"AI command.connect: {output_interface.action} - mode: {self.mode} - face presence: {self.face_presence_provider.unknown_faces}")
+
+        if self.mode == "guard" and self.face_presence_provider.unknown_faces > 0:
+            logging.info(
+                "Guard mode active and unknown face detected - disregarding AI command"
+            )
+            return
 
         if not self.ai_control_enabled:
             logging.info("AI Control is disabled - disregarding AI command")

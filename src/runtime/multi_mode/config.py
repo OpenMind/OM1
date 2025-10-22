@@ -126,6 +126,7 @@ class ModeConfig:
 
         return RuntimeConfig(
             hertz=self.hertz,
+            mode=self.name,
             name=f"{global_config.name}_{self.name}",
             system_prompt_base=self.system_prompt_base,
             system_governance=global_config.system_governance,
@@ -139,9 +140,6 @@ class ModeConfig:
             api_key=global_config.api_key,
             URID=global_config.URID,
             unitree_ethernet=global_config.unitree_ethernet,
-            mode_name=self.name,
-            mode_display_name=self.display_name,
-            mode_description=self.description,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -387,13 +385,14 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     g_ut_eth = system_config.unitree_ethernet
     g_URID = system_config.URID
     g_robot_ip = system_config.robot_ip
+    g_mode = mode_config.name
 
     # Load inputs
     mode_config.agent_inputs = [
         load_input(inp["type"])(
             config=SensorConfig(
                 **add_meta(
-                    inp.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
+                    inp.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
                 )
             )
         )
@@ -406,7 +405,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
             config=SimulatorConfig(
                 name=sim["type"],
                 **add_meta(
-                    sim.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
+                    sim.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
                 ),
             )
         )
@@ -419,7 +418,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
             {
                 **action,
                 "config": add_meta(
-                    action.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
+                    action.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
                 ),
             }
         )
@@ -431,7 +430,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         load_background(bg["type"])(
             config=BackgroundConfig(
                 **add_meta(
-                    bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
+                    bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip, g_mode
                 )
             )
         )
@@ -450,6 +449,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_ut_eth,
                     g_URID,
                     g_robot_ip,
+                    g_mode,
                 )
             ),
             available_actions=mode_config.agent_actions,

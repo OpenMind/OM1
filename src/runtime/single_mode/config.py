@@ -46,9 +46,7 @@ class RuntimeConfig:
     unitree_ethernet: Optional[str] = None
 
     # Optional mode information for multi-mode runtime configurations
-    mode_name: Optional[str] = None
-    mode_display_name: Optional[str] = None
-    mode_description: Optional[str] = None
+    mode: Optional[str] = None
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
@@ -237,6 +235,7 @@ def add_meta(
     g_ut_eth: Optional[str],
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
+    g_mode: Optional[str] = None,
 ) -> dict[str, str]:
     """
     Add an API key and Robot configuration to a runtime configuration.
@@ -267,7 +266,8 @@ def add_meta(
         config["URID"] = g_URID
     if "robot_ip" not in config and g_robot_ip is not None:
         config["robot_ip"] = g_robot_ip
-    # logging.info(f"config after {config}")
+    if "mode" not in config and g_mode is not None:
+        config["mode"] = g_mode
     return config
 
 
