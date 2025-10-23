@@ -1,0 +1,23 @@
+{
+"name": "Simple Webcam Agent",
+"description": "A basic agent that processes webcam input and logs captions.",
+"inputs": [
+{
+"type": "webcam",
+"params": {
+"device": 0,
+"resolution": "640x480"
+}
+}
+],
+"actions": [
+{
+"type": "log_caption",
+"params": {
+"output_file": "captions.log"
+}
+}
+],
+"model": "gpt-4o-mini",
+"system_prompt": "You are a basic observer. Describe what you see from the webcam."
+}
