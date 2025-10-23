@@ -40,22 +40,88 @@ uv venv
 
 ### Install Dependencies
 
-For MacOS
+#### macOS
 ```bash
 brew install portaudio ffmpeg
 ```
 
-For Linux
+#### Linux
 ```bash
 sudo apt-get update
 sudo apt-get install portaudio19-dev python-dev ffmpeg
 ```
 
+#### Windows
+
+**prerequisites:**
+- python 3.10+ installed
+- powershell 5.1+ or powershell core
+
+**install uv:**
+
+```powershell
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**install dependencies via chocolatey:**
+
+```powershell
+# install chocolatey if needed
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+# install portaudio and ffmpeg
+choco install portaudio ffmpeg -y
+```
+
+**alternative: manual install**
+
+download portaudio binaries from [portaudio.com](http://www.portaudio.com/download.html) and ffmpeg from [ffmpeg.org](https://ffmpeg.org/download.html), add to path.
+
+**wsl (recommended for ros2):**
+
+if using wsl, follow linux steps inside wsl environment.
+
 ### Obtain an OpenMind API Key
 
 Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp env.example .env` and add your key to the `.env`.
 
+### Configuration Example
+
+Edit `config/spot.json5` (or copy from `config/spot.example.json5` if available). Here's a basic template:
+
+```json5
+{
+  openmind: {
+    api_key: "your_openmind_free_key_here",  // From https://portal.openmind.org/
+  },
+  llm: {
+    model: "gpt-4o",
+    endpoint: "https://api.openai.com/v1/chat/completions",
+  },
+  inputs: [
+    { type: "webcam", device: 0 },  // Default camera
+  ],
+  actions: [
+    { type: "speech", tts: "elevenlabs" },
+    { type: "move", connector: "simulated" },  // For testing without hardware
+  ],
+}
+```
+
+Customize system_prompt in the file to change agent behavior, e.g., "You are a helpful robot assistant focused on object recognition."
+
 ### Launching OM1
+
+### Troubleshooting
+
+- **PortAudio/FFmpeg Error**: Ensure dependencies are installed. On Mac/Linux, run `brew list portaudio` or `apt list --installed | grep portaudio`. On Windows, verify with `choco list --local-only`. Restart terminal.
+- **API Key Invalid**: Double-check at [OpenMind Portal](https://portal.openmind.org/). Use `.env` for secrets: `echo "OM_API_KEY=your_key" >> .env` (bash/zsh) or `Add-Content .env "OM_API_KEY=your_key"` (powershell).
+- **WebSim Not Loading**: Check `http://localhost:8000/`; ensure no firewall blocks port 8000. Run `uv run src/run.py spot --debug` for logs.
+- **No Webcam Detected**: List devices with `python -c "import cv2; print(cv2.VideoCapture(0).isOpened())"`.
+- **Testing Without Hardware**: Use `simulated` connector in config for mock actions.
+- **Windows Path Issues**: Use forward slashes in config paths or raw strings: `r"C:\path\to\file"`.
+
+If issues persist, join [Discord](https://discord.gg/VUjpg4ef5n) or open an issue with logs.
 
 Run
 ```bash
@@ -100,7 +166,7 @@ OM1 is developed on:
 * Mac Mini with Apple M4 Pro with 48 GB unified memory (running MacOS Sequoia)
 * Generic Linux machines (running Ubuntu 22.04)
 
-OM1 _should_ run on other platforms (such as Windows) and microcontrollers such as the Raspberry Pi 5 16GB.
+OM1 _should_ run on other platforms and microcontrollers such as the Raspberry Pi 5 16GB. Windows 10/11 is supported (with Python 3.10+, WSL recommended for ROS2).
 
 
 ## Full Autonomy Guidance
