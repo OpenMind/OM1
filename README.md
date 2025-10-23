@@ -119,7 +119,7 @@ Setup the API key
 
 For Bash: vim ~/.bashrc or ~/.bash_profile.
 
-For Zsh: vim ~/.zshrc.
+For Zsh: vim ~/.zshrc
 
 Add 
 
