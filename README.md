@@ -2,7 +2,7 @@
 
 <p align="center">  <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |  <a href="https://docs.openmind.org/">Documentation</a> |  <a href="https://x.com/openmind_agi">X</a> | <a href="https://discord.gg/VUjpg4ef5n">Discord</a> </p>
 
-**OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
+**OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including humanoids, phone apps, websites, quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
 ## Capabilities of OM1
 
@@ -60,10 +60,10 @@ After launching OM1, the Spot agent will interact with you and perform (simulate
 
 ## What's Next?
 
-* Try out some [examples](https://docs.openmind.org/examples)
-* Add new `inputs` and `actions`.
-* Design custom agents and robots by creating your own `json5` config files with custom combinations of inputs and actions.
-* Change the system prompts in the configuration files (located in `/config/`) to create new behaviors.
+- Try out some [examples](https://docs.openmind.org/examples)
+- Add new `inputs` and `actions`
+- Design custom agents and robots by creating your own `json5` config files with custom combinations of inputs and actions
+- Change the system prompts in the configuration files (located in `/config/`) to create new behaviors
 
 ## Interfacing with New Robot Hardware
 
@@ -102,8 +102,8 @@ We're excited to introduce **full autonomy mode**, where three services work tog
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 
 ## Intro to Backpack?
-From research to real-world autonomy, a platform that learns, moves, and builds with you.
-We'll shortly be releasing the **BOM** and details on **DIY** for the it. 
+From research to real-world autonomy, Backpack is a platform that learns, moves, and builds with you.
+We'll shortly be releasing the **BOM** and details on **DIY** for it. 
 Stay tuned!
 
 Clone the following repos -
