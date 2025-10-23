@@ -26,33 +26,31 @@ dependencies = [
     "opencv-python",
     "deepface>=0.0.81",
     "tensorflow>=2.15.0",
-    "tf_keras>=2.15.0",
+    # "tf_keras>=2.15.0",  # redundant with TensorFlow
     "web3",
     "numpy",
     "cdp-sdk==0.21.0",
-    "hid",
-    "cv_bridge",
-    "torch",
+    "hidapi",
+    "cv_bridge; platform_system == 'Linux'",
+    "torch>=2.2.0,<3.0",
     "torchvision",
     "pyserial",
     "py-mjpeg",
     "fastapi>=0.110.0",
     "uvicorn>=0.27.1",
     "websockets>=12.0",
-    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@95b8dd34fce25a4a8d0571d4e50fb4693e1708a0",
+    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@95b8dd34fce25a4a8d0571d4e50fb4693e1708a0#egg=om1-modules",
     "aiohttp>=3.9.3",
     "python-multipart>=0.0.9",
     "jinja2>=3.1.3",
     "pydub>=0.25.1",
     "pynput>=1.8.1",
-    "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
+    "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6#egg=dimo-python-sdk",
     "nest-asyncio>=1.6.0",
 ]
 
 [project.optional-dependencies]
-dds = [
-    "cyclonedds==0.10.2"
-]
+dds = ["cyclonedds==0.10.2"]
 macos = ["osascript"]
 
 [dependency-groups]
@@ -69,33 +67,31 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "auto"
-addopts = "-m \"not integration\""
+addopts = '-m "not integration"'
 norecursedirs = ["src/unitree", "system_hw_test", "gazebo", "src/ubtech"]
-markers = [
-    "integration: marks tests as integration tests",
-]
+markers = ["integration: marks tests as integration tests"]
 
 [tool.black]
 line-length = 88
-include = '\.pyi?$'
-exclude = "(.venv)|(/src/unitree)|(/src/ubtech)|(/gazebo)"
+include = "\\.pyi?$"
+exclude = ["venv", "src/unitree", "src/ubtech", "gazebo"]
 
 [tool.isort]
 profile = "black"
 multi_line_output = 3
 line_length = 88
 sources = ["src", "tests"]
-skip_glob = [".venv*", "/src/unitree", "/gazebo", "/src/ubtech"]
+skip_glob = ["venv*", "src/unitree", "gazebo", "src/ubtech"]
 
 [tool.ruff]
 line-length = 88
 indent-width = 4
 src = ["src"]
-exclude = ["src/unitree","gazebo", "src/ubtech"]
+exclude = ["src/unitree", "gazebo", "src/ubtech"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = ["E203", "E501"]
-fixable = ["ALL"]
+fixable = ["all"]
 unfixable = []
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+))$"
