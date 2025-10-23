@@ -1,8 +1,13 @@
-## Contributing to OM1
+# Contributing to OM1
 
-We welcome contributions from the community!  OM1 is an open-source project, and we appreciate your help in making it better.  Whether you're fixing bugs, adding features, improving documentation, or suggesting new ideas, your contributions are valuable.
+Thanks for your interest! We welcome all contributions, especially docs to make OM1 more accessible.
 
-Before contributing, please take a moment to read through the following guidelines. This helps streamline the process and ensures everyone is on the same page.
+## How to Contribute
+1. Fork the repo and create a branch: `git checkout -b docs-improvement`.
+2. Make changes (e.g., update README with examples).
+3. Test locally: Preview Markdown, run `uv run src/run.py spot` to verify.
+4. Commit: `git commit -m "Add Windows install guide and config example"`.
+5. Push and open PR to `main`. Use template below.
 
 **PRs must clearly state the problem being solved. Changes without a clear problem statement may be closed without review.**
 
@@ -122,5 +127,13 @@ If you have any questions or need help with the contribution process, feel free 
 *   Open an issue on GitHub.
 *   Ask questions in the comments of relevant issues or pull requests.
 *   Join our [developer telegram group](https://t.me/openminddev).
+*   Join [Discord](https://discord.gg/openmind) for ideas and discussions!
 
 Thank you for contributing to OM1!
+## PR Template
+- **Description**: What/Why?
+- **Changes**: List files.
+- **Tests**: How verified?
+- **Closes**: #issue (if any).
+
+For docs: Focus on clarity, add screenshots via GitHub uploads. Tag @openmind-team for review.
