@@ -9,6 +9,14 @@ Thanks for your interest! We welcome all contributions, especially docs to make 
 4. Commit: `git commit -m "Add Windows install guide and config example"`.
 5. Push and open PR to `main`. Use template below.
 
+## PR Template
+- **Description**: What/Why?
+- **Changes**: List files.
+- **Tests**: How verified?
+- **Closes**: #issue (if any).
+
+For docs: Focus on clarity, add screenshots via GitHub uploads. Tag @openmind-team for review.
+
 **PRs must clearly state the problem being solved. Changes without a clear problem statement may be closed without review.**
 
 **Ways to Contribute:**
@@ -130,10 +138,3 @@ If you have any questions or need help with the contribution process, feel free 
 *   Join [Discord](https://discord.gg/openmind) for ideas and discussions!
 
 Thank you for contributing to OM1!
-## PR Template
-- **Description**: What/Why?
-- **Changes**: List files.
-- **Tests**: How verified?
-- **Closes**: #issue (if any).
-
-For docs: Focus on clarity, add screenshots via GitHub uploads. Tag @openmind-team for review.
