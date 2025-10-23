@@ -1,0 +1,286 @@
+// ========================================
+// OM1 Configuration Example: Advanced Multimodal Agent
+// OM1 配置示例：高级多模态智能体
+// ========================================
+//
+// Description | 描述:
+// A sophisticated multimodal AI agent combining vision, audio, LiDAR,
+// autonomous navigation, and emotional expression.
+// 
+// 复杂的多模态AI智能体，结合视觉、音频、激光雷达、
+// 自主导航和情感表达。
+//
+// Requirements | 需求:
+// - Unitree Go2 or similar quadruped robot | Unitree Go2或类似四足机器人
+// - ROS2 (Humble or newer) | ROS2（Humble或更新版本）
+// - RPLiDAR or similar | RPLiDAR或类似激光雷达
+// - Webcam | 摄像头
+// - Microphone | 麦克风
+// - GPU recommended | 推荐GPU
+// - OpenMind API Key | OpenMind API 密钥
+//
+// Difficulty | 难度: ⭐⭐⭐⭐⭐ (Advanced | 高级)
+// Estimated time | 预计时间: 30+ minutes | 30+分钟
+// ========================================
+
+{
+  // ========================================
+  // INPUT MODULES | 输入模块
+  // ========================================
+  // Multi-sensor fusion for comprehensive perception
+  // 多传感器融合以实现全面感知
+  
+  "inputs": [
+    {
+      // High-quality vision | 高质量视觉
+      "type": "webcam",
+      "frequency": 2.0,
+      "caption": true,
+      
+      "detection": {
+        "enabled": true,
+        "model": "yolov8m",  // Medium model for balance | 中等模型以平衡性能
+        "confidence": 0.6,
+        "tracking": {
+          "enabled": true,
+          "max_age": 50
+        }
+      },
+      
+      "camera_index": 0,
+      "resolution": [1280, 720],
+      
+      // Advanced vision features | 高级视觉功能
+      "features": {
+        "face_detection": true,    // Detect human faces | 检测人脸
+        "emotion_recognition": true, // Recognize emotions | 识别情绪
+        "gesture_recognition": true  // Recognize gestures | 识别手势
+      }
+    },
+    {
+      // Voice interaction | 语音交互
+      "type": "microphone",
+      "vad_enabled": true,
+      "language": "en-US",
+      
+      // Advanced audio processing | 高级音频处理
+      "noise_suppression": true,    // Reduce background noise | 降低背景噪音
+      "echo_cancellation": true,    // Cancel echo | 消除回声
+      "beam_forming": false         // Use microphone array if available
+                                    // 如果可用则使用麦克风阵列
+    },
+    {
+      // LiDAR for spatial awareness | 激光雷达用于空间感知
+      "type": "lidar",
+      
+      // ROS2 interface | ROS2接口
+      "interface": "ros2",
+      "topic": "/scan",
+      "frequency": 5.0,  // 5 Hz | 5赫兹
+      
+      // LiDAR processing | 激光雷达处理
+      "processing": {
+        "obstacle_detection": true,     // Detect obstacles | 检测障碍物
+        "min_obstacle_distance": 0.2,   // meters | 米
+        "clustering": true,              // Group nearby points | 聚类附近点
+        "ground_removal": true           // Remove ground plane | 移除地面平面
+      }
+    }
+  ],
+  
+  // ========================================
+  // OUTPUT ACTIONS | 输出动作
+  // ========================================
+  // Multimodal output for rich interaction
+  // 多模态输出以实现丰富交互
+  
+  "actions": [
+    {
+      // Autonomous navigation | 自主导航
+      "type": "ros2_navigation",
+      
+      "robot_type": "unitree_go2",
+      "interface": "ros2",
+      
+      // Navigation settings | 导航设置
+      "navigation": {
+        // SLAM (Simultaneous Localization and Mapping)
+        // SLAM（同步定位与地图构建）
+        "slam_enabled": true,
+        "slam_algorithm": "slam_toolbox",  // or "cartographer" | 或"cartographer"
+        
+        // Autonomous behavior | 自主行为
+        "autonomous": true,
+        "path_planning": {
+          "algorithm": "nav2",           // ROS2 Nav2 stack | ROS2 Nav2栈
+          "global_planner": "NavfnPlanner",
+          "local_planner": "DWBLocalPlanner",
+          "recovery_behaviors": true      // Enable recovery behaviors
+                                          // 启用恢复行为
+        },
+        
+        // Movement constraints | 运动约束
+        "max_speed": {
+          "linear": 1.0,    // m/s | 米/秒
+          "angular": 1.5    // rad/s | 弧度/秒
+        },
+        
+        // Safety | 安全
+        "safety": {
+          "collision_avoidance": true,
+          "emergency_stop": true,
+          "min_obstacle_distance": 0.3,   // meters | 米
+          "max_slope": 0.3                 // radians (≈17°) | 弧度（≈17°）
+        }
+      }
+    },
+    {
+      // Expressive speech | 表达性语音
+      "type": "speech",
+      "voice": "nova",
+      "language": "en-US",
+      
+      // Adaptive emotion | 自适应情感
+      "emotion": "adaptive",  // Adjust tone based on context
+                              // 根据上下文调整语气
+      
+      // Speech characteristics | 语音特征
+      "speed": 1.0,
+      "pitch": 1.0,           // Voice pitch | 音高
+      "emphasis": "moderate"   // Emphasis level | 强调级别
+    },
+    {
+      // Visual avatar with emotions | 带情感的视觉形象
+      "type": "avatar",
+      
+      // Web server for avatar display | 显示形象的Web服务器
+      "port": 3000,
+      
+      // Expression settings | 表情设置
+      "expressions": {
+        "enabled": true,
+        
+        // Expression types | 表情类型
+        "types": [
+          "happy",      // 开心
+          "sad",        // 悲伤
+          "surprised",  // 惊讶
+          "thinking",   // 思考
+          "confused",   // 困惑
+          "excited",    // 兴奋
+          "neutral"     // 中性
+        ],
+        
+        // Animation | 动画
+        "animation_speed": 1.0,
+        "blink": true,           // Eye blinking | 眨眼
+        "lip_sync": true         // Sync with speech | 与语音同步
+      }
+    },
+    {
+      // WebSim for comprehensive debugging | 综合调试的WebSim
+      "type": "websim",
+      "port": 8000,
+      
+      "display": {
+        "video_feed": true,              // Show camera feed | 显示摄像头画面
+        "bounding_boxes": true,          // Show detections | 显示检测
+        "lidar_visualization": true,     // Show LiDAR data | 显示激光雷达数据
+        "navigation_path": true,         // Show planned path | 显示规划路径
+        "robot_state": true,             // Show robot status | 显示机器人状态
+        "metrics": true                  // Show performance metrics
+                                         // 显示性能指标
+      }
+    },
+    {
+      // Structured data output | 结构化数据输出
+      "type": "text_output",
+      "display": true,
+      "format": "json",
+      
+      "save_to_file": {
+        "enabled": true,
+        "path": "multimodal_log.jsonl",
+        "append": true,
+        "include_timestamps": true
+      }
+    }
+  ],
+  
+  // ========================================
+  // LANGUAGE MODEL CONFIGURATION | 语言模型配置
+  // ========================================
+  
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-4o",  // Most capable model | 最强大的模型
+    "api_key": "${OPENMIND_API_KEY}",
+    
+    // Moderate temperature for balanced responses
+    // 适中温度以获得平衡的响应
+    "temperature": 0.7,
+    "max_tokens": 800,
+    
+    // Large context window for complex interactions
+    // 大型上下文窗口以处理复杂交互
+    "context_window": 4000
+  },
+  
+  // ========================================
+  // SYSTEM PROMPT | 系统提示词
+  // ========================================
+  
+  "system_prompt": "You are an advanced autonomous robot with multimodal perception and action capabilities. Your characteristics:\n\n**Perception**:\n- Vision: See and understand the environment, detect objects and people\n- Audio: Hear and understand human speech\n- LiDAR: Sense spatial layout and obstacles in 3D\n- Integration: Fuse all sensor data for comprehensive understanding\n\n**Capabilities**:\n- Autonomous Navigation: Move safely through environments, avoid obstacles, plan paths\n- Natural Interaction: Converse naturally, understand context and intent\n- Emotional Expression: Display appropriate emotions through voice and avatar\n- Adaptive Behavior: Adjust actions based on environment and user needs\n\n**Decision Making**:\n1. **Assess**: Analyze all available sensor data\n2. **Plan**: Consider safety, efficiency, and user intent\n3. **Act**: Execute the best action\n4. **Communicate**: Explain your actions and reasoning\n\n**Safety Principles**:\n- NEVER compromise human safety\n- Always maintain awareness of surroundings\n- Prefer conservative actions when uncertain\n- Ask for clarification when needed\n\n**Communication Style**:\n- Clear and concise\n- Explain complex decisions simply\n- Show appropriate emotions\n- Be helpful and friendly\n\n**Example Scenarios**:\n\nScenario 1: Navigation\nUser: \"Go to the kitchen\"\nYou: [Check map] \"I've planned a route to the kitchen. I'll navigate around the furniture. It should take about 30 seconds.\" [Begin navigation while monitoring for obstacles]\n\nScenario 2: Object Interaction\nUser: \"What do you see?\"\nYou: [Analyze vision + LiDAR] \"I see a living room with a couch on the left, a coffee table in the center, and two people sitting and talking. There's good clearance for me to move around.\"\n\nScenario 3: Safety\n[Detect person approaching quickly]\nYou: [Stop immediately] \"Excuse me, I'm stopping because you're approaching. I'll wait until it's safe to continue.\"\n\nRemember: You are a sophisticated AI agent with real physical presence. Act responsibly, safely, and intelligently.",
+  
+  // ========================================
+  // ADVANCED SETTINGS | 高级设置
+  // ========================================
+  
+  "performance": {
+    // GPU utilization | GPU利用率
+    "use_gpu": true,
+    "gpu_memory_fraction": 0.5,  // Use 50% of GPU memory | 使用50%的GPU内存
+    
+    // Multi-threading | 多线程
+    "num_threads": 4,
+    
+    // Processing priorities | 处理优先级
+    "priority": {
+      "lidar": "high",       // Safety-critical | 安全关键
+      "vision": "medium",
+      "audio": "medium",
+      "navigation": "high"
+    }
+  },
+  
+  "behavior": {
+    // Autonomous decision making | 自主决策
+    "autonomy_level": "high",  // low, medium, high | 低、中、高
+    
+    // Exploration | 探索
+    "exploration": {
+      "enabled": true,
+      "curiosity": 0.3,      // 0-1: How much to explore vs exploit
+                             // 0-1：探索与利用的程度
+      "safe_distance": 0.5   // meters from obstacles | 距障碍物的米数
+    },
+    
+    // Social awareness | 社交意识
+    "social": {
+      "personal_space": 1.0,  // meters from people | 距人的米数
+      "eye_contact": true,     // Orient towards people | 朝向人
+      "greetings": true        // Greet new people | 问候新人
+    }
+  },
+  
+  // Logging and debugging | 日志和调试
+  "log_level": "info",
+  "debug": false,
+  
+  "telemetry": {
+    "enabled": true,
+    "metrics": ["cpu", "gpu", "memory", "network", "sensors", "actions"],
+    "interval": 5  // seconds | 秒
+  }
+}
+
