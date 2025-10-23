@@ -1,0 +1,9 @@
+Description
+In the Capabilities section of README.md, "Voice-to-Speech" appears to be a typo. It should likely be "Text-to-Speech" based on the context of pre-configured endpoints for speech output.
+Current:
+"Pre-configured Endpoints: Supports Voice-to-Speech, OpenAI’s gpt-4o, ..."
+Suggested:
+"Pre-configured Endpoints: Supports Text-to-Speech, OpenAI’s gpt-4o, ..."
+Steps to Reproduce
+View README.md on GitHub.
+
