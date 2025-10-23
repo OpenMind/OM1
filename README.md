@@ -15,6 +15,7 @@
 ## Architecture Overview
   ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
 
+uv venv --python 3.10
 ## Getting Started - Hello World
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to `OpenAI 4o`, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
@@ -29,7 +30,8 @@ You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-start
 git clone https://github.com/openmind/OM1.git
 cd OM1
 git submodule update --init
-uv venv
+uv venv --python 3.10
+
 ```
 
 ### Install Dependencies
