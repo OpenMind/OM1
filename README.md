@@ -245,7 +245,6 @@ More detailed documentation can be accessed at [docs.openmind.org](https://docs.
 Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before making a pull request.
 
 ## License
-
 ## 中文文档 (Chinese Documentation)
 
 欢迎贡献中文翻译！查看 [README_zh.md](README_zh.md) 获取初步翻译（后续可扩展）。
