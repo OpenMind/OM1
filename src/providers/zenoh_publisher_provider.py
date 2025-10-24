@@ -33,8 +33,14 @@ class ZenohPublisherProvider:
         try:
             self.session = open_zenoh_session()
             logging.info("Zenoh client opened")
+        except (ConnectionError, TimeoutError) as e:
+            logging.error(f"Failed to connect to Zenoh: {e}")
+            self.session = None
+        except (RuntimeError, ValueError) as e:
+            logging.error(f"Zenoh configuration error: {e}", exc_info=True)
+            self.session = None
         except Exception as e:
-            logging.error(f"Error opening Zenoh client: {e}")
+            logging.error(f"Unexpected error opening Zenoh client: {e}", exc_info=True)
             self.session = None
 
         self.pub_topic = topic
@@ -98,8 +104,12 @@ class ZenohPublisherProvider:
                 self._publish_message(msg)
             except Empty:
                 continue
+            except (ConnectionError, TimeoutError) as e:
+                logging.error(f"Connection error in publisher thread: {e}")
+            except (RuntimeError, ValueError) as e:
+                logging.error(f"Message formatting error in publisher thread: {e}", exc_info=True)
             except Exception as e:
-                logging.exception("Exception in publisher thread: %s", e)
+                logging.exception("Unexpected exception in publisher thread: %s", e)
 
     def stop(self):
         """

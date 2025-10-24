@@ -64,8 +64,12 @@ class BackgroundOrchestrator:
         while not self._stop_event.is_set():
             try:
                 background.run()
+            except (ConnectionError, TimeoutError) as e:
+                logging.error(f"Connection error in background {background.name}: {e}")
+            except (RuntimeError, ValueError) as e:
+                logging.error(f"Configuration error in background {background.name}: {e}", exc_info=True)
             except Exception as e:
-                logging.error(f"Error in background {background.name}: {e}")
+                logging.error(f"Unexpected error in background {background.name}: {e}", exc_info=True)
 
     def stop(self):
         """

@@ -103,8 +103,15 @@ class ModeCortexRuntime:
 
             logging.info(f"Successfully transitioned to mode: {to_mode}")
 
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            logging.warning(f"Mode transition cancelled: {from_mode} -> {to_mode}")
+            raise
+        except (RuntimeError, ValueError) as e:
+            logging.error(f"Configuration error during mode transition {from_mode} -> {to_mode}: {e}")
+            # TODO: Implement fallback/recovery mechanism
+            raise
         except Exception as e:
-            logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
+            logging.error(f"Unexpected error during mode transition {from_mode} -> {to_mode}: {e}", exc_info=True)
             # TODO: Implement fallback/recovery mechanism
             raise
 
@@ -143,8 +150,10 @@ class ModeCortexRuntime:
                 logging.debug(
                     f"Successfully cancelled {len(tasks_to_cancel)} orchestrator tasks"
                 )
+            except asyncio.CancelledError:
+                logging.debug("Orchestrator tasks already cancelled")
             except Exception as e:
-                logging.warning(f"Error during orchestrator shutdown: {e}")
+                logging.warning(f"Error during orchestrator shutdown: {e}", exc_info=True)
 
         # Clear task references
         self.input_listener_task = None
@@ -201,8 +210,10 @@ class ModeCortexRuntime:
         if tasks_to_cancel:
             try:
                 await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+            except asyncio.CancelledError:
+                logging.debug("Final cleanup tasks already cancelled")
             except Exception as e:
-                logging.warning(f"Error during final cleanup: {e}")
+                logging.warning(f"Error during final cleanup: {e}", exc_info=True)
 
         logging.debug("Tasks cleaned up successfully")
 
@@ -270,12 +281,18 @@ class ModeCortexRuntime:
                     else:
                         break
 
+                except (RuntimeError, ValueError) as e:
+                    logging.error(f"Configuration error in orchestrator tasks: {e}", exc_info=True)
+                    await asyncio.sleep(1.0)
                 except Exception as e:
-                    logging.error(f"Error in orchestrator tasks: {e}")
+                    logging.error(f"Unexpected error in orchestrator tasks: {e}", exc_info=True)
                     await asyncio.sleep(1.0)
 
+        except KeyboardInterrupt:
+            logging.info("Cortex runtime interrupted by user")
+            raise
         except Exception as e:
-            logging.error(f"Error in mode-aware cortex runtime: {e}")
+            logging.error(f"Fatal error in mode-aware cortex runtime: {e}", exc_info=True)
             raise
         finally:
             # Execute shutdown hooks before cleanup
@@ -315,8 +332,14 @@ class ModeCortexRuntime:
                 await self._tick()
                 self.sleep_ticker_provider.skip_sleep = False
 
+            except asyncio.CancelledError:
+                logging.debug("Cortex loop cancelled, exiting")
+                break
+            except (RuntimeError, ValueError) as e:
+                logging.error(f"Configuration error in cortex loop: {e}", exc_info=True)
+                await asyncio.sleep(1.0)
             except Exception as e:
-                logging.error(f"Error in cortex loop: {e}")
+                logging.error(f"Unexpected error in cortex loop: {e}", exc_info=True)
                 await asyncio.sleep(1.0)
 
     async def _tick(self) -> None:

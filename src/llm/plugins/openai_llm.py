@@ -127,6 +127,18 @@ class OpenAILLM(LLM[R]):
 
             return None
 
+        except openai.APIConnectionError as e:
+            logging.error(f"OpenAI connection error: {e}")
+            return None
+        except openai.RateLimitError as e:
+            logging.warning(f"OpenAI rate limit exceeded: {e}")
+            return None
+        except openai.APIStatusError as e:
+            logging.error(f"OpenAI API error (status {e.status_code}): {e}")
+            return None
+        except (ValueError, KeyError) as e:
+            logging.error(f"Response parsing error: {e}", exc_info=True)
+            return None
         except Exception as e:
-            logging.error(f"OpenAI API error: {e}")
+            logging.error(f"Unexpected OpenAI error: {e}", exc_info=True)
             return None

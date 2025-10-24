@@ -115,6 +115,18 @@ class DeepSeekLLM(LLM[R]):
                 return T.cast(R, result)
 
             return None
+        except openai.APIConnectionError as e:
+            logging.error(f"DeepSeek connection error: {e}")
+            return None
+        except openai.RateLimitError as e:
+            logging.warning(f"DeepSeek rate limit exceeded: {e}")
+            return None
+        except openai.APIStatusError as e:
+            logging.error(f"DeepSeek API error (status {e.status_code}): {e}")
+            return None
+        except (ValueError, KeyError) as e:
+            logging.error(f"Response parsing error: {e}", exc_info=True)
+            return None
         except Exception as e:
-            logging.error(f"DeepSeek API error: {e}")
+            logging.error(f"Unexpected DeepSeek error: {e}", exc_info=True)
             return None

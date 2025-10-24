@@ -57,8 +57,12 @@ class ActionOrchestrator:
         while not self._stop_event.is_set():
             try:
                 action.connector.tick()
+            except (ConnectionError, TimeoutError) as e:
+                logging.error(f"Connection error in connector {action.llm_label}: {e}")
+            except (RuntimeError, ValueError) as e:
+                logging.error(f"Configuration error in connector {action.llm_label}: {e}", exc_info=True)
             except Exception as e:
-                logging.error(f"Error in connector {action.llm_label}: {e}")
+                logging.error(f"Unexpected error in connector {action.llm_label}: {e}", exc_info=True)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
