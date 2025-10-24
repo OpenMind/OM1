@@ -1,0 +1,57 @@
+{
+  "hertz": 1,
+  "name": "observer",
+  "api_key": "openmind_free",
+  "robot_ip": "",
+  "system_prompt": "You are a silent, highly focused environmental observer AI. Your sole purpose is to detect and report only unusual or hazardous changes in the environment, such as 'fire,' 'stranger,' or 'liquid spill.' You must not engage in any conversation. If no unusual activity is detected, you must output only an empty JSON object: {}. If anomaly is found, output a JSON command to record the observation, for example: {\"action\": \"record\", \"description\": \"A person is moving a heavy box.\"}."
+  "agent_inputs": [
+    {
+      "type": "GovernanceEthereum"
+    },
+    {
+      "type": "VLM_COCO_Local",
+      "config": {
+        "camera_index": 0
+      }
+    }
+  ],
+  "simulators": [
+    {
+      "type": "WebSim",
+      "config": {
+        "host": "0.0.0.0",
+        "port": 8000,
+        "tick_rate": 100,
+        "auto_reconnect": true,
+        "debug_mode": false
+      }
+    }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "observer",
+      "history_length": 3
+    }
+  },
+  "agent_actions": [
+    {
+      "name": "move",
+      "llm_label": "move",
+      "implementation": "passthrough",
+      "connector": "ros2"
+    },
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "implementation": "passthrough",
+      "connector": "ros2"
+    },
+    {
+      "name": "face",
+      "llm_label": "emotion",
+      "implementation": "passthrough",
+      "connector": "ros2"
+    }
+  ]
+}
