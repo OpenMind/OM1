@@ -63,19 +63,18 @@ class CortexRuntime:
         -------
         None
         """
-        input_listener_task = await self._start_input_listeners()
+        input_listener_task = asyncio.create_task(self._start_input_listeners())
         cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
-
-        simulator_start = self._start_simulator_task()
-        action_start = self._start_action_task()
-        background_start = self._start_background_task()
+        simulator_task = asyncio.create_task(self._start_simulator_task())
+        action_task = asyncio.create_task(self._start_action_task())
+        background_task = asyncio.create_task(self._start_background_task())
 
         await asyncio.gather(
             input_listener_task,
             cortex_loop_task,
-            simulator_start,
-            action_start,
-            background_start,
+            simulator_task,
+            action_task,
+            background_task,
         )
 
     async def _start_input_listeners(self) -> asyncio.Task:
@@ -91,8 +90,7 @@ class CortexRuntime:
             Task handling input listening operations.
         """
         input_orchestrator = InputOrchestrator(self.config.agent_inputs)
-        input_listener_task = asyncio.create_task(input_orchestrator.listen())
-        return input_listener_task
+        return asyncio.create_task(input_orchestrator.listen())
 
     async def _start_simulator_task(self) -> asyncio.Future:
         return self.simulator_orchestrator.start()
