@@ -1,0 +1,9 @@
+# OM Code Reviewer Rules
+*.mdx @OpenMind/core-developer-team/devrel-team @OpenMind/core-developer-team/admin
+*.md @OpenMind/core-developer-team/devrel-team @OpenMind/core-developer-team/admin
+/docs/ @OpenMind/core-developer-team/devrel-team @OpenMind/core-developer-team/admin
+/src/ @OpenMind/core-developer-team/robotics-team @OpenMind/core-developer-team/admin
+/system_hw_test/ @OpenMind/robotics-team @OpenMind/core-developer-team/admin
+
+# Default owners for everything
+* @OpenMind/core-developer-team
