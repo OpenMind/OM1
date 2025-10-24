@@ -1,0 +1,70 @@
+// security_guard.json5
+//
+// This agent is configured as a "Security Guard".
+// Its main purpose is to analyze camera (VLM) inputs and report
+// unusual situations, individuals, or movements.
+{
+  "agent_name": "security_guard",
+  "loop_interval_sec": 0.1,
+
+  // The security guard primarily focuses on visual inputs.
+  "inputs": {
+    "camera": {
+      "module": "vlm_input",
+      "config": {
+        // Note: Unlike the 'spot' agent, it might be more efficient
+        // to analyze frames at intervals or upon motion detection.
+        // Using default VLM settings for now.
+        "vlm_type": "openai_4o",
+        "prompt": "Analyze this image for any security concerns. Identify people, unfamiliar objects, or sudden movements. Describe the scene factually.",
+      },
+    },
+    // It can also listen for voice input for commands.
+    "voice": {
+      "module": "voice_input",
+      "config": {
+        "stt_type": "openai_whisper",
+      },
+    },
+  },
+
+  // Outputs can be speech (alerts) or an action
+  // (if hardware is connected) based on the detection.
+  "outputs": {
+    "speech": {
+      "module": "tts_output",
+      "config": {
+        "tts_type": "openai_tts",
+      },
+    },
+    // Optional: To trigger an alarm or light.
+    // "alert_system": {
+    //   "module": "gpio_output",
+    //   "config": {
+    //     "pin": 17,
+    //   },
+    // },
+  },
+
+  // The agent's brain (LLM)
+  "llm": {
+    "module": "llm",
+    "config": {
+      "llm_type": "openai_4o",
+      "system_prompt": """
+      You are an AI Security Guard. Your callsign is 'OM1-Guard'.
+      Your primary function is to monitor the visual feed and voice commands.
+      You are professional, calm, and concise.
+
+      - When you receive visual data (from 'camera'), analyze it based on the VLM's description.
+      - If you detect a person, state it clearly: "Person detected in [location]."
+      - If you detect sudden movement or an anomaly, report it: "Anomaly detected: [description]."
+      - If the scene is clear, respond with: "All clear."
+      - When you receive a voice command (from 'voice'), respond to it directly.
+        (e.g., "Report status." -> "All clear.")
+
+      Do not engage in casual conversation. Only report observations and respond to commands.
+      """,
+    },
+  },
+}
