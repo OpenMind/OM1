@@ -33,7 +33,10 @@ class WalletCoinbase(FuserInput[float]):
 
         self.POLL_INTERVAL = 0.5  # seconds between blockchain data updates
         self.COINBASE_WALLET_ID = os.environ.get("COINBASE_WALLET_ID")
-        logging.info(f"Using {self.COINBASE_WALLET_ID} as the coinbase wallet id")
+        if self.COINBASE_WALLET_ID:
+            logging.info("Coinbase wallet ID configured successfully")
+        else:
+            logging.warning("COINBASE_WALLET_ID environment variable not set")
 
         # Initialize Wallet
         # TODO(Kyle): Create Wallet if the wallet ID is not found
@@ -54,11 +57,16 @@ class WalletCoinbase(FuserInput[float]):
 
             self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
             logging.info(f"Wallet: {self.wallet}")
+            
+            # Initialize balance only if wallet was successfully fetched
+            self.ETH_balance = float(self.wallet.balance("eth"))
+            self.ETH_balance_previous = self.ETH_balance
         except Exception as e:
             logging.error(f"Error fetching Coinbase Wallet data: {e}")
-
-        self.ETH_balance = float(self.wallet.balance("eth"))
-        self.ETH_balance_previous = self.ETH_balance
+            # Set wallet to None and initialize with zero balance to prevent crashes
+            self.wallet = None
+            self.ETH_balance = 0.0
+            self.ETH_balance_previous = 0.0
 
         logging.info("Testing: WalletCoinbase: Initialized")
 
@@ -79,13 +87,18 @@ class WalletCoinbase(FuserInput[float]):
         #     faucet_transaction.wait()
         #     logging.info(f"WalletCoinbase: Faucet transaction: {faucet_transaction}")
 
-        self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)  # type: ignore
-        logging.info(
-            f"WalletCoinbase: Wallet refreshed: {self.wallet.balance('eth')}, the current balance is {self.ETH_balance}"
-        )
-        self.ETH_balance = float(self.wallet.balance("eth"))
-        balance_change = self.ETH_balance - self.ETH_balance_previous
-        self.ETH_balance_previous = self.ETH_balance
+        try:
+            self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)  # type: ignore
+            logging.info(
+                f"WalletCoinbase: Wallet refreshed: {self.wallet.balance('eth')}, the current balance is {self.ETH_balance}"
+            )
+            self.ETH_balance = float(self.wallet.balance("eth"))
+            balance_change = self.ETH_balance - self.ETH_balance_previous
+            self.ETH_balance_previous = self.ETH_balance
+        except Exception as e:
+            logging.error(f"Error refreshing wallet data: {e}")
+            # Return zero balance change if wallet refresh fails
+            balance_change = 0.0
 
         return [self.ETH_balance, balance_change]
 
