@@ -1,7 +1,12 @@
 name: "Pull Request Labeler"
 
 on:
-  - pull_request_target
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
   labeler:
