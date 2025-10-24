@@ -272,6 +272,13 @@ class ModeCortexRuntime:
 
                 except Exception as e:
                     logging.error(f"Error in orchestrator tasks: {e}")
+                    # Attempt to recover by reinitializing the current mode
+                    try:
+                        await self._stop_current_orchestrators()
+                        await self._initialize_mode(self.mode_manager.current_mode)
+                        await self._start_orchestrators()
+                    except Exception as recovery_error:
+                        logging.error(f"Failed to recover from error: {recovery_error}")
                     await asyncio.sleep(1.0)
 
         except Exception as e:
