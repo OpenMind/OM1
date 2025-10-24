@@ -40,7 +40,7 @@
       "connector": "elevenlabs_tts",
       "config": {
         "voice_id": "TbMNBJ27fH2U0VgpSNko",
-        "silence_rate": 0, // vocalize all speech outputs
+        "silence_rate": 0 // vocalize all speech outputs
       }
     }
   ],

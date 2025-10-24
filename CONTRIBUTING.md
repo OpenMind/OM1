@@ -74,7 +74,7 @@ Before contributing, please take a moment to read through the following guidelin
 
 **Code of Conduct:**
 
-Please review and adhere to our [Code of Conduct](./). We expect all contributors to be respectful and inclusive.
+Please review and adhere to our Code of Conduct. We expect all contributors to be respectful and inclusive.
 
 **Getting Help:**
 
