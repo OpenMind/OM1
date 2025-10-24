@@ -32,7 +32,7 @@ class LLMHistoryManager:
         config: LLMConfig,
         client: Union[openai.AsyncClient, openai.OpenAI],
         system_prompt: str = "You are a helpful assistant that summarizes a succession of events and interactions accurately and concisely. You are watching a robot named **** interact with people and the world. Your goal is to help **** remember what the robot felt, saw, and heard, and how the robot responded to those inputs.",
-        summary_command: str = "\nConsidering the new information, write an updated summary of the situation for ****. Emphasize information that **** needs to know to respond to people and situations in the best possible and most compelling way.",
+        summary_command: str = "\nConsidering the new information, write an updated summary of the situation for ****. Emphasize information that **** needs to know to respond to people and situations in the best compelling way.",
     ):
         self.client = client
 
@@ -61,6 +61,11 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+        
+        # NEW: Action deduplication tracking
+        self.last_action_content: Optional[str] = None
+        self.duplicate_action_count: int = 0
+        self.max_duplicate_actions: int = 3
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -144,8 +149,17 @@ class LLMHistoryManager:
 
         try:
             if self._summary_task and not self._summary_task.done():
-                logging.info("Previous summary task still running")
-                return
+                logging.info("Previous summary task still running, waiting for completion...")
+                # NEW: Wait for previous task instead of returning immediately
+                try:
+                    await asyncio.wait_for(self._summary_task, timeout=15.0)
+                except asyncio.TimeoutError:
+                    logging.warning("Previous summary task timed out, cancelling...")
+                    self._summary_task.cancel()
+                    try:
+                        await self._summary_task
+                    except asyncio.CancelledError:
+                        pass
 
             messages_copy = messages.copy()
             self._summary_task = asyncio.create_task(
@@ -220,8 +234,6 @@ class LLMHistoryManager:
                     logging.debug(f"LLM: {input_info}")
                     formatted_inputs += f"{input_type}. {input_info.input} | "
 
-                # formatted_inputs = f"**** sensed the following: {" | ".join(f"{input_type}: {input_info.input}" for input_type, input_info in self.io_provider.inputs.items())}"
-
                 formatted_inputs = formatted_inputs.replace("..", ".")
                 formatted_inputs = formatted_inputs.replace("  ", " ")
 
@@ -252,6 +264,33 @@ class LLMHistoryManager:
                     )
 
                     action_message = action_message.replace("****", self.agent_name)
+                    
+                    # NEW: Check for duplicate actions
+                    if action_message == self.history_manager.last_action_content:
+                        self.history_manager.duplicate_action_count += 1
+                        logging.warning(
+                            f"Duplicate action detected ({self.history_manager.duplicate_action_count}/"
+                            f"{self.history_manager.max_duplicate_actions}): {action_message}"
+                        )
+                        
+                        if self.history_manager.duplicate_action_count >= self.history_manager.max_duplicate_actions:
+                            logging.error(
+                                f"Maximum duplicate actions reached. Forcing context reset to prevent infinite loop."
+                            )
+                            # Clear history to force new behavior
+                            self.history_manager.history.clear()
+                            self.history_manager.duplicate_action_count = 0
+                            self.history_manager.last_action_content = None
+                            # Add a system message to prompt different behavior
+                            self.history_manager.history.append(
+                                ChatMessage(
+                                    role="system",
+                                    content=f"{self.agent_name} has been repeating the same action. Try something completely different now."
+                                )
+                            )
+                    else:
+                        self.history_manager.duplicate_action_count = 0
+                        self.history_manager.last_action_content = action_message
 
                     self.history_manager.history.append(
                         ChatMessage(role="user", content=action_message)
