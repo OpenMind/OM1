@@ -16,12 +16,44 @@
   ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
 
 ## Getting Started - Hello World
+[![CI](https://github.com/OpenMind/OM1/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenMind/OM1/actions)
+[![License](https://img.shields.io/github/license/OpenMind/OM1)](LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/OpenMind/OM1)](https://github.com/OpenMind/OM1/graphs/contributors)
+
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to `OpenAI 4o`, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+## Project structure
+
+A compact overview of the top-level tree and purpose of key folders:
+
+OM1/
+├─ src/ # Core runtime: inputs, actions, agents, plugins
+├─ config/ # Example configs & JSON5 templates for robots/agents
+├─ docs/ # Documentation source (quickstart, tutorials)
+├─ tests/ # Unit & integration tests
+├─ examples/ # Example agents and demo scripts
+├─ docker/ # Docker and compose files
+├─ .github/ # CI, issue templates, PR templates
+└─ CONTRIBUTING.md # How to contribute
+
+Each folder has a README (where applicable) explaining how to use it.
 
 ### Package Management and VENV
 
 You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
+
+Add a Quick verification snippet after the Quick Start
+### Quick verification
+
+After running the demo (e.g. `uv run src/run.py spot`), you should see console output similar to:
+
+INFO AgentManager - Starting agent 'spot-demo'...
+INFO InputCamera - Frame received (480x360)
+INFO LLM - Plan generated: "Move forward 0.5m and inspect object"
+ACTION MoveSafe - Executing safe_motion: velocity=0.2 m/s
+
+If you see errors like `ModuleNotFoundError` or `ros2: command not found`, check the Troubleshooting guide below.
+
 
 ### Clone the Repo
 
