@@ -144,7 +144,7 @@ class GovernanceEthereum(FuserInput[float]):
         # getRuleSet() Function selector (first 4 bytes of Keccak hash).
         self.function_selector = "0x1db3d5ff"
 
-        # The current rule rule set can be obtained from
+        # The current rule set can be obtained from
         # getLatestRuleSetVersion(0x254e2f1e)
         # It's currently = 2
         self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
