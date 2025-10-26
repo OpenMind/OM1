@@ -1,7 +1,5 @@
 from unittest.mock import Mock, mock_open, patch
-
 import pytest
-
 from inputs import find_module_with_class, load_input
 from inputs.base import Sensor
 
@@ -77,6 +75,65 @@ def test_load_input_invalid_type():
             ValueError, match="'InvalidInput' is not a valid input subclass"
         ):
             load_input("InvalidInput")
+
+
+def test_load_input_import_error_creates_stub():
+    """Test that ImportError results in a stub sensor being created."""
+    with (
+        patch("inputs.find_module_with_class") as mock_find_module,
+        patch("importlib.import_module") as mock_import,
+        patch("logging.warning") as mock_warning,
+    ):
+        # Setup: module found but import fails due to missing dependencies
+        mock_find_module.return_value = "vlm_coco_local"
+        mock_import.side_effect = ImportError("No module named 'torch'")
+
+        # Call load_input
+        result = load_input("VLM_COCO_Local")
+
+        # Verify warning was logged
+        assert mock_warning.called
+        warning_call = mock_warning.call_args[0][0]
+        assert "Optional input module" in warning_call
+        assert "vlm_coco_local" in warning_call
+        assert "missing dependencies" in warning_call
+
+        # Verify stub sensor was returned
+        assert result is not None
+        assert issubclass(result, Sensor)
+        assert "Stub_" in result.__name__
+
+        # Verify stub sensor can be instantiated and returns None on read()
+        stub_instance = result()
+        assert stub_instance.read() is None
+
+
+def test_stub_sensor_logs_warning_on_instantiation():
+    """Test that stub sensor logs a warning when instantiated."""
+    with (
+        patch("inputs.find_module_with_class") as mock_find_module,
+        patch("importlib.import_module") as mock_import,
+        patch("logging.warning") as mock_warning,
+    ):
+        mock_find_module.return_value = "vlm_vila"
+        mock_import.side_effect = ImportError("No module named 'transformers'")
+
+        # Load the stub sensor
+        stub_class = load_input("VLM_Vila")
+
+        # Reset mock to check for instantiation warning
+        mock_warning.reset_mock()
+
+        # Instantiate the stub sensor
+        stub_instance = stub_class()
+
+        # Verify warning was logged during instantiation
+        assert mock_warning.called
+        instantiation_warning = mock_warning.call_args[0][0]
+        assert "Stub sensor" in instantiation_warning
+        assert "VLM_Vila" in instantiation_warning
+        assert "failed to load" in instantiation_warning
+        assert "Install missing dependencies" in instantiation_warning
 
 
 def test_find_module_with_class_success():
