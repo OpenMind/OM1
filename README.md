@@ -134,7 +134,7 @@ command: ["unitree_go2_autonomy_advance"]
 
 ```bash
 cd OM1
-docker-compose up om1 -d --no-build
+docker compose up om1 -d --no-build
 ```
 - For unitree_go2_ros2_sdk
 ```bash
