@@ -1,0 +1,7 @@
+# configs/eeg_test.yaml
+inputs:
+  - module: om1.modules.input.eeg_input
+    class: EEGInput
+    config:
+      sample_rate: 256
+      channels: 8

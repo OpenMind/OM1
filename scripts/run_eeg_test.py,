@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import yaml
+from importlib import import_module
+import pprint
+import sys
+from pathlib import Path
+
+# proje kökünü PYTHONPATH'e ekle (terminalden çalıştırırken sorun çıkmasın diye)
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+cfg = yaml.safe_load(open(ROOT / "configs" / "eeg_test.yaml", "r"))
+inp = cfg["inputs"][0]
+module_path = inp["module"]
+class_name = inp["class"]
+config = inp.get("config", {})
+
+print(f"Loading {module_path}.{class_name} with config: {config}")
+mod = import_module(module_path)
+Cls = getattr(mod, class_name)
+instance = Cls(config)
+
+print("Calling read() ...\n")
+result = instance.read()
+pprint.pprint(result)
