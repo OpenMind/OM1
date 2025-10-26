@@ -124,7 +124,14 @@ For Zsh: vim ~/.zshrc.
 Add 
 
 ```bash 
+# After adding, reload your shell
+source ~/.bashrc      # For Bash
+# or
+source ~/.zshrc       # For Zsh
+
+# Or, for the current session only
 export OM_API_KEY="your_api_key"
+
 ```
 
 Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
