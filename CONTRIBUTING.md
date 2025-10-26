@@ -259,6 +259,15 @@ chore(.github): add issue & PR templates and recommended labels
 Please review and adhere to our [Code of Conduct](./). We expect all contributors to be respectful and inclusive.
 
 **Getting Help:**
+Quick checklist you can copy to the repo (PR checklist)
+Add this to .github/pull_request_template.md or include as a CI gate:
+- [ ] Branch is up-to-date with `main`
+- [ ] PR description explains why the change is needed
+- [ ] Tests added/updated
+- [ ] `pre-commit` checks passed locally
+- [ ] Documentation updated (if applicable)
+- [ ] Issue referenced (`Fixes #...`)
+
 
 If you have any questions or need help with the contribution process, feel free to:
 
