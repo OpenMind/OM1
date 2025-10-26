@@ -5,6 +5,188 @@ We welcome contributions from the community!  OM1 is an open-source project, and
 Before contributing, please take a moment to read through the following guidelines. This helps streamline the process and ensures everyone is on the same page.
 
 **Ways to Contribute:**
+# Contributing to OM1
+
+Thanks for helping! This guide shows how to set up a development environment, run tests, and submit PRs.
+
+## 1. Code of conduct
+Please read `CODE_OF_CONDUCT.md` and be respectful.
+
+## 2. Quick dev setup (Linux/macOS recommended)
+1. Fork the repository and clone your fork:
+   ```bash
+   git clone https://github.com/<your-username>/OM1.git
+   cd OM1
+Create a Python virtualenv and activate it:
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+
+Install the project dependencies in editable mode:
+pip install -e .
+
+Run linters & formatters (pre-commit)
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+
+3. Branching & commit style
+   Create a feature branch: git checkout -b feat/<short-descr> or fix/<short-descr>.
+
+Keep commits small and focused.
+
+Commit message format:
+<scope>(<subsystem>): <short summary>
+
+Longer description (optional). Reference issues using Fixes #<issue>.
+
+Tests & CI
+Run unit tests locally:
+uv run pytest
+
+Opening a PR
+
+Rebase or merge main branch first:
+git fetch upstream
+git rebase upstream/main
+Push and open a PR against main.
+
+Add GitHub Actions CI (.github/workflows/ci.yml) — minimal example
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.10, 3.11]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install deps
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install -U pip
+          pip install -e .
+          pip install pytest pre-commit
+      - name: Run linters (pre-commit)
+        run: |
+          pre-commit run --all-files || true
+      - name: Run tests
+        run: |
+          uv run pytest -q
+
+
+Good first contributions
+
+Look for good first issue or documentation labels. Small wins:
+
+Fix README typos
+
+Improve docs for an example config
+
+Add a unit test for a small utility function
+
+Where to ask for help
+
+GitHub Issues / Discussions
+
+Discord: <link>
+
+Mention maintainers in PR if you need a review
+
+Use the PR template (.github/PULL_REQUEST_TEMPLATE.md) and add tests/screenshots where relevant.
+
+### Commit message suggestion
+docs(contributing): add step-by-step dev setup, commit style, tests instructions
+
+---
+
+# 3) Issues / labels / templates — improve triage & new contributor visibility
+
+## Problems
+- Issues may be unlabelled or inconsistent; newcomers struggle to find easy work.
+- No PR or issue templates to guide contributors.
+
+## Suggested changes
+
+### Add Issue templates (.github/ISSUE_TEMPLATE/*.md)
+`bug_report.md` and `feature_request.md` (basic content) — example:
+
+```yaml
+# .github/ISSUE_TEMPLATE/bug_report.md
+name: Bug report
+about: Create a report to help us fix bugs
+---
+**Describe the bug**
+A clear and concise description of what the bug is.
+
+**To Reproduce**
+Steps to reproduce the behavior:
+1. ...
+2. ...
+
+**Expected behavior**
+A clear and concise description.
+
+**Environment (please complete the following information):**
+ - OS: [e.g. Ubuntu 22.04]
+ - Python version: [e.g. 3.10]
+ - OM1 commit: [git sha]
+Add a "smoke" test for examples (tests/test_smoke_examples.py)
+def test_spot_sim_config_loads():
+    from om1 import load_config
+    cfg = load_config('config/spot.json5')
+    assert 'robot' in cfg
+Commit message suggestion
+ci: add GitHub Actions for lint & tests and add simple smoke test for example configs
+
+**Additional context**
+Add any other context about the problem here.
+
+Add labels (recommended set)
+
+good first issue
+
+help wanted
+
+documentation
+
+bug
+
+enhancement
+
+priority/high
+
+needs triage
+You can add label descriptions to explain what type of tasks go into each.
+Add a PR template .github/PULL_REQUEST_TEMPLATE.md
+## What this PR does
+(Concise summary)
+
+## Related issues
+Fixes #<issue-number> / Related to #<issue>
+
+## How to test
+Steps to reproduce or commands to run
+
+## Checklist
+- [ ] I have run `pre-commit`
+- [ ] I have added/updated tests
+- [ ] I have updated documentation if needed
+Commit message suggestion
+chore(.github): add issue & PR templates and recommended labels
+
 
 *   **Report Bugs:** If you find a bug, please [open an issue](https://github.com/OpenmindAGI/OM1/issues) on GitHub. Be sure to include:
     *   A clear and concise description of the bug.
