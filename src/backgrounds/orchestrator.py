@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
@@ -66,8 +67,6 @@ class BackgroundOrchestrator:
                 background.run()
             except Exception as e:
                 logging.error(f"Error in background {background.name}: {e}")
-                # Add a small delay to prevent rapid error loops
-                import time
                 time.sleep(0.1)
 
     def stop(self):
