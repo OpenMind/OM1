@@ -91,7 +91,7 @@ double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
     inf = std::numeric_limits<double>::infinity();
   else
     inf = 1.0E300;
-  double t, t1, t2; /* t is the step lenght, which is the minimum of the partial step length t1 
+  double t, t1, t2; /* t is the step length, which is the minimum of the partial step length t1 
     * and the full step length t2 */
   Vector<int> A(m + p), A_old(m + p), iai(m + p);
   unsigned int iq, iter = 0;
@@ -181,7 +181,7 @@ double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
     print_vector("d", d);
 #endif
     
-    /* compute full step length t2: i.e., the minimum step in primal space s.t. the contraint 
+    /* compute full step length t2: i.e., the minimum step in primal space s.t. the constraint 
       becomes feasible */
     t2 = 0.0;
     if (fabs(scalar_product(z, z)) > std::numeric_limits<double>::epsilon()) // i.e. z != 0

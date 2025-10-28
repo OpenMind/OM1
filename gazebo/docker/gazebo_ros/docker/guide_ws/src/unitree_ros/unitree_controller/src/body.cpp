@@ -12,7 +12,7 @@ unitree_legged_msgs::LowCmd lowCmd;
 unitree_legged_msgs::LowState lowState;
 
 // These parameters are only for reference.
-// Actual patameters need to be debugged if you want to run on real robot.
+// Actual parameters need to be debugged if you want to run on real robot.
 void paramInit()
 {
     for(int i=0; i<4; i++){
