@@ -320,7 +320,7 @@ class OdomProvider:
 
             delta = math.sqrt(dx + dy + dz)
 
-            # moving? Use a decay kernal
+            # moving? Use a decay kernel
             self.move_history = 0.7 * delta + 0.3 * self.move_history
 
             if delta > 0.01 or self.move_history > 0.01:
