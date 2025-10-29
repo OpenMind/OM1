@@ -394,7 +394,6 @@ class OdomProvider:
         """
         Stop the OdomProvider and clean up resources.
         """
-        # Signal stop event to terminate processor thread
         self._stop_event.set()
         
         if self._odom_reader_thread:
