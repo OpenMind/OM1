@@ -58,7 +58,6 @@ class WalletCoinbase(FuserInput[float]):
             self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
             logging.info(f"Wallet: {self.wallet}")
             
-            # Initialize balance only if wallet was successfully fetched
             self.ETH_balance = float(self.wallet.balance("eth"))
             self.ETH_balance_previous = self.ETH_balance
         except Exception as e:
