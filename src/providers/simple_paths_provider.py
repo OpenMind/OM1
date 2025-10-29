@@ -152,7 +152,7 @@ class SimplePathsProvider:
         """
         Process paths data from the data queue and generate movement options.
         """
-        while not getattr(self, '_stop_event', None) or not self._stop_event.is_set():
+        while not self._stop_event.is_set():
             try:
                 paths = self.data_queue.get_nowait()
 
