@@ -106,7 +106,7 @@ class RemoteAudioInput:
                 )
                 if input_device["maxInputChannels"] == 0:
                     logging.warning(
-                        f"Selected input device does not advertize input channels: {input_device['name']} ({self._device})"
+                        f"Selected input device does not advertise input channels: {input_device['name']} ({self._device})"
                     )
             elif self._device_name is not None:
                 available_devices = []
