@@ -1,6 +1,6 @@
 ## Install Zenoh Middleware
 
-[Zenoh](https://zenoh.io) is a pub/sub/query protocol unifying data in motion, data at rest and computations. You need two pieces - the `eclipse-zenoh` python libary and the Zenoh daemon (`zenohd`). Your Python project needs `eclipse-zenoh`, which is already added to OM1's `pyproject.toml`. 
+[Zenoh](https://zenoh.io) is a pub/sub/query protocol unifying data in motion, data at rest and computations. You need two pieces - the `eclipse-zenoh` python library and the Zenoh daemon (`zenohd`). Your Python project needs `eclipse-zenoh`, which is already added to OM1's `pyproject.toml`. 
 
 ### Mac
 
