@@ -504,7 +504,7 @@ class WebSim(Simulator):
             port=8000,
             log_level="error",
             server_header=False,
-            loop="asyncio",  # uvicorn'un asyncio loop'u kullanmasını garanti et
+            loop="asyncio",  
             log_config={
                 "version": 1,
                 "disable_existing_loggers": False,
