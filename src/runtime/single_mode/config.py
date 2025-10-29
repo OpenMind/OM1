@@ -229,14 +229,6 @@ def load_config(
     return RuntimeConfig(**parsed_config)
 
 
-def get_nested_value(data, keys):
-    if not keys:
-        return data
-    if isinstance(data, dict) and keys[0] in data:
-        return get_nested_value(data[keys[0]], keys[1:])
-    return None
-
-
 def add_meta(
     config: Dict,
     g_api_key: Optional[str],
