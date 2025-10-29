@@ -15,48 +15,249 @@
 ## Architecture Overview
   ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
 
-## Getting Started - Hello World
+## Quick Start
 
-To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to `OpenAI 4o`, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+Get OM1 running in 5-10 minutes:
 
-### Package Management and VENV
+```bash
+# 1. Clone the repository
+git clone https://github.com/openmind/OM1.git
+cd OM1
+git submodule update --init --recursive
 
-You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
+# 2. Create virtual environment and install dependencies
+# Install uv first if needed: https://docs.astral.sh/uv/getting-started/installation/
+uv venv
+uv sync
 
-### Clone the Repo
+# 3. Install system dependencies (Linux)
+sudo apt-get update
+sudo apt-get install -y portaudio19-dev python3-dev ffmpeg
+
+# Or macOS
+brew install portaudio ffmpeg
+
+# 4. Get API key and configure
+# Get your key at https://portal.openmind.org/
+cp env.example .env
+# Edit .env and add your OM_API_KEY
+
+# 5. Run the agent
+uv run src/run.py start spot
+```
+
+After launching, the Spot agent will interact with you via webcam. View the WebSim interface at **http://localhost:8000/** to see actions and debug info.
+
+## Requirements
+
+- **Python**: 3.10+ (recommended: 3.10)
+- **OS**: Ubuntu 22.04, macOS (Sequoia or newer), or Windows (experimental)
+- **Package Manager**: [uv](https://docs.astral.sh/uv/getting-started/installation/) (required)
+
+**System Dependencies:**
+
+- **Linux (Ubuntu/Debian):**
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y portaudio19-dev python3-dev ffmpeg cmake
+  ```
+
+- **macOS:**
+  ```bash
+  brew install portaudio ffmpeg
+  ```
+
+- **Windows:** (experimental) Requires manual installation of PortAudio and FFmpeg.
+
+**Optional:**
+- CycloneDDS (for ROS2 integration)
+- Docker & Docker Compose (for containerized deployment)
+
+## Installation
+
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/openmind/OM1.git
 cd OM1
-git submodule update --init
-uv venv
+git submodule update --init --recursive
 ```
 
-### Install Dependencies
+### Step 2: Create Virtual Environment
 
-For MacOS  
 ```bash
-brew install portaudio ffmpeg
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create venv and install dependencies
+uv venv
+uv sync
 ```
 
-For Linux  
+### Step 3: Configure Environment Variables
+
+```bash
+cp env.example .env
+# Edit .env and add your OM_API_KEY
+```
+
+Get your API key from the [OpenMind Portal](https://portal.openmind.org/).
+
+### Step 4: (Optional) Setup Pre-commit Hooks
+
+```bash
+uv run pre-commit install
+```
+
+## Run / Development
+
+### Running an Agent
+
+```bash
+# Activate virtual environment (if needed)
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate  # Windows
+
+# Run the agent
+uv run src/run.py start spot
+
+# Or with a custom config
+uv run src/run.py start unitree_go2_basic
+```
+
+For more details, see [Getting Started Guide](https://docs.openmind.org/getting-started).
+
+### Running via Docker Compose
+
+```bash
+# Set OM_API_KEY in environment
+export OM_API_KEY="your_api_key"
+
+# Edit docker-compose.yml, replace command:
+# command: ["unitree_go2_autonomy_advance"]
+
+# Start the service
+docker-compose up om1 -d --no-build
+```
+
+See [Full Autonomy Guidance](#full-autonomy-guidance) below for multi-service setup.
+
+## Test & Lint
+
+### Linting and Formatting
+
+```bash
+# Check and auto-fix
+uv run ruff check . --fix
+uv run black .
+uv run isort .
+
+# Check only (no changes)
+uv run ruff check .
+uv run black --check .
+uv run isort --check-only .
+```
+
+### Type Checking
+
+```bash
+uv run pyright --project ./pyrightconfig.json
+```
+
+### Testing
+
+```bash
+# All unit tests
+uv run pytest --log-cli-level=DEBUG -s
+
+# Integration tests only
+uv run pytest -m "integration" --log-cli-level=DEBUG -s
+```
+
+### Pre-commit Hooks
+
+```bash
+# Install hooks
+uv run pre-commit install
+
+# Run all checks manually
+uv run pre-commit run --all-files
+```
+
+## Troubleshooting
+
+### Error: "ModuleNotFoundError" or import issues
+
+**Solution:**
+```bash
+# Ensure virtual environment is activated
+source .venv/bin/activate  # Linux/macOS
+
+# Reinstall dependencies
+uv sync --reinstall
+```
+
+### Error: "PortAudio library not found"
+
+**Linux:**
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-dev ffmpeg
+sudo apt-get install -y portaudio19-dev python3-dev
+uv sync --reinstall
 ```
 
-### Obtain an OpenMind API Key
-
-Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp env.example .env` and add your key to the `.env`. 
-
-### Launching OM1
-
-Run
+**macOS:**
 ```bash
-uv run src/run.py spot
+brew install portaudio
+uv sync --reinstall
 ```
 
-After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/getting-started).
+### Error: "No module named '_sounddevice'" or audio issues
+
+**Solution:**
+```bash
+# Reinstall audio-related dependencies
+uv sync --reinstall
+# Ensure portaudio is installed (see above)
+```
+
+### Error when cloning submodules
+
+**Solution:**
+```bash
+# Remove and re-clone submodules
+git submodule deinit --all -f
+git submodule update --init --recursive
+```
+
+### API key issues
+
+**Solution:**
+- Verify `.env` file exists: `cp env.example .env`
+- Ensure `OM_API_KEY` is set in `.env` or environment variables
+- Verify key is valid at [OpenMind Portal](https://portal.openmind.org/)
+
+### WebSim not opening on localhost:8000
+
+**Solution:**
+- Ensure agent is running (`uv run src/run.py start spot`)
+- Check that port 8000 isn't occupied by another process
+- Try a different browser or incognito mode
+
+## FAQ
+
+**Q: Can I use a different package manager instead of uv?**  
+A: `uv` is recommended for fastest setup. Alternatively, you can use `pip` with `requirements.txt`, but compatibility isn't guaranteed.
+
+**Q: How do I change the LLM model?**  
+A: Edit the config file in `config/` (e.g., `spot.json5`) and modify the `llm` section with your desired endpoint and model.
+
+**Q: Is Windows supported?**  
+A: Windows support is experimental. We recommend using WSL2 or Linux/macOS for development.
+
+**Q: How do I add a new input or action?**  
+A: See [Interfacing with New Robot Hardware](#interfacing-with-new-robot-hardware) below and [development docs](https://docs.openmind.org/developing/get-started).
 
 ## What's Next?
 
@@ -154,7 +355,33 @@ More detailed documentation can be accessed at [docs.openmind.org](https://docs.
 
 ## Contributing
 
-Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before making a pull request.
+We welcome contributions from the community! Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before making a pull request.
+
+**Quick start for contributors:**
+1. Fork the repository
+2. Create a branch: `git checkout -b feat/your-feature-name`
+3. Make your changes and ensure linting/tests pass
+4. Commit using [Conventional Commits](https://www.conventionalcommits.org/): `git commit -m "feat: add new feature"`
+5. Open a PR with a clear description of changes
+
+**Commit style:**
+- `feat:` - new feature
+- `fix:` - bug fix
+- `docs:` - documentation changes
+- `chore:` - build/dependency changes
+- `test:` - adding/changing tests
+
+## Security
+
+Please see [SECURITY.md](./SECURITY.md) for security policy and vulnerability reporting.
+
+## Links
+
+- 📚 [Documentation](https://docs.openmind.org/) - Full project documentation
+- 📄 [Technical Paper](https://arxiv.org/abs/2412.18588) - Architecture and design paper
+- 💬 [Discord](https://discord.gg/VUjpg4ef5n) - Developer community
+- 🐦 [X (Twitter)](https://x.com/openmind_agi) - Updates and news
+- 🔐 [OpenMind Portal](https://portal.openmind.org/) - Get API keys
 
 ## License
 
