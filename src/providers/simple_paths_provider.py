@@ -136,7 +136,6 @@ class SimplePathsProvider:
         """
         Stop the SimplePathsProvider by closing the Zenoh session.
         """
-        # Signal stop event to terminate derived processor thread
         self._stop_event.set()
         
         if self._simple_paths_processor_thread:
