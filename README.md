@@ -108,7 +108,7 @@ Stay tuned!
 
 Clone the following repos -
 - https://github.com/OpenMind/OM1.git
-- https://github.com/OpenMind/unitree_go2_ros2_sdk.git
+- https://github.com/OpenMind/unitree_sdk.git
 - https://github.com/OpenMind/OM1-avatar.git
 
 ## Starting the system
@@ -136,9 +136,9 @@ command: ["unitree_go2_autonomy_advance"]
 cd OM1
 docker-compose up om1 -d --no-build
 ```
-- For unitree_go2_ros2_sdk
+- For unitree_sdk
 ```bash
-cd unitree_go2_ros2_sdk
+cd unitree_sdk
 docker-compose up orchestrator -d --no-build
 docker-compose up om1_sensor -d --no-build
 docker-compose up watchdog -d --no-build
