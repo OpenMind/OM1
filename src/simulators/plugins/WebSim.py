@@ -494,13 +494,17 @@ class WebSim(Simulator):
 
     def _run_server(self):
         """Run the FastAPI server"""
+        # Create and own an event loop in this server thread and expose it
+        self._server_loop: Optional[asyncio.AbstractEventLoop] = None
+        asyncio.set_event_loop(self._server_loop)
+
         config = uvicorn.Config(
             app=self.app,
-            host="0.0.0.0",  # Still bind to all interfaces
+            host="0.0.0.0",
             port=8000,
             log_level="error",
             server_header=False,
-            # Override the default startup message
+            loop="asyncio",  # uvicorn'un asyncio loop'u kullanmasını garanti et
             log_config={
                 "version": 1,
                 "disable_existing_loggers": False,
@@ -524,7 +528,10 @@ class WebSim(Simulator):
             },
         )
         server = uvicorn.Server(config)
-        server.run()
+
+        # uvicorn'u bu thread'in loop'unda görev olarak çalıştır
+        self._server_loop.create_task(server.serve())
+        self._server_loop.run_forever()
 
     async def broadcast_state(self):
         """Broadcast current state to all connected clients"""
@@ -567,26 +574,13 @@ class WebSim(Simulator):
 
     def tick(self) -> None:
         """Update simulator state"""
-        if self._initialized:
-            try:
-                # Get or create event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-
-                try:
-                    loop.run_until_complete(self.broadcast_state())
-                except Exception:
-                    loop = asyncio.get_event_loop()
-                    loop.create_task(self.broadcast_state())
-
-            except Exception as e:
-                logging.error(f"Error in tick: {e}")
-
-            time.sleep(0.5)
-
+        if not self._initialized or self._server_loop is None:
+            return
+        try:
+            # Yayını uvicorn'un loop'una threadsafe şekilde planla
+            asyncio.run_coroutine_threadsafe(self.broadcast_state(), self._server_loop)
+        except Exception as e:
+            logging.error(f"Error in tick: {e}")
     def sim(self, actions: List[Action]) -> None:
         """Handle simulation updates from commands"""
         if not self._initialized:
