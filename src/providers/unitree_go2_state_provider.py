@@ -211,7 +211,6 @@ class UnitreeGo2StateProvider:
         """
         Stop the Unitree Go2 state provider.
         """
-        # Signal stop event to terminate processor thread
         self._stop_event.set()
         
         if self._go2_state_reader_thread:
