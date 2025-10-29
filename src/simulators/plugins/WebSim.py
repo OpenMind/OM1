@@ -495,12 +495,12 @@ class WebSim(Simulator):
     def _run_server(self):
         """Run the FastAPI server"""
         # Create and own an event loop in this server thread and expose it
-        self._server_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._server_loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
         asyncio.set_event_loop(self._server_loop)
 
         config = uvicorn.Config(
             app=self.app,
-            host="0.0.0.0",
+            host="0.0.0.0", # Still bind to all interfaces
             port=8000,
             log_level="error",
             server_header=False,
@@ -529,7 +529,7 @@ class WebSim(Simulator):
         )
         server = uvicorn.Server(config)
 
-        # uvicorn'u bu thread'in loop'unda görev olarak çalıştır
+        
         self._server_loop.create_task(server.serve())
         self._server_loop.run_forever()
 
@@ -577,7 +577,7 @@ class WebSim(Simulator):
         if not self._initialized or self._server_loop is None:
             return
         try:
-            # Yayını uvicorn'un loop'una threadsafe şekilde planla
+            
             asyncio.run_coroutine_threadsafe(self.broadcast_state(), self._server_loop)
         except Exception as e:
             logging.error(f"Error in tick: {e}")
