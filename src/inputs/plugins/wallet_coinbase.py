@@ -63,7 +63,6 @@ class WalletCoinbase(FuserInput[float]):
             self.ETH_balance_previous = self.ETH_balance
         except Exception as e:
             logging.error(f"Error fetching Coinbase Wallet data: {e}")
-            # Set wallet to None and initialize with zero balance to prevent crashes
             self.wallet = None
             self.ETH_balance = 0.0
             self.ETH_balance_previous = 0.0
