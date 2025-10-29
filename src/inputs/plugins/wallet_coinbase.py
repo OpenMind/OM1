@@ -97,7 +97,6 @@ class WalletCoinbase(FuserInput[float]):
             self.ETH_balance_previous = self.ETH_balance
         except Exception as e:
             logging.error(f"Error refreshing wallet data: {e}")
-            # Return zero balance change if wallet refresh fails
             balance_change = 0.0
 
         return [self.ETH_balance, balance_change]
