@@ -114,7 +114,7 @@ class ActionOrchestrator:
             )
             if agent_action is None:
                 logging.warning(
-                    f"Attempted to call non-existant action: {action.type.lower()}."
+                    f"Attempted to call non-existent action: {action.type.lower()}."
                 )
                 continue
             action_response = asyncio.create_task(

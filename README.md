@@ -1,6 +1,11 @@
 ![OM_Banner_X2 (1)](https://github.com/user-attachments/assets/853153b7-351a-433d-9e1a-d257b781f93c)
 
-<p align="center">  <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |  <a href="https://docs.openmind.org/">Documentation</a> |  <a href="https://x.com/openmind_agi">X</a> | <a href="https://discord.gg/VUjpg4ef5n">Discord</a> </p>
+<p align="center">  
+<a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |  
+<a href="https://docs.openmind.org/">Documentation</a> |  
+<a href="https://x.com/openmind_agi">X</a> |  
+<a href="https://discord.gg/VUjpg4ef5n">Discord</a> 
+</p>
 
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
@@ -13,7 +18,7 @@
 * **Pre-configured Endpoints**: Supports Voice-to-Speech, OpenAI’s `gpt-4o`, DeepSeek, and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 
 ## Architecture Overview
-  ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
+![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
 
 ## Getting Started - Hello World
 
@@ -98,7 +103,7 @@ OM1 _should_ run on other platforms (such as Windows) and microcontrollers such 
 We're excited to introduce **full autonomy mode**, where three services work together in a loop without manual intervention:
 
 - **om1**
-- **unitree_go2_ros2_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
+- **unitree_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 
 ## Intro to Backpack?
@@ -108,7 +113,7 @@ Stay tuned!
 
 Clone the following repos -
 - https://github.com/OpenMind/OM1.git
-- https://github.com/OpenMind/unitree_go2_ros2_sdk.git
+- https://github.com/OpenMind/unitree_sdk.git
 - https://github.com/OpenMind/OM1-avatar.git
 
 ## Starting the system
@@ -136,9 +141,9 @@ command: ["unitree_go2_autonomy_advance"]
 cd OM1
 docker-compose up om1 -d --no-build
 ```
-- For unitree_go2_ros2_sdk
+- For unitree_sdk
 ```bash
-cd unitree_go2_ros2_sdk
+cd unitree_sdk
 docker-compose up orchestrator -d --no-build
 docker-compose up om1_sensor -d --no-build
 docker-compose up watchdog -d --no-build
