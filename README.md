@@ -22,7 +22,7 @@
 
 ## Getting Started
 
-To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to `OpenAI 4o`, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
 
 ### Package Management and VENV
 
@@ -31,7 +31,7 @@ You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-start
 ### Clone the Repo
 
 ```bash
-git clone https://github.com/openmind/OM1.git
+git clone https://github.com/OpenMind/OM1.git
 cd OM1
 git submodule update --init
 uv venv
@@ -62,6 +62,9 @@ uv run src/run.py spot
 ```
 
 After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/getting-started).
+
+Note: This is just an example agent configuration.
+If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
 
 ## What's Next?
 
@@ -100,13 +103,14 @@ OM1 _should_ run on other platforms (such as Windows) and microcontrollers such 
 
 ## Full Autonomy Guidance
 
-We're excited to introduce **full autonomy mode**, where three services work together in a loop without manual intervention:
+We're excited to introduce **full autonomy mode**, where four services work together in a loop without manual intervention:
 
 - **om1**
 - **unitree_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
+- **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 
-## Intro to Backpack?
+## Intro to BrainPack?
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
 We'll shortly be releasing the **BOM** and details on **DIY** for the it. 
 Stay tuned!
@@ -115,6 +119,7 @@ Clone the following repos -
 - https://github.com/OpenMind/OM1.git
 - https://github.com/OpenMind/unitree-sdk.git
 - https://github.com/OpenMind/OM1-avatar.git
+- https://github.com/OpenMind/OM1-video-processor.git
 
 ## Starting the system
 To start all services, run the following commands:
