@@ -85,7 +85,7 @@ def go2_state_processor(
         str
             The state name corresponding to the code, or "unknown" if not found.
         """
-        return state_machine_codes.get(code, "unkown")
+        return state_machine_codes.get(code, "unknown")
 
     def state_callback(msg: SportModeState_):
         """
