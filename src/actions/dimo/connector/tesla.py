@@ -61,7 +61,7 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
         if output_interface.action != self.previouse_output:
             self.previouse_output = output_interface.action
 
-            # chekcout timeout of vehicle_jwt
+            # checkout timeout of vehicle_jwt
             if (
                 self.vehicle_jwt_expires is not None
                 and time.time() > self.vehicle_jwt_expires
