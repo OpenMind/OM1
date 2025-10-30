@@ -30,7 +30,7 @@ Ensure you have the following installed on your machine:
 
 #### UV (A Rust and Python package manager)
 
-``` bash
+```bash
 # Mac
 brew install uv 
 
@@ -48,8 +48,10 @@ brew install portaudio
 
 # Linux
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-all-dev
+sudo apt-get install portaudio19-dev
 ```
+
+Note: `python-all-dev` may also be needed. 
 
 #### ffmpeg
 
@@ -82,7 +84,7 @@ uv venv
 Locate the `config` folder and add your OpenMind API key to `/config/spot.json` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.org/.  
 
 ```bash
-# /config/spot.json
+# /config/spot.json5
 ...
 "api_key": "om1_live_..."
 ...
@@ -106,8 +108,9 @@ uv run src/run.py spot
 
 On initial execution, this command will resolve and install project dependencies. Please allow a few minutes for this process to finish, before the system becomes active.
 
-Note: This is just an example agent configuration. 
-If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
+Note: This is just an example agent configuration.
+
+If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `spot.json5`.
 
 ASR configuration (check in agent_inputs)
 ```bash
@@ -127,7 +130,7 @@ TTS configuration (check in agent_actions)
         voice_id: "i4CzbCVWoqvD0P1QJCUL",
         "silence_rate": 20,
       },
-},
+}
 ```
 
 ### WebSim to check input and output
