@@ -4,7 +4,7 @@
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |  
 <a href="https://docs.openmind.org/">Documentation</a> |  
 <a href="https://x.com/openmind_agi">X</a> |  
-<a href="https://discord.gg/VUjpg4ef5n">Discord</a> 
+<a href="https://discord.gg/openmind">Discord</a> 
 </p>
 
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
@@ -15,12 +15,12 @@
 * **Data Input**: Easily handles new data and sensors.
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
 * **Web-Based Debugging Display**: Monitor the system in action with WebSim (available at http://localhost:8000/) for easy visual debugging.
-* **Pre-configured Endpoints**: Supports Voice-to-Speech, OpenAI’s `gpt-4o`, DeepSeek, and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
+* **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 
 ## Architecture Overview
 ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
 
-## Getting Started - Hello World
+## Getting Started
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to `OpenAI 4o`, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
 
@@ -113,7 +113,7 @@ Stay tuned!
 
 Clone the following repos -
 - https://github.com/OpenMind/OM1.git
-- https://github.com/OpenMind/unitree_sdk.git
+- https://github.com/OpenMind/unitree-sdk.git
 - https://github.com/OpenMind/OM1-avatar.git
 
 ## Starting the system
