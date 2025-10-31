@@ -83,11 +83,26 @@ class UnitreeGo2Battery(FuserInput[str]):
         self.descriptor_for_LLM = "Energy Levels"
 
     def LowStateMessageHandler(self, msg: LowState_):
-        self.low_state = msg
-        self.battery_percentage = round(float(msg.bms_state.soc), 2)  # type: ignore
-        self.battery_voltage = round(float(msg.power_v), 2)  # type: ignore
-        self.battery_amperes = round(float(msg.power_a), 2)  # type: ignore
-        self.battery_t = int((msg.temperature_ntc1 + msg.temperature_ntc2) / 2)  # type: ignore
+        """
+        Handle incoming LowState messages from Unitree Go2.
+
+        Parameters
+        ----------
+        msg : LowState_
+            Incoming LowState message
+        """
+        try:
+            self.low_state = msg
+            self.battery_percentage = round(float(msg.bms_state.soc), 2)  # type: ignore
+            self.battery_voltage = round(float(msg.power_v), 2)  # type: ignore
+            self.battery_amperes = round(float(msg.power_a), 2)  # type: ignore
+            self.battery_t = int((msg.temperature_ntc1 + msg.temperature_ntc2) / 2)  # type: ignore
+        except AttributeError as e:
+            logging.warning(f"Incomplete LowState message: {e}")
+            self.battery_percentage = 0.0
+            self.battery_voltage = 0.0
+            self.battery_amperes = 0.0
+            self.battery_t = 0
 
     async def report_status(self):
         """
