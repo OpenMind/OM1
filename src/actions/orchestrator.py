@@ -61,6 +61,7 @@ class ActionOrchestrator:
                 logging.error(f"Error in connector {action.llm_label}: {e}")
                 # Add a small delay to prevent rapid error loops
                 import time
+
                 time.sleep(0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:

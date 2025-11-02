@@ -29,7 +29,7 @@ class ARMUnitreeSDKConnector(ActionConnector[ArmInput]):
             return
 
         action_id = None
-        
+
         if output_interface.action == "left kiss":
             action_id = 12
         elif output_interface.action == "right kiss":
