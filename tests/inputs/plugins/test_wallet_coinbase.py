@@ -3,10 +3,11 @@ Test cases for WalletCoinbase input plugin.
 """
 
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from inputs.plugins.wallet_coinbase import WalletCoinbase, Message
-from inputs.base import SensorConfig
+
+from inputs.plugins.wallet_coinbase import Message, WalletCoinbase
 
 
 class TestWalletCoinbase:
@@ -87,7 +88,7 @@ class TestWalletCoinbase:
         
         assert result is not None
         assert isinstance(result, Message)
-        assert result.message == "0.5"
+        assert result.message == "0.50000"
 
     def test_raw_to_text_with_zero_balance_change(self):
         """Test that _raw_to_text returns None for zero balance change."""
@@ -116,7 +117,7 @@ class TestWalletCoinbase:
         result = wallet.formatted_latest_buffer()
         
         assert result is not None
-        assert "You just received 1.0 ETH." in result
+        assert "You just received 1.00000 ETH." in result
         assert "WalletCoinbase INPUT" in result
         assert len(wallet.messages) == 0  # Buffer should be cleared
 
