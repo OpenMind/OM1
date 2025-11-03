@@ -51,7 +51,7 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
         shutil.copy2(runtime_config_path, config_path)
         logging.info("Using default runtime configuration from memory folder")
         logging.info(
-            f"Copied .runtime.json5 to {config_name}.json5 for system compatibility"
+            f"Copied config/memory/.runtime.json5 to config/{config_name}.json5 for system compatibility"
         )
     else:
         config_path = os.path.join(
