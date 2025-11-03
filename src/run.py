@@ -17,7 +17,13 @@ app = typer.Typer()
 
 
 @app.command()
-def start(config_name: str, log_level: str = "INFO", log_to_file: bool = False) -> None:
+def start(
+    config_name: str,
+    hot_reload: bool = True,
+    check_interval: int = 60,
+    log_level: str = "INFO",
+    log_to_file: bool = False,
+) -> None:
     """
     Start the OM1 agent with a specific configuration.
 
@@ -25,6 +31,10 @@ def start(config_name: str, log_level: str = "INFO", log_to_file: bool = False) 
     ----------
     config_name : str
         The name of the configuration file (without extension) located in the config directory.
+    hot_reload : bool, optional
+        Enable hot-reload of configuration files (default is True).
+    check_interval : int, optional
+        Interval in seconds between config file checks when hot_reload is enabled (default is 60).
     log_level : str, optional
         The logging level to use (default is "INFO").
     log_to_file : bool, optional
@@ -42,14 +52,29 @@ def start(config_name: str, log_level: str = "INFO", log_to_file: bool = False) 
 
         if "modes" in raw_config and "default_mode" in raw_config:
             mode_config = load_mode_config(config_name)
-            runtime = ModeCortexRuntime(mode_config)
+            runtime = ModeCortexRuntime(
+                mode_config,
+                config_name,
+                hot_reload=hot_reload,
+                check_interval=check_interval,
+            )
             logging.info(f"Starting OM1 with mode-aware configuration: {config_name}")
             logging.info(f"Available modes: {list(mode_config.modes.keys())}")
             logging.info(f"Default mode: {mode_config.default_mode}")
         else:
             config = load_config(config_name)
-            runtime = CortexRuntime(config)
+            runtime = CortexRuntime(
+                config,
+                config_name,
+                hot_reload=hot_reload,
+                check_interval=check_interval,
+            )
             logging.info(f"Starting OM1 with standard configuration: {config_name}")
+
+        if hot_reload:
+            logging.info(
+                f"Hot-reload enabled (check interval: {check_interval} seconds)"
+            )
 
         asyncio.run(runtime.run())
 

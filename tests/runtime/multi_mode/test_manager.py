@@ -492,7 +492,7 @@ class TestModeManager:
     def test_get_state_file_path(self, mode_manager):
         """Test getting state file path."""
         path = mode_manager._get_state_file_path()
-        assert path.endswith(".test_config.json5")
+        assert path.endswith(".test_config.memory.json5")
         assert "memory" in path
 
     def test_save_mode_state_disabled(self, mode_manager):
