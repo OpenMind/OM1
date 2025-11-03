@@ -3,7 +3,7 @@ import logging
 import multiprocessing as mp
 import os
 import shutil
-from typing import Optional
+from typing import Optional, Tuple
 
 import dotenv
 import json5
@@ -18,40 +18,17 @@ from runtime.single_mode.cortex import CortexRuntime
 app = typer.Typer()
 
 
-@app.command()
-def start(
-    config_name: Optional[str] = typer.Argument(
-        None,
-        help="The name of the configuration file (without extension) located in the config directory. If not provided, uses .runtime.config from memory folder.",
-    ),
-    hot_reload: bool = typer.Option(
-        True, help="Enable hot-reload of configuration files."
-    ),
-    check_interval: int = typer.Option(
-        60,
-        help="Interval in seconds between config file checks when hot_reload is enabled.",
-    ),
-    log_level: str = typer.Option("INFO", help="The logging level to use."),
-    log_to_file: bool = typer.Option(False, help="Whether to log output to a file."),
-) -> None:
+def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
     """
-    Start the OM1 agent with a specific configuration.
+    Set up the configuration file.
 
     Parameters
     ----------
     config_name : str, optional
         The name of the configuration file (without extension) located in the config directory.
-        If not provided, uses .runtime.config from memory folder as default.
-    hot_reload : bool, optional
-        Enable hot-reload of configuration files (default is True).
-    check_interval : int, optional
-        Interval in seconds between config file checks when hot_reload is enabled (default is 60).
-    log_level : str, optional
-        The logging level to use (default is "INFO").
-    log_to_file : bool, optional
-        Whether to log output to a file (default is False).
+        If not provided, uses .runtime.json5 from memory folder.
     """
-    # Use .runtime.json5 from memory folder as default if no config_name provided
+    # If no config_name is provided, use the default .runtime.json5 from memory
     if config_name is None:
         runtime_config_path = os.path.join(
             os.path.dirname(__file__), "../config/memory", ".runtime.json5"
@@ -81,6 +58,43 @@ def start(
             os.path.dirname(__file__), "../config", config_name + ".json5"
         )
 
+    return config_name, config_path
+
+
+@app.command()
+def start(
+    config_name: Optional[str] = typer.Argument(
+        None,
+        help="The name of the configuration file (without extension) located in the config directory. If not provided, uses .runtime.json5 from memory folder.",
+    ),
+    hot_reload: bool = typer.Option(
+        True, help="Enable hot-reload of configuration files."
+    ),
+    check_interval: int = typer.Option(
+        60,
+        help="Interval in seconds between config file checks when hot_reload is enabled.",
+    ),
+    log_level: str = typer.Option("INFO", help="The logging level to use."),
+    log_to_file: bool = typer.Option(False, help="Whether to log output to a file."),
+) -> None:
+    """
+    Start the OM1 agent with a specific configuration.
+
+    Parameters
+    ----------
+    config_name : str, optional
+        The name of the configuration file (without extension) located in the config directory.
+        If not provided, uses .runtime.json5 from memory folder as default.
+    hot_reload : bool, optional
+        Enable hot-reload of configuration files (default is True).
+    check_interval : int, optional
+        Interval in seconds between config file checks when hot_reload is enabled (default is 60).
+    log_level : str, optional
+        The logging level to use (default is "INFO").
+    log_to_file : bool, optional
+        Whether to log output to a file (default is False).
+    """
+    config_name, config_path = setup_config_file(config_name)
     setup_logging(config_name, log_level, log_to_file)
 
     try:
