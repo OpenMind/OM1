@@ -75,6 +75,8 @@ class ModeManager:
         self.pending_transitions: List[TransitionRule] = []
         self._transition_callbacks: List = []
         self._main_event_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._transition_lock = asyncio.Lock()
+        self._is_transitioning = False
 
         # Validate configuration
         if config.default_mode not in config.modes:
@@ -405,9 +407,20 @@ class ModeManager:
         bool
             True if the transition was successful, False otherwise
         """
-        from_mode = self.state.current_mode
+        async with self._transition_lock:
+            if self._is_transitioning:
+                logging.debug(f"Transition already in progress, skipping transition to {target_mode}")
+                return True
+
+            self._is_transitioning = True
 
         try:
+            from_mode = self.state.current_mode
+
+            if from_mode == target_mode:
+                logging.debug(f"Already in target mode '{target_mode}', skipping transition")
+                return True
+
             transition_key = f"{from_mode}->{target_mode}"
             self.transition_cooldowns[transition_key] = time.time()
 
@@ -481,6 +494,8 @@ class ModeManager:
                 f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
             )
             return False
+        finally:
+            self._is_transitioning = False
 
     def get_available_transitions(self) -> List[str]:
         """
@@ -588,7 +603,7 @@ class ModeManager:
             The incoming Zenoh sample containing the request.
         """
         mode_status = ModeStatusRequest.deserialize(data.payload.to_bytes())
-        logging.info(f"Received mode status request: {mode_status}")
+        logging.debug(f"Received mode status request: {mode_status}")
 
         code = mode_status.code
         request_id = mode_status.request_id
