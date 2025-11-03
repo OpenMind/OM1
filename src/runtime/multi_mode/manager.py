@@ -409,7 +409,9 @@ class ModeManager:
         """
         async with self._transition_lock:
             if self._is_transitioning:
-                logging.debug(f"Transition already in progress, skipping transition to {target_mode}")
+                logging.debug(
+                    f"Transition already in progress, skipping transition to {target_mode}"
+                )
                 return True
 
             self._is_transitioning = True
@@ -418,7 +420,9 @@ class ModeManager:
             from_mode = self.state.current_mode
 
             if from_mode == target_mode:
-                logging.debug(f"Already in target mode '{target_mode}', skipping transition")
+                logging.debug(
+                    f"Already in target mode '{target_mode}', skipping transition"
+                )
                 return True
 
             transition_key = f"{from_mode}->{target_mode}"
