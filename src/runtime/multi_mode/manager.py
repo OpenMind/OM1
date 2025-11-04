@@ -697,7 +697,11 @@ class ModeManager:
             os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)
 
         config_name = getattr(self.config, "config_name", "default")
-        state_filename = f".{config_name}.memory.json5"
+        state_filename = (
+            f"{config_name}.memory.json5"
+            if config_name.startswith(".")
+            else f".{config_name}.memory.json5"
+        )
 
         return os.path.join(memory_folder_path, state_filename)
 
