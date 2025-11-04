@@ -48,41 +48,23 @@ def test_configs():
 
 def assert_action_classes_exist(action_config):
     """Assert that all required classes for an action exist without instantiating them."""
-    import logging
-
     # Check interface exists
-    try:
-        action_module = importlib.import_module(
-            f"actions.{action_config['name']}.interface"
-        )
-        interface = find_subclass_in_module(action_module, Interface)
-        assert (
-            interface is not None
-        ), f"No interface found for action {action_config['name']}"
-    except (ImportError, ModuleNotFoundError) as e:
-        # Skip actions with missing optional dependencies
-        logging.warning(
-            f"Skipping interface check for action {action_config['name']} due to missing dependency: {e}"
-        )
-        # Don't fail the test for optional dependencies
-        return
+    action_module = importlib.import_module(
+        f"actions.{action_config['name']}.interface"
+    )
+    interface = find_subclass_in_module(action_module, Interface)
+    assert (
+        interface is not None
+    ), f"No interface found for action {action_config['name']}"
 
     # Check connector exists
-    try:
-        connector_module = importlib.import_module(
-            f"actions.{action_config['name']}.connector.{action_config['connector']}"
-        )
-        connector = find_subclass_in_module(connector_module, ActionConnector)
-        assert (
-            connector is not None
-        ), f"No connector found for action {action_config['name']}"
-    except (ImportError, ModuleNotFoundError) as e:
-        # Skip actions with missing optional dependencies
-        logging.warning(
-            f"Skipping connector check for action {action_config['name']} due to missing dependency: {e}"
-        )
-        # Don't fail the test for optional dependencies
-        pass
+    connector_module = importlib.import_module(
+        f"actions.{action_config['name']}.connector.{action_config['connector']}"
+    )
+    connector = find_subclass_in_module(connector_module, ActionConnector)
+    assert (
+        connector is not None
+    ), f"No connector found for action {action_config['name']}"
 
 
 def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:

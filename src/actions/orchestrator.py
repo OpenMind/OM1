@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+import time
 import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
@@ -59,9 +60,6 @@ class ActionOrchestrator:
                 action.connector.tick()
             except Exception as e:
                 logging.error(f"Error in connector {action.llm_label}: {e}")
-                # Add a small delay to prevent rapid error loops
-                import time
-
                 time.sleep(0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
@@ -130,21 +128,11 @@ class ActionOrchestrator:
         logging.debug(
             f"Calling action {agent_action.llm_label} with type {action.type.lower()} and argument {action.value}"
         )
-        try:
-            input_interface = T.get_type_hints(agent_action.interface)["input"](
-                **{"action": action.value}
-            )
-            await agent_action.connector.connect(input_interface)
-            return input_interface
-        except Exception as e:
-            logging.error(f"Error executing action {agent_action.llm_label}: {e}")
-            try:
-                return T.get_type_hints(agent_action.interface)["input"](
-                    **{"action": "idle"}
-                )
-            except Exception as fallback_error:
-                logging.error(f"Failed to create fallback interface: {fallback_error}")
-                return None
+        input_interface = T.get_type_hints(agent_action.interface)["input"](
+            **{"action": action.value}
+        )
+        await agent_action.connector.connect(input_interface)
+        return input_interface
 
     def stop(self):
         """

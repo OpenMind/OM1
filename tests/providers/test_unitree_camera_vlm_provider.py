@@ -6,6 +6,11 @@ import cv2
 import numpy as np
 import pytest
 
+from providers.unitree_camera_vlm_provider import (
+    UnitreeCameraVideoStream,
+    UnitreeCameraVLMProvider,
+)
+
 
 class MockVideoClient:
     def __init__(self):
@@ -23,13 +28,9 @@ class MockVideoClient:
 
 @pytest.fixture
 def mock_video_client():
-    """Mock VideoClient for unitree camera tests."""
     mock_client = MockVideoClient()
-    # Patch VideoClient in the provider module (it may not exist if import failed)
     with patch(
-        "providers.unitree_camera_vlm_provider.VideoClient",
-        MockVideoClient,
-        create=True,
+        "providers.unitree_camera_vlm_provider.VideoClient", return_value=mock_client
     ):
         yield mock_client
 
@@ -44,27 +45,9 @@ def fps():
     return 30
 
 
-@pytest.fixture
-def unitree_provider_modules(mock_video_client):
-    """Import unitree provider modules after mocking VideoClient."""
-    from providers.unitree_camera_vlm_provider import (
-        UnitreeCameraVideoStream,
-        UnitreeCameraVLMProvider,
-    )
-
-    return UnitreeCameraVideoStream, UnitreeCameraVLMProvider
-
-
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    """Reset singleton instance before each test."""
-    try:
-        from providers.unitree_camera_vlm_provider import UnitreeCameraVLMProvider
-
-        UnitreeCameraVLMProvider._instance = None
-    except (ImportError, AttributeError):
-        # If import fails, singleton reset is not needed
-        pass
+    UnitreeCameraVLMProvider._instance = None
     yield
 
 
@@ -85,8 +68,7 @@ def mock_dependencies():
         yield mock_ws_client_class, mock_video_stream_class, mock_ws_client, mock_video_stream
 
 
-def test_video_stream_initialization(mock_video_client, unitree_provider_modules):
-    UnitreeCameraVideoStream, _ = unitree_provider_modules
+def test_video_stream_initialization(mock_video_client):
     callback = Mock()
     stream = UnitreeCameraVideoStream(frame_callback=callback, fps=30)
 
@@ -97,8 +79,7 @@ def test_video_stream_initialization(mock_video_client, unitree_provider_modules
     assert stream.video_client.init_called
 
 
-def test_video_stream_processing(mock_video_client, unitree_provider_modules):
-    UnitreeCameraVideoStream, _ = unitree_provider_modules
+def test_video_stream_processing(mock_video_client):
     callback = Mock()
     stream = UnitreeCameraVideoStream(frame_callback=callback, fps=30)
 
@@ -119,8 +100,7 @@ def test_video_stream_processing(mock_video_client, unitree_provider_modules):
         pytest.fail(f"Failed to decode base64 string: {e}")
 
 
-def test_video_stream_resize(mock_video_client, unitree_provider_modules):
-    UnitreeCameraVideoStream, _ = unitree_provider_modules
+def test_video_stream_resize(mock_video_client):
     callback = Mock()
     stream = UnitreeCameraVideoStream(frame_callback=callback, fps=30)
 
@@ -145,10 +125,7 @@ def test_video_stream_resize(mock_video_client, unitree_provider_modules):
     assert height <= 480
 
 
-def test_vlm_provider_singleton_pattern(
-    mock_video_client, ws_url, fps, unitree_provider_modules
-):
-    _, UnitreeCameraVLMProvider = unitree_provider_modules
+def test_vlm_provider_singleton_pattern(mock_video_client, ws_url, fps):
     provider1 = UnitreeCameraVLMProvider(ws_url, fps=fps)
     provider2 = UnitreeCameraVLMProvider(ws_url, fps=fps)
 

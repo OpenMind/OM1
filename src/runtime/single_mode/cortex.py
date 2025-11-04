@@ -498,6 +498,7 @@ class CortexRuntime:
 
             # Trigger the simulators
             await self.simulator_orchestrator.promise(output.actions)
+
             # Trigger the actions
             await self.action_orchestrator.promise(output.actions)
         except Exception as error:
