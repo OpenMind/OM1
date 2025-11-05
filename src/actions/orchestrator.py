@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+import time
 import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
@@ -59,6 +60,7 @@ class ActionOrchestrator:
                 action.connector.tick()
             except Exception as e:
                 logging.error(f"Error in connector {action.llm_label}: {e}")
+                time.sleep(0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
