@@ -293,4 +293,6 @@ class FacePresenceProvider:
             unknown_faces = int(data.get("unknown_now", 0) or 0)
 
         ts = float(data.get("server_ts", time.time()))
-        return PresenceSnapshot(ts=ts, names=names, unknown_faces=unknown_faces, raw=data)
+        return PresenceSnapshot(
+            ts=ts, names=names, unknown_faces=unknown_faces, raw=data
+        )
