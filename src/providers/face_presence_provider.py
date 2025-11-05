@@ -296,3 +296,8 @@ class FacePresenceProvider:
         return PresenceSnapshot(
             ts=ts, names=names, unknown_faces=unknown_faces, raw=data
         )
+
+    @property
+    def unknown_faces(self) -> int:
+        """Return the most recent count of unknown faces detected."""
+        return self.unknown_faces
