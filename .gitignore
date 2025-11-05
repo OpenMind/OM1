@@ -1,4 +1,6 @@
-# Python-generated files
+# -----------------------------
+# Python
+# -----------------------------
 __pycache__/
 *.py[oc]
 build/
@@ -8,38 +10,58 @@ wheels/
 .ruff_cache/
 .pytest_cache/
 
-# Virtual environments
-.venv
-
-# Environment variables
-.env
+# -----------------------------
+# Virtual Environments
+# -----------------------------
+.venv/
+env/
+venv/
 *.lock
 
-# IDE
-.vscode/
+# -----------------------------
+# Environment & Config
+# -----------------------------
+.env
+config/iris_ai.json
+config/memory
+config/.runtime.json5
 
-# Debug files
+# -----------------------------
+# IDE / Editors
+# -----------------------------
+.vscode/
+.idea/
+
+# -----------------------------
+# OS Specific
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# Logs / Debug / Temporary
+# -----------------------------
+logs/
 front_image.jpg
 turtlebot4_debug.jpg
 turtlebot.jpg
-
-# Mac specific lint
-.DS_Store
-config/iris_ai.json
+*.log
 launch.sh
 
-# AI models
-*.pt
-
-# Logs
-logs/
-
-# Data files
+# -----------------------------
+# Data / Artifacts
+# -----------------------------
 *.jsonl
+*.pt
 *.jpg
 /zenohdb
 /locations
 
-# Mode system state files
-config/memory
-config/.runtime.json5
+# -----------------------------
+# Distribution / Packaging
+# -----------------------------
+*.tar.gz
+*.zip
+*.whl
+*.egg
+MANIFEST
