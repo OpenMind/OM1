@@ -42,6 +42,8 @@ logs/
 
 # Mode system state files
 config/memory
+
 # Ignore large binary files
 yolov8n.pt
 libzenoh_backend_fs.dylib
+config/.runtime.json5

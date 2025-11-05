@@ -222,7 +222,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     runtime_config = build_runtime_config_from_test_case(config)
 
     # Create a CortexRuntime instance
-    cortex = CortexRuntime(runtime_config)
+    cortex = CortexRuntime(runtime_config, "test_config", hot_reload=False)
 
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}

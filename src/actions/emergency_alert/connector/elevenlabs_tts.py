@@ -154,16 +154,16 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.info(f"Received TTS Control Status message: {tts_status}")
+        logging.debug(f"Received TTS Control Status message: {tts_status}")
 
         code = tts_status.code
 
         # Enable the TTS
         if code == 1:
             self.tts_enabled = True
-            logging.info("TTS Enabled")
+            logging.debug("TTS Enabled")
 
         # Disable the TTS
         if code == 0:
             self.tts_enabled = False
-            logging.info("TTS Disabled")
+            logging.debug("TTS Disabled")
