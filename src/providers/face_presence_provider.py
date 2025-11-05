@@ -32,7 +32,7 @@ class PresenceSnapshot:
 
     ts: float
     names: List[str]
-    unknown: int
+    unknown_faces: int
     raw: Dict
 
     def to_text(self) -> str:
@@ -60,7 +60,7 @@ class PresenceSnapshot:
                 clean.append(n)
 
         k = len(clean)
-        u = int(self.unknown or 0)
+        u = int(self.unknown_faces or 0)
 
         def join_names(ns: List[str]) -> str:
             if not ns:
@@ -130,6 +130,7 @@ class FacePresenceProvider:
         self.prefer_recent = bool(prefer_recent)
         self.unknown_frac_threshold = float(unknown_frac_threshold)
         self.unknown_min_count = int(unknown_min_count)
+        self.min_obs_window = int(min_obs_window)
 
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -270,9 +271,9 @@ class FacePresenceProvider:
                     frames_recent >= self.min_obs_window
                     and unknown_frac < self.unknown_frac_threshold
                 ):
-                    unknown = 0  # suppress brief/rare unknowns
+                    unknown_faces = 0  # suppress brief/rare unknowns
                 else:
-                    unknown = unknown_peak  # report the maximum unknown seen in any single frame
+                    unknown_faces = unknown_peak  # report the maximum unknown seen in any single frame
             else:
                 now = data.get("now", []) or []
                 seen, names_fallback = set(), []
@@ -281,7 +282,7 @@ class FacePresenceProvider:
                         seen.add(n)
                         names_fallback.append(n)
                 names = names_fallback
-                unknown = int(data.get("unknown_now", 0) or 0)
+                unknown_faces = int(data.get("unknown_now", 0) or 0)
         else:
             now = data.get("now", []) or []
             seen, names = set(), []
@@ -289,7 +290,7 @@ class FacePresenceProvider:
                 if n and n != "unknown" and n not in seen:
                     seen.add(n)
                     names.append(n)
-            unknown = int(data.get("unknown_now", 0) or 0)
+            unknown_faces = int(data.get("unknown_now", 0) or 0)
 
         ts = float(data.get("server_ts", time.time()))
-        return PresenceSnapshot(ts=ts, names=names, unknown=unknown, raw=data)
+        return PresenceSnapshot(ts=ts, names=names, unknown_faces=unknown_faces, raw=data)
