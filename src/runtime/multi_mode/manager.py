@@ -150,15 +150,6 @@ class ModeManager:
         except Exception as e:
             logging.error(f"Error creating runtime config file: {e}")
 
-    def update_runtime_config(self):
-        """
-        Update the runtime config file with current configuration.
-
-        This should be called whenever the configuration changes
-        to keep the runtime config file in sync.
-        """
-        self._create_runtime_config_file()
-
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         """
         Set the main event loop reference for thread-safe task scheduling.
@@ -487,9 +478,6 @@ class ModeManager:
             await self._notify_transition_callbacks(from_mode, target_mode)
 
             self._save_mode_state()
-
-            # Update runtime config file to reflect the new state
-            self.update_runtime_config()
 
             return True
 

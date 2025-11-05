@@ -404,6 +404,9 @@ class ModeCortexRuntime:
         """
         Execute the main cortex processing loop with mode awareness.
         """
+        current_mode = self.mode_manager.current_mode_name
+        logging.info(f"Starting cortex loop for mode: {current_mode}")
+
         try:
             while True:
                 if not self.sleep_ticker_provider.skip_sleep and self.current_config:
@@ -417,10 +420,10 @@ class ModeCortexRuntime:
                 await self._tick()
                 self.sleep_ticker_provider.skip_sleep = False
         except asyncio.CancelledError:
-            logging.info("Cortex loop cancelled, exiting gracefully")
+            logging.info(f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully")
             raise
         except Exception as e:
-            logging.error(f"Unexpected error in cortex loop: {e}")
+            logging.error(f"Unexpected error in cortex loop for mode '{current_mode}': {e}")
             raise
 
     async def _tick(self) -> None:
@@ -452,6 +455,10 @@ class ModeCortexRuntime:
         output = await self.current_config.cortex_llm.ask(prompt)
         if output is None:
             logging.debug("No output from LLM")
+            return
+
+        if self._is_reloading:
+            logging.debug("Skipping tick during config reload")
             return
 
         if self.simulator_orchestrator:
@@ -565,8 +572,6 @@ class ModeCortexRuntime:
 
             self.mode_config = new_mode_config
             self.mode_manager.config = new_mode_config
-
-            self.mode_manager.update_runtime_config()
 
             if current_mode not in new_mode_config.modes:
                 logging.warning(
