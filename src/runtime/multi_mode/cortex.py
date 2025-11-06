@@ -420,10 +420,14 @@ class ModeCortexRuntime:
                 await self._tick()
                 self.sleep_ticker_provider.skip_sleep = False
         except asyncio.CancelledError:
-            logging.info(f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully")
+            logging.info(
+                f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully"
+            )
             raise
         except Exception as e:
-            logging.error(f"Unexpected error in cortex loop for mode '{current_mode}': {e}")
+            logging.error(
+                f"Unexpected error in cortex loop for mode '{current_mode}': {e}"
+            )
             raise
 
     async def _tick(self) -> None:
