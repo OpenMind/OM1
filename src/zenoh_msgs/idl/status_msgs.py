@@ -116,5 +116,5 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
 @dataclass
 class ASRText(IdlStruct, typename="ASRText"):
     header: Header
-    text: String
+    text: str
     is_final: uint8

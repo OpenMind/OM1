@@ -12,7 +12,7 @@ from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
-from zenoh_msgs import ASRText, String, open_zenoh_session, prepare_header
+from zenoh_msgs import ASRText, open_zenoh_session, prepare_header
 
 LANGUAGE_CODE_MAP: dict = {
     "english": "en-US",
@@ -138,7 +138,7 @@ class GoogleASRInput(FuserInput[str]):
                         try:
                             asr_msg = ASRText(
                                 header=prepare_header(str(uuid4())),
-                                text=String(asr_reply),
+                                text=asr_reply,
                                 is_final=1,
                             )
                             self.asr_publisher.put(asr_msg.serialize())
