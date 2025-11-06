@@ -1,0 +1,184 @@
+/* === General Page Styling === */
+body {
+  margin: 0;
+  background-color: #000;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  height: 100vh;
+}
+
+/* === Wallet Main Section (Left) === */
+.wallet-section {
+  flex: 1;
+  text-align: center;
+  padding-top: 40px;
+}
+
+/* === Header with OpenMind Logo === */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+}
+
+.brand-text {
+  color: #00ffcc;
+  font-weight: bold;
+  font-size: 22px;
+}
+
+/* === Title and Buttons === */
+.title {
+  color: #00ff00;
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+
+.connect-btn,
+.sign-btn,
+.send-btn,
+.disconnect-btn,
+.switch-buttons button {
+  margin: 5px;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.connect-btn {
+  background-color: #222;
+  color: #00ffcc;
+}
+
+.connect-btn:hover {
+  background-color: #333;
+}
+
+.sign-btn {
+  background-color: #00cc00;
+  color: #fff;
+}
+
+.sign-btn:hover {
+  background-color: #00ff66;
+}
+
+.send-box input {
+  display: block;
+  margin: 8px auto;
+  padding: 8px;
+  width: 80%;
+  border-radius: 5px;
+  border: none;
+  text-align: center;
+}
+
+.send-btn {
+  background-color: #008800;
+  color: #fff;
+}
+
+.send-btn:hover {
+  background-color: #00aa00;
+}
+
+.switch-buttons {
+  margin-top: 10px;
+}
+
+.switch-buttons button {
+  background-color: #fff;
+  color: #000;
+}
+
+.switch-buttons button:hover {
+  background-color: #ddd;
+}
+
+.disconnect-btn {
+  background-color: #ff3333;
+  color: white;
+  margin-top: 10px;
+}
+
+.disconnect-btn:hover {
+  background-color: #ff6666;
+}
+
+/* === Right Sidebar for Transactions === */
+.tx-panel {
+  width: 300px;
+  background-color: #111;
+  padding: 20px;
+  border-left: 2px solid #333;
+  overflow-y: auto;
+}
+
+.tx-panel h3 {
+  color: #00ffcc;
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.tx-panel p {
+  color: #999;
+}
+
+.tx-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tx-panel li {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.tx-panel a {
+  color: #00ff66;
+  text-decoration: none;
+}
+
+.tx-panel a:hover {
+  text-decoration: underline;
+}
+
+
+.signed-text {
+  color: #00ff99;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+
+.signed-text {
+  color: #00ff99;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+
+.balance {
+  color: #00ffcc;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+
