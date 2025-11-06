@@ -1,38 +1,59 @@
 ## Contributing to OM1
 
-We welcome contributions from the community!  OM1 is an open-source project, and we appreciate your help in making it better.  Whether you're fixing bugs, adding features, improving documentation, or suggesting new ideas, your contributions are valuable.
+We welcome contributions from the community! **OM1** is an open-source project, and we appreciate your help in making it better. Whether you’re fixing bugs, adding features, improving documentation, or suggesting ideas — your input is valuable.
 
-Before contributing, please take a moment to read through the following guidelines. This helps streamline the process and ensures everyone is on the same page.
+Before you contribute, please read these guidelines. They help ensure a smooth process and consistent collaboration.
 
-**Ways to Contribute:**
+---
 
-*   **Report Bugs:** If you find a bug, please [open an issue](https://github.com/OpenmindAGI/OM1/issues) on GitHub. Be sure to include:
-    *   A clear and concise description of the bug.
-    *   Steps to reproduce the bug.
-    *   Your operating system and Python version.
-    *   Relevant error messages or stack traces.
-    *   Screenshots (if applicable).
+### 💡 Ways to Contribute
 
-*   **Suggest Features:**  Have an idea for a new feature or improvement?  [Open an issue](https://github.com/OpenmindAGI/OM1/issues) on GitHub and describe your suggestion. Explain the motivation behind the feature and how it would benefit OM1 users.  We encourage discussion on feature requests before implementation.
+#### 🐛 Report Bugs
+If you find a bug, please [open an issue](https://github.com/OpenmindAGI/OM1/issues) with:
+- A clear, concise description.
+- Steps to reproduce.
+- Your OS and Python version.
+- Relevant error messages or stack traces.
+- Screenshots, if applicable.
 
-*   **Improve Documentation:**  Good documentation is crucial.  If you find anything unclear, incomplete, or outdated in the documentation, please submit a pull request with your changes. This includes the README, docstrings, and any other documentation files. Visit [OM1 docs](https://docs.openmind.org/), and [source code](https://github.com/OpenmindAGI/OM1/tree/main/docs).
+#### 💡 Suggest Features
+Got an idea? [Open an issue](https://github.com/OpenmindAGI/OM1/issues) and describe:
+- The problem or motivation.
+- How it benefits users.
+- Optional: early design thoughts.
 
-*   **Fix Bugs:** Browse the [open issues](https://github.com/OpenmindAGI/OM1/issues) and look for bugs labeled "bug" or "help wanted." If you want to tackle a bug, comment on the issue to let us know you're working on it.
+We encourage discussion before implementation.
 
-*   **Implement Features:**  Check the [open issues](https://github.com/OpenmindAGI/OM1/issues) for features labeled "enhancement" or "bounty" or "help wanted".  It's best to discuss your approach in the issue comments *before* starting significant development.
+#### 📝 Improve Documentation
+If anything is unclear, outdated, or missing, please submit a pull request!  
+Docs live in the [OM1 Docs](https://docs.openmind.org/) and [source code](https://github.com/OpenmindAGI/OM1/tree/main/docs).
 
-*   **Write Tests:**  OM1 aims for high test coverage.  If you're adding new code, please include corresponding tests. If you find areas with insufficient test coverage, adding tests is a great contribution.
+#### 🔧 Fix Bugs
+Browse [open issues](https://github.com/OpenmindAGI/OM1/issues) labeled `bug` or `help wanted`.  
+Comment on the issue to claim it.
 
-*   **Code Review:** Reviewing pull requests is a valuable way to contribute.  It helps ensure code quality and maintainability.
+#### 🚀 Implement Features
+Look for issues labeled `enhancement`, `bounty`, or `help wanted`.  
+Discuss your plan in comments before coding.
 
-**Contribution Workflow (Pull Requests):**
+#### 🧪 Write Tests
+We aim for **high test coverage**. Add or improve tests in areas that need them.
 
-1.  **Fork the Repository:**  Click the "Fork" button on the top-right of the OM1 repository page to create your own copy.
+#### 👀 Code Review
+Reviewing pull requests helps maintain quality and consistency — and is highly appreciated!
 
-2.  **Clone Your Fork with CLI:**
-    ```bash
-    git clone [https://github.com/](https://github.com/)<your-username>/OM1.git
-    cd OM1
+---
+
+### 🧭 Contribution Workflow
+
+1. **Fork the Repository**  
+   Click **Fork** on the [OM1 repo](https://github.com/OpenmindAGI/OM1/).
+
+2. **Clone Your Fork**
+   ```bash
+   git clone https://github.com/<your-username>/OM1.git
+   cd OM1
+
     ```
     (Replace `<your-username>` with your GitHub username.)
 
