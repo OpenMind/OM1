@@ -137,8 +137,6 @@ class FacePresenceProvider:
         self._callbacks: List = []
         self._cb_lock = threading.Lock()
         self._session = requests.Session()
-
-        # Backing fields for public properties
         self._unknown_faces: int = 0
 
     def set_recent_sec(self, sec: float) -> None:
@@ -297,7 +295,6 @@ class FacePresenceProvider:
 
         ts = float(data.get("server_ts", time.time()))
 
-        # update backing field for the public property
         self._unknown_faces = int(unknown_faces)
 
         return PresenceSnapshot(
