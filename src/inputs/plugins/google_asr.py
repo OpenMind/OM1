@@ -4,6 +4,7 @@ import logging
 import time
 from queue import Empty, Queue
 from typing import Dict, List, Optional
+from uuid import uuid4
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
@@ -11,7 +12,7 @@ from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
-from providers.zenoh_publisher_provider import ZenohPublisherProvider
+from zenoh_msgs import ASRText, String, open_zenoh_session, prepare_header
 
 LANGUAGE_CODE_MAP: dict = {
     "english": "en-US",
@@ -101,14 +102,19 @@ class GoogleASRInput(FuserInput[str]):
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
-        # Initialize Zenoh publisher
+        # Initialize Zenoh session
+        self.asr_topic = "om/asr/text"
+        self.session = None
+        self.asr_publisher = None
+
         try:
-            self.zenoh_asr_publisher = ZenohPublisherProvider(topic="om/asr/text")
-            self.zenoh_asr_publisher.start()
+            self.session = open_zenoh_session()
+            self.asr_publisher = self.session.declare_publisher(self.asr_topic)
             logging.info("Zenoh ASR publisher initialized on topic 'om/asr/text'")
         except Exception as e:
             logging.warning(f"Could not initialize Zenoh for ASR broadcast: {e}")
-            self.zenoh_asr_publisher = None
+            self.session = None
+            self.asr_publisher = None
 
     def _handle_asr_message(self, raw_message: str):
         """
@@ -127,10 +133,15 @@ class GoogleASRInput(FuserInput[str]):
                     self.message_buffer.put(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
 
-                    # Publish ASR text to Zenoh
-                    if self.zenoh_asr_publisher:
+                    # Publish to Zenoh
+                    if self.asr_publisher:
                         try:
-                            self.zenoh_asr_publisher.add_pending_message(asr_reply)
+                            asr_msg = ASRText(
+                                header=prepare_header(str(uuid4())),
+                                text=String(asr_reply),
+                                is_final=1,
+                            )
+                            self.asr_publisher.put(asr_msg.serialize())
                             logging.info(f"Published ASR to Zenoh: {asr_reply}")
                         except Exception as e:
                             logging.warning(f"Failed to publish ASR to Zenoh: {e}")
@@ -218,3 +229,14 @@ INPUT: {self.descriptor_for_LLM}
         # Reset messages buffer
         self.messages = []
         return result
+
+    def stop(self):
+        """
+        Stop the ASR input.
+        """
+        if self.asr:
+            self.asr.stop()
+
+        if self.session:
+            self.session.close()
+            logging.info("Zenoh ASR session closed")

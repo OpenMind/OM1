@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from pycdr2 import IdlStruct
-from pycdr2.types import int8
+from pycdr2.types import int8, uint8
 
 from .std_msgs import Header, String
 
@@ -111,3 +111,10 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
     request_id: String
     code: int8
     status: String
+
+
+@dataclass
+class ASRText(IdlStruct, typename="ASRText"):
+    header: Header
+    text: String
+    is_final: uint8
