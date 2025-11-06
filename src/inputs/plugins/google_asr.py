@@ -101,7 +101,7 @@ class GoogleASRInput(FuserInput[str]):
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
-        # Initialize Zenoh publisher 
+        # Initialize Zenoh publisher
         try:
             self.zenoh_asr_publisher = ZenohPublisherProvider(topic="om/asr/text")
             self.zenoh_asr_publisher.start()
@@ -126,7 +126,7 @@ class GoogleASRInput(FuserInput[str]):
                 if len(asr_reply.split()) > 1:
                     self.message_buffer.put(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
-                    
+
                     # Publish ASR text to Zenoh
                     if self.zenoh_asr_publisher:
                         try:
