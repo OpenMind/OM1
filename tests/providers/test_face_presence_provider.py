@@ -1,5 +1,3 @@
-# tests/test_face_presence_provider.py
-
 from providers.face_presence_provider import (
     FacePresenceProvider,
     PresenceSnapshot,
