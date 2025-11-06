@@ -1,7 +1,4 @@
-from providers.face_presence_provider import (
-    FacePresenceProvider,
-    PresenceSnapshot,
-)
+from providers.face_presence_provider import FacePresenceProvider, PresenceSnapshot
 
 
 class _FakeResp:
