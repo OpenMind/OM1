@@ -11,6 +11,7 @@ from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
+from providers.zenoh_publisher_provider import ZenohPublisherProvider
 
 LANGUAGE_CODE_MAP: dict = {
     "english": "en-US",
@@ -100,6 +101,15 @@ class GoogleASRInput(FuserInput[str]):
         # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
+        # Initialize Zenoh publisher 
+        try:
+            self.zenoh_asr_publisher = ZenohPublisherProvider(topic="om/asr/text")
+            self.zenoh_asr_publisher.start()
+            logging.info("Zenoh ASR publisher initialized on topic 'om/asr/text'")
+        except Exception as e:
+            logging.warning(f"Could not initialize Zenoh for ASR broadcast: {e}")
+            self.zenoh_asr_publisher = None
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages.
@@ -116,6 +126,14 @@ class GoogleASRInput(FuserInput[str]):
                 if len(asr_reply.split()) > 1:
                     self.message_buffer.put(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
+                    
+                    # Publish ASR text to Zenoh
+                    if self.zenoh_asr_publisher:
+                        try:
+                            self.zenoh_asr_publisher.add_pending_message(asr_reply)
+                            logging.info(f"Published ASR to Zenoh: {asr_reply}")
+                        except Exception as e:
+                            logging.warning(f"Failed to publish ASR to Zenoh: {e}")
         except json.JSONDecodeError:
             pass
 
