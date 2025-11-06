@@ -18,6 +18,12 @@ LANGUAGE_CODE_MAP: dict = {
     "german": "de-DE",
     "french": "fr-FR",
     "japanese": "ja-JP",
+    "korean": "ko-KR",
+    "spanish": "es-ES",
+    "italian": "it-IT",
+    "portuguese": "pt-BR",
+    "russian": "ru-RU",
+    "arabic": "ar-SA",
 }
 
 

@@ -45,13 +45,18 @@ class RuntimeConfig:
     # Optional Ethernet adapter setting for Unitree Robots
     unitree_ethernet: Optional[str] = None
 
+    # Optional mode information for multi-mode runtime configurations
+    mode: Optional[str] = None
+
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
         """Load a runtime configuration from a file."""
         return load_config(config_name)
 
 
-def load_config(config_name: str) -> RuntimeConfig:
+def load_config(
+    config_name: str, config_source_path: Optional[str] = None
+) -> RuntimeConfig:
     """
     Load and parse a runtime configuration from a JSON file.
 
@@ -59,6 +64,8 @@ def load_config(config_name: str) -> RuntimeConfig:
     ----------
     config_name : str
         Name of the configuration file (without .json extension)
+    config_source_path : Optional[str]
+        Optional path to the configuration file to load. If not provided, the default path based on config_name will be used.
 
     Returns
     -------
@@ -78,8 +85,12 @@ def load_config(config_name: str) -> RuntimeConfig:
     ValueError
         If configuration values are invalid (e.g., negative hertz)
     """
-    config_path = os.path.join(
-        os.path.dirname(__file__), "../../../config", config_name + ".json5"
+    config_path = (
+        os.path.join(
+            os.path.dirname(__file__), "../../../config", config_name + ".json5"
+        )
+        if config_source_path is None
+        else config_source_path
     )
 
     with open(config_path, "r+") as f:
@@ -232,6 +243,7 @@ def add_meta(
     g_ut_eth: Optional[str],
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
+    g_mode: Optional[str] = None,
 ) -> dict[str, str]:
     """
     Add an API key and Robot configuration to a runtime configuration.
@@ -262,7 +274,8 @@ def add_meta(
         config["URID"] = g_URID
     if "robot_ip" not in config and g_robot_ip is not None:
         config["robot_ip"] = g_robot_ip
-    # logging.info(f"config after {config}")
+    if "mode" not in config and g_mode is not None:
+        config["mode"] = g_mode
     return config
 
 

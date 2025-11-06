@@ -22,28 +22,20 @@ def sample_mode_configs():
             name="default",
             display_name="Default Mode",
             description="Default operational mode",
-            system_prompt_base="You are a helpful assistant.",
-            hertz=1.0,
-            entry_message="Welcome to default mode",
-            exit_message="Leaving default mode",
+            system_prompt_base="You are a test agent",
             timeout_seconds=300.0,
         ),
         "advanced": ModeConfig(
             name="advanced",
             display_name="Advanced Mode",
-            description="Advanced operational mode",
-            system_prompt_base="You are an expert assistant.",
-            hertz=2.0,
-            entry_message="Entering advanced mode",
-            exit_message="Exiting advanced mode",
+            description="Advanced test mode",
+            system_prompt_base="You are an advanced test agent",
         ),
         "emergency": ModeConfig(
             name="emergency",
             display_name="Emergency Mode",
-            description="Emergency operational mode",
-            system_prompt_base="You are in emergency mode.",
-            hertz=5.0,
-            entry_message="EMERGENCY MODE ACTIVATED",
+            description="Emergency test mode",
+            system_prompt_base="EMERGENCY PROTOCOL ACTIVATED",
         ),
     }
 
@@ -93,7 +85,6 @@ def sample_system_config(sample_mode_configs, sample_transition_rules):
         default_mode="default",
         config_name="test_config",
         allow_manual_switching=True,
-        transition_announcement=True,
         mode_memory_enabled=True,
         api_key="test_api_key",
         robot_ip="192.168.1.100",
@@ -215,24 +206,24 @@ class TestModeManager:
 
         await mode_manager._notify_transition_callbacks("from", "to")
 
-    def test_check_time_based_transitions_no_timeout(self, mode_manager):
+    async def test_check_time_based_transitions_no_timeout(self, mode_manager):
         """Test time-based transitions when current mode has no timeout."""
-        result = mode_manager.check_time_based_transitions()
+        result = await mode_manager.check_time_based_transitions()
         assert result is None
 
-    def test_check_time_based_transitions_within_timeout(self, mode_manager):
+    async def test_check_time_based_transitions_within_timeout(self, mode_manager):
         """Test time-based transitions within timeout period."""
         mode_manager.config.modes["default"].timeout_seconds = 3600.0
-        result = mode_manager.check_time_based_transitions()
+        result = await mode_manager.check_time_based_transitions()
         assert result is None
 
-    def test_check_time_based_transitions_exceeded_timeout(self, mode_manager):
+    async def test_check_time_based_transitions_exceeded_timeout(self, mode_manager):
         """Test time-based transitions when timeout is exceeded."""
         mode_manager.state.current_mode = "advanced"
         mode_manager.config.modes["advanced"].timeout_seconds = 0.1
         mode_manager.state.mode_start_time = time.time() - 1.0
 
-        result = mode_manager.check_time_based_transitions()
+        result = await mode_manager.check_time_based_transitions()
         assert result == "default"
 
     def test_check_input_triggered_transitions_no_input(self, mode_manager):
@@ -501,7 +492,7 @@ class TestModeManager:
     def test_get_state_file_path(self, mode_manager):
         """Test getting state file path."""
         path = mode_manager._get_state_file_path()
-        assert path.endswith(".test_config.json5")
+        assert path.endswith(".test_config.memory.json5")
         assert "memory" in path
 
     def test_save_mode_state_disabled(self, mode_manager):

@@ -64,8 +64,6 @@ def sample_mode_config():
         description="A test mode for unit testing",
         system_prompt_base="You are a test assistant.",
         hertz=2.0,
-        entry_message="Entering test mode",
-        exit_message="Exiting test mode",
         timeout_seconds=300.0,
         remember_locations=True,
         save_interactions=True,
@@ -80,7 +78,6 @@ def sample_system_config():
         default_mode="default",
         config_name="test_config",
         allow_manual_switching=True,
-        transition_announcement=True,
         mode_memory_enabled=True,
         api_key="test_api_key",
         robot_ip="192.168.1.100",
@@ -149,8 +146,6 @@ class TestModeConfig:
         assert config.description == "A test mode for unit testing"
         assert config.system_prompt_base == "You are a test assistant."
         assert config.hertz == 2.0
-        assert config.entry_message == "Entering test mode"
-        assert config.exit_message == "Exiting test mode"
         assert config.timeout_seconds == 300.0
         assert config.remember_locations is True
         assert config.save_interactions is True
@@ -164,8 +159,6 @@ class TestModeConfig:
             system_prompt_base="Basic prompt",
         )
         assert config.hertz == 1.0
-        assert config.entry_message is None
-        assert config.exit_message is None
         assert config.timeout_seconds is None
         assert config.remember_locations is False
         assert config.save_interactions is False
@@ -243,7 +236,6 @@ class TestModeSystemConfig:
         assert config.default_mode == "default"
         assert config.config_name == "test_config"
         assert config.allow_manual_switching is True
-        assert config.transition_announcement is True
         assert config.mode_memory_enabled is True
         assert config.api_key == "test_api_key"
         assert config.robot_ip == "192.168.1.100"
@@ -260,7 +252,6 @@ class TestModeSystemConfig:
         )
         assert config.config_name == ""
         assert config.allow_manual_switching is True
-        assert config.transition_announcement is True
         assert config.mode_memory_enabled is True
         assert config.api_key is None
         assert config.robot_ip is None

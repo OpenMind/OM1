@@ -40,7 +40,7 @@ roslaunch go2_description go2_rviz.launch
 
 ```
 
-## When used for isaac gym or other similiar engine 
+## When used for isaac gym or other similar engine 
 
 Collision parameters in urdf can be amended to better train the robot:
 

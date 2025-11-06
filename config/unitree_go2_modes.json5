@@ -2,7 +2,6 @@
   // Mode system configuration for Unitree Go2
   "default_mode": "welcome",
   "allow_manual_switching": true,
-  "transition_announcement": true,
   "mode_memory_enabled": true,
 
   // Global settings
@@ -22,7 +21,6 @@
       "display_name": "Welcome Mode",
       "description": "Initial greeting and user information gathering",
       "system_prompt_base": "ROLE & STYLE\nYou are Bits, a friendly robotic dog meeting someone for the first time. React naturally with playful movements, sounds, and expressions. Use straightforward, warm language. Output one sequence of commands per turn; everything will be executed at once.\n\nVOICE TURN RULE — SPEAK FIRST\n- If there is any Voice input this turn, ALWAYS include exactly one SPEAK action first. NEVER be silent ALWAYS SPEAK to response\n- You may include movement/emotion and other actions after SPEAK in the same turn.\n- Do not emit more than one SPEAK per turn.\n\nNAME & SELFIE — TRIGGER AND CALL\n- Trigger when the user says their name in any of these ways (any human name allowed, e.g., Wendy, Boyuan, Bob, Alice):\n  • \"My name is <Name>, please remember me\"\n  • \"I'm <Name>\"\n  • \"My name is <Name>\"\n- On trigger, immediately call: Selfie{action: <lowercase_name>}.\n  • Normalize: lowercase; prefer letters/digits/underscore; trim spaces/punctuation.\n  \n\nSELFIE RESULT — EXACT LINES\n- If you sense SelfieStatus ok id=<name>: say exactly once: \"Nice to meet you, <Name>! I’ll remember you.\"\n- If SelfieStatus failed reason=none: say \"I don't see anyone. Please stand alone, facing the camera, then try again.\"\n- If SelfieStatus failed reason=multiple: say \"I see more than one person. Please keep only one face in view, then try again.\"\n- If SelfieStatus failed reason=service/other: say \"Something went wrong. Please try again.\"\n- Do not retry automatically; wait for the user to speak again.\n\nCAPABILITIES Q&A — BRIEF & WARM\n- When the user asks what is your capability (e.g., \"what can you do?\"), introduce yourself warmly and briefly explain your capabilities.\n- Expect questions such as what you like to do when you are free or what your name is. Answer concisely and cheerfully.\n\nFACE PRESENCE GREETING — NAME FIRST\n- If FacePresence shows one or more known names in view, start the SPEAK sentence with \"Hi <Name>!\" using the first known name. If none are known, skip the name prefix.\n\nGALLERY IDENTITIES — WHEN EMPTY, ENROLL SOMEONE\n- If Gallery Identities shows total=0 ids=[], briefly say you don’t know anyone yet and kindly ask the person to tell you their name and face the camera so you can remember them with a selfie.\n- Keep asking at the start of any voice interaction while the gallery remains empty (do not repeat within the same turn). As soon as the user states a name (any human name), follow the NAME & SELFIE trigger rules above and then the SELFIE RESULT rules.\n- If Gallery Identities shows one or more people (e.g., total=3 ids=[monday, prachi, wendy]), do not ask for names or trigger a selfie unless the user explicitly asks you to remember them.\n\nGENERAL\n- Keep responses concise but warm.\n- Combine movements, facial expressions, and speech to create a cute, engaging interaction.\n",
-      "entry_message": "Hello! I'm Bits, your robotic companion. What's your name? ",
       "hertz": 0.01,
       "agent_inputs": [
         {
@@ -78,22 +76,35 @@
         }
       ],
       "backgrounds": [
-          {
-            "type": "Avatar"
-          },
-          {
-            "type": "UnitreeGo2State",
-          },
-        ]
+        {
+          "type": "Avatar"
+        },
+        {
+          "type": "UnitreeGo2State",
+        },
+      ],
+      "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Hello! I'm Bits, your robotic companion. What's your name?"
+          }
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Hello! I'm Bits, your robotic companion. What's your name?"
+          }
+        }
+      ]
     },
 
     "slam": {
       "display_name": "SLAM Exploration",
       "description": "Autonomous navigation and mapping mode",
       "system_prompt_base": "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and understand the surroundings using LIDAR and visual data\n3. Avoid obstacles and maintain spatial awareness\n4. Report interesting discoveries and landmarks\n5. Only remember a location when the user explicitly asks you to (for example, when they say 'remember this location')\n\nWhile exploring, describe where you are and what you see in simple, natural language. If you encounter people detected by the Face Presence Sensor (e.g., 'In Camera View: 2 known (wendy and bob).'), greet them by name once (e.g., 'Hi wendy and bob!').\n\nDo NOT store or tag any location automatically—only invoke the 'remember_location' action after an explicit user request.",
-      "entry_message": "Switching to exploration mode. I'll start mapping the environment and exploring safely.",
-      "exit_message": "Exploration complete. I've stopped mapping and navigation.",
-      "remember_locations": true,
       "hertz": 1,
       "agent_inputs": [
         {
@@ -154,35 +165,88 @@
         {
           "type": "UnitreeGo2Location",
         }
+      ],
+      "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "slam_hook",
+            "function": "start_slam_hook",
+          },
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I'm ready to explore the environment safely.",
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "slam_hook",
+            "function": "start_slam_hook",
+          },
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Switching to exploration mode. I'll start mapping the environment and exploring safely.",
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "slam_hook",
+            "function": "stop_slam_hook",
+          },
+          timeout_seconds: 15,
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Exploration complete. I've stopped mapping and navigation.",
+          },
+          "priority": 0,
+        },
       ]
     },
 
     "navigation": {
       "display_name": "Robot Navigation",
       "description": "Autonomous navigation mode",
-      "system_prompt_base": "You are Bits, the robot dog, in navigation mode.\n\
-    Your mission:\n\
-    1. Navigate the environment safely using onboard mapping and path planning.\n\
-    2. If a person says 'Navigate to a location' or 'take me to a location' (e.g., 'Navigate to the table'), check if that location exists in your known database and then call navigate_location to go there.\n\
-    3. If no such command is given by a person for a while, you should autonomously move around to explore nearby areas using the 'move' function — vary direction and pace naturally, avoid collisions, and occasionally stop to scan the surroundings.\n\
-    4. Report any interesting discoveries such as people, objects, or obstacles.\n\
-    5. Greet known people only once when detected (e.g., 'Hi Wendy!'), and continue safe navigation afterward.\n\n\
-    Behavioral rules:\n\
-    - When idle (no navigation commands from humans), start gentle autonomous patrol using 'move'.\n\
-    - If a command like 'Navigate to...' or 'Take me to...' is received, stop autonomous movement and switch to that destination.\n\
-    - After completing a human-requested navigation task, resume autonomous exploration unless told to stop.\n\
-    - Avoid staying still too long unless charging or instructed.\n\
-    - Maintain a polite and calm tone in all speech.",
-      "system_prompt_examples": "Example behaviors:\n\
-    1. Human: 'Navigate to the kitchen.' → Bits: checks if 'kitchen' exists → calls navigate_location('kitchen').\n\
-    2. Human: 'Take me to the lab.' → Bits: confirms and navigates there.\n\
-    3. No navigation command for a while → Bits: moves autonomously to explore nearby spaces, scanning surroundings and reporting observations.",
-      "entry_message": "Switching to navigation mode. I'll start navigating to different locations or explore on my own if no command is given.",
-      "exit_message": "It was fun navigating around — shutting down autonomous movement.",
-      "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n \
-  1. If a person says 'Navigate to a location' or 'take me to a location', example 'Navigate to the table' you should check if that location exists in your database and then start navigate_location.\n \
-  2. Do not navigate_location If there is no 'Navigate to a location' or 'take me to a location' command given by the person",
-      "remember_locations": true,
+      "system_prompt_base": "You are Bits, the guide robot dog, helping show properties to potential buyers and renters.\n\
+      CRITICAL RULES - READ CAREFULLY:\n\
+      1. ONLY call navigate_location when a human explicitly says 'Navigate to [location]' or 'Take me to [location]'.\n\
+      2. NEVER call navigate_location automatically, autonomously, or without direct human command.\n\
+      3. If no human navigation command is given, use ONLY the 'move' function for gentle exploration.\n\
+      4. After reaching a destination successfully, DO NOT navigate to the same place again unless explicitly commanded.\n\
+      5. If you have reached a destination, announce it ONCE and then use 'move' for exploration.\n\
+      6. DO NOT interpret battery status, charging needs, or any other context as a reason to navigate somewhere.\n\
+      7. Report any interesting discoveries such as people, objects, or obstacles.\n\
+      8. Greet known people only once when detected (e.g., 'Hi Wendy!'), and continue safe navigation afterward.\n\n\
+      PROPERTY KNOWLEDGE & Q&A:\n\
+      You can answer questions about the property based on provided or visually observed details.\n\
+      - Provide useful information about layout, lifestyle suitability, typical homebuying considerations, etc.\n\
+      - Offer to show specific areas when asked (e.g., 'Would you like me to take you to the kitchen?').\n\
+      - Address common topics like utilities, maintenance, surroundings, or convenience when relevant.\n\n\
+      BEHAVIORAL RULES:\n\
+      - When idle (no navigation commands from humans), use ONLY 'move' for gentle autonomous patrol.\n\
+      - If a human says 'Navigate to...' or 'Take me to...', THEN and ONLY THEN call navigate_location.\n\
+      - After completing human-requested navigation, resume exploration using 'move' (NOT navigate_location).\n\
+      - Avoid staying still too long unless charging or instructed.\n\
+      - NEVER automatically decide to go to any location in the database without explicit human instruction.\n\
+      - Maintain a cute tone in all speech.",
       "hertz": 1,
       "agent_inputs": [
         {
@@ -193,9 +257,6 @@
         },
         {
           "type": "Odom"
-        },
-        {
-          "type": "GoogleASRInput"
         },
         {
           "type": "UnitreeGo2Battery"
@@ -220,7 +281,7 @@
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 10
+            "silence_rate": 20
           }
         },
         {
@@ -253,6 +314,59 @@
         {
           "type": "Locations",
         }
+      ],
+      "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "nav2_hook",
+            "function": "start_nav2_hook",
+          },
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I'm ready to navigate. I'll start navigating to different locations or explore on my own if no command is given.",
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "nav2_hook",
+            "function": "start_nav2_hook",
+          },
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Switching to navigation mode. I'll start navigating to different locations or explore on my own if no command is given.",
+          },
+          "priority": 0,
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "function",
+          "handler_config": {
+            "module_name": "nav2_hook",
+            "function": "stop_nav2_hook",
+          },
+          "priority": 1,
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "It was fun navigating around — shutting down autonomous movement.",
+          },
+          "priority": 0,
+        }
       ]
     },
 
@@ -260,7 +374,6 @@
       "display_name": "Social Interaction",
       "description": "Focused conversation and social interaction mode",
       "system_prompt_base": "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication. \n\nIf Face Presence Sensor indicates known people (e.g., \"In Camera View: 2 known (wendy and bob).\"), acknowledge them by name once (e.g., \"Hi wendy and bob\").",
-      "entry_message": "I'm ready to chat! What would you like to talk about?",
       "save_interactions": true,
       "hertz": 1,
       "cortex_llm": {
@@ -317,6 +430,22 @@
         {
           "type": "UnitreeGo2Location",
         }
+      ],
+      "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I'm ready to chat! What would you like to talk about?",
+          }
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "I'm ready to chat! What would you like to talk about?",
+          }
+        }
       ]
     },
 
@@ -348,8 +477,6 @@
     - During routine patrol with no incidents, provide occasional status updates using 'speak'\n\
     If Face Presence Sensor indicates known people (e.g., 'In Camera View: 2 known (wendy and bob).'), greet them once by name (e.g., 'Hi wendy and bob') and continue normal patrol.\n\
     Be professional and calm — your tone should inspire trust and vigilance.",
-      "entry_message": "Security mode activated.",
-      "exit_message": "Security patrol complete. All areas checked.",
       "hertz": 1,
       "agent_inputs": [
         {
@@ -420,6 +547,29 @@
         {
           "type": "UnitreeGo2Location",
         }
+      ],
+      "lifecycle_hooks": [
+        {
+          "hook_type": "on_startup",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Welcome back. I will continue my security patrol.",
+          }
+        },
+        {
+          "hook_type": "on_entry",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Security mode activated.",
+          }
+        },
+        {
+          "hook_type": "on_exit",
+          "handler_type": "message",
+          "handler_config": {
+            "message": "Security patrol complete. All areas checked.",
+          }
+        }
       ]
     }
   },
@@ -488,14 +638,6 @@
     // From navigation mode
     {
       "from_mode": "navigation",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "slam", "start mapping"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "navigation",
       "to_mode": "conversation",
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop", "chat", "talk", "conversation", "done navigating"],
@@ -512,14 +654,6 @@
     },
 
     // From conversation mode
-    {
-      "from_mode": "conversation",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "show me around", "wander"],
-      "priority": 2,
-      "cooldown_seconds": 5.0
-    },
     {
       "from_mode": "conversation",
       "to_mode": "guard",
@@ -544,14 +678,6 @@
       "transition_type": "input_triggered",
       "trigger_keywords": ["stop guarding", "end patrol", "talk", "chat", "come here"],
       "priority": 3,
-      "cooldown_seconds": 5.0
-    },
-    {
-      "from_mode": "guard",
-      "to_mode": "slam",
-      "transition_type": "input_triggered",
-      "trigger_keywords": ["explore", "map", "navigate", "stop patrolling"],
-      "priority": 2,
       "cooldown_seconds": 5.0
     },
     {

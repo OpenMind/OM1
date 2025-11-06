@@ -30,8 +30,11 @@ def modes(config_name: str) -> None:
             f"Manual Switching: {'Enabled' if mode_config.allow_manual_switching else 'Disabled'}"
         )
         print(
-            f"Announcements: {'Enabled' if mode_config.transition_announcement else 'Disabled'}"
+            f"Mode Memory: {'Enabled' if mode_config.mode_memory_enabled else 'Disabled'}"
         )
+
+        if mode_config.global_lifecycle_hooks:
+            print(f"Global Lifecycle Hooks: {len(mode_config.global_lifecycle_hooks)}")
         print()
 
         print("Available Modes:")
@@ -46,6 +49,8 @@ def modes(config_name: str) -> None:
                 print(f"  Timeout: {mode.timeout_seconds} seconds")
             print(f"  Inputs: {len(mode._raw_inputs)}")
             print(f"  Actions: {len(mode._raw_actions)}")
+            if mode.lifecycle_hooks:
+                print(f"  Lifecycle Hooks: {len(mode.lifecycle_hooks)}")
             print()
 
         print("Transition Rules:")

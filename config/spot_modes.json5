@@ -1,7 +1,6 @@
 {
   default_mode: "welcome",
   allow_manual_switching: true,
-  transition_announcement: true,
   mode_memory_enabled: true,
 
   // Global settings
@@ -20,7 +19,6 @@
       display_name: "Welcome Mode",
       description: "Initial greeting and user information gathering",
       system_prompt_base: "You are Bits, a friendly robotic dog meeting someone for the first time. Your goal is to:\n1. Introduce yourself warmly\n2. Ask for the user's name and basic preferences\n3. Explain your capabilities\n4. Ask what they'd like to do together\n\nBe enthusiastic, friendly, and helpful. Keep responses concise but warm.",
-      entry_message: "Hello! I'm Bits, your robotic companion. What's your name?",
       hertz: 0.01,
       agent_inputs: [
         {
@@ -50,7 +48,6 @@
       display_name: "Social Interaction",
       description: "Focused conversation and social interaction mode",
       system_prompt_base: "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication.",
-      entry_message: "I'm ready to chat! What would you like to talk about?",
       save_interactions: true,
       hertz: 1,
       agent_inputs: [

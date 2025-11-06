@@ -11,7 +11,6 @@
     "properties": {
         "default_mode": {"type": "string"},
         "allow_manual_switching": {"type": "boolean"},
-        "transition_announcement": {"type": "boolean"},
         "mode_memory_enabled": {"type": "boolean"},
         "api_key": {"type": "string"},
         "URID": {"type": "string"},
@@ -31,6 +30,39 @@
                 }
             }
         },
+        "global_lifecycle_hooks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["hook_type", "handler_type", "handler_config"],
+                "properties": {
+                    "hook_type": {
+                        "type": "string",
+                        "enum": ["on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout"]
+                    },
+                    "handler_type": {
+                        "type": "string",
+                        "enum": ["message", "command", "function", "action"]
+                    },
+                    "handler_config": {
+                        "type": "object",
+                        "properties": {
+                            "message": {"type": "string"},
+                            "command": {"type": "string"},
+                            "function": {"type": "string"},
+                            "action": {"type": "string"}
+                        }
+                    },
+                    "priority": {"type": "integer"},
+                    "async_execution": {"type": "boolean"},
+                    "timeout_seconds": {"type": "number"},
+                    "on_failure": {
+                        "type": "string",
+                        "enum": ["log", "ignore", "abort"]
+                    }
+                }
+            }
+        },
         "modes": {
             "type": "object",
             "patternProperties": {
@@ -41,9 +73,8 @@
                         "display_name": {"type": "string"},
                         "description": {"type": "string"},
                         "system_prompt_base": {"type": "string"},
-                        "entry_message": {"type": "string"},
-                        "exit_message": {"type": "string"},
                         "hertz": {"type": "number"},
+                        "timeout_seconds": {"type": "number"},
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
                         "cortex_llm": {
@@ -56,6 +87,39 @@
                                     "properties": {
                                         "agent_name": {"type": "string"},
                                         "history_length": {"type": "integer"}
+                                    }
+                                }
+                            }
+                        },
+                        "lifecycle_hooks": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["hook_type", "handler_type", "handler_config"],
+                                "properties": {
+                                    "hook_type": {
+                                        "type": "string",
+                                        "enum": ["on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout"]
+                                    },
+                                    "handler_type": {
+                                        "type": "string",
+                                        "enum": ["message", "command", "function", "action"]
+                                    },
+                                    "handler_config": {
+                                        "type": "object",
+                                        "properties": {
+                                            "message": {"type": "string"},
+                                            "command": {"type": "string"},
+                                            "function": {"type": "string"},
+                                            "action": {"type": "string"}
+                                        }
+                                    },
+                                    "priority": {"type": "integer"},
+                                    "async_execution": {"type": "boolean"},
+                                    "timeout_seconds": {"type": "number"},
+                                    "on_failure": {
+                                        "type": "string",
+                                        "enum": ["log", "ignore", "abort"]
                                     }
                                 }
                             }

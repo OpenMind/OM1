@@ -87,7 +87,7 @@ class DummyVLMLocal(FuserInput[Image.Image]):
             Timestamped message containing description
         """
         # You can use the `raw_input` variable for something, it is of Type Image
-        # But for simpicity let's just create a string that changes
+        # But for simplicity let's just create a string that changes
         num = random.randint(0, 100)
         message = f"DUMMY VLM - FAKE DATA - I see {num} people. Also, I see a rocket."
 
