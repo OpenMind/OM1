@@ -19,7 +19,7 @@ class PresenceSnapshot:
         Server timestamp in UNIX epoch seconds (falls back to local time if missing).
     names : list[str]
         Known identities present (deduplicated).
-    unknown : int
+    unknown_faces : int
         Count of unknown faces present.
     raw : dict
         Full response body from `/who` for advanced consumers.
@@ -137,6 +137,7 @@ class FacePresenceProvider:
         self._callbacks: List = []
         self._cb_lock = threading.Lock()
         self._session = requests.Session()
+        self._unknown_faces: int = 0
 
     def set_recent_sec(self, sec: float) -> None:
         """Dynamically change the lookback window used for `/who`."""
@@ -293,11 +294,14 @@ class FacePresenceProvider:
             unknown_faces = int(data.get("unknown_now", 0) or 0)
 
         ts = float(data.get("server_ts", time.time()))
+
+        self._unknown_faces = int(unknown_faces)
+
         return PresenceSnapshot(
             ts=ts, names=names, unknown_faces=unknown_faces, raw=data
         )
 
     @property
     def unknown_faces(self) -> int:
-        """Return the most recent count of unknown faces detected."""
-        return self.unknown_faces
+        """Most recent (suppressed) count of unknown faces detected in the lookback window."""
+        return self._unknown_faces
