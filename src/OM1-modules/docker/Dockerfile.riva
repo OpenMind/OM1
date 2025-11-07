@@ -1,0 +1,15 @@
+FROM nvcr.io/nvidia/riva/riva-speech:2.18.0 AS base
+
+RUN apt-get update && apt-get -y install python3-pyaudio pulseaudio pulseaudio-utils alsa-utils libasound2 libasound2-plugins netcat
+RUN pip install --upgrade pyaudio websockets
+
+RUN mkdir /app
+
+COPY ./src/om1_speech /app/om1_speech
+COPY ./src/om1_utils /app/om1_utils
+
+COPY ./docker/scripts/riva.sh /app/riva.sh
+
+RUN chmod +x /app/riva.sh
+
+CMD ["/app/riva.sh"]

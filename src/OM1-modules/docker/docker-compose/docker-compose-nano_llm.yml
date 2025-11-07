@@ -1,0 +1,36 @@
+services:
+  om1_vlm:
+    image: openmindagi/om1_nano_llm:latest
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.nano_llm
+    runtime: nvidia
+    privileged: true    # Grants access to all devices
+    network_mode: host  # Use host networking
+    volumes:
+      - /tmp/argus_socket:/tmp/argus_socket
+      - /tmp/nv_jetson_model:/tmp/nv_jetson_model
+      - /etc/enctune.conf:/etc/enctune.conf
+      - /etc/nv_tegra_release:/etc/nv_tegra_release
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/jetson-containers/data:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /tmp/.docker.xauth:/tmp/.docker.xauth
+      - /lib/modules:/lib/modules
+    devices:
+      - /dev:/dev
+      - /dev/snd:/dev/snd
+      - /dev/bus/usb:/dev/bus/usb
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+      - /dev/video2:/dev/video2
+      - /dev/input:/dev/input
+    restart: no
+    command: ["--server-mode", "--ws-host=0.0.0.0", "--model-name=nano_llm"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

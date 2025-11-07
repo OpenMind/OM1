@@ -1,0 +1,25 @@
+FROM nvcr.io/nvidia/pytorch:24.06-py3
+
+WORKDIR /app
+
+RUN git clone https://github.com/NVlabs/VILA.git . && git checkout 86e009759a14eee045c669421128d703227da362
+
+COPY ./src/om1_vlm om1_vlm
+COPY ./src/om1_utils om1_utils
+
+RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o ~/miniconda.sh \
+  && sh ~/miniconda.sh -b -p /opt/conda \
+  && rm ~/miniconda.sh
+
+ENV PATH /opt/conda/bin:$PATH
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
+
+RUN bash environment_setup.sh vila
+
+RUN conda run -n vila pip install -U "huggingface_hub[cli]" && \
+  conda run -n vila pip install -U "huggingface_hub[hf_transfer]" && \
+  conda run -n vila huggingface-cli download Efficient-Large-Model/VILA1.5-3b --local-dir /app/Efficient-Large-Model/VILA1.5-3B
+
+EXPOSE 6789 8888
+
+CMD ["conda", "run", "-n", "vila", "--no-capture-output", "python", "-m", "om1_vlm", "--model-name=vila", "--server-mode", "--ws-host=0.0.0.0"]

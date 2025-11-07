@@ -1,0 +1,6 @@
+__pycache__
+.DS_Store
+.pytest_cache
+.ruff_cace
+
+.env
