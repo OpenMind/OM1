@@ -1,34 +1,46 @@
 ![OM_Banner_X2 (1)](https://github.com/user-attachments/assets/853153b7-351a-433d-9e1a-d257b781f93c)
 
-<p align="center">  
-<a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |  
-<a href="https://docs.openmind.org/">Documentation</a> |  
-<a href="https://x.com/openmind_agi">X</a> |  
-<a href="https://discord.gg/openmind">Discord</a> 
+<p align="center">
+  <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
+  <a href="https://docs.openmind.org/">Documentation</a> |
+  <a href="https://x.com/openmind_agi">X</a> |
+  <a href="https://discord.gg/openmind">Discord</a>
 </p>
 
-**OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
+---
 
-## Capabilities of OM1
+**OpenMind’s OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots** — including humanoids, mobile apps, websites, quadrupeds, and educational robots like TurtleBot 4.
 
-* **Modular Architecture**: Designed with Python for simplicity and seamless integration.
-* **Data Input**: Easily handles new data and sensors.
-* **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
-* **Web-Based Debugging Display**: Monitor the system in action with WebSim (available at http://localhost:8000/) for easy visual debugging.
-* **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
+OM1 agents process diverse inputs (web data, social media, camera feeds, LIDAR) while enabling physical actions (motion, navigation, and conversation). The goal: to make it easy to build highly capable, human-focused robots that are simple to upgrade and reconfigure across different form factors.
 
-## Architecture Overview
-![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
+---
 
-## Getting Started
+## 🚀 Capabilities of OM1
 
-To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+* **Modular Architecture:** Built in Python for simplicity and seamless integration.  
+* **Flexible Data Input:** Easily handles new sensors and data streams.  
+* **Hardware Plugin Support:** Integrates hardware APIs through plugins supporting `ROS2`, `Zenoh`, and `CycloneDDS`.  
+  - 🧠 Recommended middleware: `Zenoh` for all new development.  
+* **Web-Based Debug Display:** Use **WebSim** (http://localhost:8000/) for visual debugging and real-time monitoring.  
+* **Preconfigured AI Endpoints:** Compatible with OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, and NearAI, with built-in Text-to-Speech and Visual Language Model (VLM) support.  
 
-### Package Management and VENV
+---
 
-You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
+## 🧩 Architecture Overview
 
-### Clone the Repo
+![Architecture Overview](https://github.com/user-attachments/assets/14e9b916-4df7-4700-9336-2983c85be311)
+
+---
+
+## 🧠 Getting Started
+
+Let’s run the **Spot agent**. It uses your webcam to capture and label objects, sending these captions to an LLM that returns commands for `movement`, `speech`, and `face` actions. These are visualized in **WebSim** with timing and debug info.
+
+### 📦 Prerequisites
+
+You’ll need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
+
+### 🧰 Clone the Repository
 
 ```bash
 git clone https://github.com/OpenMind/OM1.git
