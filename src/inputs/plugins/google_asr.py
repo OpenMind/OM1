@@ -213,7 +213,7 @@ INPUT: {self.descriptor_for_LLM}
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
 
-        # Publish to Zenoh 
+        # Publish to Zenoh
         if self.asr_publisher:
             try:
                 asr_msg = ASRText(
