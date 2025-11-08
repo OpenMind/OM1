@@ -62,7 +62,7 @@ Run
 uv run src/run.py spot
 ```
 
-After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/getting-started).
+After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
 
 Note: This is just an example agent configuration.
 If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
@@ -113,7 +113,7 @@ We're excited to introduce **full autonomy mode**, where four services work toge
 
 ## Intro to BrainPack?
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
-We'll shortly be releasing the **BOM** and details on **DIY** for the it. 
+We'll shortly be releasing the **BOM** and details on **DIY** for it. 
 Stay tuned!
 
 Clone the following repos -
