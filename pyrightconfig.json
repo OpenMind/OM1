@@ -1,13 +1,14 @@
 {
   "include": ["src"],
   "exclude": [
-    "**/system_hw_test",
     "**/__pycache__",
     "**/tests",
+    "**/system_hw_test",
     "**/unitree",
     "**/ubtech"
   ],
   "typeCheckingMode": "basic",
   "reportMissingImports": "warning",
-  "pythonVersion": "3.10"
+  "pythonVersion": "3.10",
+  "useLibraryCodeForTypes": true
 }
