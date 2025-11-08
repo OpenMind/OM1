@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from pycdr2 import IdlStruct
-from pycdr2.types import int8, uint8
+from pycdr2.types import int8
 
 from .std_msgs import Header, String
 
