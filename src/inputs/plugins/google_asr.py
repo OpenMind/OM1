@@ -132,19 +132,6 @@ class GoogleASRInput(FuserInput[str]):
                 if len(asr_reply.split()) > 1:
                     self.message_buffer.put(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
-
-                    # Publish to Zenoh
-                    if self.asr_publisher:
-                        try:
-                            asr_msg = ASRText(
-                                header=prepare_header(str(uuid4())),
-                                text=asr_reply,
-                                is_final=1,
-                            )
-                            self.asr_publisher.put(asr_msg.serialize())
-                            logging.info(f"Published ASR to Zenoh: {asr_reply}")
-                        except Exception as e:
-                            logging.warning(f"Failed to publish ASR to Zenoh: {e}")
         except json.JSONDecodeError:
             pass
 
@@ -225,6 +212,18 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
+
+        # Publish to Zenoh 
+        if self.asr_publisher:
+            try:
+                asr_msg = ASRText(
+                    header=prepare_header(str(uuid4())),
+                    text=self.messages[-1],
+                )
+                self.asr_publisher.put(asr_msg.serialize())
+                logging.info(f"Published ASR to Zenoh: {self.messages[-1]}")
+            except Exception as e:
+                logging.warning(f"Failed to publish ASR to Zenoh: {e}")
 
         # Reset messages buffer
         self.messages = []

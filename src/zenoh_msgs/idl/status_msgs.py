@@ -117,4 +117,3 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
 class ASRText(IdlStruct, typename="ASRText"):
     header: Header
     text: str
-    is_final: uint8
