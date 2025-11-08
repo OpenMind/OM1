@@ -54,7 +54,9 @@ class RuntimeConfig:
         return load_config(config_name)
 
 
-def load_config(config_name: str) -> RuntimeConfig:
+def load_config(
+    config_name: str, config_source_path: Optional[str] = None
+) -> RuntimeConfig:
     """
     Load and parse a runtime configuration from a JSON file.
 
@@ -62,6 +64,8 @@ def load_config(config_name: str) -> RuntimeConfig:
     ----------
     config_name : str
         Name of the configuration file (without .json extension)
+    config_source_path : Optional[str]
+        Optional path to the configuration file to load. If not provided, the default path based on config_name will be used.
 
     Returns
     -------
@@ -81,8 +85,12 @@ def load_config(config_name: str) -> RuntimeConfig:
     ValueError
         If configuration values are invalid (e.g., negative hertz)
     """
-    config_path = os.path.join(
-        os.path.dirname(__file__), "../../../config", config_name + ".json5"
+    config_path = (
+        os.path.join(
+            os.path.dirname(__file__), "../../../config", config_name + ".json5"
+        )
+        if config_source_path is None
+        else config_source_path
     )
 
     with open(config_path, "r+") as f:

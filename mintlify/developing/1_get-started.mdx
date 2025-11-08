@@ -26,7 +26,7 @@ Ensure you have the following installed on your machine:
 - `uv` >= 0.6.2 as the Python package manager and virtual environment
 - `portaudio` for audio input and output
 - `ffmpeg` for video processing
-- [Openmind API key](https://portal.openmind.org/)
+- Get your OpenMind API key [here](https://portal.openmind.org/)
 
 #### UV (A Rust and Python package manager)
 
@@ -90,9 +90,9 @@ Locate the `config` folder and add your OpenMind API key to `/config/spot.json` 
 ...
 ```
 
-Note: Using the placeholder key **openmind-free** will generate errors.
-
 Or, create a `.env` file in the project directory and add the following:
+
+Note: Using the placeholder key **openmind-free** will generate errors.
 
 ```bash
 OM_API_KEY=om1_live_...
@@ -106,9 +106,37 @@ Run the following command to start the Spot Agent:
 uv run src/run.py spot
 ```
 
-On initial execution, this command will resolve and install project dependencies. Please allow a few minutes for this process to finish, before the system becomes active.
+### Initial Setup
 
-Note: This is just an example agent configuration.
+During the first execution, the system will automatically resolve and install all project dependencies. This process may take several minutes to complete before the agent becomes operational.
+
+### Runtime Configuration
+
+Upon successful initialization, a `.runtime.json5` file will be generated in the `config/memory` directory. This file serves as a snapshot of the agent configuration used in the current session.
+
+### Subsequent Executions
+
+After the initial run, you can start the agent using the simplified command:
+
+```bash
+uv run src/run.py
+```
+
+![Reference](../assets/hot_reload.png)
+
+The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
+
+###Switching Agent Configurations
+
+To run a different agent (for example, the conversation agent), specify the configuration name explicitly:
+
+```bash
+uv run src/run.py conversation
+```
+
+**Note**: Agent configuration names are only required when switching between different agents. Once an agent has been run, it becomes the default for subsequent executions.
+
+Spot is just an example agent configuration.
 
 If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `spot.json5`.
 

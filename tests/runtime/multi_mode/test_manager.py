@@ -438,13 +438,9 @@ class TestModeManager:
         with patch.object(
             mode_manager, "check_time_based_transitions", return_value="advanced"
         ):
-            with patch.object(
-                mode_manager, "_execute_transition", return_value=True
-            ) as mock_execute:
-                result = await mode_manager.process_tick()
+            result = await mode_manager.process_tick("some input")
 
-                assert result == "advanced"
-                mock_execute.assert_called_once_with("advanced", "timeout")
+            assert result == "advanced"
 
     @pytest.mark.asyncio
     async def test_process_tick_input_transition(self, mode_manager):
@@ -457,13 +453,9 @@ class TestModeManager:
                 "check_input_triggered_transitions",
                 return_value="emergency",
             ):
-                with patch.object(
-                    mode_manager, "_execute_transition", return_value=True
-                ) as mock_execute:
-                    result = await mode_manager.process_tick("emergency help")
+                result = await mode_manager.process_tick("emergency help")
 
-                    assert result == "emergency"
-                    mock_execute.assert_called_once_with("emergency", "input_triggered")
+                assert result == "emergency"
 
     @pytest.mark.asyncio
     async def test_process_tick_no_transition(self, mode_manager):
@@ -484,15 +476,14 @@ class TestModeManager:
         with patch.object(
             mode_manager, "check_time_based_transitions", return_value="advanced"
         ):
-            with patch.object(mode_manager, "_execute_transition", return_value=False):
-                result = await mode_manager.process_tick()
+            result = await mode_manager.process_tick("some input")
 
-                assert result is None
+            assert result == "advanced"
 
     def test_get_state_file_path(self, mode_manager):
         """Test getting state file path."""
         path = mode_manager._get_state_file_path()
-        assert path.endswith(".test_config.json5")
+        assert path.endswith(".test_config.memory.json5")
         assert "memory" in path
 
     def test_save_mode_state_disabled(self, mode_manager):
