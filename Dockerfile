@@ -1,12 +1,12 @@
 FROM python:3.10-slim
 
-RUN apt-get update && apt-get install -y \
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     ffmpeg \
     portaudio19-dev \
     libasound2-dev \
     libv4l-dev \
-    python3-pip \
     build-essential \
     cmake \
     python3-dev \
@@ -22,36 +22,45 @@ RUN apt-get update && apt-get install -y \
     curl \
     pkg-config \
     libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --upgrade pip
+# Upgrade pip
+RUN python -m pip install --upgrade pip
 
+# Install uv (Python package & project manager)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-RUN mkdir -p /etc/alsa && \
-    ln -snf /usr/share/alsa/alsa.conf.d /etc/alsa/conf.d
-
+# ALSA / PulseAudio configuration
+RUN mkdir -p /etc/alsa && ln -snf /usr/share/alsa/alsa.conf.d /etc/alsa/conf.d
 RUN printf '%s\n' \
   'pcm.!default { type pulse }' \
   'ctl.!default { type pulse }' \
   > /etc/asound.conf
 
+# Build CycloneDDS from source
 WORKDIR /app
-RUN git clone --branch releases/0.10.x https://github.com/eclipse-cyclonedds/cyclonedds
-WORKDIR /app/cyclonedds/build
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON \
- && cmake --build . --target install
+RUN git clone --branch releases/0.10.x https://github.com/eclipse-cyclonedds/cyclonedds && \
+    mkdir -p /app/cyclonedds/build && \
+    cd /app/cyclonedds/build && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON && \
+    cmake --build . --target install
 
+# DDS env
 ENV CYCLONEDDS_HOME=/app/cyclonedds/install \
-    CMAKE_PREFIX_PATH=/app/cyclonedds/install
+    CMAKE_PREFIX_PATH=/app/cyclonedds/install \
+    LD_LIBRARY_PATH=/app/cyclonedds/install/lib:${LD_LIBRARY_PATH} \
+    PKG_CONFIG_PATH=/app/cyclonedds/install/lib/pkgconfig:${PKG_CONFIG_PATH}
 
+# Project
 WORKDIR /app/OM1
 COPY . .
 RUN git submodule update --init --recursive
 
-RUN uv venv /app/OM1/.venv && \
-    uv pip install -r pyproject.toml --extra dds
+# Create a dedicated virtualenv and sync deps (reads pyproject.toml)
+ENV UV_PROJECT_ENV=/app/OM1/.venv
+RUN uv sync --extra dds
 
+# Entrypoint waits for network and runs OM1
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
     echo 'until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
