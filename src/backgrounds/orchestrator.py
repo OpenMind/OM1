@@ -17,7 +17,7 @@ class BackgroundOrchestrator:
 
     _config: "RuntimeConfig"
     _background_workers: int
-    _background_executor: ThreadPoolExecutor
+    _background_executor: ThreadPoolExecutor | None
     _submitted_backgrounds: set[str]
     _background_futures: dict[str, Future]
     _stop_event: threading.Event
@@ -33,9 +33,11 @@ class BackgroundOrchestrator:
         """
         self._config = config
         backgrounds = getattr(config, "backgrounds", None) or []
-        self._background_workers = min(12, len(backgrounds)) if backgrounds else 1
-        self._background_executor = ThreadPoolExecutor(
-            max_workers=self._background_workers,
+        self._background_workers = min(12, len(backgrounds)) if backgrounds else 0
+        self._background_executor = (
+            ThreadPoolExecutor(max_workers=self._background_workers)
+            if self._background_workers
+            else None
         )
         self._submitted_backgrounds = set()
         self._background_futures = {}
@@ -52,15 +54,26 @@ class BackgroundOrchestrator:
             execution.
         """
         backgrounds = getattr(self._config, "backgrounds", None) or []
+        if not backgrounds:
+            return dict(self._background_futures)
+
+        if self._background_executor is None:
+            self._background_workers = min(12, len(backgrounds)) if backgrounds else 0
+            if not self._background_workers:
+                return dict(self._background_futures)
+            self._background_executor = ThreadPoolExecutor(
+                max_workers=self._background_workers,
+            )
+
+        executor = self._background_executor
+        assert executor is not None
         for background in backgrounds:
             if background.name in self._submitted_backgrounds:
                 logging.warning(
                     f"Background {background.name} already submitted, skipping."
                 )
                 continue
-            future = self._background_executor.submit(
-                self._run_background_loop, background
-            )
+            future = executor.submit(self._run_background_loop, background)
             self._background_futures[background.name] = future
             self._submitted_backgrounds.add(background.name)
 
@@ -87,7 +100,8 @@ class BackgroundOrchestrator:
         Stop the background executor and wait for all tasks to complete.
         """
         self._stop_event.set()
-        self._background_executor.shutdown(wait=True)
+        if self._background_executor is not None:
+            self._background_executor.shutdown(wait=True)
 
     def __del__(self):
         """
