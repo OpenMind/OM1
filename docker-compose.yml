@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: openmindagi/om1:latest
+    image: openmindagi/om1:sha-3d8c1d1
     container_name: om1
     restart: unless-stopped
     network_mode: host
