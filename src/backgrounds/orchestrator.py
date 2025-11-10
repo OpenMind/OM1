@@ -1,8 +1,7 @@
-import asyncio
 import logging
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 
 from backgrounds.base import Background
 from runtime.multi_mode.config import RuntimeConfig
@@ -17,6 +16,7 @@ class BackgroundOrchestrator:
     _background_workers: int
     _background_executor: ThreadPoolExecutor
     _submitted_backgrounds: set[str]
+    _background_futures: dict[str, Future]
     _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
@@ -36,11 +36,18 @@ class BackgroundOrchestrator:
             max_workers=self._background_workers,
         )
         self._submitted_backgrounds = set()
+        self._background_futures = {}
         self._stop_event = threading.Event()
 
-    def start(self):
+    def start(self) -> dict[str, Future]:
         """
         Start background tasks in separate threads.
+
+        Returns
+        -------
+        dict[str, Future]
+            A mapping between background names and the futures tracking their
+            execution.
         """
         for background in self._config.backgrounds:
             if background.name in self._submitted_backgrounds:
@@ -48,10 +55,13 @@ class BackgroundOrchestrator:
                     f"Background {background.name} already submitted, skipping."
                 )
                 continue
-            self._background_executor.submit(self._run_background_loop, background)
+            future = self._background_executor.submit(
+                self._run_background_loop, background
+            )
+            self._background_futures[background.name] = future
             self._submitted_backgrounds.add(background.name)
 
-        return asyncio.Future()
+        return dict(self._background_futures)
 
     def _run_background_loop(self, background: Background):
         """
