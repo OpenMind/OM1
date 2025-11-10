@@ -29,16 +29,14 @@ def orchestrator(mock_background):
     return BackgroundOrchestrator(mock_background)
 
 
-@pytest.mark.asyncio
-async def test_background_orchestrator_initialization(mock_background):
+def test_background_orchestrator_initialization(mock_background):
     """Test that BackgroundOrchestrator initializes correctly."""
     orchestrator = BackgroundOrchestrator(mock_background)
     assert orchestrator._config == mock_background
     assert orchestrator._background_workers == 2
 
 
-@pytest.mark.asyncio
-async def test_start_background(orchestrator):
+def test_start_background(orchestrator):
     """Test that backgrounds are started in separate threads."""
     try:
         futures = orchestrator.start()

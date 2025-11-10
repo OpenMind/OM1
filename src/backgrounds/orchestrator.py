@@ -2,9 +2,12 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
+from typing import TYPE_CHECKING
 
 from backgrounds.base import Background
-from runtime.multi_mode.config import RuntimeConfig
+
+if TYPE_CHECKING:
+    from runtime.multi_mode.config import RuntimeConfig
 
 
 class BackgroundOrchestrator:
@@ -12,14 +15,14 @@ class BackgroundOrchestrator:
     Manages the background tasks for the application.
     """
 
-    _config: RuntimeConfig
+    _config: "RuntimeConfig"
     _background_workers: int
     _background_executor: ThreadPoolExecutor
     _submitted_backgrounds: set[str]
     _background_futures: dict[str, Future]
     _stop_event: threading.Event
 
-    def __init__(self, config: RuntimeConfig):
+    def __init__(self, config: "RuntimeConfig"):
         """
         Initialize the BackgroundOrchestrator with the provided configuration.
 
