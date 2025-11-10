@@ -1,4 +1,5 @@
 from concurrent.futures import Future, ThreadPoolExecutor
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -58,3 +59,13 @@ def test_start_background(orchestrator):
         assert all(isinstance(future, Future) for future in futures.values())
     finally:
         orchestrator.stop()
+
+
+def test_start_without_configured_backgrounds():
+    config = SimpleNamespace(backgrounds=None)
+    orchestrator = BackgroundOrchestrator(config)
+
+    assert orchestrator._background_workers == 1
+    assert orchestrator.start() == {}
+
+    orchestrator.stop()
