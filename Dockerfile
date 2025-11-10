@@ -36,15 +36,6 @@ RUN printf '%s\n' \
   'ctl.!default { type pulse }' \
   > /etc/asound.conf
 
-# Configure PulseAudio client for container use
-RUN mkdir -p /root/.config/pulse && \
-    printf '%s\n' \
-  'default-server = unix:/tmp/pulse-socket' \
-  'autospawn = no' \
-  'daemon-binary = /bin/true' \
-  'enable-shm = false' \
-  > /root/.config/pulse/client.conf
-
 WORKDIR /app
 RUN git clone --branch releases/0.10.x https://github.com/eclipse-cyclonedds/cyclonedds
 WORKDIR /app/cyclonedds/build
