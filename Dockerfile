@@ -58,7 +58,12 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo '  echo "Waiting for internet connection..."' >> /entrypoint.sh && \
     echo '  sleep 2' >> /entrypoint.sh && \
     echo 'done' >> /entrypoint.sh && \
-    echo 'echo "Internet connected. Starting main command..."' >> /entrypoint.sh && \
+    echo 'echo "Internet connected. Checking audio device..."' >> /entrypoint.sh && \
+    echo 'until pactl list sinks | grep -q "default_output_aec" 2>/dev/null; do' >> /entrypoint.sh && \
+    echo '  echo "Waiting for speaker default_output_aec to be ready..."' >> /entrypoint.sh && \
+    echo '  sleep 2' >> /entrypoint.sh && \
+    echo 'done' >> /entrypoint.sh && \
+    echo 'echo "Speaker default_output_aec is ready. Starting main command..."' >> /entrypoint.sh && \
     echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
