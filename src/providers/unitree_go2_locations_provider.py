@@ -10,7 +10,7 @@ from .singleton import singleton
 
 
 @singleton
-class LocationsProvider:
+class UnitreeGo2LocationsProvider:
     """
     Provider that fetches locations from HTTP API in a background thread.
     """
@@ -48,13 +48,13 @@ class LocationsProvider:
         Start the background fetch thread.
         """
         if self._thread and self._thread.is_alive():
-            logging.warning("LocationsProvider already running")
+            logging.warning("UnitreeGo2LocationsProvider already running")
             return
 
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
-        logging.info("LocationsProvider background thread started")
+        logging.info("UnitreeGo2LocationsProvider background thread started")
 
     def stop(self) -> None:
         """

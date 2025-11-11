@@ -311,9 +311,6 @@
         {
           "type": "UnitreeGo2Location",
         },
-        {
-          "type": "Locations",
-        }
       ],
       "lifecycle_hooks": [
         {
