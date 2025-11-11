@@ -58,7 +58,20 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo '  echo "Waiting for internet connection..."' >> /entrypoint.sh && \
     echo '  sleep 2' >> /entrypoint.sh && \
     echo 'done' >> /entrypoint.sh && \
-    echo 'echo "Internet connected. Starting main command..."' >> /entrypoint.sh && \
+    echo 'echo "Internet connected. Checking audio system..."' >> /entrypoint.sh && \
+    echo 'if ! pactl info >/dev/null 2>&1; then' >> /entrypoint.sh && \
+    echo '  echo "ERROR: PulseAudio connection failed. Exiting container for restart..."' >> /entrypoint.sh && \
+    echo '  exit 1' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    echo 'echo "PulseAudio connected successfully."' >> /entrypoint.sh && \
+    echo 'if ! pactl list sinks | grep -q "default_output_aec" 2>/dev/null; then' >> /entrypoint.sh && \
+    echo '  echo "ERROR: Audio device default_output_aec not found. Exiting container for restart..."' >> /entrypoint.sh && \
+    echo '  echo "Available audio sinks:"' >> /entrypoint.sh && \
+    echo '  pactl list short sinks 2>/dev/null || echo "No sinks available"' >> /entrypoint.sh && \
+    echo '  exit 1' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    echo 'echo "Audio device default_output_aec is ready."' >> /entrypoint.sh && \
+    echo 'echo "Starting main command..."' >> /entrypoint.sh && \
     echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
