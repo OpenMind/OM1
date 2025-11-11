@@ -84,7 +84,7 @@
       "type": "UnitreeGo2Navigation",
     },
     {
-      "type": "UnitreeGo2Location",
+      "type": "UnitreeGo2Locations",
     },
     {
       "type": "Locations",
