@@ -11,10 +11,19 @@ Our boot sequence is as follows:
     - Wait 15 seconds before restarting om1
 
 Follow the steps below to get the system up and running
+
+- Install ROS2-humble and CycloneDDS on the edge device.
+
+- Setup the API key
+
+    For Bash: ```vim ~/.bashrc or ~/.bash_profile.```
+    Add ``` export OM_API_KEY="your API key" ```
+
 - Install unclutter on your system to hide the mouse cursor after a period of inactivity:
     ```bash
     sudo apt install unclutter
     ```
+    
 - Install Chromium and lock the snapd version for stability:
     ```bash
     sudo snap install chromium
@@ -158,9 +167,3 @@ docker-compose restart om1
     sudo systemctl enable om1-container.service
     sudo systemctl start om1-container.service
     ```
-
-- Setup the API key
-
-For Bash: vim ~/.bashrc or ~/.bash_profile.
-
-Now you're ready to run all your Docker containers!
