@@ -7,7 +7,7 @@ from typing import List, Optional
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.locations_provider import LocationsProvider
+from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
 
 
 @dataclass
@@ -42,7 +42,9 @@ class LocationsInput(FuserInput[str]):
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
 
-        self.locations_provider = LocationsProvider(base_url, timeout, refresh_interval)
+        self.locations_provider = UnitreeGo2LocationsProvider(
+            base_url, timeout, refresh_interval
+        )
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []
@@ -50,7 +52,7 @@ class LocationsInput(FuserInput[str]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll the LocationsProvider for the latest locations.
+        Poll the UnitreeGo2LocationsProvider for the latest locations.
 
         Returns
         -------
