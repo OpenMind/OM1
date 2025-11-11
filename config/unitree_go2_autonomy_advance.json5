@@ -16,9 +16,6 @@
   8. Do not navigate_location If there is no 'Navigate to a location' or 'take me to a location' command given by the person",
   "agent_inputs": [
     {
-      "type": "GoogleASRInput"
-    },
-    {
       "type": "LocationsInput",
     },
     {
@@ -61,8 +58,8 @@
       "connector": "elevenlabs_tts",
       "config": {
         "voice_id": "TbMNBJ27fH2U0VgpSNko",
-        "silence_rate": 6, // vocalize every 6th speech output
-      }
+        "silence_rate": 6,
+      },
     },
     {
       "name": "face",
@@ -75,6 +72,13 @@
       "type": "Avatar"
     },
     {
+      "type": "ElevenLabsTTS",
+      "config": {
+        "voice_id": "TbMNBJ27fH2U0VgpSNko",
+        "silence_rate": 6,
+      },
+    },
+    {
       "type": "UnitreeGo2State",
     },
     {
@@ -84,10 +88,7 @@
       "type": "UnitreeGo2Navigation",
     },
     {
-      "type": "UnitreeGo2Location",
-    },
-    {
-      "type": "Locations",
+      "type": "UnitreeGo2Locations",
     }
   ]
 }
