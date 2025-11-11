@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
-from providers.avatar_provider import AvatarProvider
+from llm.thinking_state import manage_thinking_state
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -63,6 +63,7 @@ class OpenAILLM(LLM[R]):
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
     @LLMHistoryManager.update_history()
+    @manage_thinking_state
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
     ) -> R | None:
@@ -85,12 +86,6 @@ class OpenAILLM(LLM[R]):
         try:
             logging.info(f"OpenAI LLM input: {prompt}")
             logging.debug(f"OpenAI LLM messages: {messages}")
-
-            # When sending request, set avatar to Think
-            try:
-                AvatarProvider().send_avatar_command("Think")
-            except Exception:
-                pass
 
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
@@ -130,15 +125,6 @@ class OpenAILLM(LLM[R]):
 
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"OpenAI LLM function call output: {result}")
-
-                # If no face action, set avatar to Happy
-                has_face = any(a.type.lower() == "face" for a in actions)
-                if not has_face:
-                    try:
-                        AvatarProvider().send_avatar_command("Happy")
-                    except Exception:
-                        pass
-
                 return T.cast(R, result)
 
             return None
