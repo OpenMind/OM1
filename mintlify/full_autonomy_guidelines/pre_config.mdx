@@ -11,10 +11,56 @@ Our boot sequence is as follows:
     - Wait 15 seconds before restarting om1
 
 Follow the steps below to get the system up and running
+
+- Setup the API key
+    Get you API key from [OM1 Portal](https://portal.openmind.org/)
+
+    For Bash: 
+    Open the bashrc file
+    ```vim ~/.bashrc or ~/.bash_profile.``` and add ``` export OM_API_KEY="your API key" ```
+
+- Install ROS2-humble and CycloneDDS on the edge device.
+
+- Establish Ethernet and DDS connectivity
+
+    Open the network settings and find the network interface that is connected to the Go2 EDU. In the IPv4 settings, change the IPv4 mode to manual, set the address to 192.168.123.99, and set the mask to 255.255.255.0. After completion, click apply (or equivalent) and wait for the network to reconnect.
+
+- Create cyclonedds.xml file inside /Documents/Github/cyclonedds/
+    ```vi cyclonedds.xml```
+    Add the following -
+    ```bash
+    <CycloneDDS>
+        <Domain>
+            <General>
+            <Interfaces>
+                <NetworkInterface name="eno1" priority="default" multicast="default" />
+            </Interfaces>
+            </General>
+            <Discovery>
+            <Peers>
+                <Peer address="192.168.123.161"/>   <!-- Go2 Robot 1 -->
+                <Peer address="192.168.123.100"/>   <!-- Control station 1 -->
+                <Peer address="192.168.123.99"/>   <!-- Control station 2 --> 
+            </Peers>
+            </Discovery>
+        </Domain>
+        </CycloneDDS>
+    ```
+    Make sure you configure the correct IP address for control station 2. It should be the same you configure in IPv4 settings above.
+
+- Set CYCLONEDDS_HOME, CMAKE_PREFIX_PATH, and CYCLONEDDS_URI
+    ```bash
+    source /opt/ros/humble/setup.bash
+    export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+    export CYCLONEDDS_HOME=/home/{username}/Documents/Github/cyclonedds/install
+    export CYCLONEDDS_URI=~/Documents/Github/cyclonedds/cyclonedds.xml
+    ```
+
 - Install unclutter on your system to hide the mouse cursor after a period of inactivity:
     ```bash
     sudo apt install unclutter
     ```
+
 - Install Chromium and lock the snapd version for stability:
     ```bash
     sudo snap install chromium
@@ -159,8 +205,4 @@ docker-compose restart om1
     sudo systemctl start om1-container.service
     ```
 
-- Setup the API key
-
-For Bash: vim ~/.bashrc or ~/.bash_profile.
-
-Now you're ready to run all your Docker containers!
+After completing all pre-configuration steps, clone each repository individually and build the corresponding Docker images. Once all services are successfully set up and running, the robot will operate in Full Autonomy Mode.
