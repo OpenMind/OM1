@@ -395,7 +395,7 @@ class OdomProvider:
         Stop the OdomProvider and clean up resources.
         """
         self._stop_event.set()
-        
+
         if self._odom_reader_thread:
             self._odom_reader_thread.terminate()
             self._odom_reader_thread.join()

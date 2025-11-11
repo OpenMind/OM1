@@ -11,6 +11,7 @@ try:
         UnitreeCameraVideoStream,
         UnitreeCameraVLMProvider,
     )
+
     UNITREE_AVAILABLE = hasattr(provider_module, "VideoClient")
 except (ImportError, ModuleNotFoundError, AttributeError):
     UNITREE_AVAILABLE = False

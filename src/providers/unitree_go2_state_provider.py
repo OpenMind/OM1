@@ -212,7 +212,7 @@ class UnitreeGo2StateProvider:
         Stop the Unitree Go2 state provider.
         """
         self._stop_event.set()
-        
+
         if self._go2_state_reader_thread:
             self.control_queue.put("STOP")
             self._go2_state_reader_thread.join()
