@@ -88,9 +88,10 @@
                     {
                         "group": "Full Autonomy",
                         "pages": [
-                            "full_autonomy_guidelines/backpack_introduction",
+                            "full_autonomy_guidelines/brainpack_introduction",
                             "full_autonomy_guidelines/architecture_overview",
                             "full_autonomy_guidelines/pre_config",
+                            "robotics/nvidia_thor",
                             {
                                 "group": "Full Autonomy Components",
                                 "pages": [
@@ -98,6 +99,14 @@
                                     "full_autonomy_guidelines/om",
                                     "full_autonomy_guidelines/unitree_sdk",
                                     "full_autonomy_guidelines/om1_video_processor"
+                                ]
+
+                            },
+                            {
+                                "group": "Modes",
+                                "pages": [
+                                    "full_autonomy_guidelines/modes",
+                                    "full_autonomy_guidelines/mode_selection"
                                 ]
 
                             }
