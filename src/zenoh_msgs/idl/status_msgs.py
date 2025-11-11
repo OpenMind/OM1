@@ -111,3 +111,9 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
     request_id: String
     code: int8
     status: String
+
+
+@dataclass
+class ASRText(IdlStruct, typename="ASRText"):
+    header: Header
+    text: str

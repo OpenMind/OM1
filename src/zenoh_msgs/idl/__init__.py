@@ -37,6 +37,7 @@ from .sensor_msgs import (
 from .status_msgs import (
     AIStatusRequest,
     AIStatusResponse,
+    ASRText,
     AudioStatus,
     CameraStatus,
     ModeStatusRequest,
@@ -59,6 +60,7 @@ __all__ = [
     "CameraStatus",
     "AIStatusRequest",
     "AIStatusResponse",
+    "ASRText",
     "ModeStatusRequest",
     "ModeStatusResponse",
     "TTSStatusRequest",

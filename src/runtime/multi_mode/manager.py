@@ -150,15 +150,6 @@ class ModeManager:
         except Exception as e:
             logging.error(f"Error creating runtime config file: {e}")
 
-    def update_runtime_config(self):
-        """
-        Update the runtime config file with current configuration.
-
-        This should be called whenever the configuration changes
-        to keep the runtime config file in sync.
-        """
-        self._create_runtime_config_file()
-
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         """
         Set the main event loop reference for thread-safe task scheduling.
@@ -488,9 +479,6 @@ class ModeManager:
 
             self._save_mode_state()
 
-            # Update runtime config file to reflect the new state
-            self.update_runtime_config()
-
             return True
 
         except Exception as e:
@@ -564,7 +552,7 @@ class ModeManager:
         """Get the current user context."""
         return self.state.user_context.copy()
 
-    async def process_tick(self, input_text: Optional[str] = None) -> Optional[str]:
+    async def process_tick(self, input_text: Optional[str]) -> Optional[str]:
         """
         Process a tick and check for any needed transitions.
 
@@ -578,22 +566,20 @@ class ModeManager:
         Optional[str]
             The new mode if a transition occurred, None otherwise
         """
+        if not input_text:
+            return None
+
         # Check time-based transitions first
         time_target = await self.check_time_based_transitions()
         if time_target:
-            success = await self._execute_transition(time_target, "timeout")
-            if success:
-                return time_target
+            logging.info(f"Time-based transition to mode: {time_target}")
+            return time_target
 
-        # Check input-triggered transitions
-        if input_text:
-            input_target = self.check_input_triggered_transitions(input_text)
-            if input_target:
-                success = await self._execute_transition(
-                    input_target, "input_triggered"
-                )
-                if success:
-                    return input_target
+        # Then check input-triggered transitions
+        target_mode = self.check_input_triggered_transitions(input_text)
+        if target_mode:
+            logging.info(f"Input-triggered transition to mode: {target_mode}")
+            return target_mode
 
         return None
 
