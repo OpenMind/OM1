@@ -52,6 +52,9 @@ RUN git submodule update --init --recursive
 RUN uv venv /app/OM1/.venv && \
     uv pip install -r pyproject.toml --extra dds
 
+ENV VIRTUAL_ENV=/app/OM1/.venv
+ENV PATH="/app/OM1/.venv/bin:$PATH"
+
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
     echo 'until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
@@ -72,7 +75,7 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'echo "Audio device default_output_aec is ready."' >> /entrypoint.sh && \
     echo 'echo "Starting main command..."' >> /entrypoint.sh && \
-    echo 'exec uv run src/run.py "$@"' >> /entrypoint.sh && \
+    echo 'exec python src/run.py "$@"' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

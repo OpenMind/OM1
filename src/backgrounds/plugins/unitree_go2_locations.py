@@ -1,12 +1,12 @@
 import logging
 
 from backgrounds.base import Background, BackgroundConfig
-from providers.locations_provider import LocationsProvider
+from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
 
 
-class Locations(Background):
+class UnitreeGo2Locations(Background):
     """
-    Reads locations from LocationsProvider.
+    Reads locations from UnitreeGo2LocationsProvider.
     """
 
     def __init__(self, config: BackgroundConfig = BackgroundConfig()):
@@ -28,7 +28,7 @@ class Locations(Background):
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
 
-        self.locations_provider = LocationsProvider(
+        self.locations_provider = UnitreeGo2LocationsProvider(
             base_url=base_url,
             timeout=timeout,
             refresh_interval=refresh_interval,
