@@ -1,12 +1,14 @@
 import functools
-from typing import Any, Callable, TypeVar
+from typing import Any, Awaitable, Callable, TypeVar
 
 from providers.avatar_provider import AvatarProvider
 
 T = TypeVar("T")
 
 
-def manage_thinking_state(func: Callable[..., T]) -> Callable[..., T]:
+def manage_thinking_state(
+    func: Callable[..., Awaitable[T]],
+) -> Callable[..., Awaitable[T]]:
     """
     Decorator to manage avatar thinking state during LLM processing.
 
