@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, Awaitable, Callable, List, Optional, TypeVar
 
 from .avatar_provider import AvatarProvider
 
@@ -32,13 +32,17 @@ def manage_thinking_state(
             result = await func(self, *args, **kwargs)
 
             # Restore happy if no face action in result
-            if result and avatar_provider and hasattr(result, "actions"):
-                has_face = any(a.type.lower() == "face" for a in result.actions)
-                if not has_face:
-                    try:
-                        avatar_provider.send_avatar_command("Happy")
-                    except Exception:
-                        pass
+            if result and avatar_provider:
+                actions: Optional[List[Any]] = getattr(result, "actions", None)
+                if actions:
+                    has_face = any(
+                        getattr(a, "type", "").lower() == "face" for a in actions
+                    )
+                    if not has_face:
+                        try:
+                            avatar_provider.send_avatar_command("Happy")
+                        except Exception:
+                            pass
 
             return result
 
