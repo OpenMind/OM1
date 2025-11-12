@@ -29,28 +29,42 @@ class WalletCoinbase(FuserInput[float]):
 
         # Track IO
         self.io_provider = IOProvider()
-        self.messages: list[str] = []
+        self.messages: List[Message] = []
 
         self.POLL_INTERVAL = 0.5  # seconds between blockchain data updates
         self.COINBASE_WALLET_ID = os.environ.get("COINBASE_WALLET_ID")
-        logging.info(f"Using {self.COINBASE_WALLET_ID} as the coinbase wallet id")
+        if self.COINBASE_WALLET_ID:
+            logging.info("Coinbase wallet ID configured successfully")
+        else:
+            logging.warning("COINBASE_WALLET_ID environment variable not set")
 
         # Initialize Wallet
         # TODO(Kyle): Create Wallet if the wallet ID is not found
         # TODO(Kyle): Support importing other wallets, following https://docs.cdp.coinbase.com/mpc-wallet/docs/wallets#importing-a-wallet
         API_KEY = os.environ.get("COINBASE_API_KEY")
         API_SECRET = os.environ.get("COINBASE_API_SECRET")
-        Cdp.configure(API_KEY, API_SECRET)
+        if not API_KEY or not API_SECRET:
+            logging.error(
+                "COINBASE_API_KEY or COINBASE_API_SECRET environment variable is not set"
+            )
+        else:
+            Cdp.configure(API_KEY, API_SECRET)
 
         try:
             # fetch wallet data
+            if not self.COINBASE_WALLET_ID:
+                raise ValueError("COINBASE_WALLET_ID environment variable is not set")
+
             self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
             logging.info(f"Wallet: {self.wallet}")
+
+            self.ETH_balance = float(self.wallet.balance("eth"))
+            self.ETH_balance_previous = self.ETH_balance
         except Exception as e:
             logging.error(f"Error fetching Coinbase Wallet data: {e}")
-
-        self.ETH_balance = float(self.wallet.balance("eth"))
-        self.ETH_balance_previous = self.ETH_balance
+            self.wallet = None
+            self.ETH_balance = 0.0
+            self.ETH_balance_previous = 0.0
 
         logging.info("Testing: WalletCoinbase: Initialized")
 
@@ -71,13 +85,17 @@ class WalletCoinbase(FuserInput[float]):
         #     faucet_transaction.wait()
         #     logging.info(f"WalletCoinbase: Faucet transaction: {faucet_transaction}")
 
-        self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
-        logging.info(
-            f"WalletCoinbase: Wallet refreshed: {self.wallet.balance('eth')}, the current balance is {self.ETH_balance}"
-        )
-        self.ETH_balance = float(self.wallet.balance("eth"))
-        balance_change = self.ETH_balance - self.ETH_balance_previous
-        self.ETH_balance_previous = self.ETH_balance
+        try:
+            self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)  # type: ignore
+            logging.info(
+                f"WalletCoinbase: Wallet refreshed: {self.wallet.balance('eth')}, the current balance is {self.ETH_balance}"
+            )
+            self.ETH_balance = float(self.wallet.balance("eth"))
+            balance_change = self.ETH_balance - self.ETH_balance_previous
+            self.ETH_balance_previous = self.ETH_balance
+        except Exception as e:
+            logging.error(f"Error refreshing wallet data: {e}")
+            balance_change = 0.0
 
         return [self.ETH_balance, balance_change]
 
@@ -108,13 +126,13 @@ class WalletCoinbase(FuserInput[float]):
         logging.debug(f"WalletCoinbase: {message}")
         return Message(timestamp=time.time(), message=message)
 
-    async def raw_to_text(self, raw_input: float):
+    async def raw_to_text(self, raw_input: List[float]):
         """
         Process balance update and manage message buffer.
 
         Parameters
         ----------
-        raw_input : float
+        raw_input : List[float]
             Raw balance data
         """
         pending_message = await self._raw_to_text(raw_input)

@@ -10,6 +10,8 @@ import zenoh
 from om1_utils import ws
 from om1_vlm import VideoStream
 
+from zenoh_msgs import open_zenoh_session
+
 from .singleton import singleton
 
 
@@ -20,7 +22,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
     This class extends the VideoStream class to handle TurtleBot camera-specific
     video streaming and processing.
 
-    NOTE - this uses the defaul preview image size of 250x250.
+    NOTE - this uses the default preview image size of 250x250.
     If you want to stream high resolution data, you will need to change
     configurations inside the TurtleBot4.
 
@@ -65,13 +67,18 @@ class TurtleBot4CameraVideoStream(VideoStream):
             resolution=resolution,
             jpeg_quality=jpeg_quality,
         )
+        self.session = None
 
-        self.session = zenoh.open(zenoh.Config())
-        topic = f"{URID}/pi/oakd/rgb/preview/image_raw"
-        logging.info(
-            f"TurtleBot4 Camera listener starting with URID: {URID} and topic: {topic}"
-        )
-        self.camera = self.session.declare_subscriber(topic, self.camera_listener)
+        try:
+            self.session = open_zenoh_session()
+            topic = f"{URID}/pi/oakd/rgb/preview/image_raw"
+            logging.info(
+                f"TurtleBot4 Camera listener starting with URID: {URID} and topic: {topic}"
+            )
+            self.camera = self.session.declare_subscriber(topic, self.camera_listener)
+            logging.info("Zenoh TurtleBot4 Camera subscriber created")
+        except Exception as e:
+            logging.error(f"Error opening Zenoh TurtleBot4 Camera client: {e}")
 
         self.lock = threading.Lock()
         self.image = None
@@ -107,7 +114,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
         """
         logging.info("TurtleBot Camera Video Stream")
 
-        frame_time = 1.0 / self.fps
+        frame_time = 1.0 / (self.fps or 30)
         last_frame_time = time.perf_counter()
 
         while self.running:
@@ -120,7 +127,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
                         image, self.resolution, interpolation=cv2.INTER_AREA
                     )
                     _, buffer = cv2.imencode(".jpg", resized_image, self.encode_quality)
-                    frame_data = base64.b64encode(buffer).decode("utf-8")
+                    frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
                     if self.frame_callbacks:
                         for frame_callback in self.frame_callbacks:
@@ -201,10 +208,11 @@ class TurtleBot4CameraVLMProvider:
 
         Parameters
         ----------
-        callback : callable
+        callback : Optional[callable]
             The callback function to process VLM results.
         """
-        self.ws_client.register_message_callback(message_callback)
+        if message_callback is not None:
+            self.ws_client.register_message_callback(message_callback)
 
     def start(self):
         """

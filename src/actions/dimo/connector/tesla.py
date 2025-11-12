@@ -33,6 +33,11 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
             private_key = getattr(config, "private_key", None)
             self.token_id = getattr(config, "token_id", None)
 
+            if not client_id or not domain or not private_key or not self.token_id:
+                raise ValueError(
+                    "DIMOTeslaConnector: Missing DIMO configuration in config or IOProvider dynamic variables"
+                )
+
             try:
                 auth_header = self.dimo.auth.get_dev_jwt(
                     client_id=client_id, domain=domain, private_key=private_key
@@ -56,10 +61,11 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
         if output_interface.action != self.previouse_output:
             self.previouse_output = output_interface.action
 
-            # chekcout timeout of vehicle_jwt
+            # checkout timeout of vehicle_jwt
             if (
                 self.vehicle_jwt_expires is not None
                 and time.time() > self.vehicle_jwt_expires
+                and self.token_id is not None
             ):
                 try:
                     get_vehicle_jwt = self.dimo.token_exchange.exchange(

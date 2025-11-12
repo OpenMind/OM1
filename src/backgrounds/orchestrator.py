@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
-from runtime.config import RuntimeConfig
+from runtime.multi_mode.config import RuntimeConfig
 
 
 class BackgroundOrchestrator:
@@ -66,6 +67,7 @@ class BackgroundOrchestrator:
                 background.run()
             except Exception as e:
                 logging.error(f"Error in background {background.name}: {e}")
+                time.sleep(0.1)
 
     def stop(self):
         """

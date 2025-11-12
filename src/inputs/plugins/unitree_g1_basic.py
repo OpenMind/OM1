@@ -10,7 +10,10 @@ from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusPro
 
 try:
     from unitree.unitree_sdk2py.core.channel import ChannelSubscriber
-    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import BmsState_, LowState_
+    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import (  # type: ignore
+        BmsState_,
+        LowState_,
+    )
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
@@ -119,10 +122,10 @@ class UnitreeG1Basic(FuserInput[str]):
         self.bms_state = msg
         logging.debug(f"BmsState_: {msg}")
 
-        self.battery_voltage = float(msg.bmsvoltage[0])
-        self.battery_amperes = float(msg.current)
-        self.battery_percentage = float(msg.soc)
-        self.battery_temperature = float(msg.temperature[0])
+        self.battery_voltage = float(msg.bmsvoltage[0])  # type: ignore
+        self.battery_amperes = float(msg.current)  # type: ignore
+        self.battery_percentage = float(msg.soc)  # type: ignore
+        self.battery_temperature = float(msg.temperature[0])  # type: ignore
 
     def LowStateHandler(self, msg: LowState_):
         self.low_state = msg
@@ -135,12 +138,12 @@ class UnitreeG1Basic(FuserInput[str]):
         self.status_provider.share_status(
             TeleopsStatus(
                 machine_name="UnitreeG1",
-                update_time=time.time(),
+                update_time=str(time.time()),
                 battery_status=BatteryStatus(
                     battery_level=self.battery_percentage,
                     temperature=self.battery_temperature,
                     voltage=self.battery_voltage,
-                    timestamp=time.time(),
+                    timestamp=str(time.time()),
                     charging_status=False,
                 ),
             )

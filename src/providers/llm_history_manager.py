@@ -39,8 +39,16 @@ class LLMHistoryManager:
         # configuration
         self.config = config
         self.agent_name = self.config.agent_name
-        self.system_prompt = system_prompt.replace("****", self.agent_name)
-        self.summary_command = summary_command.replace("****", self.agent_name)
+        self.system_prompt = (
+            system_prompt.replace("****", self.agent_name)
+            if self.agent_name
+            else system_prompt
+        )
+        self.summary_command = (
+            summary_command.replace("****", self.agent_name)
+            if self.agent_name
+            else summary_command
+        )
 
         # frame index
         self.frame_index = 0
@@ -84,15 +92,19 @@ class LLMHistoryManager:
             summary_prompt += self.summary_command
 
             # insert actual robot name
-            summary_prompt = summary_prompt.replace("****", self.agent_name)
+            summary_prompt = (
+                summary_prompt.replace("****", self.agent_name)
+                if self.agent_name
+                else summary_prompt
+            )
 
             logging.info(f"Information to summarize:\n{summary_prompt}")
 
             # Set timeout for API call
             timeout = 10.0  # seconds
             response = await asyncio.wait_for(
-                self.client.chat.completions.create(
-                    model=self.config.model,
+                self.client.chat.completions.create(  # type: ignore
+                    model=self.config.model or "gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": summary_prompt},
@@ -108,6 +120,11 @@ class LLMHistoryManager:
                 )
 
             summary = response.choices[0].message.content
+            if summary is None:
+                logging.error("Received empty summary from API")
+                return ChatMessage(
+                    role="system", content="Error: Received empty summary from API"
+                )
             return ChatMessage(role="assistant", content=f"Previously, {summary}")
 
         except asyncio.TimeoutError:
@@ -118,14 +135,6 @@ class LLMHistoryManager:
             return ChatMessage(
                 role="system", content=f"Error: API service unavailable: {str(e)}"
             )
-        except openai.APIConnectionError as e:
-            logging.error(f"OpenAI API connection error: {e}")
-            return ChatMessage(
-                role="system", content="Error: Could not connect to API service"
-            )
-        except openai.RateLimitError as e:
-            logging.error(f"OpenAI API rate limit error: {e}")
-            return ChatMessage(role="system", content="Error: API rate limit exceeded")
         except Exception as e:
             logging.error(f"Error summarizing messages: {type(e).__name__}: {e}")
             return ChatMessage(role="system", content="Error summarizing state")
@@ -241,7 +250,7 @@ class LLMHistoryManager:
                                 ACTION_MAP[action.type.lower()].format(
                                     action.value if action.value else ""
                                 )
-                                for action in response.actions
+                                for action in response.actions  # type: ignore
                                 if action.type.lower() in ACTION_MAP
                             )
                         )

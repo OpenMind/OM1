@@ -3,12 +3,12 @@ import multiprocessing as mp
 import threading
 import time
 from queue import Empty, Full
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import zenoh
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 from .singleton import singleton
 
@@ -58,7 +58,7 @@ def simple_paths_processor(
     running = True
 
     try:
-        session = zenoh.open(zenoh.Config())
+        session = open_zenoh_session()
         session.declare_subscriber("om/paths", paths_callback)
         logging.info("Zenoh is open for SimplePathProvider")
     except Exception as e:
@@ -101,8 +101,10 @@ class SimplePathsProvider:
         self.data_queue = mp.Queue(maxsize=5)
         self.control_queue = mp.Queue()
 
+        # Thread control
         self._simple_paths_processor_thread = None
         self._simple_paths_derived_thread = None
+        self._stop_event = threading.Event()
 
     def start(self):
         """
@@ -134,6 +136,8 @@ class SimplePathsProvider:
         """
         Stop the SimplePathsProvider by closing the Zenoh session.
         """
+        self._stop_event.set()
+
         if self._simple_paths_processor_thread:
             self.control_queue.put("STOP")
             self._simple_paths_processor_thread.join()
@@ -147,7 +151,7 @@ class SimplePathsProvider:
         """
         Process paths data from the data queue and generate movement options.
         """
-        while True:
+        while not self._stop_event.is_set():
             try:
                 paths = self.data_queue.get_nowait()
 
@@ -232,7 +236,7 @@ class SimplePathsProvider:
         return self._lidar_string
 
     @property
-    def movement_options(self) -> Dict[str, List[int]]:
+    def movement_options(self) -> Dict[str, Union[List[int], bool]]:
         """
         Get the movement options based on the current valid paths.
 

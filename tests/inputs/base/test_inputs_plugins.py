@@ -8,6 +8,7 @@ from inputs.base.loop import FuserInput
 def get_all_inputs_classes():
     import importlib
     import inspect
+    import logging
     import os
 
     plugins_dir = os.path.join("src", "inputs", "plugins")
@@ -15,14 +16,19 @@ def get_all_inputs_classes():
 
     inputs_classes = []
     for plugin in plugin_files:
-        module = importlib.import_module(f"inputs.plugins.{plugin}")
-        for name, obj in inspect.getmembers(module):
-            if (
-                inspect.isclass(obj)
-                and issubclass(obj, FuserInput)
-                and obj != FuserInput
-            ):
-                inputs_classes.append(obj)
+        try:
+            module = importlib.import_module(f"inputs.plugins.{plugin}")
+            for name, obj in inspect.getmembers(module):
+                if (
+                    inspect.isclass(obj)
+                    and issubclass(obj, FuserInput)
+                    and obj != FuserInput
+                ):
+                    inputs_classes.append(obj)
+        except (ImportError, ModuleNotFoundError) as e:
+            # Skip plugins that fail to import due to missing optional dependencies
+            logging.warning(f"Skipping plugin {plugin} due to import error: {e}")
+            continue
     return inputs_classes
 
 

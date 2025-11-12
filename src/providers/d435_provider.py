@@ -3,7 +3,7 @@ import math
 
 import zenoh
 
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 from .singleton import singleton
 
@@ -16,16 +16,18 @@ class D435Provider:
 
     def __init__(self):
         self.obstacle = []
-
         self.running = False
+        self.session = None
 
-        self.session = zenoh.open(zenoh.Config())
-
-        self.session.declare_subscriber(
-            "camera/realsense2_camera_node/depth/obstacle_point", self.obstacle_callback
-        )
-
-        logging.info("Zenoh is open for D435Provider")
+        try:
+            self.session = open_zenoh_session()
+            self.session.declare_subscriber(
+                "camera/realsense2_camera_node/depth/obstacle_point",
+                self.obstacle_callback,
+            )
+            logging.info("Zenoh is open for D435Provider")
+        except Exception as e:
+            logging.error(f"Error opening Zenoh client: {e}")
 
         self.start()
 
@@ -52,20 +54,20 @@ class D435Provider:
 
         return angle_degrees, distance
 
-    def obstacle_callback(self, msg: sensor_msgs.PointCloud):
+    def obstacle_callback(self, sample: zenoh.Sample):
         """
         Callback function to process the obstacle point cloud data.
 
         Parameters:
         ----------
-        msg : sensor_msgs.PointCloud
-            The message containing the point cloud data.
+        sample : zenoh.Sample
+            The sample containing the point cloud data.
         """
         try:
-            points = sensor_msgs.PointCloud.deserialize(msg.payload.to_bytes())
+            points = sensor_msgs.PointCloud.deserialize(sample.payload.to_bytes())
 
             obstacles = []
-            for pt in points.points:
+            for pt in points.points:  # type: ignore
                 x = pt.x
                 y = pt.y
                 z = pt.z
@@ -97,5 +99,8 @@ class D435Provider:
             return
 
         self.running = False
-        self.session.close()
+
+        if self.session:
+            self.session.close()
+
         logging.info("D435Provider stopped and Zenoh session closed")

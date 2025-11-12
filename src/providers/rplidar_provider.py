@@ -7,7 +7,7 @@ import threading
 import time
 from dataclasses import dataclass
 from queue import Empty, Full
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import zenoh
@@ -15,8 +15,7 @@ from numpy.typing import NDArray
 
 from providers.odom_provider import OdomProvider
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_idl import sensor_msgs
-from zenoh_idl.sensor_msgs import LaserScan
+from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
 
 from .d435_provider import D435Provider
 from .rplidar_driver import RPDriver
@@ -148,8 +147,6 @@ class RPLidarProvider:
         The angle of the sensor zero relative to the way in which it's mounted
     URID: str = ""
         The URID of the robot, used for Zenoh communication
-    multicast_address: str = ""
-        The multicast address for Zenoh communication
     machine_type: str = "go2"
         The type of the robot, e.g., "go2" or "tb4"
     use_zenoh: bool = False
@@ -176,12 +173,11 @@ class RPLidarProvider:
         self,
         serial_port: str = DEFAULT_SERIAL_PORT,
         half_width_robot: float = DEFAULT_HALF_WIDTH_ROBOT,
-        angles_blanked: list = None,
+        angles_blanked: Optional[list] = None,
         relevant_distance_max: float = DEFAULT_RELEVANT_DISTANCE_MAX,
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
         URID: str = "",
-        multicast_address: str = "",
         machine_type: str = "go2",
         use_zenoh: bool = False,
         simple_paths: bool = False,
@@ -201,7 +197,6 @@ class RPLidarProvider:
         self.relevant_distance_min = relevant_distance_min
         self.sensor_mounting_angle = sensor_mounting_angle
         self.URID = URID
-        self.multicast_address = multicast_address
         self.machine_type = machine_type
         self.use_zenoh = use_zenoh
         self.simple_paths = simple_paths
@@ -215,7 +210,7 @@ class RPLidarProvider:
 
         self._raw_scan: Optional[NDArray] = None
         self._valid_paths: Optional[list] = None
-        self._lidar_string: str = None
+        self._lidar_string: Optional[str] = None
 
         self.angles = None
         self.angles_final = None
@@ -266,14 +261,7 @@ class RPLidarProvider:
         if self.use_zenoh:
             logging.info("Connecting to the RPLIDAR via Zenoh")
             try:
-                config = zenoh.Config()
-                if self.multicast_address:
-                    config.insert_json5(
-                        "scouting",
-                        f'{{"multicast": {{"address": "{self.multicast_address}"}}}}',
-                    )
-
-                self.zen = zenoh.open(config)
+                self.zen = open_zenoh_session()
                 logging.info(f"Zenoh move client opened {self.zen}")
 
                 if self.machine_type == "tb4":
@@ -319,15 +307,17 @@ class RPLidarProvider:
             raise ValueError("Provided json_line must be a json string.")
 
         if (
-            os.path.exists(self.filename_current)
+            self.filename_current is not None
+            and os.path.exists(self.filename_current)
             and os.path.getsize(self.filename_current) > self.max_file_size_bytes
         ):
             self.filename_current = self.update_filename()
             logging.info(f"New rpscan file name: {self.filename_current}")
 
-        with open(self.filename_current, "a", encoding="utf-8") as f:
-            f.write(json_line + "\n")
-            f.flush()
+        if self.filename_current is not None:
+            with open(self.filename_current, "a", encoding="utf-8") as f:
+                f.write(json_line + "\n")
+                f.flush()
 
     def listen_scan(self, data: zenoh.Sample):
         """
@@ -393,7 +383,7 @@ class RPLidarProvider:
         """
         if scan is None:
             logging.info("Waiting for Zenoh Laserscan data...")
-            self._raw_scan = []
+            self._raw_scan = None
             self._lidar_string = "You might be surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
             self._valid_paths = []
         else:
@@ -410,7 +400,10 @@ class RPLidarProvider:
                 self.angles_final = np.flip(self.angles)
 
             # angles now run from 360.0 to 0 degress
-            data = list(zip(self.angles_final, scan.ranges))
+            if self.angles_final is not None:
+                data = list(zip(self.angles_final, scan.ranges))
+            else:
+                data = []
             array_ready = np.array(data)
             self._path_processor(array_ready)
 
@@ -689,19 +682,19 @@ class RPLidarProvider:
         return self._raw_scan
 
     @property
-    def lidar_string(self) -> str:
+    def lidar_string(self) -> Optional[str]:
         """
         Get the latest natural language assessment of possible paths.
 
         Returns
         -------
-        str
+        Optional[str]
             A natural language summary of possible motion paths
         """
         return self._lidar_string
 
     @property
-    def movement_options(self) -> Dict[str, List[int]]:
+    def movement_options(self) -> Dict[str, Union[List[int], bool]]:
         """
         Get the movement options based on the current valid paths.
 

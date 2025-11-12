@@ -1,8 +1,11 @@
 import logging
+from typing import TypeVar
 
 from om1_utils import ws
 
 from .singleton import singleton
+
+R = TypeVar("R")
 
 
 @singleton

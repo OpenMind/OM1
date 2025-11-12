@@ -47,10 +47,11 @@ class RivaTTSProvider:
 
         Parameters
         ----------
-        tts_state_callback : callable
+        tts_state_callback : Optional[callable]
             The callback function to receive TTS state changes.
         """
-        self._audio_stream.set_tts_state_callback(tts_state_callback)
+        if tts_state_callback is not None:
+            self._audio_stream.set_tts_state_callback(tts_state_callback)
 
     def add_pending_message(self, text: str):
         """

@@ -2,14 +2,12 @@ import logging
 import threading
 import time
 
-import zenoh
-
 from actions.base import ActionConfig, ActionConnector
 from actions.move_game_controller.interface import IDLEInput
 from providers.odom_provider import OdomProvider, RobotState
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
-from zenoh_idl.status_msgs import AudioStatus
+from zenoh_msgs import AudioStatus, open_zenoh_session
 
 try:
     import hid
@@ -47,7 +45,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self.topic = "robot/status/audio"
         self.session = None
         try:
-            self.session = zenoh.open(zenoh.Config())
+            self.session = open_zenoh_session()
             self.session.declare_subscriber(self.topic, self.zenoh_audio_message)
             logging.info("Game Controller Zenoh client opened")
         except Exception as e:
@@ -82,14 +80,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self.d_pad_previous = 0
         self.button_previous = 0
 
-        self.lt_value = None
-        self.rt_value = None
-        self.d_pad_value = None
-        self.button_value = None
+        self.lt_value = 0
+        self.rt_value = 0
+        self.d_pad_value = 0
+        self.button_value = 0
 
         self.RTLT_moving = False
 
-        unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        unitree_ethernet = getattr(config, "unitree_ethernet", "")
         self.odom = OdomProvider(channel=unitree_ethernet)
         self.unitree_state_provider = UnitreeGo2StateProvider()
 
@@ -168,15 +166,19 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                 return
 
             if self.unitree_state_provider.state_code == 1002:
-                self.sport_client.BalanceStand()
-                self.sport_client.Move(0.05, 0, 0)
+                if self.sport_client:
+                    logging.info("Robot is in jointLock state - issuing BalanceStand()")
+                    self.sport_client.BalanceStand()
+                    self.sport_client.Move(0.05, 0, 0)
 
             code = getattr(self.sport_client, command)()
             logging.info(f"Unitree command {command} executed with code {code}")
 
             if self.unitree_state_provider.state_code == 1002:
-                self.sport_client.BalanceStand()
-                self.sport_client.Move(0.05, 0, 0)
+                if self.sport_client:
+                    logging.info("Robot is in jointLock state - issuing BalanceStand()")
+                    self.sport_client.BalanceStand()
+                    self.sport_client.Move(0.05, 0, 0)
 
         except Exception as e:
             logging.error(f"Error in command thread {command}: {e}")
@@ -297,7 +299,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                     self._move_robot(0.0, 0.0, -self.turn_speed)
                     return
 
-            if self.d_pad_previous > 0:
+            if self.d_pad_previous and self.d_pad_previous > 0:
                 if self.d_pad_previous == 1:  # Up
                     logging.info("D-pad UP - Moving forward")
                     self._move_robot(

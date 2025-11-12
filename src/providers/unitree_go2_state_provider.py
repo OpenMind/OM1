@@ -85,7 +85,7 @@ def go2_state_processor(
         str
             The state name corresponding to the code, or "unknown" if not found.
         """
-        return state_machine_codes.get(code, "unkown")
+        return state_machine_codes.get(code, "unknown")
 
     def state_callback(msg: SportModeState_):
         """
@@ -169,6 +169,7 @@ class UnitreeGo2StateProvider:
 
         self._go2_state_reader_thread = None
         self._go2_state_processor_thread = None
+        self._stop_event = threading.Event()
 
         self.go2_sport_mode_state_msg = None
         self.go2_state = None
@@ -206,11 +207,26 @@ class UnitreeGo2StateProvider:
             self._go2_state_processor_thread.start()
             logging.info("Unitree Go2 state processor started.")
 
+    def stop(self):
+        """
+        Stop the Unitree Go2 state provider.
+        """
+        self._stop_event.set()
+
+        if self._go2_state_reader_thread:
+            self.control_queue.put("STOP")
+            self._go2_state_reader_thread.join()
+            logging.info("Unitree Go2 state reader stopped.")
+
+        if self._go2_state_processor_thread:
+            self._go2_state_processor_thread.join()
+            logging.info("Unitree Go2 state processor stopped.")
+
     def _go2_state_processor(self):
         """
         Process the Unitree Go2 state data from the data queue.
         """
-        while True:
+        while not self._stop_event.is_set():
             try:
                 data = self.data_queue.get_nowait()
 

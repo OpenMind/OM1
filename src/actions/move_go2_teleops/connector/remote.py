@@ -47,8 +47,8 @@ class MoveGo2Remote(ActionConnector[MoveInput]):
         self.ws_client = ws.Client(
             url=f"wss://api.openmind.org/api/core/teleops/action?api_key={api_key}"
         )
-        self.ws_client.start()
         self.ws_client.register_message_callback(self._on_message)
+        self.ws_client.start()
 
         self.unitree_state_provider = UnitreeGo2StateProvider()
 

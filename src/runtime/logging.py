@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -28,7 +29,7 @@ def setup_logging(
     config_name: str,
     log_level: str = "INFO",
     log_to_file: bool = False,
-    logging_config: LoggingConfig = None,
+    logging_config: Optional[LoggingConfig] = None,
 ) -> None:
     """
     Set up the logging configuration for the application.
@@ -63,7 +64,7 @@ def setup_logging(
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
 
-    handlers = [console_handler]
+    handlers: list[logging.Handler] = [console_handler]
 
     if log_to_file:
 

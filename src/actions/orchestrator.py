@@ -1,12 +1,13 @@
 import asyncio
 import logging
 import threading
+import time
 import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
 from actions.base import AgentAction
 from llm.output_model import Action
-from runtime.config import RuntimeConfig
+from runtime.single_mode.config import RuntimeConfig
 
 
 class ActionOrchestrator:
@@ -59,6 +60,7 @@ class ActionOrchestrator:
                 action.connector.tick()
             except Exception as e:
                 logging.error(f"Error in connector {action.llm_label}: {e}")
+                time.sleep(0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
@@ -73,8 +75,14 @@ class ActionOrchestrator:
         return done_promises, self.promise_queue
 
     async def promise(self, actions: list[Action]) -> None:
-        # loop through commands and send the correct
-        # command to the correct action
+        """
+        Promises the actions to the appropriate connectors.
+
+        Parameters
+        ----------
+        actions : list[Action]
+            List of actions to promise to connectors.
+        """
         for action in actions:
             logging.debug(f"Sending command: {action}")
 
@@ -108,7 +116,7 @@ class ActionOrchestrator:
             )
             if agent_action is None:
                 logging.warning(
-                    f"Attempted to call non-existant action: {action.type.lower()}."
+                    f"Attempted to call non-existent action: {action.type.lower()}."
                 )
                 continue
             action_response = asyncio.create_task(

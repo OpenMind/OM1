@@ -2,19 +2,16 @@ import logging
 import sys
 import time
 
-import zenoh
-
 sys.path.insert(0, "../src")
 
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 logging.basicConfig(level=logging.INFO)
 
 
 class SimplePaths:
     def __init__(self):
-        self.session = zenoh.open(zenoh.Config())
-
+        self.session = open_zenoh_session()
         self.session.declare_subscriber("om/paths", self.paths_callback)
 
         logging.info("Zenoh is open for Paths")
@@ -28,7 +25,7 @@ class SimplePaths:
             current_time = time.time()
             lattency = current_time - msg_time
             logging.debug(f"Received paths with latency: {lattency:.6f} seconds")
-            logging.info(f"Received paths: {paths_msg.paths}")
+            logging.debug(f"Received paths: {paths_msg.paths}")
         except Exception as e:
             logging.error(f"Error processing paths: {e}")
 

@@ -9,8 +9,8 @@ from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
 
 try:
-    from unitree.unitree_sdk2py.core.channel import ChannelSubscriber
-    from unitree.unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
+    from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
+    from unitree.unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_  # type: ignore
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
@@ -65,13 +65,13 @@ class UnitreeGo2Battery(FuserInput[str]):
         self.lowstate_subscriber = None
 
         try:
-            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
+            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)  # type: ignore
             logging.info("Battery monitor initialized")
         except Exception as e:
             logging.error(f"Error initializing Battery monitor: {e}")
 
         if self.lowstate_subscriber:
-            self.lowstate_subscriber.Init(self.LowStateMessageHandler, 10)
+            self.lowstate_subscriber.Init(self.LowStateMessageHandler, 10)  # type: ignore
 
         # battery state
         self.battery_percentage = 0.0
@@ -83,11 +83,26 @@ class UnitreeGo2Battery(FuserInput[str]):
         self.descriptor_for_LLM = "Energy Levels"
 
     def LowStateMessageHandler(self, msg: LowState_):
-        self.low_state = msg
-        self.battery_percentage = round(float(msg.bms_state.soc), 2)
-        self.battery_voltage = round(float(msg.power_v), 2)
-        self.battery_amperes = round(float(msg.power_a), 2)
-        self.battery_t = int((msg.temperature_ntc1 + msg.temperature_ntc2) / 2)
+        """
+        Handle incoming LowState messages from Unitree Go2.
+
+        Parameters
+        ----------
+        msg : LowState_
+            Incoming LowState message
+        """
+        try:
+            self.low_state = msg
+            self.battery_percentage = round(float(msg.bms_state.soc), 2)  # type: ignore
+            self.battery_voltage = round(float(msg.power_v), 2)  # type: ignore
+            self.battery_amperes = round(float(msg.power_a), 2)  # type: ignore
+            self.battery_t = int((msg.temperature_ntc1 + msg.temperature_ntc2) / 2)  # type: ignore
+        except AttributeError as e:
+            logging.warning(f"Incomplete LowState message: {e}")
+            self.battery_percentage = 0.0
+            self.battery_voltage = 0.0
+            self.battery_amperes = 0.0
+            self.battery_t = 0
 
     async def report_status(self):
         """
@@ -96,12 +111,12 @@ class UnitreeGo2Battery(FuserInput[str]):
         self.status_provider.share_status(
             TeleopsStatus(
                 machine_name="UnitreeGo2",
-                update_time=time.time(),
+                update_time=str(time.time()),
                 battery_status=BatteryStatus(
                     battery_level=self.battery_percentage,
                     temperature=self.battery_t,
                     voltage=self.battery_voltage,
-                    timestamp=time.time(),
+                    timestamp=str(time.time()),
                     charging_status=False,
                 ),
             )

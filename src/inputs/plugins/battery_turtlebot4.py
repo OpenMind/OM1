@@ -9,7 +9,7 @@ import zenoh
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
-from zenoh_idl import sensor_msgs
+from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 
 @dataclass
@@ -53,8 +53,7 @@ class TurtleBot4Battery(FuserInput[str]):
         self.is_docked = False
 
         logging.info("Opening Zenoh TurtleBot4 session...")
-        conf = zenoh.Config()
-        self.z = zenoh.open(conf)
+        self.z = open_zenoh_session()
 
         logging.info(f"Config: {self.config}")
 
@@ -122,12 +121,12 @@ class TurtleBot4Battery(FuserInput[str]):
         self.status_provider.share_status(
             TeleopsStatus(
                 machine_name="TurtleBot4",
-                update_time=time.time(),
+                update_time=str(time.time()),
                 battery_status=BatteryStatus(
                     battery_level=self.battery_percentage,
                     temperature=self.battery_temperature,
                     voltage=self.battery_voltage,
-                    timestamp=self.battery_timestamp,
+                    timestamp=str(self.battery_timestamp),
                     charging_status=self.is_docked,
                 ),
             )
@@ -149,9 +148,12 @@ class TurtleBot4Battery(FuserInput[str]):
             f"TB4 batt percent:{self.battery_percentage} low?: {self.battery_status}"
         )
 
-        return [self.battery_status]
+        if self.battery_status is not None:
+            return [self.battery_status]
+        else:
+            return []
 
-    async def _raw_to_text(self, raw_input: str) -> Optional[Message]:
+    async def _raw_to_text(self, raw_input: List[str]) -> Optional[Message]:
         """
         Process raw lowstate to generate text description.
 
@@ -170,7 +172,7 @@ class TurtleBot4Battery(FuserInput[str]):
 
         return None
 
-    async def raw_to_text(self, raw_input: List[float]):
+    async def raw_to_text(self, raw_input: List[str]):
         """
         Convert raw lowstate to text and update message buffer.
 

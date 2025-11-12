@@ -4,7 +4,8 @@ import threading
 import time
 from typing import Dict, List
 
-from bleak import AdvertisementData, BleakScanner
+from bleak import BleakScanner
+from bleak.backends.scanner import AdvertisementData
 
 from backgrounds.base import Background, BackgroundConfig
 from providers.fabric_map_provider import (
@@ -267,7 +268,7 @@ class RFmapper(Background):
                 try:
                     self.fds.share_data(
                         FabricData(
-                            machine_id=self.URID,
+                            machine_id=self.URID if self.URID else "Unknown",
                             payload_idx=self.payload_idx,
                             gps_unix_ts=self.gps_unix_ts,
                             gps_lat=self.gps_lat,

@@ -17,13 +17,13 @@ description: "Project structure and flow diagram"
 │   ├── providers/        # Background tasks
 │   ├── runtime/          # Core runtime system
 │   ├── simulators/       # Virtual endpoints such as `WebSim`
-│   ├── zenoh_idl/        # Zenoh's Interface Definition Language (IDL)
+│   ├── zenoh_msgs/       # Zenoh's Interface Definition Language (IDL)
 │   └── run.py            # CLI entry point
 ```
 
 The system is based on a loop that runs at a fixed frequency of `self.config.hertz`. The loop looks for the most recent data from various sources, fuses the data into a prompt (typical length ~1 paragraph), sends that prompt to one or more LLMs, and then sends the LLM responses to virtual agents or physical robots for conversion into real world actions.
 
-Note - In addition to the core loop running at `self.config.hertz`, a robot will have dozens of other control loops running at rates of 50-500 Hz (for physical stabilization and motions), 2-30 Hz for sensors such as LIDARS and laserscan, 10 Hz for GPS, 50 Hz for odometry, and so forth. The `self.config.hertz` setting refers only the basic fuser cycle that is best thought of as the refresh rate of the robot's core attention and working memory.     
+Note - In addition to the core loop running at `self.config.hertz`, a robot will have dozens of other control loops running at rates of 50-500 Hz (for physical stabilization and motions), 2-30 Hz for sensors such as LIDARS and laserscan, 10 Hz for GPS, 50 Hz for odometry, and so forth. The `self.config.hertz` setting refers only the basic fuser cycle that is best thought of as the refresh rate of the robot's core attention and working memory.
 
 ## Flow Diagram
 

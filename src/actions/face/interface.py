@@ -5,11 +5,12 @@ from actions.base import Interface
 
 
 class FaceAction(str, Enum):
-    CRY = "cry"
-    SMILE = "smile"
-    FROWN = "frown"
+    HAPPY = "happy"
+    CONFUSED = "confused"
+    CURIOUS = "curious"
+    EXCITED = "excited"
+    SAD = "sad"
     THINK = "think"
-    JOY = "joy"
 
 
 @dataclass
