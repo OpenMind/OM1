@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Awaitable, Callable, TypeVar
 
-from providers.avatar_provider import AvatarProvider
+from .avatar_provider import AvatarProvider
 
 T = TypeVar("T")
 

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
-from llm.thinking_state import manage_thinking_state
+from providers.avatar_llm_state_provider import manage_thinking_state
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
