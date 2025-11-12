@@ -1,4 +1,6 @@
 import functools
+import logging
+import threading
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar
 
 from .avatar_provider import AvatarProvider
@@ -6,56 +8,125 @@ from .avatar_provider import AvatarProvider
 T = TypeVar("T")
 
 
-def AvatarLLMStateProvider(
-    func: Callable[..., Awaitable[T]],
-) -> Callable[..., Awaitable[T]]:
+class AvatarLLMState:
     """
-    Decorator to manage avatar thinking state during LLM processing.
+    Singleton class to manage avatar thinking state during LLM processing.
 
-    Sets avatar to "Think" state when LLM starts processing,
-    Restores to "Happy" state after completion if no face action was generated.
-
+    Provides static-like decorator methods for avatar state management,
+    similar to LLMHistoryManager pattern.
     """
 
-    @functools.wraps(func)
-    async def wrapper(self, *args: Any, **kwargs: Any) -> T:
-        # Set thinking state before LLM processing
-        avatar_provider = None
-        try:
-            avatar_provider = AvatarProvider()
-            if avatar_provider.running:
-                avatar_provider.send_avatar_command("Think")
-        except Exception:
-            pass
+    _instance = None
+    _lock = None
 
-        try:
-            result = await func(self, *args, **kwargs)
+    def __new__(cls):
+        if cls._instance is None:
+            if cls._lock is None:
+                cls._lock = threading.Lock()
 
-            # Check if result contains face action
-            has_face_action = False
-            if result:
-                actions: Optional[List[Any]] = getattr(result, "actions", None)
-                if actions:
-                    has_face_action = any(
-                        getattr(a, "type", "").lower() == "face" for a in actions
-                    )
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
 
-            # Restore happy if no face action in result
-            if not has_face_action and avatar_provider and avatar_provider.running:
+    def __init__(self):
+        """
+        Initialize the AvatarLLMState singleton instance.
+        """
+        if not getattr(self, "_initialized", False):
+            self.avatar_provider: Optional[AvatarProvider] = None
+            try:
+                self.avatar_provider = AvatarProvider()
+            except Exception:
+                logging.error("Failed to initialize AvatarProvider in AvatarLLMState")
+                self.avatar_provider = None
+            self._initialized = True
+
+    def _start_thinking(self) -> None:
+        """
+        Internal method to trigger the thinking animation on the avatar.
+
+        Sets the avatar to "Think" state to indicate LLM processing.
+        """
+        if self.avatar_provider and self.avatar_provider.running:
+            try:
+                self.avatar_provider.send_avatar_command("Think")
+            except Exception:
+                pass
+
+    def _restore_happy(self) -> None:
+        """
+        Restore the avatar to happy state.
+
+        Sets the avatar to "Happy" state after processing completion.
+        """
+        if self.avatar_provider and self.avatar_provider.running:
+            try:
+                self.avatar_provider.send_avatar_command("Happy")
+            except Exception:
+                pass
+
+    def _has_face_action_in_result(self, result: Any) -> bool:
+        """
+        Check if the result contains a face action.
+
+        Parameters
+        ----------
+        result : Any
+            The result object to check.
+
+        Returns
+        -------
+        bool
+            True if result contains a face action, False otherwise
+        """
+        if not result:
+            return False
+
+        actions: Optional[List[Any]] = getattr(result, "actions", None)
+        if not actions:
+            return False
+
+        return any(getattr(a, "type", "").lower() == "face" for a in actions)
+
+    @classmethod
+    def trigger_thinking(cls, func: Optional[Callable[..., Awaitable[T]]] = None):
+        """
+        Decorator to manage avatar state during LLM processing.
+
+        Parameters
+        ----------
+        func : Optional[Callable[..., Awaitable[T]]]
+            The async function to wrap.
+
+        Returns
+        -------
+        Callable or wrapped function
+            Wrapped function that manages avatar state
+        """
+
+        def decorator(f: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+            @functools.wraps(f)
+            async def wrapper(*args: Any, **kwargs: Any) -> T:
+                instance = cls()
+                instance._start_thinking()
+
                 try:
-                    avatar_provider.send_avatar_command("Happy")
-                except Exception:
-                    pass
+                    result = await f(*args, **kwargs)
 
-            return result
+                    if not instance._has_face_action_in_result(result):
+                        instance._restore_happy()
 
-        except Exception as e:
-            # Restore happy on error
-            if avatar_provider and avatar_provider.running:
-                try:
-                    avatar_provider.send_avatar_command("Happy")
-                except Exception:
-                    pass
-            raise e
+                    return result
 
-    return wrapper
+                except Exception as e:
+                    instance._restore_happy()
+                    raise e
+
+            return wrapper
+
+        if func is not None:
+            return decorator(func)
+
+        return decorator

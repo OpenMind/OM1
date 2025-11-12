@@ -1,17 +1,18 @@
+from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from llm.output_model import Action, CortexOutputModel
-from providers.avatar_llm_state_provider import AvatarLLMStateProvider
+from providers.avatar_llm_state_provider import AvatarLLMState
 
 
 class MockLLM:
-    @AvatarLLMStateProvider
+    @AvatarLLMState.trigger_thinking
     async def ask(self, prompt: str) -> CortexOutputModel:
         return CortexOutputModel(actions=[Action(type="speak", value="Hello")])
 
-    @AvatarLLMStateProvider
+    @AvatarLLMState.trigger_thinking
     async def ask_with_face(self, prompt: str) -> CortexOutputModel:
         return CortexOutputModel(
             actions=[
@@ -20,19 +21,27 @@ class MockLLM:
             ]
         )
 
-    @AvatarLLMStateProvider
+    @AvatarLLMState.trigger_thinking
     async def ask_that_fails(self, prompt: str) -> CortexOutputModel:
         raise ValueError("Test error")
 
 
+def reset_avatar_llm_state():
+    AvatarLLMState._instance = None
+
+
 @pytest.fixture
-def mock_avatar_provider() -> MagicMock:
+def mock_avatar_provider() -> Generator[MagicMock, None, None]:
+    reset_avatar_llm_state()
+
     with patch("providers.avatar_llm_state_provider.AvatarProvider") as mock:
         provider_instance = MagicMock()
         provider_instance.running = True
         provider_instance.send_avatar_command = MagicMock()
         mock.return_value = provider_instance
         yield provider_instance
+
+    reset_avatar_llm_state()
 
 
 @pytest.mark.asyncio
@@ -86,6 +95,8 @@ async def test_decorator_restores_happy_on_exception(mock_avatar_provider):
 
 @pytest.mark.asyncio
 async def test_decorator_handles_avatar_provider_not_running():
+    reset_avatar_llm_state()
+
     with patch("providers.avatar_llm_state_provider.AvatarProvider") as mock:
         provider_instance = MagicMock()
         provider_instance.running = False
@@ -101,6 +112,8 @@ async def test_decorator_handles_avatar_provider_not_running():
 
 @pytest.mark.asyncio
 async def test_decorator_handles_avatar_provider_exception():
+    reset_avatar_llm_state()
+
     with patch("providers.avatar_llm_state_provider.AvatarProvider") as mock:
         mock.side_effect = Exception("Avatar provider error")
 
@@ -124,7 +137,7 @@ async def test_decorator_preserves_return_value(mock_avatar_provider):
 @pytest.mark.asyncio
 async def test_decorator_handles_result_without_actions(mock_avatar_provider):
     class MockLLMNoActions:
-        @AvatarLLMStateProvider
+        @AvatarLLMState.trigger_thinking
         async def ask(self, prompt: str):
             return {"response": "test"}
 
@@ -142,7 +155,7 @@ async def test_decorator_handles_result_without_actions(mock_avatar_provider):
 @pytest.mark.asyncio
 async def test_decorator_handles_none_result(mock_avatar_provider):
     class MockLLMNone:
-        @AvatarLLMStateProvider
+        @AvatarLLMState.trigger_thinking
         async def ask(self, prompt: str):
             return None
 
