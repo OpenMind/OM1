@@ -1,0 +1,9 @@
+# utils/string_helper.py
+
+def capitalize_sentences(text: str) -> str:
+    """
+    Converts the first letter of each sentence in the text to uppercase.
+    """
+    import re
+    sentences = re.split('([.!?] *)', text)
+    return ''.join(s.capitalize() for s in sentences)
