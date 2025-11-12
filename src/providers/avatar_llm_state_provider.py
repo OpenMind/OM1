@@ -58,7 +58,7 @@ class AvatarLLMState:
         """
         if not self.io_provider:
             return False
-        
+
         try:
             inputs = self.io_provider.inputs
             return "Voice" in inputs
@@ -73,12 +73,15 @@ class AvatarLLMState:
         """
         if not self._has_voice_input():
             return
-        
+
         if self.avatar_provider and self.avatar_provider.running:
             try:
                 self.avatar_provider.send_avatar_command("Think")
             except Exception:
-                logging.error("Failed to send 'Think' command to avatar in AvatarLLMState", exc_info=True)
+                logging.error(
+                    "Failed to send 'Think' command to avatar in AvatarLLMState",
+                    exc_info=True,
+                )
 
     def _restore_happy(self) -> None:
         """
