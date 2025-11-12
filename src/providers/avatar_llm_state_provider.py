@@ -11,9 +11,6 @@ T = TypeVar("T")
 class AvatarLLMState:
     """
     Singleton class to manage avatar thinking state during LLM processing.
-
-    Provides static-like decorator methods for avatar state management,
-    similar to LLMHistoryManager pattern.
     """
 
     _instance = None
