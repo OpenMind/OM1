@@ -31,23 +31,27 @@ def AvatarLLMStateProvider(
         try:
             result = await func(self, *args, **kwargs)
 
-            # Restore happy if no face action in result
-            if result and avatar_provider:
+            # Check if result contains face action
+            has_face_action = False
+            if result:
                 actions: Optional[List[Any]] = getattr(result, "actions", None)
                 if actions:
-                    has_face = any(
+                    has_face_action = any(
                         getattr(a, "type", "").lower() == "face" for a in actions
                     )
-                    if not has_face:
-                        try:
-                            avatar_provider.send_avatar_command("Happy")
-                        except Exception:
-                            pass
+
+            # Restore happy if no face action in result
+            if not has_face_action and avatar_provider and avatar_provider.running:
+                try:
+                    avatar_provider.send_avatar_command("Happy")
+                except Exception:
+                    pass
 
             return result
 
         except Exception as e:
-            if avatar_provider:
+            # Restore happy on error
+            if avatar_provider and avatar_provider.running:
                 try:
                     avatar_provider.send_avatar_command("Happy")
                 except Exception:
