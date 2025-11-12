@@ -32,7 +32,7 @@ def manage_thinking_state(
             result = await func(self, *args, **kwargs)
 
             # Restore happy if no face action in result
-            if result and avatar_provider:
+            if result and avatar_provider and hasattr(result, "actions"):
                 has_face = any(a.type.lower() == "face" for a in result.actions)
                 if not has_face:
                     try:
