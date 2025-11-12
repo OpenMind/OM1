@@ -35,7 +35,7 @@ catkin_package(
   message_runtime
   std_msgs
   geometry_msgs
-  sensor_msgs 
+  sensor_msgs
 )
 
 #############

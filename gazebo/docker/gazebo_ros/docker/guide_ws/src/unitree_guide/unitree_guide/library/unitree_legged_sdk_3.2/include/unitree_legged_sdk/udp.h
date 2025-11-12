@@ -37,7 +37,7 @@ public:
     void GetRecv(char*);
     int Send();
     int Recv(); // directly save in buffer
-    
+
     UDPState udpState;
     char*    targetIP;
     uint16_t targetPort;
@@ -45,7 +45,7 @@ public:
     uint16_t localPort;
 private:
     void init(uint16_t localPort, const char* targetIP, uint16_t targetPort);
-    
+
     uint8_t levelFlag = HIGHLEVEL;   // default: high level
     int sockFd;
     bool connected; // udp only works when connected

@@ -72,3 +72,11 @@ jobs:
 
       - name: Run Pyright
         run: uv run pyright --project ./pyrightconfig.json
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit hooks
+        id: pre-commit
+        run: |
+          pre-commit run --all-files --show-diff-on-failure

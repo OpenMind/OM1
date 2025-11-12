@@ -11,8 +11,8 @@ using namespace UNITREE_LEGGED_SDK;
 class Custom
 {
 public:
-    Custom(uint8_t level): 
-        safe(LeggedType::Go1), 
+    Custom(uint8_t level):
+        safe(LeggedType::Go1),
         udp(level, 8090, "192.168.123.10", 8007){
         udp.InitCmdData(cmd);
     }
@@ -35,11 +35,11 @@ void Custom::UDPRecv()
 }
 
 void Custom::UDPSend()
-{  
+{
     udp.Send();
 }
 
-void Custom::RobotControl() 
+void Custom::RobotControl()
 {
     motiontime++;
     udp.GetRecv(state);
@@ -72,7 +72,7 @@ void Custom::RobotControl()
     udp.SetSend(cmd);
 }
 
-int main(void) 
+int main(void)
 {
     std::cout << "Communication level is set to LOW-level." << std::endl
               << "WARNING: Make sure the robot is hung up." << std::endl
@@ -93,5 +93,5 @@ int main(void)
         sleep(10);
     };
 
-    return 0; 
+    return 0;
 }

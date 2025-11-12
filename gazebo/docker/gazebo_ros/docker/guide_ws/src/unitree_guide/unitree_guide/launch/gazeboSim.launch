@@ -11,7 +11,7 @@
     <arg name="debug" default="false"/>
     <!-- Debug mode will hung up the robot, use "true" or "false" to switch it. -->
     <arg name="user_debug" default="false"/>
-    
+
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="world_name" value="$(find unitree_gazebo)/worlds/$(arg wname).world"/>
         <arg name="debug" value="$(arg debug)"/>
@@ -27,7 +27,7 @@
 
     <!-- Load the URDF into the ROS Parameter Server -->
     <param name="robot_description"
-           command="$(find xacro)/xacro --inorder '$(arg dollar)$(arg robot_path)/xacro/robot.xacro' 
+           command="$(find xacro)/xacro --inorder '$(arg dollar)$(arg robot_path)/xacro/robot.xacro'
            DEBUG:=$(arg user_debug)"/>
 
     <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->

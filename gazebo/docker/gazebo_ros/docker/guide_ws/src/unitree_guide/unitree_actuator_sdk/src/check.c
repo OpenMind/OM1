@@ -1,10 +1,10 @@
 #include <stdio.h>
-#include <errno.h>      
+#include <errno.h>
 #include <string.h>
 #include <unistd.h>    //usleep()
-#include <sys/time.h> 
+#include <sys/time.h>
 #include "LSerial.h"    //serial port communication
-#include "motor_ctrl.h" 
+#include "motor_ctrl.h"
 
 enum motor_command_type
 {
@@ -171,6 +171,6 @@ printf("102\n");
 #if defined(__WIN32__)
     system("pause");
 #endif
-    
+
     return 0;
 }

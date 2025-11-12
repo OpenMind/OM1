@@ -8,7 +8,7 @@ safe_docker_stop_and_remove() {
         echo "Stopping container: $container_name"
         docker stop "$container_name" &>/dev/null
     fi
-    
+
     # Check if the container exists (stopped or running), then remove it
     if docker container ls -a -q -f name="$container_name" &>/dev/null; then
         echo "Removing container: $container_name"
@@ -79,11 +79,11 @@ sleep 2
 # Preparing
 
 echo "Disabling access control"
-xhost + 
+xhost +
 
 # Assume device number is 10
 DEVICE_NO=10
-echo "Creating virtual video device at /dev/video$DEVICE_NO" 
+echo "Creating virtual video device at /dev/video$DEVICE_NO"
 sudo modprobe -r v4l2loopback
 sudo modprobe v4l2loopback video_nr=$DEVICE_NO exclusive_caps=1
 
@@ -144,4 +144,3 @@ source /opt/ros/noetic/setup.bash && \
 source /app/guide_ws/devel/setup.bash && \
 rosrun move_publisher move_publisher.py; \
 exec bash'
-

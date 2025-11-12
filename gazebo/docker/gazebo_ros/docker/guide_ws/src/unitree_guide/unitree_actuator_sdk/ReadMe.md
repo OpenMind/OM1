@@ -3,7 +3,7 @@ This library is used for the communication between PC and the motor control boar
 
 # Dependencies
 * [CMake](http://www.cmake.org) (version 2.8.3 or higher)
-  
+
 # Files
 ## /lib
 Including the library files of Linux and Windows separately. If you wish to use the SDK under ARM32/64, please modify the CMakeList manually to select the correst `.so` file.

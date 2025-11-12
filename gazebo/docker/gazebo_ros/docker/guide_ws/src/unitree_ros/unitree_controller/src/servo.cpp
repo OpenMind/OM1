@@ -49,7 +49,7 @@ public:
     }
 
     void imuCallback(const sensor_msgs::Imu & msg)
-    { 
+    {
         lowState.imu.quaternion[0] = msg.orientation.w;
         lowState.imu.quaternion[1] = msg.orientation.x;
         lowState.imu.quaternion[2] = msg.orientation.y;
@@ -58,11 +58,11 @@ public:
         lowState.imu.gyroscope[0] = msg.angular_velocity.x;
         lowState.imu.gyroscope[1] = msg.angular_velocity.y;
         lowState.imu.gyroscope[2] = msg.angular_velocity.z;
-        
+
         lowState.imu.accelerometer[0] = msg.linear_acceleration.x;
         lowState.imu.accelerometer[1] = msg.linear_acceleration.y;
         lowState.imu.accelerometer[2] = msg.linear_acceleration.z;
-        
+
     }
 
     void FRhipCallback(const unitree_legged_msgs::MotorState& msg)

@@ -89,10 +89,8 @@ ax1.set_xlim(-5, 5)
 ax1.set_ylim(-5, 5)
 ax1.set_aspect("equal")
 
-"""
-Robot and sensor configuration
-UNITREE
-"""
+# Robot and sensor configuration
+# UNITREE
 
 half_width_robot = 0.20  # the width of the robot is 40 cm
 relevant_distance_max = 1.1  # meters

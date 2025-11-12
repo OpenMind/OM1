@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
 
 	constexpr int HIGHLEVEL    = 0x00;
@@ -17,7 +17,7 @@ namespace UNITREE_LEGGED_SDK
 	constexpr double VelStopF  = (16000.0f);
 	extern const int HIGH_CMD_LENGTH;      // sizeof(HighCmd)
 	extern const int HIGH_STATE_LENGTH;    // sizeof(HighState)
-	extern const int LOW_CMD_LENGTH;       // shorter than sizeof(LowCmd),   bytes compressed LowCmd length  
+	extern const int LOW_CMD_LENGTH;       // shorter than sizeof(LowCmd),   bytes compressed LowCmd length
 	extern const int LOW_STATE_LENGTH;     // shorter than sizeof(LowState), bytes compressed LowState length
 
 #pragma pack(1)
@@ -66,7 +66,7 @@ namespace UNITREE_LEGGED_SDK
 
 	typedef struct
 	{
-		uint8_t mode;                      // motor working mode 
+		uint8_t mode;                      // motor working mode
 		float q;                           // current angle (unit: radian)
 		float dq;                          // current velocity (unit: radian/second)
 		float ddq;                       // current acc (unit: radian/second*second)
@@ -81,7 +81,7 @@ namespace UNITREE_LEGGED_SDK
 	typedef struct
 	{
 		uint8_t mode;                      // desired working mode
-		float q;                           // desired angle (unit: radian) 
+		float q;                           // desired angle (unit: radian)
 		float dq;                          // desired velocity (unit: radian/second)
 		float tau;                       // desired output torque (unit: N.m)
 		float Kp;                        // desired position stiffness (unit: N.m/rad )
@@ -94,7 +94,7 @@ namespace UNITREE_LEGGED_SDK
 		uint8_t levelFlag;                 // flag to distinguish high level or low level
 		uint16_t commVersion;
 		uint16_t robotID;
-		uint32_t SN; 
+		uint32_t SN;
 		uint8_t bandWidth;
 		IMU imu;
 		MotorState motorState[20];
@@ -107,7 +107,7 @@ namespace UNITREE_LEGGED_SDK
 		uint32_t crc;
 	} LowState;                            // low level feedback
 
-	typedef struct 
+	typedef struct
 	{
 		uint8_t levelFlag;
 		uint16_t commVersion;
@@ -137,7 +137,7 @@ namespace UNITREE_LEGGED_SDK
 	float position[3];                 // (unit: m), from own odometry in inertial frame, usually drift
 	float bodyHeight;                  // (unit: m, default: 0.28m),
 	float velocity[3];                 // (unit: m/s), forwardSpeed, sideSpeed, rotateSpeed in body frame
-	float yawSpeed;                    // (unit: rad/s), rotateSpeed in body frame        
+	float yawSpeed;                    // (unit: rad/s), rotateSpeed in body frame
 	Cartesian footPosition2Body[4];    // foot position relative to body
 	Cartesian footSpeed2Body[4];       // foot speed relative to body
 	int8_t temperature[20];
@@ -160,9 +160,9 @@ namespace UNITREE_LEGGED_SDK
 										// 2. target velocity walking (controlled by velocity + yawSpeed)
 										// 3. target position walking (controlled by position + ypr[0])
 										// 4. path mode walking (reserve for future release)
-										// 5. position stand down. 
-										// 6. position stand up 
-										// 7. damping mode 
+										// 5. position stand down.
+										// 6. position stand up
+										// 7. damping mode
 										// 8. recovery stand
 										// 9. backflip
 										// 10. jumpYaw
@@ -188,15 +188,15 @@ namespace UNITREE_LEGGED_SDK
 
 #pragma pack()
 
-	typedef struct     
+	typedef struct
 	{
 		unsigned long long TotalCount;     // total loop count
 		unsigned long long SendCount;      // total send count
 		unsigned long long RecvCount;      // total receive count
-		unsigned long long SendError;      // total send error 
-		unsigned long long FlagError;      // total flag error 
-		unsigned long long RecvCRCError;   // total reveive CRC error	
-		unsigned long long RecvLoseError;  // total lose package count	
+		unsigned long long SendError;      // total send error
+		unsigned long long FlagError;      // total flag error
+		unsigned long long RecvCRCError;   // total reveive CRC error
+		unsigned long long RecvLoseError;  // total lose package count
 	} UDPState;                            // UDP communication state
 
 }

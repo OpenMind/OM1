@@ -1,3 +1,7 @@
+"""
+This only works if you actually have a serial port connected to your computer, such as, via a USB serial dongle. On Mac, you can determine the correct name to use via `ls /dev/cu.usb*`.
+"""
+
 import logging
 import time
 
@@ -5,10 +9,6 @@ import serial
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move.interface import MoveInput
-
-"""
-This only works if you actually have a serial port connected to your computer, such as, via a USB serial dongle. On Mac, you can determine the correct name to use via `ls /dev/cu.usb*`.
-"""
 
 
 class MoveSerialConnector(ActionConnector[MoveInput]):

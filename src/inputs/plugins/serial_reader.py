@@ -10,9 +10,7 @@ from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
-"""
-
-simple code example to ingest serial data written by an Arduino, such as:
+# simple code example to ingest serial data written by an Arduino, such as:
 
 #       if (grip_force > grip_force_threshold) {
 #         Serial.println("Grip: Elevated");
@@ -26,7 +24,7 @@ simple code example to ingest serial data written by an Arduino, such as:
 #         Serial.println("Pulse: Normal");
 #       }
 
-"""
+#
 
 
 @dataclass
