@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from providers.avatar_llm_state_provider import AvatarLLMStateProvider
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -53,6 +54,7 @@ class NearAILLM(LLM[R]):
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
     @LLMHistoryManager.update_history()
+    @AvatarLLMStateProvider
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
     ) -> R | None:

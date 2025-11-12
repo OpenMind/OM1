@@ -6,7 +6,7 @@ from .avatar_provider import AvatarProvider
 T = TypeVar("T")
 
 
-def manage_thinking_state(
+def AvatarLLMStateProvider(
     func: Callable[..., Awaitable[T]],
 ) -> Callable[..., Awaitable[T]]:
     """
