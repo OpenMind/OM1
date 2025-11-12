@@ -50,7 +50,7 @@ class AvatarLLMState:
             try:
                 self.avatar_provider.send_avatar_command("Think")
             except Exception:
-                pass
+                logging.error("Failed to send 'Think' command to avatar in AvatarLLMState", exc_info=True)
 
     def _restore_happy(self) -> None:
         """
