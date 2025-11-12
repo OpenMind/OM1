@@ -103,10 +103,11 @@
 
                             },
                             {
-                                "group": "Modes",
+                                "group": "Modes and Lifecycle",
                                 "pages": [
                                     "full_autonomy_guidelines/modes",
-                                    "full_autonomy_guidelines/mode_selection"
+                                    "full_autonomy_guidelines/mode_selection",
+                                    "full_autonomy_guidelines/lifecycle"
                                 ]
 
                             }
