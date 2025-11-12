@@ -60,8 +60,10 @@ class AvatarLLMState:
             return False
 
         try:
-            inputs = self.io_provider.inputs
-            return "Voice" in inputs
+            return (
+                self.io_provider.llm_prompt is not None
+                and "INPUT: Voice" in self.io_provider.llm_prompt
+            )
         except Exception:
             return False
 
