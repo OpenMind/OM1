@@ -4,6 +4,7 @@ import threading
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar
 
 from .avatar_provider import AvatarProvider
+from .io_provider import IOProvider
 
 T = TypeVar("T")
 
@@ -33,12 +34,36 @@ class AvatarLLMState:
         """
         if not getattr(self, "_initialized", False):
             self.avatar_provider: Optional[AvatarProvider] = None
+            self.io_provider: Optional[IOProvider] = None
             try:
                 self.avatar_provider = AvatarProvider()
             except Exception:
                 logging.error("Failed to initialize AvatarProvider in AvatarLLMState")
                 self.avatar_provider = None
+            try:
+                self.io_provider = IOProvider()
+            except Exception:
+                logging.error("Failed to initialize IOProvider in AvatarLLMState")
+                self.io_provider = None
             self._initialized = True
+
+    def _has_voice_input(self) -> bool:
+        """
+        Check if current input contains voice input.
+
+        Returns
+        -------
+        bool
+            True if voice input is present, False otherwise
+        """
+        if not self.io_provider:
+            return False
+        
+        try:
+            inputs = self.io_provider.inputs
+            return "Voice" in inputs
+        except Exception:
+            return False
 
     def _start_thinking(self) -> None:
         """
@@ -46,6 +71,9 @@ class AvatarLLMState:
 
         Sets the avatar to "Think" state to indicate LLM processing.
         """
+        if not self._has_voice_input():
+            return
+        
         if self.avatar_provider and self.avatar_provider.running:
             try:
                 self.avatar_provider.send_avatar_command("Think")
