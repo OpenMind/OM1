@@ -1009,6 +1009,7 @@
             </box>
           </geometry>
         </visual>
+
         <sensor name="camera" type="camera">
           <pose>0 0 0.1 0 0 0</pose>
           <camera>
@@ -1026,6 +1027,40 @@
           <update_rate>30</update_rate>
           <visualize>true</visualize>
         </sensor>
+
+        <sensor name="lidar" type="gpu_lidar">
+          <pose>0 0 0.1 0 0 0</pose>
+          <update_rate>10</update_rate>
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>1800</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.14159</min_angle>
+                <max_angle>3.14159</max_angle>
+              </horizontal>
+              <vertical>
+                <samples>32</samples>
+                <resolution>1</resolution>
+                <min_angle>-0.122</min_angle>
+                <max_angle>0.2</max_angle>
+              </vertical>
+            </scan>
+            <range>
+              <min>0.05</min>
+              <max>10.0</max>
+              <resolution>0.01</resolution>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise>
+          </ray>
+          <visualize>true</visualize>
+          <always_on>true</always_on>
+        </sensor>
+
       </link>
 
       <joint name='camera_sensor_joint' type='fixed'>

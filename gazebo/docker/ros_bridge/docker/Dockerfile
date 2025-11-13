@@ -16,7 +16,16 @@ RUN apt-get -y install ros-humble-desktop
 ###########################
 # 2.) Temporarily remove ROS2 apt repository
 ###########################
-RUN mv /etc/apt/sources.list.d/ros2-latest.list /root/
+# The ROS2 repo is configured via a .sources file (DEB822 format)
+RUN echo "Temporarily removing ROS2 apt repository..." && \
+    if [ -L /etc/apt/sources.list.d/ros2.sources ]; then \
+        rm /etc/apt/sources.list.d/ros2.sources && \
+        echo "Removed ROS2 sources symlink"; \
+    elif [ -f /etc/apt/sources.list.d/ros2.sources ]; then \
+        mv /etc/apt/sources.list.d/ros2.sources /root/ros2.sources && \
+        echo "Moved ROS2 sources file"; \
+    fi
+
 RUN apt-get update
 
 ###########################
@@ -43,7 +52,7 @@ RUN apt-get install -f
 ###########################
 RUN apt-get -y install ros-desktop-dev
 
-# fix ARM64 pkgconfig path issue -- Fix provided by ambrosekwok 
+# fix ARM64 pkgconfig path issue -- Fix provided by ambrosekwok
 RUN if [[ $(uname -m) = "arm64" || $(uname -m) = "aarch64" ]]; then                     \
       cp /usr/lib/x86_64-linux-gnu/pkgconfig/* /usr/lib/aarch64-linux-gnu/pkgconfig/;   \
     fi
@@ -53,7 +62,18 @@ RUN if [[ $(uname -m) = "arm64" || $(uname -m) = "aarch64" ]]; then             
 #   For example, to include ROS tutorial message types, pass
 #   "--build-arg ADD_ros_tutorials=1" to the docker build command.
 ###########################
-RUN mv /root/ros2-latest.list /etc/apt/sources.list.d/
+# Restore the ROS2 repository symlink
+RUN echo "Restoring ROS2 apt repository..." && \
+    if [ -f /usr/share/ros-apt-source/ros2.sources ]; then \
+        ln -s /usr/share/ros-apt-source/ros2.sources /etc/apt/sources.list.d/ros2.sources && \
+        echo "Restored ROS2 sources symlink"; \
+    elif [ -f /root/ros2.sources ]; then \
+        mv /root/ros2.sources /etc/apt/sources.list.d/ros2.sources && \
+        echo "Restored ROS2 sources file"; \
+    else \
+        echo "Warning: Could not restore ROS2 sources"; \
+    fi
+
 RUN apt-get -y update
 
 
@@ -78,7 +98,7 @@ RUN                                                                             
     NPROC=$(nproc);  MIN=$((MEMG<NPROC ? MEMG : NPROC));                        \
     echo "Please wait...  running $MIN concurrent jobs to build ros1_bridge";   \
     time MAKEFLAGS="-j $MIN" colcon build --event-handlers console_direct+      \
-      --cmake-args -DCMAKE_BUILD_TYPE=Release 
+      --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 ###########################
 # 8.) Clean up
@@ -88,7 +108,7 @@ RUN apt-get -y clean all; apt-get -y update
 ###########################
 # 9.) Pack all ROS1 dependent libraries
 ###########################
-# fix ARM64 pkgconfig path issue -- Fix provided by ambrosekwok 
+# fix ARM64 pkgconfig path issue -- Fix provided by ambrosekwok
 RUN if [[ $(uname -m) = "arm64" || $(uname -m) = "aarch64" ]]; then                    \
       cp /usr/lib/x86_64-linux-gnu/pkgconfig/* /usr/lib/aarch64-linux-gnu/pkgconfig/;  \
     fi
@@ -116,7 +136,7 @@ RUN ROS1_LIBS="libxmlrpcpp.so";                                                 
 # 10.) Install additional dependencies
 ###########################
 RUN apt-get update && apt-get install -q -y --no-install-recommends \
-    ros-humble-rosidl-generator-dds-idl 
+    ros-humble-rosidl-generator-dds-idl
 
 COPY ./messages /app/messages
 
@@ -128,7 +148,7 @@ RUN cd /app/messages/ros1 &&\
     source /opt/ros/humble/setup.bash &&\
     time colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release &&\
     cd /ros-humble-ros1-bridge &&\
-    rm -rf build install log &&\ 
+    rm -rf build install log &&\
     source /app/messages/ros1/install/setup.bash &&\
     source /app/messages/ros2/install/setup.bash &&\
     time colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release

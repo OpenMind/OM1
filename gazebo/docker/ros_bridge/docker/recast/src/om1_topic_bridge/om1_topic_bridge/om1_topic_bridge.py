@@ -9,48 +9,48 @@ from std_msgs.msg import String
 
 class BridgeNode(Node):
     def __init__(self):
-        super().__init__('ai_topic_bridge')
+        super().__init__("ai_topic_bridge")
 
         # Subscription to the om1_interfaces/AI topic
         self.subscription = self.create_subscription(
             String,
-            '/move_topic',  # Update with your actual topic name
+            "/move_topic",  # Update with your actual topic name
             self.listener_callback,
-            10  # QoS
+            10,  # QoS
         )
         self.subscription  # Prevent unused variable warning
 
         # Publisher to the om1_msgs/AI topic
         self.publisher = self.create_publisher(
             AIFromMsgs,
-            '/bridged_movecmd',  # Update with your actual bridged topic name
-            10  # QoS
+            "/bridged_movecmd",  # Update with your actual bridged topic name
+            10,  # QoS
         )
 
-        self.get_logger().info('AI Topic Bridge Node Initialized')
+        self.get_logger().info("AI Topic Bridge Node Initialized")
 
     def listener_callback(self, string_msg):
         # Manually map fields from om1_interfaces/AI to om1_msgs/AI
         msg_to_msgs = AIFromMsgs()
 
         match string_msg.data:
-            case msg if 'run' in msg:
+            case msg if "run" in msg:
                 vx, vy, vyaw = 1.0, 0.0, 0.0
-            case msg if 'walk forward' in msg:
+            case msg if "walk forward" in msg:
                 vx, vy, vyaw = 0.3, 0.0, 0.0
-            case msg if 'walk backward' in msg:
+            case msg if "walk backward" in msg:
                 vx, vy, vyaw = -0.3, 0.0, 0.0
-            case msg if 'turn left' in msg:
+            case msg if "turn left" in msg:
                 vx, vy, vyaw = 0.0, 0.0, -0.4
-            case msg if 'turn right' in msg:
+            case msg if "turn right" in msg:
                 vx, vy, vyaw = 0.0, 0.0, 0.4
-            case msg if 'look left' in msg:
+            case msg if "look left" in msg:
                 vx, vy, vyaw = 0.0, 0.0, -0.1
-            case msg if 'look right' in msg:
+            case msg if "look right" in msg:
                 vx, vy, vyaw = 0.0, 0.0, 0.1
-            case msg if 'move left' in msg:
+            case msg if "move left" in msg:
                 vx, vy, vyaw = 0.0, -0.2, 0.0
-            case msg if 'move right' in msg:
+            case msg if "move right" in msg:
                 vx, vy, vyaw = 0.0, 0.2, 0.0
             case _:
                 vx, vy, vyaw = 0.0, 0.0, 0.0
@@ -69,6 +69,7 @@ class BridgeNode(Node):
             f"vy={msg_to_msgs.vy}, vyaw={msg_to_msgs.vyaw}"
         )
 
+
 def main(args=None):
     rclpy.init(args=args)
 
@@ -83,5 +84,6 @@ def main(args=None):
     bridge_node.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

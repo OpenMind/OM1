@@ -4,7 +4,7 @@ import logging
 from actions.base import ActionConfig, ActionConnector
 from actions.navigate_location.interface import NavigateLocationInput
 from providers.io_provider import IOProvider
-from providers.locations_provider import LocationsProvider
+from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
 from providers.unitree_go2_navigation_provider import UnitreeGo2NavigationProvider
 from zenoh_msgs import Header, Point, Pose, PoseStamped, Quaternion, Time
 
@@ -33,7 +33,9 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
 
-        self.location_provider = LocationsProvider(base_url, timeout, refresh_interval)
+        self.location_provider = UnitreeGo2LocationsProvider(
+            base_url, timeout, refresh_interval
+        )
         self.unitree_go2_navigation_provider = UnitreeGo2NavigationProvider()
         self.io_provider = IOProvider()
 

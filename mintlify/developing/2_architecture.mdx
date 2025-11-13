@@ -31,7 +31,7 @@ These models convert raw sensor data into meaningful descriptions:
 
 ### Natural Language Data Bus (NLDB)
 
-A centralized bus that collects and manages natural language data generated from various captioning/compression modules, ensuring structured data flow between components. 
+A centralized bus that collects and manages natural language data generated from various captioning/compression modules, ensuring structured data flow between components.
 
 Example messages might include:
 
@@ -55,7 +55,7 @@ Example fuser output:
 
 ### Multi AI Planning/Decision Layer
 
-Uses fused data to make decisions through one or more AI models. A typical multi-agent endpoint wraps three of more LLMs: 
+Uses fused data to make decisions through one or more AI models. A typical multi-agent endpoint wraps three of more LLMs:
 
 - Fast Action LLM (Local or Cloud): A small LLM that quickly processes immediate or time-critical actions without significant latency. Expected token response time - 300 ms.
 - Cognition ("Core") LLM (Cloud): Cloud-based LLM for complex reasoning, long-term planning, and high-level cognitive tasks, leveraging more computational resources. Expected token response time - 2 s.
@@ -76,9 +76,8 @@ This layer translates high-level AI decisions into actionable commands for robot
 - Speech: Handles synthesized voice outputs.
 - Wallet: Digital wallet for economic transactions or cryptographic operations for identity verification.
 
-In many cases, this is where AI decisions are mapped onto existing ROS2 functionalities, and/or CycloneDDS or Zenoh middleware. 
+In many cases, this is where AI decisions are mapped onto existing ROS2 functionalities, and/or CycloneDDS or Zenoh middleware.
 
 ### Overall System Data Flow
 
 Raw Sensors → AI Captioning/Compression (Audio, LIDAR, Spatial RAG, Vision models) → NLDB → Data Fuser → AI Decision Layer (Emergency Responder LLM, Core LLM, Coach LLM) → HAL → Robot Actions ("Foundational" models, ROS2 code, movement policies, action models)
-

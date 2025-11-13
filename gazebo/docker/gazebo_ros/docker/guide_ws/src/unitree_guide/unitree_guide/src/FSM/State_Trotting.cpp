@@ -5,9 +5,9 @@
 #include <iomanip>
 
 State_Trotting::State_Trotting(CtrlComponents *ctrlComp)
-             :FSMState(ctrlComp, FSMStateName::TROTTING, "trotting"), 
-              _est(ctrlComp->estimator), _phase(ctrlComp->phase), 
-              _contact(ctrlComp->contact), _robModel(ctrlComp->robotModel), 
+             :FSMState(ctrlComp, FSMStateName::TROTTING, "trotting"),
+              _est(ctrlComp->estimator), _phase(ctrlComp->phase),
+              _contact(ctrlComp->contact), _robModel(ctrlComp->robotModel),
               _balCtrl(ctrlComp->balCtrl){
     _gait = new GaitGenerator(ctrlComp);
 
@@ -16,7 +16,7 @@ State_Trotting::State_Trotting(CtrlComponents *ctrlComp)
 #ifdef ROBOT_TYPE_Go1
     _Kpp = Vec3(70, 70, 70).asDiagonal();
     _Kdp = Vec3(10, 10, 10).asDiagonal();
-    _kpw = 780; 
+    _kpw = 780;
     _Kdw = Vec3(70, 70, 70).asDiagonal();
     _KpSwing = Vec3(400, 400, 400).asDiagonal();
     _KdSwing = Vec3(10, 10, 10).asDiagonal();
@@ -129,7 +129,7 @@ bool State_Trotting::checkStepOrNot(){
 void State_Trotting::setHighCmd(double vx, double vy, double wz){
     _vCmdBody(0) = vx;
     _vCmdBody(1) = vy;
-    _vCmdBody(2) = 0; 
+    _vCmdBody(2) = 0;
     _dYawCmd = wz;
 }
 
@@ -196,14 +196,13 @@ void State_Trotting::calcQQd(){
 
     Vec34 _posFeet2B;
     _posFeet2B = _robModel->getFeet2BPositions(*_lowState,FrameType::BODY);
-    
+
     for(int i(0); i<4; ++i){
         _posFeet2BGoal.col(i) = _G2B_RotMat * (_posFeetGlobalGoal.col(i) - _posBody);
-        _velFeet2BGoal.col(i) = _G2B_RotMat * (_velFeetGlobalGoal.col(i) - _velBody); 
-        // _velFeet2BGoal.col(i) = _G2B_RotMat * (_velFeetGlobalGoal.col(i) - _velBody - _B2G_RotMat * (skew(_lowState->getGyro()) * _posFeet2B.col(i)) );  //  c.f formula (6.12) 
+        _velFeet2BGoal.col(i) = _G2B_RotMat * (_velFeetGlobalGoal.col(i) - _velBody);
+        // _velFeet2BGoal.col(i) = _G2B_RotMat * (_velFeetGlobalGoal.col(i) - _velBody - _B2G_RotMat * (skew(_lowState->getGyro()) * _posFeet2B.col(i)) );  //  c.f formula (6.12)
     }
-    
+
     _qGoal = vec12ToVec34(_robModel->getQ(_posFeet2BGoal, FrameType::BODY));
     _qdGoal = vec12ToVec34(_robModel->getQd(_posFeet2B, _velFeet2BGoal, FrameType::BODY));
 }
-

@@ -163,7 +163,7 @@
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
         }
       ],
       "lifecycle_hooks": [
@@ -309,11 +309,8 @@
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
         },
-        {
-          "type": "Locations",
-        }
       ],
       "lifecycle_hooks": [
         {
@@ -428,7 +425,7 @@
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
         }
       ],
       "lifecycle_hooks": [
@@ -545,7 +542,7 @@
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
         }
       ],
       "lifecycle_hooks": [

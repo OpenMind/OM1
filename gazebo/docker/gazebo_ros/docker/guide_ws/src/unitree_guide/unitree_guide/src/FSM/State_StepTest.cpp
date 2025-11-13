@@ -5,7 +5,7 @@
 
 State_StepTest::State_StepTest(CtrlComponents *ctrlComp)
                   :FSMState(ctrlComp, FSMStateName::STEPTEST, "stepTest"),
-                  _est(ctrlComp->estimator), _robModel(ctrlComp->robotModel), 
+                  _est(ctrlComp->estimator), _robModel(ctrlComp->robotModel),
                   _balCtrl(ctrlComp->balCtrl), _contact(ctrlComp->contact),
                   _phase(ctrlComp->phase){
 
@@ -73,7 +73,7 @@ void State_StepTest::calcTau(){
 
     _posFeet2BGlobal = _est->getPosFeet2BGlobal();
     _forceFeetGlobal = - _balCtrl->calF(_ddPcd, _dWbd, _B2G_RotMat, _posFeet2BGlobal, *_contact);
-    
+
     _posFeetGlobal = _est->getFeetPos();
     _velFeetGlobal = _est->getFeetVel();
     for(int i(0); i<4; ++i){
@@ -81,7 +81,7 @@ void State_StepTest::calcTau(){
             _forceFeetGlobal.col(i) = _KpSwing*(_posFeetGlobalGoal.col(i) - _posFeetGlobal.col(i)) + _KdSwing*(_velFeetGlobalGoal.col(i)-_velFeetGlobal.col(i));
         }
     }
-    
+
     _forceFeetBody = _G2B_RotMat * _forceFeetGlobal;
 
     _q = vec34ToVec12(_lowState->getQ());

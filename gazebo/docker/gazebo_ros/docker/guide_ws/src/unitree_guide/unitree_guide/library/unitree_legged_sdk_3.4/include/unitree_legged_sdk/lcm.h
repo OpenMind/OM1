@@ -9,7 +9,7 @@
 #include <lcm/lcm-cpp.hpp>
 #include <string.h>
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
 
     constexpr char highCmdChannel[]   = "LCM_High_Cmd";
@@ -18,17 +18,17 @@ namespace UNITREE_LEGGED_SDK
     constexpr char lowStateChannel[]  = "LCM_Low_State";
 
     template<class T>
-    class LCMHandler 
+    class LCMHandler
     {
     public:
-        LCMHandler(){ 
-            pthread_mutex_init(&countMut, NULL); 
-            pthread_mutex_init(&recvMut, NULL); 
+        LCMHandler(){
+            pthread_mutex_init(&countMut, NULL);
+            pthread_mutex_init(&recvMut, NULL);
         }
 
         void onMsg(const lcm::ReceiveBuffer* rbuf, const std::string& channel){
             isrunning = true;
-            
+
             pthread_mutex_lock(&countMut);
             counter = 0;
             pthread_mutex_unlock(&countMut);
@@ -73,7 +73,7 @@ namespace UNITREE_LEGGED_SDK
         lcm::LCM lcm;
         lcm::Subscription* subLcm;
         int lcmFd;
-        int LCM_PERIOD = 2000;     //default 2ms       
+        int LCM_PERIOD = 2000;     //default 2ms
 	};
 
 }

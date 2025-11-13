@@ -1,6 +1,6 @@
 <launch>
     <!-- transform pointCloud2 to laserScan -->
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="face_pointcloud_to_laserscan" 
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="face_pointcloud_to_laserscan"
         respawn="false" output="screen">
         <remap from="cloud_in" to="/cam1/point_cloud_face"/>
         <remap from="/scan" to="/faceLaserScan"/>
@@ -27,7 +27,7 @@
         <!-- <rosparam file="$(find unitree_move_base)/config/pointCloud_to_laserScan_params.yaml" command="load" /> -->
     </node>
 
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="left_pointcloud_to_laserscan" 
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="left_pointcloud_to_laserscan"
         respawn="false" output="screen">
         <remap from="cloud_in" to="/cam3/point_cloud_left"/>
         <remap from="/scan" to="/leftLaserScan"/>
@@ -54,7 +54,7 @@
         <!-- <rosparam file="$(find unitree_move_base)/config/pointCloud_to_laserScan_params.yaml" command="load" /> -->
     </node>
 
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="right_pointcloud_to_laserscan" 
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="right_pointcloud_to_laserscan"
         respawn="false" output="screen">
         <remap from="cloud_in" to="/cam4/point_cloud_right"/>
         <remap from="/scan" to="/rightLaserScan"/>

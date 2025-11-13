@@ -14,8 +14,8 @@ using namespace UNITREE_LEGGED_SDK;
 class Custom
 {
 public:
-    Custom(uint8_t level): 
-        safe(LeggedType::Go1), 
+    Custom(uint8_t level):
+        safe(LeggedType::Go1),
         udp(level, 8090, "192.168.123.10", 8007) {
         udp.InitCmdData(cmd);
     }
@@ -30,7 +30,7 @@ public:
     float qInit[3]={0};
     float qDes[3]={0};
     float sin_mid_q[3] = {0.0, 1.2, -2.0};
-    float Kp[3] = {0};  
+    float Kp[3] = {0};
     float Kd[3] = {0};
     double time_consume = 0;
     int rate_count = 0;
@@ -40,12 +40,12 @@ public:
 };
 
 void Custom::UDPRecv()
-{  
+{
     udp.Recv();
 }
 
 void Custom::UDPSend()
-{  
+{
     udp.Send();
 }
 
@@ -57,7 +57,7 @@ double jointLinearInterpolation(double initPos, double targetPos, double rate)
     return p;
 }
 
-void Custom::RobotControl() 
+void Custom::RobotControl()
 {
     motiontime++;
     udp.GetRecv(state);
@@ -84,11 +84,11 @@ void Custom::RobotControl()
         if( motiontime >= 10 && motiontime < 400){
             rate_count++;
             double rate = rate_count/200.0;                       // needs count to 200
-            Kp[0] = 5.0; Kp[1] = 5.0; Kp[2] = 5.0; 
+            Kp[0] = 5.0; Kp[1] = 5.0; Kp[2] = 5.0;
             Kd[0] = 1.0; Kd[1] = 1.0; Kd[2] = 1.0;
-            // Kp[0] = 20.0; Kp[1] = 20.0; Kp[2] = 20.0; 
+            // Kp[0] = 20.0; Kp[1] = 20.0; Kp[2] = 20.0;
             // Kd[0] = 2.0; Kd[1] = 2.0; Kd[2] = 2.0;
-            
+
             qDes[0] = jointLinearInterpolation(qInit[0], sin_mid_q[0], rate);
             qDes[1] = jointLinearInterpolation(qInit[1], sin_mid_q[1], rate);
             qDes[2] = jointLinearInterpolation(qInit[2], sin_mid_q[2], rate);
@@ -144,7 +144,7 @@ int main(void)
               << "WARNING: Make sure the robot is hung up." << std::endl
               << "Press Enter to continue..." << std::endl;
     std::cin.ignore();
-    
+
     Custom custom(LOWLEVEL);
     // InitEnvironment();
     LoopFunc loop_control("control_loop", custom.dt,    boost::bind(&Custom::RobotControl, &custom));
@@ -159,5 +159,5 @@ int main(void)
         sleep(10);
     };
 
-    return 0; 
+    return 0;
 }

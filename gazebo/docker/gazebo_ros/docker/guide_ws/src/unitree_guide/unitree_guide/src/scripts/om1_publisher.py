@@ -10,6 +10,7 @@ from om1_msgs.msg import AI  # Assuming /bridged_movecmd uses om1_msgs/AI
 # Flag to control the publishing loop
 running = True
 
+
 def signal_handler(sig, frame):
     """
     Handle termination signals (e.g., Ctrl+C) to enable graceful shutdown.
@@ -17,6 +18,7 @@ def signal_handler(sig, frame):
     global running
     rospy.loginfo("Shutting down user_input_publisher gracefully...")
     running = False
+
 
 def vx_vy_vyaw_to_userinput(vx, vy, vyaw):
     """
@@ -29,6 +31,7 @@ def vx_vy_vyaw_to_userinput(vx, vy, vyaw):
     userValue_w = 0.0
 
     return Vector4(x=userValue_x, y=userValue_y, z=userValue_z, w=userValue_w)
+
 
 def bridged_movecmd_callback(msg, publisher):
     """
@@ -47,12 +50,17 @@ def bridged_movecmd_callback(msg, publisher):
     rospy.loginfo(
         "Received from /bridged_movecmd: vx=%.2f, vy=%.2f, vyaw=%.2f. "
         "Publishing UserInput: userCmd=%d, userValue=(%.2f, %.2f, %.2f, %.2f)",
-        msg.vx, msg.vy, msg.vyaw,
+        msg.vx,
+        msg.vy,
+        msg.vyaw,
         user_input_msg.userCmd,
-        user_input_msg.userValue.x, user_input_msg.userValue.y,
-        user_input_msg.userValue.z, user_input_msg.userValue.w
+        user_input_msg.userValue.x,
+        user_input_msg.userValue.y,
+        user_input_msg.userValue.z,
+        user_input_msg.userValue.w,
     )
     publisher.publish(user_input_msg)
+
 
 def publish_message(pub, user_cmd, user_value, duration):
     """
@@ -73,18 +81,21 @@ def publish_message(pub, user_cmd, user_value, duration):
         rospy.loginfo(
             "Publishing UserInput: userCmd=%d, userValue=(%.2f, %.2f, %.2f, %.2f)",
             user_input_msg.userCmd,
-            user_input_msg.userValue.x, user_input_msg.userValue.y,
-            user_input_msg.userValue.z, user_input_msg.userValue.w
+            user_input_msg.userValue.x,
+            user_input_msg.userValue.y,
+            user_input_msg.userValue.z,
+            user_input_msg.userValue.w,
         )
         pub.publish(user_input_msg)
         rate.sleep()
 
+
 def user_input_publisher():
     # Initialize the ROS node
-    rospy.init_node('user_input_publisher', anonymous=True)
+    rospy.init_node("user_input_publisher", anonymous=True)
 
     # Create a publisher for the custom UserInput message
-    pub = rospy.Publisher('/user_command_topic', UserInput, queue_size=10)
+    pub = rospy.Publisher("/user_command_topic", UserInput, queue_size=10)
 
     # Publish initial messages
     rospy.loginfo("Publishing initial UserInput messages...")
@@ -92,12 +103,15 @@ def user_input_publisher():
     publish_message(pub, user_cmd=1, user_value=(0.0, 0.0, 0.0, 0.0), duration=3)
 
     # Subscribe to /bridged_movecmd and process messages with the callback
-    rospy.Subscriber('/bridged_movecmd', AI, bridged_movecmd_callback, callback_args=pub)
+    rospy.Subscriber(
+        "/bridged_movecmd", AI, bridged_movecmd_callback, callback_args=pub
+    )
 
     # Spin to keep the node running and processing callbacks
     rospy.spin()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

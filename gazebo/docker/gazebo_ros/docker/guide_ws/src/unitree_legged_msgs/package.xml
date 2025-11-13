@@ -8,12 +8,12 @@
   </description>
   <maintainer email="laikago@unitree.cc">unitree</maintainer>
   <license>TODO</license>
-  
+
   <buildtool_depend>catkin</buildtool_depend>
   <depend>message_runtime</depend>
   <depend>message_generation</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
-  
+
 </package>

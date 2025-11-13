@@ -17,8 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(gazebo REQUIRED)
 
 catkin_package(
-    CATKIN_DEPENDS 
-    unitree_legged_msgs 
+    CATKIN_DEPENDS
+    unitree_legged_msgs
 )
 
 include_directories(
@@ -33,7 +33,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 
 # Declare a C++ library
 add_library(${PROJECT_NAME}
-    src/body.cpp 
+    src/body.cpp
 )
 
 add_dependencies(${PROJECT_NAME} unitree_legged_msgs_gencpp)

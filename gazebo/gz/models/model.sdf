@@ -134,6 +134,16 @@
         <topic>/world/dog_world/model/go2/link/camera_link/sensor/camera/image</topic>
         <topic_picker>false</topic_picker>
       </plugin>
+      <plugin filename="VisualizeLidar" name="Visualize Lidar">
+        <gz-gui>
+          <title>LiDAR Point Cloud</title>
+          <property key="state" type="string">docked</property>
+          <property type="double" key="width">350</property>
+          <property type="double" key="height">315</property>
+          <property type="double" key="x">360</property>
+          <property type="double" key="y">0</property>
+        </gz-gui>
+        </plugin>
       <plugin filename="Teleop" name="Teleop">
           <gz-gui>
               <property key="x" type="double">0</property>
@@ -340,6 +350,6 @@
 
       </link>
     </model>
-    
+
   </world>
 </sdf>
