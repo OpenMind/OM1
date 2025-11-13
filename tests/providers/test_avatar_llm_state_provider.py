@@ -34,11 +34,20 @@ def reset_avatar_llm_state():
 def mock_avatar_provider() -> Generator[MagicMock, None, None]:
     reset_avatar_llm_state()
 
-    with patch("providers.avatar_llm_state_provider.AvatarProvider") as mock:
+    with (
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as avatar_mock,
+        patch("providers.avatar_llm_state_provider.IOProvider") as io_mock,
+    ):
+
         provider_instance = MagicMock()
         provider_instance.running = True
         provider_instance.send_avatar_command = MagicMock()
-        mock.return_value = provider_instance
+        avatar_mock.return_value = provider_instance
+
+        io_instance = MagicMock()
+        io_instance.llm_prompt = "INPUT: Voice\ntest prompt"
+        io_mock.return_value = io_instance
+
         yield provider_instance
 
     reset_avatar_llm_state()
@@ -97,11 +106,19 @@ async def test_decorator_restores_happy_on_exception(mock_avatar_provider):
 async def test_decorator_handles_avatar_provider_not_running():
     reset_avatar_llm_state()
 
-    with patch("providers.avatar_llm_state_provider.AvatarProvider") as mock:
+    with (
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as avatar_mock,
+        patch("providers.avatar_llm_state_provider.IOProvider") as io_mock,
+    ):
+
         provider_instance = MagicMock()
         provider_instance.running = False
         provider_instance.send_avatar_command = MagicMock()
-        mock.return_value = provider_instance
+        avatar_mock.return_value = provider_instance
+
+        io_instance = MagicMock()
+        io_instance.llm_prompt = "INPUT: Voice\ntest prompt"
+        io_mock.return_value = io_instance
 
         llm = MockLLM()
         result = await llm.ask("test prompt")
@@ -114,8 +131,16 @@ async def test_decorator_handles_avatar_provider_not_running():
 async def test_decorator_handles_avatar_provider_exception():
     reset_avatar_llm_state()
 
-    with patch("providers.avatar_llm_state_provider.AvatarProvider") as mock:
-        mock.side_effect = Exception("Avatar provider error")
+    with (
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as avatar_mock,
+        patch("providers.avatar_llm_state_provider.IOProvider") as io_mock,
+    ):
+
+        avatar_mock.side_effect = Exception("Avatar provider error")
+
+        io_instance = MagicMock()
+        io_instance.llm_prompt = "INPUT: Voice\ntest prompt"
+        io_mock.return_value = io_instance
 
         llm = MockLLM()
         result = await llm.ask("test prompt")
