@@ -24,7 +24,7 @@
             <parent link="world"/>
             <child link="base"/>
         </joint>
-    </xacro:if> 
+    </xacro:if>
 
     <link name="base">
         <visual>
@@ -61,7 +61,7 @@
             <inertia
                 ixx="${trunk_ixx}" ixy="${trunk_ixy}" ixz="${trunk_ixz}"
                 iyy="${trunk_iyy}" iyz="${trunk_iyz}"
-                izz="${trunk_izz}"/>  
+                izz="${trunk_izz}"/>
         </inertial>
     </link>
 
@@ -98,7 +98,7 @@
             <origin xyz="0 0 -0.09" rpy="0 0 0"/>
             <inertia ixx="0.000166667" ixy="0" ixz="0" iyy="0.000166667" iyz="0" izz="0.000166667"/>
         </inertial>
-        
+
         <visual>
             <origin xyz="0 0 -0.09" rpy="0 0 0"/>
             <geometry>

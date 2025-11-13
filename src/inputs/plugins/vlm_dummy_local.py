@@ -125,7 +125,7 @@ class DummyVLMLocal(FuserInput[Image.Image]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

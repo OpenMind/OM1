@@ -19,7 +19,7 @@ IF(CMAKE_SYSTEM_NAME MATCHES "Linux")
     ENDIF()
 ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(EXTRA_LIBS libUnitree_motor_SDK_Win64.dll)
-ENDIF()   
+ENDIF()
 
 add_executable(check_c src/check.c)
 target_link_libraries(check_c ${EXTRA_LIBS})

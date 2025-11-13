@@ -5,7 +5,7 @@
 
 State_BalanceTest::State_BalanceTest(CtrlComponents *ctrlComp)
                   :FSMState(ctrlComp, FSMStateName::BALANCETEST, "balanceTest"),
-                  _est(ctrlComp->estimator), _robModel(ctrlComp->robotModel), 
+                  _est(ctrlComp->estimator), _robModel(ctrlComp->robotModel),
                   _balCtrl(ctrlComp->balCtrl), _contact(ctrlComp->contact){
 
     _xMax = 0.05;

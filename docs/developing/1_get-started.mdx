@@ -32,10 +32,10 @@ Ensure you have the following installed on your machine:
 
 ```bash
 # Mac
-brew install uv 
+brew install uv
 
 # Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh 
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 #### PortAudio Library
@@ -51,7 +51,7 @@ sudo apt-get update
 sudo apt-get install portaudio19-dev
 ```
 
-Note: `python-all-dev` may also be needed. 
+Note: `python-all-dev` may also be needed.
 
 #### ffmpeg
 
@@ -64,7 +64,7 @@ brew install ffmpeg
 # Linux
 sudo apt-get update
 sudo apt-get install ffmpeg
-``` 
+```
 
 ## Installation and Setup
 
@@ -81,7 +81,7 @@ uv venv
 
 2. Set the configuration variables
 
-Locate the `config` folder and add your OpenMind API key to `/config/spot.json` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.org/.  
+Locate the `config` folder and add your OpenMind API key to `/config/spot.json` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.org/.
 
 ```bash
 # /config/spot.json5
@@ -153,7 +153,7 @@ TTS configuration (check in agent_actions)
       name: "speak",
       llm_label: "speak",
       connector: "elevenlabs_tts",
-      config: 
+      config:
       {
         voice_id: "i4CzbCVWoqvD0P1QJCUL",
         "silence_rate": 20,
@@ -174,7 +174,7 @@ The log data provide insight into how the `spot` agent makes sense of its enviro
   - The LLM(s) decide on a set of actions (dancing and speaking).
   - The simulated robot expresses emotions via a front-facing display.
   - Logs latency and processing times to monitor system performance.
-  
+
 ```bash
 Object Detector INPUT
 // START
@@ -197,7 +197,7 @@ command: emotion
     Effect: Performs a given facial expression.
     Arguments: Allowed values: 'cry', 'smile', 'frown', 'think', 'joy'
 
-What will you do? Command: 
+What will you do? Command:
 
 INFO:httpx:HTTP Request: POST https://api.openmind.org/api/core/openai/chat/completions "HTTP/1.1 200 OK"
 INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), Command(type='speak', value="Hi there! I see you and I'm excited!"), Command(type='emotion', value='joy')]

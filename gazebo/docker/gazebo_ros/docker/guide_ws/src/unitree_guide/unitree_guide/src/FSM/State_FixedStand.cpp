@@ -29,7 +29,7 @@ void State_FixedStand::run(){
     _percent += (float)1/_duration;
     _percent = _percent > 1 ? 1 : _percent;
     for(int j=0; j<12; j++){
-        _lowCmd->motorCmd[j].q = (1 - _percent)*_startPos[j] + _percent*_targetPos[j]; 
+        _lowCmd->motorCmd[j].q = (1 - _percent)*_startPos[j] + _percent*_targetPos[j];
     }
 }
 

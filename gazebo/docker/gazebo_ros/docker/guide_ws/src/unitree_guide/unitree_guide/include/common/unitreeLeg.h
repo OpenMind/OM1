@@ -9,7 +9,7 @@
 
 class QuadrupedLeg{
 public:
-    QuadrupedLeg(int legID, float abadLinkLength, float hipLinkLength, 
+    QuadrupedLeg(int legID, float abadLinkLength, float hipLinkLength,
                  float kneeLinkLength, Vec3 pHip2B);
     ~QuadrupedLeg(){}
     Vec3 calcPEe2H(Vec3 q);
@@ -24,7 +24,7 @@ public:
 protected:
     float q1_ik(float py, float pz, float b2y);
     float q3_ik(float b3z, float b4z, float b);
-    float q2_ik(float q1, float q3, float px, 
+    float q2_ik(float q1, float q3, float px,
                 float py, float pz, float b3z, float b4z);
     float _sideSign;
     const float _abadLinkLength, _hipLinkLength, _kneeLinkLength;

@@ -32,7 +32,7 @@ void State_Passive::enter(){
 }
 
 void State_Passive::run(){
-    
+
 }
 
 void State_Passive::exit(){

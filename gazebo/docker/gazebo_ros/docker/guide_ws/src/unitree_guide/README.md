@@ -28,7 +28,7 @@ source ./devel/setup.bash
 ```
 To open the gazebo simulator, run:
 ```
-roslaunch unitree_guide gazeboSim.launch 
+roslaunch unitree_guide gazeboSim.launch
 ```
 
 For starting the controller, open another terminal and switch to the same directory,  then run the following command:
