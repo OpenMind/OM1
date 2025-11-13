@@ -117,3 +117,20 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
 class ASRText(IdlStruct, typename="ASRText"):
     header: Header
     text: str
+
+
+@dataclass
+class AvatarFace(IdlStruct, typename="AvatarFace"):
+    
+    class Face(Enum):
+        HAPPY = 0
+        SAD = 1
+        CURIOUS = 2
+        CONFUSED = 3
+        THINK = 4
+        EXCITED = 5
+        UNKNOWN = 6
+    
+    header: Header
+    face: int8
+    face_text: str
