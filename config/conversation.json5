@@ -23,6 +23,11 @@
       "llm_label": "speak",
       "implementation": "passthrough",
       "connector": "elevenlabs_tts"
+    },
+    {
+      "name": "face",
+      "llm_label": "emotion",
+      "connector": "avatar"
     }
   ]
 }

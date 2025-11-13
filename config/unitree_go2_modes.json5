@@ -77,9 +77,6 @@
       ],
       "backgrounds": [
         {
-          "type": "Avatar"
-        },
-        {
           "type": "UnitreeGo2State",
         },
       ],
@@ -150,9 +147,6 @@
         }
       ],
       "backgrounds": [
-        {
-          "type": "Avatar"
-        },
         {
           "type": "UnitreeGo2State",
         },
@@ -297,9 +291,6 @@
       ],
       "backgrounds": [
         {
-          "type": "Avatar"
-        },
-        {
           "type": "UnitreeGo2State",
         },
         {
@@ -412,9 +403,6 @@
         }
       ],
       "backgrounds": [
-        {
-          "type": "Avatar"
-        },
         {
           "type": "UnitreeGo2State",
         },
@@ -529,9 +517,6 @@
         }
       ],
       "backgrounds": [
-        {
-          "type": "Avatar"
-        },
         {
           "type": "UnitreeGo2State",
         },
