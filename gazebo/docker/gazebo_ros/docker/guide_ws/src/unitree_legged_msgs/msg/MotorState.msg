@@ -1,4 +1,4 @@
-uint8 mode           # motor current mode 
+uint8 mode           # motor current mode
 float32 q            # motor current position（rad）
 float32 dq           # motor current speed（rad/s）
 float32 ddq          # motor current speed（rad/s）

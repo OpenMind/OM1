@@ -23,7 +23,7 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 
-add_library( unitree_legged_control 
+add_library( unitree_legged_control
     src/joint_controller.cpp
     src/unitree_joint_control_tool.cpp
 )

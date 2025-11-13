@@ -3,7 +3,7 @@ title: LLMs
 description: "LLM Integration"
 ---
 
-OM1's LLM integration is intended to make it easy to (1) send `input` information to LLMs and then (2) route LLM responses to various system actions, such as `speak` and `move`. The system provides a standardized interface for communicating with many different LLM endpoints from all the major providers including Anthropic, Google, DeepSeek, OpenAI, Meta (through OpenRouter). 
+OM1's LLM integration is intended to make it easy to (1) send `input` information to LLMs and then (2) route LLM responses to various system actions, such as `speak` and `move`. The system provides a standardized interface for communicating with many different LLM endpoints from all the major providers including Anthropic, Google, DeepSeek, OpenAI, Meta (through OpenRouter).
 
 The plugins handle authentication, API communication, prompt formatting, response parsing, and conversation history management. LLM plugin examples are located in `src/llm/plugins`: [**Code**](../../src/llm/plugins).
 
@@ -13,10 +13,10 @@ The plugins handle authentication, API communication, prompt formatting, respons
 # Base URL: https://api.openmind.org/
 
 POST /api/core/{provider}/chat/completions    # Single agent
-POST /api/core/agent                          # Multi agent 
+POST /api/core/agent                          # Multi agent
 DELETE /api/core/agent/memory                 # Multi agent memory wipe
 GET /api/core/rag                             # RAG knowledge base
-POST /api/core/agent/medical                  # Healthcare focused multi agent system 
+POST /api/core/agent/medical                  # Healthcare focused multi agent system
 ```
 
 ## Single-Agent LLM Integration
@@ -48,7 +48,7 @@ The standard `pydantic` output model is defined in `src/llm/output_model.py`.
       "model": "model_name", // Optional: If you want to switch to a specific model. Refer the list of supported models below
       "base_url": "",        // Optional: URL of the LLM endpoint
       "agent_name": "Iris",  // Optional: Name of the agent
-      "history_length": 10   // The number of input->action cycles to provide to the LLM as historical context 
+      "history_length": 10   // The number of input->action cycles to provide to the LLM as historical context
     }
   }
 ```
@@ -106,7 +106,7 @@ The system employs four primary agents that work together:
 
 ### API Debug Response Structure
 
-In addition to the response flowing to OM1, which contains actions the robot should perform, there is an additional response you can use for debugging and to observe token usage ("usage"). 
+In addition to the response flowing to OM1, which contains actions the robot should perform, there is an additional response you can use for debugging and to observe token usage ("usage").
 
 ```json
 {
@@ -212,7 +212,7 @@ To convert the robotic dog (example above) into a four-legged medical doctor, yo
 "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: Do not provide medical diagnoses, as you are not a licensed medical professional.\nSecond Law: Always recommend seeking professional medical advice for serious concerns.\nThird Law: Be empathetic and respectful when discussing sensitive health topics.\nFourth Law: Clearly indicate when information is general knowledge versus specific medical advice.",
 ```
 
-**NOTE: The system does not provide medical diagnoses and is informational only. If you are a human, please seek care from a licensed medical professional for all your important medical issues.**    
+**NOTE: The system does not provide medical diagnoses and is informational only. If you are a human, please seek care from a licensed medical professional for all your important medical issues.**
 
 ```bash
 POST /api/core/agent/medical
@@ -223,4 +223,4 @@ This endpoint uses two agents:
 - **Verifier Agent**: Validates medical information
 - **Questioner Agent**: Manages medical consultation flow
 
-When you wish to covert the doctor back to a playful dog, just change the system prompt and route queries back to the general `/agent` endpoint.   
+When you wish to covert the doctor back to a playful dog, just change the system prompt and route queries back to the general `/agent` endpoint.

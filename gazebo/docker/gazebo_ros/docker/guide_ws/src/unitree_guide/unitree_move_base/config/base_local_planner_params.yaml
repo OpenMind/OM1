@@ -30,8 +30,8 @@ TrajectoryPlannerROS:
    heading_scoring: true            ##
    heading_lookahead: 0.8
    heading_scoring_timestep: 2.8    ##
-   planner_patience: 5.0            
-   oscillation_reset_dist: 0.05      
+   planner_patience: 5.0
+   oscillation_reset_dist: 0.05
    publish_cost_grid_pc: false
    prune_plan: true
 

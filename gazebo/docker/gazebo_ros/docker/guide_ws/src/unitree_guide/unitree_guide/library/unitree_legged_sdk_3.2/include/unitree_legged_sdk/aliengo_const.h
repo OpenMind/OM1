@@ -6,7 +6,7 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #ifndef _UNITREE_LEGGED_ALIENGO_H_
 #define _UNITREE_LEGGED_ALIENGO_H_
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
     constexpr double aliengo_Hip_max   = 1.047;    // unit:radian ( = 60   degree)
     constexpr double aliengo_Hip_min   = -0.873;   // unit:radian ( = -50  degree)

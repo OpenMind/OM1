@@ -32,12 +32,12 @@ BalanceCtrl::BalanceCtrl(QuadrupedRobot *robModel){
     _beta  = 0.1;
     _fricRatio = 0.4;
 
-    s << 20, 20, 50, 450, 450, 450; 
+    s << 20, 20, 50, 450, 450, 450;
 
     _S = s.asDiagonal();
     _W = w.asDiagonal();
     _U = u.asDiagonal();
-    
+
     _Fprev.setZero();
     _fricMat <<  1,  0, _fricRatio,
                 -1,  0, _fricRatio,

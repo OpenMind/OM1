@@ -145,7 +145,7 @@ void teleForceCmd::keyLoop()
             }
             Fx = 0;
             Fy = 0;
-            Fz = 0;            
+            Fz = 0;
             ROS_INFO("Fx:%3d   Fy:%3d   Fz:%3d", (int)Fx, (int)Fy, (int)Fz);
             dirty = true;
             break;

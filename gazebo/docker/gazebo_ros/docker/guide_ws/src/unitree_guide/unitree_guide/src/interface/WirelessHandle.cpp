@@ -17,36 +17,36 @@ void WirelessHandle::receiveHandle(UNITREE_LEGGED_SDK::LowState *lowState){
 #endif
 #ifdef ROBOT_TYPE_Go1
     memcpy(&_keyData, &lowState->wirelessRemote[0], 40);
-#endif  
-    if(((int)_keyData.btn.components.L2 == 1) && 
+#endif
+    if(((int)_keyData.btn.components.L2 == 1) &&
        ((int)_keyData.btn.components.B  == 1)){
         userCmd = UserCommand::L2_B;
     }
-    else if(((int)_keyData.btn.components.L2 == 1) && 
+    else if(((int)_keyData.btn.components.L2 == 1) &&
             ((int)_keyData.btn.components.A  == 1)){
         userCmd = UserCommand::L2_A;
     }
-    else if(((int)_keyData.btn.components.L2 == 1) && 
+    else if(((int)_keyData.btn.components.L2 == 1) &&
             ((int)_keyData.btn.components.X  == 1)){
         userCmd = UserCommand::L2_X;
     }
 
 #ifdef COMPILE_WITH_MOVE_BASE
-    else if(((int)_keyData.btn.components.L2 == 1) && 
+    else if(((int)_keyData.btn.components.L2 == 1) &&
             ((int)_keyData.btn.components.Y  == 1)){
         userCmd = UserCommand::L2_Y;
     }
 #endif  // COMPILE_WITH_MOVE_BASE
 
-    else if(((int)_keyData.btn.components.L1 == 1) && 
+    else if(((int)_keyData.btn.components.L1 == 1) &&
             ((int)_keyData.btn.components.X  == 1)){
         userCmd = UserCommand::L1_X;
     }
-    else if(((int)_keyData.btn.components.L1 == 1) && 
+    else if(((int)_keyData.btn.components.L1 == 1) &&
             ((int)_keyData.btn.components.A  == 1)){
         userCmd = UserCommand::L1_A;
     }
-    else if(((int)_keyData.btn.components.L1 == 1) && 
+    else if(((int)_keyData.btn.components.L1 == 1) &&
             ((int)_keyData.btn.components.Y  == 1)){
         userCmd = UserCommand::L1_Y;
     }

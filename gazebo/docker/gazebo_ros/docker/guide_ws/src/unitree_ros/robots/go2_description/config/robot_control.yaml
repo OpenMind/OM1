@@ -2,7 +2,7 @@ go2_gazebo:
     # Publish all joint states -----------------------------------
     joint_state_controller:
         type: joint_state_controller/JointStateController
-        publish_rate: 1000  
+        publish_rate: 1000
 
     # FL Controllers ---------------------------------------
     FL_hip_controller:
@@ -67,4 +67,3 @@ go2_gazebo:
         type: unitree_legged_control/UnitreeJointController
         joint: RR_calf_joint
         pid: {p: 300.0, i: 0.0, d: 8.0}
-
