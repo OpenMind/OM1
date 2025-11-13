@@ -120,7 +120,7 @@ class ASRText(IdlStruct, typename="ASRText"):
 
 
 @dataclass
-class AvatarFace(IdlStruct, typename="AvatarFace"):
+class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
     
     class Face(Enum):
         HAPPY = 0
@@ -134,3 +134,10 @@ class AvatarFace(IdlStruct, typename="AvatarFace"):
     header: Header
     face: int8
     face_text: str
+
+
+@dataclass
+class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
+    header: Header
+    code: int8
+    message: str
