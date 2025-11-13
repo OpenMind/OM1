@@ -1,6 +1,6 @@
 ---
-title: ROS2 SDK for Go2 Beta Release
-description: "v1.0.0-beta.2"
+title: Unitree SDK Beta Release
+description: "v1.0.0-beta.3"
 ---
 
 ## What's included
@@ -8,6 +8,22 @@ description: "v1.0.0-beta.2"
 Beta release for the Docker image openmindagi/unitree_go2_sdk, which provides the full ROS2 system for running the Unitree Go2 SDK.
 
 ## Features
+
+### v1.0.0-beta.3
+- The Docker image and repository have been renamed to unitree_sdk, reflecting the unified SDK architecture and simplifying deployment workflows.
+- Smart Auto-Charging System
+  - The robot now supports AprilTag-based visual docking integrated with Nav2 navigation.
+  - When the robot requires charging, it autonomously navigates to the charging station’s vicinity using the Nav2 stack.
+  - Upon reaching the target area, it switches to precision docking mode, using onboard cameras to detect AprilTags mounted near or on the charging dock.
+  - This hybrid approach ensures robust and accurate alignment for seamless autonomous charging.
+- The CYCLONE_INTERFACE has been renamed to CYCLONEDDS_INTERFACE for consistency with the underlying communication standard.
+- New Remote Control Feature
+  Added the ability to remotely control the robot, enabling manual operation for testing, navigation overrides, and precision movement in complex environments.
+- We added monitoring to WatchSensor for audio RTSP.
+- Reorganized the orchestrator package by splitting core logic, API, and cloud nodes into 'core', HTTP/ROS handlers into 'handlers', and process, map, location, and charging logic into 'managers'. Added new service and utility modules, moved WebSocket clients/servers to 'utils', and updated imports accordingly. This modular structure improves maintainability, separation of concerns, and scalability for future development.
+- Users can now enable or disable TTS mode directly from the web portal for greater flexibility in communication and operation.
+- New topics have been added for fetching, enabling, and disabling AI mode, allowing dynamic AI state management via ROS or other interfaces.
+- Agile mode of the robot is unstable due to the payload on its back. Operate in Classic Mode for optimal stability and performance is recommended.
 
 ### v1.0.0-beta.2
 - Added CRSF Protocol Support
