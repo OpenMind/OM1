@@ -1,7 +1,6 @@
 import logging
 import time
 
-
 from actions.base import ActionConfig, ActionConnector
 from actions.face.interface import FaceInput
 from providers.avatar_provider import AvatarProvider
@@ -31,9 +30,9 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
         output_interface : FaceInput
         """
         action = output_interface.action
-        
+
         success = self.avatar_provider.send_avatar_command(action)
-        
+
         if success:
             logging.info(f"Avatar face command sent: {action}")
         else:
