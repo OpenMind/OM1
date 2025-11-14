@@ -10,7 +10,7 @@ from .singleton import singleton
 class AvatarProvider:
     """
     Singleton provider for Avatar communication via Zenoh.
-    
+
     """
 
     def __init__(self):
@@ -20,7 +20,7 @@ class AvatarProvider:
         self.session = None
         self.avatar_publisher = None
         self.running = False
-        
+
         self.face_map = {
             "happy": (AvatarFaceRequest.Face.HAPPY.value, "Happy"),
             "sad": (AvatarFaceRequest.Face.SAD.value, "Sad"),
@@ -29,7 +29,7 @@ class AvatarProvider:
             "think": (AvatarFaceRequest.Face.THINK.value, "Think"),
             "excited": (AvatarFaceRequest.Face.EXCITED.value, "Excited"),
         }
-        
+
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
@@ -40,7 +40,9 @@ class AvatarProvider:
             self.session = open_zenoh_session()
             self.avatar_publisher = self.session.declare_publisher("om/avatar/face")
             self.running = True
-            logging.info("AvatarProvider initialized with Zenoh on topic 'om/avatar/face'")
+            logging.info(
+                "AvatarProvider initialized with Zenoh on topic 'om/avatar/face'"
+            )
         except Exception as e:
             logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
             self.session = None
@@ -67,14 +69,14 @@ class AvatarProvider:
             return False
 
         command = command.lower()
-        
+
         if command not in self.face_map:
             logging.warning(f"Unknown avatar command: {command}")
             return False
 
         try:
             face_code, face_text = self.face_map[command]
-            
+
             face_msg = AvatarFaceRequest(
                 header=prepare_header(str(uuid4())),
                 face=face_code,
@@ -83,7 +85,7 @@ class AvatarProvider:
             self.avatar_publisher.put(face_msg.serialize())
             logging.info(f"AvatarProvider sent command to Zenoh: {face_text}")
             return True
-            
+
         except Exception as e:
             logging.error(f"Failed to send avatar command via Zenoh: {e}")
             return False
