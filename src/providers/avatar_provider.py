@@ -62,7 +62,7 @@ class AvatarProvider:
         command = command.lower()
 
         try:
-            face_text = command.capitalize()
+            face_text = command
 
             face_msg = AvatarFaceRequest(
                 header=prepare_header(str(uuid4())),
