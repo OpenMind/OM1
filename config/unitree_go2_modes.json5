@@ -419,7 +419,7 @@
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 10
+            "silence_rate": 30
           }
         }
       ],
