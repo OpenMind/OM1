@@ -22,12 +22,12 @@ class AvatarProvider:
         self.running = False
 
         self.face_map = {
-            "happy": (AvatarFaceRequest.Face.HAPPY.value, "Happy"),
-            "sad": (AvatarFaceRequest.Face.SAD.value, "Sad"),
-            "curious": (AvatarFaceRequest.Face.CURIOUS.value, "Curious"),
-            "confused": (AvatarFaceRequest.Face.CONFUSED.value, "Confused"),
-            "think": (AvatarFaceRequest.Face.THINK.value, "Think"),
-            "excited": (AvatarFaceRequest.Face.EXCITED.value, "Excited"),
+            "happy": "Happy",
+            "sad": "Sad",
+            "curious": "Curious",
+            "confused": "Confused",
+            "think": "Think",
+            "excited": "Excited",
         }
 
         self._initialize_zenoh()
@@ -38,10 +38,10 @@ class AvatarProvider:
         """
         try:
             self.session = open_zenoh_session()
-            self.avatar_publisher = self.session.declare_publisher("om/avatar/face")
+            self.avatar_publisher = self.session.declare_publisher("om/avatar/request")
             self.running = True
             logging.info(
-                "AvatarProvider initialized with Zenoh on topic 'om/avatar/face'"
+                "AvatarProvider initialized with Zenoh on topic 'om/avatar/request'"
             )
         except Exception as e:
             logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
@@ -75,11 +75,10 @@ class AvatarProvider:
             return False
 
         try:
-            face_code, face_text = self.face_map[command]
+            face_text = self.face_map[command]
 
             face_msg = AvatarFaceRequest(
                 header=prepare_header(str(uuid4())),
-                face=face_code,
                 face_text=face_text,
             )
             self.avatar_publisher.put(face_msg.serialize())

@@ -29,14 +29,22 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
         ----------
         output_interface : FaceInput
         """
-        action = output_interface.action
-
-        success = self.avatar_provider.send_avatar_command(action)
-
-        if success:
-            logging.info(f"Avatar face command sent: {action}")
+        if output_interface.action == "happy":
+            self.avatar_provider.send_avatar_command("Happy")
+        elif output_interface.action == "sad":
+            self.avatar_provider.send_avatar_command("Sad")
+        elif output_interface.action == "curious":
+            self.avatar_provider.send_avatar_command("Curious")
+        elif output_interface.action == "confused":
+            self.avatar_provider.send_avatar_command("Confused")
+        elif output_interface.action == "think":
+            self.avatar_provider.send_avatar_command("Think")
+        elif output_interface.action == "excited":
+            self.avatar_provider.send_avatar_command("Excited")
         else:
-            logging.warning(f"Failed to send avatar face command: {action}")
+            logging.warning("Failed to send avatar face command")
+
+        logging.info(f"Avatar face command sent: {output_interface.action}")
 
     def stop(self):
         """
