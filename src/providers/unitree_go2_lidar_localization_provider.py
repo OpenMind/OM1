@@ -17,7 +17,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
 
     def __init__(
         self,
-        topic: str = "om/localization",
+        topic: str = "om/localization_pose",
         quality_tolerance: float = 0.9,
     ):
         """
@@ -26,7 +26,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         Parameters
         ----------
         topic : str, optional
-            The topic on which to subscribe for lidar localization messages (default is "om/localization").
+            The topic on which to subscribe for lidar localization messages (default is "om/localization_pose").
         quality_tolerance : float, optional
             The tolerance for localization quality percent (default is 0.9).
         """
@@ -56,7 +56,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             self.localization_status = quality_percent >= self.quality_tolerance
             self.localization_pose = message.pose
 
-            logging.info(
+            logging.debug(
                 "Localization Status: %s, Pose: %s",
                 self.localization_status,
                 self.localization_pose,
