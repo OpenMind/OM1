@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from pycdr2 import IdlStruct
-from pycdr2.types import array, float64, int32, sequence, uint8
+from pycdr2.types import array, float32, float64, int32, sequence, uint8
 
 from .geometry_msgs import Pose, PoseWithCovariance, TwistWithCovariance
 from .std_msgs import Header, String
@@ -20,6 +20,15 @@ class AMCLPose(IdlStruct, typename="AMCLPose"):
     header: Header
     pose: Pose
     covariance: array[float64, 36]
+
+
+@dataclass
+class LidarLocalization(IdlStruct, typename="LidarLocalization"):
+    header: Header
+    pose: Pose
+    match_score: int32
+    quality_percent: float32
+    num_points: int32
 
 
 @dataclass
