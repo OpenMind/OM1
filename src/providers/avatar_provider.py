@@ -21,15 +21,6 @@ class AvatarProvider:
         self.avatar_publisher = None
         self.running = False
 
-        self.face_map = {
-            "happy": "Happy",
-            "sad": "Sad",
-            "curious": "Curious",
-            "confused": "Confused",
-            "think": "Think",
-            "excited": "Excited",
-        }
-
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
@@ -70,12 +61,8 @@ class AvatarProvider:
 
         command = command.lower()
 
-        if command not in self.face_map:
-            logging.warning(f"Unknown avatar command: {command}")
-            return False
-
         try:
-            face_text = self.face_map[command]
+            face_text = command.capitalize()
 
             face_msg = AvatarFaceRequest(
                 header=prepare_header(str(uuid4())),
