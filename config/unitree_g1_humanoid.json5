@@ -9,6 +9,11 @@
   agent_inputs: [
     {
       type: "GoogleASRInput",
+      config: {
+        api_key: "YOUR_API_KEY",
+        microphone_device_id: "default", // or specific device id on your system
+        // microphone_name: "USB PnP Sound Device" // optional
+      },
     },
     {
       type: "UnitreeG1Basic",
