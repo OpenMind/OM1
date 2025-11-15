@@ -30,10 +30,22 @@ class InputOrchestrator:
 
         Creates and manages async tasks for each input source.
         """
-        input_tasks = [
-            asyncio.create_task(self._listen_to_input(input)) for input in self.inputs
-        ]
-        await asyncio.gather(*input_tasks)
+        input_tasks = []
+
+        for input_source in self.inputs:
+            if input_source is None:
+                # optional input missing, skip silently
+                continue
+
+            try:
+                task = asyncio.create_task(self._listen_to_input(input_source))
+                input_tasks.append(task)
+            except Exception as e:
+                print(f"[warning] Optional input failed to start: {type(input_source).__name__}: {e}")
+                continue
+
+        if input_tasks:
+            await asyncio.gather(*input_tasks)
 
     async def _listen_to_input(self, input: Sensor) -> None:
         """
@@ -44,5 +56,12 @@ class InputOrchestrator:
         input : Sensor
             Input source to listen to
         """
-        async for event in input.listen():
-            await input.raw_to_text(event)
+        try:
+            async for event in input.listen():
+                try:
+                    await input.raw_to_text(event)
+                except Exception as e:
+                    print(f"[warning] Failed to process input event: {e}")
+                    continue
+        except Exception as e:
+            print(f"[warning] Input listener stopped due to error ({type(input).__name__}): {e}")
