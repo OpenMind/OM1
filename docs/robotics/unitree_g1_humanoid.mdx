@@ -469,3 +469,16 @@ trust <MAC>
 pair <MAC>
 connect <MAC>
 ```
+
+### Configuring `microphone_device_id` for GoogleASR
+
+When using `GoogleASRInput` with `unitree_g1_humanoid.json5`, you may want to specify a `microphone_device_id` so OM1 knows which audio device to use.
+
+- On most systems, `"default"` will use the system default microphone.
+- If you have multiple devices, you can list them using a Python audio library (e.g. `sounddevice` in a separate script) and pick the correct ID/name.
+
+Example:
+
+```json5
+microphone_device_id: "default"
+
