@@ -50,6 +50,16 @@ For Linux
 sudo apt-get update
 sudo apt-get install portaudio19-dev python-dev ffmpeg
 ```
+### Download required binary/model files
+
+Some large binary files are not stored in the repository to keep it lightweight.
+
+Download them manually before running OM1:
+
+```bash
+curl -L <model-download-url> -o yolov8n.pt
+curl -L <library-download-url> -o libzenoh_backend_fs.dylib
+
 
 ### Obtain an OpenMind API Key
 
