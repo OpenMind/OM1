@@ -159,6 +159,34 @@ docker-compose up watchdog -d --no-build
 cd OM1-avatar
 docker-compose up om1_avatar -d --no-build
 ```
+
+### Troubleshooting: macOS Zenoh error (issue #639)
+
+If you run OM1 on macOS **without a physical robot** and you see a Zenoh error like:
+
+```text
+Unable to connect to any of [tcp/127.0.0.1:7447]
+```
+you can try the following:
+
+1. Use Python 3.10 on macOS (Python 3.11 is not fully supported yet).
+
+2. For local experiments, temporarily remove the `GovernanceEthereum` item from the `agent_inputs` array in your agent config, for example:
+
+```json5
+"agent_inputs": [
+  // {
+  //   "type": "GovernanceEthereum"
+  // },
+  {
+    "type": "VLM_COCO_Local",
+    "config": {
+      "camera_index": 0
+    }
+  }
+]
+```
+
 ## Detailed Documentation
 
 More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).
