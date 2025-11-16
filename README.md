@@ -163,6 +163,15 @@ docker-compose up om1_avatar -d --no-build
 
 More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).
 
+### Related Repositories
+
+| Component | Repository | Description |
+|----------|------------|-------------|
+| OM1 Core | https://github.com/OpenMind/OM1 | Main robotics runtime and agent framework. |
+| OM1 Avatar | https://github.com/OpenMind/OM1-avatar | React-based UI for robot status visualization and avatar control. |
+| OM1 Video Processor | https://github.com/OpenMind/OM1-video-processor | Handles camera streaming, face detection, and audio capture. |
+| Unitree SDK | https://github.com/OpenMind/unitree-sdk | Navigation, SLAM and robot hardware integration for Unitree robots. |
+
 ## Contributing
 
 Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before making a pull request.
