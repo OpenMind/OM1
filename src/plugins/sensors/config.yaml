@@ -1,0 +1,6 @@
+mock_mode: true
+sensors:
+  bme280: true
+  dht22: true
+  bh1750: true
+  mq135: true
