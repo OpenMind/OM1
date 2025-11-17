@@ -153,7 +153,9 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
             tensor_image = torch.tensor(
                 batch_image / 255.0, dtype=torch.float, device=self.device
             )
-            mobilenet_detections = self.model(tensor_image)[0]  # pylint: disable=E1102 disable not callable warning
+            mobilenet_detections = self.model(tensor_image)[
+                0
+            ]  # pylint: disable=E1102 disable not callable warning
 
             # logging.info(f"VLM_COCO_Local detections: {mobilenet_detections}")
             filtered_detections = [

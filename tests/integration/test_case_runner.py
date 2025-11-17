@@ -1183,9 +1183,9 @@ async def test_from_config(test_case_path: Path):
         logging.info(f"Test results for {config['name']}:\n{message}")
 
         # Assert test passed
-        assert passed, (
-            f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
-        )
+        assert (
+            passed
+        ), f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
 
         logging.info(f"test_from_config: Test {config['name']} completed successfully")
 

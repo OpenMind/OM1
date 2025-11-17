@@ -31,9 +31,9 @@ def test_init_signature(simulator_class: Type[Simulator]):
     """Verify __init__ signature matches base class"""
     base_params = set(Simulator.__init__.__annotations__.keys())
     impl_params = set(simulator_class.__init__.__annotations__.keys())
-    assert base_params == impl_params, (
-        f"{simulator_class.__name__} __init__ signature mismatch"
-    )
+    assert (
+        base_params == impl_params
+    ), f"{simulator_class.__name__} __init__ signature mismatch"
 
 
 @pytest.mark.parametrize("simulator_class", get_all_simulator_classes())
@@ -41,9 +41,9 @@ def test_tick_signature(simulator_class: Type[Simulator]):
     """Verify tick method signature matches base class"""
     base_params = set(Simulator.tick.__annotations__.keys())
     impl_params = set(simulator_class.tick.__annotations__.keys())
-    assert base_params == impl_params, (
-        f"{simulator_class.__name__} tick signature mismatch"
-    )
+    assert (
+        base_params == impl_params
+    ), f"{simulator_class.__name__} tick signature mismatch"
 
 
 @pytest.mark.parametrize("simulator_class", get_all_simulator_classes())
@@ -51,9 +51,9 @@ def test_sim_signature(simulator_class: Type[Simulator]):
     """Verify sim method signature matches base class"""
     base_params = set(Simulator.sim.__annotations__.keys())
     impl_params = set(simulator_class.sim.__annotations__.keys())
-    assert base_params == impl_params, (
-        f"{simulator_class.__name__} sim signature mismatch"
-    )
+    assert (
+        base_params == impl_params
+    ), f"{simulator_class.__name__} sim signature mismatch"
 
 
 @pytest.mark.parametrize("simulator_class", get_all_simulator_classes())
@@ -77,16 +77,16 @@ def test_return_type_annotations(simulator_class: Type[Simulator]):
 @pytest.mark.parametrize("simulator_class", get_all_simulator_classes())
 def test_docstring_exists(simulator_class: Type[Simulator]):
     """Verify all simulator classes and their methods have docstrings"""
-    assert simulator_class.__doc__ is not None, (
-        f"{simulator_class.__name__} missing class docstring"
-    )
+    assert (
+        simulator_class.__doc__ is not None
+    ), f"{simulator_class.__name__} missing class docstring"
 
     methods_to_check = ["tick", "sim"]
     for method_name in methods_to_check:
         method = getattr(simulator_class, method_name)
-        assert method.__doc__ is not None, (
-            f"{simulator_class.__name__}.{method_name} missing docstring"
-        )
+        assert (
+            method.__doc__ is not None
+        ), f"{simulator_class.__name__}.{method_name} missing docstring"
 
 
 @pytest.mark.parametrize("simulator_class", get_all_simulator_classes())

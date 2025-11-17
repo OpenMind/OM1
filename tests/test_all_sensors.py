@@ -1,8 +1,8 @@
 import time
 import unittest
 
-from src.plugins.sensors.bme280_plugin import BME280Plugin
 from src.plugins.sensors.bh1750_plugin import BH1750Plugin
+from src.plugins.sensors.bme280_plugin import BME280Plugin
 from src.plugins.sensors.dht22_plugin import DHT22Plugin
 from src.plugins.sensors.mq135_plugin import MQ135Plugin
 

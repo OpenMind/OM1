@@ -31,11 +31,7 @@ class BME280Plugin:
                     else (
                         "hot"
                         if t > 26
-                        else "dry"
-                        if h < 30
-                        else "humid"
-                        if h > 70
-                        else "comfortable"
+                        else "dry" if h < 30 else "humid" if h > 70 else "comfortable"
                     )
                 )
                 self.data = {
