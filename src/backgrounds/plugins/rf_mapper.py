@@ -128,17 +128,13 @@ class RFmapper(Background):
                 self.seen_devices[addr].unix_ts = time.time()
                 if tx_power and self.seen_devices[addr].tx_power is None:
                     self.seen_devices[addr].tx_power = tx_power
-                    logging.info(
-                        f"Updated BLE tx_power: {self.seen_devices[addr].tx_power}"
-                    )
+                    logging.info(f"Updated BLE tx_power: {self.seen_devices[addr].tx_power}")
                 if local_name and self.seen_devices[addr].name is None:
                     self.seen_devices[addr].name = local_name
                     logging.info(f"Updated BLE name: {self.seen_devices[addr].name}")
                 if len(mfgval) > len(self.seen_devices[addr].mfgval):
                     self.seen_devices[addr].mfgval = mfgval
-                    logging.info(
-                        f"Updated BLE mfgval: {self.seen_devices[addr].mfgval}"
-                    )
+                    logging.info(f"Updated BLE mfgval: {self.seen_devices[addr].mfgval}")
             else:
 
                 # this is a new device
@@ -163,9 +159,7 @@ class RFmapper(Background):
         logging.debug(f"ready to sort: {self.seen_devices.values()}")
 
         # Get the top 20 devices with the strongest RSSI
-        sorted_devices = sorted(
-            self.seen_devices.values(), key=lambda d: d.rssi, reverse=True
-        )
+        sorted_devices = sorted(self.seen_devices.values(), key=lambda d: d.rssi, reverse=True)
 
         final_list: List[RFData] = []
         for i, device in enumerate(sorted_devices):

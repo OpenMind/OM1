@@ -73,9 +73,7 @@ def test_load_input_invalid_type():
         mock_module.InvalidInput = InvalidInput
         mock_import.return_value = mock_module
 
-        with pytest.raises(
-            ValueError, match="'InvalidInput' is not a valid input subclass"
-        ):
+        with pytest.raises(ValueError, match="'InvalidInput' is not a valid input subclass"):
             load_input("InvalidInput")
 
 

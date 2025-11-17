@@ -17,9 +17,7 @@ class MoveSerialConnector(ActionConnector[MoveInput]):
         super().__init__(config)
 
         # Open the serial port
-        self.port = (
-            ""  # specify your serial port here, such as COM1 or /dev/cu.usbmodem14101
-        )
+        self.port = ""  # specify your serial port here, such as COM1 or /dev/cu.usbmodem14101
         self.ser = None
         if self.port:
             self.ser = serial.Serial(self.port, 9600)

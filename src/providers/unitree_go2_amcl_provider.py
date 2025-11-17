@@ -52,9 +52,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:
-            message: nav_msgs.AMCLPose = nav_msgs.AMCLPose.deserialize(
-                data.payload.to_bytes()
-            )
+            message: nav_msgs.AMCLPose = nav_msgs.AMCLPose.deserialize(data.payload.to_bytes())
             logging.debug("Received AMCL message: %s", message)
             covariance = np.array(message.covariance)
 
@@ -62,8 +60,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
             yaw_uncertainty = np.sqrt(covariance[35])
 
             self.localization_status = (
-                pos_uncertainty < self.pose_tolerance
-                and yaw_uncertainty < self.yaw_tolerance
+                pos_uncertainty < self.pose_tolerance and yaw_uncertainty < self.yaw_tolerance
             )
             self.localization_pose = message.pose
             logging.info(

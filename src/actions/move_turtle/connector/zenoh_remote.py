@@ -60,9 +60,7 @@ class MoveZenohRemoteConnector(ActionConnector[MoveInput]):
             command_status = CommandStatus.from_dict(json.loads(message))
             t = geometry_msgs.Twist(
                 linear=geometry_msgs.Vector3(x=float(command_status.vx), y=0.0, z=0.0),
-                angular=geometry_msgs.Vector3(
-                    x=0.0, y=0.0, z=float(command_status.vyaw)
-                ),
+                angular=geometry_msgs.Vector3(x=0.0, y=0.0, z=float(command_status.vyaw)),
             )
             self.session.put(self.cmd_vel, t.serialize())
             logging.info(

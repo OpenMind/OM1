@@ -44,9 +44,7 @@ class UbtechCameraVideoStream(VideoStream):
 
         try:
             self.resolution = self.resolution or (640, 480)
-            YanAPI.open_vision_stream(
-                resolution=f"{self.resolution[0]}x{self.resolution[1]}"
-            )
+            YanAPI.open_vision_stream(resolution=f"{self.resolution[0]}x{self.resolution[1]}")
             time.sleep(2)
 
             self.stream_client = MJPEGClient(self.url)

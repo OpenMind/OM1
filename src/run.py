@@ -35,18 +35,14 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
         )
 
         if not os.path.exists(runtime_config_path):
-            logging.error(
-                f"Default runtime configuration file not found: {runtime_config_path}"
-            )
+            logging.error(f"Default runtime configuration file not found: {runtime_config_path}")
             logging.error(
                 "Please provide a config_name or ensure .runtime.json5 exists in config/memory/"
             )
             raise typer.Exit(1)
 
         config_name = ".runtime"
-        config_path = os.path.join(
-            os.path.dirname(__file__), "../config", config_name + ".json5"
-        )
+        config_path = os.path.join(os.path.dirname(__file__), "../config", config_name + ".json5")
 
         shutil.copy2(runtime_config_path, config_path)
         logging.info("Using default runtime configuration from memory folder")
@@ -54,9 +50,7 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
             f"Copied config/memory/.runtime.json5 to config/{config_name}.json5 for system compatibility"
         )
     else:
-        config_path = os.path.join(
-            os.path.dirname(__file__), "../config", config_name + ".json5"
-        )
+        config_path = os.path.join(os.path.dirname(__file__), "../config", config_name + ".json5")
 
     return config_name, config_path
 
@@ -67,9 +61,7 @@ def start(
         None,
         help="The name of the configuration file (without extension) located in the config directory. If not provided, uses .runtime.json5 from memory folder.",
     ),
-    hot_reload: bool = typer.Option(
-        True, help="Enable hot-reload of configuration files."
-    ),
+    hot_reload: bool = typer.Option(True, help="Enable hot-reload of configuration files."),
     check_interval: int = typer.Option(
         60,
         help="Interval in seconds between config file checks when hot_reload is enabled.",
@@ -123,9 +115,7 @@ def start(
             logging.info(f"Starting OM1 with standard configuration: {config_name}")
 
         if hot_reload:
-            logging.info(
-                f"Hot-reload enabled (check interval: {check_interval} seconds)"
-            )
+            logging.info(f"Hot-reload enabled (check interval: {check_interval} seconds)")
 
         asyncio.run(runtime.run())
 

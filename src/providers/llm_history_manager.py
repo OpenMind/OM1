@@ -40,9 +40,7 @@ class LLMHistoryManager:
         self.config = config
         self.agent_name = self.config.agent_name
         self.system_prompt = (
-            system_prompt.replace("****", self.agent_name)
-            if self.agent_name
-            else system_prompt
+            system_prompt.replace("****", self.agent_name) if self.agent_name else system_prompt
         )
         self.summary_command = (
             summary_command.replace("****", self.agent_name)
@@ -122,9 +120,7 @@ class LLMHistoryManager:
             summary = response.choices[0].message.content
             if summary is None:
                 logging.error("Received empty summary from API")
-                return ChatMessage(
-                    role="system", content="Error: Received empty summary from API"
-                )
+                return ChatMessage(role="system", content="Error: Received empty summary from API")
             return ChatMessage(role="assistant", content=f"Previously, {summary}")
 
         except asyncio.TimeoutError:
@@ -132,9 +128,7 @@ class LLMHistoryManager:
             return ChatMessage(role="system", content="Error: API request timed out")
         except openai.APIError as e:
             logging.error(f"OpenAI API error: {e}")
-            return ChatMessage(
-                role="system", content=f"Error: API service unavailable: {str(e)}"
-            )
+            return ChatMessage(role="system", content=f"Error: API service unavailable: {str(e)}")
         except Exception as e:
             logging.error(f"Error summarizing messages: {type(e).__name__}: {e}")
             return ChatMessage(role="system", content="Error summarizing state")
@@ -153,9 +147,7 @@ class LLMHistoryManager:
                 return
 
             messages_copy = messages.copy()
-            self._summary_task = asyncio.create_task(
-                self.summarize_messages(messages_copy)
-            )
+            self._summary_task = asyncio.create_task(self.summarize_messages(messages_copy))
 
             def callback(task):
                 try:
@@ -168,13 +160,8 @@ class LLMHistoryManager:
                         messages.clear()
                         messages.append(summary_message)
                         logging.info("Successfully summarized the state")
-                    elif (
-                        summary_message.role == "system"
-                        and "Error" in summary_message.content
-                    ):
-                        logging.error(
-                            f"Summarization failed: {summary_message.content}"
-                        )
+                    elif summary_message.role == "system" and "Error" in summary_message.content:
+                        logging.error(f"Summarization failed: {summary_message.content}")
                         messages.pop(0) if messages else None
                         messages.pop(0) if messages else None
                     else:
@@ -182,9 +169,7 @@ class LLMHistoryManager:
                 except asyncio.CancelledError:
                     logging.warning("Summary task callback cancelled")
                 except Exception as e:
-                    logging.error(
-                        f"Error in summary task callback: {type(e).__name__}: {e}"
-                    )
+                    logging.error(f"Error in summary task callback: {type(e).__name__}: {e}")
                     messages.pop(0) if messages else None
                     messages.pop(0) if messages else None
 
@@ -243,16 +228,13 @@ class LLMHistoryManager:
 
                 if response is not None:
 
-                    action_message = (
-                        "Given that information, **** took these actions: "
-                        + (
-                            " | ".join(
-                                ACTION_MAP[action.type.lower()].format(
-                                    action.value if action.value else ""
-                                )
-                                for action in response.actions  # type: ignore
-                                if action.type.lower() in ACTION_MAP
+                    action_message = "Given that information, **** took these actions: " + (
+                        " | ".join(
+                            ACTION_MAP[action.type.lower()].format(
+                                action.value if action.value else ""
                             )
+                            for action in response.actions  # type: ignore
+                            if action.type.lower() in ACTION_MAP
                         )
                     )
 
@@ -267,9 +249,7 @@ class LLMHistoryManager:
                         and len(self.history_manager.history)
                         > self.history_manager.config.history_length
                     ):
-                        await self.history_manager.start_summary_task(
-                            self.history_manager.history
-                        )
+                        await self.history_manager.start_summary_task(self.history_manager.history)
 
                 self.history_manager.frame_index += 1
 

@@ -70,9 +70,7 @@ def test_arabic_language_code():
     assert LANGUAGE_CODE_MAP["arabic"] == "ar-SA"
 
 
-def test_init_with_korean_language(
-    mock_asr_provider, mock_sleep_ticker, mock_conversation
-):
+def test_init_with_korean_language(mock_asr_provider, mock_sleep_ticker, mock_conversation):
     """Test ASR initialization with Korean language."""
     config = SensorConfig(api_key="test_key", language="korean")
     _ = GoogleASRInput(config=config)
@@ -82,9 +80,7 @@ def test_init_with_korean_language(
     assert call_args[1]["language_code"] == "ko-KR"
 
 
-def test_init_with_spanish_language(
-    mock_asr_provider, mock_sleep_ticker, mock_conversation
-):
+def test_init_with_spanish_language(mock_asr_provider, mock_sleep_ticker, mock_conversation):
     """Test ASR initialization with Spanish language."""
     config = SensorConfig(api_key="test_key", language="spanish")
     _ = GoogleASRInput(config=config)
@@ -93,9 +89,7 @@ def test_init_with_spanish_language(
     assert call_args[1]["language_code"] == "es-ES"
 
 
-def test_init_with_japanese_language(
-    mock_asr_provider, mock_sleep_ticker, mock_conversation
-):
+def test_init_with_japanese_language(mock_asr_provider, mock_sleep_ticker, mock_conversation):
     """Test ASR initialization with Japanese language."""
     config = SensorConfig(api_key="test_key", language="japanese")
     _ = GoogleASRInput(config=config)
@@ -115,9 +109,7 @@ def test_init_with_case_insensitive_language(
     assert call_args[1]["language_code"] == "ko-KR"
 
 
-def test_init_with_whitespace_in_language(
-    mock_asr_provider, mock_sleep_ticker, mock_conversation
-):
+def test_init_with_whitespace_in_language(mock_asr_provider, mock_sleep_ticker, mock_conversation):
     """Test that language names handle whitespace."""
     config = SensorConfig(api_key="test_key", language="  korean  ")
     _ = GoogleASRInput(config=config)

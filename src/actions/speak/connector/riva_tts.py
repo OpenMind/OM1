@@ -95,13 +95,9 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,
                 code=1 if self.tts_enabled else 0,
-                status=String(
-                    data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                ),
+                status=String(data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
 
         # Enable the TTS
         if code == 1:
@@ -114,9 +110,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
                 code=1,
                 status=String(data="TTS Enabled"),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())
 
         # Disable the TTS
         if code == 0:
@@ -129,6 +123,4 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
                 status=String(data="TTS Disabled"),
             )
 
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())

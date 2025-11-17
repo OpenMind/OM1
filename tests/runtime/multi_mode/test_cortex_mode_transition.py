@@ -174,16 +174,12 @@ def mock_mode_manager():
 
 
 @pytest.fixture
-def cortex_runtime_with_mode_transition(
-    mock_system_config, mock_io_provider, mock_mode_manager
-):
+def cortex_runtime_with_mode_transition(mock_system_config, mock_io_provider, mock_mode_manager):
     """ModeCortexRuntime instance configured for mode transition testing."""
     with (
         patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
         patch("runtime.multi_mode.cortex.IOProvider") as mock_io_provider_class,
-        patch(
-            "runtime.multi_mode.cortex.SleepTickerProvider"
-        ) as mock_sleep_provider_class,
+        patch("runtime.multi_mode.cortex.SleepTickerProvider") as mock_sleep_provider_class,
     ):
         mock_manager_class.return_value = mock_mode_manager
         mock_io_provider_class.return_value = mock_io_provider
@@ -562,9 +558,7 @@ async def test_request_mode_change_integration(cortex_runtime_with_mode_transiti
     result = await runtime.request_mode_change("emergency")
 
     assert result is True
-    mocks["mode_manager"].request_transition.assert_called_once_with(
-        "emergency", "manual"
-    )
+    mocks["mode_manager"].request_transition.assert_called_once_with("emergency", "manual")
 
 
 def test_get_available_modes_returns_correct_structure(
@@ -656,9 +650,7 @@ async def test_mode_transition_with_simulator_orchestrator(
     if runtime._pending_mode_transition:
         pass
     else:
-        runtime.simulator_orchestrator.promise.assert_called_once_with(
-            mock_output.actions
-        )
+        runtime.simulator_orchestrator.promise.assert_called_once_with(mock_output.actions)
 
 
 @pytest.mark.asyncio
@@ -670,9 +662,7 @@ async def test_mode_transition_input_triggers_advanced_mode(cortex_runtime):
 
     await runtime._tick()
 
-    components["mode_manager"].process_tick.assert_called_once_with(
-        "switch to advanced mode"
-    )
+    components["mode_manager"].process_tick.assert_called_once_with("switch to advanced mode")
 
     assert runtime._pending_mode_transition == "advanced"
     runtime._mode_transition_event.set.assert_called_once()
@@ -687,9 +677,7 @@ async def test_mode_transition_input_triggers_emergency_mode(cortex_runtime):
 
     await runtime._tick()
 
-    components["mode_manager"].process_tick.assert_called_once_with(
-        "emergency help needed!"
-    )
+    components["mode_manager"].process_tick.assert_called_once_with("emergency help needed!")
 
     assert runtime._pending_mode_transition == "emergency"
     runtime._mode_transition_event.set.assert_called_once()
@@ -798,9 +786,7 @@ async def test_manual_mode_change_delegation_to_manager(cortex_runtime):
 
     result = await runtime.request_mode_change("emergency")
 
-    components["mode_manager"].request_transition.assert_called_once_with(
-        "emergency", "manual"
-    )
+    components["mode_manager"].request_transition.assert_called_once_with("emergency", "manual")
     assert result is True
 
 

@@ -369,9 +369,7 @@ class IOProvider:
             if self._mode_transition_input is None:
                 self._mode_transition_input = input_text
             else:
-                self._mode_transition_input = (
-                    self._mode_transition_input + " " + input_text
-                )
+                self._mode_transition_input = self._mode_transition_input + " " + input_text
 
     @contextmanager
     def mode_transition_input(self):

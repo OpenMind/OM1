@@ -1,5 +1,6 @@
 import time, yaml, random, threading
 
+
 class MQ135Plugin:
     def __init__(self, config_path="src/plugins/sensors/config.yaml"):
         with open(config_path) as f:
@@ -17,4 +18,5 @@ class MQ135Plugin:
                 self.data = {"co2_ppm": ppm, "air_quality": quality}
             time.sleep(3)
 
-    def get_data(self): return self.data.copy()
+    def get_data(self):
+        return self.data.copy()

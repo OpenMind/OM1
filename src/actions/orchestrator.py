@@ -27,9 +27,7 @@ class ActionOrchestrator:
     def __init__(self, config: RuntimeConfig):
         self._config = config
         self.promise_queue = []
-        self._connector_workers = (
-            min(12, len(config.agent_actions)) if config.agent_actions else 1
-        )
+        self._connector_workers = min(12, len(config.agent_actions)) if config.agent_actions else 1
         self._connector_executor = ThreadPoolExecutor(
             max_workers=self._connector_workers,
         )
@@ -42,9 +40,7 @@ class ActionOrchestrator:
         """
         for agent_action in self._config.agent_actions:
             if agent_action.llm_label in self._submitted_connectors:
-                logging.warning(
-                    f"Connector {agent_action.llm_label} already submitted, skipping."
-                )
+                logging.warning(f"Connector {agent_action.llm_label} already submitted, skipping.")
                 continue
             self._connector_executor.submit(self._run_connector_loop, agent_action)
             self._submitted_connectors.add(agent_action.llm_label)
@@ -107,21 +103,13 @@ class ActionOrchestrator:
                 action.value = "move back"
 
             agent_action = next(
-                (
-                    m
-                    for m in self._config.agent_actions
-                    if m.llm_label == action.type.lower()
-                ),
+                (m for m in self._config.agent_actions if m.llm_label == action.type.lower()),
                 None,
             )
             if agent_action is None:
-                logging.warning(
-                    f"Attempted to call non-existent action: {action.type.lower()}."
-                )
+                logging.warning(f"Attempted to call non-existent action: {action.type.lower()}.")
                 continue
-            action_response = asyncio.create_task(
-                self._promise_action(agent_action, action)
-            )
+            action_response = asyncio.create_task(self._promise_action(agent_action, action))
             self.promise_queue.append(action_response)
 
     async def _promise_action(self, agent_action: AgentAction, action: Action) -> T.Any:

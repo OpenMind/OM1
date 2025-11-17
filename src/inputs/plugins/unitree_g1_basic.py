@@ -15,9 +15,7 @@ try:
         LowState_,
     )
 except ImportError:
-    logging.warning(
-        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
-    )
+    logging.warning("Unitree SDK not found. Please install the Unitree SDK to use this plugin.")
 
     class BmsState_:
         def __init__(self):

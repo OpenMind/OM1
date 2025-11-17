@@ -149,9 +149,7 @@ class TestModeManager:
         sample_system_config.default_mode = "nonexistent"
 
         with patch("runtime.multi_mode.manager.open_zenoh_session"):
-            with pytest.raises(
-                ValueError, match="Default mode 'nonexistent' not found"
-            ):
+            with pytest.raises(ValueError, match="Default mode 'nonexistent' not found"):
                 ModeManager(sample_system_config)
 
     def test_current_mode_config_property(self, mode_manager):
@@ -241,9 +239,7 @@ class TestModeManager:
 
     def test_check_input_triggered_transitions_emergency_priority(self, mode_manager):
         """Test that emergency mode takes priority due to higher priority value."""
-        result = mode_manager.check_input_triggered_transitions(
-            "advanced emergency help"
-        )
+        result = mode_manager.check_input_triggered_transitions("advanced emergency help")
         assert result == "emergency"
 
     def test_check_input_triggered_transitions_no_match(self, mode_manager):
@@ -264,9 +260,7 @@ class TestModeManager:
         result = mode_manager._can_transition(rule)
         assert result is True
 
-    def test_can_transition_cooldown_active(
-        self, mode_manager, sample_transition_rules
-    ):
+    def test_can_transition_cooldown_active(self, mode_manager, sample_transition_rules):
         """Test transition blocked by active cooldown."""
         rule = sample_transition_rules[0]
         transition_key = "default->advanced"
@@ -275,9 +269,7 @@ class TestModeManager:
         result = mode_manager._can_transition(rule)
         assert result is False
 
-    def test_can_transition_cooldown_expired(
-        self, mode_manager, sample_transition_rules
-    ):
+    def test_can_transition_cooldown_expired(self, mode_manager, sample_transition_rules):
         """Test transition allowed after cooldown expires."""
         rule = sample_transition_rules[0]
         transition_key = "default->advanced"
@@ -320,9 +312,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_request_transition_success(self, mode_manager):
         """Test successful manual transition request."""
-        with patch.object(
-            mode_manager, "_execute_transition", return_value=True
-        ) as mock_execute:
+        with patch.object(mode_manager, "_execute_transition", return_value=True) as mock_execute:
             result = await mode_manager.request_transition("advanced")
             assert result is True
             mock_execute.assert_called_once_with("advanced", "manual")
@@ -340,9 +330,7 @@ class TestModeManager:
             assert mode_manager.state.current_mode == "advanced"
             assert mode_manager.state.previous_mode == "default"
             assert len(mode_manager.state.transition_history) == 1
-            assert (
-                "default->advanced:test_reason" in mode_manager.state.transition_history
-            )
+            assert "default->advanced:test_reason" in mode_manager.state.transition_history
 
             callback.assert_called_once_with("default", "advanced")
             mock_save.assert_called_once()
@@ -435,9 +423,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_time_transition(self, mode_manager):
         """Test process_tick with time-based transition."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value="advanced"
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value="advanced"):
             result = await mode_manager.process_tick("some input")
 
             assert result == "advanced"
@@ -445,9 +431,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_input_transition(self, mode_manager):
         """Test process_tick with input-triggered transition."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value=None
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value=None):
             with patch.object(
                 mode_manager,
                 "check_input_triggered_transitions",
@@ -460,9 +444,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_no_transition(self, mode_manager):
         """Test process_tick with no transitions triggered."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value=None
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value=None):
             with patch.object(
                 mode_manager, "check_input_triggered_transitions", return_value=None
             ):
@@ -473,9 +455,7 @@ class TestModeManager:
     @pytest.mark.asyncio
     async def test_process_tick_failed_transition(self, mode_manager):
         """Test process_tick with failed transition execution."""
-        with patch.object(
-            mode_manager, "check_time_based_transitions", return_value="advanced"
-        ):
+        with patch.object(mode_manager, "check_time_based_transitions", return_value="advanced"):
             result = await mode_manager.process_tick("some input")
 
             assert result == "advanced"
@@ -536,16 +516,12 @@ class TestModeManager:
             temp_file = f.name
 
         try:
-            with patch.object(
-                mode_manager, "_get_state_file_path", return_value=temp_file
-            ):
+            with patch.object(mode_manager, "_get_state_file_path", return_value=temp_file):
                 mode_manager._load_mode_state()
 
                 assert mode_manager.state.current_mode == "advanced"
                 assert mode_manager.state.previous_mode == "default"
-                assert mode_manager.state.transition_history == [
-                    "default->advanced:test"
-                ]
+                assert mode_manager.state.transition_history == ["default->advanced:test"]
         finally:
             import os
 
@@ -564,9 +540,7 @@ class TestModeManager:
             temp_file = f.name
 
         try:
-            with patch.object(
-                mode_manager, "_get_state_file_path", return_value=temp_file
-            ):
+            with patch.object(mode_manager, "_get_state_file_path", return_value=temp_file):
                 mode_manager._load_mode_state()
 
                 assert mode_manager.state.current_mode == "default"
@@ -582,9 +556,7 @@ class TestModeManager:
             temp_file = f.name
 
         try:
-            with patch.object(
-                mode_manager, "_get_state_file_path", return_value=temp_file
-            ):
+            with patch.object(mode_manager, "_get_state_file_path", return_value=temp_file):
                 mode_manager._load_mode_state()
 
                 assert mode_manager.state.current_mode == "default"

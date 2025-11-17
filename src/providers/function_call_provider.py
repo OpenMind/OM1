@@ -140,10 +140,7 @@ class FunctionGenerator:
         functions = {}
 
         for _, method in inspect.getmembers(cls_instance, predicate=inspect.ismethod):
-            if (
-                hasattr(method.__func__, "_llm_function")
-                and method.__func__._llm_function
-            ):
+            if hasattr(method.__func__, "_llm_function") and method.__func__._llm_function:
                 function_schema = FunctionGenerator.extract_function_schema(method)
                 functions[method.__func__._llm_name] = function_schema
 

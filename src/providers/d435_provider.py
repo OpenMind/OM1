@@ -72,9 +72,7 @@ class D435Provider:
                 y = pt.y
                 z = pt.z
                 angle, distance = self.calculate_angle_and_distance(x, y)
-                obstacles.append(
-                    {"x": x, "y": y, "z": z, "angle": angle, "distance": distance}
-                )
+                obstacles.append({"x": x, "y": y, "z": z, "angle": angle, "distance": distance})
             self.obstacle = obstacles
         except Exception as e:
             logging.error(f"Error processing obstacle info: {e}")

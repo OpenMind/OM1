@@ -16,9 +16,7 @@ class GPSFabricConnector(ActionConnector[GPSInput]):
         self.io_provider = IOProvider()
 
         # Set fabric endpoint configuration
-        self.fabric_endpoint = getattr(
-            self.config, "fabric_endpoint", "http://localhost:8545"
-        )
+        self.fabric_endpoint = getattr(self.config, "fabric_endpoint", "http://localhost:8545")
 
     async def connect(self, output_interface: GPSInput) -> None:
         """
@@ -52,9 +50,7 @@ class GPSFabricConnector(ActionConnector[GPSInput]):
                 f"{self.fabric_endpoint}",
                 json={
                     "method": "omp2p_shareStatus",
-                    "params": [
-                        {"latitude": latitude, "longitude": longitude, "yaw": yaw}
-                    ],
+                    "params": [{"latitude": latitude, "longitude": longitude, "yaw": yaw}],
                     "id": 1,
                     "jsonrpc": "2.0",
                 },

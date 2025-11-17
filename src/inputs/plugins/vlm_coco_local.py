@@ -101,9 +101,7 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
             self.width = int(self.cap.get(3))  # float `width`
             self.height = int(self.cap.get(4))  # float `height`
             self.cam_third = int(self.width / 3)
-            logging.info(
-                f"Webcam pixel dimensions for COCO: {self.width}, {self.height}"
-            )
+            logging.info(f"Webcam pixel dimensions for COCO: {self.width}, {self.height}")
 
     async def _poll(self) -> Optional[np.ndarray]:
         """
@@ -150,9 +148,7 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
             image = raw_input.copy().transpose((2, 0, 1))
 
             batch_image = np.expand_dims(image, axis=0)
-            tensor_image = torch.tensor(
-                batch_image / 255.0, dtype=torch.float, device=self.device
-            )
+            tensor_image = torch.tensor(batch_image / 255.0, dtype=torch.float, device=self.device)
             mobilenet_detections = self.model(tensor_image)[
                 0
             ]  # pylint: disable=E1102 disable not callable warning
@@ -173,15 +169,9 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
 
         if filtered_detections and len(filtered_detections) > 0:
 
-            pred_boxes = torch.stack(
-                [detection.bbox for detection in filtered_detections]
-            )
-            pred_scores = torch.stack(
-                [detection.score for detection in filtered_detections]
-            )
-            pred_labels = [
-                self.class_labels[detection.label] for detection in filtered_detections
-            ]
+            pred_boxes = torch.stack([detection.bbox for detection in filtered_detections])
+            pred_scores = torch.stack([detection.score for detection in filtered_detections])
+            pred_labels = [self.class_labels[detection.label] for detection in filtered_detections]
             logging.debug(f"COCO labels {pred_labels} scores {pred_scores}")
 
             # we have a least one detection, and that will have the highest score

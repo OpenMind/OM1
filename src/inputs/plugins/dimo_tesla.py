@@ -65,15 +65,8 @@ class DIMOTesla(FuserInput[str]):
         domain = getattr(config, "domain", None)
         private_key = getattr(config, "private_key", None)
 
-        if (
-            client_id is None
-            or client_id == ""
-            or domain is None
-            or private_key is None
-        ):
-            logging.info(
-                "DIMOTesla: You did not provide credentials to your Tesla - aborting"
-            )
+        if client_id is None or client_id == "" or domain is None or private_key is None:
+            logging.info("DIMOTesla: You did not provide credentials to your Tesla - aborting")
             return
 
         self.token_id = getattr(config, "token_id", None)

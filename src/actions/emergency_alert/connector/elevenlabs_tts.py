@@ -125,9 +125,7 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
 
         # Avoid queuing too many TTS messages
         if self.tts.get_pending_message_count() > 0:
-            logging.warning(
-                "Too many pending TTS messages, skipping adding new message"
-            )
+            logging.warning("Too many pending TTS messages, skipping adding new message")
             return
 
         state = AudioStatus(

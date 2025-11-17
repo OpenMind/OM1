@@ -23,9 +23,7 @@ def mock_response():
     """Fixture providing a valid mock API response"""
     response = MagicMock()
     response.choices = [
-        MagicMock(
-            message=MagicMock(content='{"test_field": "success"}', tool_calls=None)
-        )
+        MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=None))
     ]
     return response
 
@@ -39,11 +37,7 @@ def mock_response_with_tool_calls():
 
     response = MagicMock()
     response.choices = [
-        MagicMock(
-            message=MagicMock(
-                content='{"test_field": "success"}', tool_calls=[tool_call]
-            )
-        )
+        MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=[tool_call]))
     ]
     return response
 

@@ -142,7 +142,9 @@ class GovernanceEthereum(FuserInput[float]):
         # The current rule set can be obtained from
         # getLatestRuleSetVersion(0x254e2f1e)
         # It's currently = 2
-        self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
+        self.function_argument = (
+            "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
+        )
 
         self.universal_rule = self.load_rules_from_blockchain()
         self.messages: list[Message] = []

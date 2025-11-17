@@ -25,9 +25,7 @@ class SimulatorOrchestrator:
     def __init__(self, config: RuntimeConfig):
         self._config = config
         self.promise_queue = []
-        self._simulator_workers = (
-            min(12, len(config.simulators)) if config.simulators else 1
-        )
+        self._simulator_workers = min(12, len(config.simulators)) if config.simulators else 1
         self._simulator_executor = ThreadPoolExecutor(
             max_workers=self._simulator_workers,
         )
@@ -40,9 +38,7 @@ class SimulatorOrchestrator:
         """
         for simulator in self._config.simulators:
             if simulator.name in self._submitted_simulators:
-                logging.warning(
-                    f"Simulator {simulator.name} already submitted, skipping."
-                )
+                logging.warning(f"Simulator {simulator.name} already submitted, skipping.")
                 continue
             self._simulator_executor.submit(self._run_simulator_loop, simulator)
             self._submitted_simulators.add(simulator.name)
@@ -92,14 +88,10 @@ class SimulatorOrchestrator:
             List of actions to send to the simulators
         """
         for simulator in self._config.simulators:
-            simulator_response = asyncio.create_task(
-                self._promise_simulator(simulator, actions)
-            )
+            simulator_response = asyncio.create_task(self._promise_simulator(simulator, actions))
             self.promise_queue.append(simulator_response)
 
-    async def _promise_simulator(
-        self, simulator: Simulator, actions: T.List[Action]
-    ) -> T.Any:
+    async def _promise_simulator(self, simulator: Simulator, actions: T.List[Action]) -> T.Any:
         """
         Send actions to a single simulator
 

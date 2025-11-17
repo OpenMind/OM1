@@ -58,7 +58,9 @@ class Odom(FuserInput[str]):
             logging.info(f"Odom using Zenoh and URID: {self.URID}")
 
         self.odom = OdomProvider(self.URID, use_zenoh, unitree_ethernet)
-        self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
+        self.descriptor_for_LLM = (
+            "Information about your location and body pose, to help plan your movements."
+        )
 
     async def _poll(self) -> Optional[dict]:
         """
@@ -153,8 +155,7 @@ class Odom(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
         )
 
         self.io_provider.add_input(

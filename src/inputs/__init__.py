@@ -36,9 +36,7 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            pattern = (
-                rf"^class\s+{re.escape(class_name)}\s*\([^)]*FuserInput[^)]*\)\s*:"
-            )
+            pattern = rf"^class\s+{re.escape(class_name)}\s*\([^)]*FuserInput[^)]*\)\s*:"
 
             if re.search(pattern, content, re.MULTILINE):
                 return plugin_file[:-3]
@@ -86,6 +84,4 @@ def load_input(class_name: str) -> T.Type[Sensor]:
     except ImportError as e:
         raise ValueError(f"Could not import input module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in input module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in input module '{module_name}'")

@@ -40,12 +40,8 @@ class FabricClosestPeer(FuserInput[str]):
         self.msg_q: Queue[str] = Queue()
 
         # endpoint / mock toggle -------------------------------------------------
-        self.fabric_endpoint = getattr(
-            config, "fabric_endpoint", "http://localhost:8545"
-        )
-        self.mock_mode: bool = bool(
-            getattr(config, "mock_mode", True)
-        )  # default ON for now
+        self.fabric_endpoint = getattr(config, "fabric_endpoint", "http://localhost:8545")
+        self.mock_mode: bool = bool(getattr(config, "mock_mode", True))  # default ON for now
 
     # ────────────────────────────────────────────────────────────────────────
     async def _poll(self) -> Optional[str]:
@@ -60,9 +56,7 @@ class FabricClosestPeer(FuserInput[str]):
             )
         else:
             if requests is None:
-                logging.error(
-                    "FabricClosestPeer: requests not available and mock_mode=False"
-                )
+                logging.error("FabricClosestPeer: requests not available and mock_mode=False")
                 return None
             try:
                 lat = self.io.get_dynamic_variable("latitude")
@@ -70,9 +64,7 @@ class FabricClosestPeer(FuserInput[str]):
                 if lat is None or lon is None:
                     logging.error("FabricClosestPeer: latitude or longitude not set.")
                     return None
-                logging.info(
-                    f"FabricClosestPeer: fetching closest peer for {lat:.6f}, {lon:.6f}"
-                )
+                logging.info(f"FabricClosestPeer: fetching closest peer for {lat:.6f}, {lon:.6f}")
                 resp = requests.post(
                     self.fabric_endpoint,
                     json={
@@ -93,9 +85,7 @@ class FabricClosestPeer(FuserInput[str]):
                 peer_lat = peer_info["latitude"]
                 peer_lon = peer_info["longitude"]
             except Exception as exc:  # pylint: disable=broad-except
-                logging.error(
-                    f"FabricClosestPeer: error calling Fabric endpoint – {exc}"
-                )
+                logging.error(f"FabricClosestPeer: error calling Fabric endpoint – {exc}")
                 return None
 
         # store & enqueue ------------------------------------------------------

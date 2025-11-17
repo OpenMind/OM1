@@ -66,9 +66,7 @@ class VLMOpenAI(FuserInput[str]):
         if api_key is None or api_key == "":
             raise ValueError("config file missing api_key")
 
-        base_url = getattr(
-            self.config, "base_url", "https://api.openmind.org/api/core/openai"
-        )
+        base_url = getattr(self.config, "base_url", "https://api.openmind.org/api/core/openai")
         stream_base_url = getattr(
             self.config,
             "stream_base_url",

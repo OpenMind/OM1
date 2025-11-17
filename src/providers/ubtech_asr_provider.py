@@ -84,14 +84,10 @@ class UbtechASRProvider:
                 logging.debug(
                     "UbtechASRProvider: _run loop iteration, attempting to get utterance."
                 )
-                text = (
-                    self._get_single_utterance()
-                )  # This can raise an exception or return None
+                text = self._get_single_utterance()  # This can raise an exception or return None
 
                 if text:
-                    logging.debug(
-                        f"UbtechASRProvider: Successfully got utterance: '{text}'"
-                    )
+                    logging.debug(f"UbtechASRProvider: Successfully got utterance: '{text}'")
                     if self._message_callback:
                         logging.debug(
                             f"UbtechASRProvider: Calling message callback with: '{text}'"
@@ -129,9 +125,7 @@ class UbtechASRProvider:
                     logging.info(
                         f"ASR got text: '{text}'. Pausing. Provider now sleeping for 2.0s to allow system processing."
                     )
-                    time.sleep(
-                        2.0
-                    )  # MODIFIED: Add 2.0-second sleep while provider is paused
+                    time.sleep(2.0)  # MODIFIED: Add 2.0-second sleep while provider is paused
                 elif not text:  # No text obtained or error occurred
                     logging.debug(
                         "UbtechASRProvider: No text obtained or error occurred, sleeping briefly before allowing resume."
@@ -140,19 +134,13 @@ class UbtechASRProvider:
 
     def _get_single_utterance(self) -> Optional[str]:
         ts = int(time.time())
-        logging.debug(
-            f"UbtechASRProvider: _get_single_utterance called, timestamp: {ts}"
-        )
+        logging.debug(f"UbtechASRProvider: _get_single_utterance called, timestamp: {ts}")
 
         try:
             # PRE-EMPTIVE STOP: Ensure any previous session is cleared before starting a new one.
-            logging.info(
-                "UbtechASRProvider: Pre-emptively stopping any existing ASR session."
-            )
+            logging.info("UbtechASRProvider: Pre-emptively stopping any existing ASR session.")
             self._stop_voice_iat()  # Attempt to stop any lingering session
-            time.sleep(
-                0.1
-            )  # Brief pause after pre-emptive stop to allow robot to process
+            time.sleep(0.1)  # Brief pause after pre-emptive stop to allow robot to process
 
             if not self._start_voice_iat(ts):
                 logging.warning(
@@ -174,20 +162,14 @@ class UbtechASRProvider:
                     )
                     return None
                 res = self._get_voice_iat()
-                logging.debug(
-                    f"UbtechASRProvider: _get_voice_iat (attempt {i+1}) returned: {res}"
-                )
+                logging.debug(f"UbtechASRProvider: _get_voice_iat (attempt {i+1}) returned: {res}")
                 if res.get("status") == "idle" and res.get("timestamp") == ts:
                     if not res.get("data") or res.get("code") != 0:
-                        logging.debug(
-                            "UbtechASRProvider: Idle status but no data or error code."
-                        )
+                        logging.debug("UbtechASRProvider: Idle status but no data or error code.")
                         return None
                     words = res.get("data", {}).get("text", {}).get("ws", [])
                     processed_text = (
-                        "".join(w["cw"][0]["w"] for w in words).strip().lower()
-                        if words
-                        else None
+                        "".join(w["cw"][0]["w"] for w in words).strip().lower() if words else None
                     )
                     logging.debug(
                         f"UbtechASRProvider: Processed text from idle status: '{processed_text}'"
@@ -234,9 +216,7 @@ class UbtechASRProvider:
             )  # Use session
             res.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
             response_json = res.json()
-            logging.debug(
-                f"UbtechASRProvider: _start_voice_iat response: {response_json}"
-            )
+            logging.debug(f"UbtechASRProvider: _start_voice_iat response: {response_json}")
             return response_json.get("code") == 0
         except requests.RequestException as e:
             logging.error(f"UbtechASRProvider: _start_voice_iat request failed: {e}")
@@ -278,9 +258,7 @@ class UbtechASRProvider:
                     continue  # Retry
                 return  # Give up after retries
 
-        logging.error(
-            f"UbtechASRProvider: _stop_voice_iat failed after {max_retries} retries."
-        )
+        logging.error(f"UbtechASRProvider: _stop_voice_iat failed after {max_retries} retries.")
         return  # Give up
 
     def _get_voice_iat(self) -> Dict:
@@ -291,14 +269,10 @@ class UbtechASRProvider:
                 logging.debug(
                     f"UbtechASRProvider: Attempting to get voice iat (attempt {attempt + 1}/{max_retries})."
                 )
-                res = self.session.get(
-                    f"{self.basic_url}voice/iat", timeout=3
-                )  # Use session
+                res = self.session.get(f"{self.basic_url}voice/iat", timeout=3)  # Use session
                 res.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
                 response_json = res.json()
-                logging.debug(
-                    f"UbtechASRProvider: _get_voice_iat raw response: {response_json}"
-                )
+                logging.debug(f"UbtechASRProvider: _get_voice_iat raw response: {response_json}")
                 # The original cleaning logic for data field if it's an embedded JSON string
                 if (
                     response_json.get("data")
@@ -348,9 +322,7 @@ class UbtechASRProvider:
                     "data": None,
                     "status": "error",
                 }  # Return error structure
-            except (
-                json.JSONDecodeError
-            ) as e:  # Catch JSON decode errors for the main response
+            except json.JSONDecodeError as e:  # Catch JSON decode errors for the main response
                 logging.error(
                     f"UbtechASRProvider: _get_voice_iat failed to decode main JSON response (attempt {attempt + 1}): {e}"
                 )
@@ -364,9 +336,7 @@ class UbtechASRProvider:
                     "status": "error",
                 }
 
-        logging.error(
-            f"UbtechASRProvider: _get_voice_iat failed after {max_retries} retries."
-        )
+        logging.error(f"UbtechASRProvider: _get_voice_iat failed after {max_retries} retries.")
         return {
             "code": -1,
             "message": "Max retries exceeded",

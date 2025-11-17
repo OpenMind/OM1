@@ -1,5 +1,6 @@
 import time, yaml, random, threading
 
+
 class BH1750Plugin:
     def __init__(self, config_path="src/plugins/sensors/config.yaml"):
         with open(config_path) as f:
@@ -13,8 +14,9 @@ class BH1750Plugin:
         while True:
             if self.mock:
                 lux = random.randint(50, 1000)
-                desc = ["dark", "dim", "moderate", "bright", "very bright"][min(lux//200, 4)]
+                desc = ["dark", "dim", "moderate", "bright", "very bright"][min(lux // 200, 4)]
                 self.data = {"lux": lux, "description": desc}
             time.sleep(1)
 
-    def get_data(self): return self.data.copy()
+    def get_data(self):
+        return self.data.copy()

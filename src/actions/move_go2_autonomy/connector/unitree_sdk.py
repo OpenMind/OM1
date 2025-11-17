@@ -59,18 +59,14 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                 self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
-            logging.info(
-                f"Action in progress: {self.unitree_go2_state.action_progress}"
-            )
+            logging.info(f"Action in progress: {self.unitree_go2_state.action_progress}")
             return
 
         # fallback to the odom provider
         if not self.unitree_go2_state.state_code:
             if self.odom.position["moving"]:
                 # for example due to a teleops or game controller command
-                logging.info(
-                    "Disregard new AI movement command - robot is already moving"
-                )
+                logging.info("Disregard new AI movement command - robot is already moving")
                 return
 
         if self.pending_movements.qsize() > 0:
@@ -277,9 +273,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
                         self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
-                        logging.debug(
-                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
-                        )
+                        logging.debug(f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m")
                         self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
                 else:
                     logging.info(

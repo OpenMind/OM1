@@ -32,9 +32,7 @@ async def start_nav2_hook(context: Dict[str, Any]):
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"Nav2 started successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"Nav2 started successfully: {result.get('message', 'Success')}")
                     elevenlabs_provider.add_pending_message(
                         "Navigation system has started successfully."
                     )
@@ -82,9 +80,7 @@ async def stop_nav2_hook(context: Dict[str, Any]):
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"Nav2 started successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"Nav2 started successfully: {result.get('message', 'Success')}")
                     return {
                         "status": "success",
                         "message": "Nav2 process initiated",

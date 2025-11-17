@@ -78,9 +78,7 @@ class TwitterInput(FuserInput[str]):
                         self.buffer = [context]  # Replace buffer with context
                 else:
                     error_text = await response.text()
-                    logging.error(
-                        f"Query failed with status {response.status}: {error_text}"
-                    )
+                    logging.error(f"Query failed with status {response.status}: {error_text}")
 
         except Exception as e:
             logging.error(f"Error querying context: {str(e)}")
@@ -139,9 +137,7 @@ class TwitterInput(FuserInput[str]):
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """Format and return the context."""
-        content = (
-            self.context if self.context else (self.buffer[-1] if self.buffer else None)
-        )
+        content = self.context if self.context else (self.buffer[-1] if self.buffer else None)
 
         if not content:
             return None

@@ -59,9 +59,7 @@ class MockInput(FuserInput[str]):
         self.loop = None
 
         # Start WebSocket server in a separate thread
-        self.server_thread = threading.Thread(
-            target=self._start_server_thread, daemon=True
-        )
+        self.server_thread = threading.Thread(target=self._start_server_thread, daemon=True)
         self.server_thread.start()
 
     def _start_server_thread(self):
@@ -82,18 +80,12 @@ class MockInput(FuserInput[str]):
         Start the WebSocket server.
         """
         try:
-            self.server = await websockets.serve(
-                self._handle_client, self.host, self.port
-            )
-            logging.info(
-                f"Mock Input webSocket server started at ws://{self.host}:{self.port}"
-            )
+            self.server = await websockets.serve(self._handle_client, self.host, self.port)
+            logging.info(f"Mock Input webSocket server started at ws://{self.host}:{self.port}")
         except Exception as e:
             logging.error(f"Failed to start Mock Input webSocket server: {e}")
 
-    async def _handle_client(
-        self, websocket: websockets.WebSocketServerProtocol, path: str
-    ):
+    async def _handle_client(self, websocket: websockets.WebSocketServerProtocol, path: str):
         """
         Handle a client connection.
 
@@ -211,8 +203,6 @@ INPUT: {self.descriptor_for_LLM}
 {self.messages[-1]}
 // END
 """
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1].message, time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1].message, time.time())
         self.messages = []
         return result

@@ -54,9 +54,7 @@ class RuntimeConfig:
         return load_config(config_name)
 
 
-def load_config(
-    config_name: str, config_source_path: Optional[str] = None
-) -> RuntimeConfig:
+def load_config(config_name: str, config_source_path: Optional[str] = None) -> RuntimeConfig:
     """
     Load and parse a runtime configuration from a JSON file.
 
@@ -86,9 +84,7 @@ def load_config(
         If configuration values are invalid (e.g., negative hertz)
     """
     config_path = (
-        os.path.join(
-            os.path.dirname(__file__), "../../../config", config_name + ".json5"
-        )
+        os.path.join(os.path.dirname(__file__), "../../../config", config_name + ".json5")
         if config_source_path is None
         else config_source_path
     )
@@ -157,9 +153,7 @@ def load_config(
         "backgrounds": [
             load_background(bg["type"])(
                 config=BackgroundConfig(
-                    **add_meta(
-                        bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    )
+                    **add_meta(bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip)
                 )
             )
             for bg in raw_config.get("backgrounds", [])
@@ -167,9 +161,7 @@ def load_config(
         "agent_inputs": [
             load_input(input["type"])(
                 config=SensorConfig(
-                    **add_meta(
-                        input.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    )
+                    **add_meta(input.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip)
                 )
             )
             for input in raw_config.get("agent_inputs", [])
@@ -306,9 +298,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         load_simulator(sim["type"])(
             config=SimulatorConfig(
                 name=sim["type"],
-                **add_meta(
-                    sim.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
+                **add_meta(sim.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip),
             )
         )
         for sim in config.get("simulators", [])

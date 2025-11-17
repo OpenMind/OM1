@@ -56,14 +56,10 @@ def test_register_callback(mock_audio_stream):
     provider = RivaTTSProvider(url="test_url")
     callback = Mock()
     provider.register_tts_state_callback(callback)
-    mock_audio_stream.return_value.set_tts_state_callback.assert_called_once_with(
-        callback
-    )
+    mock_audio_stream.return_value.set_tts_state_callback.assert_called_once_with(callback)
 
 
 def test_add_pending_message(mock_audio_stream):
     provider = RivaTTSProvider(url="test_url")
     provider.add_pending_message("test message")
-    mock_audio_stream.return_value.add_request.assert_called_once_with(
-        {"text": "test message"}
-    )
+    mock_audio_stream.return_value.add_request.assert_called_once_with({"text": "test message"})

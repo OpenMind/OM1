@@ -12,9 +12,7 @@ try:
     from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
     from unitree.unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_  # type: ignore
 except ImportError:
-    logging.warning(
-        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
-    )
+    logging.warning("Unitree SDK not found. Please install the Unitree SDK to use this plugin.")
 
     class ChannelSubscriber:
         def __init__(self):
@@ -202,8 +200,7 @@ class UnitreeGo2Battery(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
         )
 
         self.io_provider.add_input(

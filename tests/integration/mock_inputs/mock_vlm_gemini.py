@@ -59,9 +59,7 @@ class MockVLM_Gemini(VLMGemini):
         while self.running and not self.images_processed:
             # Rate limit to avoid overwhelming the API
             current_time = time.time()
-            if (
-                current_time - self.last_processed_time < 1.0
-            ):  # One second minimum between frames
+            if current_time - self.last_processed_time < 1.0:  # One second minimum between frames
                 await asyncio.sleep(0.1)
                 continue
 
@@ -74,9 +72,7 @@ class MockVLM_Gemini(VLMGemini):
                 self.images_processed = True
                 continue
 
-            logging.info(
-                f"MockVLM_Gemini: Processing mock image with shape {image.shape}"
-            )
+            logging.info(f"MockVLM_Gemini: Processing mock image with shape {image.shape}")
 
             # Convert image to base64 string
             _, buffer = cv2.imencode(".jpg", image)

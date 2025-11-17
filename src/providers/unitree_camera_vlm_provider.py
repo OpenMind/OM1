@@ -13,9 +13,7 @@ from .singleton import singleton
 try:
     from unitree.unitree_sdk2py.go2.video.video_client import VideoClient
 except ImportError:
-    logging.warning(
-        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
-    )
+    logging.warning("Unitree SDK not found. Please install the Unitree SDK to use this plugin.")
 
 
 class UnitreeCameraVideoStream(VideoStream):
@@ -99,9 +97,7 @@ class UnitreeCameraVideoStream(VideoStream):
                         resized_image = cv2.resize(
                             image, (new_width, new_height), interpolation=cv2.INTER_AREA
                         )
-                        _, buffer = cv2.imencode(
-                            ".jpg", resized_image, self.encode_quality
-                        )
+                        _, buffer = cv2.imencode(".jpg", resized_image, self.encode_quality)
                         frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
                         if self.frame_callbacks:
@@ -199,9 +195,7 @@ class UnitreeCameraVLMProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.start()
-            self.video_stream.register_frame_callback(
-                self.stream_ws_client.send_message
-            )
+            self.video_stream.register_frame_callback(self.stream_ws_client.send_message)
 
         logging.info("Unitree Camera VLM provider started")
 

@@ -157,9 +157,7 @@ class FabricData:
             "odom_rockchip_ts": self.odom_rockchip_ts,
             "odom_subscriber_ts": self.odom_subscriber_ts,
             "rf_data": [rf.to_dict() for rf in self.rf_data] if self.rf_data else [],
-            "rf_data_raw": (
-                [rf.to_dict() for rf in self.rf_data_raw] if self.rf_data_raw else []
-            ),
+            "rf_data_raw": ([rf.to_dict() for rf in self.rf_data_raw] if self.rf_data_raw else []),
         }
 
 
@@ -260,9 +258,7 @@ class FabricDataSubmitter:
             if request.status_code == 201:
                 logging.debug(f"Data shared: {request.json()}")
             else:
-                logging.error(
-                    f"Failed to share data: {request.status_code} - {request.text}"
-                )
+                logging.error(f"Failed to share data: {request.status_code} - {request.text}")
         except Exception as e:
             logging.error(f"Error sharing data: {str(e)}")
 

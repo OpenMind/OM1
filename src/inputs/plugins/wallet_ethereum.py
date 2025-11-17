@@ -94,9 +94,7 @@ class WalletEthereum(FuserInput[float]):
 
             self.eth_info = {
                 "block_number": int(block_number),
-                "address": str(
-                    self.ACCOUNT_ADDRESS
-                ),  # that's a string prefixed with `0x`
+                "address": str(self.ACCOUNT_ADDRESS),  # that's a string prefixed with `0x`
                 "balance": self.balance_eth,
             }
             logging.debug(

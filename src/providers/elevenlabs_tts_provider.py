@@ -83,9 +83,7 @@ class ElevenLabsTTSProvider:
         """
         logging.info(f"audio_stream: {text}")
         elevenlabs_api_key = (
-            {"elevenlabs_api_key": self.elevenlabs_api_key}
-            if self.elevenlabs_api_key
-            else {}
+            {"elevenlabs_api_key": self.elevenlabs_api_key} if self.elevenlabs_api_key else {}
         )
         return {
             "text": text,
@@ -105,9 +103,7 @@ class ElevenLabsTTSProvider:
             The message to be added, typically containing text and TTS parameters.
         """
         if not self.running:
-            logging.warning(
-                "TTS provider is not running. Call start() before adding messages."
-            )
+            logging.warning("TTS provider is not running. Call start() before adding messages.")
             return
 
         if isinstance(message, str):

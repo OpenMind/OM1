@@ -97,9 +97,7 @@ class CortexRuntime:
         str
             The absolute path to the runtime config file
         """
-        memory_folder_path = os.path.join(
-            os.path.dirname(__file__), "../../../config", "memory"
-        )
+        memory_folder_path = os.path.join(os.path.dirname(__file__), "../../../config", "memory")
         if not os.path.exists(memory_folder_path):
             os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)
 
@@ -155,9 +153,7 @@ class CortexRuntime:
         """
         try:
             if self.hot_reload:
-                self.config_watcher_task = asyncio.create_task(
-                    self._check_config_changes()
-                )
+                self.config_watcher_task = asyncio.create_task(self._check_config_changes())
 
             await self._start_orchestrators()
 
@@ -165,9 +161,7 @@ class CortexRuntime:
 
             while True:
                 try:
-                    awaitables: List[Union[asyncio.Task, asyncio.Future]] = [
-                        self.cortex_loop_task
-                    ]
+                    awaitables: List[Union[asyncio.Task, asyncio.Future]] = [self.cortex_loop_task]
 
                     if self.hot_reload and self.config_watcher_task:
                         awaitables.append(self.config_watcher_task)
@@ -252,9 +246,7 @@ class CortexRuntime:
                 logging.error("No config name available for reload")
                 return
 
-            new_config = load_config(
-                self.config_name, config_source_path=self.config_path
-            )
+            new_config = load_config(self.config_name, config_source_path=self.config_path)
 
             await self._stop_current_orchestrators()
 
@@ -322,9 +314,7 @@ class CortexRuntime:
                 )
                 if pending:
                     pending_names = [
-                        name
-                        for name, task in tasks_to_cancel.items()
-                        if task in pending
+                        name for name, task in tasks_to_cancel.items() if task in pending
                     ]
                     completed_names = [
                         name for name, task in tasks_to_cancel.items() if task in done
@@ -333,12 +323,8 @@ class CortexRuntime:
                     logging.warning(
                         f"Abandoning {len(pending)} unresponsive tasks: {pending_names}"
                     )
-                    logging.info(
-                        f"Successfully cancelled {len(done)} tasks: {completed_names}"
-                    )
-                    logging.info(
-                        "Continuing with reload without waiting for unresponsive tasks"
-                    )
+                    logging.info(f"Successfully cancelled {len(done)} tasks: {completed_names}")
+                    logging.info("Continuing with reload without waiting for unresponsive tasks")
                 else:
                     logging.info(f"All {len(done)} tasks cancelled successfully!")
                     for name, task in tasks_to_cancel.items():
@@ -348,9 +334,7 @@ class CortexRuntime:
                         except asyncio.CancelledError:
                             logging.info(f"  {name}: Successfully cancelled")
                         except Exception as e:
-                            logging.warning(
-                                f"  {name}: Exception - {type(e).__name__}: {e}"
-                            )
+                            logging.warning(f"  {name}: Exception - {type(e).__name__}: {e}")
 
             except Exception as e:
                 logging.warning(f"Error during task cancellation: {e}")

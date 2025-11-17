@@ -38,9 +38,7 @@ class TestWalletCoinbase:
         mock_wallet.balance.return_value = "1.5"
 
         with patch.dict(os.environ, {"COINBASE_WALLET_ID": "test_wallet_id"}):
-            with patch(
-                "inputs.plugins.wallet_coinbase.Wallet.fetch", return_value=mock_wallet
-            ):
+            with patch("inputs.plugins.wallet_coinbase.Wallet.fetch", return_value=mock_wallet):
                 with patch("inputs.plugins.wallet_coinbase.Cdp.configure"):
                     wallet = WalletCoinbase()
                     assert wallet.wallet == mock_wallet
@@ -67,9 +65,7 @@ class TestWalletCoinbase:
         mock_wallet.balance.return_value = "2.0"
 
         with patch.dict(os.environ, {"COINBASE_WALLET_ID": "test_wallet_id"}):
-            with patch(
-                "inputs.plugins.wallet_coinbase.Wallet.fetch", return_value=mock_wallet
-            ):
+            with patch("inputs.plugins.wallet_coinbase.Wallet.fetch", return_value=mock_wallet):
                 with patch("inputs.plugins.wallet_coinbase.Cdp.configure"):
                     wallet = WalletCoinbase()
                     wallet.ETH_balance_previous = 1.5  # Set previous balance

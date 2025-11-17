@@ -65,9 +65,7 @@ def load_simulator(class_name: str) -> T.Type[Simulator]:
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
-        raise ValueError(
-            f"Class '{class_name}' not found in any simulator plugin module"
-        )
+        raise ValueError(f"Class '{class_name}' not found in any simulator plugin module")
 
     try:
         module = importlib.import_module(f"simulators.plugins.{module_name}")
@@ -86,6 +84,4 @@ def load_simulator(class_name: str) -> T.Type[Simulator]:
     except ImportError as e:
         raise ValueError(f"Could not import simulator module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in simulator module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in simulator module '{module_name}'")

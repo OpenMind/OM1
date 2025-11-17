@@ -180,10 +180,7 @@ class UnitreeGo2StateProvider:
         """
         Start the Unitree Go2 state provider.
         """
-        if (
-            not self._go2_state_processor_thread
-            or not self._go2_state_processor_thread.is_alive()
-        ):
+        if not self._go2_state_processor_thread or not self._go2_state_processor_thread.is_alive():
             self._go2_state_reader_thread = mp.Process(
                 target=go2_state_processor,
                 args=(
@@ -196,10 +193,7 @@ class UnitreeGo2StateProvider:
             self._go2_state_reader_thread.start()
             logging.info("Unitree Go2 state reader started.")
 
-        if (
-            not self._go2_state_processor_thread
-            or not self._go2_state_processor_thread.is_alive()
-        ):
+        if not self._go2_state_processor_thread or not self._go2_state_processor_thread.is_alive():
             self._go2_state_processor_thread = threading.Thread(
                 target=self._go2_state_processor,
                 daemon=True,

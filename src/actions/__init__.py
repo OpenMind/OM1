@@ -6,9 +6,7 @@ from typing import Optional
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 
 
-def describe_action(
-    action_name: str, llm_label: str, exclude_from_prompt: bool
-) -> Optional[str]:
+def describe_action(action_name: str, llm_label: str, exclude_from_prompt: bool) -> Optional[str]:
     if exclude_from_prompt:
         return None
 
@@ -27,9 +25,7 @@ def describe_action(
     hints = {}
     input_interface = T.get_type_hints(interface)["input"]
     for field_name, field_type in T.get_type_hints(input_interface).items():
-        if hasattr(field_type, "__origin__") and isinstance(
-            field_type.__origin__, type
-        ):
+        if hasattr(field_type, "__origin__") and isinstance(field_type.__origin__, type):
             # Handle generic types
             hints[field_name] = str(field_type)
         elif isinstance(field_type, type) and issubclass(field_type, Enum):

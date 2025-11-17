@@ -69,16 +69,12 @@ class MoveGo2Remote(ActionConnector[MoveInput]):
             self.sport_client.BalanceStand()
 
         if self.unitree_state_provider.action_progress != 0:
-            logging.info(
-                f"Action in progress: {self.unitree_state_provider.action_progress}"
-            )
+            logging.info(f"Action in progress: {self.unitree_state_provider.action_progress}")
             return
 
         try:
             command_status = CommandStatus.from_dict(json.loads(message))
-            self.sport_client.Move(
-                command_status.vx, command_status.vy, command_status.vyaw
-            )
+            self.sport_client.Move(command_status.vx, command_status.vy, command_status.vyaw)
             logging.info(
                 f"Published command: {command_status.to_dict()} - latency: {(time.time() - float(command_status.timestamp)):.3f} seconds"
             )

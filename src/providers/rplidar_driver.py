@@ -162,9 +162,7 @@ class RPDriver(object):
                 write_timeout=self.timeout,
             )
         except serial.SerialException as err:
-            raise RPLidarException(
-                "Failed to connect to the sensor " "due to: %s" % err
-            )
+            raise RPLidarException("Failed to connect to the sensor " "due to: %s" % err)
 
     def disconnect(self):
         """Disconnects from the serial port"""
@@ -183,9 +181,7 @@ class RPDriver(object):
     @motor_speed.setter
     def motor_speed(self, pwm):
         if not (0 <= pwm <= MAX_MOTOR_PWM):
-            raise ValueError(
-                f"PWM value must be between 0 and {MAX_MOTOR_PWM}, got {pwm}"
-            )
+            raise ValueError(f"PWM value must be between 0 and {MAX_MOTOR_PWM}, got {pwm}")
         self._motor_speed = pwm
         if self.motor_running:
             self._set_pwm(self._motor_speed)
@@ -344,19 +340,13 @@ class RPDriver(object):
         self.logger.debug("Health status: %s [%d]", status, error_code)
 
         if status == _HEALTH_STATUSES[2]:
-            self.logger.warning(
-                "Trying to reset sensor due to error. Error code: %d", error_code
-            )
+            self.logger.warning("Trying to reset sensor due to error. Error code: %d", error_code)
             self.reset()
             status, error_code = self.get_health()
             if status == _HEALTH_STATUSES[2]:
-                raise RPLidarException(
-                    "RPLidar hardware failure. Error code: %d" % error_code
-                )
+                raise RPLidarException("RPLidar hardware failure. Error code: %d" % error_code)
         elif status == _HEALTH_STATUSES[1]:
-            self.logger.warning(
-                "Warning sensor status detected! Error code: %d", error_code
-            )
+            self.logger.warning("Warning sensor status detected! Error code: %d", error_code)
 
         cmd = _SCAN_TYPE[scan_type]["byte"]
         self.logger.info("Starting scan process in %s mode", scan_type)
@@ -417,8 +407,7 @@ class RPDriver(object):
                 data_in_buf = self._serial.inWaiting()
                 if data_in_buf > max_buf_meas:
                     self.logger.warning(
-                        "Too many bytes in the input buffer: %d/%d. "
-                        "Cleaning buffer...",
+                        "Too many bytes in the input buffer: %d/%d. " "Cleaning buffer...",
                         data_in_buf,
                         max_buf_meas,
                     )
@@ -547,9 +536,7 @@ class RPDriver(object):
                 scan_list.append((angle, distance))
 
 
-class ExpressPacket(
-    namedtuple("express_packet", "distance angle new_scan start_angle")
-):
+class ExpressPacket(namedtuple("express_packet", "distance angle new_scan start_angle")):
     sync1 = 0xA
     sync2 = 0x5
     sign = {0: 1, 1: -1}

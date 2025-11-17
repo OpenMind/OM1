@@ -29,9 +29,7 @@ class UbTtsConnector(ActionConnector[SpeakInput]):
         super().__init__(config)
 
         robot_ip = getattr(self.config, "robot_ip", None)
-        base_url = getattr(
-            self.config, "ub_tts_base_url", f"http://{robot_ip}:9090/v1/"
-        )
+        base_url = getattr(self.config, "ub_tts_base_url", f"http://{robot_ip}:9090/v1/")
 
         # Zenoh topics
         self.tts_status_request_topic = "om/tts/request"
@@ -98,13 +96,9 @@ class UbTtsConnector(ActionConnector[SpeakInput]):
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,
                 code=1 if self.tts_enabled else 0,
-                status=String(
-                    data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                ),
+                status=String(data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
 
         # Enable the TTS
         if code == 1:
@@ -117,9 +111,7 @@ class UbTtsConnector(ActionConnector[SpeakInput]):
                 code=1,
                 status=String(data="TTS Enabled"),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())
 
         # Disable the TTS
         if code == 0:
@@ -132,6 +124,4 @@ class UbTtsConnector(ActionConnector[SpeakInput]):
                 status=String(data="TTS Disabled"),
             )
 
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())

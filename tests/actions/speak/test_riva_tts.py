@@ -39,9 +39,7 @@ class MockSpeakRivaTTSConnector(ActionConnector):
 
     async def connect(self, output_interface):
         try:
-            self.tts.register_tts_state_callback(
-                self.asr.audio_stream.on_tts_state_change
-            )
+            self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
             if output_interface and output_interface.action:
                 self.tts.add_pending_message(output_interface.action)
             else:

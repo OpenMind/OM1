@@ -83,9 +83,7 @@ class Fuser:
         actions_fused = ""
 
         for action in self.config.agent_actions:
-            desc = describe_action(
-                action.name, action.llm_label, action.exclude_from_prompt
-            )
+            desc = describe_action(action.name, action.llm_label, action.exclude_from_prompt)
             if desc:
                 actions_fused += desc + "\n\n"
 

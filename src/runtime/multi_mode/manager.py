@@ -80,9 +80,7 @@ class ModeManager:
 
         # Validate configuration
         if config.default_mode not in config.modes:
-            raise ValueError(
-                f"Default mode '{config.default_mode}' not found in available modes"
-            )
+            raise ValueError(f"Default mode '{config.default_mode}' not found in available modes")
 
         # Load persisted state if enabled
         if config.mode_memory_enabled:
@@ -105,9 +103,7 @@ class ModeManager:
             self.session = None
             self.pub = None
 
-        logging.info(
-            f"Mode Manager initialized with current mode: {self.state.current_mode}"
-        )
+        logging.info(f"Mode Manager initialized with current mode: {self.state.current_mode}")
 
         self._create_runtime_config_file()
 
@@ -120,9 +116,7 @@ class ModeManager:
         str
             The absolute path to the runtime config file
         """
-        memory_folder_path = os.path.join(
-            os.path.dirname(__file__), "../../../config", "memory"
-        )
+        memory_folder_path = os.path.join(os.path.dirname(__file__), "../../../config", "memory")
         if not os.path.exists(memory_folder_path):
             os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)
 
@@ -242,10 +236,7 @@ class ModeManager:
 
         # Check if current mode has a timeout
         current_config = self.current_mode_config
-        if (
-            current_config.timeout_seconds
-            and mode_duration >= current_config.timeout_seconds
-        ):
+        if current_config.timeout_seconds and mode_duration >= current_config.timeout_seconds:
             timeout_context = {
                 "mode_name": self.state.current_mode,
                 "timeout_seconds": current_config.timeout_seconds,
@@ -335,10 +326,7 @@ class ModeManager:
 
         transition_key = f"{rule.from_mode}->{rule.to_mode}"
         if transition_key in self.transition_cooldowns:
-            if (
-                current_time - self.transition_cooldowns[transition_key]
-                < rule.cooldown_seconds
-            ):
+            if current_time - self.transition_cooldowns[transition_key] < rule.cooldown_seconds:
                 logging.debug(f"Transition {transition_key} still in cooldown")
                 return False
 
@@ -350,9 +338,7 @@ class ModeManager:
 
         return True
 
-    async def request_transition(
-        self, target_mode: str, reason: str = "manual"
-    ) -> bool:
+    async def request_transition(self, target_mode: str, reason: str = "manual") -> bool:
         """
         Request a manual transition to a specific mode.
 
@@ -411,9 +397,7 @@ class ModeManager:
             from_mode = self.state.current_mode
 
             if from_mode == target_mode:
-                logging.debug(
-                    f"Already in target mode '{target_mode}', skipping transition"
-                )
+                logging.debug(f"Already in target mode '{target_mode}', skipping transition")
                 return True
 
             transition_key = f"{from_mode}->{target_mode}"
@@ -456,9 +440,7 @@ class ModeManager:
             if len(self.state.transition_history) > 50:
                 self.state.transition_history = self.state.transition_history[-25:]
 
-            logging.info(
-                f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
-            )
+            logging.info(f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})")
 
             # Execute entry hooks for the new mode
             logging.debug(f"Executing entry hooks for mode: {target_mode}")
@@ -482,9 +464,7 @@ class ModeManager:
             return True
 
         except Exception as e:
-            logging.error(
-                f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
-            )
+            logging.error(f"Failed to execute transition {from_mode} -> {target_mode}: {e}")
             return False
         finally:
             self._is_transitioning = False
@@ -627,13 +607,9 @@ class ModeManager:
                 current_mode=String(self.state.current_mode),
                 message=String(json.dumps(self.get_mode_info())),
             )
-            return self._zenoh_mode_status_response_pub.put(
-                mode_status_response.serialize()
-            )
+            return self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
 
-    async def _handle_mode_switch_request(
-        self, frame_id: str, request_id: str, target_mode: str
-    ):
+    async def _handle_mode_switch_request(self, frame_id: str, request_id: str, target_mode: str):
         """
         Handle mode switch request asynchronously and send appropriate response.
 
@@ -676,9 +652,7 @@ class ModeManager:
         str
             The absolute path to the state file
         """
-        memory_folder_path = os.path.join(
-            os.path.dirname(__file__), "../../../config", "memory"
-        )
+        memory_folder_path = os.path.join(os.path.dirname(__file__), "../../../config", "memory")
         if not os.path.exists(memory_folder_path):
             os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)
 
@@ -720,9 +694,7 @@ class ModeManager:
                 if saved_history:
                     self.state.transition_history.extend(saved_history)
                     if len(self.state.transition_history) > 50:
-                        self.state.transition_history = self.state.transition_history[
-                            -25:
-                        ]
+                        self.state.transition_history = self.state.transition_history[-25:]
 
                 logging.info(f"Mode state restored from {state_file}")
             else:

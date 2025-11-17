@@ -142,9 +142,7 @@ class VLM_COCO_Local_Gazebo(FuserInput[Image.Image]):
             else:
                 # Reshape to (height, step) then crop each row to the actual image data.
                 rows = np.frombuffer(raw_data, dtype=np.uint8).reshape((height, step))
-                image_array = rows[:, :expected_bytes_per_row].reshape(
-                    (height, width, channels)
-                )
+                image_array = rows[:, :expected_bytes_per_row].reshape((height, width, channels))
         except Exception as e:
             logging.error("Error reshaping image data:", e)
             return None
@@ -179,9 +177,7 @@ class VLM_COCO_Local_Gazebo(FuserInput[Image.Image]):
             return result.stdout
 
         except subprocess.TimeoutExpired:
-            logging.error(
-                f"Subprocess timed out while fetching message from {self.topic}."
-            )
+            logging.error(f"Subprocess timed out while fetching message from {self.topic}.")
             return None
 
         except FileNotFoundError:
@@ -247,9 +243,7 @@ class VLM_COCO_Local_Gazebo(FuserInput[Image.Image]):
         if raw_input is not None:
             image = raw_input.copy().transpose((2, 0, 1))
             batch_image = np.expand_dims(image, axis=0)
-            tensor_image = torch.tensor(
-                batch_image / 255.0, dtype=torch.float, device=self.device
-            )
+            tensor_image = torch.tensor(batch_image / 255.0, dtype=torch.float, device=self.device)
             mobilenet_detections = self.model(tensor_image)[
                 0
             ]  # pylint: disable=E1102 disable not callable warning
@@ -276,15 +270,9 @@ class VLM_COCO_Local_Gazebo(FuserInput[Image.Image]):
 
         if filtered_detections and len(filtered_detections) > 0:
 
-            pred_boxes = torch.stack(
-                [detection.bbox for detection in filtered_detections]
-            )
-            pred_scores = torch.stack(
-                [detection.score for detection in filtered_detections]
-            )
-            pred_labels = [
-                self.class_labels[detection.label] for detection in filtered_detections
-            ]
+            pred_boxes = torch.stack([detection.bbox for detection in filtered_detections])
+            pred_scores = torch.stack([detection.score for detection in filtered_detections])
+            pred_labels = [self.class_labels[detection.label] for detection in filtered_detections]
             logging.debug(f"COCO labels {pred_labels} scores {pred_scores}")
 
             # we have a least one detection, and that will have the highest score
@@ -308,9 +296,7 @@ class VLM_COCO_Local_Gazebo(FuserInput[Image.Image]):
                 sentence = sentence + f" You also see a {other_thing}."
 
         elif full_detections and len(full_detections) > 0:
-            full_labels = [
-                self.class_labels[detection.label] for detection in full_detections
-            ]
+            full_labels = [self.class_labels[detection.label] for detection in full_detections]
             logging.info(
                 f"COCO isn't detecting anything familiar. The closest thing it recognises is {full_labels[0]}"
             )

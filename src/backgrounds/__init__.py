@@ -36,9 +36,7 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            pattern = (
-                rf"^class\s+{re.escape(class_name)}\s*\([^)]*Background[^)]*\)\s*:"
-            )
+            pattern = rf"^class\s+{re.escape(class_name)}\s*\([^)]*Background[^)]*\)\s*:"
 
             if re.search(pattern, content, re.MULTILINE):
                 return plugin_file[:-3]
@@ -67,9 +65,7 @@ def load_background(class_name: str) -> T.Type[Background]:
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
-        raise ValueError(
-            f"Class '{class_name}' not found in any background plugin module"
-        )
+        raise ValueError(f"Class '{class_name}' not found in any background plugin module")
 
     try:
         module = importlib.import_module(f"backgrounds.plugins.{module_name}")
@@ -88,6 +84,4 @@ def load_background(class_name: str) -> T.Type[Background]:
     except ImportError as e:
         raise ValueError(f"Could not import background module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in background module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in background module '{module_name}'")

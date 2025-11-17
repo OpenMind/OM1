@@ -48,9 +48,7 @@ class UbtechCameraVLMInput(FuserInput[str]):
 
         # Initialize VLM provider
         base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        self.vlm: UbtechVLMProvider = UbtechVLMProvider(
-            ws_url=base_url, robot_ip=self.robot_ip
-        )
+        self.vlm: UbtechVLMProvider = UbtechVLMProvider(ws_url=base_url, robot_ip=self.robot_ip)
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 

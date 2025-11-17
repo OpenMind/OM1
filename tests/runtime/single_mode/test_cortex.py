@@ -34,9 +34,7 @@ def mock_dependencies():
 @pytest.fixture
 def runtime(mock_config, mock_dependencies):
     with (
-        patch(
-            "runtime.single_mode.cortex.Fuser", return_value=mock_dependencies["fuser"]
-        ),
+        patch("runtime.single_mode.cortex.Fuser", return_value=mock_dependencies["fuser"]),
         patch(
             "runtime.single_mode.cortex.ActionOrchestrator",
             return_value=mock_dependencies["action_orchestrator"],
@@ -63,9 +61,7 @@ async def test_tick_successful_execution(runtime):
 
     # Mock successful flow
     finished_promises = ["promise1"]
-    mocks["action_orchestrator"].flush_promises = AsyncMock(
-        return_value=(finished_promises, None)
-    )
+    mocks["action_orchestrator"].flush_promises = AsyncMock(return_value=(finished_promises, None))
     mocks["fuser"].fuse.return_value = "test prompt"
 
     action = Action(type="action1", value="val1")
@@ -109,9 +105,7 @@ async def test_tick_no_prompt(runtime):
 async def test_tick_no_llm_output(runtime):
     cortex_runtime, mocks = runtime
 
-    mocks["action_orchestrator"].flush_promises = AsyncMock(
-        return_value=(["promise"], None)
-    )
+    mocks["action_orchestrator"].flush_promises = AsyncMock(return_value=(["promise"], None))
     mocks["fuser"].fuse.return_value = "test prompt"
     cortex_runtime.config.cortex_llm.ask = AsyncMock(return_value=None)
 
@@ -260,9 +254,7 @@ class TestCortexRuntimeHotReload:
             assert runtime.hot_reload is False
             assert runtime.last_modified == 0.0
 
-    def test_get_file_mtime_existing_file(
-        self, mock_config, mock_dependencies, temp_config_file
-    ):
+    def test_get_file_mtime_existing_file(self, mock_config, mock_dependencies, temp_config_file):
         """Test getting modification time of existing file."""
         with (
             patch(
@@ -651,9 +643,7 @@ class TestCortexRuntimeHotReload:
             runtime._check_config_changes.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup_tasks_with_config_watcher(
-        self, mock_config, mock_dependencies
-    ):
+    async def test_cleanup_tasks_with_config_watcher(self, mock_config, mock_dependencies):
         """Test cleanup includes config watcher task when hot reload is enabled."""
         with (
             patch(

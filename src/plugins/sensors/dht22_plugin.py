@@ -1,5 +1,6 @@
 import time, yaml, random, threading
 
+
 class DHT22Plugin:
     def __init__(self, config_path="src/plugins/sensors/config.yaml"):
         with open(config_path) as f:
@@ -18,4 +19,5 @@ class DHT22Plugin:
                 self.data = {"temperature": temp, "humidity": hum, "comfort": comfort}
             time.sleep(2)
 
-    def get_data(self): return self.data.copy()
+    def get_data(self):
+        return self.data.copy()

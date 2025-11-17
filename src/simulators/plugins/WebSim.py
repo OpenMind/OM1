@@ -602,10 +602,7 @@ class WebSim(Simulator):
                 input_rezeroed = []
                 for input_type, input_info in self.io_provider.inputs.items():
                     timestamp = 0
-                    if (
-                        input_type != "GovernanceEthereum"
-                        and input_info.timestamp is not None
-                    ):
+                    if input_type != "GovernanceEthereum" and input_info.timestamp is not None:
                         timestamp = input_info.timestamp - earliest_time
                     input_rezeroed.append(
                         {
@@ -621,16 +618,10 @@ class WebSim(Simulator):
                 llm_end_time = self.io_provider.llm_end_time or 0
 
                 system_latency = {
-                    "fuse_time": (
-                        fuser_end_time - earliest_time if fuser_end_time else 0
-                    ),
-                    "llm_start": (
-                        llm_start_time - earliest_time if llm_start_time else 0
-                    ),
+                    "fuse_time": (fuser_end_time - earliest_time if fuser_end_time else 0),
+                    "llm_start": (llm_start_time - earliest_time if llm_start_time else 0),
                     "processing": (
-                        llm_end_time - llm_start_time
-                        if (llm_end_time and llm_start_time)
-                        else 0
+                        llm_end_time - llm_start_time if (llm_end_time and llm_start_time) else 0
                     ),
                     "complete": llm_end_time - earliest_time if llm_end_time else 0,
                 }

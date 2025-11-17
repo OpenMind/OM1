@@ -28,9 +28,7 @@ async def start_slam_hook(context: Dict[str, Any]):
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"SLAM started successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"SLAM started successfully: {result.get('message', 'Success')}")
                     return {
                         "status": "success",
                         "message": "SLAM process initiated",
@@ -86,9 +84,7 @@ async def stop_slam_hook(context: Dict[str, Any]):
                     logging.info(
                         f"SLAM map saved successfully: {save_result.get('message', 'Success')}"
                     )
-                    elevenlabs_provider.add_pending_message(
-                        "Map has been saved successfully."
-                    )
+                    elevenlabs_provider.add_pending_message("Map has been saved successfully.")
                 else:
                     try:
                         error_info = await save_response.json()
@@ -110,9 +106,7 @@ async def stop_slam_hook(context: Dict[str, Any]):
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"SLAM stopped successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"SLAM stopped successfully: {result.get('message', 'Success')}")
                     return {
                         "status": "success",
                         "message": "SLAM process stopped",

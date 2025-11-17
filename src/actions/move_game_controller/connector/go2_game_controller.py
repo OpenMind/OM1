@@ -12,9 +12,7 @@ from zenoh_msgs import AudioStatus, open_zenoh_session
 try:
     import hid
 except ImportError:
-    logging.warning(
-        "HID library not found. Please install the HIDAPI library to use this plugin."
-    )
+    logging.warning("HID library not found. Please install the HIDAPI library to use this plugin.")
     hid = None
 
 
@@ -70,9 +68,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
             logging.info("Game controller Unitree sport client initialized")
         except Exception as e:
             self.sport_client = None
-            logging.error(
-                f"Error initializing game controller Unitree sport client: {e}"
-            )
+            logging.error(f"Error initializing game controller Unitree sport client: {e}")
 
         # Pad buttons
         self.rt_previous = 0
@@ -145,17 +141,12 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                         self.sony_edge = True
                         break
                     except Exception as e:
-                        logging.error(
-                            f"Failed to connect to DualSense Edge controller: {e}"
-                        )
+                        logging.error(f"Failed to connect to DualSense Edge controller: {e}")
                         continue
 
     def _execute_command_thread(self, command: str) -> None:
         try:
-            if (
-                command == "StandUp"
-                and self.odom.position["body_attitude"] is RobotState.STANDING
-            ):
+            if command == "StandUp" and self.odom.position["body_attitude"] is RobotState.STANDING:
                 logging.info("Already standing, skipping command")
                 return
             elif (
@@ -289,9 +280,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
             if self.rt_previous > 0 or self.lt_previous > 0:
                 # we always excute the left turn first
                 if self.lt_previous > 0:
-                    logging.info(
-                        "Left Trigger is kept pressed - Counter-clockwise rotation"
-                    )
+                    logging.info("Left Trigger is kept pressed - Counter-clockwise rotation")
                     self._move_robot(0.0, 0.0, self.turn_speed)
                     return
                 if self.rt_previous > 0:
@@ -302,9 +291,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
             if self.d_pad_previous and self.d_pad_previous > 0:
                 if self.d_pad_previous == 1:  # Up
                     logging.info("D-pad UP - Moving forward")
-                    self._move_robot(
-                        self.move_speed, self.lateral_correction, self.yaw_correction
-                    )
+                    self._move_robot(self.move_speed, self.lateral_correction, self.yaw_correction)
                 elif self.d_pad_previous == 5:  # Down
                     logging.info("D-pad DOWN - Moving backward")
                     self._move_robot(
@@ -418,15 +405,11 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
             if self.d_pad_value == 1:  # Up
                 logging.info("D-pad UP - Moving forward")
                 move_triggered_dpad = True
-                self._move_robot(
-                    self.move_speed, self.lateral_correction, self.yaw_correction
-                )
+                self._move_robot(self.move_speed, self.lateral_correction, self.yaw_correction)
             elif self.d_pad_value == 5:  # Down
                 logging.info("D-pad DOWN - Moving backward")
                 move_triggered_dpad = True
-                self._move_robot(
-                    -self.move_speed, -self.lateral_correction, -self.yaw_correction
-                )
+                self._move_robot(-self.move_speed, -self.lateral_correction, -self.yaw_correction)
             elif self.d_pad_value == 7:  # Left
                 logging.info("D-pad LEFT - Moving left")
                 move_triggered_dpad = True

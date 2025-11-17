@@ -178,17 +178,13 @@ class BatteryState(IdlStruct, typename="BatteryState"):
     power_supply_health: uint8  # The battery health metric. Values defined above
     power_supply_technology: uint8  # The battery chemistry. Values defined above
     present: bool  # True if the battery is present
-    cell_voltage: List[
-        float32
-    ]  # An array of individual cell voltages for each cell in the pack
+    cell_voltage: List[float32]  # An array of individual cell voltages for each cell in the pack
     # If individual voltages unknown but number of cells known set each to NaN
     cell_temperature: List[
         float32
     ]  # An array of individual cell voltages for each cell in the pack
     # If individual voltages unknown but number of cells known set each to NaN
-    location: (
-        String  # The location into which the battery is inserted. (slot number or plug)
-    )
+    location: String  # The location into which the battery is inserted. (slot number or plug)
     serial_number: String  # The best approximation of the battery serial number
 
 

@@ -199,10 +199,7 @@ class MockRPLidar(RPLidar):
                         agent_actions = cortex.action_orchestrator._config.agent_actions
 
                         for agent_action in agent_actions:
-                            if (
-                                hasattr(agent_action, "connector")
-                                and agent_action.connector
-                            ):
+                            if hasattr(agent_action, "connector") and agent_action.connector:
                                 # Close Zenoh sessions in action connectors
                                 if (
                                     hasattr(agent_action.connector, "session")

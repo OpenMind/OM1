@@ -38,9 +38,7 @@ def test_init_signature(llm_class: Type[LLM]):
     # Verify __init__ signature matches base class
     base_params = set(LLM.__init__.__annotations__.keys())
     impl_params = set(llm_class.__init__.__annotations__.keys())
-    assert (
-        base_params == impl_params
-    ), f"{llm_class.__name__} __init__ signature mismatch"
+    assert base_params == impl_params, f"{llm_class.__name__} __init__ signature mismatch"
 
 
 @pytest.mark.parametrize("llm_class", get_all_llm_classes())

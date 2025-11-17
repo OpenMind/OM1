@@ -107,13 +107,9 @@ def generate_function_schemas_from_actions(actions: list) -> list[dict]:
             try:
                 schema = generate_function_schema_from_action(action)
                 schemas.append(schema)
-                logging.debug(
-                    f"Generated function schema for {action.llm_label}: {schema}"
-                )
+                logging.debug(f"Generated function schema for {action.llm_label}: {schema}")
             except Exception as e:
-                logging.error(
-                    f"Error generating function schema for {action.llm_label}: {e}"
-                )
+                logging.error(f"Error generating function schema for {action.llm_label}: {e}")
 
     return schemas
 
@@ -144,9 +140,7 @@ def convert_function_calls_to_actions(function_calls: list[dict]) -> list[Action
                 try:
                     args = json.loads(function_args)
                 except json.JSONDecodeError:
-                    logging.error(
-                        f"Failed to parse function arguments: {function_args}"
-                    )
+                    logging.error(f"Failed to parse function arguments: {function_args}")
                     continue
             else:
                 args = function_args
@@ -169,9 +163,7 @@ def convert_function_calls_to_actions(function_calls: list[dict]) -> list[Action
             action = Action(type=function_name, value=action_value)
             actions.append(action)
 
-            logging.info(
-                f"Converted function call {function_name}({args}) to action: {action}"
-            )
+            logging.info(f"Converted function call {function_name}({args}) to action: {action}")
 
         except Exception as e:
             logging.error(f"Error converting function call to action: {e}")

@@ -29,9 +29,7 @@ def modes(config_name: str) -> None:
         print(
             f"Manual Switching: {'Enabled' if mode_config.allow_manual_switching else 'Disabled'}"
         )
-        print(
-            f"Mode Memory: {'Enabled' if mode_config.mode_memory_enabled else 'Disabled'}"
-        )
+        print(f"Mode Memory: {'Enabled' if mode_config.mode_memory_enabled else 'Disabled'}")
 
         if mode_config.global_lifecycle_hooks:
             print(f"Global Lifecycle Hooks: {len(mode_config.global_lifecycle_hooks)}")
@@ -103,9 +101,7 @@ def list_configs() -> None:
                     raw_config = json5.load(f)
 
                 if "modes" in raw_config and "default_mode" in raw_config:
-                    mode_configs.append(
-                        (config_name, raw_config.get("name", config_name))
-                    )
+                    mode_configs.append((config_name, raw_config.get("name", config_name)))
                 else:
                     configs.append((config_name, raw_config.get("name", config_name)))
             except Exception as _:

@@ -105,12 +105,8 @@ class LLM(T.Generic[R]):
         self._available_actions = available_actions or []
         self.function_schemas = []
         if self._available_actions:
-            self.function_schemas = generate_function_schemas_from_actions(
-                self._available_actions
-            )
-            logging.info(
-                f"LLM initialized with {len(self.function_schemas)} function schemas"
-            )
+            self.function_schemas = generate_function_schemas_from_actions(self._available_actions)
+            logging.info(f"LLM initialized with {len(self.function_schemas)} function schemas")
 
         # Set up the IO provider
         self.io_provider = IOProvider()
@@ -202,11 +198,7 @@ def load_llm(class_name: str) -> T.Type[LLM]:
         module = importlib.import_module(f"llm.plugins.{module_name}")
         llm_class = getattr(module, class_name)
 
-        if not (
-            inspect.isclass(llm_class)
-            and issubclass(llm_class, LLM)
-            and llm_class != LLM
-        ):
+        if not (inspect.isclass(llm_class) and issubclass(llm_class, LLM) and llm_class != LLM):
             raise ValueError(f"'{class_name}' is not a valid LLM subclass")
 
         logging.debug(f"Loaded LLM {class_name} from {module_name}.py")
@@ -215,6 +207,4 @@ def load_llm(class_name: str) -> T.Type[LLM]:
     except ImportError as e:
         raise ValueError(f"Could not import LLM module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in LLM module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in LLM module '{module_name}'")

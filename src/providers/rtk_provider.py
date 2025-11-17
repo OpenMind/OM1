@@ -36,9 +36,7 @@ class RtkProvider:
 
         self.serial_connection = None
         try:
-            self.serial_connection = serial.Serial(
-                serial_port, baudrate, timeout=timeout
-            )
+            self.serial_connection = serial.Serial(serial_port, baudrate, timeout=timeout)
             self.serial_connection.reset_input_buffer()
             logging.info(f"Connected to {serial_port} at {baudrate} baud")
         except serial.SerialException as e:

@@ -103,12 +103,8 @@ class UnitreeGo2NavigationProvider:
         self.ai_status_pub = None
         if self.session:
             try:
-                self.ai_status_pub = self.session.declare_publisher(
-                    self.ai_status_topic
-                )
-                logging.info(
-                    "AI status publisher initialized on topic: %s", self.ai_status_topic
-                )
+                self.ai_status_pub = self.session.declare_publisher(self.ai_status_topic)
+                logging.info("AI status publisher initialized on topic: %s", self.ai_status_topic)
             except Exception as e:
                 logging.error(f"Error creating AI status publisher: {e}")
 
@@ -122,9 +118,7 @@ class UnitreeGo2NavigationProvider:
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:
-            message: nav_msgs.Nav2Status = nav_msgs.Nav2Status.deserialize(
-                data.payload.to_bytes()
-            )
+            message: nav_msgs.Nav2Status = nav_msgs.Nav2Status.deserialize(data.payload.to_bytes())
             logging.debug("Received Navigation Status message: %s", message)
             status_list = message.status_list
             if status_list:
@@ -142,18 +136,12 @@ class UnitreeGo2NavigationProvider:
                 if status_code in (1, 2):  # ACCEPTED or EXECUTING
                     if not self._nav_in_progress:
                         self._nav_in_progress = True
-                        self._publish_ai_status(
-                            enabled=False
-                        )  # Disable AI during navigation
+                        self._publish_ai_status(enabled=False)  # Disable AI during navigation
                         logging.info("Navigation started - AI mode disabled")
-                elif (
-                    status_code == 4
-                ):  # STATUS_SUCCEEDED - Navigation completed successfully
+                elif status_code == 4:  # STATUS_SUCCEEDED - Navigation completed successfully
                     if self._nav_in_progress:
                         self._nav_in_progress = False
-                        self._publish_ai_status(
-                            enabled=True
-                        )  # Re-enable AI ONLY on success
+                        self._publish_ai_status(enabled=True)  # Re-enable AI ONLY on success
                         logging.info("Navigation succeeded - AI mode re-enabled")
 
                         # Add speech feedback for successful navigation
@@ -198,9 +186,7 @@ class UnitreeGo2NavigationProvider:
                 code=1 if enabled else 0,
             )
             self.ai_status_pub.put(status_msg.serialize())
-            logging.info(
-                "AI mode %s during navigation", "enabled" if enabled else "disabled"
-            )
+            logging.info("AI mode %s during navigation", "enabled" if enabled else "disabled")
         except Exception as e:
             logging.error(f"Error publishing AI status: {e}")
 
@@ -209,9 +195,7 @@ class UnitreeGo2NavigationProvider:
         Start the navigation provider by registering the message callback and starting the listener.
         """
         if self.session is None:
-            logging.error(
-                "Cannot start navigation provider; Zenoh session is not available."
-            )
+            logging.error("Cannot start navigation provider; Zenoh session is not available.")
             return
 
         if not self.running:

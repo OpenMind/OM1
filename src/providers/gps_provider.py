@@ -38,9 +38,7 @@ class GpsProvider:
 
         self.serial_connection = None
         try:
-            self.serial_connection = serial.Serial(
-                serial_port, baudrate, timeout=timeout
-            )
+            self.serial_connection = serial.Serial(serial_port, baudrate, timeout=timeout)
             self.serial_connection.reset_input_buffer()
             logging.info(f"Connected to {serial_port} at {baudrate} baud")
         except serial.SerialException as e:
@@ -83,17 +81,13 @@ class GpsProvider:
                 if len(parts) >= 2:
                     # that's a HDG packet
                     self.yaw_mag_0_360 = float(parts[1])
-                    self.yaw_mag_cardinal = self.compass_heading_to_direction(
-                        self.yaw_mag_0_360
-                    )
+                    self.yaw_mag_cardinal = self.compass_heading_to_direction(self.yaw_mag_0_360)
                     logging.debug(f"MAG: {self.yaw_mag_0_360}")
                 else:
                     logging.warning(f"Unable to parse heading: {data}")
             elif data.startswith("YPR:"):
                 yaw, pitch, roll = map(str.strip, data[4:].split(","))
-                logging.debug(
-                    f"Orientation is Yaw: {yaw}°, Pitch: {pitch}°, Roll: {roll}°."
-                )
+                logging.debug(f"Orientation is Yaw: {yaw}°, Pitch: {pitch}°, Roll: {roll}°.")
             elif data.startswith("SAT:"):
                 logging.info(f"{data}")
             elif data.startswith("GPS:"):
@@ -192,9 +186,7 @@ class GpsProvider:
             address = match[0].upper()
             rssi = int(match[1])
             packet = match[2].lower()
-            devices.append(
-                RFDataRaw(unix_ts=unix_ts, address=address, rssi=rssi, packet=packet)
-            )
+            devices.append(RFDataRaw(unix_ts=unix_ts, address=address, rssi=rssi, packet=packet))
 
         return devices
 

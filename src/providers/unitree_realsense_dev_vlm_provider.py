@@ -88,9 +88,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
                     time.sleep(0.1)
 
                     if failure_count >= max_retries:
-                        logger.error(
-                            "Too many frame read errors. Trying another camera device."
-                        )
+                        logger.error("Too many frame read errors. Trying another camera device.")
                         self._cap.release()
                         new_cam = self._find_rgb_device(skip_devices=tried_devices)
                         if new_cam is None:
@@ -111,9 +109,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
                                 break
                             tried_devices.add(new_cam)
                             self._cap = self._open_camera(new_cam)
-                        failure_count = (
-                            0  # Reset failure counter after switching devices
-                        )
+                        failure_count = 0  # Reset failure counter after switching devices
                     continue  # Skip processing for this iteration
 
                 failure_count = 0  # Reset on a successful read
@@ -163,9 +159,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
         except Exception as e:
-            logger.exception(
-                "Error setting camera properties for device %s: %s", cam, e
-            )
+            logger.exception("Error setting camera properties for device %s: %s", cam, e)
         try:
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         except Exception:
@@ -212,14 +206,10 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
 
             try:
                 if "MJPG" in formats or "YUYV" in formats:
-                    logger.info(
-                        "Found RGB device at %s with formats: %s", device, formats
-                    )
+                    logger.info("Found RGB device at %s with formats: %s", device, formats)
                     return device
             except Exception as e:
-                logger.exception(
-                    "Error processing formats for device %s: %s", device, e
-                )
+                logger.exception("Error processing formats for device %s: %s", device, e)
 
         logger.warning("No RGB device found")
         return None
@@ -300,9 +290,7 @@ class UnitreeRealSenseDevVLMProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.start()
-            self.video_stream.register_frame_callback(
-                self.stream_ws_client.send_message
-            )
+            self.video_stream.register_frame_callback(self.stream_ws_client.send_message)
 
         logging.info("Unitree RealSenseDev VLM provider started")
 

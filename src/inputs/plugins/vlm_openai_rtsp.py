@@ -66,9 +66,7 @@ class VLMOpenAIRTSP(FuserInput[str]):
         if api_key is None or api_key == "":
             raise ValueError("config file missing api_key")
 
-        base_url = getattr(
-            self.config, "base_url", "https://api.openmind.org/api/core/openai"
-        )
+        base_url = getattr(self.config, "base_url", "https://api.openmind.org/api/core/openai")
         rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/top_camera")
         prompt = getattr(
             self.config,

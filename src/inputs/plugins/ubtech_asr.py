@@ -40,9 +40,7 @@ class UbtechASRInput(FuserInput[str]):
         self.language_code = LANGUAGE_CODE_MAP.get(self.language, "en")
 
         # Initialize and start the provider
-        self.asr = UbtechASRProvider(
-            robot_ip=self.robot_ip, language_code=self.language_code
-        )
+        self.asr = UbtechASRProvider(robot_ip=self.robot_ip, language_code=self.language_code)
         self.asr.start()
         # Register our internal method as the callback for the provider
         self.asr.register_message_callback(self._handle_asr_message)
@@ -65,18 +63,14 @@ class UbtechASRInput(FuserInput[str]):
             # by setting last_asr_resume_trigger_time to a value that would allow immediate resume if buffer becomes empty.
             # This makes the system more responsive after successful speech.
             if message:
-                self.last_asr_resume_trigger_time = (
-                    time.time() - self.asr_resume_cooldown - 1
-                )
+                self.last_asr_resume_trigger_time = time.time() - self.asr_resume_cooldown - 1
             return message
         except Empty:
             # The buffer is empty.
             # Only resume ASR if it's paused AND the cooldown period has elapsed since the last resume trigger.
             if self.asr.paused:
                 current_time = time.time()
-                if (
-                    current_time - self.last_asr_resume_trigger_time
-                ) > self.asr_resume_cooldown:
+                if (current_time - self.last_asr_resume_trigger_time) > self.asr_resume_cooldown:
                     logging.info(
                         f"UbtechASRInput: Cooldown ({self.asr_resume_cooldown}s) passed since last ASR resume trigger. Resuming ASR."
                     )
@@ -117,8 +111,6 @@ INPUT: {self.descriptor_for_LLM}
 {self.messages[-1]}
 // END
 """
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1], time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1], time.time())
         self.messages = []
         return result

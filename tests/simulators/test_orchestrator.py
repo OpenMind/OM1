@@ -64,14 +64,9 @@ async def test_start_simulators(orchestrator):
         future = orchestrator.start()
 
         assert isinstance(orchestrator._simulator_executor, ThreadPoolExecutor)
-        assert (
-            orchestrator._simulator_executor._max_workers
-            == orchestrator._simulator_workers
-        )
+        assert orchestrator._simulator_executor._max_workers == orchestrator._simulator_workers
 
-        assert len(orchestrator._submitted_simulators) == len(
-            orchestrator._config.simulators
-        )
+        assert len(orchestrator._submitted_simulators) == len(orchestrator._config.simulators)
         assert isinstance(future, asyncio.Future)
 
         expected_simulator_names = {bg.name for bg in orchestrator._config.simulators}
