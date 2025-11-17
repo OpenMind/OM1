@@ -78,7 +78,7 @@ ffmpeg not found
 Audio backend initialization failed
 ```
 
-###Cause
+### Cause
 FFmpeg is required for:
 - Text-to-Speech
 - Audio playback
