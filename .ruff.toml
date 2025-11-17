@@ -1,0 +1,10 @@
+[tool.ruff]
+select = ["E", "F", "I", "UP"]
+ignore = ["I001"]  # ignore organize imports for test files
+line-length = 99
+
+[tool.ruff.isort]
+known-first-party = ["src"]
+
+[tool.ruff.flake8]
+extend-ignore = ["E203"]
