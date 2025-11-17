@@ -1,4 +1,8 @@
-import time, yaml, random, threading
+import random
+import threading
+import time
+
+import yaml
 
 
 class DHT22Plugin:

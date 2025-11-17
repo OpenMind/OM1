@@ -3,12 +3,13 @@ import random
 from queue import Queue
 from typing import Optional
 
+from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_action.interface import ActionInput
 from providers.odom_provider import OdomProvider
 from providers.rplidar_provider import RPLidarProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
 class ActionUnitreeSDKConnector(ActionConnector[ActionInput]):
