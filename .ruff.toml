@@ -1,10 +1,10 @@
-[tool.ruff]
+[lint]
 select = ["E", "F", "I", "UP"]
-ignore = ["I001"]
+ignore = ["I001"]  # ignora organize imports (il problema del CI)
 line-length = 99
 
-[tool.ruff.isort]
+[lint.isort]
 known-first-party = ["src"]
 
-[tool.ruff.flake8]
+[lint.flake8]
 extend-ignore = ["E203"]
