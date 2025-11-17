@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <array>
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
 
 	constexpr int HIGHLEVEL    = 0xee;
@@ -18,7 +18,7 @@ namespace UNITREE_LEGGED_SDK
 	constexpr double VelStopF  = (16000.0f);
 	extern const int HIGH_CMD_LENGTH;      // sizeof(HighCmd)
 	extern const int HIGH_STATE_LENGTH;    // sizeof(HighState)
-	extern const int LOW_CMD_LENGTH;       // shorter than sizeof(LowCmd),   bytes compressed LowCmd length  
+	extern const int LOW_CMD_LENGTH;       // shorter than sizeof(LowCmd),   bytes compressed LowCmd length
 	extern const int LOW_STATE_LENGTH;     // shorter than sizeof(LowState), bytes compressed LowState length
 
 #pragma pack(1)
@@ -67,7 +67,7 @@ namespace UNITREE_LEGGED_SDK
 
 	typedef struct
 	{
-		uint8_t mode;                      // motor working mode 
+		uint8_t mode;                      // motor working mode
 		float q;                           // current angle (unit: radian)
 		float dq;                          // current velocity (unit: radian/second)
 		float ddq;                         // current acc (unit: radian/second*second)
@@ -82,7 +82,7 @@ namespace UNITREE_LEGGED_SDK
 	typedef struct
 	{
 		uint8_t mode;                      // desired working mode
-		float q;                           // desired angle (unit: radian) 
+		float q;                           // desired angle (unit: radian)
 		float dq;                          // desired velocity (unit: radian/second)
 		float tau;                         // desired output torque (unit: N.m)
 		float Kp;                          // desired position stiffness (unit: N.m/rad )
@@ -95,7 +95,7 @@ namespace UNITREE_LEGGED_SDK
 		std::array<uint8_t, 2> head;
 		uint8_t levelFlag;
 		uint8_t frameReserve;
-		
+
 		std::array<uint32_t, 2> SN;
 		std::array<uint32_t, 2> version;
 		uint16_t bandWidth;
@@ -107,7 +107,7 @@ namespace UNITREE_LEGGED_SDK
 		uint32_t tick;                              // reference real-time from motion controller (unit: us)
 		std::array<uint8_t, 40> wirelessRemote;     // wireless commands
 		uint32_t reserve;
-		
+
 		uint32_t crc;
 	} LowState;                            // low level feedback
 
@@ -116,7 +116,7 @@ namespace UNITREE_LEGGED_SDK
 		std::array<uint8_t, 2> head;
 		uint8_t levelFlag;
 		uint8_t frameReserve;
-		
+
 		std::array<uint32_t, 2> SN;
 		std::array<uint32_t, 2> version;
 		uint16_t bandWidth;
@@ -124,7 +124,7 @@ namespace UNITREE_LEGGED_SDK
 		BmsCmd bms;
 		std::array<uint8_t, 40> wirelessRemote;
 		uint32_t reserve;
-		
+
 		uint32_t crc;
 	} LowCmd;                              // low level control
 
@@ -133,7 +133,7 @@ namespace UNITREE_LEGGED_SDK
 		std::array<uint8_t, 2> head;
 		uint8_t levelFlag;
 		uint8_t frameReserve;
-		
+
 		std::array<uint32_t, 2> SN;
 		std::array<uint32_t, 2> version;
 		uint16_t bandWidth;
@@ -149,13 +149,13 @@ namespace UNITREE_LEGGED_SDK
 		std::array<float, 3> position;               // (unit: m), from own odometry in inertial frame, usually drift
 		float bodyHeight;                            // (unit: m, default: 0.28m),
 		std::array<float, 3> velocity;               // (unit: m/s), forwardSpeed, sideSpeed, rotateSpeed in body frame
-		float yawSpeed;                              // (unit: rad/s), rotateSpeed in body frame        
+		float yawSpeed;                              // (unit: rad/s), rotateSpeed in body frame
 		std::array<float, 4> rangeObstacle;
 		std::array<Cartesian, 4> footPosition2Body;  // foot position relative to body
 		std::array<Cartesian, 4> footSpeed2Body;     // foot speed relative to body
 		std::array<uint8_t, 40> wirelessRemote;
 		uint32_t reserve;
-		
+
 		uint32_t crc;
 	} HighState;                           // high level feedback
 
@@ -164,7 +164,7 @@ namespace UNITREE_LEGGED_SDK
 		std::array<uint8_t, 2> head;
 		uint8_t levelFlag;
 		uint8_t frameReserve;
-		
+
 		std::array<uint32_t, 2> SN;
 		std::array<uint32_t, 2> version;
 		uint16_t bandWidth;
@@ -172,9 +172,9 @@ namespace UNITREE_LEGGED_SDK
 											// 2. target velocity walking (controlled by velocity + yawSpeed)
 											// 3. target position walking (controlled by position + ypr[0])
 											// 4. path mode walking (reserve for future release)
-											// 5. position stand down. 
-											// 6. position stand up 
-											// 7. damping mode 
+											// 5. position stand down.
+											// 6. position stand up
+											// 7. damping mode
 											// 8. recovery stand
 											// 9. backflip
 											// 10. jumpYaw
@@ -194,7 +194,7 @@ namespace UNITREE_LEGGED_SDK
 		std::array<LED, 4> led;
 		std::array<uint8_t, 40> wirelessRemote;
 		uint32_t reserve;
-		
+
 		uint32_t crc;
 	} HighCmd;                              // high level control
 
@@ -205,10 +205,10 @@ namespace UNITREE_LEGGED_SDK
 		unsigned long long TotalCount;     // total loop count
 		unsigned long long SendCount;      // total send count
 		unsigned long long RecvCount;      // total receive count
-		unsigned long long SendError;      // total send error 
-		unsigned long long FlagError;      // total flag error 
-		unsigned long long RecvCRCError;   // total reveive CRC error	
-		unsigned long long RecvLoseError;  // total lose package count	
+		unsigned long long SendError;      // total send error
+		unsigned long long FlagError;      // total flag error
+		unsigned long long RecvCRCError;   // total reveive CRC error
+		unsigned long long RecvLoseError;  // total lose package count
 	} UDPState;                            // UDP communication state
 
 }

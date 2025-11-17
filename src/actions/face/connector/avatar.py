@@ -9,7 +9,7 @@ from providers.avatar_provider import AvatarProvider
 class FaceAvatarConnector(ActionConnector[FaceInput]):
     def __init__(self, config: ActionConfig):
         """
-        Initialize the FaceAvatarConnector with the given configuration.
+        Initialize the FaceAvatarConnector with AvatarProvider.
 
         Parameters:
         ----------
@@ -19,17 +19,15 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
         super().__init__(config)
 
         self.avatar_provider = AvatarProvider()
-
-        logging.info("Emotion system intiated")
+        logging.info("Face system initiated with AvatarProvider")
 
     async def connect(self, output_interface: FaceInput) -> None:
         """
-        Connect to the avatar system and send the appropriate face command.
+        Send face command via AvatarProvider.
 
         Parameters:
         ----------
         output_interface : FaceInput
-            The face input containing the action to be performed.
         """
         if output_interface.action == "happy":
             self.avatar_provider.send_avatar_command("Happy")
@@ -44,9 +42,16 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
         elif output_interface.action == "excited":
             self.avatar_provider.send_avatar_command("Excited")
         else:
-            logging.info(f"Unknown emotion: {output_interface.action}")
+            logging.warning("Failed to send avatar face command")
 
-        logging.info(f"SendThisToUTClient: {output_interface.action}")
+        logging.info(f"Avatar face command sent: {output_interface.action}")
+
+    def stop(self):
+        """
+        Stop and cleanup AvatarProvider.
+        """
+        self.avatar_provider.stop()
+        logging.info("AvatarProvider stopped")
 
     def tick(self) -> None:
         time.sleep(60)

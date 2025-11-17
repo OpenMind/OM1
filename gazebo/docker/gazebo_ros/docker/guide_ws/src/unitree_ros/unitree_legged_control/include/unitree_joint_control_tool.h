@@ -16,7 +16,7 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #define posStopF (2.146E+9f)  // stop position control mode
 #define velStopF (16000.0f)   // stop velocity control mode
 
-typedef struct 
+typedef struct
 {
     uint8_t mode;
     double pos;

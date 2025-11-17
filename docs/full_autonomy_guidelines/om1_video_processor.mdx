@@ -60,8 +60,8 @@ We priotize safety and want to protect everyone's identity – when in doubt (lo
 
     Get OM_API_KEY and OM_API_KEY_ID from [OpenMind portal](https://portal.openmind.org/).
     Once you generate a new API key, copy the key and paste it in the OM_API_KEY environment variable.
-    
-    To get your API key ID, copy the 16 digit id from your API key as highlighted in the image below: 
+
+    To get your API key ID, copy the 16 digit id from your API key as highlighted in the image below:
     ![OM_API_KEY_ID](../assets/om_api_key_id.png)
     ```bash
     export OM_API_KEY_ID="your_api_key_id"
@@ -175,7 +175,7 @@ To modify the om_face_recog_stream parameters, edit the command in video_process
 vim video_processor/supervisord.conf
 ```
 
-Modified parameters - 
+Modified parameters -
 ```bash
 --device: Camera device path
 --rtsp-mic-device: Microphone device identifier
@@ -201,7 +201,7 @@ uv run om_face_recog_stream --help
 - **No video feed**:
   - Verify camera device permissions
   - Check if the camera is being used by another application
-  
+
 - **Audio not working**:
   - Verify the correct audio device is specified
   - Check PulseAudio configuration

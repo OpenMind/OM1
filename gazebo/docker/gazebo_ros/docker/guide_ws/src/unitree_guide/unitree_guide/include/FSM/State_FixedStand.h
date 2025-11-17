@@ -16,7 +16,7 @@ public:
     FSMStateName checkChange();
 
 private:
-    float _targetPos[12] = {0.0, 0.67, -1.3, 0.0, 0.67, -1.3, 
+    float _targetPos[12] = {0.0, 0.67, -1.3, 0.0, 0.67, -1.3,
                             0.0, 0.67, -1.3, 0.0, 0.67, -1.3};
     float _startPos[12];
     float _duration = 1000;   //steps

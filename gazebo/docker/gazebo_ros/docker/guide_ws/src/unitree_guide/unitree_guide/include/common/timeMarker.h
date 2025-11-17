@@ -8,11 +8,11 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-//时间戳  微秒级， 需要#include <sys/time.h> 
+//时间戳  微秒级， 需要#include <sys/time.h>
 inline long long getSystemTime(){
-    struct timeval t;  
+    struct timeval t;
     gettimeofday(&t, NULL);
-    return 1000000 * t.tv_sec + t.tv_usec;  
+    return 1000000 * t.tv_sec + t.tv_usec;
 }
 //时间戳  秒级， 需要getSystemTime()
 inline double getTimeSecond(){

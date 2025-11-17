@@ -2,7 +2,7 @@
 #include <errno.h>      //错误定义
 #include <string.h>
 #include <unistd.h>    //Unix标准函数定义, usleep()
-#include <sys/time.h> 
+#include <sys/time.h>
 #include "LSerial.h"    //串口通信函数
 #include "motor_ctrl.h" //声明发送数据、接收数据的结构体，以及函数声明
 
@@ -26,7 +26,7 @@ int main()
     //文件ID
 #if defined(__linux__)
     int fd;
-    
+
 #elif defined(__WIN32__)
     HANDLE fd;
 
@@ -34,7 +34,7 @@ int main()
 
     fd = open_set((char*)"/dev/ttyUSB0");
     // fd = open_set((char*)"\\\\.\\COM4");
-    
+
     modify_data(&motor_s);
     modify_data(&motor_s1);
 
@@ -66,6 +66,6 @@ int main()
 #if defined(__WIN32__)
     system("pause");
 #endif
-    
+
     return 0;
 }

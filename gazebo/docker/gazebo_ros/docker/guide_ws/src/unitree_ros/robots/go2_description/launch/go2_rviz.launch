@@ -1,7 +1,7 @@
 <launch>
 
     <arg name="user_debug" default="false"/>
-    
+
     <param name="robot_description"  textfile="$(find go2_description)/urdf/go2_description.urdf" />
 
     <!-- for higher robot_state_publisher average rate-->

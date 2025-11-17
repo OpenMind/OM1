@@ -5,7 +5,7 @@
 #include "common/mathTools.h"
 #include "common/enumClass.h"
 
-Estimator::Estimator(QuadrupedRobot *robotModel, LowlevelState* lowState, 
+Estimator::Estimator(QuadrupedRobot *robotModel, LowlevelState* lowState,
                      VecInt4 *contact, Vec4 *phase, double dt, Vec18 Qdig,
                      std::string testName)
           :_robModel(robotModel), _lowState(lowState), _contact(contact),
@@ -14,9 +14,9 @@ Estimator::Estimator(QuadrupedRobot *robotModel, LowlevelState* lowState,
     _initSystem();
 }
 
-Estimator::Estimator(QuadrupedRobot *robotModel, LowlevelState* lowState, 
+Estimator::Estimator(QuadrupedRobot *robotModel, LowlevelState* lowState,
                      VecInt4 *contact, Vec4 *phase, double dt)
-          :_robModel(robotModel), _lowState(lowState), _contact(contact), 
+          :_robModel(robotModel), _lowState(lowState), _contact(contact),
            _phase(phase), _dt(dt){
 
     for(int i(0); i<_Qdig.rows(); ++i){
@@ -253,4 +253,3 @@ Vec34 Estimator::getPosFeet2BGlobal(){
     }
     return feet2BPos;
 }
-

@@ -7,7 +7,7 @@
     <xacro:property name="stick_mass" value="0.00001"/>
 
     <!-- simplified collision value -->
-    <xacro:property name="trunk_width" value="0.0935"/> 
+    <xacro:property name="trunk_width" value="0.0935"/>
     <xacro:property name="trunk_length" value="0.3762"/>
     <xacro:property name="trunk_height" value="0.114"/>
     <xacro:property name="hip_radius" value="0.046"/>

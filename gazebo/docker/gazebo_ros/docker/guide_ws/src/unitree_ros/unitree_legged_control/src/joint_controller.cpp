@@ -9,7 +9,7 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 
 // #define rqtTune // use rqt or not
 
-namespace unitree_legged_control 
+namespace unitree_legged_control
 {
 
     UnitreeJointController::UnitreeJointController(){
@@ -57,8 +57,8 @@ namespace unitree_legged_control
             ROS_ERROR("No joint given in namespace: '%s')", n.getNamespace().c_str());
             return false;
         }
-        
-        // load pid param from ymal only if rqt need 
+
+        // load pid param from ymal only if rqt need
         // if(rqtTune) {
 #ifdef rqtTune
             // Load PID Controller using gains set on parameter server
@@ -82,17 +82,17 @@ namespace unitree_legged_control
         }
         if(joint_name == "FR_calf_joint" || joint_name == "FL_calf_joint" || joint_name == "RR_calf_joint" || joint_name == "RL_calf_joint"){
             isCalf = true;
-        }        
+        }
         joint = robot->getHandle(joint_name);
 
         // Start command subscriber
         sub_ft = n.subscribe(name_space + "/" +"joint_wrench", 1, &UnitreeJointController::setTorqueCB, this);
         sub_cmd = n.subscribe("command", 20, &UnitreeJointController::setCommandCB, this);
 
-        // pub_state = n.advertise<unitree_legged_msgs::MotorState>(name_space + "/state", 20); 
+        // pub_state = n.advertise<unitree_legged_msgs::MotorState>(name_space + "/state", 20);
         // Start realtime state publisher
         controller_state_publisher_.reset(
-            new realtime_tools::RealtimePublisher<unitree_legged_msgs::MotorState>(n, name_space + "/state", 1));        
+            new realtime_tools::RealtimePublisher<unitree_legged_msgs::MotorState>(n, name_space + "/state", 1));
 
         return true;
     }
@@ -166,18 +166,18 @@ namespace unitree_legged_control
         //     servoCmd.velStiffness = 5;
         //     servoCmd.torque = 0;
         // }
-        
+
         // rqt set P D gains
         // if(rqtTune) {
 #ifdef rqtTune
             double i, i_max, i_min;
             getGains(servoCmd.posStiffness,i,servoCmd.velStiffness,i_max,i_min);
 #endif
-        // } 
+        // }
 
         currentPos = joint.getPosition();
         currentVel = computeVel(currentPos, (double)lastState.q, (double)lastState.dq, period.toSec());
-        calcTorque = computeTorque(currentPos, currentVel, servoCmd);      
+        calcTorque = computeTorque(currentPos, currentVel, servoCmd);
         effortLimits(calcTorque);
 
         joint.setCommand(calcTorque);

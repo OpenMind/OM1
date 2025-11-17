@@ -3,15 +3,15 @@ title: TurtleBot4
 description: "TurtleBot4 Basic Setup"
 ---
 
-## Establishing Basic Networking and Connectivity 
+## Establishing Basic Networking and Connectivity
 
-For many development tasks, you will need to `ssh` to the RPi on the TB4 from your laptop: 
+For many development tasks, you will need to `ssh` to the RPi on the TB4 from your laptop:
 
 ```bash
 ssh ubuntu@192.168.1.116 # use your TB4's IP address
 ```
 
-The password is `turtlebot4`. Once on the command line, you can use `turtlebot4-setup` to configure ROS2, the WiFi, etc. 
+The password is `turtlebot4`. Once on the command line, you can use `turtlebot4-setup` to configure ROS2, the WiFi, etc.
 
 ## Required Operating System Versions
 
@@ -28,14 +28,14 @@ Note: choose TurtleBot4 lite image file if your TurtleBot4 is the lite version.
 
 [H.2.6 (Humble)](https://github.com/iRobotEducation/create3_docs/releases/download/H.2.6/Create3-H.2.6.swu)
 
-**Important: Make sure your Raspberry Pi 4 is running Ubuntu 22.04.4 LTS (Turtlebot4 Humble image) and that the Create 3 is running H.2.6/Create3-H.2.6.swu**. Among other possible problems, running Ubuntu 24 will create compatibility issues with the version of ROS2 and CycloneDDS on the Create3. 
+**Important: Make sure your Raspberry Pi 4 is running Ubuntu 22.04.4 LTS (Turtlebot4 Humble image) and that the Create 3 is running H.2.6/Create3-H.2.6.swu**. Among other possible problems, running Ubuntu 24 will create compatibility issues with the version of ROS2 and CycloneDDS on the Create3.
 
 ## Prepare the TurtleBot4
 
 1. Flash the correct TurtleBot4 image to an SD card (if needed).
 2. Upgrade/downgrade the Create3 firmware to H.2.6 (if needed).
 3. Insert the SD card into the TurtleBot4 and power it on.
-4. Set up your TurtleBot4 following the [Basic Setup](https://turtlebot.github.io/turtlebot4-user-manual/setup/basic.html#robot). 
+4. Set up your TurtleBot4 following the [Basic Setup](https://turtlebot.github.io/turtlebot4-user-manual/setup/basic.html#robot).
 
 ## Identity and API Keys
 
@@ -53,7 +53,7 @@ Enter the URID in the "URID" field in the `/config/turtlebot4.json5` file. You c
 URID=OM742d35Cc6634 # yours will be different!
 ```
 
-Note: for testing you can use any short string as the URID, as long as it's unique for each robot within a team of robots within the same local network. 
+Note: for testing you can use any short string as the URID, as long as it's unique for each robot within a team of robots within the same local network.
 
 ## Configure the TurtleBot4
 
@@ -61,7 +61,7 @@ Once the TurtleBot4 is set up, configure it as follows:
 
 - Configure the RPi4 through `turtlebot4-setup`
 - Configure the Create3 through its web server
-- Install docker and configure the `docker-compose.yaml` file 
+- Install docker and configure the `docker-compose.yaml` file
 
 ### Configure the TurtleBot4 Internal RPi4
 
@@ -74,7 +74,7 @@ RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 CYCLONEDDS_URI=[] # Empty
 ```
 
-Click "Save", "Esc", and then "Apply Settings". The TurtleBot4 will reboot. 
+Click "Save", "Esc", and then "Apply Settings". The TurtleBot4 will reboot.
 
 ### Configure the TurtleBot4 Internal Create3
 
@@ -105,7 +105,7 @@ The TurtleBot4 will now be more stable, can discover other computers running Zen
 
 ## OM1 Installation and Launch
 
-You can install and run OM1 
+You can install and run OM1
 
 - on your laptop, or
 - onboard the Raspberry Pi on the TurtleBot4
@@ -114,7 +114,7 @@ You can install and run OM1
 
 For fully autonomous use, install OM1 on the TurtleBot4's Raspberry Pi. On the RPi terminal command line, follow these [instructions](raspberrypi.mdx). When you see all the right topics listed in `ros2 topic list`, your TurtleBot4 is set up and you are ready to install OM1.
 
-Install `uv` - Python package manager:   
+Install `uv` - Python package manager:
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
@@ -125,7 +125,7 @@ Install `portaudio`, `ffmpeg` and other dependencies:
 sudo apt install pulseaudio pulseaudio-utils ffmpeg portaudio19-dev python-all-dev
 ```
 
-Then, connect a Logitech 270 Webcam (or equivalent). Unplug the standard TurtleBot4 Depth Camera. Connect a speaker to RPi with a 3.5 mm audio patch cable (or use bluetooth, depending on your pain threshold and patience with debugging bluetooth issues). 
+Then, connect a Logitech 270 Webcam (or equivalent). Unplug the standard TurtleBot4 Depth Camera. Connect a speaker to RPi with a 3.5 mm audio patch cable (or use bluetooth, depending on your pain threshold and patience with debugging bluetooth issues).
 
 Make sure [Identity and Keys](#identity-and-keys) are set correctly. To update the `.env` with your OM1 key, run `vim .env`, "i" to insert, paste in key, "ESC", ":", "wq" to write and exit.
 
@@ -150,23 +150,23 @@ pactl set-default-sink alsa_output.platform-bcm2835_audio.stereo-fallback
 uv run src/run.py turtlebot4_lidar_gps
 ```
 
-On the RPi4, there will be a lengthy delay before OM1 runs the first time you invoke this command. 
+On the RPi4, there will be a lengthy delay before OM1 runs the first time you invoke this command.
 
 ### Running OM1 on your Laptop
 
 Install OM1 and Zenoh on your laptop, following [Install OM1 on your laptop](../developing/1_get-started.mdx) and [Installing the Zenoh router](https://zenoh.io/docs/getting-started/installation/).
 
-Then, run OM1:  
+Then, run OM1:
 
 ```bash
 uv run src/run.py turtlebot4
 ```
 
-Please make sure that your development machine (e.g. your laptop) is running the same version of the Zenoh bridge (e.g. 1.2.1) as the RPi otherwise you will get errors. When you run OM1 on your laptop, OM1 will use your laptop's microphone, speaker, and camera inputs/outputs, rather than the sensors on the TurtleBot4. 
+Please make sure that your development machine (e.g. your laptop) is running the same version of the Zenoh bridge (e.g. 1.2.1) as the RPi otherwise you will get errors. When you run OM1 on your laptop, OM1 will use your laptop's microphone, speaker, and camera inputs/outputs, rather than the sensors on the TurtleBot4.
 
 ### Interacting with TurtleBot4 from a Remote Computer using Zenoh and the Command Line
 
-This is useful for debugging. Inside `system_hw_test`, there are several scripts for you to interact with the TurtleBot4. For all these scripts, provide the robot's URID, such as `OM742d35Cc6634` as an argument. 
+This is useful for debugging. Inside `system_hw_test`, there are several scripts for you to interact with the TurtleBot4. For all these scripts, provide the robot's URID, such as `OM742d35Cc6634` as an argument.
 
 #### Steer the TurtleBot4 with your Laptop Keyboard
 

@@ -12,7 +12,7 @@
     <!-- Debug mode will hung up the robot, use "true" or "false" to switch it. -->
     <arg name="user_debug" default="false"/>
     <arg name="UnitreeGripperYN" default="true"/>
-    
+
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="world_name" value="$(find unitree_gazebo)/worlds/$(arg wname).world"/>
         <arg name="debug" value="$(arg debug)"/>
@@ -24,7 +24,7 @@
 
     <!-- Load the URDF into the ROS Parameter Server -->
     <param name="robot_description"
-           command="$(find xacro)/xacro --inorder '$(arg dollar)$(arg robot_path)/xacro/robot.xacro' 
+           command="$(find xacro)/xacro --inorder '$(arg dollar)$(arg robot_path)/xacro/robot.xacro'
            UnitreeGripper:=$(arg UnitreeGripperYN)"/>
 
     <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->
@@ -38,16 +38,16 @@
     <!-- load the controllers -->
     <group unless="$(arg UnitreeGripperYN)">
         <node pkg="controller_manager" type="spawner" name="controller_spawner" respawn="false"
-            output="screen" ns="/$(arg rname)_gazebo" args="joint_state_controller 
+            output="screen" ns="/$(arg rname)_gazebo" args="joint_state_controller
             Joint01_controller Joint02_controller Joint03_controller
             Joint04_controller Joint05_controller Joint06_controller"/>
     </group>
 
     <group if="$(arg UnitreeGripperYN)">
         <node pkg="controller_manager" type="spawner" name="controller_spawner" respawn="false"
-            output="screen" ns="/$(arg rname)_gazebo" args="joint_state_controller 
-            Joint01_controller Joint02_controller Joint03_controller 
-            Joint04_controller Joint05_controller Joint06_controller 
+            output="screen" ns="/$(arg rname)_gazebo" args="joint_state_controller
+            Joint01_controller Joint02_controller Joint03_controller
+            Joint04_controller Joint05_controller Joint06_controller
             gripper_controller"/>
     </group>
 

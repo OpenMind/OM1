@@ -15,7 +15,7 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
 
 constexpr int THREAD_PRIORITY    = 99;   // real-time priority

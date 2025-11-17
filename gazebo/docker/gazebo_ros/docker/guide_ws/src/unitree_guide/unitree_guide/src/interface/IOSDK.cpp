@@ -49,7 +49,7 @@ void IOSDK::sendRecv(const LowlevelCmd *cmd, LowlevelState *state){
         _lowCmd.motorCmd[i].Kd   = cmd->motorCmd[i].Kd;
         _lowCmd.motorCmd[i].tau  = cmd->motorCmd[i].tau;
     }
-    
+
     _udp.SetSend(_lowCmd);
     _udp.Send();
 
@@ -77,9 +77,9 @@ void IOSDK::sendRecv(const LowlevelCmd *cmd, LowlevelState *state){
 
 #ifdef COMPILE_WITH_MOVE_BASE
     _joint_state.header.stamp = ros::Time::now();
-    _joint_state.name = {"FR_hip_joint", "FR_thigh_joint", "FR_calf_joint", 
-                         "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",  
-                         "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint", 
+    _joint_state.name = {"FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",
+                         "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",
+                         "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint",
                          "RL_hip_joint", "RL_thigh_joint", "RL_calf_joint"};
     for(int i(0); i<12; ++i){
         _joint_state.position[i] = state->motorState[i].q;

@@ -20,7 +20,7 @@
                  \--- non block         if no data will return immediately
 
                   /--- Y  ip/port will be set later
-    3. setIpPort: 
+    3. setIpPort:
                   \--- N  ip/port not specified, as a server wait for connect
 */
 
@@ -43,15 +43,15 @@ namespace UNITREE_LEGGED_SDK
     class UDP {
 	public:
         UDP(uint8_t level, HighLevelType highControl = HighLevelType::Basic);  // unitree dafault IP and Port
-        UDP(uint16_t localPort, const char* targetIP, uint16_t targetPort, 
+        UDP(uint16_t localPort, const char* targetIP, uint16_t targetPort,
             int sendLength, int recvLength, bool initiativeDisconnect = false, RecvEnum recvType = RecvEnum::nonBlock);
-        UDP(uint16_t localPort, 
-            int sendLength, int recvLength, bool initiativeDisconnect = false, RecvEnum recvType = RecvEnum::nonBlock, bool setIpPort = false);  
+        UDP(uint16_t localPort,
+            int sendLength, int recvLength, bool initiativeDisconnect = false, RecvEnum recvType = RecvEnum::nonBlock, bool setIpPort = false);
         ~UDP();
-        
+
         void SetIpPort(const char* targetIP, uint16_t targetPort);  // if not indicated at constructor function
         void SetRecvTimeout(int time);                                                  // use in RecvEnum::blockTimeout  (unit: ms)
-        
+
         void SetDisconnectTime(float callback_dt, float disconnectTime);  // initiativeDisconnect = true, disconnect for another IP to connect
         void SetAccessibleTime(float callback_dt, float accessibleTime);  // check if can access data
 
@@ -76,7 +76,7 @@ namespace UNITREE_LEGGED_SDK
 
     private:
         void init(uint16_t localPort, const char* targetIP = NULL, uint16_t targetPort = 0);
-        
+
         uint8_t levelFlag = HIGHLEVEL;   // default: high level
         int sockFd;
         bool connected;                  // udp works with connect() function, rather than server mode
@@ -89,7 +89,7 @@ namespace UNITREE_LEGGED_SDK
 
         bool nonblock = true;
         int blockTimeout = -1;             // use time out method or not, (unit: ms)
-        bool initiativeDisconnect = false;           // 
+        bool initiativeDisconnect = false;           //
         // bool initAsServer = false;
 
         pthread_mutex_t sendMutex;

@@ -45,7 +45,7 @@ void Lcm_Server_Low::LCMRecv()
     }
     mylcm.Recv();
 }
-void Lcm_Server_Low::RobotControl() 
+void Lcm_Server_Low::RobotControl()
 {
     udp.GetRecv(state);
     mylcm.Send(state);
@@ -70,7 +70,7 @@ public:
     }
     void LCMRecv();
     void RobotControl();
-    
+
     UDP udp;
     LCM mylcm;
     HighCmd cmd = {0};
@@ -91,7 +91,7 @@ void Lcm_Server_High::LCMRecv()
     mylcm.Recv();
 }
 
-void Lcm_Server_High::RobotControl() 
+void Lcm_Server_High::RobotControl()
 {
     udp.GetRecv(state);
     mylcm.Send(state);
