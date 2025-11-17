@@ -1,82 +1,89 @@
 import logging
-from typing import TypeVar
+from uuid import uuid4
 
-from om1_utils import ws
+from zenoh_msgs import AvatarFaceRequest, open_zenoh_session, prepare_header
 
 from .singleton import singleton
-
-R = TypeVar("R")
 
 
 @singleton
 class AvatarProvider:
     """
-    Avatar Provider.
+    Singleton provider for Avatar communication via Zenoh.
 
-    This class implements a singleton pattern to manage:
-        * Connection to Avatar server for sending commands
-
-    Parameters
-    ----------
-    avatar_server: str = "localhost"
-        The Avatar server host
-    avatar_port: int = 8123
-        The Avatar server port
     """
 
-    def __init__(self, avatar_server: str = "localhost", avatar_port: int = 8123):
+    def __init__(self):
         """
-        Robot and sensor configuration
+        Initialize the AvatarProvider.
         """
+        self.session = None
+        self.avatar_publisher = None
+        self.running = False
 
-        logging.info(
-            f"Avatar_Provider booting Avatar Provider at server: {avatar_server}, port: {avatar_port}"
-        )
+        self._initialize_zenoh()
 
-        self.avatar_server_host = avatar_server
-        self.avatar_server_port = avatar_port
-
-        self.avatar_server = None
+    def _initialize_zenoh(self):
+        """
+        Initialize Zenoh session and publisher.
+        """
         try:
-            self.avatar_server = ws.Server(
-                self.avatar_server_host, self.avatar_server_port
+            self.session = open_zenoh_session()
+            self.avatar_publisher = self.session.declare_publisher("om/avatar/request")
+            self.running = True
+            logging.info(
+                "AvatarProvider initialized with Zenoh on topic 'om/avatar/request'"
             )
-            self.avatar_server.start()
-            logging.info(f"Connected to Avatar server at {avatar_server}:{avatar_port}")
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
+            self.session = None
+            self.avatar_publisher = None
+            self.running = False
 
-    def send_avatar_command(self, command: str):
+    def send_avatar_command(self, command: str) -> bool:
         """
-        Send command to avatar server.
+        Send avatar command via Zenoh.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         command : str
-            The command string to send to the avatar server.
+
+        Returns
+        -------
+        bool
+            True if command was sent successfully, False otherwise
         """
-        if self.avatar_server and self.avatar_server.running:
-            self.avatar_server.handle_global_response(command)
-            logging.info(f"Sent avatar command: {command}")
-        else:
-            logging.warning("Avatar server is not running, cannot send command.")
+        if not self.running or not self.avatar_publisher:
+            logging.warning(
+                f"AvatarProvider not running, cannot send command: {command}"
+            )
+            return False
+
+        command = command.lower()
+
+        try:
+            face_text = command
+
+            face_msg = AvatarFaceRequest(
+                header=prepare_header(str(uuid4())),
+                face_text=face_text,
+            )
+            self.avatar_publisher.put(face_msg.serialize())
+            logging.info(f"AvatarProvider sent command to Zenoh: {face_text}")
+            return True
+
+        except Exception as e:
+            logging.error(f"Failed to send avatar command via Zenoh: {e}")
+            return False
 
     def stop(self):
         """
-        Stops the avatar server.
+        Stop the AvatarProvider and cleanup Zenoh session.
         """
-        if self.avatar_server and self.avatar_server.running:
-            self.avatar_server.stop()
-            logging.info("Stopped Avatar Server in provider")
-
-    @property
-    def running(self) -> bool:
-        """
-        Check if the avatar server is running.
-
-        Returns:
-        --------
-        bool
-            True if the avatar server is running, False otherwise.
-        """
-        return self.avatar_server.running if self.avatar_server else False
+        self.running = False
+        if self.session:
+            try:
+                self.session.close()
+                logging.info("AvatarProvider Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing AvatarProvider Zenoh session: {e}")

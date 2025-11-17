@@ -7,7 +7,9 @@ from typing import List, Optional
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.unitree_go2_amcl_provider import UnitreeGo2AMCLProvider
+from providers.unitree_go2_lidar_localization_provider import (
+    UnitreeGo2LidarLocalizationProvider,
+)
 
 
 @dataclass
@@ -27,11 +29,11 @@ class Message:
     message: str
 
 
-class LocalizationInput(FuserInput[str]):
+class LidarLocalizationInput(FuserInput[str]):
     """
-    Localization status input plugin for LLM prompts.
+    Lidar localization status input plugin for LLM prompts.
 
-    Monitors the robot's localization status via AMCL and provides
+    Monitors the robot's localization status via Lidar and provides
     clear feedback to the LLM about whether navigation is safe to proceed.
     """
 
@@ -47,7 +49,9 @@ class LocalizationInput(FuserInput[str]):
         super().__init__(config)
 
         # Initialize providers
-        self.amcl_provider: UnitreeGo2AMCLProvider = UnitreeGo2AMCLProvider()
+        self.lidar_localization_provider: UnitreeGo2LidarLocalizationProvider = (
+            UnitreeGo2LidarLocalizationProvider()
+        )
         self.io_provider = IOProvider()
 
         # Message buffer
@@ -62,7 +66,7 @@ class LocalizationInput(FuserInput[str]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll the AMCL provider for localization status.
+        Poll the lidar localization provider for localization status.
 
         Returns
         -------
@@ -73,8 +77,8 @@ class LocalizationInput(FuserInput[str]):
         await asyncio.sleep(0.1)  # Brief delay to prevent excessive polling
 
         try:
-            is_localized = self.amcl_provider.is_localized
-            pose = self.amcl_provider.pose
+            is_localized = self.lidar_localization_provider.is_localized
+            pose = self.lidar_localization_provider.pose
 
             if is_localized and pose is not None:
                 status_msg = "LOCALIZED: Robot position is confirmed. Navigation commands are safe to execute."
