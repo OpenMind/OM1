@@ -1,7 +1,12 @@
 import logging
 from uuid import uuid4
 
-from zenoh_msgs import AvatarFaceRequest, open_zenoh_session, prepare_header
+from zenoh_msgs import (
+    AvatarFaceRequest,
+    AvatarFaceResponse,
+    open_zenoh_session,
+    prepare_header,
+)
 
 from .singleton import singleton
 
@@ -18,27 +23,56 @@ class AvatarProvider:
         Initialize the AvatarProvider.
         """
         self.session = None
+        # Face Publisher
         self.avatar_publisher = None
+        # Health Check Publisher and Subscriber
+        self.avatar_healthcheck_publisher = None
+        self.avatar_subscriber = None
         self.running = False
 
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
         """
-        Initialize Zenoh session and publisher.
+        Initialize Zenoh session, publishers, and subscriber.
         """
         try:
             self.session = open_zenoh_session()
             self.avatar_publisher = self.session.declare_publisher("om/avatar/request")
+            self.avatar_healthcheck_publisher = self.session.declare_publisher(
+                "om/avatar/response"
+            )
+            self.avatar_subscriber = self.session.declare_subscriber(
+                "om/avatar/request", self._handle_avatar_request
+            )
             self.running = True
             logging.info(
-                "AvatarProvider initialized with Zenoh on topic 'om/avatar/request'"
+                "AvatarProvider initialized with Zenoh on topics"
             )
         except Exception as e:
             logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
-            self.session = None
-            self.avatar_publisher = None
-            self.running = False
+
+    def _handle_avatar_request(self, sample):
+        """
+        Handle incoming avatar requests for health check.
+        
+        """
+        try:
+            request = AvatarFaceRequest.deserialize(sample.payload.to_bytes())
+            logging.debug(f"Received avatar request: {request.face_text}")
+            
+            # Send response
+            response = AvatarFaceResponse(
+                header=prepare_header(str(uuid4())),
+                request_id=request.request_id,
+                message="Avatar system active",
+            )
+            
+            if self.avatar_healthcheck_publisher:
+                self.avatar_healthcheck_publisher.put(response.serialize())
+                logging.debug("Sent avatar active response")
+        except Exception as e:
+            logging.error(f"Error handling avatar request: {e}")
 
     def send_avatar_command(self, command: str) -> bool:
         """
@@ -66,6 +100,7 @@ class AvatarProvider:
 
             face_msg = AvatarFaceRequest(
                 header=prepare_header(str(uuid4())),
+                request_id="", 
                 face_text=face_text,
             )
             self.avatar_publisher.put(face_msg.serialize())

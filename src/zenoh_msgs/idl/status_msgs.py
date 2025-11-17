@@ -122,11 +122,12 @@ class ASRText(IdlStruct, typename="ASRText"):
 @dataclass
 class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
     header: Header
+    request_id: str
     face_text: str
 
 
 @dataclass
 class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
     header: Header
-    code: int8
+    request_id: str
     message: str
