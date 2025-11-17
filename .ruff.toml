@@ -1,6 +1,6 @@
 [tool.ruff]
 select = ["E", "F", "I", "UP"]
-ignore = ["I001"]  # ignore organize imports for test files
+ignore = ["I001"]
 line-length = 99
 
 [tool.ruff.isort]
