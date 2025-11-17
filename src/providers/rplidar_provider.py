@@ -268,7 +268,9 @@ class RPLidarProvider:
                     logging.info(
                         f"{self.machine_type} RPLIDAR listener starting with URID: {self.URID}"
                     )
-                    self.zen.declare_subscriber(f"{self.URID}/pi/scan", self.listen_scan)
+                    self.zen.declare_subscriber(
+                        f"{self.URID}/pi/scan", self.listen_scan
+                    )
 
                 if self.machine_type == "go2":
                     logging.info(f"{self.machine_type} RPLIDAR listener starting")
@@ -342,7 +344,10 @@ class RPLidarProvider:
             logging.info("RPLidar using Zenoh, no serial port required")
             return
 
-        if not self._rplidar_processor_thread or not self._rplidar_processor_thread.is_alive():
+        if (
+            not self._rplidar_processor_thread
+            or not self._rplidar_processor_thread.is_alive()
+        ):
             self._rplidar_processor_thread = mp.Process(
                 target=rplidar_processor,
                 args=(
@@ -356,7 +361,10 @@ class RPLidarProvider:
             )
             self._rplidar_processor_thread.start()
 
-        if not self._serial_processor_thread or not self._serial_processor_thread.is_alive():
+        if (
+            not self._serial_processor_thread
+            or not self._serial_processor_thread.is_alive()
+        ):
             self._serial_processor_thread = threading.Thread(
                 target=self._serial_processor, daemon=True
             )
@@ -416,7 +424,6 @@ class RPLidarProvider:
         raw = []
 
         for angle, distance in data:
-
             d_m = distance
 
             # first, correctly orient the sensor zero to the robot zero
@@ -744,7 +751,8 @@ class RPLidarProvider:
             A list of NumPy arrays representing the paths.
         """
         return [
-            self._create_straight_path_from_angle(angle, length=1.0) for angle in self.path_angles
+            self._create_straight_path_from_angle(angle, length=1.0)
+            for angle in self.path_angles
         ]
 
     def distance_point_to_line_segment(

@@ -15,7 +15,6 @@ from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 
 
 class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 
@@ -50,7 +49,6 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
-
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
@@ -60,14 +58,18 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                 self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
-            logging.info(f"Action in progress: {self.unitree_go2_state.action_progress}")
+            logging.info(
+                f"Action in progress: {self.unitree_go2_state.action_progress}"
+            )
             return
 
         # fallback to the odom provider
         if not self.unitree_go2_state.state_code:
             if self.odom.position["moving"]:
                 # for example due to a teleops or game controller command
-                logging.info("Disregard new AI movement command - robot is already moving")
+                logging.info(
+                    "Disregard new AI movement command - robot is already moving"
+                )
                 return
 
         if self.pending_movements.qsize() > 0:
@@ -182,7 +184,6 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         target: List[MoveCommand] = list(self.pending_movements.queue)
 
         if len(target) > 0:
-
             current_target = target[0]
 
             logging.info(
@@ -274,7 +275,9 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
                         self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
-                        logging.debug(f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m")
+                        logging.debug(
+                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
+                        )
                         self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
                 else:
                     logging.info(

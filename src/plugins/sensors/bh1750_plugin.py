@@ -18,7 +18,9 @@ class BH1750Plugin:
         while True:
             if self.mock:
                 lux = random.randint(50, 1000)
-                desc = ["dark", "dim", "moderate", "bright", "very bright"][min(lux // 200, 4)]
+                desc = ["dark", "dim", "moderate", "bright", "very bright"][
+                    min(lux // 200, 4)
+                ]
                 self.data = {"lux": lux, "description": desc}
             time.sleep(1)
 

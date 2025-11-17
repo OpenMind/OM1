@@ -8,7 +8,6 @@ from actions.emotion.interface import EmotionInput
 
 
 class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 
@@ -32,7 +31,6 @@ class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
             self.ao_client.LedControl(0, 255, 0)
 
     async def connect(self, output_interface: EmotionInput) -> None:
-
         if not self.ao_client:
             logging.error("No Unitree Emotion Client")
             return

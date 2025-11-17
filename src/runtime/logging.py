@@ -67,7 +67,6 @@ def setup_logging(
     handlers: list[logging.Handler] = [console_handler]
 
     if log_to_file:
-
         os.makedirs("logs", exist_ok=True)
 
         file_handler = logging.FileHandler(
@@ -93,6 +92,7 @@ def get_logging_config() -> LoggingConfig:
     return LoggingConfig(
         log_level=logging.getLevelName(logging.getLogger().level),
         log_to_file=any(
-            isinstance(handler, logging.FileHandler) for handler in logging.getLogger().handlers
+            isinstance(handler, logging.FileHandler)
+            for handler in logging.getLogger().handlers
         ),
     )

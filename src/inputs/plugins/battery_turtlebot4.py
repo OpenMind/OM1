@@ -64,7 +64,9 @@ class TurtleBot4Battery(FuserInput[str]):
         self.batts = self.z.declare_subscriber(
             f"{self.URID}/c3/battery_state", self.listener_battery
         )
-        self.dock = self.z.declare_subscriber(f"{self.URID}/c3/dock_status", self.listener_dock)
+        self.dock = self.z.declare_subscriber(
+            f"{self.URID}/c3/dock_status", self.listener_dock
+        )
 
         # Simple description of sensor output to help LLM understand its importance and utility
         self.descriptor_for_LLM = "Energy Level"
@@ -142,7 +144,9 @@ class TurtleBot4Battery(FuserInput[str]):
         await asyncio.sleep(2.0)
         await self.report_status()
 
-        logging.info(f"TB4 batt percent:{self.battery_percentage} low?: {self.battery_status}")
+        logging.info(
+            f"TB4 batt percent:{self.battery_percentage} low?: {self.battery_status}"
+        )
 
         if self.battery_status is not None:
             return [self.battery_status]
@@ -200,7 +204,8 @@ class TurtleBot4Battery(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
+            f"{latest_message.message}\n// END\n"
         )
 
         self.io_provider.add_input(

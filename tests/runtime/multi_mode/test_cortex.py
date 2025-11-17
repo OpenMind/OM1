@@ -74,12 +74,16 @@ def cortex_runtime(mock_system_config):
     with (
         patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
         patch("runtime.multi_mode.cortex.IOProvider") as mock_io_provider_class,
-        patch("runtime.multi_mode.cortex.SleepTickerProvider") as mock_sleep_provider_class,
+        patch(
+            "runtime.multi_mode.cortex.SleepTickerProvider"
+        ) as mock_sleep_provider_class,
     ):
         mock_manager = Mock()
         mock_manager.current_mode_name = "default"
         mock_manager.add_transition_callback = Mock()
-        mock_manager._get_runtime_config_path = Mock(return_value="/fake/path/test_config.json5")
+        mock_manager._get_runtime_config_path = Mock(
+            return_value="/fake/path/test_config.json5"
+        )
         mock_manager_class.return_value = mock_manager
 
         mock_io_provider = Mock()
@@ -140,8 +144,12 @@ class TestModeCortexRuntime:
         with (
             patch("runtime.multi_mode.cortex.Fuser") as mock_fuser_class,
             patch("runtime.multi_mode.cortex.ActionOrchestrator") as mock_action_class,
-            patch("runtime.multi_mode.cortex.SimulatorOrchestrator") as mock_simulator_class,
-            patch("runtime.multi_mode.cortex.BackgroundOrchestrator") as mock_background_class,
+            patch(
+                "runtime.multi_mode.cortex.SimulatorOrchestrator"
+            ) as mock_simulator_class,
+            patch(
+                "runtime.multi_mode.cortex.BackgroundOrchestrator"
+            ) as mock_background_class,
         ):
             mock_fuser = Mock()
             mock_action_orch = Mock()
@@ -157,8 +165,12 @@ class TestModeCortexRuntime:
 
             await runtime._initialize_mode("test_mode")
 
-            mock_mode_config.load_components.assert_called_once_with(runtime.mode_config)
-            mock_mode_config.to_runtime_config.assert_called_once_with(runtime.mode_config)
+            mock_mode_config.load_components.assert_called_once_with(
+                runtime.mode_config
+            )
+            mock_mode_config.to_runtime_config.assert_called_once_with(
+                runtime.mode_config
+            )
 
             assert runtime.fuser == mock_fuser
             assert runtime.action_orchestrator == mock_action_orch
@@ -377,7 +389,9 @@ class TestModeCortexRuntimeHotReload:
             )
             mock_manager_class.return_value = mock_manager
 
-            runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=False)
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=False
+            )
 
             assert runtime.hot_reload is False
             assert runtime.last_modified is None
@@ -396,7 +410,9 @@ class TestModeCortexRuntimeHotReload:
             )
             mock_manager_class.return_value = mock_manager
 
-            runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=True)
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
             runtime.config_path = temp_config_file
 
             mtime = runtime._get_file_mtime()
@@ -416,14 +432,18 @@ class TestModeCortexRuntimeHotReload:
             )
             mock_manager_class.return_value = mock_manager
 
-            runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=True)
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
             runtime.config_path = "/nonexistent/file.json5"
 
             mtime = runtime._get_file_mtime()
             assert mtime == 0.0
 
     @pytest.mark.asyncio
-    async def test_check_config_changes_file_changed(self, mock_system_config, temp_config_file):
+    async def test_check_config_changes_file_changed(
+        self, mock_system_config, temp_config_file
+    ):
         """Test config change detection when file is modified."""
         with (
             patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
@@ -546,7 +566,9 @@ class TestModeCortexRuntimeHotReload:
             new_mock_config.modes = {"test_mode": Mock()}
             mock_load_config.return_value = new_mock_config
 
-            runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=True)
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
             runtime.mode_manager = mock_manager
 
             runtime._stop_current_orchestrators = AsyncMock()
@@ -590,7 +612,9 @@ class TestModeCortexRuntimeHotReload:
             new_mock_config.modes = {"default_mode": Mock()}
             mock_load_config.return_value = new_mock_config
 
-            runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=True)
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
             runtime.mode_manager = mock_manager
 
             runtime._stop_current_orchestrators = AsyncMock()
@@ -622,7 +646,9 @@ class TestModeCortexRuntimeHotReload:
             )
             mock_manager_class.return_value = mock_manager
 
-            runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=True)
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
             runtime.mode_manager = mock_manager
 
             runtime._stop_current_orchestrators = AsyncMock()
@@ -648,7 +674,9 @@ class TestModeCortexRuntimeHotReload:
             )
             mock_manager_class.return_value = mock_manager
 
-            mock_system_config.execute_global_lifecycle_hooks = AsyncMock(return_value=True)
+            mock_system_config.execute_global_lifecycle_hooks = AsyncMock(
+                return_value=True
+            )
             mock_system_config.modes = {"test_mode": Mock()}
             mock_system_config.modes["test_mode"].execute_lifecycle_hooks = AsyncMock()
 
@@ -700,7 +728,9 @@ class TestModeCortexRuntimeHotReload:
             )
             mock_manager_class.return_value = mock_manager
 
-            runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=True)
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
             runtime.mode_manager = mock_manager
 
             mock_config_watcher = Mock()

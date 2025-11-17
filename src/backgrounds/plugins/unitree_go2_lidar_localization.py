@@ -14,6 +14,10 @@ class UnitreeGo2LidarLocalization(Background):
     def __init__(self, config: BackgroundConfig = BackgroundConfig()):
         super().__init__(config)
 
-        self.unitree_go2_lidar_localization_provider = UnitreeGo2LidarLocalizationProvider()
+        self.unitree_go2_lidar_localization_provider = (
+            UnitreeGo2LidarLocalizationProvider()
+        )
         self.unitree_go2_lidar_localization_provider.start()
-        logging.info("Unitree Go2 Lidar Localization Provider initialized in background")
+        logging.info(
+            "Unitree Go2 Lidar Localization Provider initialized in background"
+        )

@@ -31,7 +31,9 @@ class AvatarProvider:
             self.session = open_zenoh_session()
             self.avatar_publisher = self.session.declare_publisher("om/avatar/request")
             self.running = True
-            logging.info("AvatarProvider initialized with Zenoh on topic 'om/avatar/request'")
+            logging.info(
+                "AvatarProvider initialized with Zenoh on topic 'om/avatar/request'"
+            )
         except Exception as e:
             logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
             self.session = None
@@ -52,7 +54,9 @@ class AvatarProvider:
             True if command was sent successfully, False otherwise
         """
         if not self.running or not self.avatar_publisher:
-            logging.warning(f"AvatarProvider not running, cannot send command: {command}")
+            logging.warning(
+                f"AvatarProvider not running, cannot send command: {command}"
+            )
             return False
 
         command = command.lower()

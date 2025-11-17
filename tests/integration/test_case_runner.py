@@ -82,7 +82,8 @@ def process_env_vars(config_dict):
             result[key] = process_env_vars(value)
         elif isinstance(value, list):
             result[key] = [
-                process_env_vars(item) if isinstance(item, dict) else item for item in value
+                process_env_vars(item) if isinstance(item, dict) else item
+                for item in value
             ]
         elif isinstance(value, str):
             # Find all ${ENV_VAR} patterns and replace them
@@ -127,7 +128,9 @@ def load_test_case(test_case_path: Path) -> Dict[str, Any]:
     if config.get("api_key") == "openmind_free":
         env_api_key = os.environ.get("OM1_API_KEY")
         if not env_api_key:
-            logging.warning("OM1_API_KEY environment variable not found, using default free tier")
+            logging.warning(
+                "OM1_API_KEY environment variable not found, using default free tier"
+            )
         config["api_key"] = env_api_key or "openmind_free"
 
     return config
@@ -192,7 +195,9 @@ def _create_mock_llm_response(expected_outputs: Dict[str, Any]) -> CortexOutputM
     if "movement" in expected_outputs and expected_outputs["movement"]:
         movement_options = expected_outputs["movement"]
         movement_value = (
-            movement_options[0] if isinstance(movement_options, list) else movement_options
+            movement_options[0]
+            if isinstance(movement_options, list)
+            else movement_options
         )
         actions.append(Action(type="move", value=movement_value))
 
@@ -240,7 +245,9 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         # Load test images
         images = load_test_images_from_config(config)
         if not images:
-            raise ValueError("No valid test images found in configuration for image-based inputs")
+            raise ValueError(
+                "No valid test images found in configuration for image-based inputs"
+            )
 
         logging.info(f"Loaded {len(images)} test images for test case")
 
@@ -289,7 +296,9 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     original_llm_ask = cortex.config.cortex_llm.ask
 
     async def mock_llm_ask(prompt):
-        logging.info(f"Generated prompt: {prompt[:200]}...")  # Log first 200 chars of prompt
+        logging.info(
+            f"Generated prompt: {prompt[:200]}..."
+        )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
         try:
@@ -382,10 +391,14 @@ async def initialize_mock_inputs(inputs):
                     logging.info(f"Initialized mock input: {type(input_obj).__name__}")
                     break
                 else:
-                    logging.info(f"Waiting for input data from {type(input_obj).__name__}...")
+                    logging.info(
+                        f"Waiting for input data from {type(input_obj).__name__}..."
+                    )
                     await asyncio.sleep(0.1)  # Check every 100ms
             else:
-                logging.warning(f"Timeout waiting for input data from {type(input_obj).__name__}")
+                logging.warning(
+                    f"Timeout waiting for input data from {type(input_obj).__name__}"
+                )
 
 
 async def cleanup_mock_inputs(inputs):
@@ -410,7 +423,9 @@ async def cleanup_mock_inputs(inputs):
             if hasattr(input_obj, "async_cleanup"):
                 await input_obj.async_cleanup()
             # Try async stop method
-            elif hasattr(input_obj, "stop") and asyncio.iscoroutinefunction(input_obj.stop):
+            elif hasattr(input_obj, "stop") and asyncio.iscoroutinefunction(
+                input_obj.stop
+            ):
                 await input_obj.stop()
             # Try synchronous cleanup method
             elif hasattr(input_obj, "cleanup"):
@@ -419,7 +434,9 @@ async def cleanup_mock_inputs(inputs):
             elif hasattr(input_obj, "stop"):
                 input_obj.stop()
             else:
-                logging.warning(f"cleanup_mock_inputs: No cleanup method found for {input_name}")
+                logging.warning(
+                    f"cleanup_mock_inputs: No cleanup method found for {input_name}"
+                )
 
         except Exception as e:
             logging.error(f"cleanup_mock_inputs: Error cleaning up {input_name}: {e}")
@@ -556,16 +573,22 @@ def _build_llm_evaluation_prompts(
             comparison_sections.append(f'- Movement command: "{movement_list[0]}"')
         else:
             movement_options = ", ".join([f'"{m}"' for m in movement_list])
-            comparison_sections.append(f"- Movement command (any of): {movement_options}")
+            comparison_sections.append(
+                f"- Movement command (any of): {movement_options}"
+            )
     if has_keywords:
-        comparison_sections.append(f'- Should detect keywords: {formatted_expected["keywords"]}')
+        comparison_sections.append(
+            f"- Should detect keywords: {formatted_expected['keywords']}"
+        )
     if has_emotion:
         emotion_list = formatted_expected["emotion"]
         if len(emotion_list) == 1:
             comparison_sections.append(f'- Expected emotion: "{emotion_list[0]}"')
         else:
             emotion_options = ", ".join([f'"{e}"' for e in emotion_list])
-            comparison_sections.append(f"- Expected emotion (any of): {emotion_options}")
+            comparison_sections.append(
+                f"- Expected emotion (any of): {emotion_options}"
+            )
 
     expected_text = "\n    ".join(comparison_sections)
 
@@ -574,7 +597,7 @@ def _build_llm_evaluation_prompts(
         actual_sections.append(f'- Movement command: "{formatted_actual["movement"]}"')
     if has_keywords:
         actual_sections.append(
-            f'- Keywords successfully detected: {formatted_actual["keywords_found"]}'
+            f"- Keywords successfully detected: {formatted_actual['keywords_found']}"
         )
     if has_emotion:
         actual_sections.append(f'- Actual emotion: "{formatted_actual["emotion"]}"')
@@ -585,7 +608,9 @@ def _build_llm_evaluation_prompts(
     comparison_questions = []
     if has_movement:
         if len(formatted_expected["movement"]) == 1:
-            comparison_questions.append("Does the actual movement match the expected movement?")
+            comparison_questions.append(
+                "Does the actual movement match the expected movement?"
+            )
         else:
             comparison_questions.append(
                 "Does the actual movement match any of the expected movements?"
@@ -594,7 +619,9 @@ def _build_llm_evaluation_prompts(
         comparison_questions.append("Were the expected keywords detected?")
     if has_emotion:
         if len(formatted_expected["emotion"]) == 1:
-            comparison_questions.append("Does the actual emotion match the expected emotion?")
+            comparison_questions.append(
+                "Does the actual emotion match the expected emotion?"
+            )
         else:
             comparison_questions.append(
                 "Does the actual emotion match any of the expected emotions?"
@@ -669,13 +696,17 @@ async def evaluate_with_llm(
         )
 
     # Check which evaluation criteria are specified
-    has_movement = "movement" in expected_output and expected_output["movement"] is not None
+    has_movement = (
+        "movement" in expected_output and expected_output["movement"] is not None
+    )
     has_keywords = (
         "keywords" in expected_output
         and expected_output["keywords"]
         and len(expected_output["keywords"]) > 0
     )
-    has_emotion = "emotion" in expected_output and expected_output["emotion"] is not None
+    has_emotion = (
+        "emotion" in expected_output and expected_output["emotion"] is not None
+    )
 
     # If neither movement nor keywords nor emotion are specified, return perfect score
     if not has_movement and not has_keywords and not has_emotion:
@@ -704,7 +735,8 @@ async def evaluate_with_llm(
             kw
             for kw in expected_output.get("keywords", [])
             if any(
-                kw.lower() in result.lower() for result in actual_output.get("raw_response", [])
+                kw.lower() in result.lower()
+                for result in actual_output.get("raw_response", [])
             )
         ],
         "emotion": next(
@@ -805,7 +837,9 @@ async def evaluate_test_results(
     # Check which evaluation criteria are specified
     has_movement = "movement" in expected and expected["movement"] is not None
     has_keywords = (
-        "keywords" in expected and expected["keywords"] and len(expected["keywords"]) > 0
+        "keywords" in expected
+        and expected["keywords"]
+        and len(expected["keywords"]) > 0
     )
     has_emotion = "emotion" in expected and expected["emotion"] is not None
 
@@ -829,7 +863,9 @@ async def evaluate_test_results(
         elif "images" in input_section:
             input_type = "VLM/Image"
 
-    logging.info(f"Heuristic evaluation using {input_type} movement types: {movement_types}")
+    logging.info(
+        f"Heuristic evaluation using {input_type} movement types: {movement_types}"
+    )
 
     # Normalize expected values to always be lists for consistent handling
     def normalize_expected_value(value):
@@ -871,7 +907,9 @@ async def evaluate_test_results(
                     keyword_matches.append(keyword)
 
         keyword_match_ratio = (
-            len(set(keyword_matches)) / len(expected_keywords) if expected_keywords else 1.0
+            len(set(keyword_matches)) / len(expected_keywords)
+            if expected_keywords
+            else 1.0
         )
         evaluation_components.append("keywords")
 
@@ -913,7 +951,9 @@ async def evaluate_test_results(
             heuristic_score += component_weight if emotion_match else 0.0
 
     # Get LLM-based evaluation with config context
-    llm_score, llm_reasoning = await evaluate_with_llm(results, expected, api_key, config)
+    llm_score, llm_reasoning = await evaluate_with_llm(
+        results, expected, api_key, config
+    )
 
     # Combine scores (equal weighting)
     final_score = (heuristic_score + llm_score) / 2.0
@@ -1127,7 +1167,9 @@ async def test_from_config(test_case_path: Path):
         if "images" in input_section:
             logging.info(f"Expected images for test: {len(input_section['images'])}")
         if "lidar" in input_section:
-            logging.info(f"Expected lidar files for test: {len(input_section['lidar'])}")
+            logging.info(
+                f"Expected lidar files for test: {len(input_section['lidar'])}"
+            )
 
         # Run the test case
         results = await run_test_case(config)
@@ -1141,7 +1183,9 @@ async def test_from_config(test_case_path: Path):
         logging.info(f"Test results for {config['name']}:\n{message}")
 
         # Assert test passed
-        assert passed, f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
+        assert passed, (
+            f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
+        )
 
         logging.info(f"test_from_config: Test {config['name']} completed successfully")
 

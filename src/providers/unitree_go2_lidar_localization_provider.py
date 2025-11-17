@@ -47,8 +47,8 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:
-            message: nav_msgs.LidarLocalization = nav_msgs.LidarLocalization.deserialize(
-                data.payload.to_bytes()
+            message: nav_msgs.LidarLocalization = (
+                nav_msgs.LidarLocalization.deserialize(data.payload.to_bytes())
             )
             logging.debug("Received Lidar Localization message: %s", message)
 
@@ -72,7 +72,9 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         if not self.running:
             self.register_message_callback(self.lidar_localization_message_callback)
             self.running = True
-            logging.info("Lidar Localization Provider started and listening for messages")
+            logging.info(
+                "Lidar Localization Provider started and listening for messages"
+            )
         else:
             logging.warning("Lidar Localization Provider is already running")
 

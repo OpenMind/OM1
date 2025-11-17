@@ -244,7 +244,9 @@ class TeleopsStatusProvider:
         if request.status_code == 200:
             return request.json()
         else:
-            logging.error(f"Failed to get status: {request.status_code} - {request.text}")
+            logging.error(
+                f"Failed to get status: {request.status_code} - {request.text}"
+            )
             return {}
 
     def _share_status_worker(self, status: TeleopsStatus):
@@ -271,7 +273,9 @@ class TeleopsStatusProvider:
             if request.status_code == 200:
                 logging.debug(f"Status shared successfully: {request.json()}")
             else:
-                logging.error(f"Failed to share status: {request.status_code} - {request.text}")
+                logging.error(
+                    f"Failed to share status: {request.status_code} - {request.text}"
+                )
         except Exception as e:
             logging.error(f"Error sharing status: {str(e)}")
 

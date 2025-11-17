@@ -10,7 +10,6 @@ from providers.io_provider import IOProvider
 
 
 class DIMOTeslaConnector(ActionConnector[TeslaInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 
@@ -51,7 +50,9 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
                 self.vehicle_jwt = get_vehicle_jwt["token"]
                 self.vehicle_jwt_expires = time.time() + 8 * 60
             except Exception as e:
-                logging.error(f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}")
+                logging.error(
+                    f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}"
+                )
                 self.vehicle_jwt = None
 
     async def connect(self, output_interface: TeslaInput) -> None:
@@ -73,7 +74,9 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
                     self.vehicle_jwt = get_vehicle_jwt["token"]
                     self.vehicle_jwt_expires = time.time() + 8 * 60
                 except Exception as e:
-                    logging.error(f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}")
+                    logging.error(
+                        f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}"
+                    )
                     self.vehicle_jwt = None
                     return None
 

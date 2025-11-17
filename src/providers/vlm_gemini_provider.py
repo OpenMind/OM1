@@ -49,7 +49,9 @@ class VLMGeminiProvider:
             ws.Client(url=stream_url) if stream_url else None
         )
         self.video_stream: VideoStream = VideoStream(
-            frame_callback=self._process_frame, fps=fps, device_index=camera_index  # type: ignore
+            frame_callback=self._process_frame,
+            fps=fps,
+            device_index=camera_index,  # type: ignore
         )
         self.message_callback: Optional[Callable] = None
 
@@ -121,7 +123,9 @@ class VLMGeminiProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.start()
-            self.video_stream.register_frame_callback(self.stream_ws_client.send_message)
+            self.video_stream.register_frame_callback(
+                self.stream_ws_client.send_message
+            )
 
         logging.info("Gemini VLM provider started")
 

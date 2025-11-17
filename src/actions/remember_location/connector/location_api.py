@@ -68,7 +68,9 @@ class RememberLocationConnector(ActionConnector[RememberLocationInput]):
                             f"Location {input_protocol.action} remembered. Woof! Woof!"
                         )
                     else:
-                        logging.error(f"RememberLocation API returned {resp.status}: {text}")
+                        logging.error(
+                            f"RememberLocation API returned {resp.status}: {text}"
+                        )
         except asyncio.TimeoutError:
             logging.error("RememberLocation API request timed out")
         except Exception as e:

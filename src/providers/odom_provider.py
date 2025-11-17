@@ -154,7 +154,9 @@ class OdomProvider:
         If not specified, it will raise an error when starting the provider.
     """
 
-    def __init__(self, URID: str = "", use_zenoh: bool = False, channel: Optional[str] = ""):
+    def __init__(
+        self, URID: str = "", use_zenoh: bool = False, channel: Optional[str] = ""
+    ):
         """
         Robot and sensor configuration
         """
@@ -203,7 +205,9 @@ class OdomProvider:
                 logging.error("Channel must be specified to start the Odom Provider.")
                 return
 
-            logging.info(f"Starting Unitree Go2 Odom Provider on channel: {self.channel}")
+            logging.info(
+                f"Starting Unitree Go2 Odom Provider on channel: {self.channel}"
+            )
 
             self._odom_reader_thread = mp.Process(
                 target=odom_processor,
@@ -223,7 +227,9 @@ class OdomProvider:
             return
         else:
             logging.info("Starting Odom processor thread")
-            self._odom_processor_thread = threading.Thread(target=self.process_odom, daemon=True)
+            self._odom_processor_thread = threading.Thread(
+                target=self.process_odom, daemon=True
+            )
             self._odom_processor_thread.start()
 
     def euler_from_quaternion(self, x: float, y: float, z: float, w: float) -> tuple:
@@ -320,7 +326,9 @@ class OdomProvider:
 
             if delta > 0.01 or self.move_history > 0.01:
                 self.moving = True
-                logging.info(f"delta moving (m): {round(delta,3)} {round(self.move_history,3)}")
+                logging.info(
+                    f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
+                )
             else:
                 # logging.info(
                 #     f"delta moving (m): {round(delta,3)} {round(self.move_history,3)}"

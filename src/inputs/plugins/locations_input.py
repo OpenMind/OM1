@@ -42,7 +42,9 @@ class LocationsInput(FuserInput[str]):
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
 
-        self.locations_provider = UnitreeGo2LocationsProvider(base_url, timeout, refresh_interval)
+        self.locations_provider = UnitreeGo2LocationsProvider(
+            base_url, timeout, refresh_interval
+        )
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []
@@ -67,7 +69,9 @@ class LocationsInput(FuserInput[str]):
             pose = entry.get("pose") if isinstance(entry, dict) else None
             if pose and isinstance(pose, dict):
                 pos = pose.get("position", {})
-                lines.append(f"{label} (x:{pos.get('x',0):.2f} y:{pos.get('y',0):.2f})")
+                lines.append(
+                    f"{label} (x:{pos.get('x', 0):.2f} y:{pos.get('y', 0):.2f})"
+                )
             else:
                 lines.append(f"{label}")
 

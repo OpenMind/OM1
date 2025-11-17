@@ -55,7 +55,9 @@ class NearAILLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(self, prompt: str, messages: T.List[T.Dict[str, str]] = []) -> R | None:
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> R | None:
         """
         Send a prompt to the NearAI API and get a structured response.
 

@@ -138,7 +138,9 @@ class FaceEmotionCapture(FuserInput[cv2.typing.MatLike]):
             face_roi = rgb_frame[y : y + h, x : x + w]
 
             # Perform emotion analysis on the face ROI
-            result = DeepFace.analyze(face_roi, actions=["emotion"], enforce_detection=False)
+            result = DeepFace.analyze(
+                face_roi, actions=["emotion"], enforce_detection=False
+            )
 
             # Determine the dominant emotion
             self.emotion = result[0]["dominant_emotion"]

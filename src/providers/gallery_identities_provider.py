@@ -38,7 +38,6 @@ class IdentitiesSnapshot:
     raw: Dict
 
     def to_text(self) -> str:
-
         seen = set()
         ordered = []
         for n in self.names or []:

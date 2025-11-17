@@ -207,7 +207,9 @@ class FunctionHookHandler(LifecycleHookHandler):
 
             module_file = os.path.join(hooks_dir, f"{module_name}.py")
             if not os.path.exists(module_file):
-                logging.error(f"Module file {module_name}.py not found in hooks directory")
+                logging.error(
+                    f"Module file {module_name}.py not found in hooks directory"
+                )
                 return None
 
             try:
@@ -220,7 +222,9 @@ class FunctionHookHandler(LifecycleHookHandler):
                 )
 
                 if not function_pattern.search(file_content):
-                    logging.error(f"Function {function_name} not found in {module_name}.py")
+                    logging.error(
+                        f"Function {function_name} not found in {module_name}.py"
+                    )
                     return None
 
                 try:
@@ -272,7 +276,9 @@ class ActionHookHandler(LifecycleHookHandler):
             try:
                 from actions import load_action
 
-                self.action = load_action({"type": action_type, "config": action_config})
+                self.action = load_action(
+                    {"type": action_type, "config": action_config}
+                )
             except Exception as e:
                 logging.error(f"Error loading action for lifecycle hook: {e}")
                 return False
@@ -408,11 +414,15 @@ async def execute_lifecycle_hooks(
                     if hook.on_failure == "ignore":
                         pass
             else:
-                logging.error(f"Failed to create handler for lifecycle hook: {hook.handler_type}")
+                logging.error(
+                    f"Failed to create handler for lifecycle hook: {hook.handler_type}"
+                )
                 all_successful = False
 
         except asyncio.TimeoutError:
-            logging.error(f"Lifecycle hook timed out after {hook.timeout_seconds} seconds")
+            logging.error(
+                f"Lifecycle hook timed out after {hook.timeout_seconds} seconds"
+            )
             all_successful = False
             if hook.on_failure == "abort":
                 return False

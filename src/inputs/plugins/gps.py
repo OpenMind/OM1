@@ -34,7 +34,6 @@ class Gps(FuserInput[str]):
     """
 
     def __init__(self, config: SensorConfig = SensorConfig()):
-
         super().__init__(config)
 
         self.gps = GpsProvider()
@@ -135,7 +134,8 @@ class Gps(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
+            f"{latest_message.message}\n// END\n"
         )
 
         self.io_provider.add_input(

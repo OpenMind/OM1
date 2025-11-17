@@ -31,10 +31,19 @@ class BME280Plugin:
                     else (
                         "hot"
                         if t > 26
-                        else "dry" if h < 30 else "humid" if h > 70 else "comfortable"
+                        else "dry"
+                        if h < 30
+                        else "humid"
+                        if h > 70
+                        else "comfortable"
                     )
                 )
-                self.data = {"temperature": t, "humidity": h, "pressure": p, "comfort": c}
+                self.data = {
+                    "temperature": t,
+                    "humidity": h,
+                    "pressure": p,
+                    "comfort": c,
+                }
             time.sleep(1)
 
     def get_data(self):

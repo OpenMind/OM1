@@ -33,7 +33,9 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
 
-        self.location_provider = UnitreeGo2LocationsProvider(base_url, timeout, refresh_interval)
+        self.location_provider = UnitreeGo2LocationsProvider(
+            base_url, timeout, refresh_interval
+        )
         self.unitree_go2_navigation_provider = UnitreeGo2NavigationProvider()
         self.io_provider = IOProvider()
 
@@ -61,7 +63,9 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         ]:
             if label.startswith(prefix):
                 label = label[len(prefix) :].strip()
-                logging.info(f"Cleaned location label: removed '{prefix}' prefix -> '{label}'")
+                logging.info(
+                    f"Cleaned location label: removed '{prefix}' prefix -> '{label}'"
+                )
                 break
 
         # Use provider to lookup
@@ -69,7 +73,10 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         if loc is None:
             locations = self.location_provider.get_all_locations()
             locations_list = ", ".join(
-                [str(v.get("name") if isinstance(v, dict) else k) for k, v in locations.items()]
+                [
+                    str(v.get("name") if isinstance(v, dict) else k)
+                    for k, v in locations.items()
+                ]
             )
             logging.warning(
                 f"Location '{label}' not found. Available: {locations_list}"

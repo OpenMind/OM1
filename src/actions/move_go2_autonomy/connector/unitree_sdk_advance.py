@@ -24,7 +24,6 @@ from zenoh_msgs import (
 
 
 class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 
@@ -69,7 +68,9 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
         try:
             self.session = open_zenoh_session()
-            self.session.declare_subscriber(self.ai_status_request, self._zenoh_ai_status_request)
+            self.session.declare_subscriber(
+                self.ai_status_request, self._zenoh_ai_status_request
+            )
             self._zenoh_ai_status_response_pub = self.session.declare_publisher(
                 self.ai_status_response
             )
@@ -90,7 +91,9 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         logging.info(f"AI command.connect: {output_interface.action}")
 
         if self.mode == "guard" and self.face_presence_provider.unknown_faces > 0:
-            logging.info("Guard mode active and unknown face detected - disregarding AI command")
+            logging.info(
+                "Guard mode active and unknown face detected - disregarding AI command"
+            )
             return
 
         if not self.ai_control_enabled:
@@ -103,14 +106,18 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
-            logging.info(f"Action in progress: {self.unitree_go2_state.action_progress}")
+            logging.info(
+                f"Action in progress: {self.unitree_go2_state.action_progress}"
+            )
             return
 
         # fallback to the odom provider
         if not self.unitree_go2_state.state_code:
             if self.odom.position["moving"]:
                 # for example due to a teleops or game controller command
-                logging.info("Disregard new AI movement command - robot is already moving")
+                logging.info(
+                    "Disregard new AI movement command - robot is already moving"
+                )
                 return
 
         if self.pending_movements.qsize() > 0:
@@ -225,7 +232,6 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         target: List[MoveCommand] = list(self.pending_movements.queue)
 
         if len(target) > 0:
-
             current_target = target[0]
 
             logging.info(
@@ -317,7 +323,9 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
                         self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
-                        logging.debug(f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m")
+                        logging.debug(
+                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
+                        )
                         self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
                 else:
                     logging.info(
@@ -512,11 +520,15 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 code=1 if self.ai_control_enabled else 0,
                 status=String(
                     data=(
-                        "AI Control Enabled" if self.ai_control_enabled else "AI Control Disabled"
+                        "AI Control Enabled"
+                        if self.ai_control_enabled
+                        else "AI Control Disabled"
                     )
                 ),
             )
-            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )
 
         # Enable the AI control
         if code == 1:
@@ -529,7 +541,9 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 code=1,
                 status=String(data="AI Control Enabled"),
             )
-            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )
 
         # Disable the AI control
         if code == 0:
@@ -542,4 +556,6 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
                 status=String(data="AI Control Disabled"),
             )
 
-            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
+            return self._zenoh_ai_status_response_pub.put(
+                ai_status_response.serialize()
+            )
