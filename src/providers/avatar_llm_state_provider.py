@@ -110,7 +110,7 @@ class AvatarLLMState:
                 self.avatar_provider.send_avatar_command("Happy")
             except Exception:
                 pass
-            
+
             self.avatar_provider.stop()
 
     def _has_face_action_in_result(self, result: Any) -> bool:
