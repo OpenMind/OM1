@@ -129,8 +129,23 @@ class AvatarProvider:
     def stop(self):
         """
         Stop the AvatarProvider and cleanup Zenoh session.
+
         """
         self.running = False
+
+        if self.avatar_subscriber is not None:
+            self.avatar_subscriber.undeclare()
+            self.avatar_subscriber = None
+
+        if self.avatar_publisher is not None:
+            self.avatar_publisher.undeclare()
+            self.avatar_publisher = None
+
+        if self.avatar_healthcheck_publisher is not None:
+            self.avatar_healthcheck_publisher.undeclare()
+            self.avatar_healthcheck_publisher = None
+
         if self.session is not None:
             self.session.close()
+            self.session = None
             logging.info("AvatarProvider Zenoh session closed")
