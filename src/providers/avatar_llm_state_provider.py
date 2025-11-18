@@ -37,7 +37,6 @@ class AvatarLLMState:
             self.io_provider: Optional[IOProvider] = None
             try:
                 self.avatar_provider = AvatarProvider()
-                self.avatar_provider.start()
             except Exception:
                 logging.error("Failed to initialize AvatarProvider in AvatarLLMState")
                 self.avatar_provider = None
@@ -77,7 +76,14 @@ class AvatarLLMState:
         if not self._has_voice_input():
             return
 
-        if self.avatar_provider and self.avatar_provider.running:
+        if self.avatar_provider:
+            if not self.avatar_provider.running:
+                try:
+                    self.avatar_provider.start()
+                except Exception:
+                    logging.error("Failed to start AvatarProvider in AvatarLLMState")
+                    return
+
             try:
                 self.avatar_provider.send_avatar_command("Think")
             except Exception:
@@ -92,7 +98,14 @@ class AvatarLLMState:
 
         Sets the avatar to "Happy" state after processing completion.
         """
-        if self.avatar_provider and self.avatar_provider.running:
+        if self.avatar_provider:
+            if not self.avatar_provider.running:
+                try:
+                    self.avatar_provider.start()
+                except Exception:
+                    logging.error("Failed to start AvatarProvider in AvatarLLMState")
+                    return
+
             try:
                 self.avatar_provider.send_avatar_command("Happy")
             except Exception:
