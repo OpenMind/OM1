@@ -121,13 +121,25 @@ class ASRText(IdlStruct, typename="ASRText"):
 
 @dataclass
 class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
+    class Code(Enum):
+        ACTIVE = 0
+        INACTIVE = 1
+        UNKNOWN = 2
+
     header: Header
     request_id: str
-    face_text: str
+    code: int8
+    face_text: str  
 
 
 @dataclass
 class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
+    class Code(Enum):
+        ACTIVE = 0
+        INACTIVE = 1
+        UNKNOWN = 2
+
     header: Header
     request_id: str
+    code: int8
     message: str

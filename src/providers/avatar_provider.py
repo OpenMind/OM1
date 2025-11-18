@@ -54,23 +54,26 @@ class AvatarProvider:
 
     def _handle_avatar_request(self, sample):
         """
-        Handle incoming avatar requests for health check.
+        Handle incoming avatar requests.
         
+        Processes health check requests and responds.
         """
         try:
             request = AvatarFaceRequest.deserialize(sample.payload.to_bytes())
-            logging.debug(f"Received avatar request: {request.face_text}")
             
-            # Send response
-            response = AvatarFaceResponse(
-                header=prepare_header(str(uuid4())),
-                request_id=request.request_id,
-                message="Avatar system active",
-            )
-            
-            if self.avatar_healthcheck_publisher:
-                self.avatar_healthcheck_publisher.put(response.serialize())
-                logging.debug("Sent avatar active response")
+            if request.code == AvatarFaceRequest.Code.ACTIVE.value:
+                logging.debug(f"Received avatar health check request")
+                
+                response = AvatarFaceResponse(
+                    header=prepare_header(str(uuid4())),
+                    request_id=request.request_id,
+                    code=AvatarFaceResponse.Code.ACTIVE.value,
+                    message="Avatar system active",
+                )
+                
+                if self.avatar_healthcheck_publisher:
+                    self.avatar_healthcheck_publisher.put(response.serialize())
+                    logging.debug("Sent avatar active response")
         except Exception as e:
             logging.error(f"Error handling avatar request: {e}")
 
@@ -100,7 +103,8 @@ class AvatarProvider:
 
             face_msg = AvatarFaceRequest(
                 header=prepare_header(str(uuid4())),
-                request_id="", 
+                request_id="",
+                code=AvatarFaceRequest.Code.UNKNOWN.value,
                 face_text=face_text,
             )
             self.avatar_publisher.put(face_msg.serialize())
