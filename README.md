@@ -7,6 +7,14 @@
   <a href="https://discord.gg/VUjpg4ef5n">Discord</a>  
 </p>
 
+<div align="center">
+
+[English](README.md) | [한국어](README.ko.md)
+
+</div>
+
+---
+
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as **TurtleBot4**. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
 ---
