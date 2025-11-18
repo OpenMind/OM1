@@ -1,6 +1,8 @@
 import logging
 from uuid import uuid4
 
+import zenoh
+
 from zenoh_msgs import (
     AvatarFaceRequest,
     AvatarFaceResponse,
@@ -50,11 +52,17 @@ class AvatarProvider:
         except Exception as e:
             logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
 
-    def _handle_avatar_request(self, sample):
+    def _handle_avatar_request(self, sample: zenoh.Sample):
         """
-        Handle incoming avatar requests.
+        Handle incoming avatar requests from Zenoh subscriber.
 
-        Processes health check requests and responds.
+        Processes health check requests (STATUS) and responds with system status.
+        Face change requests (SWITCH_FACE) are ignored in this callback.
+
+        Parameters
+        ----------
+        sample : zenoh.Sample
+            The Zenoh sample containing the serialized AvatarFaceRequest message.
         """
         try:
             request = AvatarFaceRequest.deserialize(sample.payload.to_bytes())
