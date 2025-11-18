@@ -129,7 +129,7 @@ class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
     header: Header
     request_id: str
     code: int8
-    face_text: str  
+    face_text: str
 
 
 @dataclass

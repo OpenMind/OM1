@@ -46,31 +46,29 @@ class AvatarProvider:
                 "om/avatar/request", self._handle_avatar_request
             )
             self.running = True
-            logging.info(
-                "AvatarProvider initialized with Zenoh on topics"
-            )
+            logging.info("AvatarProvider initialized with Zenoh on topics")
         except Exception as e:
             logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
 
     def _handle_avatar_request(self, sample):
         """
         Handle incoming avatar requests.
-        
+
         Processes health check requests and responds.
         """
         try:
             request = AvatarFaceRequest.deserialize(sample.payload.to_bytes())
-            
+
             if request.code == AvatarFaceRequest.Code.ACTIVE.value:
-                logging.debug(f"Received avatar health check request")
-                
+                logging.debug("Received avatar health check request")
+
                 response = AvatarFaceResponse(
                     header=prepare_header(str(uuid4())),
                     request_id=request.request_id,
                     code=AvatarFaceResponse.Code.ACTIVE.value,
                     message="Avatar system active",
                 )
-                
+
                 if self.avatar_healthcheck_publisher:
                     self.avatar_healthcheck_publisher.put(response.serialize())
                     logging.debug("Sent avatar active response")
