@@ -23,6 +23,7 @@ class AvatarProvider:
     def __init__(self):
         """
         Initialize the AvatarProvider.
+
         """
         self.session = None
         # Face Publisher
@@ -32,12 +33,15 @@ class AvatarProvider:
         self.avatar_subscriber = None
         self.running = False
 
-        self._initialize_zenoh()
+    def start(self):
+        """
+        Start the AvatarProvider by initializing Zenoh session.
 
-    def _initialize_zenoh(self):
         """
-        Initialize Zenoh session, publishers, and subscriber.
-        """
+        if self.running:
+            logging.warning("AvatarProvider is already running")
+            return
+
         try:
             self.session = open_zenoh_session()
             self.avatar_publisher = self.session.declare_publisher("om/avatar/request")
@@ -48,9 +52,10 @@ class AvatarProvider:
                 "om/avatar/request", self._handle_avatar_request
             )
             self.running = True
-            logging.info("AvatarProvider initialized with Zenoh on topics")
+            logging.info("AvatarProvider started with Zenoh on topics")
         except Exception as e:
-            logging.error(f"Failed to initialize AvatarProvider Zenoh session: {e}")
+            logging.error(f"Failed to start AvatarProvider Zenoh session: {e}")
+            self.running = False
 
     def _handle_avatar_request(self, sample: zenoh.Sample):
         """
@@ -126,9 +131,6 @@ class AvatarProvider:
         Stop the AvatarProvider and cleanup Zenoh session.
         """
         self.running = False
-        if self.session:
-            try:
-                self.session.close()
-                logging.info("AvatarProvider Zenoh session closed")
-            except Exception as e:
-                logging.error(f"Error closing AvatarProvider Zenoh session: {e}")
+        if self.session is not None:
+            self.session.close()
+            logging.info("AvatarProvider Zenoh session closed")

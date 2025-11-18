@@ -19,6 +19,7 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
         super().__init__(config)
 
         self.avatar_provider = AvatarProvider()
+        self.avatar_provider.start()
         logging.info("Face system initiated with AvatarProvider")
 
     async def connect(self, output_interface: FaceInput) -> None:
