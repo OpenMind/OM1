@@ -59,7 +59,7 @@ class AvatarProvider:
         try:
             request = AvatarFaceRequest.deserialize(sample.payload.to_bytes())
 
-            if request.code == AvatarFaceRequest.Code.ACTIVE.value:
+            if request.code == AvatarFaceRequest.Code.STATUS.value:
                 logging.debug("Received avatar health check request")
 
                 response = AvatarFaceResponse(
@@ -102,7 +102,7 @@ class AvatarProvider:
             face_msg = AvatarFaceRequest(
                 header=prepare_header(str(uuid4())),
                 request_id="",
-                code=AvatarFaceRequest.Code.UNKNOWN.value,
+                code=AvatarFaceRequest.Code.SWITCH_FACE.value,
                 face_text=face_text,
             )
             self.avatar_publisher.put(face_msg.serialize())
