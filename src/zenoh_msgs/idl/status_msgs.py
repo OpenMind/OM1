@@ -126,9 +126,9 @@ class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
         STATUS = 1
 
     header: Header
-    request_id: str
+    request_id: String
     code: int8
-    face_text: str
+    face_text: String
 
 
 @dataclass
@@ -139,6 +139,6 @@ class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
         UNKNOWN = 2
 
     header: Header
-    request_id: str
+    request_id: String
     code: int8
-    message: str
+    message: String

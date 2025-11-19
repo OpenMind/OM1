@@ -6,6 +6,7 @@ import zenoh
 from zenoh_msgs import (
     AvatarFaceRequest,
     AvatarFaceResponse,
+    String,
     open_zenoh_session,
     prepare_header,
 )
@@ -74,7 +75,7 @@ class AvatarProvider:
                     header=prepare_header(str(uuid4())),
                     request_id=request.request_id,
                     code=AvatarFaceResponse.Code.ACTIVE.value,
-                    message="Avatar system active",
+                    message=String("Avatar system active"),
                 )
 
                 if self.avatar_healthcheck_publisher:
@@ -105,13 +106,14 @@ class AvatarProvider:
         command = command.lower()
 
         try:
+            request_id = str(uuid4())
             face_text = command
 
             face_msg = AvatarFaceRequest(
-                header=prepare_header(str(uuid4())),
-                request_id="",
+                header=prepare_header(request_id),
+                request_id=String(request_id),
                 code=AvatarFaceRequest.Code.SWITCH_FACE.value,
-                face_text=face_text,
+                face_text=String(face_text),
             )
             self.avatar_publisher.put(face_msg.serialize())
             logging.info(f"AvatarProvider sent command to Zenoh: {face_text}")

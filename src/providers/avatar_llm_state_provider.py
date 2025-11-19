@@ -96,10 +96,6 @@ class AvatarLLMState:
                 self.avatar_provider.send_avatar_command("Happy")
             except Exception:
                 pass
-            try:
-                self.avatar_provider.stop()
-            except Exception:
-                pass
 
     def _has_face_action_in_result(self, result: Any) -> bool:
         """
@@ -164,3 +160,13 @@ class AvatarLLMState:
             return decorator(func)
 
         return decorator
+
+    def stop(self) -> None:
+        """
+        Stop the AvatarLLMState singleton instance.
+        """
+        if self.avatar_provider and self.avatar_provider.running:
+            try:
+                self.avatar_provider.stop()
+            except Exception:
+                logging.error("Failed to stop AvatarProvider in AvatarLLMState")
