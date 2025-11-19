@@ -117,11 +117,6 @@ async def test_decorator_handles_avatar_provider_not_running():
         provider_instance.send_avatar_command = MagicMock()
         provider_instance.stop = MagicMock()
 
-        def mock_start():
-            provider_instance.running = True
-
-        provider_instance.start = MagicMock(side_effect=mock_start)
-
         avatar_mock.return_value = provider_instance
 
         io_instance = MagicMock()
@@ -132,8 +127,7 @@ async def test_decorator_handles_avatar_provider_not_running():
         result = await llm.ask("test prompt")
 
         assert result is not None
-        provider_instance.start.assert_called()
-        assert provider_instance.send_avatar_command.call_count == 2
+        provider_instance.send_avatar_command.assert_not_called()
 
     reset_avatar_llm_state()
 

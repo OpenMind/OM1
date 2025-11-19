@@ -37,7 +37,6 @@ class AvatarLLMState:
             self.io_provider: Optional[IOProvider] = None
             try:
                 self.avatar_provider = AvatarProvider()
-                self.avatar_provider.start()
             except Exception:
                 logging.error("Failed to initialize AvatarProvider in AvatarLLMState")
                 self.avatar_provider = None
