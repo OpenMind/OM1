@@ -11,6 +11,7 @@ from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.config_provider import ConfigProvider
 from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.orchestrator import SimulatorOrchestrator
 
@@ -37,6 +38,7 @@ class CortexRuntime:
     background_orchestrator: BackgroundOrchestrator
     sleep_ticker_provider: SleepTickerProvider
     io_provider: IOProvider
+    config_provider: ConfigProvider
 
     def __init__(
         self,
@@ -70,6 +72,7 @@ class CortexRuntime:
         self.background_orchestrator = BackgroundOrchestrator(config)
         self.sleep_ticker_provider = SleepTickerProvider()
         self.io_provider = IOProvider()
+        self.config_provider = ConfigProvider()
 
         self.last_modified: float = 0.0
         self.config_watcher_task: Optional[asyncio.Task] = None
@@ -409,6 +412,9 @@ class CortexRuntime:
                 await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
             except Exception as e:
                 logging.warning(f"Error during final cleanup: {e}")
+
+        # Stop ConfigProvider
+        self.config_provider.stop()
 
         logging.debug("Tasks cleaned up successfully")
 

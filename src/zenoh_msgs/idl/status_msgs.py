@@ -142,3 +142,17 @@ class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
     request_id: String
     code: int8
     message: String
+
+
+@dataclass
+class ConfigRequest(IdlStruct, typename="ConfigRequest"):
+    header: Header
+    request_id: String
+
+
+@dataclass
+class ConfigResponse(IdlStruct, typename="ConfigResponse"):
+    header: Header
+    request_id: String
+    config: String
+    message: String
