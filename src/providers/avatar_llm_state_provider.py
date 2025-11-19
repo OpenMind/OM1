@@ -37,6 +37,7 @@ class AvatarLLMState:
             self.io_provider: Optional[IOProvider] = None
             try:
                 self.avatar_provider = AvatarProvider()
+                self.avatar_provider.start()
             except Exception:
                 logging.error("Failed to initialize AvatarProvider in AvatarLLMState")
                 self.avatar_provider = None
@@ -96,7 +97,10 @@ class AvatarLLMState:
                 self.avatar_provider.send_avatar_command("Happy")
             except Exception:
                 pass
-        self.avatar_provider.stop()
+            try:
+                self.avatar_provider.stop()
+            except Exception:
+                pass
 
     def _has_face_action_in_result(self, result: Any) -> bool:
         """
