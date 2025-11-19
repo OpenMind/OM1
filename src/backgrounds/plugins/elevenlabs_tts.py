@@ -31,4 +31,14 @@ class ElevenLabsTTS(Background):
             output_format=output_format,
         )
         self.tts.start()
+
+        # Configure Eleven Labs TTS Provider to ensure settings are applied
+        self.tts.configure(
+            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            api_key=api_key,
+            elevenlabs_api_key=elevenlabs_api_key,
+            voice_id=voice_id,
+            model_id=model_id,
+            output_format=output_format,
+        )
         logging.info("Eleven Labs TTS Provider initialized in background")
