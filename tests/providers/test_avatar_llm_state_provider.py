@@ -116,11 +116,12 @@ async def test_decorator_handles_avatar_provider_not_running():
         provider_instance.running = False
         provider_instance.send_avatar_command = MagicMock()
         provider_instance.stop = MagicMock()
-        
+
         def mock_start():
             provider_instance.running = True
+
         provider_instance.start = MagicMock(side_effect=mock_start)
-        
+
         avatar_mock.return_value = provider_instance
 
         io_instance = MagicMock()
