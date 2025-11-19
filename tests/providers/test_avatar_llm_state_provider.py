@@ -27,11 +27,6 @@ class MockLLM:
 
 
 def reset_avatar_llm_state():
-    if AvatarLLMState._instance is not None:
-        try:
-            AvatarLLMState._instance.stop()
-        except Exception:
-            pass
     AvatarLLMState._instance = None
 
 
@@ -42,34 +37,23 @@ def mock_avatar_provider() -> Generator[MagicMock, None, None]:
     with (
         patch("providers.avatar_llm_state_provider.AvatarProvider") as avatar_mock,
         patch("providers.avatar_llm_state_provider.IOProvider") as io_mock,
-        patch("providers.avatar_provider.open_zenoh_session") as mock_zenoh_session,
     ):
 
         provider_instance = MagicMock()
         provider_instance.running = True
         provider_instance.send_avatar_command = MagicMock()
         provider_instance.stop = MagicMock()
-        provider_instance.start = MagicMock()
         avatar_mock.return_value = provider_instance
 
         io_instance = MagicMock()
         io_instance.llm_prompt = "INPUT: Voice\ntest prompt"
         io_mock.return_value = io_instance
 
-        zenoh_session = MagicMock()
-        zenoh_session.close = MagicMock()
-        zenoh_session.declare_publisher = MagicMock(return_value=MagicMock())
-        zenoh_session.declare_subscriber = MagicMock(return_value=MagicMock())
-        mock_zenoh_session.return_value = zenoh_session
-
         yield provider_instance
 
-    try:
-        if zenoh_session.close:
-            zenoh_session.close()
-    except Exception:
-        pass
-
+    # Ensure cleanup after test
+    state = AvatarLLMState()
+    state.stop()
     reset_avatar_llm_state()
 
 
@@ -134,7 +118,12 @@ async def test_decorator_handles_avatar_provider_not_running():
         provider_instance = MagicMock()
         provider_instance.running = False
         provider_instance.send_avatar_command = MagicMock()
-        provider_instance.start = MagicMock(side_effect=Exception("Failed to start"))
+        provider_instance.stop = MagicMock()
+        
+        def mock_start():
+            provider_instance.running = True
+        provider_instance.start = MagicMock(side_effect=mock_start)
+        
         avatar_mock.return_value = provider_instance
 
         io_instance = MagicMock()
@@ -145,7 +134,12 @@ async def test_decorator_handles_avatar_provider_not_running():
         result = await llm.ask("test prompt")
 
         assert result is not None
-        provider_instance.send_avatar_command.assert_not_called()
+        provider_instance.start.assert_called()
+        assert provider_instance.send_avatar_command.call_count == 2
+
+    state = AvatarLLMState()
+    state.stop()
+    reset_avatar_llm_state()
 
 
 @pytest.mark.asyncio
@@ -167,6 +161,8 @@ async def test_decorator_handles_avatar_provider_exception():
         result = await llm.ask("test prompt")
 
         assert result is not None
+
+    reset_avatar_llm_state()
 
 
 @pytest.mark.asyncio
