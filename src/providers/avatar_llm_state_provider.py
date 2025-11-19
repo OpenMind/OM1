@@ -47,18 +47,6 @@ class AvatarLLMState:
                 self.io_provider = None
             self._initialized = True
 
-    def stop(self) -> None:
-        """
-        Stop the AvatarLLMState and release resources.
-        """
-        if self.avatar_provider:
-            try:
-                if self.avatar_provider.running:
-                    self.avatar_provider.stop()
-                    logging.info("AvatarProvider stopped")
-            except Exception:
-                logging.error("Failed to stop AvatarProvider")
-
     def _has_voice_input(self) -> bool:
         """
         Check if current input contains voice input.
@@ -122,6 +110,8 @@ class AvatarLLMState:
                 self.avatar_provider.send_avatar_command("Happy")
             except Exception:
                 pass
+
+            self.avatar_provider.stop()
 
     def _has_face_action_in_result(self, result: Any) -> bool:
         """

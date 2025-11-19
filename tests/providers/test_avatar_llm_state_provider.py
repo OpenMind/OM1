@@ -51,9 +51,6 @@ def mock_avatar_provider() -> Generator[MagicMock, None, None]:
 
         yield provider_instance
 
-    # Ensure cleanup after test
-    state = AvatarLLMState()
-    state.stop()
     reset_avatar_llm_state()
 
 
@@ -137,8 +134,6 @@ async def test_decorator_handles_avatar_provider_not_running():
         provider_instance.start.assert_called()
         assert provider_instance.send_avatar_command.call_count == 2
 
-    state = AvatarLLMState()
-    state.stop()
     reset_avatar_llm_state()
 
 
