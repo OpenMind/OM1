@@ -29,7 +29,7 @@ class MockLLM:
 def reset_avatar_llm_state():
     if AvatarLLMState._instance is not None:
         try:
-            AvatarLLMState._instance.cleanup()
+            AvatarLLMState._instance.stop()
         except Exception:
             pass
     AvatarLLMState._instance = None

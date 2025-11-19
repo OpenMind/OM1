@@ -19,6 +19,7 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
         super().__init__(config)
 
         self.avatar_provider = AvatarProvider()
+        self.avatar_provider.start()
         logging.info("Face system initiated with AvatarProvider")
 
     async def connect(self, output_interface: FaceInput) -> None:
@@ -29,9 +30,6 @@ class FaceAvatarConnector(ActionConnector[FaceInput]):
         ----------
         output_interface : FaceInput
         """
-        if not self.avatar_provider.running:
-            self.avatar_provider.start()
-
         if output_interface.action == "happy":
             self.avatar_provider.send_avatar_command("Happy")
         elif output_interface.action == "sad":
