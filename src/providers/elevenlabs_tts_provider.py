@@ -89,7 +89,10 @@ class ElevenLabsTTSProvider:
             or output_format != self._output_format
         )
 
-        if restart_needed and self.running:
+        if not restart_needed:
+            return
+
+        if self.running:
             self.stop()
 
         self.api_key = api_key
