@@ -1,11 +1,25 @@
 import atexit
 import logging
+import weakref
 
 import zenoh
 
 logging.basicConfig(level=logging.INFO)
 
-_active_sessions = set()
+_active_sessions = weakref.WeakSet()
+
+
+def _cleanup_session(session_ref):
+    """
+    Cleanup callback for weakref when session is garbage collected.
+    """
+    try:
+        session = session_ref()
+        if session is not None:
+            session.close()
+            logging.info("Zenoh session closed automatically via weakref callback")
+    except Exception as e:
+        logging.warning(f"Error during automatic session cleanup: {e}")
 
 
 def _cleanup_all_sessions():
@@ -13,7 +27,6 @@ def _cleanup_all_sessions():
     Cleanup all active sessions on program exit.
     """
     sessions_to_close = list(_active_sessions)
-
     for session in sessions_to_close:
         try:
             if hasattr(session, "close"):
@@ -21,8 +34,6 @@ def _cleanup_all_sessions():
                 logging.info("Zenoh session closed automatically on exit")
         except Exception as e:
             logging.warning(f"Error during exit cleanup: {e}")
-
-    _active_sessions.clear()
 
 
 atexit.register(_cleanup_all_sessions)
@@ -82,6 +93,8 @@ def open_zenoh_session() -> zenoh.Session:
             raise Exception("Failed to open Zenoh session") from e
 
     _active_sessions.add(session)
+
+    weakref.finalize(session, _cleanup_session, weakref.ref(session))
 
     return session
 
