@@ -1,7 +1,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import json5
 
@@ -94,7 +94,7 @@ def load_config(
     )
 
     with open(config_path, "r+") as f:
-        raw_config = json5.load(f)
+        raw_config: Dict[str, Any] = json5.load(f)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -229,7 +229,7 @@ def load_config(
     return RuntimeConfig(**parsed_config)
 
 
-def get_nested_value(data, keys):
+def get_nested_value(data: Dict[str, Any], keys: List[str]) -> Optional[Any]:
     if not keys:
         return data
     if isinstance(data, dict) and keys[0] in data:
@@ -238,13 +238,13 @@ def get_nested_value(data, keys):
 
 
 def add_meta(
-    config: Dict,
+    config: Dict[str, Any],
     g_api_key: Optional[str],
     g_ut_eth: Optional[str],
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
     g_mode: Optional[str] = None,
-) -> dict[str, str]:
+) -> Dict[str, Any]:
     """
     Add an API key and Robot configuration to a runtime configuration.
 
@@ -280,7 +280,7 @@ def add_meta(
 
 
 # this is for testing only
-def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
+def build_runtime_config_from_test_case(config: Dict[str, Any]) -> RuntimeConfig:
     api_key = config.get("api_key")
     g_ut_eth = config.get("unitree_ethernet")
     g_URID = config.get("URID")
@@ -289,7 +289,9 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     backgrounds = [
         load_background(bg["type"])(
             config=BackgroundConfig(
-                **add_meta(bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip)
+                **add_meta(
+                    bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                )
             )
         )
         for bg in config.get("backgrounds", [])
@@ -297,7 +299,9 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     agent_inputs = [
         load_input(inp["type"])(
             config=SensorConfig(
-                **add_meta(inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip)
+                **add_meta(
+                    inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                )
             )
         )
         for inp in config.get("agent_inputs", [])
