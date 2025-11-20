@@ -154,9 +154,6 @@ class AvatarLLMState:
                     instance._restore_happy()
                     raise e
 
-                finally:
-                    instance.stop()
-
             return wrapper
 
         if func is not None:
