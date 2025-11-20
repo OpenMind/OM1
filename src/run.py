@@ -3,7 +3,7 @@ import logging
 import multiprocessing as mp
 import os
 import shutil
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import dotenv
 import json5
@@ -27,6 +27,11 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
     config_name : str, optional
         The name of the configuration file (without extension) located in the config directory.
         If not provided, uses .runtime.json5 from memory folder.
+
+    Returns
+    -------
+    Tuple[str, str]
+        A tuple containing the resolved config_name and the absolute config_path.
     """
     # If no config_name is provided, use the default .runtime.json5 from memory
     if config_name is None:
@@ -99,7 +104,8 @@ def start(
 
     try:
         with open(config_path, "r") as f:
-            raw_config = json5.load(f)
+            # Explicit type hint for dictionary loaded from json5
+            raw_config: Dict[str, Any] = json5.load(f)
 
         if "modes" in raw_config and "default_mode" in raw_config:
             mode_config = load_mode_config(config_name)
