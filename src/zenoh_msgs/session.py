@@ -1,8 +1,29 @@
+import atexit
 import logging
+import weakref
 
 import zenoh
 
 logging.basicConfig(level=logging.INFO)
+
+_active_sessions = weakref.WeakSet()
+
+
+def _cleanup_all_sessions():
+    """
+    Cleanup all active sessions on program exit.
+    """
+    sessions_to_close = list(_active_sessions)
+    for session in sessions_to_close:
+        try:
+            if hasattr(session, "close"):
+                session.close()
+                logging.info("Zenoh session closed automatically on exit")
+        except Exception as e:
+            logging.warning(f"Error during exit cleanup: {e}")
+
+
+atexit.register(_cleanup_all_sessions)
 
 
 def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
@@ -29,12 +50,12 @@ def create_zenoh_config(network_discovery: bool = True) -> zenoh.Config:
 
 def open_zenoh_session() -> zenoh.Session:
     """
-    Open a Zenoh session with a local connection first, then fall back to network discovery.
+    Open a Zenoh session with automatic cleanup.
 
     Returns
     -------
     zenoh.Session
-        The opened Zenoh session.
+        The opened Zenoh session with automatic cleanup.
 
     Raises
     ------
@@ -42,28 +63,27 @@ def open_zenoh_session() -> zenoh.Session:
         If unable to open a Zenoh session.
     """
     local_config = create_zenoh_config(network_discovery=False)
+
     try:
         session = zenoh.open(local_config)
         logging.info("Zenoh client opened without network discovery")
-        return session
     except Exception as e:
         logging.warning(f"Local connection failed: {e}")
         logging.info("Falling back to network discovery...")
 
-    config = create_zenoh_config()
-    try:
-        session = zenoh.open(config)
-        logging.info("Zenoh client opened with network discovery")
-        return session
-    except Exception as e:
-        logging.error(f"Error opening Zenoh client: {e}")
-        raise Exception("Failed to open Zenoh session") from e
+        config = create_zenoh_config()
+        try:
+            session = zenoh.open(config)
+            logging.info("Zenoh client opened with network discovery")
+        except Exception as e:
+            logging.error(f"Error opening Zenoh client: {e}")
+            raise Exception("Failed to open Zenoh session") from e
+
+    _active_sessions.add(session)
+
+    return session
 
 
 if __name__ == "__main__":
     session = open_zenoh_session()
-    if session:
-        logging.info("Session opened successfully")
-        session.close()
-    else:
-        logging.error("Failed to open Zenoh session")
+    logging.info("Session opened successfully with automatic cleanup")
