@@ -63,7 +63,6 @@ def open_zenoh_session() -> zenoh.Session:
         If unable to open a Zenoh session.
     """
     local_config = create_zenoh_config(network_discovery=False)
-    session = None
 
     try:
         session = zenoh.open(local_config)
