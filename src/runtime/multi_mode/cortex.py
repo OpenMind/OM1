@@ -8,9 +8,9 @@ from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
+from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
-from providers.config_provider import ConfigProvider
 from runtime.multi_mode.config import (
     LifecycleHookType,
     ModeSystemConfig,

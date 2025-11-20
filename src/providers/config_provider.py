@@ -31,9 +31,9 @@ class ConfigProvider:
         self.config_response_publisher = None
         self.config_request_subscriber = None
         self.running = False
-        
+
         self.config_path = self._get_runtime_config_path()
-        
+
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
@@ -42,17 +42,17 @@ class ConfigProvider:
         """
         try:
             self.session = open_zenoh_session()
-            
+
             # Publisher for config responses
             self.config_response_publisher = self.session.declare_publisher(
                 "om/config/response"
             )
-            
+
             # Subscriber for config requests
             self.config_request_subscriber = self.session.declare_subscriber(
                 "om/config/request", self._handle_config_request
             )
-            
+
             self.running = True
             logging.info("ConfigProvider initialized with Zenoh")
         except Exception as e:
@@ -61,7 +61,7 @@ class ConfigProvider:
     def _get_runtime_config_path(self) -> str:
         """
         Get the path to the runtime config file in memory folder.
-        
+
         Returns
         -------
         str
@@ -75,9 +75,9 @@ class ConfigProvider:
     def _handle_config_request(self, sample: zenoh.Sample):
         """
         Handle incoming config requests from Zenoh subscriber.
-        
+
         Responds with current runtime configuration.
-        
+
         Parameters
         ----------
         sample : zenoh.Sample
@@ -87,7 +87,7 @@ class ConfigProvider:
             request = ConfigRequest.deserialize(sample.payload.to_bytes())
             logging.debug("Received config request")
             self._send_config_response(request.request_id)
-                
+
         except Exception as e:
             logging.error(f"Error handling config request: {e}")
 
@@ -99,18 +99,18 @@ class ConfigProvider:
             # Get current config
             config_snapshot = self._get_config_snapshot()
             config_json_str = json.dumps(config_snapshot, indent=2)
-            
+
             response = ConfigResponse(
                 header=prepare_header(str(uuid4())),
                 request_id=request_id,
                 config=String(config_json_str),
                 message=String("Configuration retrieved successfully"),
             )
-            
+
             if self.config_response_publisher:
                 self.config_response_publisher.put(response.serialize())
                 logging.info("ConfigProvider sent config response")
-                
+
         except Exception as e:
             logging.error(f"Failed to send config response: {e}")
             self._send_error_response(request_id, str(e))
@@ -126,11 +126,11 @@ class ConfigProvider:
                 config=String(""),
                 message=String(error_message),
             )
-            
+
             if self.config_response_publisher:
                 self.config_response_publisher.put(response.serialize())
                 logging.warning(f"ConfigProvider sent error response: {error_message}")
-                
+
         except Exception as e:
             logging.error(f"Failed to send error response: {e}")
 
@@ -140,12 +140,14 @@ class ConfigProvider:
         """
         try:
             if not os.path.exists(self.config_path):
-                logging.warning(f"ConfigProvider: Config file not found: {self.config_path}")
+                logging.warning(
+                    f"ConfigProvider: Config file not found: {self.config_path}"
+                )
                 return {}
-            
-            with open(self.config_path, 'r') as f:
+
+            with open(self.config_path, "r") as f:
                 return json5.load(f)
-                
+
         except Exception as e:
             logging.error(f"Failed to read config file {self.config_path}: {e}")
             return {}
