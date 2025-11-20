@@ -133,6 +133,11 @@
       },
       "agent_actions": [
         {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
+        {
           "name": "speak",
           "llm_label": "speak",
           "connector": "elevenlabs_tts",
@@ -282,6 +287,11 @@
       },
       "agent_actions": [
         {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
+        {
           "name": "speak",
           "llm_label": "speak",
           "connector": "elevenlabs_tts",
@@ -405,6 +415,11 @@
       ],
       "agent_actions": [
         {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
+        {
           "name": "speak",
           "llm_label": "speak",
           "connector": "elevenlabs_tts",
@@ -504,6 +519,11 @@
         }
       ],
       "agent_actions": [
+        {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
         {
           "name": "move_go2_autonomy",
           "llm_label": "move",
