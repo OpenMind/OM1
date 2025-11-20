@@ -2,7 +2,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
@@ -52,25 +52,25 @@ def setup_logging(
         log_level = logging_config.log_level
         log_to_file = logging_config.log_to_file
 
-    level = getattr(logging, log_level.upper(), logging.INFO)
+    level: int = getattr(logging, log_level.upper(), logging.INFO)
 
     logging.getLogger().handlers.clear()
 
-    formatter = logging.Formatter(
+    formatter: logging.Formatter = logging.Formatter(
         fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-    console_handler = logging.StreamHandler()
+    console_handler: logging.StreamHandler = logging.StreamHandler()
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
 
-    handlers: list[logging.Handler] = [console_handler]
+    # Changed generic list[] to typing.List[] for project consistency
+    handlers: List[logging.Handler] = [console_handler]
 
     if log_to_file:
-
         os.makedirs("logs", exist_ok=True)
 
-        file_handler = logging.FileHandler(
+        file_handler: logging.FileHandler = logging.FileHandler(
             f"logs/{config_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log",
             mode="a",
         )
@@ -91,7 +91,7 @@ def get_logging_config() -> LoggingConfig:
         The current logging configuration.
     """
     return LoggingConfig(
-        log_level=logging.getLevelName(logging.getLogger().level),
+        log_level=str(logging.getLevelName(logging.getLogger().level)),
         log_to_file=any(
             isinstance(handler, logging.FileHandler)
             for handler in logging.getLogger().handlers
