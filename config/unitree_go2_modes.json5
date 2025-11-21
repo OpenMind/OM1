@@ -144,7 +144,7 @@
         {
           "name": "remember_location",
           "llm_label": "remember_location",
-          "connector": "location_api",
+          "connector": "location_api_go2",
         }
       ],
       "backgrounds": [
@@ -248,7 +248,7 @@
       "hertz": 1,
       "agent_inputs": [
         {
-          "type": "LocationsInput"
+          "type": "LocationsGo2Input"
         },
         {
           "type": "LidarLocalizationInput"
@@ -298,7 +298,7 @@
         {
           "name": "navigate_location",
           "llm_label": "navigate_location",
-          "connector": "nav",
+          "connector": "nav_go2",
         },
       ],
       "backgrounds": [

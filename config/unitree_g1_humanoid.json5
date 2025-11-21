@@ -11,6 +11,9 @@
       type: "GoogleASRRTSPInput",
     },
     {
+      type: "LocationsG1Input"
+    },
+    {
       type: "Odom"
     },
     {
@@ -45,7 +48,7 @@
     {
       name: "remember_location",
       llm_label: "remember_location",
-      connector: "location_api",
+      connector: "location_api_g1",
     },
     {
       name: "navigate_location",

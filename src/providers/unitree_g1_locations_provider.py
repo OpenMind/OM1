@@ -13,6 +13,19 @@ from .singleton import singleton
 class UnitreeG1LocationsProvider:
     """
     Provider that fetches locations from HTTP API in a background thread for Unitree G1.
+
+    This class implements a singleton pattern to manage:
+        * Periodic background fetching of location data from an HTTP API
+        * Thread-safe access to the location dictionary
+
+    Parameters
+    ----------
+    base_url : str, optional
+        The HTTP endpoint to fetch locations from. Default is "http://localhost:5000/maps/locations/list".
+    timeout : int, optional
+        Timeout for HTTP requests in seconds. Default is 5.
+    refresh_interval : int, optional
+        How often to refresh locations in seconds. Default is 30.
     """
 
     def __init__(
@@ -21,6 +34,18 @@ class UnitreeG1LocationsProvider:
         timeout: int = 5,
         refresh_interval: int = 30,
     ):
+        """
+        Initialize the Unitree G1 Locations Provider with a specific API endpoint and refresh interval.
+
+        Parameters
+        ----------
+        base_url : str, optional
+            The HTTP endpoint to fetch locations from. Default is "http://localhost:5000/maps/locations/list".
+        timeout : int, optional
+            Timeout for HTTP requests in seconds. Default is 5.
+        refresh_interval : int, optional
+            How often to refresh locations in seconds. Default is 30.
+        """
         self.base_url = base_url
         self.timeout = timeout
         self.refresh_interval = refresh_interval
@@ -31,6 +56,9 @@ class UnitreeG1LocationsProvider:
         self.io_provider = IOProvider()
 
     def start(self) -> None:
+        """
+        Start the background fetch thread.
+        """
         if self._thread and self._thread.is_alive():
             logging.warning("UnitreeG1LocationsProvider already running")
             return
@@ -40,11 +68,17 @@ class UnitreeG1LocationsProvider:
         logging.info("UnitreeG1LocationsProvider background thread started")
 
     def stop(self) -> None:
+        """
+        Stop the background fetch thread.
+        """
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
 
     def _run(self) -> None:
+        """
+        Background thread that periodically fetches locations.
+        """
         while not self._stop_event.is_set():
             try:
                 self._fetch()
@@ -53,6 +87,9 @@ class UnitreeG1LocationsProvider:
             self._stop_event.wait(timeout=self.refresh_interval)
 
     def _fetch(self) -> None:
+        """
+        Fetch locations from the API and update cache.
+        """
         if not self.base_url:
             return
         try:
@@ -82,6 +119,14 @@ class UnitreeG1LocationsProvider:
             logging.exception("Error fetching locations")
 
     def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
+        """
+        Parse and store locations.
+
+        Parameters
+        ----------
+        locations_raw : Dict or List
+            Raw locations data from the API.
+        """
         parsed = {}
         if isinstance(locations_raw, dict):
             for k, v in locations_raw.items():
@@ -100,10 +145,31 @@ class UnitreeG1LocationsProvider:
             self._locations = parsed
 
     def get_all_locations(self) -> Dict[str, Dict]:
+        """
+        Get all cached locations.
+
+        Returns
+        -------
+        Dict
+            A dictionary of all locations keyed by their labels.
+        """
         with self._lock:
             return dict(self._locations)
 
     def get_location(self, label: str) -> Optional[Dict]:
+        """
+        Get a specific location by label.
+
+        Parameters
+        ----------
+        label : str
+            The label of the location to retrieve.
+
+        Returns
+        -------
+        Dict or None
+            The location data if found, otherwise None.
+        """
         if not label:
             return None
         key = label.strip().lower()

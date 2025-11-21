@@ -32,6 +32,28 @@ status_map = {
 class UnitreeG1NavigationProvider:
     """
     Navigation Provider for Unitree G1 robot.
+
+    This class implements a singleton pattern to manage:
+        * Navigation goal publishing to ROS2 Nav2 stack
+        * Navigation status monitoring from ROS2 action server
+        * Automatic AI mode control based on navigation state
+
+    The provider automatically manages AI mode control during navigation:
+    - Disables AI mode when navigation starts (ACCEPTED/EXECUTING status)
+    - Re-enables AI mode only on successful navigation completion (SUCCEEDED status)
+    - Keeps AI mode disabled on navigation failure/cancellation (CANCELED/ABORTED status)
+
+    Parameters
+    ----------
+    navigation_status_topic : str, optional
+        The ROS2 topic to subscribe for navigation status messages.
+        Default: "navigate_to_pose/_action/status"
+        Alternative: "navigate_to_pose/_action/feedback" for more detailed updates
+    goal_pose_topic : str, optional
+        The topic on which to publish goal poses (default is "goal_pose").
+    cancel_goal_topic : str, optional
+        The topic on which to publish goal cancellations
+        (default is "navigate_to_pose/_action/cancel_goal").
     """
 
     def __init__(
@@ -40,6 +62,20 @@ class UnitreeG1NavigationProvider:
         goal_pose_topic: str = "goal_pose",
         cancel_goal_topic: str = "navigate_to_pose/_action/cancel_goal",
     ):
+        """
+        Initialize the Unitree G1 Navigation Provider with a specific topic.
+
+        Parameters
+        ----------
+        navigation_status_topic : str, optional
+            The ROS2 topic to subscribe for navigation status messages.
+            Default: "navigate_to_pose/_action/status"
+            Alternative: "navigate_to_pose/_action/feedback" for more detailed updates
+        goal_pose_topic : str, optional
+            The topic on which to publish goal poses (default is "goal_pose").
+        cancel_goal_topic : str, optional
+            The topic on which to publish goal cancellations (default is "navigate_to_pose/_action/cancel_goal").
+        """
         self.session: Optional[zenoh.Session] = None
         try:
             self.session = open_zenoh_session()
@@ -65,6 +101,9 @@ class UnitreeG1NavigationProvider:
                 logging.error(f"Error declaring AI status publisher: {e}")
 
     def start(self):
+        """
+        Start the navigation provider by registering the message callback and starting the listener.
+        """
         if self.session is None:
             logging.error(
                 "Cannot start navigation provider; Zenoh session is not available."
@@ -84,6 +123,14 @@ class UnitreeG1NavigationProvider:
         logging.warning("G1 Navigation Provider is already running")
 
     def navigation_status_message_callback(self, data: zenoh.Sample):
+        """
+        Process an incoming navigation status message.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The Zenoh sample received, which should have a 'payload' attribute.
+        """
         if data.payload:
             message: nav_msgs.Nav2Status = nav_msgs.Nav2Status.deserialize(
                 data.payload.to_bytes()
@@ -125,6 +172,14 @@ class UnitreeG1NavigationProvider:
             logging.warning("Received empty navigation status message")
 
     def _publish_ai_status(self, enabled: bool):
+        """
+        Publish AI status to enable or disable AI mode during navigation.
+
+        Parameters
+        ----------
+        enabled : bool
+            True to enable AI mode, False to disable.
+        """
         if self.ai_status_pub is None:
             logging.warning("AI status publisher not available")
             return
@@ -145,6 +200,16 @@ class UnitreeG1NavigationProvider:
     def publish_goal_pose(
         self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None
     ):
+        """
+        Publish a goal pose to the navigation topic.
+
+        Parameters
+        ----------
+        pose : geometry_msgs.PoseStamped
+            The goal pose to be published.
+        destination_name : Optional[str]
+            Name of the destination for speech feedback
+        """
         if self.session is None:
             logging.error("Cannot publish goal pose; Zenoh session is not available.")
             return
@@ -157,6 +222,10 @@ class UnitreeG1NavigationProvider:
             logging.error(f"Error publishing goal pose: {e}")
 
     def clear_goal_pose(self):
+        """
+        Clear/cancel all active navigation goals.
+        Publishes to the cancel_goal topic to stop navigation.
+        """
         if self.session is None:
             logging.error("Cannot cancel goal; Zenoh session is not available.")
             return
@@ -170,8 +239,24 @@ class UnitreeG1NavigationProvider:
 
     @property
     def navigation_state(self) -> str:
+        """
+        Get the current navigation state.
+
+        Returns
+        -------
+        str
+            The current navigation state as a string.
+        """
         return self.navigation_status
 
     @property
     def is_navigating(self) -> bool:
+        """
+        Check if navigation is currently in progress.
+
+        Returns
+        -------
+        bool
+            True if navigation is in progress, False otherwise.
+        """
         return self._nav_in_progress
