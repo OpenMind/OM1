@@ -42,6 +42,7 @@ def mock_avatar_provider() -> Generator[MagicMock, None, None]:
         provider_instance = MagicMock()
         provider_instance.running = True
         provider_instance.send_avatar_command = MagicMock()
+        provider_instance.stop = MagicMock()
         avatar_mock.return_value = provider_instance
 
         io_instance = MagicMock()
@@ -114,6 +115,8 @@ async def test_decorator_handles_avatar_provider_not_running():
         provider_instance = MagicMock()
         provider_instance.running = False
         provider_instance.send_avatar_command = MagicMock()
+        provider_instance.stop = MagicMock()
+
         avatar_mock.return_value = provider_instance
 
         io_instance = MagicMock()
@@ -125,6 +128,8 @@ async def test_decorator_handles_avatar_provider_not_running():
 
         assert result is not None
         provider_instance.send_avatar_command.assert_not_called()
+
+    reset_avatar_llm_state()
 
 
 @pytest.mark.asyncio
@@ -146,6 +151,8 @@ async def test_decorator_handles_avatar_provider_exception():
         result = await llm.ask("test prompt")
 
         assert result is not None
+
+    reset_avatar_llm_state()
 
 
 @pytest.mark.asyncio
