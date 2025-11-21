@@ -85,11 +85,38 @@ class ConfigProvider:
         """
         try:
             request = ConfigRequest.deserialize(sample.payload.to_bytes())
-            logging.debug("Received config request")
-            self._send_config_response(request.request_id)
+            logging.debug(f"Received config request: {request.request_id}")
+
+            if request.config and request.config.data:
+                # This is a set_config request
+                self._handle_set_config(request.request_id, request.config.data)
+            else:
+                # This is a get_config request
+                self._send_config_response(request.request_id)
 
         except Exception as e:
             logging.error(f"Error handling config request: {e}")
+
+    def _handle_set_config(self, request_id: String, config_str: str):
+        """
+        Handle request to update runtime configuration.
+        """
+        try:
+            new_config = json5.loads(config_str)
+
+            temp_path = self.config_path + ".tmp"
+            with open(temp_path, "w") as f:
+                json.dump(new_config, f, indent=2)
+
+            os.rename(temp_path, self.config_path)
+
+            logging.info(f"Updated runtime config file: {self.config_path}")
+
+            self._send_config_response(request_id)
+
+        except Exception as e:
+            logging.error(f"Failed to update config: {e}")
+            self._send_error_response(request_id, f"Failed to update config: {e}")
 
     def _send_config_response(self, request_id: String):
         """

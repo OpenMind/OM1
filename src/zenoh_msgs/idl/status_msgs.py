@@ -148,6 +148,7 @@ class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
 class ConfigRequest(IdlStruct, typename="ConfigRequest"):
     header: Header
     request_id: String
+    config: String = String("") # ignored for GET_CONFIG
 
 
 @dataclass
