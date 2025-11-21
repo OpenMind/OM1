@@ -4,14 +4,14 @@ import logging
 from actions.base import ActionConfig, ActionConnector
 from actions.navigate_location.interface import NavigateLocationInput
 from providers.io_provider import IOProvider
-from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
-from providers.unitree_go2_navigation_provider import UnitreeGo2NavigationProvider
+from providers.unitree_g1_locations_provider import UnitreeG1LocationsProvider
+from providers.unitree_g1_navigation_provider import UnitreeG1NavigationProvider
 from zenoh_msgs import Header, Point, Pose, PoseStamped, Quaternion, Time
 
 
-class NavGo2Connector(ActionConnector[NavigateLocationInput]):
+class UnitreeG1NavConnector(ActionConnector[NavigateLocationInput]):
     """
-    Navigation/location connector for Unitree Go2 robots.
+    Navigation/location connector for Unitree G1 robots.
     """
 
     def __init__(self, config: ActionConfig):
@@ -21,13 +21,13 @@ class NavGo2Connector(ActionConnector[NavigateLocationInput]):
         )
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
-        self.location_provider = UnitreeGo2LocationsProvider(
+        self.location_provider = UnitreeG1LocationsProvider(
             base_url, timeout, refresh_interval
         )
-        self.navigation_provider = UnitreeGo2NavigationProvider()
+        self.navigation_provider = UnitreeG1NavigationProvider()
         self.io_provider = IOProvider()
         logging.info(
-            "[NavGo2Connector] Using UnitreeGo2 providers for locations and navigation."
+            "[NavG1Connector] Using UnitreeG1 providers for locations and navigation."
         )
 
     async def connect(self, input_protocol: NavigateLocationInput) -> None:

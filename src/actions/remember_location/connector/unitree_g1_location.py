@@ -9,7 +9,7 @@ from actions.remember_location.interface import RememberLocationInput
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
-class RememberLocationG1Connector(ActionConnector[RememberLocationInput]):
+class UnitreeG1RememberLocationConnector(ActionConnector[RememberLocationInput]):
     """
     Connector that persists a remembered location for Unitree G1 by POSTing to an HTTP API.
     """

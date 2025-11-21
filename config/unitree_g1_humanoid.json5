@@ -48,12 +48,12 @@
     {
       name: "remember_location",
       llm_label: "remember_location",
-      connector: "location_api_g1",
+      "connector": "unitree_g1_location",
     },
     {
       name: "navigate_location",
       llm_label: "navigate_location",
-      connector: "nav_g1",
+      "connector": "unitree_g1_nav",
     },
     {
       name: "arm_g1",
