@@ -1,21 +1,17 @@
 import asyncio
 import logging
-import os
 
 from actions.base import ActionConfig, ActionConnector
 from actions.navigate_location.interface import NavigateLocationInput
 from providers.io_provider import IOProvider
-from providers.unitree_g1_locations_provider import UnitreeG1LocationsProvider
-from providers.unitree_g1_navigation_provider import UnitreeG1NavigationProvider
 from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
 from providers.unitree_go2_navigation_provider import UnitreeGo2NavigationProvider
 from zenoh_msgs import Header, Point, Pose, PoseStamped, Quaternion, Time
 
 
-class NavConnector(ActionConnector[NavigateLocationInput]):
+class NavGo2Connector(ActionConnector[NavigateLocationInput]):
     """
-    Navigation/location connector for Unitree Go2 and G1 robots.
-    Selects provider based on ROBOT_TYPE env variable or plugin fallback.
+    Navigation/location connector for Unitree Go2 robots.
     """
 
     def __init__(self, config: ActionConfig):
@@ -25,32 +21,16 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         )
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
-
-        robot_type = os.environ.get("ROBOT_TYPE", "").lower() or "go2"
-
-        if robot_type == "g1":
-            self.location_provider = UnitreeG1LocationsProvider(
-                base_url, timeout, refresh_interval
-            )
-            self.navigation_provider = UnitreeG1NavigationProvider()
-            logging.info(
-                "[NavConnector] Using UnitreeG1 providers for locations and navigation."
-            )
-        else:
-            self.location_provider = UnitreeGo2LocationsProvider(
-                base_url, timeout, refresh_interval
-            )
-            self.navigation_provider = UnitreeGo2NavigationProvider()
-            logging.info(
-                "[NavConnector] Using UnitreeGo2 providers for locations and navigation."
-            )
-
+        self.location_provider = UnitreeGo2LocationsProvider(
+            base_url, timeout, refresh_interval
+        )
+        self.navigation_provider = UnitreeGo2NavigationProvider()
         self.io_provider = IOProvider()
+        logging.info(
+            "[NavGo2Connector] Using UnitreeGo2 providers for locations and navigation."
+        )
 
     async def connect(self, input_protocol: NavigateLocationInput) -> None:
-        """
-        Connect the input protocol to the navigation action.
-        """
         label = input_protocol.action.lower().strip()
         for prefix in [
             "go to the ",
@@ -68,7 +48,6 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
                     f"Cleaned location label: removed '{prefix}' prefix -> '{label}'"
                 )
                 break
-
         loc = self.location_provider.get_location(label)
         if loc is None:
             locations = self.location_provider.get_all_locations()
@@ -83,14 +62,11 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
             )
             logging.warning(msg)
             return
-
         pose = loc.get("pose") or {}
         position = pose.get("position", {})
         orientation = pose.get("orientation", {})
-
         now = Time(sec=int(asyncio.get_event_loop().time()), nanosec=0)
         header = Header(stamp=now, frame_id="map")
-
         position_msg = Point(
             x=float(position.get("x", 0.0)),
             y=float(position.get("y", 0.0)),
@@ -104,7 +80,6 @@ class NavConnector(ActionConnector[NavigateLocationInput]):
         )
         pose_msg = Pose(position=position_msg, orientation=orientation_msg)
         goal_pose = PoseStamped(header=header, pose=pose_msg)
-
         try:
             self.navigation_provider.publish_goal_pose(goal_pose, label)
             logging.info(f"Navigation to '{label}' initiated")
