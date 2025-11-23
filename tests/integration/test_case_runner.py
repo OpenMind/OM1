@@ -5,6 +5,7 @@ import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from unittest.mock import MagicMock, patch
 
 import json5
 import openai
@@ -38,6 +39,51 @@ TEST_CASES_DIR = DATA_DIR / "test_cases"
 
 # Global client to be created once for all test cases
 _llm_client = None
+
+
+@pytest.fixture(autouse=True)
+def mock_avatar_components():
+    """Mock all avatar and IO components to prevent Zenoh session creation"""
+
+    def mock_decorator(func=None):
+        def decorator(f):
+            return f
+
+        if func is not None:
+            return decorator(func)
+        return decorator
+
+    with (
+        patch(
+            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
+        ),
+        patch("llm.plugins.openai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch("llm.plugins.openrouter.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch("llm.plugins.gemini_llm.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch(
+            "llm.plugins.near_ai_llm.AvatarLLMState.trigger_thinking", mock_decorator
+        ),
+        patch("llm.plugins.xai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch(
+            "providers.avatar_llm_state_provider.AvatarLLMState"
+        ) as mock_avatar_state,
+        patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
+        patch(
+            "providers.avatar_llm_state_provider.AvatarProvider"
+        ) as mock_avatar_llm_state_provider,
+    ):
+        mock_avatar_state._instance = None
+        mock_avatar_state._lock = None
+
+        mock_provider_instance = MagicMock()
+        mock_provider_instance.running = False
+        mock_provider_instance.session = None
+        mock_provider_instance.stop = MagicMock()
+        mock_avatar_provider.return_value = mock_provider_instance
+        mock_avatar_llm_state_provider.return_value = mock_provider_instance
+
+        yield
+
 
 # Movement types that should be considered movement commands
 VLM_MOVE_TYPES = {
