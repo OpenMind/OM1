@@ -15,22 +15,41 @@ class UnitreeG1NavConnector(ActionConnector[NavigateLocationInput]):
     """
 
     def __init__(self, config: ActionConfig):
+        """
+        Initialize the UnitreeG1NavConnector.
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
+
         base_url = getattr(
             self.config, "base_url", "http://localhost:5000/maps/locations/list"
         )
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
+
         self.location_provider = UnitreeG1LocationsProvider(
             base_url, timeout, refresh_interval
         )
         self.navigation_provider = UnitreeG1NavigationProvider()
         self.io_provider = IOProvider()
+
         logging.info(
             "[NavG1Connector] Using UnitreeG1 providers for locations and navigation."
         )
 
     async def connect(self, input_protocol: NavigateLocationInput) -> None:
+        """
+        Connect the input protocol to the navigate location action for G1.
+
+        Parameters
+        ----------
+        input_protocol : NavigateLocationInput
+            The input protocol containing the action details.
+        """
         label = input_protocol.action.lower().strip()
         for prefix in [
             "go to the ",
@@ -48,6 +67,7 @@ class UnitreeG1NavConnector(ActionConnector[NavigateLocationInput]):
                     f"Cleaned location label: removed '{prefix}' prefix -> '{label}'"
                 )
                 break
+
         loc = self.location_provider.get_location(label)
         if loc is None:
             locations = self.location_provider.get_all_locations()
@@ -62,6 +82,7 @@ class UnitreeG1NavConnector(ActionConnector[NavigateLocationInput]):
             )
             logging.warning(msg)
             return
+
         pose = loc.get("pose") or {}
         position = pose.get("position", {})
         orientation = pose.get("orientation", {})
@@ -80,6 +101,7 @@ class UnitreeG1NavConnector(ActionConnector[NavigateLocationInput]):
         )
         pose_msg = Pose(position=position_msg, orientation=orientation_msg)
         goal_pose = PoseStamped(header=header, pose=pose_msg)
+
         try:
             self.navigation_provider.publish_goal_pose(goal_pose, label)
             logging.info(f"Navigation to '{label}' initiated")
