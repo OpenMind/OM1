@@ -1,4 +1,7 @@
 {
+  // Configuration version
+  "version": "v1.0.0",
+
   // Mode system configuration for Unitree Go2
   "default_mode": "welcome",
   "allow_manual_switching": true,
