@@ -16,7 +16,6 @@ dependencies = [
     "json5",
     "jsonschema",
     "pycdr2",
-    "eclipse-zenoh>=1.4.0",
     "audiosegment",
     "pyaudio",
     "openai>=1.59.5",
@@ -26,16 +25,12 @@ dependencies = [
     "opencv-python",
     "deepface>=0.0.81",
     "tensorflow>=2.15.0",
-    "tf_keras>=2.15.0",
     "web3",
     "numpy",
     "cdp-sdk==0.21.0",
-    "hid",
-    "cv_bridge",
     "torch",
     "torchvision",
     "pyserial",
-    "py-mjpeg",
     "fastapi>=0.110.0",
     "uvicorn>=0.27.1",
     "websockets>=12.0",
@@ -54,6 +49,15 @@ dds = [
     "cyclonedds==0.10.2"
 ]
 macos = ["osascript"]
+ros = [
+    "cv_bridge",
+    "eclipse-zenoh>=1.4.0",
+]
+hardware = [
+    "hid",
+    "py-mjpeg",
+]
+jetson = ["tf_keras>=2.15.0"]
 
 [dependency-groups]
 dev = [
@@ -91,11 +95,9 @@ skip_glob = [".venv*", "/src/unitree", "/gazebo", "/src/ubtech"]
 line-length = 88
 indent-width = 4
 src = ["src"]
-exclude = ["src/unitree","gazebo", "src/ubtech"]
-
-[tool.ruff.lint]
-select = ["E", "F", "I"]
-ignore = ["E203", "E501"]
-fixable = ["ALL"]
-unfixable = []
+exclude = ["src/unitree", "gazebo", "src/ubtech"]
+lint.select = ["E", "F", "I"]
+lint.ignore = ["E203", "E501"]
+lint.fixable = ["ALL"]
+lint.unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
