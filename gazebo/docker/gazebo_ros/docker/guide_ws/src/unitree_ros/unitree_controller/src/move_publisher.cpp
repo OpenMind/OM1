@@ -2,7 +2,7 @@
 #include <gazebo_msgs/ModelState.h>
 #include <gazebo_msgs/SetModelState.h>
 #include <string>
-#include <stdio.h>  
+#include <stdio.h>
 #include <tf/transform_datatypes.h>
 // #include <std_msgs/Float64.h>
 #include <math.h>
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
         model_state_pub.pose.position.x = 0.0;
         model_state_pub.pose.position.y = 0.0;
         model_state_pub.pose.position.z = 0.5;
-        
+
         model_state_pub.pose.orientation.x = 0.0;
         model_state_pub.pose.orientation.y = 0.0;
         model_state_pub.pose.orientation.z = 0.0;
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
         model_state_pub.twist.linear.x= 0.02; //0.02: 2cm/sec
         model_state_pub.twist.linear.y= 0.0;
         model_state_pub.twist.linear.z= 0.08;
-        
+
         model_state_pub.twist.angular.x= 0.0;
         model_state_pub.twist.angular.y= 0.0;
         model_state_pub.twist.angular.z= 0.0;
@@ -76,5 +76,5 @@ int main(int argc, char **argv)
             loop_rate.sleep();
         }
     }
-    
+
 }

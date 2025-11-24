@@ -2,19 +2,18 @@
 
 # Stop existing containers if any
 safe_docker_stop_and_remove() {
-  local container_name=$1
+    local container_name=$1
+    # Check if the container exists and is running, then stop it
+    if docker ps -q -f name="$container_name" &>/dev/null; then
+        echo "Stopping container: $container_name"
+        docker stop "$container_name" &>/dev/null
+    fi
 
-  # Check if the container exists and is running, then stop it
-  if docker ps -q -f name="$container_name" &>/dev/null; then
-    echo "Stopping container: $container_name"
-    docker stop "$container_name" &>/dev/null
-  fi
-
-  # Check if the container exists (stopped or running), then remove it
-  if docker container ls -a -q -f name="$container_name" &>/dev/null; then
-    echo "Removing container: $container_name"
-    docker container rm "$container_name" &>/dev/null
-  fi
+    # Check if the container exists (stopped or running), then remove it
+    if docker container ls -a -q -f name="$container_name" &>/dev/null; then
+        echo "Removing container: $container_name"
+        docker container rm "$container_name" &>/dev/null
+    fi
 }
 
 # Stop and remove specific containers
@@ -27,9 +26,45 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Define the combined docker-compose file with an absolute path
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 
+# Auto-detect GPU and set Docker runtime AND rendering variables
+if nvidia-smi &>/dev/null; then
+    echo "NVIDIA GPU detected - using nvidia runtime"
+    export DOCKER_RUNTIME=nvidia
+    # These will be passed to the container
+    export USE_GPU_RENDERING=true
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __NV_PRIME_RENDER_OFFLOAD=1
+else
+    echo "No NVIDIA GPU detected - using default runtime"
+    export DOCKER_RUNTIME=runc
+    export USE_GPU_RENDERING=false
+fi
+
+# Allow X server connections
+xhost +local:docker 2>/dev/null || true
+
 # Ensure containers are started (or restarted if already running)
 echo "Ensuring containers are running..."
 docker compose -f $COMPOSE_FILE up -d --build
+
+# Wait for container to be ready
+sleep 2
+
+# Set GPU environment inside the container after it starts
+if [ "$USE_GPU_RENDERING" = "true" ]; then
+    echo "Configuring container for GPU rendering..."
+    docker exec ros1_gazebo_container bash -c "
+        echo 'export __GLX_VENDOR_LIBRARY_NAME=nvidia' >> /tmp/gpu_env
+        echo 'export __NV_PRIME_RENDER_OFFLOAD=1' >> /tmp/gpu_env
+        echo 'unset LIBGL_ALWAYS_SOFTWARE' >> /tmp/gpu_env
+        source /tmp/gpu_env
+    "
+    echo "GPU rendering configured. You can verify with: docker exec ros1_gazebo_container glxinfo | grep 'OpenGL renderer'"
+else
+    echo "Software rendering will be used"
+fi
+
+echo "Containers are ready!"
 
 # Wait for a moment to ensure containers are up
 sleep 5
@@ -44,11 +79,11 @@ sleep 2
 # Preparing
 
 echo "Disabling access control"
-xhost + 
+xhost +
 
 # Assume device number is 10
 DEVICE_NO=10
-echo "Creating virtual video device at /dev/video$DEVICE_NO" 
+echo "Creating virtual video device at /dev/video$DEVICE_NO"
 sudo modprobe -r v4l2loopback
 sudo modprobe v4l2loopback video_nr=$DEVICE_NO exclusive_caps=1
 
@@ -109,4 +144,3 @@ source /opt/ros/noetic/setup.bash && \
 source /app/guide_ws/devel/setup.bash && \
 rosrun move_publisher move_publisher.py; \
 exec bash'
-

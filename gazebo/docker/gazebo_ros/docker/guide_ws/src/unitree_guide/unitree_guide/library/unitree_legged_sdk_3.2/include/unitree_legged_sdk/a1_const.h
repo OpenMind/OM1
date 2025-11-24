@@ -6,7 +6,7 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #ifndef _UNITREE_LEGGED_A1_H_
 #define _UNITREE_LEGGED_A1_H_
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
     constexpr double a1_Hip_max   = 0.802;    // unit:radian ( = 46   degree)
     constexpr double a1_Hip_min   = -0.802;   // unit:radian ( = -46  degree)

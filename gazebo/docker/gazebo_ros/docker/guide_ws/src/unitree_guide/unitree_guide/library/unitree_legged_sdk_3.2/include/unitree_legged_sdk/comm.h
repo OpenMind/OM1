@@ -8,7 +8,7 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 
 #include <stdint.h>
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
 
 	constexpr int HIGHLEVEL = 0x00;
@@ -43,7 +43,7 @@ namespace UNITREE_LEGGED_SDK
 
 	typedef struct
 	{
-		uint8_t mode;                      // motor working mode 
+		uint8_t mode;                      // motor working mode
 		float q;                           // current angle (unit: radian)
 		float dq;                          // current velocity (unit: radian/second)
 		float ddq;                         // current acc (unit: radian/second*second)
@@ -58,7 +58,7 @@ namespace UNITREE_LEGGED_SDK
 	typedef struct
 	{
 		uint8_t mode;                      // desired working mode
-		float q;                           // desired angle (unit: radian) 
+		float q;                           // desired angle (unit: radian)
 		float dq;                          // desired velocity (unit: radian/second)
 		float tau;                         // desired output torque (unit: N.m)
 		float Kp;                          // desired position stiffness (unit: N.m/rad )
@@ -71,7 +71,7 @@ namespace UNITREE_LEGGED_SDK
 		uint8_t levelFlag;                 // flag to distinguish high level or low level
 		uint16_t commVersion;
 		uint16_t robotID;
-		uint32_t SN; 
+		uint32_t SN;
 		uint8_t bandWidth;
 		IMU imu;
 		MotorState motorState[20];
@@ -83,7 +83,7 @@ namespace UNITREE_LEGGED_SDK
 		uint32_t crc;
 	} LowState;                            // low level feedback
 
-	typedef struct 
+	typedef struct
 	{
 		uint8_t levelFlag;
 		uint16_t commVersion;
@@ -106,10 +106,10 @@ namespace UNITREE_LEGGED_SDK
 		uint8_t bandWidth;
 		uint8_t mode;
 		IMU imu;
-		float forwardSpeed;               
-		float sideSpeed;                  
-		float rotateSpeed;                
-		float bodyHeight;                 
+		float forwardSpeed;
+		float sideSpeed;
+		float rotateSpeed;
+		float bodyHeight;
 		float updownSpeed;                 // speed of stand up or squat down
 		float forwardPosition;             // front or rear displacement, an integrated number form kinematics function, usually drift
 		float sidePosition;                // left or right displacement, an integrated number form kinematics function, usually drift
@@ -148,20 +148,20 @@ namespace UNITREE_LEGGED_SDK
 
 #pragma pack()
 
-	typedef struct     
+	typedef struct
 	{
 		unsigned long long TotalCount;     // total loop count
 		unsigned long long SendCount;      // total send count
 		unsigned long long RecvCount;      // total receive count
-		unsigned long long SendError;      // total send error 
-		unsigned long long FlagError;      // total flag error 
-		unsigned long long RecvCRCError;   // total reveive CRC error	
-		unsigned long long RecvLoseError;  // total lose package count	
+		unsigned long long SendError;      // total send error
+		unsigned long long FlagError;      // total flag error
+		unsigned long long RecvCRCError;   // total reveive CRC error
+		unsigned long long RecvLoseError;  // total lose package count
 	} UDPState;                            // UDP communication state
 
 	constexpr int HIGH_CMD_LENGTH   = (sizeof(HighCmd));
 	constexpr int HIGH_STATE_LENGTH = (sizeof(HighState));
-	
+
 }
 
 #endif

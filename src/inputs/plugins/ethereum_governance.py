@@ -10,16 +10,11 @@ from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
-"""
-RULES are stored on the ETHEREUM HOLESKY testnet
-
-"GovernanceContract": "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
-
-https://holesky.etherscan.io/address/0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695
-
-Note: Etherscan.io does not handle bytes[]/json well. See below for ways to
-interact with HOLESKY and decode the data, generating an ASCII string.
-"""
+# RULES are stored on the ETHEREUM HOLESKY testnet
+# "GovernanceContract": "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
+# https://holesky.etherscan.io/address/0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695
+# Note: Etherscan.io does not handle bytes[]/json well. See below for ways to
+# interact with HOLESKY and decode the data, generating an ASCII string.
 
 
 @dataclass
@@ -144,7 +139,7 @@ class GovernanceEthereum(FuserInput[float]):
         # getRuleSet() Function selector (first 4 bytes of Keccak hash).
         self.function_selector = "0x1db3d5ff"
 
-        # The current rule rule set can be obtained from
+        # The current rule set can be obtained from
         # getLatestRuleSetVersion(0x254e2f1e)
         # It's currently = 2
         self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument

@@ -182,7 +182,10 @@ class RPDriver(object):
 
     @motor_speed.setter
     def motor_speed(self, pwm):
-        assert 0 <= pwm <= MAX_MOTOR_PWM
+        if not (0 <= pwm <= MAX_MOTOR_PWM):
+            raise ValueError(
+                f"PWM value must be between 0 and {MAX_MOTOR_PWM}, got {pwm}"
+            )
         self._motor_speed = pwm
         if self.motor_running:
             self._set_pwm(self._motor_speed)

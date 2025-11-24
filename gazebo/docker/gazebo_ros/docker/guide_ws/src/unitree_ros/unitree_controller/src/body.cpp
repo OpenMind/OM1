@@ -12,7 +12,7 @@ unitree_legged_msgs::LowCmd lowCmd;
 unitree_legged_msgs::LowState lowState;
 
 // These parameters are only for reference.
-// Actual patameters need to be debugged if you want to run on real robot.
+// Actual parameters need to be debugged if you want to run on real robot.
 void paramInit()
 {
     for(int i=0; i<4; i++){
@@ -38,8 +38,8 @@ void paramInit()
 }
 
 void stand()
-{   
-    double pos[12] = {0.0, 0.67, -1.3, -0.0, 0.67, -1.3, 
+{
+    double pos[12] = {0.0, 0.67, -1.3, -0.0, 0.67, -1.3,
                       0.0, 0.67, -1.3, -0.0, 0.67, -1.3};
     moveAllPosition(pos, 2*1000);
 }
@@ -67,7 +67,7 @@ void moveAllPosition(double* targetPos, double duration)
         if(!ros::ok()) break;
         percent = (double)i/duration;
         for(int j=0; j<12; j++){
-            lowCmd.motorCmd[j].q = lastPos[j]*(1-percent) + targetPos[j]*percent; 
+            lowCmd.motorCmd[j].q = lastPos[j]*(1-percent) + targetPos[j]*percent;
         }
         sendServoCmd();
     }

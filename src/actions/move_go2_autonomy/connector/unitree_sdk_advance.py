@@ -9,7 +9,7 @@ import zenoh
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
-from providers.io_provider import IOProvider
+from providers.face_presence_provider import FacePresenceProvider
 from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
@@ -42,6 +42,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
 
         self.path_provider = SimplePathsProvider()
         self.unitree_go2_state = UnitreeGo2StateProvider()
+        self.face_presence_provider = FacePresenceProvider()
 
         # create sport client
         self.sport_client = None
@@ -59,13 +60,6 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         if unitree_ethernet is None:
             raise ValueError("unitree_ethernet must be specified in the config")
         self.odom = OdomProvider(channel=unitree_ethernet)
-
-        # Automation sleep mode configuration
-        self.io_provider = IOProvider()
-        self.last_voice_command_time = time.time()
-        self.sleep_mode_enabled = False
-        self.auto_sleep_mode = getattr(config, "auto_sleep_mode", True)
-        self.auto_sleep_time = getattr(config, "auto_sleep_time", 300)
 
         # Zenoh topic for AI control status
         self.ai_status_request = "om/ai/request"
@@ -89,54 +83,20 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         # AI control status
         self.ai_control_enabled = True
 
+        # Mode
+        self.mode = getattr(self.config, "mode", None)
+
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
-        if self.auto_sleep_mode:
-            voice_input = self.io_provider.inputs.get("Voice")
-            if voice_input:
-                self.last_voice_command_time = voice_input.timestamp
-
-            current_time = time.time()
-
-            # Check if the timestamp seems valid (after Aug 18, 2025)
-            # If Orin restarted, timestamp will be very small
-            if (
-                self.last_voice_command_time is None
-                or self.last_voice_command_time < 1755500000
-            ):
-                # Timestamp is invalid (Orin restarted), treat as very old
-                time_since_last_command = float("-inf")
-                # Try to updat the timestamp to the latest time
-                if (
-                    self.last_voice_command_time is not None
-                    and current_time > self.last_voice_command_time
-                ):
-                    self.last_voice_command_time = current_time
-            else:
-                time_since_last_command = current_time - self.last_voice_command_time
-
-            if time_since_last_command > self.auto_sleep_time:
-                self.sleep_mode_enabled = True
-                if self.odom.position["body_attitude"] != RobotState.SITTING:
-                    logging.info("No voice command for 5 minutes - sit down")
-                    if self.sport_client:
-                        self.sport_client.StandDown()
-                return
-            else:
-                if (
-                    self.odom.position["body_attitude"] != RobotState.STANDING
-                    and self.sleep_mode_enabled
-                ):
-                    self.sleep_mode_enabled = False
-                    logging.info("Voice command received - stand up")
-                    if self.sport_client:
-                        self.sport_client.RecoveryStand()
-
-        # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
-        # Check if AI control is enabled
+        if self.mode == "guard" and self.face_presence_provider.unknown_faces > 0:
+            logging.info(
+                "Guard mode active and unknown face detected - disregarding AI command"
+            )
+            return
+
         if not self.ai_control_enabled:
             logging.info("AI Control is disabled - disregarding AI command")
             return

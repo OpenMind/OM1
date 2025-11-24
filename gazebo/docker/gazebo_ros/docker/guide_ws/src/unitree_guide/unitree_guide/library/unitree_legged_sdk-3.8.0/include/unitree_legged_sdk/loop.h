@@ -14,7 +14,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
 
 constexpr int THREAD_PRIORITY    = 95;   // real-time priority

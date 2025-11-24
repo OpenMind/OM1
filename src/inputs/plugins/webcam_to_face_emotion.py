@@ -1,3 +1,9 @@
+"""
+Code example is from:
+https://github.com/manish-9245/Facial-Emotion-Recognition-using-OpenCV-and-Deepface
+Thank you @manish-9245
+"""
+
 import asyncio
 import logging
 import random
@@ -28,13 +34,6 @@ class Message:
 
     timestamp: float
     message: str
-
-
-"""
-Code example is from:
-https://github.com/manish-9245/Facial-Emotion-Recognition-using-OpenCV-and-Deepface
-Thank you @manish-9245
-"""
 
 
 def check_webcam():

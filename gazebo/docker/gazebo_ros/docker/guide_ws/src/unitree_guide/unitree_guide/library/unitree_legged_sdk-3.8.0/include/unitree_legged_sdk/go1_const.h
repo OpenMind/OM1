@@ -5,7 +5,7 @@
 #ifndef _UNITREE_LEGGED_GO1_H_
 #define _UNITREE_LEGGED_GO1_H_
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
     constexpr double go1_Hip_max   = 1.047;    // unit:radian ( = 60   degree)
     constexpr double go1_Hip_min   = -1.047;   // unit:radian ( = -60  degree)

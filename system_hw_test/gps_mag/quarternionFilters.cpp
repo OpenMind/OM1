@@ -4,9 +4,9 @@
  license: Beerware - Use this code however you'd like. If you
  find it useful you can buy me a beer some time.
  Modified by Brent Wilkins July 19, 2016
- Modified by Owen Lyke Aug 6 2018 
+ Modified by Owen Lyke Aug 6 2018
  - Removed code about magnetometer that would cause an abort()
- - Magnetometer can be accessed by using the MPU9250 as an I2C 
+ - Magnetometer can be accessed by using the MPU9250 as an I2C
    master. See the register map for more details
 
  Demonstrate basic MPU-9250 functionality including parameterizing the register
@@ -32,7 +32,7 @@
 // These are the free parameters in the Mahony filter and fusion scheme, Kp
 // for proportional feedback, Ki for integral
 #define Kp 2.0f * 5.0f
-// ADJUST!! Set to 0.0 to turn off 
+// ADJUST!! Set to 0.0 to turn off
 #define Ki 0.0f
 
 static float GyroMeasError = PI * (40.0f / 180.0f);
@@ -239,7 +239,7 @@ void MahonyQuaternionUpdate(float ax, float ay, float az, float gx, float gy, fl
   gx = gx + Kp * ex + Ki * eInt[0];
   gy = gy + Kp * ey + Ki * eInt[1];
   gz = gz + Kp * ez + Ki * eInt[2];
- 
+
   // Integrate rate of change of quaternion
   pa = q2;
   pb = q3;

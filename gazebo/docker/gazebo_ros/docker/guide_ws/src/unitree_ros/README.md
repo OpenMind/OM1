@@ -102,5 +102,5 @@ You can launch the z1 Gazebo simulation with the following command:
 roslaunch unitree_gazebo z1.launch
 ```
 
-After launching the gazebo simulation, you can start to control the z1 robot by z1_sdk.  
+After launching the gazebo simulation, you can start to control the z1 robot by z1_sdk.
 see [z1_documentation](https://dev-z1.unitree.com)

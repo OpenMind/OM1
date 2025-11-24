@@ -170,6 +170,7 @@ class OdomProvider:
         self.data_queue: mp.Queue[PoseStamped] = mp.Queue()
         self._odom_reader_thread: Optional[mp.Process] = None
         self._odom_processor_thread: Optional[threading.Thread] = None
+        self._stop_event = threading.Event()
 
         self.body_height_cm = 0
         self.body_attitude: Optional[RobotState] = None
@@ -279,7 +280,7 @@ class OdomProvider:
         pose : PoseWithCovariance
             The pose data containing position and orientation.
         """
-        while True:
+        while not self._stop_event.is_set():
             try:
                 pose_data = self.data_queue.get()
             except Exception as e:
@@ -320,7 +321,7 @@ class OdomProvider:
 
             delta = math.sqrt(dx + dy + dz)
 
-            # moving? Use a decay kernal
+            # moving? Use a decay kernel
             self.move_history = 0.7 * delta + 0.3 * self.move_history
 
             if delta > 0.01 or self.move_history > 0.01:
@@ -388,3 +389,18 @@ class OdomProvider:
             "odom_rockchip_ts": self.odom_rockchip_ts,
             "odom_subscriber_ts": self.odom_subscriber_ts,
         }
+
+    def stop(self):
+        """
+        Stop the OdomProvider and clean up resources.
+        """
+        self._stop_event.set()
+
+        if self._odom_reader_thread:
+            self._odom_reader_thread.terminate()
+            self._odom_reader_thread.join()
+            logging.info("OdomProvider reader thread stopped.")
+
+        if self._odom_processor_thread:
+            self._odom_processor_thread.join()
+            logging.info("OdomProvider processor thread stopped.")

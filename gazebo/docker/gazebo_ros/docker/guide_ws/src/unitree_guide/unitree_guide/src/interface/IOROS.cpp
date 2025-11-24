@@ -26,7 +26,7 @@ IOROS::IOROS():IOInterface(){
     subSpinner.start();
     usleep(300000);     //wait for subscribers start
     // initialize publisher
-    initSend();   
+    initSend();
 
     signal(SIGINT, RosShutDown);
 
@@ -162,7 +162,7 @@ void IOROS::userInputCallback(const custom_msgs::UserInput& msg) {
 
 
 void IOROS::imuCallback(const sensor_msgs::Imu & msg)
-{ 
+{
     _lowState.imu.quaternion[0] = msg.orientation.w;
     _lowState.imu.quaternion[1] = msg.orientation.x;
     _lowState.imu.quaternion[2] = msg.orientation.y;
@@ -171,7 +171,7 @@ void IOROS::imuCallback(const sensor_msgs::Imu & msg)
     _lowState.imu.gyroscope[0] = msg.angular_velocity.x;
     _lowState.imu.gyroscope[1] = msg.angular_velocity.y;
     _lowState.imu.gyroscope[2] = msg.angular_velocity.z;
-    
+
     _lowState.imu.accelerometer[0] = msg.linear_acceleration.x;
     _lowState.imu.accelerometer[1] = msg.linear_acceleration.y;
     _lowState.imu.accelerometer[2] = msg.linear_acceleration.z;

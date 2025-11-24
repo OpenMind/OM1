@@ -200,7 +200,7 @@ inline void PyPlot::addFrame(std::string plotName, double value){
 
 inline void PyPlot::addFrame(std::string plotName, double x, double value){
     Plot* plot = _getPlotPtr(plotName);
-    
+
     plot->curves[0]->x.push_back(x);
     plot->curves[0]->y.push_back(value);
 }

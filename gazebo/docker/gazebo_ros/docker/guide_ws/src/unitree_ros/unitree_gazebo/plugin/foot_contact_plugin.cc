@@ -21,7 +21,7 @@ namespace gazebo
 
         void Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf)
         {
-            this->parentSensor = std::dynamic_pointer_cast<sensors::ContactSensor>(_sensor); // Make sure the parent sensor is valid.        
+            this->parentSensor = std::dynamic_pointer_cast<sensors::ContactSensor>(_sensor); // Make sure the parent sensor is valid.
             if (!this->parentSensor){
                 gzerr << "UnitreeFootContactPlugin requires a ContactSensor.\n";
                 return;
@@ -50,8 +50,8 @@ namespace gazebo
             for (unsigned int i = 0; i < count; ++i){
                 if(contacts.contact(i).position_size() != 1){
                     ROS_ERROR("Contact count isn't correct!!!!");
-                }     
-                for (unsigned int j = 0; j < contacts.contact(i).position_size(); ++j){                 
+                }
+                for (unsigned int j = 0; j < contacts.contact(i).position_size(); ++j){
                     // std::cout << i <<" "<< contacts.contact(i).position_size() <<" Force:"
                     //           << contacts.contact(i).wrench(j).body_1_wrench().force().x() << " "
                     //           << contacts.contact(i).wrench(j).body_1_wrench().force().y() << " "
@@ -61,7 +61,7 @@ namespace gazebo
                     Fz += contacts.contact(i).wrench(0).body_1_wrench().force().z();
                 }
             }
-            if(count != 0){           
+            if(count != 0){
                 force.wrench.force.x = Fx/double(count);
                 force.wrench.force.y = Fy/double(count);
                 force.wrench.force.z = Fz/double(count);
@@ -83,11 +83,10 @@ namespace gazebo
             ros::Publisher force_pub;
             event::ConnectionPtr update_connection;
             std::string contact_namespace;
-            sensors::ContactSensorPtr parentSensor;      
+            sensors::ContactSensorPtr parentSensor;
             geometry_msgs::WrenchStamped force;
             int count = 0;
             double Fx=0, Fy=0, Fz=0;
     };
     GZ_REGISTER_SENSOR_PLUGIN(UnitreeFootContactPlugin)
 }
-    

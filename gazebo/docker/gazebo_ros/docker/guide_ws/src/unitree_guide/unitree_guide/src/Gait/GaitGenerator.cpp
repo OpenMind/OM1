@@ -4,8 +4,8 @@
 #include "Gait/GaitGenerator.h"
 
 GaitGenerator::GaitGenerator(CtrlComponents *ctrlComp)
-              : _waveG(ctrlComp->waveGen), _est(ctrlComp->estimator), 
-                _phase(ctrlComp->phase), _contact(ctrlComp->contact), 
+              : _waveG(ctrlComp->waveGen), _est(ctrlComp->estimator),
+                _phase(ctrlComp->phase), _contact(ctrlComp->contact),
                 _robModel(ctrlComp->robotModel), _state(ctrlComp->lowState){
     _feetCal = new FeetEndCal(ctrlComp);
     _firstRun = true;
@@ -56,7 +56,7 @@ Vec3 GaitGenerator::getFootPos(int i){
     footPos(0) = cycloidXYPosition(_startP.col(i)(0), _endP.col(i)(0), (*_phase)(i));
     footPos(1) = cycloidXYPosition(_startP.col(i)(1), _endP.col(i)(1), (*_phase)(i));
     footPos(2) =  cycloidZPosition(_startP.col(i)(2), _gaitHeight, (*_phase)(i));
-    
+
     return footPos;
 }
 

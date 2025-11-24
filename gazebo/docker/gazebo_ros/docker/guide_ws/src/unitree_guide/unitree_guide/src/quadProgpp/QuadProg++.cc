@@ -1,14 +1,14 @@
-/* 
+/*
 File $Id: QuadProg++.cc 232 2007-06-21 12:29:00Z digasper $
- 
+
  Author: Luca Di Gaspero
  DIEGM - University of Udine, Italy
  luca.digaspero@uniud.it
  http://www.diegm.uniud.it/digaspero/
- 
+
  This software may be modified and distributed under the terms
  of the MIT license.  See the LICENSE file for details.
- 
+
  */
 
 #include <iostream>
@@ -22,7 +22,7 @@ File $Id: QuadProg++.cc 232 2007-06-21 12:29:00Z digasper $
 
 namespace quadprogpp {
 
-// Utility functions for updating some data needed by the solution method 
+// Utility functions for updating some data needed by the solution method
 void compute_d(Vector<double>& d, const Matrix<double>& J, const Vector<double>& np);
 void update_z(Vector<double>& z, const Matrix<double>& J, const Vector<double>& d, int iq);
 void update_r(const Matrix<double>& R, Vector<double>& r, const Vector<double>& d, int iq);
@@ -36,7 +36,7 @@ void cholesky_solve(const Matrix<double>& L, Vector<double>& x, const Vector<dou
 void forward_elimination(const Matrix<double>& L, Vector<double>& y, const Vector<double>& b);
 void backward_elimination(const Matrix<double>& U, Vector<double>& x, const Vector<double>& y);
 
-// Utility functions for computing the scalar product and the euclidean 
+// Utility functions for computing the scalar product and the euclidean
 // distance between two numbers
 double scalar_product(const Vector<double>& x, const Vector<double>& y);
 double distance(double a, double b);
@@ -48,9 +48,9 @@ template<typename T>
 void print_vector(const char* name, const Vector<T>& v, int n = -1);
 
 // The Solving function, implementing the Goldfarb-Idnani method
-double solve_quadprog(Matrix<double>& G, Vector<double>& g0, 
-                      const Matrix<double>& CE, const Vector<double>& ce0,  
-                      const Matrix<double>& CI, const Vector<double>& ci0, 
+double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
+                      const Matrix<double>& CE, const Vector<double>& ce0,
+                      const Matrix<double>& CI, const Vector<double>& ci0,
                       Vector<double>& x)
 {
   std::ostringstream msg;
@@ -91,12 +91,12 @@ double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
     inf = std::numeric_limits<double>::infinity();
   else
     inf = 1.0E300;
-  double t, t1, t2; /* t is the step lenght, which is the minimum of the partial step length t1 
+  double t, t1, t2; /* t is the step length, which is the minimum of the partial step length t1
     * and the full step length t2 */
   Vector<int> A(m + p), A_old(m + p), iai(m + p);
   unsigned int iq, iter = 0;
   Vector<bool> iaexcl(m + p);
-	
+
   /* p is the number of equality constraints */
   /* m is the number of inequality constraints */
 #ifdef TRACE_SOLVER
@@ -107,12 +107,12 @@ double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
   print_vector("ce0", ce0);
   print_matrix("CI", CI);
   print_vector("ci0", ci0);
-#endif  
-  
+#endif
+
   /*
    * Preprocessing phase
    */
-	
+
   /* compute the trace of the original matrix G */
   c1 = 0.0;
   for (i = 0; i < n; i++)
@@ -132,10 +132,10 @@ double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
       R[i][j] = 0.0;
   }
   R_norm = 1.0; /* this variable will hold the norm of the matrix R */
-  
+
   /* compute the inverse of the factorized matrix G^-1, this is the initial value for H */
   c2 = 0.0;
-  for (i = 0; i < n; i++) 
+  for (i = 0; i < n; i++)
   {
     d[i] = 1.0;
     forward_elimination(G, z, d);
@@ -147,24 +147,24 @@ double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
 #ifdef TRACE_SOLVER
   print_matrix("J", J);
 #endif
-  
+
   /* c1 * c2 is an estimate for cond(G) */
-  
-  /* 
-    * Find the unconstrained minimizer of the quadratic form 0.5 * x G x + g0 x 
+
+  /*
+    * Find the unconstrained minimizer of the quadratic form 0.5 * x G x + g0 x
    * this is a feasible point in the dual space
    * x = G^-1 * g0
    */
   cholesky_solve(G, x, g0);
   for (i = 0; i < n; i++)
     x[i] = -x[i];
-  /* and compute the current solution value */ 
+  /* and compute the current solution value */
   f_value = 0.5 * scalar_product(g0, x);
 #ifdef TRACE_SOLVER
   std::cout << "Unconstrained solution: " << f_value << std::endl;
   print_vector("x", x);
 #endif
-  
+
   /* Add equality constraints to the working set A */
   iq = 0;
   for (i = 0; i < p; i++)
@@ -180,38 +180,38 @@ double solve_quadprog(Matrix<double>& G, Vector<double>& g0,
     print_vector("r", r, iq);
     print_vector("d", d);
 #endif
-    
-    /* compute full step length t2: i.e., the minimum step in primal space s.t. the contraint 
+
+    /* compute full step length t2: i.e., the minimum step in primal space s.t. the constraint
       becomes feasible */
     t2 = 0.0;
     if (fabs(scalar_product(z, z)) > std::numeric_limits<double>::epsilon()) // i.e. z != 0
       t2 = (-scalar_product(np, x) - ce0[i]) / scalar_product(z, np);
-    
+
     /* set x = x + t2 * z */
     for (k = 0; k < n; k++)
       x[k] += t2 * z[k];
-    
+
     /* set u = u+ */
     u[iq] = t2;
     for (k = 0; k < iq; k++)
       u[k] -= t2 * r[k];
-    
+
     /* compute the new solution value */
     f_value += 0.5 * (t2 * t2) * scalar_product(z, np);
     A[i] = -i - 1;
-    
+
     if (!add_constraint(R, J, d, iq, R_norm))
-    {	  
+    {
       // Equality constraints are linearly dependent
       throw std::runtime_error("Constraints are linearly dependent");
       return f_value;
     }
   }
-  
+
   /* set iai = K \ A */
   for (i = 0; i < m; i++)
     iai[i] = i;
-  
+
 l1:	iter++;
 #ifdef TRACE_SOLVER
   print_vector("x", x);
@@ -222,7 +222,7 @@ l1:	iter++;
     ip = A[i];
     iai[ip] = -1;
   }
-	
+
   /* compute s[x] = ci^T * x + ci0 for all elements of K \ A */
   ss = 0.0;
   psi = 0.0; /* this value will contain the sum of all infeasibilities */
@@ -240,14 +240,14 @@ l1:	iter++;
 #ifdef TRACE_SOLVER
   print_vector("s", s, m);
 #endif
-  
-  
+
+
   if (fabs(psi) <= m * std::numeric_limits<double>::epsilon() * c1 * c2* 100.0)
   {
     /* numerically there are not infeasibilities anymore */
     return f_value;
   }
-  
+
   /* save old values for u and A */
   for (i = 0; i < iq; i++)
   {
@@ -257,7 +257,7 @@ l1:	iter++;
   /* and for x */
   for (i = 0; i < n; i++)
     x_old[i] = x[i];
-  
+
 l2: /* Step 2: check for feasibility and determine a new S-pair */
     for (i = 0; i < m; i++)
     {
@@ -271,7 +271,7 @@ l2: /* Step 2: check for feasibility and determine a new S-pair */
   {
     return f_value;
   }
-  
+
   /* set np = n[ip] */
   for (i = 0; i < n; i++)
     np[i] = CI[i][ip];
@@ -279,12 +279,12 @@ l2: /* Step 2: check for feasibility and determine a new S-pair */
   u[iq] = 0.0;
   /* add ip to the active set A */
   A[iq] = ip;
-  
+
 #ifdef TRACE_SOLVER
   std::cout << "Trying with constraint " << ip << std::endl;
   print_vector("np", np);
 #endif
-  
+
 l2a:/* Step 2a: determine step direction */
     /* compute z = H np: the step direction in the primal space (through J, see the paper) */
     compute_d(d, J, np);
@@ -299,7 +299,7 @@ l2a:/* Step 2a: determine step direction */
   print_vector("d", d);
   print_vector("A", A, iq + 1);
 #endif
-  
+
   /* Step 2b: compute step length */
   l = 0;
   /* Compute t1: partial step length (maximum step in dual space without violating dual feasibility */
@@ -325,15 +325,15 @@ l2a:/* Step 2a: determine step direction */
   }
   else
     t2 = inf; /* +inf */
-  
+
   /* the step is chosen as the minimum of t1 and t2 */
   t = std::min(t1, t2);
 #ifdef TRACE_SOLVER
   std::cout << "Step sizes: " << t << " (t1 = " << t1 << ", t2 = " << t2 << ") ";
 #endif
-  
+
   /* Step 2c: determine new S-pair and take step: */
-  
+
   /* case (i): no step in primal or dual space */
   if (t >= inf)
   {
@@ -351,7 +351,7 @@ l2a:/* Step 2a: determine step direction */
     iai[l] = l;
     delete_constraint(R, J, A, u, n, p, iq, l);
 #ifdef TRACE_SOLVER
-    std::cout << " in dual space: " 
+    std::cout << " in dual space: "
       << f_value << std::endl;
     print_vector("x", x);
     print_vector("z", z);
@@ -359,9 +359,9 @@ l2a:/* Step 2a: determine step direction */
 #endif
     goto l2a;
   }
-  
+
   /* case (iii): step in primal and dual space */
-  
+
   /* set x = x + t * z */
   for (k = 0; k < n; k++)
     x[k] += t * z[k];
@@ -372,14 +372,14 @@ l2a:/* Step 2a: determine step direction */
     u[k] -= t * r[k];
   u[iq] += t;
 #ifdef TRACE_SOLVER
-  std::cout << " in both spaces: " 
+  std::cout << " in both spaces: "
     << f_value << std::endl;
   print_vector("x", x);
   print_vector("u", u, iq + 1);
   print_vector("r", r, iq + 1);
   print_vector("A", A, iq + 1);
 #endif
-  
+
   if (fabs(t - t2) < std::numeric_limits<double>::epsilon())
   {
 #ifdef TRACE_SOLVER
@@ -408,7 +408,7 @@ l2a:/* Step 2a: determine step direction */
       for (i = 0; i < n; i++)
         x[i] = x_old[i];
       goto l2; /* go to step 2 */
-    }    
+    }
     else
       iai[ip] = -1;
 #ifdef TRACE_SOLVER
@@ -418,7 +418,7 @@ l2a:/* Step 2a: determine step direction */
 #endif
     goto l1;
   }
-  
+
   /* a patial step has taken */
 #ifdef TRACE_SOLVER
   std::cout << "Partial step has taken " << t << std::endl;
@@ -431,13 +431,13 @@ l2a:/* Step 2a: determine step direction */
   print_matrix("R", R);
   print_vector("A", A, iq);
 #endif
-  
+
   /* update s[ip] = CI * x + ci0 */
   sum = 0.0;
   for (k = 0; k < n; k++)
     sum += CI[k][ip] * x[k];
   s[ip] = sum + ci0[ip];
-  
+
 #ifdef TRACE_SOLVER
   print_vector("s", s, m);
 #endif
@@ -448,7 +448,7 @@ inline void compute_d(Vector<double>& d, const Matrix<double>& J, const Vector<d
 {
   register int i, j, n = d.size();
   register double sum;
-  
+
   /* compute d = H^T * np */
   for (i = 0; i < n; i++)
   {
@@ -462,7 +462,7 @@ inline void compute_d(Vector<double>& d, const Matrix<double>& J, const Vector<d
 inline void update_z(Vector<double>& z, const Matrix<double>& J, const Vector<double>& d, int iq)
 {
   register int i, j, n = z.size();
-	
+
   /* setting of z = H * d */
   for (i = 0; i < n; i++)
   {
@@ -476,7 +476,7 @@ inline void update_r(const Matrix<double>& R, Vector<double>& r, const Vector<do
 {
   register int i, j;
   register double sum;
-  
+
   /* setting of r = R^-1 d */
   for (i = iq - 1; i >= 0; i--)
   {
@@ -495,17 +495,17 @@ bool add_constraint(Matrix<double>& R, Matrix<double>& J, Vector<double>& d, uns
 #endif
   register unsigned int i, j, k;
   double cc, ss, h, t1, t2, xny;
-	
+
   /* we have to find the Givens rotation which will reduce the element
     d[j] to zero.
     if it is already zero we don't have to do anything, except of
-    decreasing j */  
+    decreasing j */
   for (j = n - 1; j >= iq + 1; j--)
   {
     /* The Givens rotation is done with the matrix (cc cs, cs -cc).
     If cc is one, then element (j) of d is zero compared with element
-    (j - 1). Hence we don't have to do anything. 
-    If cc is zero, then we just have to switch column (j) and column (j - 1) 
+    (j - 1). Hence we don't have to do anything.
+    If cc is zero, then we just have to switch column (j) and column (j - 1)
     of J. Since we only switch columns in J, we have to be careful how we
     update d depending on the sign of gs.
     Otherwise we have to apply the Givens rotation to these columns.
@@ -548,8 +548,8 @@ bool add_constraint(Matrix<double>& R, Matrix<double>& J, Vector<double>& d, uns
   print_matrix("J", J);
   print_vector("d", d, iq);
 #endif
-  
-  if (fabs(d[iq - 1]) <= std::numeric_limits<double>::epsilon() * R_norm) 
+
+  if (fabs(d[iq - 1]) <= std::numeric_limits<double>::epsilon() * R_norm)
   {
     // problem degenerate
     return false;
@@ -590,10 +590,10 @@ void delete_constraint(Matrix<double>& R, Matrix<double>& J, Vector<int>& A, Vec
       for (j = 0; j < n; j++)
         R[j][i] = R[j][i + 1];
     }
-      
+
   A[iq - 1] = A[iq];
   u[iq - 1] = u[iq];
-  A[iq] = 0; 
+  A[iq] = 0;
   u[iq] = 0.0;
   for (j = 0; j < iq; j++)
     R[j][iq - 1] = 0.0;
@@ -601,11 +601,11 @@ void delete_constraint(Matrix<double>& R, Matrix<double>& J, Vector<int>& A, Vec
   iq--;
 #ifdef TRACE_SOLVER
   std::cout << '/' << iq << std::endl;
-#endif 
-  
+#endif
+
   if (iq == 0)
     return;
-  
+
   for (j = qq; j < iq; j++)
   {
     cc = R[j][j];
@@ -624,7 +624,7 @@ void delete_constraint(Matrix<double>& R, Matrix<double>& J, Vector<int>& A, Vec
     }
     else
       R[j][j] = h;
-    
+
     xny = ss / (1.0 + cc);
     for (k = j + 1; k < iq; k++)
     {
@@ -648,7 +648,7 @@ inline double distance(double a, double b)
   register double a1, b1, t;
   a1 = fabs(a);
   b1 = fabs(b);
-  if (a1 > b1) 
+  if (a1 > b1)
   {
     t = (b1 / a1);
     return a1 * sqrt(1.0 + t * t);
@@ -667,18 +667,18 @@ inline double scalar_product(const Vector<double>& x, const Vector<double>& y)
 {
   register int i, n = x.size();
   register double sum;
-	
+
   sum = 0.0;
   for (i = 0; i < n; i++)
     sum += x[i] * y[i];
-  return sum;			
+  return sum;
 }
 
-void cholesky_decomposition(Matrix<double>& A) 
+void cholesky_decomposition(Matrix<double>& A)
 {
   register int i, j, k, n = A.nrows();
   register double sum;
-	
+
   for (i = 0; i < n; i++)
   {
     for (j = i; j < n; j++)
@@ -686,7 +686,7 @@ void cholesky_decomposition(Matrix<double>& A)
       sum = A[i][j];
       for (k = i - 1; k >= 0; k--)
         sum -= A[i][k]*A[j][k];
-      if (i == j) 
+      if (i == j)
 	    {
 	      if (sum <= 0.0)
         {
@@ -704,14 +704,14 @@ void cholesky_decomposition(Matrix<double>& A)
     }
     for (k = i + 1; k < n; k++)
       A[i][k] = A[k][i];
-  } 
+  }
 }
 
 void cholesky_solve(const Matrix<double>& L, Vector<double>& x, const Vector<double>& b)
 {
   int n = L.nrows();
   Vector<double> y(n);
-	
+
   /* Solve L * y = b */
   forward_elimination(L, y, b);
   /* Solve L^T * x = y */
@@ -721,7 +721,7 @@ void cholesky_solve(const Matrix<double>& L, Vector<double>& x, const Vector<dou
 inline void forward_elimination(const Matrix<double>& L, Vector<double>& y, const Vector<double>& b)
 {
   register int i, j, n = L.nrows();
-	
+
   y[0] = b[0] / L[0][0];
   for (i = 1; i < n; i++)
   {
@@ -735,7 +735,7 @@ inline void forward_elimination(const Matrix<double>& L, Vector<double>& y, cons
 inline void backward_elimination(const Matrix<double>& U, Vector<double>& x, const Vector<double>& y)
 {
   register int i, j, n = U.nrows();
-	
+
   x[n - 1] = y[n - 1] / U[n - 1][n - 1];
   for (i = n - 2; i >= 0; i--)
   {
@@ -754,7 +754,7 @@ void print_matrix(const char* name, const Matrix<double>& A, int n, int m)
     n = A.nrows();
   if (m == -1)
     m = A.ncols();
-	
+
   s << name << ": " << std::endl;
   for (int i = 0; i < n; i++)
   {
@@ -765,7 +765,7 @@ void print_matrix(const char* name, const Matrix<double>& A, int n, int m)
   }
   t = s.str();
   t = t.substr(0, t.size() - 3); // To remove the trailing space, comma and newline
-	
+
   std::cout << t << std::endl;
 }
 
@@ -776,7 +776,7 @@ void print_vector(const char* name, const Vector<T>& v, int n)
   std::string t;
   if (n == -1)
     n = v.size();
-	
+
   s << name << ": " << std::endl << " ";
   for (int i = 0; i < n; i++)
   {
@@ -784,7 +784,7 @@ void print_vector(const char* name, const Vector<T>& v, int n)
   }
   t = s.str();
   t = t.substr(0, t.size() - 2); // To remove the trailing space and comma
-	
+
   std::cout << t << std::endl;
 }
 

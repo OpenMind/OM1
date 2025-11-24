@@ -8,18 +8,40 @@ services:
     image: ros1_gazebo_image:latest
     platform: linux/amd64
     container_name: ros1_gazebo_container
-    runtime: nvidia
+    runtime: ${DOCKER_RUNTIME:-runc}
     network_mode: host
     pid: host
     ipc: host
+    # environment:
+    #   # Display configuration
+    #   - DISPLAY=${DISPLAY:-:0}
+    #   # NVIDIA settings
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=all
+    #   # GLX configuration for NVIDIA
+    #   - __GLX_VENDOR_LIBRARY_NAME=nvidia
+    #   - __NV_PRIME_RENDER_OFFLOAD=1
+    #   # Qt settings
+    #   - QT_X11_NO_MITSHM=1
+    # environment:
+    #   - DISPLAY=${DISPLAY:-:0}
+    #   - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+    #   - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-all}
+    #   - QT_X11_NO_MITSHM=1
+    #   - FORCE_SOFTWARE_RENDERING=${FORCE_SOFTWARE_RENDERING:-false}
     environment:
-      # Set DISPLAY variable for GUI
-      - DISPLAY=:1
+      # Display configuration
+      - DISPLAY=${DISPLAY:-:0}
+      # NVIDIA settings
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
+      # Pass GPU detection from host
+      - USE_GPU_RENDERING=${USE_GPU_RENDERING:-false}
+      # GLX configuration - will be set based on detection
+      - __GLX_VENDOR_LIBRARY_NAME=${__GLX_VENDOR_LIBRARY_NAME:-mesa}
+      - __NV_PRIME_RENDER_OFFLOAD=${__NV_PRIME_RENDER_OFFLOAD:-0}
+      # Qt settings
       - QT_X11_NO_MITSHM=1
-      - LIBGL_ALWAYS_SOFTWARE=0
-      - __GLX_VENDOR_LIBRARY_NAME=nvidia
     volumes:
       # X11 socket for GUI forwarding
       - /tmp/.X11-unix:/tmp/.X11-unix

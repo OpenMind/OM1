@@ -8,11 +8,11 @@
 /************************/
 /*******QuadrupedLeg*****/
 /************************/
-QuadrupedLeg::QuadrupedLeg(int legID, float abadLinkLength, float hipLinkLength, 
+QuadrupedLeg::QuadrupedLeg(int legID, float abadLinkLength, float hipLinkLength,
                            float kneeLinkLength, Vec3 pHip2B)
-            :_abadLinkLength(abadLinkLength), 
-             _hipLinkLength(hipLinkLength), 
-             _kneeLinkLength(kneeLinkLength), 
+            :_abadLinkLength(abadLinkLength),
+             _hipLinkLength(hipLinkLength),
+             _kneeLinkLength(kneeLinkLength),
              _pHip2B(pHip2B){
     if (legID == 0 || legID == 2)
         _sideSign = -1;
@@ -165,7 +165,7 @@ float QuadrupedLeg::q3_ik(float b3z, float b4z, float b){
 
 float QuadrupedLeg::q2_ik(float q1, float q3, float px, float py, float pz, float b3z, float b4z){
     float q2, a1, a2, m1, m2;
-    
+
     a1 = py*sin(q1) - pz*cos(q1);
     a2 = px;
     m1 = b4z*sin(q3);

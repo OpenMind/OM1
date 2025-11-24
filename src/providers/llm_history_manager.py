@@ -120,6 +120,11 @@ class LLMHistoryManager:
                 )
 
             summary = response.choices[0].message.content
+            if summary is None:
+                logging.error("Received empty summary from API")
+                return ChatMessage(
+                    role="system", content="Error: Received empty summary from API"
+                )
             return ChatMessage(role="assistant", content=f"Previously, {summary}")
 
         except asyncio.TimeoutError:

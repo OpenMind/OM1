@@ -6,10 +6,10 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #ifndef _UNITREE_LEGGED_QUADRUPED_H_
 #define _UNITREE_LEGGED_QUADRUPED_H_
 
-namespace UNITREE_LEGGED_SDK 
+namespace UNITREE_LEGGED_SDK
 {
 
-enum class LeggedType { 
+enum class LeggedType {
 	Aliengo,
 	A1
 };
@@ -28,7 +28,7 @@ constexpr int RR_ = 2;
 constexpr int RL_ = 3;
 
 constexpr int FR_0 = 0;      // joint index
-constexpr int FR_1 = 1;      
+constexpr int FR_1 = 1;
 constexpr int FR_2 = 2;
 
 constexpr int FL_0 = 3;

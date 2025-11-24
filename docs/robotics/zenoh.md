@@ -18,7 +18,7 @@ Install the Zenoh router:
 ```bash
 $ echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null
 $ sudo apt update
-$ sudo apt install zenoh 
+$ sudo apt install zenoh
 ```
 
 ## Starting/testing the Router
@@ -57,11 +57,11 @@ You can use `curl` to publish and query the **latest** keys/values:
 ```bash
 # Put values that will be stored under ${ZENOH_BACKEND_FS_ROOT}/robot
 curl -X PUT -d "HELLO WORLD" http://localhost:9500/robot
-curl -X PUT -d "HELLO WORLD A" http://localhost:9500/robot/audio   
+curl -X PUT -d "HELLO WORLD A" http://localhost:9500/robot/audio
 
 # Retrieve the values
-curl http://localhost:9500/robot 
-curl http://localhost:9500/robot/audio 
+curl http://localhost:9500/robot
+curl http://localhost:9500/robot/audio
 ```
 
 To be clear, the system only saves the most recent key/value pair.
