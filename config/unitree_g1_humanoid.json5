@@ -11,7 +11,7 @@
       type: "GoogleASRRTSPInput",
     },
     {
-      type: "LocationsG1Input"
+      type: "UnitreeG1LocationsInput"
     },
     {
       type: "Odom"

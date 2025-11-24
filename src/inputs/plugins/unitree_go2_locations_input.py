@@ -16,7 +16,7 @@ class Message:
     message: str
 
 
-class LocationsGo2Input(FuserInput[str]):
+class UnitreeGo2LocationsInput(FuserInput[str]):
     """
     Input plugin that publishes available saved locations for LLM prompts (Unitree Go2).
 
@@ -25,7 +25,7 @@ class LocationsGo2Input(FuserInput[str]):
 
     def __init__(self, config: SensorConfig = SensorConfig()):
         """
-        Initialize the LocationsGo2Input plugin.
+        Initialize the UnitreeGo2LocationsInput plugin.
 
         Parameters
         ----------
@@ -74,7 +74,7 @@ class LocationsGo2Input(FuserInput[str]):
                 lines.append(f"{label}")
 
         result = "\n".join(lines)
-        logging.debug(f"LocationsGo2Input: formatted {len(lines)} locations")
+        logging.debug(f"UnitreeGo2LocationsInput: formatted {len(lines)} locations")
         return result
 
     async def _raw_to_text(self, raw_input: str) -> Message:

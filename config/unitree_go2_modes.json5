@@ -253,7 +253,7 @@
       "hertz": 1,
       "agent_inputs": [
         {
-          "type": "LocationsGo2Input"
+          "type": "UnitreeGo2LocationsInput"
         },
         {
           "type": "LidarLocalizationInput"

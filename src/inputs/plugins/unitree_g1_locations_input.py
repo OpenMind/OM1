@@ -16,7 +16,7 @@ class Message:
     message: str
 
 
-class LocationsG1Input(FuserInput[str]):
+class UnitreeG1LocationsInput(FuserInput[str]):
     """
     Input plugin that publishes available saved locations for LLM prompts (Unitree G1).
 
@@ -25,7 +25,7 @@ class LocationsG1Input(FuserInput[str]):
 
     def __init__(self, config: SensorConfig = SensorConfig()):
         """
-        Initialize the LocationsG1Input plugin.
+        Initialize the UnitreeG1LocationsInput plugin.
 
         Parameters
         ----------
@@ -74,7 +74,7 @@ class LocationsG1Input(FuserInput[str]):
                 lines.append(f"{label}")
 
         result = "\n".join(lines)
-        logging.debug(f"LocationsG1Input: formatted {len(lines)} locations")
+        logging.debug(f"UnitreeG1LocationsInput: formatted {len(lines)} locations")
         return result
 
     async def _raw_to_text(self, raw_input: str) -> Message:
