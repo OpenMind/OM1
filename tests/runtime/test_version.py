@@ -244,7 +244,6 @@ def test_verify_logs_contain_correct_versions(caplog):
             assert any("Runtime version: v1.0.0" in msg for msg in log_messages)
 
 
-# Integration tests for the version module
 def test_module_constants():
     """Test that module constants are properly defined."""
     assert isinstance(latest_runtime_version, str)
