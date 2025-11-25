@@ -16,7 +16,7 @@
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
 * **Web-Based Debugging Display**: Monitor the system in action with WebSim (available at http://localhost:8000/) for easy visual debugging.
 <<<<<<< HEAD
-* **Pre-configured Endpoints**: Supports Text-to-Speech, OpenAI's `gpt-4o`, multiple LLMs from xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
+* * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 >>>>>>> upstream/main
 
 ## Architecture Overview
