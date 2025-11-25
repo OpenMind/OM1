@@ -1,0 +1,30 @@
+<mujoco model="pendulum">
+    <compiler angle="radian" coordinate="local"/>
+    <option timestep="0.01"/>
+    
+    <default>
+        <joint damping="0.5"/>
+        <geom type="capsule" size="0.05" rgba="0.8 0.2 0.2 1"/>
+        <motor gear="1" ctrlrange="-2 2"/>
+    </default>
+
+    <worldbody>
+        <light pos="0 0 2" dir="0 0 -1"/>
+        <geom name="floor" type="plane" size="5 5 0.1" rgba="0.8 0.8 0.8 1"/>
+        
+        <body name="pole" pos="0 0 0">
+            <joint name="pivot" type="hinge" axis="0 1 0"/>
+            <geom name="pole_geom" type="capsule" fromto="0 0 0 0 0 -1" size="0.05"/>
+            <site name="tip" pos="0 0 -1"/>
+        </body>
+    </worldbody>
+
+    <actuator>
+        <motor name="torque" joint="pivot"/>
+    </actuator>
+
+    <sensor>
+        <jointpos name="theta" joint="pivot"/>
+        <jointvel name="theta_dot" joint="pivot"/>
+    </sensor>
+</mujoco>

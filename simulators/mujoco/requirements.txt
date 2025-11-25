@@ -1,0 +1,3 @@
+mujoco>=3.3.7
+gymnasium[mujoco]
+numpy
