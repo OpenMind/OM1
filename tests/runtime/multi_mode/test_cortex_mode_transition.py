@@ -16,6 +16,7 @@ from runtime.multi_mode.cortex import ModeCortexRuntime
 def sample_mode_configs():
     """Sample mode configurations for testing mode transitions."""
     default_mode = ModeConfig(
+        version="v1.0.0",
         name="default",
         display_name="Default Mode",
         description="Default operational mode",
@@ -23,6 +24,7 @@ def sample_mode_configs():
     )
 
     advanced_mode = ModeConfig(
+        version="v1.0.0",
         name="advanced",
         display_name="Advanced Mode",
         description="Advanced operational mode",
@@ -30,6 +32,7 @@ def sample_mode_configs():
     )
 
     emergency_mode = ModeConfig(
+        version="v1.0.0",
         name="emergency",
         display_name="Emergency Mode",
         description="Emergency operational mode",
