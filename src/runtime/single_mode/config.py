@@ -13,6 +13,7 @@ from inputs import load_input
 from inputs.base import Sensor, SensorConfig
 from llm import LLM, LLMConfig, load_llm
 from runtime.robotics import load_unitree
+from runtime.version import verify_runtime_version
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
 
@@ -20,6 +21,8 @@ from simulators.base import Simulator, SimulatorConfig
 @dataclass
 class RuntimeConfig:
     """Runtime configuration for the agent."""
+
+    version: str
 
     hertz: float
     name: str
@@ -95,6 +98,9 @@ def load_config(
 
     with open(config_path, "r+") as f:
         raw_config = json5.load(f)
+
+    config_version = raw_config.get("version")
+    verify_runtime_version(config_version, config_name)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -229,14 +235,6 @@ def load_config(
     return RuntimeConfig(**parsed_config)
 
 
-def get_nested_value(data, keys):
-    if not keys:
-        return data
-    if isinstance(data, dict) and keys[0] in data:
-        return get_nested_value(data[keys[0]], keys[1:])
-    return None
-
-
 def add_meta(
     config: Dict,
     g_api_key: Optional[str],
@@ -337,6 +335,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         available_actions=agent_actions,
     )
     return RuntimeConfig(
+        version=config.get("version", "v1.0.0"),  # Default version if not specified
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
         system_prompt_base=config.get("system_prompt_base", ""),
