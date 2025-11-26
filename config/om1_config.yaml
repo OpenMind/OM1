@@ -1,0 +1,18 @@
+om1:
+  api_key: "om1_live_482c8015602d9ef9e58c9cdcc9e8d6d6e6b75f7a9c8d635d75e482fa594e4f84be6ea052e2aa6a92"
+  endpoint: "wss://api.openmind.org"
+  
+gazebo:
+  world: "office_environment"
+  robot_model: "enhanced_om1_robot"
+  
+sensors:
+  camera:
+    enabled: true
+    topic: "/camera/image_raw"
+  lidar:
+    enabled: true
+    topic: "/scan"
+  imu:
+    enabled: true
+    topic: "/imu"
