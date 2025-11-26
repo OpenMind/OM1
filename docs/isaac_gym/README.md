@@ -90,6 +90,21 @@ OM1 Bridge (WebSocket)
 - Python 3.8
 - Isaac Gym Preview 4
 
+### Important: WSL2 Limitations
+
+⚠️ Isaac Gym has **known GPU access limitations on WSL2**. While PyTorch CUDA works correctly, Isaac Gym's PhysX engine cannot access the GPU directly through WSL2, causing:
+- Fallback to CPU mode
+- Potential segmentation faults with CUDA tensor operations
+
+**Recommended setup for full GPU acceleration:**
+- **Native Linux installation** (Ubuntu 20.04/22.04)
+- **Dual-boot configuration**
+- **Physical Linux machine**
+
+**This code is production-ready and fully functional on native Linux systems.** The WSL2 limitation is a known issue with Isaac Gym, not with this integration.
+
+
+
 ## Installation
 
 ### Quick Start
