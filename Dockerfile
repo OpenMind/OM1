@@ -49,6 +49,8 @@ WORKDIR /app/OM1
 COPY . .
 RUN git submodule update --init --recursive
 
+RUN cp -r config config_defaults
+
 RUN uv venv /app/OM1/.venv && \
     uv pip install -r pyproject.toml --extra dds
 
@@ -57,6 +59,7 @@ ENV PATH="/app/OM1/.venv/bin:$PATH"
 
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
+    echo 'cp -r /app/OM1/config_defaults/* /app/OM1/config/ 2>/dev/null || true' >> /entrypoint.sh && \
     echo 'until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
     echo '  echo "Waiting for internet connection..."' >> /entrypoint.sh && \
     echo '  sleep 2' >> /entrypoint.sh && \
@@ -75,7 +78,11 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'echo "Audio device default_output_aec is ready."' >> /entrypoint.sh && \
     echo 'echo "Starting main command..."' >> /entrypoint.sh && \
-    echo 'exec python src/run.py "$@"' >> /entrypoint.sh && \
+    echo 'if [ -f "/app/OM1/config/memory/.runtime.json5" ]; then' >> /entrypoint.sh && \
+    echo '  exec python src/run.py' >> /entrypoint.sh && \
+    echo 'else' >> /entrypoint.sh && \
+    echo '  exec python src/run.py "$@"' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -21,6 +21,7 @@ from runtime.multi_mode.hook import (
 )
 from runtime.robotics import load_unitree
 from runtime.single_mode.config import RuntimeConfig, add_meta
+from runtime.version import verify_runtime_version
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
 
@@ -82,6 +83,8 @@ class ModeConfig:
     Configuration for a specific mode.
     """
 
+    version: str
+
     name: str
     display_name: str
     description: str
@@ -125,6 +128,7 @@ class ModeConfig:
             raise ValueError(f"No LLM configured for mode {self.name}")
 
         return RuntimeConfig(
+            version=self.version,
             hertz=self.hertz,
             mode=self.name,
             name=f"{global_config.name}_{self.name}",
@@ -295,6 +299,9 @@ def load_mode_config(
     with open(config_path, "r") as f:
         raw_config = json5.load(f)
 
+    config_version = raw_config.get("version")
+    verify_runtime_version(config_version, config_name)
+
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
         logging.warning("No robot ip found in mode config. Checking .env file.")
@@ -344,6 +351,7 @@ def load_mode_config(
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
         mode_config = ModeConfig(
+            version=mode_data.get("version", "1.0"),
             name=mode_name,
             display_name=mode_data.get("display_name", mode_name),
             description=mode_data.get("description", ""),
