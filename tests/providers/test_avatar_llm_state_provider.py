@@ -38,7 +38,6 @@ def mock_avatar_provider() -> Generator[MagicMock, None, None]:
         patch("providers.avatar_llm_state_provider.AvatarProvider") as avatar_mock,
         patch("providers.avatar_llm_state_provider.IOProvider") as io_mock,
     ):
-
         provider_instance = MagicMock()
         provider_instance.running = True
         provider_instance.send_avatar_command = MagicMock()
@@ -111,7 +110,6 @@ async def test_decorator_handles_avatar_provider_not_running():
         patch("providers.avatar_llm_state_provider.AvatarProvider") as avatar_mock,
         patch("providers.avatar_llm_state_provider.IOProvider") as io_mock,
     ):
-
         provider_instance = MagicMock()
         provider_instance.running = False
         provider_instance.send_avatar_command = MagicMock()
@@ -140,7 +138,6 @@ async def test_decorator_handles_avatar_provider_exception():
         patch("providers.avatar_llm_state_provider.AvatarProvider") as avatar_mock,
         patch("providers.avatar_llm_state_provider.IOProvider") as io_mock,
     ):
-
         avatar_mock.side_effect = Exception("Avatar provider error")
 
         io_instance = MagicMock()

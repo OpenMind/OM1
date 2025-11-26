@@ -77,7 +77,6 @@ class RtkProvider:
         return dt.timestamp()
 
     def get_latest_gngga_message(self, nmea_data):
-
         pattern = re.compile(
             r"(\$GNGGA,(?P<time>\d{6}(?:\.\d+)?),[^*]*\*[0-9A-Fa-f]{2})", re.MULTILINE
         )
@@ -104,7 +103,6 @@ class RtkProvider:
             return most_recent[1]
 
     def magRTKProcessor(self, msg):
-
         try:
             logging.debug(f"RTK:{msg}")
 
@@ -166,7 +164,6 @@ class RtkProvider:
         Main loop for the RTK provider.
         """
         while self.running:
-
             if self.serial_connection:
                 bytes_waiting = self.serial_connection.in_waiting
                 while bytes_waiting > 0:

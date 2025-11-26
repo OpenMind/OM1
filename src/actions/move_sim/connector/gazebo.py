@@ -52,7 +52,6 @@ class GazeboConnector(ActionConnector[MoveInput]):
         self.robot_name = robot_name
 
     async def connect(self, output_interface: MoveInput) -> None:
-
         new_msg = {"move": ""}
 
         # stub to show how to do this

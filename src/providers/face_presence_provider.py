@@ -257,7 +257,6 @@ class FacePresenceProvider:
         data: Dict = r.json() or {}
 
         if self.prefer_recent:
-
             name_frames: Dict[str, int] = data.get("recent_name_frames", {}) or {}
             names = [k for k in name_frames.keys() if k and k != "unknown"]
 

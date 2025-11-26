@@ -175,7 +175,7 @@ class UbtechASRProvider:
                     return None
                 res = self._get_voice_iat()
                 logging.debug(
-                    f"UbtechASRProvider: _get_voice_iat (attempt {i+1}) returned: {res}"
+                    f"UbtechASRProvider: _get_voice_iat (attempt {i + 1}) returned: {res}"
                 )
                 if res.get("status") == "idle" and res.get("timestamp") == ts:
                     if not res.get("data") or res.get("code") != 0:

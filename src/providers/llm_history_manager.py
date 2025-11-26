@@ -208,7 +208,6 @@ class LLMHistoryManager:
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
             @functools.wraps(func)
             async def wrapper(self: Any, prompt: str, *args, **kwargs) -> R:
-
                 if self._config.history_length == 0:
                     response = await func(self, prompt, [], *args, **kwargs)
                     self.history_manager.frame_index += 1
@@ -242,7 +241,6 @@ class LLMHistoryManager:
                 logging.debug(f"Response to parse:\n{response}")
 
                 if response is not None:
-
                     action_message = (
                         "Given that information, **** took these actions: "
                         + (

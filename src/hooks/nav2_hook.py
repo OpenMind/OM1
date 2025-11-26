@@ -29,7 +29,6 @@ async def start_nav2_hook(context: Dict[str, Any]):
                 headers={"Content-Type": "application/json"},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
-
                 if response.status == 200:
                     result = await response.json()
                     logging.info(
@@ -79,7 +78,6 @@ async def stop_nav2_hook(context: Dict[str, Any]):
                 headers={"Content-Type": "application/json"},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
-
                 if response.status == 200:
                     result = await response.json()
                     logging.info(

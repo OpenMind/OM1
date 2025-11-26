@@ -29,7 +29,6 @@ class ROS2Connector(ActionConnector[MoveInput]):
         self.publisher.start()
 
     async def connect(self, output_interface: MoveInput) -> None:
-
         new_msg = {"move": ""}
 
         # stub to show how to do this

@@ -15,9 +15,7 @@ from zenoh_msgs import geometry_msgs, open_zenoh_session, sensor_msgs
 
 
 class MoveZenohConnector(ActionConnector[MoveInput]):
-
     def __init__(self, config: ActionConfig):
-
         super().__init__(config)
 
         self.turn_speed = 0.8
@@ -106,7 +104,6 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
         self.session.put(self.cmd_vel, t.serialize())
 
     async def connect(self, output_interface: MoveInput) -> None:
-
         logging.info(f"AI motion command: {output_interface.action}")
 
         if self.pending_movements.qsize() > 0:
@@ -209,7 +206,6 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             self.pending_movements.get()
 
     def tick(self) -> None:
-
         time.sleep(0.1)
 
         logging.debug("Move tick")
@@ -241,7 +237,6 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
             logging.info(f"Should have non-zero avoidance yaw: {self.emergency}")
 
         if self.emergency:
-
             # target = self.emergency
             target = [MoveCommand(dx=0.0, yaw=self.emergency)]
             logging.info(f"Emergency target: {target}")
@@ -289,7 +284,6 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
         target: List[MoveCommand] = list(self.pending_movements.queue)
 
         if len(target) > 0:
-
             current_target = target[0]
 
             logging.debug(
@@ -346,7 +340,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
                     (self.odom.x - s_x) ** 2 + (self.odom.y - s_y) ** 2
                 )
                 remaining = abs(goal_dx - distance_traveled)
-                logging.info(f"remaining advance GAP: {round(remaining,2)}")
+                logging.info(f"remaining advance GAP: {round(remaining, 2)}")
 
                 fb = 0
                 if pp is not None and 4 in pp:

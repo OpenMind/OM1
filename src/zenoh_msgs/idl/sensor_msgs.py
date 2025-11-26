@@ -89,7 +89,6 @@ class HazardDetectionVector(IdlStruct, typename="HazardDetectionVector"):
 
 @dataclass
 class NavSatStatus(IdlStruct, typename="NavSatStatus"):
-
     class STATUS(Enum):
         NO_FIX = -1  # unable to fix position
         FIX = 0  # unaugmented fix

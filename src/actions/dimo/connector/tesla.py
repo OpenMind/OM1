@@ -10,7 +10,6 @@ from providers.io_provider import IOProvider
 
 
 class DIMOTeslaConnector(ActionConnector[TeslaInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 

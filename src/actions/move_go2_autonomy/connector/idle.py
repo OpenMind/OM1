@@ -5,7 +5,6 @@ from actions.move_go2_autonomy.interface import MoveInput
 
 
 class IDELEConnector(ActionConnector[MoveInput]):
-
     def __init__(self, config: ActionConfig):
         """
         Initialize the IDLE connector.

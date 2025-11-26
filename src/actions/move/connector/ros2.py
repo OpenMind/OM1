@@ -6,12 +6,10 @@ from actions.move.interface import MoveInput
 
 
 class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 
     async def connect(self, output_interface: MoveInput) -> None:
-
         new_msg = {"move": ""}
 
         # stub to show how to do this

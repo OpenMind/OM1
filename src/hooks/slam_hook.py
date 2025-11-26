@@ -25,7 +25,6 @@ async def start_slam_hook(context: Dict[str, Any]):
                 headers={"Content-Type": "application/json"},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
-
                 if response.status == 200:
                     result = await response.json()
                     logging.info(
@@ -80,7 +79,6 @@ async def stop_slam_hook(context: Dict[str, Any]):
                 headers={"Content-Type": "application/json"},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as save_response:
-
                 if save_response.status == 200:
                     save_result = await save_response.json()
                     logging.info(
@@ -107,7 +105,6 @@ async def stop_slam_hook(context: Dict[str, Any]):
                 headers={"Content-Type": "application/json"},
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
-
                 if response.status == 200:
                     result = await response.json()
                     logging.info(

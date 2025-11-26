@@ -1,0 +1,10 @@
+[lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["I001"]  # ignora organize imports (il problema del CI)
+line-length = 99
+
+[lint.isort]
+known-first-party = ["src"]
+
+[lint.flake8]
+extend-ignore = ["E203"]

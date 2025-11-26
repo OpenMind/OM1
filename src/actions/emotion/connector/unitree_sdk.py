@@ -1,13 +1,13 @@
 import logging
 import time
 
+from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
+
 from actions.base import ActionConfig, ActionConnector
 from actions.emotion.interface import EmotionInput
-from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
 
 
 class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 
@@ -31,7 +31,6 @@ class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
             self.ao_client.LedControl(0, 255, 0)
 
     async def connect(self, output_interface: EmotionInput) -> None:
-
         if not self.ao_client:
             logging.error("No Unitree Emotion Client")
             return

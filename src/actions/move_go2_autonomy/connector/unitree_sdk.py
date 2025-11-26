@@ -5,16 +5,16 @@ import time
 from queue import Queue
 from typing import List, Optional
 
+from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
 from providers.odom_provider import OdomProvider, RobotState
 from providers.rplidar_provider import RPLidarProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
 class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 
@@ -49,7 +49,6 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
-
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
@@ -185,7 +184,6 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         target: List[MoveCommand] = list(self.pending_movements.queue)
 
         if len(target) > 0:
-
             current_target = target[0]
 
             logging.info(

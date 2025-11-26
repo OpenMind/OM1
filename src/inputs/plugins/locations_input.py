@@ -69,7 +69,9 @@ class LocationsInput(FuserInput[str]):
             pose = entry.get("pose") if isinstance(entry, dict) else None
             if pose and isinstance(pose, dict):
                 pos = pose.get("position", {})
-                lines.append(f"{label} (x:{pos.get('x',0):.2f} y:{pos.get('y',0):.2f})")
+                lines.append(
+                    f"{label} (x:{pos.get('x', 0):.2f} y:{pos.get('y', 0):.2f})"
+                )
             else:
                 lines.append(f"{label}")
 

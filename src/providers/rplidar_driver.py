@@ -162,9 +162,7 @@ class RPDriver(object):
                 write_timeout=self.timeout,
             )
         except serial.SerialException as err:
-            raise RPLidarException(
-                "Failed to connect to the sensor " "due to: %s" % err
-            )
+            raise RPLidarException("Failed to connect to the sensor due to: %s" % err)
 
     def disconnect(self):
         """Disconnects from the serial port"""
@@ -417,8 +415,7 @@ class RPDriver(object):
                 data_in_buf = self._serial.inWaiting()
                 if data_in_buf > max_buf_meas:
                     self.logger.warning(
-                        "Too many bytes in the input buffer: %d/%d. "
-                        "Cleaning buffer...",
+                        "Too many bytes in the input buffer: %d/%d. Cleaning buffer...",
                         data_in_buf,
                         max_buf_meas,
                     )

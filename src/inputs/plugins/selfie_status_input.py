@@ -38,7 +38,6 @@ class SelfieStatus(FuserInput[str]):
         self.descriptor_for_LLM = "SelfieStatus"
 
     async def _poll(self) -> Optional[str]:
-
         await asyncio.sleep(0.1)
         rec = self.io_provider.inputs.get("SelfieStatus")
         if not rec:

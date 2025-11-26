@@ -34,7 +34,6 @@ class Gps(FuserInput[str]):
     """
 
     def __init__(self, config: SensorConfig = SensorConfig()):
-
         super().__init__(config)
 
         self.gps = GpsProvider()

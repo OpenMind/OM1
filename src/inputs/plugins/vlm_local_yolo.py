@@ -180,7 +180,6 @@ class VLM_Local_YOLO(FuserInput[str]):
         await asyncio.sleep(0.25)
 
         if self.have_cam and self.cap is not None:
-
             ret, frame = self.cap.read()
             self.frame_index += 1
             timestamp = time.time()
@@ -286,7 +285,6 @@ class VLM_Local_YOLO(FuserInput[str]):
         detections = raw_input
 
         if detections:
-
             for det in detections:
                 logging.debug(
                     f"{det['class']} ({det['confidence']:.2f}) -> {det['bbox']}"

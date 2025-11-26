@@ -327,7 +327,7 @@ class OdomProvider:
             if delta > 0.01 or self.move_history > 0.01:
                 self.moving = True
                 logging.info(
-                    f"delta moving (m): {round(delta,3)} {round(self.move_history,3)}"
+                    f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
                 )
             else:
                 # logging.info(

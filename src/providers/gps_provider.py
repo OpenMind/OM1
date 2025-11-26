@@ -177,7 +177,6 @@ class GpsProvider:
         return directions[index]
 
     def parse_ble_triang_string(self, input_string):
-
         if not input_string.startswith("BLE:"):
             return []
 

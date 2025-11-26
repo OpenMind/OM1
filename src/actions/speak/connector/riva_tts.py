@@ -16,7 +16,6 @@ from zenoh_msgs import (
 
 
 class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
-
     def __init__(self, config: ActionConfig):
         super().__init__(config)
 

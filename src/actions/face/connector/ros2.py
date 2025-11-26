@@ -5,7 +5,6 @@ from actions.face.interface import FaceInput
 
 
 class FaceRos2Connector(ActionConnector[FaceInput]):
-
     def __init__(self, config: ActionConfig):
         """
         Initialize the FaceRos2Connector with the given configuration.
