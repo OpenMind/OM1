@@ -2,6 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "required": [
+        "version",
         "default_mode",
         "api_key",
         "system_governance",
@@ -9,6 +10,7 @@
         "modes"
     ],
     "properties": {
+        "version": {"type": "string"},
         "default_mode": {"type": "string"},
         "allow_manual_switching": {"type": "boolean"},
         "mode_memory_enabled": {"type": "boolean"},
