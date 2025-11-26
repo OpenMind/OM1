@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "om1-isaac"
+version = "0.1.0"
+description = "OM1 ↔ Isaac Gym Integration - Bounty #364"
+authors = [{name = "lau90", email = "you@example.com"}]
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
