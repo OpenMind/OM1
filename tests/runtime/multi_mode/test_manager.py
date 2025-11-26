@@ -19,6 +19,7 @@ def sample_mode_configs():
     """Sample mode configurations for testing."""
     return {
         "default": ModeConfig(
+            version="v1.0.0",
             name="default",
             display_name="Default Mode",
             description="Default operational mode",
@@ -26,12 +27,14 @@ def sample_mode_configs():
             timeout_seconds=300.0,
         ),
         "advanced": ModeConfig(
+            version="v1.0.0",
             name="advanced",
             display_name="Advanced Mode",
             description="Advanced test mode",
             system_prompt_base="You are an advanced test agent",
         ),
         "emergency": ModeConfig(
+            version="v1.0.0",
             name="emergency",
             display_name="Emergency Mode",
             description="Emergency test mode",
