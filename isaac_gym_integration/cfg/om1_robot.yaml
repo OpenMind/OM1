@@ -1,0 +1,58 @@
+# OM1 Robot Configuration for Isaac Gym
+# Bounty #364 - Isaac Gym Integration
+
+robot:
+  name: "om1_mobile_robot"
+  description: "OM1 AGI robot with LiDAR, Camera, IMU, and Navigation"
+  
+  physics:
+    gravity: [0.0, 0.0, -9.81]
+    dt: 0.0166  # 60 Hz
+    substeps: 2
+    
+  dimensions:
+    base:
+      length: 0.5
+      width: 0.3
+      height: 0.2
+      mass: 10.0
+    
+  sensors:
+    camera:
+      enabled: true
+      width: 640
+      height: 480
+      fov: 60
+      fps: 30
+      position: [0.2, 0.0, 0.15]
+      
+    lidar:
+      enabled: true
+      type: "2d"
+      num_rays: 360
+      range: 30.0
+      frequency: 10
+      position: [0.0, 0.0, 0.15]
+      
+    imu:
+      enabled: true
+      frequency: 100
+      noise_stddev: 0.01
+      
+  navigation:
+    max_linear_velocity: 1.0
+    max_angular_velocity: 2.0
+    obstacle_avoidance: true
+    min_obstacle_distance: 0.5
+
+simulation:
+  num_envs: 4  # Parallel environments on GPU
+  env_spacing: 5.0
+  use_gpu: true
+  use_gpu_pipeline: true
+  
+om1:
+  api_key: "om1_live_482c8015602d9ef9e58c9cdcc9e8d6d6e6b75f7a9c8d635d75e482fa594e4f84be6ea052e2aa6a92"
+  endpoint: "wss://api.openmind.org"
+  stream_sensors: true
+  receive_commands: true

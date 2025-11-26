@@ -1,0 +1,16 @@
+# Isaac Gym Integration Requirements
+# Bounty #364
+
+# Core dependencies
+numpy>=1.20.0
+torch>=1.10.0
+pyyaml>=5.4.1
+websockets>=10.0
+asyncio>=3.4.3
+
+# Isaac Gym (manual installation required)
+# Download from: https://developer.nvidia.com/isaac-gym
+
+# Optional for visualization
+matplotlib>=3.3.0
+opencv-python>=4.5.0
