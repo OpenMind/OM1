@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>OM1 Pizza Order</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<style>
+body { background:#0b1020;font-family:system-ui;color:#fff;margin:0;padding:20px; }
+.container { max-width:1080px;margin:auto;display:flex;gap:24px;flex-wrap:wrap; }
+.panel { flex:1 1 480px;background:#14192a;padding:20px;border-radius:16px; }
+.card-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:12px; }
+.card { background:#1d2336;padding:14px;border-radius:12px;border:1px solid #333;text-align:center; }
+.card-title { font-size:1rem; }
+.form-field { margin-bottom:20px;display:flex;flex-direction:column; }
+label { font-size:.8rem;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em; }
+input { padding:10px;border-radius:6px;border:none;background:#0f1627;color:#fff;font-size:.9rem; }
+button { padding:14px;border:none;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:10px; }
+.btn-main { background:#f5a623;color:#fff; }
+.btn-copy { background:#032b52;color:#fff; }
+.status { margin-top:10px;font-size:.8rem;min-height:1.2em; }
+.status.success { color:#6fbb43; }
+.status.error { color:#ff6b6b; }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="panel">
+        <h2>🍕 Pizza Menu</h2>
+        <p style="color:#a7b3c9;font-size:.9rem;margin-bottom:6px;">(Cards are design only — type manually below)</p>
+
+        <div class="card-grid">
+            <div class="card"><div class="card-title">Pepperoni</div></div>
+            <div class="card"><div class="card-title">BBQ Chicken</div></div>
+            <div class="card"><div class="card-title">Veggie Garden</div></div>
+        </div>
+
+        <hr style="margin:18px 0;border-color:#333;">
+
+        <div class="form-field">
+            <label>Pizza / Item</label>
+            <input type="text" id="item">
+        </div>
+
+        <div class="form-field">
+            <label>Amount (USDC)</label>
+            <input type="number" id="amount" min="1">
+        </div>
+
+        <div class="form-field">
+            <label>Receiving Wallet</label>
+            <input type="text" id="wallet">
+        </div>
+
+        <div class="form-field">
+            <label>Order ID</label>
+            <input type="text" id="orderId" readonly>
+        </div>
+
+        <div class="form-field">
+            <label>TX Hash</label>
+            <input type="text" id="txHash" placeholder="0x blockchain hash">
+        </div>
+
+        <button id="btnPayMM" class="btn-main" style="background:#f7931a;">Pay with MetaMask</button>
+        <button id="btnSend" class="btn-main">CONFIRM PAYMENT WEBHOOK</button>
+        <button id="btnCopy" class="btn-copy">Copy Order Details</button>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <div class="panel">
+        <h2>Order Summary</h2>
+        <div id="summary" style="margin-top:12px;line-height:1.6;font-size:.92rem;"></div>
+    </div>
+
+</div>
+
+<script>
+// Autofill
+const params = new URLSearchParams(window.location.search);
+orderId.value = params.get("order_id") || "";
+item.value    = params.get("item") || "";
+amount.value  = params.get("amount") || "";
+wallet.value  = params.get("wallet") || "";
+
+function updateSummary() {
+  summary.innerHTML = `
+  <b>Item:</b> ${item.value}<br>
+  <b>Amount:</b> ${amount.value} USDC<br>
+  <b>Wallet:</b> ${wallet.value}<br>
+  <b>Order ID:</b> ${orderId.value}<br>
+  <b>TX Hash:</b> ${txHash.value}
+  `;
+}
+[item, amount, wallet, txHash].forEach(e => e.oninput = updateSummary);
+updateSummary();
+
+btnPayMM.onclick = async () => {
+  if (!window.ethereum) return alert("MetaMask not found");
+  try {
+    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+    const tx = await ethereum.request({
+      method: "eth_sendTransaction",
+      params: [{ from: accounts[0], to: wallet.value, value: (amount.value * 1e18).toString() }],
+    });
+    txHash.value = tx;
+    status.textContent = "MetaMask payment sent — TX hash recorded.";
+    status.className = "status success";
+    updateSummary();
+  } catch (e) {
+    status.textContent = "Payment rejected.";
+    status.className = "status error";
+  }
+};
+
+btnSend.onclick = async () => {
+  const body = {
+    order_id: orderId.value,
+    item: item.value,
+    amount: amount.value,
+    wallet: wallet.value,
+    tx_hash: txHash.value
+  };
+
+  const res = await fetch("http://localhost:5001/pizzaorder_complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  status.textContent = res.ok ? "Webhook sent to OM1" : "Webhook FAILED";
+  status.className = res.ok ? "status success" : "status error";
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+# Add to Home Assistant configuration.yaml
+
+automation:
+  - id: om1_pizza_voice_order
+    alias: "OM1: Voice Pizza Order"
+    trigger:
+      - platform: event
+        event_type: google_assistant_command
+        event_data:
+          command: "order pizza"
+    action:
+      - service: script.om1_pizza_order_flow
+        data:
+          item: "{{ trigger.event.data.item | default('pepperoni') }}"
+          amount: "{{ trigger.event.data.amount | default(6) }}"
+          wallet: "{{ trigger.event.data.wallet | default('Not Provided') }}"
+
+script:
+  om1_pizza_order_flow:
+    alias: "OM1 Pizza Order Flow"
+    sequence:
+      - service: shell_command.trigger_om1_pizza
+        data:
+          item: "{{ item }}"
+          amount: "{{ amount }}"
+          wallet: "{{ wallet }}"
+
+shell_command:
+  trigger_om1_pizza: "python3 /path/to/OM1/src/trigger_pizza_order.py {{ item }} {{ amount }} {{ wallet }}"

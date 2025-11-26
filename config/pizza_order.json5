@@ -1,0 +1,36 @@
+{
+  "hertz": 1.0,
+  "name": "pizza_order",
+  "api_key": "${OM1_API_KEY}",
+
+  "system_prompt_base": "You help users order pizza and pay using crypto safely. You must always confirm the pizza item, price and wallet BEFORE creating the order.",
+  "system_governance": "Never trigger payment without explicit user confirmation.",
+  "system_prompt_examples": "User: pepperoni for 6 USDT ? PizzaOrder: {action:'create_order', item:'pepperoni', amount:6, wallet:'0xabc...'}\nUser: check my payment &? PizzaOrder: {action:'confirm_payment', order_id:'1234', tx_hash:'0x...'}",
+
+  "agent_inputs": [
+    {
+      "type": "MockInput"
+    }
+  ],
+
+  "cortex_llm": {
+    "type": "OpenAiLLM",
+    "config": {
+      "agent_name": "Pizza Assistant",
+      "history_length": 10
+    }
+  },
+
+  "agent_actions": [
+    {
+      "name": "pizza_order",
+      "llm_label": "Pizza order",
+      "description": "Order pizza using crypto",
+      "parameters": {},
+      "config": {
+        "connector": "create_order"
+      },
+      "exclude_from_prompt": true
+    }
+  ]
+}
