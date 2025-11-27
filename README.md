@@ -78,8 +78,7 @@ If you want to interact with the agent and see how it works, make sure ASR and T
 
 OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`.
 
-A real hardware connector example is provided in  
-`src/actions/move_go2_action/connector/unitree_sdk.py`:
+A real hardware connector example is provided in `src/actions/move_go2_action/connector/unitree_sdk.py`:
 
 ```python
 ...
