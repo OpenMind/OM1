@@ -89,7 +89,7 @@ elif action == "shake paw":
             if self.sport_client is not None:
                 self.sport_client.Hello()   # Calls the Unitree Go2 SDK
 ...
-````
+```
 
 If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) combined with suitable simulation environments (Unity, Gazebo), sensors (such as ZED depth cameras), and custom VLAs will be needed to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
 
