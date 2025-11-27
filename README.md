@@ -76,19 +76,25 @@ If you want to interact with the agent and see how it works, make sure ASR and T
 
 ## Interfacing with New Robot Hardware
 
-OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `actions/move_safe/connector/ros2.py`:
+OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`.
+
+A real hardware connector example is provided in  
+`src/actions/move_go2_action/connector/unitree_sdk.py`:
 
 ```python
 ...
-elif output_interface.action == "shake paw":
-    if self.sport_client:
-        self.sport_client.Hello()
+elif action == "shake paw":
+    if self.unitree_go2_state.go2_action_progress == 0:
+        logging.info("ActionUnitreeSDKConnector: Shaking paw")
+        try:
+            if self.sport_client is not None:
+                self.sport_client.Hello()   # Calls the Unitree Go2 SDK
 ...
-```
+````
 
-If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) in concert with suitable simulation environments (Unity, Gazebo), sensors (such as hand mounted ZED depth cameras), and custom VLAs will be needed for you to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal management/monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
+If your robot hardware does not yet provide a suitable HAL (hardware abstraction layer), traditional robotics approaches such as RL (reinforcement learning) combined with suitable simulation environments (Unity, Gazebo), sensors (such as ZED depth cameras), and custom VLAs will be needed to create one. It is further assumed that your HAL accepts motion trajectories, provides battery and thermal monitoring, and calibrates and tunes sensors such as IMUs, LIDARs, and magnetometers.
 
-OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or websockets. For an example of an advanced humanoid HAL, please see [Unitree's C++ SDK](https://github.com/unitreerobotics/unitree_sdk2/blob/adee312b081c656ecd0bb4e936eed96325546296/example/g1/high_level/g1_loco_client_example.cpp#L159). Frequently, a HAL, especially ROS2 code, will be dockerized and can then interface with OM1 through DDS middleware or websockets.
+OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or WebSockets. For an example of an advanced humanoid HAL, see [Unitree's C++ SDK](https://github.com/unitreerobotics/unitree_sdk2/blob/adee312b081c656ecd0bb4e936eed96325546296/example/g1/high_level/g1_loco_client_example.cpp#L159). Frequently, a HAL—especially ROS2 code—will be dockerized and can interface with OM1 through DDS middleware or WebSockets.
 
 ## Recommended Development Platforms
 
