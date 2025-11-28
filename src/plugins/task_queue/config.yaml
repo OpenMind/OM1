@@ -1,0 +1,40 @@
+# Priority Task Queue Plugin Configuration
+# Issue #629 - Prioritized Task Queue API
+
+name: task_queue
+version: "1.0.0"
+description: "Priority-based task queue for agent coordination"
+
+# Configuration
+config:
+  # Maximum number of completed tasks to keep in history
+  max_history: 100
+  
+  # Enable thread-safe operations
+  thread_safe: true
+
+# Priority levels (from highest to lowest)
+priorities:
+  - URGENT   # Critical tasks (emergency stop, safety)
+  - HIGH     # Important tasks (low battery, warnings)
+  - NORMAL   # Standard tasks (navigation, routine operations)
+  - LOW      # Background tasks (logging, cleanup)
+
+# Example use cases by priority
+examples:
+  URGENT:
+    - "Emergency stop"
+    - "Collision avoidance"
+    - "System critical error"
+  HIGH:
+    - "Low battery - return to charging station"
+    - "Sensor failure warning"
+    - "Mission timeout approaching"
+  NORMAL:
+    - "Navigate to waypoint"
+    - "Execute pickup action"
+    - "Update system status"
+  LOW:
+    - "Log system metrics"
+    - "Clean up temporary files"
+    - "Background data sync"
