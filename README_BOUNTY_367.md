@@ -211,7 +211,7 @@ python3 -m pytest test_wallet_integration.py --cov=src/plugins
 
 ## Demo Video
 
-[VIDEO_URL_HERE - To be added]
+https://www.youtube.com/watch?v=R3lip_snhn4
 
 ## Real Wallet Integration
 
