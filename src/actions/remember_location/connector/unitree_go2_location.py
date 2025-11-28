@@ -9,14 +9,14 @@ from actions.remember_location.interface import RememberLocationInput
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
-class RememberLocationConnector(ActionConnector[RememberLocationInput]):
+class UnitreeGo2RememberLocationConnector(ActionConnector[RememberLocationInput]):
     """
-    Connector that persists a remembered location by POSTing to an HTTP API.
+    Connector that persists a remembered location for Unitree Go2 by POSTing to an HTTP API.
     """
 
     def __init__(self, config: ActionConfig):
         """
-        Initialize the RememberLocationConnector.
+        Initialize the RememberLocationGo2Connector.
 
         Parameters
         ----------
@@ -35,7 +35,7 @@ class RememberLocationConnector(ActionConnector[RememberLocationInput]):
 
     async def connect(self, input_protocol: RememberLocationInput) -> None:
         """
-        Connect the input protocol to the remember location action.
+        Connect the input protocol to the remember location action for Go2.
 
         Parameters
         ----------
@@ -43,7 +43,7 @@ class RememberLocationConnector(ActionConnector[RememberLocationInput]):
             The input protocol containing the action details.
         """
         if not self.base_url:
-            logging.error("RememberLocation connector missing 'base_url' in config")
+            logging.error("RememberLocationGo2 connector missing 'base_url' in config")
             return
 
         payload: dict[str, Any] = {
@@ -62,16 +62,16 @@ class RememberLocationConnector(ActionConnector[RememberLocationInput]):
                     text = await resp.text()
                     if resp.status >= 200 and resp.status < 300:
                         logging.info(
-                            f"RememberLocation: stored '{input_protocol.action}' -> {resp.status} {text}"
+                            f"RememberLocationGo2: stored '{input_protocol.action}' -> {resp.status} {text}"
                         )
                         self.elevenlabs_provider.add_pending_message(
-                            f"Location {input_protocol.action} remembered. Woof! Woof!"
+                            f"Location {input_protocol.action} remembered for Go2. Woof! Woof!"
                         )
                     else:
                         logging.error(
-                            f"RememberLocation API returned {resp.status}: {text}"
+                            f"RememberLocationGo2 API returned {resp.status}: {text}"
                         )
         except asyncio.TimeoutError:
-            logging.error("RememberLocation API request timed out")
+            logging.error("RememberLocationGo2 API request timed out")
         except Exception as e:
-            logging.error(f"RememberLocation API request failed: {e}")
+            logging.error(f"RememberLocationGo2 API request failed: {e}")

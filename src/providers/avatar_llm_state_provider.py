@@ -160,3 +160,13 @@ class AvatarLLMState:
             return decorator(func)
 
         return decorator
+
+    def stop(self) -> None:
+        """
+        Stop the AvatarLLMState singleton instance.
+        """
+        if self.avatar_provider and self.avatar_provider.running:
+            try:
+                self.avatar_provider.stop()
+            except Exception:
+                logging.error("Failed to stop AvatarProvider in AvatarLLMState")
