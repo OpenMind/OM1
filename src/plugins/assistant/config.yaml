@@ -1,0 +1,3 @@
+mock_mode: true
+assistant_type: "alexa"
+webhook_url: ""
