@@ -114,11 +114,17 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           TOTAL: ${{ env.TOTAL || '' }}
         run: |
+          echo "DEBUG: SLACK_WEBHOOK is set? -> [\${SLACK_WEBHOOK:+yes}]" >&2
+          echo "DEBUG: SLACK_WEBHOOK length -> $(bash -c 'echo ${#SLACK_WEBHOOK}')" >&2
+
           cat <<'JSON' > /tmp/slack_payload.json
           {
             "text": "✅ All Integration Tests Passed\n*Total*: ${TOTAL}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
           }
           JSON
 
-          curl -X POST -H 'Content-type: application/json' --data @/tmp/slack_payload.json "${SLACK_WEBHOOK}" || true
+          TARGET="${SLACK_WEBHOOK:-https://httpbin.org/post}"
+          echo "DEBUG: Using TARGET=${TARGET}" >&2
+
+          curl -X POST -H 'Content-type: application/json' --data @/tmp/slack_payload.json "${TARGET}" || true
 
