@@ -109,12 +109,16 @@ jobs:
             ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack on success
-        if: success() && github.event_name == 'schedule'
+        if: success()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          TOTAL: ${{ env.TOTAL || '' }}
         run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{
-              \"text\": \"✅ *All Integration Tests Passed*\n\
-              *Total:* ${{ steps.summary.outputs.total }}\n\
-              🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>\"
-            }" \
-            ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}
+          cat <<'JSON' > /tmp/slack_payload.json
+          {
+            "text": "✅ All Integration Tests Passed\n*Total*: ${TOTAL}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+          }
+          JSON
+
+          curl -X POST -H 'Content-type: application/json' --data @/tmp/slack_payload.json "${SLACK_WEBHOOK}" || true
+
