@@ -2,6 +2,7 @@ import sys
 import time
 
 import unitree_legged_const as go2
+
 from unitree.unitree_sdk2py.core.channel import (
     ChannelFactoryInitialize,
     ChannelSubscriber,
@@ -27,6 +28,7 @@ class Custom:
 
 
 if __name__ == "__main__":
+
     if len(sys.argv) > 1:
         ChannelFactoryInitialize(0, sys.argv[1])
     else:
