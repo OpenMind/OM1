@@ -128,4 +128,3 @@ jobs:
           echo "DEBUG: Using TARGET=${TARGET}" >&2
 
           curl -X POST -H 'Content-type: application/json' --data @/tmp/slack_payload.json "${TARGET}" || true
-
