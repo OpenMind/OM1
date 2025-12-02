@@ -129,6 +129,7 @@ class GoogleASRInput(FuserInput[str]):
             json_message: Dict = json.loads(raw_message)
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
+                # Original logic: only puts messages > 1 word into the queue
                 if len(asr_reply.split()) > 1:
                     self.message_buffer.put(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
@@ -167,26 +168,38 @@ class GoogleASRInput(FuserInput[str]):
         """
         return raw_input
 
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Convert raw input to processed text and manage buffer.
 
         Parameters
         ----------
         raw_input : Optional[str]
-            Raw input to be processed
+            Raw input to be processed (from _poll).
+
+        This function implements the fix for message disappearance by ensuring
+        the existing message is retained until successfully consumed.
         """
         pending_message = await self._raw_to_text(raw_input)
-        if pending_message is None:
-            if len(self.messages) != 0:
-                # Skip sleep if there's already a message in the messages buffer
-                self.global_sleep_ticker_provider.skip_sleep = True
 
-        if pending_message is not None:
-            if len(self.messages) == 0:
+        # 1. If we received a valid message from the ASR buffer:
+        if pending_message is not None and pending_message.strip():
+            # Treat ASR message as a complete sentence; do not concatenate.
+            if not self.messages:
                 self.messages.append(pending_message)
             else:
-                self.messages[-1] = f"{self.messages[-1]} {pending_message}"
+                # Replace the last message with the new, complete ASR message.
+                self.messages[-1] = pending_message
+
+        # 2. Skip Sleep Logic
+        # Skip sleep if there is no new message from the queue, but a message
+        # is currently held in self.messages waiting for consumption.
+        if pending_message is None:
+            if len(self.messages) != 0:
+                self.global_sleep_ticker_provider.skip_sleep = True
+
+        # self.messages is intentionally NOT reset here. It is reset only in
+        # formatted_latest_buffer() after successful consumption by Cortex.
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """
