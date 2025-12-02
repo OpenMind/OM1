@@ -152,7 +152,7 @@
         {
           "name": "remember_location",
           "llm_label": "remember_location",
-          "connector": "location_api",
+          "connector": "unitree_go2_location",
         }
       ],
       "backgrounds": [
@@ -256,7 +256,7 @@
       "hertz": 1,
       "agent_inputs": [
         {
-          "type": "LocationsInput"
+          "type": "UnitreeGo2LocationsInput"
         },
         {
           "type": "LidarLocalizationInput"
@@ -311,7 +311,7 @@
         {
           "name": "navigate_location",
           "llm_label": "navigate_location",
-          "connector": "nav",
+          "connector": "unitree_go2_nav",
         },
       ],
       "backgrounds": [
