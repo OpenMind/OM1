@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.vlm_vila_gazebo_provider import VLMVilaGazeboProvider
+from providers.vlm_vila_zenoh_provider import VLMVilaZenohProvider
 
 
 @dataclass
@@ -29,7 +29,7 @@ class Message:
     message: str
 
 
-class VLMVilaGazebo(FuserInput[str]):
+class VLMVilaZenoh(FuserInput[str]):
     """
     Vision Language Model input handler.
 
@@ -60,19 +60,12 @@ class VLMVilaGazebo(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        api_key = getattr(self.config, "api_key", None)
-
         base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        stream_base_url = getattr(
-            self.config,
-            "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}",
-        )
+        topic = getattr(self.config, "topic", "rgb_image")
+        decode_format = getattr(self.config, "decode_format", "H264")
 
-        topic = getattr(self.config, "topic", "/camera")
-
-        self.vlm: VLMVilaGazeboProvider = VLMVilaGazeboProvider(
-            ws_url=base_url, topic=topic, stream_url=stream_base_url
+        self.vlm: VLMVilaZenohProvider = VLMVilaZenohProvider(
+            ws_url=base_url, topic=topic, decode_format=decode_format
         )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
