@@ -17,7 +17,7 @@ class ROS2PublisherProvider(Node):
         try:
             super().__init__("ROS2_publisher_provider")
         except Exception as e:
-            print(f"Node initialization error: {e}")
+            logging.error(f"Node initialization error: {e}")
 
         # Initialize the publisher.
         try:
