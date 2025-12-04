@@ -85,6 +85,30 @@ def mock_avatar_components():
         yield
 
 
+@pytest.fixture(autouse=True)
+def mock_confige_provider_components():
+    """Mock all config provider to prevent Zenoh session creation"""
+
+    with (
+        patch("providers.config_provider.ConfigProvider") as mock_config_provider,
+        patch(
+            "runtime.single_mode.cortex.ConfigProvider"
+        ) as mock_cortex_config_provider,
+        patch(
+            "runtime.multi_mode.cortex.ConfigProvider"
+        ) as mock_multi_cortex_config_provider,
+    ):
+        mock_config_provider_instance = MagicMock()
+        mock_config_provider_instance.running = False
+        mock_config_provider_instance.session = None
+        mock_config_provider_instance.stop = MagicMock()
+        mock_config_provider.return_value = mock_config_provider_instance
+        mock_cortex_config_provider.return_value = mock_config_provider_instance
+        mock_multi_cortex_config_provider.return_value = mock_config_provider_instance
+
+        yield
+
+
 # Movement types that should be considered movement commands
 VLM_MOVE_TYPES = {
     "stand still",
