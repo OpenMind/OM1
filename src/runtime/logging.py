@@ -64,7 +64,6 @@ def setup_logging(
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
 
-    # Changed generic list[] to typing.List[] for project consistency
     handlers: List[logging.Handler] = [console_handler]
 
     if log_to_file:
