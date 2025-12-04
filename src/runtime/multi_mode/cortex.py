@@ -8,6 +8,7 @@ from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
+from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.multi_mode.config import (
@@ -31,6 +32,7 @@ class ModeCortexRuntime:
     mode_manager: ModeManager
     io_provider: IOProvider
     sleep_ticker_provider: SleepTickerProvider
+    config_provider: ConfigProvider
 
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
@@ -65,6 +67,7 @@ class ModeCortexRuntime:
         self.mode_manager = ModeManager(mode_config)
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
+        self.config_provider = ConfigProvider()
 
         # Hot-reload configuration
         self.hot_reload = hot_reload
@@ -349,6 +352,9 @@ class ModeCortexRuntime:
                 await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
             except Exception as e:
                 logging.warning(f"Error during final cleanup: {e}")
+
+        # Stop ConfigProvider
+        self.config_provider.stop()
 
         logging.debug("Tasks cleaned up successfully")
 
