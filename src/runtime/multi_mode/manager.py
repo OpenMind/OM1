@@ -680,7 +680,9 @@ class ModeManager:
         """Get the current user context."""
         return self.state.user_context.copy()
 
-    async def process_tick(self, input_text: Optional[str]) -> Optional[str]:
+    async def process_tick(
+        self, input_text: Optional[str]
+    ) -> Optional[tuple[str, str]]:
         """
         Process a tick and check for any needed transitions.
 
@@ -691,24 +693,24 @@ class ModeManager:
 
         Returns
         -------
-        Optional[str]
-            The new mode if a transition occurred, None otherwise
+        Optional[tuple[str, str]]
+            A tuple of (target_mode, reason) if a transition occurred, None otherwise
         """
         time_target = await self.check_time_based_transitions()
         if time_target:
             logging.info(f"Time-based transition to mode: {time_target}")
-            return time_target
+            return (time_target, "time_based")
 
         context_target = await self.check_context_aware_transitions()
         if context_target:
             logging.info(f"Context-aware transition to mode: {context_target}")
-            return context_target
+            return (context_target, "context_aware")
 
         if input_text:
             target_mode = self.check_input_triggered_transitions(input_text)
             if target_mode:
                 logging.info(f"Input-triggered transition to mode: {target_mode}")
-                return target_mode
+                return (target_mode, "input_triggered")
 
         return None
 

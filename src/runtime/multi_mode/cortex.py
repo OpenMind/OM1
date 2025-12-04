@@ -111,6 +111,7 @@ class ModeCortexRuntime:
         # Event for handling mode transitions
         self._mode_transition_event = asyncio.Event()
         self._pending_mode_transition: Optional[str] = None
+        self._pending_transition_reason: Optional[str] = None
 
     async def _initialize_mode(self, mode_name: str):
         """
@@ -147,12 +148,18 @@ class ModeCortexRuntime:
 
                 if self._pending_mode_transition:
                     target_mode = self._pending_mode_transition
+                    transition_reason = (
+                        self._pending_transition_reason or "input_triggered"
+                    )
                     self._pending_mode_transition = None
+                    self._pending_transition_reason = None
 
-                    logging.info(f"Processing mode transition to: {target_mode}")
+                    logging.info(
+                        f"Processing mode transition to: {target_mode} (reason: {transition_reason})"
+                    )
 
                     success = await self.mode_manager._execute_transition(
-                        target_mode, "input_triggered"
+                        target_mode, transition_reason
                     )
                     if success:
                         logging.info(
@@ -510,12 +517,17 @@ class ModeCortexRuntime:
         with self.io_provider.mode_transition_input():
             last_input = self.io_provider.get_mode_transition_input()
 
-        new_mode = await self.mode_manager.process_tick(last_input)
-        if new_mode:
+        transition_result = await self.mode_manager.process_tick(last_input)
+        if transition_result:
+            new_mode, transition_reason = transition_result
+
             # Schedule the transition asynchronously
             self._pending_mode_transition = new_mode
+            self._pending_transition_reason = transition_reason
             self._mode_transition_event.set()
-            logging.info(f"Scheduled mode transition to: {new_mode}")
+            logging.info(
+                f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
+            )
             return
 
         output = await self.current_config.cortex_llm.ask(prompt)

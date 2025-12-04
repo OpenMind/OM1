@@ -488,7 +488,7 @@ class TestModeManager:
         ):
             result = await mode_manager.process_tick("some input")
 
-            assert result == "advanced"
+            assert result == ("advanced", "time_based")
 
     @pytest.mark.asyncio
     async def test_process_tick_input_transition(self, mode_manager):
@@ -503,7 +503,7 @@ class TestModeManager:
             ):
                 result = await mode_manager.process_tick("emergency help")
 
-                assert result == "emergency"
+                assert result == ("emergency", "input_triggered")
 
     @pytest.mark.asyncio
     async def test_process_tick_no_transition(self, mode_manager):
@@ -526,7 +526,7 @@ class TestModeManager:
         ):
             result = await mode_manager.process_tick("some input")
 
-            assert result == "advanced"
+            assert result == ("advanced", "time_based")
 
     def test_get_state_file_path(self, mode_manager):
         """Test getting state file path."""
@@ -958,7 +958,7 @@ class TestModeManager:
             mode_manager, "check_time_based_transitions", return_value=None
         ):
             result = await mode_manager.process_tick("some input")
-            assert result == "advanced"
+            assert result == ("advanced", "context_aware")
 
     @pytest.mark.asyncio
     async def test_process_tick_context_aware_priority_over_input(self, mode_manager):
@@ -969,4 +969,4 @@ class TestModeManager:
             mode_manager, "check_time_based_transitions", return_value="emergency"
         ):
             result = await mode_manager.process_tick("advanced mode")
-            assert result == "emergency"
+            assert result == ("emergency", "time_based")
