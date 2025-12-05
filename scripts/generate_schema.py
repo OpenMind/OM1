@@ -380,7 +380,7 @@ class ConfigSchemaGenerator:
                     else "number" if isinstance(default, (int, float)) else "string"
                 ),
                 "label": name.replace("_", " ").title(),
-                "required": default is None,
+                "required": default is not None,
             }
             if default is not None:
                 field["defaultValue"] = default
@@ -424,7 +424,11 @@ class ConfigSchemaGenerator:
                         if name.startswith("_") or name == "model_config":
                             continue
 
-                        default = self._get_pydantic_default(item.value)
+                        if item.value:
+                            default = self._get_pydantic_default(item.value)
+                        else:
+                            default = None
+
                         if default == "__SKIP__":
                             continue
 
@@ -433,7 +437,7 @@ class ConfigSchemaGenerator:
                                 "name": name,
                                 "type": self._annotation_to_type(item.annotation),
                                 "label": name.replace("_", " ").title(),
-                                "required": default is None,
+                                "required": default is not None,
                                 **(
                                     {"defaultValue": default}
                                     if default is not None
