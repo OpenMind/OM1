@@ -17,6 +17,15 @@ jobs:
       image-digest: ${{ steps.build.outputs.digest }}
       metadata: ${{ steps.meta.outputs.json }}
     steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/graalvm /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium /usr/local/lib/node_modules
+          sudo docker system prune -af
+          sudo apt-get clean
+          df -h
+
       - name: Checkout repository
         uses: actions/checkout@v5
 
@@ -57,6 +66,15 @@ jobs:
       image-digest: ${{ steps.build.outputs.digest }}
       metadata: ${{ steps.meta.outputs.json }}
     steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost /usr/local/graalvm /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium /usr/local/lib/node_modules
+          sudo docker system prune -af
+          sudo apt-get clean
+          df -h
+
       - name: Checkout repository
         uses: actions/checkout@v5
 
