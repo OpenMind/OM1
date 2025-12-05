@@ -18,10 +18,9 @@ class Message:
     message: str
 
 
-# TODO(Kyle): Support Cryptos other than ETH
 class WalletCoinbase(FuserInput[float]):
     """
-    Queries current ETH balance and reports a balance increase
+    Queries current balance of the configured asset and reports a balance increase
     """
 
     def __init__(self, config: SensorConfig = SensorConfig()):
@@ -144,7 +143,7 @@ class WalletCoinbase(FuserInput[float]):
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """
-        Format and clear the buffer contents. If there are multiple ETH transactions,
+        Format and clear the buffer contents. If there are multiple transactions,
         combine them into a single message.
 
         Returns
