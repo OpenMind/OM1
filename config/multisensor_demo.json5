@@ -1,0 +1,32 @@
+{
+  "name": "multisensor_demo",
+  "description": "Bounty 365: Minimal Input Only Demo",
+  // Tells the agent to use the safe, minimal LLM defined in cortex.json5
+  "llm": "dummy_llm",
+  
+  "modules": [
+    {
+      "name": "temp_monitor",
+      "path": "src.inputs.env_sensors.temperature.TemperatureSensor",
+      "config": { "interval": 0.5 } 
+    },
+    {
+      "name": "humid_monitor",
+      "path": "src.inputs.env_sensors.humidity.HumiditySensor",
+      "config": { "interval": 0.5 }
+    },
+    {
+      "name": "light_monitor",
+      "path": "src.inputs.env_sensors.light.LightSensor",
+      "config": { "interval": 0.5 }
+    },
+    {
+      "name": "air_monitor",
+      "path": "src.inputs.env_sensors.air_quality.AirQualitySensor",
+      "config": { "interval": 0.5 }
+    }
+  ],
+  // Empty prompt and actions sections confirm this is purely a sensor logging agent.
+  "system_prompt": "",
+  "actions": []
+}

@@ -1,0 +1,12 @@
+{
+  "llms": [
+    // This defines a safe, internal LLM that satisfies the runtime check
+    // without requiring external dependencies (like TensorFlow).
+    {
+      "name": "dummy_llm",
+      "model": "dummy",
+      "temperature": 0.0,
+      "max_tokens": 1
+    }
+  ]
+}
