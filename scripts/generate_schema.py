@@ -14,6 +14,13 @@ class ConfigSchemaGenerator:
     """Scans OM1 codebase and generates configuration schema."""
 
     def __init__(self, root_dir: str):
+        """Initialize the schema generator.
+
+        Parameters
+        ----------
+        root_dir : str
+            Absolute path to the OM1 root directory.
+        """
         self.root_dir = root_dir
         self.src_dir = os.path.join(root_dir, "src")
         self.inputs_dir = os.path.join(self.src_dir, "inputs/plugins")
@@ -24,7 +31,16 @@ class ConfigSchemaGenerator:
         self.hooks_dir = os.path.join(self.src_dir, "hooks")
 
     def generate(self) -> str:
-        """Generate schema and save to JSON5 file."""
+        """Generate complete configuration schema and save to JSON5 file.
+
+        Scans all component types (inputs, LLMs, backgrounds, actions, hooks)
+        and generates a comprehensive schema file.
+
+        Returns
+        -------
+        str
+            Absolute path to the generated schema file.
+        """
         import json5
 
         inputs = self.scan_inputs()
@@ -53,12 +69,24 @@ class ConfigSchemaGenerator:
 
     # Input
     def scan_inputs(self) -> List[Dict[str, Any]]:
-        """Scan input plugins (FuserInput/Sensor classes)."""
+        """Scan input plugins for FuserInput and Sensor classes.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of input component schemas.
+        """
         return self._scan_plugins(self.inputs_dir, ["FuserInput", "Sensor"], "input")
 
     # LLM
     def scan_llms(self) -> List[Dict[str, Any]]:
-        """Scan LLM plugins. Merges LLMConfig fields with component-specific fields."""
+        """Scan LLM plugins.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of LLM component schemas.
+        """
         results = []
         if not os.path.exists(self.llm_dir):
             return results
@@ -89,12 +117,24 @@ class ConfigSchemaGenerator:
 
     # Background
     def scan_backgrounds(self) -> List[Dict[str, Any]]:
-        """Scan background plugins (Background classes)."""
+        """Scan background plugins directory for Background classes.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of background component schemas.
+        """
         return self._scan_plugins(self.backgrounds_dir, ["Background"], "background")
 
     # Action
     def scan_actions(self) -> List[Dict[str, Any]]:
-        """Scan action connectors."""
+        """Scan action connectors in the actions directory.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of action connector schemas.
+        """
         results = []
         if not os.path.exists(self.actions_dir):
             return results
@@ -138,7 +178,15 @@ class ConfigSchemaGenerator:
 
     # Hooks
     def scan_hooks(self) -> List[Dict[str, Any]]:
-        """Scan lifecycle hooks from src/hooks."""
+        """Scan lifecycle hooks from the hooks directory.
+
+        Identifies all async functions in hook modules as potential lifecycle hooks.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of hook modules with their function names and arguments.
+        """
         results = []
         if not os.path.exists(self.hooks_dir):
             return results
@@ -167,7 +215,22 @@ class ConfigSchemaGenerator:
     def _scan_plugins(
         self, directory: str, base_classes: List[str], category: str
     ) -> List[Dict[str, Any]]:
-        """Generic plugin scanner for Input/Background."""
+        """Generic scanner for plugin directories.
+
+        Parameters
+        ----------
+        directory : str
+            Path to the plugins directory to scan.
+        base_classes : List[str]
+            List of base class names to match in inheritance.
+        category : str
+            Category label for the schema.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of component schemas with extracted fields.
+        """
         results = []
         if not os.path.exists(directory):
             return results
@@ -192,7 +255,18 @@ class ConfigSchemaGenerator:
         return results
 
     def _py_files(self, directory: str) -> List[str]:
-        """List Python files in directory (excluding __init__.py)."""
+        """List Python files in a directory, excluding init files.
+
+        Parameters
+        ----------
+        directory : str
+            Directory path to scan for Python files.
+
+        Returns
+        -------
+        List[str]
+            List of absolute paths to Python files.
+        """
         return [
             os.path.join(directory, f)
             for f in os.listdir(directory)
@@ -200,7 +274,20 @@ class ConfigSchemaGenerator:
         ]
 
     def _extends(self, node: ast.ClassDef, base_classes: List[str]) -> bool:
-        """Check if class extends any of the base classes."""
+        """Check if a class extends any of the specified base classes.
+
+        Parameters
+        ----------
+        node : ast.ClassDef
+            AST node representing a class definition.
+        base_classes : List[str]
+            List of base class names to check against.
+
+        Returns
+        -------
+        bool
+            True if the class extends any of the base classes, False otherwise.
+        """
         for base in node.bases:
             if isinstance(base, ast.Name) and base.id in base_classes:
                 return True
@@ -210,7 +297,18 @@ class ConfigSchemaGenerator:
         return False
 
     def _extends_connector(self, node: ast.ClassDef) -> bool:
-        """Check if class is a Connector."""
+        """Check if a class is a Connector subclass.
+
+        Parameters
+        ----------
+        node : ast.ClassDef
+            AST node representing a class definition.
+
+        Returns
+        -------
+        bool
+            True if the class name contains "Connector" in its base classes.
+        """
         for base in node.bases:
             if isinstance(base, ast.Name) and "Connector" in base.id:
                 return True
@@ -220,7 +318,18 @@ class ConfigSchemaGenerator:
         return False
 
     def _parse_getattr(self, class_node: ast.ClassDef) -> List[Dict[str, Any]]:
-        """Extract params from getattr in __init__."""
+        """Extract configuration parameters from getattr() calls in __init__.
+
+        Parameters
+        ----------
+        class_node : ast.ClassDef
+            The class definition node to extract parameters from.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of field definitions.
+        """
         fields = []
         init = next(
             (
@@ -282,7 +391,20 @@ class ConfigSchemaGenerator:
     def _parse_pydantic_class(
         self, class_name: str, file_path: str
     ) -> List[Dict[str, Any]]:
-        """Extract fields from Pydantic model."""
+        """Extract fields from a Pydantic BaseModel class definition.
+
+        Parameters
+        ----------
+        class_name : str
+            Name of the Pydantic model class to extract fields from.
+        file_path : str
+            Absolute path to the file containing the class definition.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of field definitions extracted from the Pydantic model.
+        """
         fields = []
         if not os.path.exists(file_path):
             return fields
@@ -325,7 +447,24 @@ class ConfigSchemaGenerator:
         return fields
 
     def _annotation_to_type(self, annotation: ast.expr) -> str:
-        """Convert Python type annotation to JSON schema type."""
+        """Convert Python type annotation to JSON schema type.
+
+        Handles:
+            - T.Optional[str] -> "string"
+            - Optional[int] -> "number"
+            - bool -> "boolean"
+            - Dict/List -> "object"
+
+        Parameters
+        ----------
+        annotation : ast.expr
+            AST node representing a type annotation.
+
+        Returns
+        -------
+        str
+            JSON schema type string.
+        """
         if annotation is None:
             return "string"
 
@@ -352,7 +491,18 @@ class ConfigSchemaGenerator:
         return "string"
 
     def _get_pydantic_default(self, value_node: ast.expr):
-        """Get default value from Pydantic field. SKIP for complex defaults."""
+        """Extract default value from Pydantic field AST node.
+
+        Parameters
+        ----------
+        value_node : ast.expr
+            AST node representing the default value expression.
+
+        Returns
+        -------
+        Any or str
+            The default value, None if no default.
+        """
         if value_node is None:
             return None
         if isinstance(value_node, ast.Constant):
