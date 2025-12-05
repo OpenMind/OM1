@@ -163,11 +163,11 @@ def mock_mode_manager():
 
         input_lower = input_text.lower()
         if "emergency" in input_lower or "urgent" in input_lower:
-            return "emergency"
+            return ("emergency", "input_triggered")
         elif "advanced" in input_lower:
-            return "advanced"
+            return ("advanced", "input_triggered")
         elif "default" in input_lower or "normal" in input_lower:
-            return "default"
+            return ("default", "input_triggered")
         return None
 
     manager.process_tick = AsyncMock(side_effect=mock_process_tick)

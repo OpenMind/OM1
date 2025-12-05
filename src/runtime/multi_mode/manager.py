@@ -91,11 +91,15 @@ class ModeManager:
         # Start zenoh controller
         self.mode_status_request = "om/mode/request"
         self.mode_status_response = "om/mode/response"
+        self.context_update_topic = "om/mode/context"
 
         try:
             self.session = open_zenoh_session()
             self.session.declare_subscriber(
                 self.mode_status_request, self._zenoh_mode_status_request
+            )
+            self.session.declare_subscriber(
+                self.context_update_topic, self._zenoh_context_update
             )
             self._zenoh_mode_status_response_pub = self.session.declare_publisher(
                 self.mode_status_response
@@ -272,6 +276,39 @@ class ModeManager:
 
         return None
 
+    async def check_context_aware_transitions(self) -> Optional[str]:
+        """
+        Check if any context-aware transitions should be triggered based on current user context.
+
+        Returns
+        -------
+        Optional[str]
+            The target mode if a transition should occur, None otherwise
+        """
+        # Find matching transition rules sorted by priority (higher priority first)
+        matching_rules = []
+        for rule in self.config.transition_rules:
+            if (
+                rule.from_mode == self.state.current_mode or rule.from_mode == "*"
+            ) and rule.transition_type == TransitionType.CONTEXT_AWARE:
+
+                if self._can_transition(rule) and self._evaluate_context_conditions(
+                    rule
+                ):
+                    matching_rules.append(rule)
+
+        if matching_rules:
+            # Sort by priority (higher first) and select the best match
+            matching_rules.sort(key=lambda r: r.priority, reverse=True)
+            target_rule = matching_rules[0]
+            logging.info(
+                f"Context-aware transition triggered: {self.state.current_mode} -> {target_rule.to_mode} "
+                f"(priority: {target_rule.priority}, conditions: {target_rule.context_conditions})"
+            )
+            return target_rule.to_mode
+
+        return None
+
     def check_input_triggered_transitions(self, input_text: str) -> Optional[str]:
         """
         Check if any input-triggered transitions should be activated.
@@ -346,9 +383,100 @@ class ModeManager:
             logging.warning(f"Target mode '{rule.to_mode}' not found in configuration")
             return False
 
-        # TODO: Add context-aware transition logic
+        return True
+
+    def _evaluate_context_conditions(self, rule: TransitionRule) -> bool:
+        """
+        Evaluate if the context conditions for a transition rule are met.
+
+        Parameters
+        ----------
+        rule : TransitionRule
+            The transition rule with context conditions to evaluate
+
+        Returns
+        -------
+        bool
+            True if all context conditions are satisfied, False otherwise
+        """
+        if not rule.context_conditions:
+            return True
+
+        user_context = self.state.user_context
+
+        for condition_key, condition_value in rule.context_conditions.items():
+            if not self._evaluate_single_condition(
+                condition_key, condition_value, user_context
+            ):
+                logging.debug(
+                    f"Context condition failed: {condition_key}={condition_value}, "
+                    f"actual context: {user_context.get(condition_key)}"
+                )
+                return False
 
         return True
+
+    def _evaluate_single_condition(
+        self, key: str, expected_value, user_context: Dict
+    ) -> bool:
+        """
+        Evaluate a single context condition.
+
+        Parameters
+        ----------
+        key : str
+            The context key to check
+        expected_value : Any
+            The expected value for the condition
+        user_context : Dict
+            The current user context
+
+        Returns
+        -------
+        bool
+            True if the condition is satisfied, False otherwise
+        """
+        if key not in user_context:
+            return False
+
+        actual_value = user_context[key]
+
+        # Handle different condition types
+        if isinstance(expected_value, dict):
+            # Support for complex conditions like {"min": 5, "max": 10} or {"contains": "pattern"}
+            if "min" in expected_value or "max" in expected_value:
+                # Numeric range condition
+                if not isinstance(actual_value, (int, float)):
+                    return False
+                if "min" in expected_value and actual_value < expected_value["min"]:
+                    return False
+                if "max" in expected_value and actual_value > expected_value["max"]:
+                    return False
+                return True
+
+            elif "contains" in expected_value:
+                # String contains condition
+                if not isinstance(actual_value, str):
+                    return False
+                return expected_value["contains"].lower() in actual_value.lower()
+
+            elif "one_of" in expected_value:
+                # Value must be one of the specified options
+                return actual_value in expected_value["one_of"]
+
+            elif "not" in expected_value:
+                # Negation condition
+                return actual_value != expected_value["not"]
+
+        elif isinstance(expected_value, list):
+            # List membership condition
+            return actual_value in expected_value
+
+        else:
+            # Simple equality condition
+            return actual_value == expected_value
+
+        return False
 
     async def request_transition(
         self, target_mode: str, reason: str = "manual"
@@ -552,7 +680,9 @@ class ModeManager:
         """Get the current user context."""
         return self.state.user_context.copy()
 
-    async def process_tick(self, input_text: Optional[str]) -> Optional[str]:
+    async def process_tick(
+        self, input_text: Optional[str]
+    ) -> Optional[tuple[str, str]]:
         """
         Process a tick and check for any needed transitions.
 
@@ -563,23 +693,24 @@ class ModeManager:
 
         Returns
         -------
-        Optional[str]
-            The new mode if a transition occurred, None otherwise
+        Optional[tuple[str, str]]
+            A tuple of (target_mode, reason) if a transition occurred, None otherwise
         """
-        if not input_text:
-            return None
-
-        # Check time-based transitions first
         time_target = await self.check_time_based_transitions()
         if time_target:
             logging.info(f"Time-based transition to mode: {time_target}")
-            return time_target
+            return (time_target, "time_based")
 
-        # Then check input-triggered transitions
-        target_mode = self.check_input_triggered_transitions(input_text)
-        if target_mode:
-            logging.info(f"Input-triggered transition to mode: {target_mode}")
-            return target_mode
+        context_target = await self.check_context_aware_transitions()
+        if context_target:
+            logging.info(f"Context-aware transition to mode: {context_target}")
+            return (context_target, "context_aware")
+
+        if input_text:
+            target_mode = self.check_input_triggered_transitions(input_text)
+            if target_mode:
+                logging.info(f"Input-triggered transition to mode: {target_mode}")
+                return (target_mode, "input_triggered")
 
         return None
 
@@ -630,6 +761,28 @@ class ModeManager:
             return self._zenoh_mode_status_response_pub.put(
                 mode_status_response.serialize()
             )
+
+    def _zenoh_context_update(self, data: zenoh.Sample):
+        """
+        Process incoming context update messages via Zenoh.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The incoming Zenoh sample containing the context update.
+        """
+        try:
+            context_data = json.loads(data.payload.to_string())
+            logging.debug(f"Received context update: {context_data}")
+
+            if isinstance(context_data, dict):
+                self.update_user_context(context_data)
+                logging.info(f"Updated user context with: {context_data}")
+            else:
+                logging.warning(f"Invalid context data format: {context_data}")
+
+        except (json.JSONDecodeError, Exception) as e:
+            logging.error(f"Error processing context update: {e}")
 
     async def _handle_mode_switch_request(
         self, frame_id: str, request_id: str, target_mode: str
