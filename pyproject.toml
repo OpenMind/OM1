@@ -39,7 +39,7 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.27.1",
     "websockets>=12.0",
-    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@95b8dd34fce25a4a8d0571d4e50fb4693e1708a0",
+    "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@cf282283dff5b1c02531d73139532656b7e51af3",
     "aiohttp>=3.9.3",
     "python-multipart>=0.0.9",
     "jinja2>=3.1.3",
@@ -70,7 +70,7 @@ dev = [
 pythonpath = ["src"]
 asyncio_mode = "auto"
 addopts = "-m \"not integration\""
-norecursedirs = ["src/unitree", "system_hw_test", "gazebo", "src/ubtech"]
+norecursedirs = ["src/unitree", "system_hw_test", "src/ubtech"]
 markers = [
     "integration: marks tests as integration tests",
 ]
@@ -78,20 +78,20 @@ markers = [
 [tool.black]
 line-length = 88
 include = '\.pyi?$'
-exclude = "(.venv)|(/src/unitree)|(/src/ubtech)|(/gazebo)"
+exclude = "(.venv)|(/src/unitree)|(/src/ubtech)"
 
 [tool.isort]
 profile = "black"
 multi_line_output = 3
 line_length = 88
 sources = ["src", "tests"]
-skip_glob = [".venv*", "/src/unitree", "/gazebo", "/src/ubtech"]
+skip_glob = [".venv*", "/src/unitree", "/src/ubtech"]
 
 [tool.ruff]
 line-length = 88
 indent-width = 4
 src = ["src"]
-exclude = ["src/unitree","gazebo", "src/ubtech"]
+exclude = ["src/unitree", "src/ubtech"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

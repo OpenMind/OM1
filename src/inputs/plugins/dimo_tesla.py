@@ -179,7 +179,6 @@ class DIMOTesla(FuserInput[str]):
             currentLocationLatitude = tesla_data["currentLocationLatitude"]["value"]
             currentLocationLongitude = tesla_data["currentLocationLongitude"]["value"]
         except Exception as e:
-            print("Error parsing Tesla data")
             logging.error(f"Error parsing Tesla data: {e}")
             return None
 
