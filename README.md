@@ -20,7 +20,16 @@
 ## Architecture Overview
 ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/dd91457d-010f-43d8-960e-d1165834aa58)
 
+## Prerequisites
 
+Before starting, ensure you have the following essential tools installed:
+
+1.  **Git:** Required for cloning this repository and managing contributions.
+2.  **Python 3.10+:** The core language environment. We recommend installing it via your system's package manager (`brew`, `apt`, `choco`).
+3.  **uv:** A modern, fast dependency management tool (used for `uv venv`).
+4.  **Docker & Docker Compose:** Essential for running the full, connected system and required services (like the LLMs).
+
+---
 ## Getting Started
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
@@ -36,6 +45,19 @@ git clone https://github.com/OpenMind/OM1.git
 cd OM1
 git submodule update --init
 uv venv
+After creating the environment, you **must** activate it to use the installed packages:
+
+* **macOS / Linux:**
+    ```bash
+    source .venv/bin/activate
+    ```
+* **Windows (Command Prompt / PowerShell):**
+    ```bash
+    .venv\Scripts\activate
+    ```
+
+> [!NOTE]
+> This activation step ensures that the Python interpreter uses the correct, isolated environment where OM1's dependencies are installed.
 ```
 
 ### Install Dependencies
@@ -55,8 +77,14 @@ sudo apt-get install portaudio19-dev python-dev ffmpeg
 
 Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp env.example .env` and add your key to the `.env`.
 
+It is recommended to use the `.env` file for setting the API key, as this is the standard practice for managing sensitive information securely and separating it from the codebase.
+
 ### Launching OM1
 
+## Which Command to Use?
+
+* **`uv run`**: Use this for quick testing of individual agents or during development of specific features (without external services).
+* **`docker-compose`**: Use this when you need the full, interconnected system (including all external services and LLMs) for complete autonomous guidance.
 Run
 ```bash
 uv run src/run.py spot
@@ -113,7 +141,7 @@ We're excited to introduce **full autonomy mode**, where four services work toge
 
 ## Intro to BrainPack?
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
-We'll shortly be releasing the **BOM** and details on **DIY** for it.
+We will soon release the Bill of Materials (BOM) and DIY instructions.
 Stay tuned!
 
 Clone the following repos -
