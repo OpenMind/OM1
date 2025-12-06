@@ -1,0 +1,34 @@
+<mujoco model="inverted_pendulum">
+  <compiler angle="radian" inertiafromgeom="true"/>
+
+  <default>
+    <joint limited="true" range="-1 1" damping="0.1"/>
+    <geom density="1000"/>
+  </default>
+
+  <asset>
+    <texture name="skybox" type="skybox" builtin="gradient" rgb1="0.4 0.6 0.8" rgb2="0 0 0" width="800" height="800"/>
+    <material name="MatGND" specular="0.3" shininess="0.3" texture="skybox"/>
+    <material name="MatCart" rgba=".9 .2 .2 1"/>
+    <material name="MatPole" rgba=".2 .9 .2 1"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="0 0 0.1" material="MatGND" rgba="0.5 0.5 0.5 1"/>
+    <light pos="0 0 1" dir="0 0 -1" diffuse="0.8 0.8 0.8"/>
+
+    <body name="cart" pos="0 0 0">
+      <joint name="slide" type="slide" axis="1 0 0" limited="true" range="-5 5" damping="0.1"/>
+      <geom name="cart" type="box" size="0.2 0.15 0.1" material="MatCart"/>
+
+      <body name="pole" pos="0 0 0.1">
+        <joint name="hinge" type="hinge" axis="0 1 0" pos="0 0 0" damping="0.05" limited="true" range="-3.14 3.14"/>
+        <geom name="pole" type="cylinder" size="0.02 0.5" pos="0 0 0.5" material="MatPole"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="cart_actuator" joint="slide" gear="100"/>
+  </actuator>
+</mujoco>

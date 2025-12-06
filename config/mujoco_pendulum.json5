@@ -1,0 +1,36 @@
+{
+  "version": "v1.0.0",
+  "hertz": 1,
+  "name": "mujoco_demo",
+  "api_key": "openmind_free",
+  "system_prompt_base": "You are a robotic control agent. Your goal is to stabilize the inverted pendulum using minimal force. Respond with a JSON object containing the force command.",
+  "system_governance": "Minimize energy consumption.",
+  "agent_inputs": [
+    {
+      "type": "UnitreeGo2Battery",
+      "config": {
+        "name": "MujocoSensorData"
+      }
+    }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "PendulumAgent",
+      "history_length": 5
+    }
+  },
+  "agent_actions": [
+    {
+      "name": "control_mujoco",
+      "llm_label": "control",
+      "connector": "http_connector",
+      "config": {
+        "endpoint": "http://127.0.0.1:8080/control",
+        "method": "POST",
+        "model": "simulators/mujoco/pendulum.xml"
+      }
+    }
+  ],
+  "backgrounds": []
+}

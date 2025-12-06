@@ -1,0 +1,3 @@
+@echo off
+echo Starting MuJoCo Adapter API Server...
+python om1_mujoco_api_server.py
