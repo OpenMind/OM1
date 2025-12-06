@@ -21,7 +21,6 @@ from runtime.multi_mode.hook import (
 )
 from runtime.robotics import load_unitree
 from runtime.single_mode.config import RuntimeConfig, add_meta
-from runtime.version import verify_runtime_version
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
 
@@ -83,8 +82,6 @@ class ModeConfig:
     Configuration for a specific mode.
     """
 
-    version: str
-
     name: str
     display_name: str
     description: str
@@ -128,7 +125,7 @@ class ModeConfig:
             raise ValueError(f"No LLM configured for mode {self.name}")
 
         return RuntimeConfig(
-            version=self.version,
+            version=global_config.version,
             hertz=self.hertz,
             mode=self.name,
             name=f"{global_config.name}_{self.name}",
@@ -217,6 +214,7 @@ class ModeSystemConfig:
 
     # Global settings
     name: str
+    version: str
     default_mode: str
     config_name: str = ""
     allow_manual_switching: bool = True
@@ -269,6 +267,7 @@ class ModeSystemConfig:
         )
 
 
+
 def load_mode_config(
     config_name: str, mode_soure_path: Optional[str] = None
 ) -> ModeSystemConfig:
@@ -298,9 +297,6 @@ def load_mode_config(
 
     with open(config_path, "r") as f:
         raw_config = json5.load(f)
-
-    config_version = raw_config.get("version")
-    verify_runtime_version(config_version, config_name)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -332,6 +328,7 @@ def load_mode_config(
 
     mode_system_config = ModeSystemConfig(
         name=raw_config.get("name", "mode_system"),
+        version=raw_config.get("version", "v1.0.0"),
         default_mode=raw_config["default_mode"],
         config_name=config_name,
         allow_manual_switching=raw_config.get("allow_manual_switching", True),
@@ -351,7 +348,6 @@ def load_mode_config(
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
         mode_config = ModeConfig(
-            version=mode_data.get("version", "1.0"),
             name=mode_name,
             display_name=mode_data.get("display_name", mode_name),
             description=mode_data.get("description", ""),
