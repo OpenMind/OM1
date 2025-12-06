@@ -29,6 +29,9 @@ class ConfigSchemaGenerator:
         self.backgrounds_dir = os.path.join(self.src_dir, "backgrounds/plugins")
         self.actions_dir = os.path.join(self.src_dir, "actions")
         self.hooks_dir = os.path.join(self.src_dir, "hooks")
+        self.schema_path = os.path.join(
+            root_dir, "config/schema/multi_mode_schema.json"
+        )
 
     def generate(self) -> str:
         """Generate complete configuration schema and save to JSON5 file.
@@ -50,7 +53,7 @@ class ConfigSchemaGenerator:
         hooks = self.scan_hooks()
 
         logging.info(
-            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks)} hook modules"
+            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks.get('available_functions', []))} hook modules"
         )
 
         schema = {
@@ -177,15 +180,55 @@ class ConfigSchemaGenerator:
         return results
 
     # Hooks
-    def scan_hooks(self) -> List[Dict[str, Any]]:
-        """Scan lifecycle hooks from the hooks directory.
+    def scan_hooks(self) -> Dict[str, Any]:
+        """Scan lifecycle hooks.
 
-        Identifies all async functions in hook modules as potential lifecycle hooks.
+        Returns
+        -------
+        Dict[str, Any]
+            Schema structure and available hook functions.
+        """
+        result = {
+            "schema": self._get_hooks_schema(),
+            "available_functions": self._scan_hook_functions(),
+        }
+        return result
+
+    def _get_hooks_schema(self) -> Dict[str, Any]:
+        """Extract lifecycle_hooks schema.
+
+        Returns
+        -------
+        Dict[str, Any]
+            The hooks schema structure with enums and field types.
+        """
+        import json
+
+        if not os.path.exists(self.schema_path):
+            logging.warning(f"Schema file not found: {self.schema_path}")
+            return {}
+
+        try:
+            with open(self.schema_path, "r") as f:
+                schema = json.load(f)
+
+            hooks_schema = schema.get("properties", {}).get(
+                "global_lifecycle_hooks", {}
+            )
+            if hooks_schema:
+                return hooks_schema.get("items", {}).get("properties", {})
+            return {}
+        except Exception as e:
+            logging.error(f"Error parsing schema file: {e}")
+            return {}
+
+    def _scan_hook_functions(self) -> List[Dict[str, Any]]:
+        """Scan available hook functions from hooks directory.
 
         Returns
         -------
         List[Dict[str, Any]]
-            List of hook modules with their function names and arguments.
+            List of hook modules with their function names.
         """
         results = []
         if not os.path.exists(self.hooks_dir):
@@ -196,18 +239,14 @@ class ConfigSchemaGenerator:
                 module_name = os.path.basename(filepath)[:-3]
                 tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
 
-                functions = []
-                for node in tree.body:
-                    if isinstance(node, ast.AsyncFunctionDef):
-                        functions.append(
-                            {
-                                "name": node.name,
-                                "args": [arg.arg for arg in node.args.args],
-                            }
-                        )
+                functions = [
+                    node.name
+                    for node in tree.body
+                    if isinstance(node, ast.AsyncFunctionDef)
+                ]
 
                 if functions:
-                    results.append({"module": module_name, "functions": functions})
+                    results.append({"module_name": module_name, "functions": functions})
             except Exception as e:
                 logging.error(f"Error parsing {filepath}: {e}")
         return results
