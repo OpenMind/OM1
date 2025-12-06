@@ -55,7 +55,7 @@ class ContextProvider:
 
         try:
             context_json = json.dumps(context)
-            self.publisher.put(context_json)
+            self.publisher.put(context_json.encode("utf-8"))
             logging.debug(f"Sent context update: {context}")
         except Exception as e:
             logging.error(f"Error sending context update: {e}")
