@@ -1,9 +1,18 @@
 # tests/inputs/plugins/test_wallet_coinbase.py
 
 import os
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+# Mock dependencies BEFORE importing WalletCoinbase to prevent
+# network calls or loading heavy libraries (like zenoh/cdp).
+if "cdp" not in sys.modules:
+    sys.modules["cdp"] = MagicMock()
+if "providers.io_provider" not in sys.modules:
+    sys.modules["providers.io_provider"] = MagicMock()
+    sys.modules["src.providers.io_provider"] = sys.modules["providers.io_provider"]
 
 from inputs.base import SensorConfig
 from inputs.plugins.wallet_coinbase import Message, WalletCoinbase
