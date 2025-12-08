@@ -6,7 +6,7 @@ from typing import List, Optional
 
 import requests
 
-from inputs.base import Message, SensorConfig
+from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
@@ -98,7 +98,7 @@ class FabricClosestPeer(FuserInput[Optional[str]]):
         self.msg_q.put(human_msg)
         return human_msg
 
-    async def raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Process raw input to generate a timestamped message.
 
