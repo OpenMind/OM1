@@ -121,8 +121,9 @@ class DualLLM(LLM[R]):
         """
         start = time.time()
         try:
-            if hasattr(llm, "_ask_raw"):
-                result = await llm._ask_raw(prompt, messages)
+            ask_raw = getattr(llm, "_ask_raw", None)
+            if ask_raw is not None:
+                result = await ask_raw(prompt, messages)
             else:
                 result = await llm.ask(prompt, messages)
             return {"result": result, "time": time.time() - start, "source": source}
