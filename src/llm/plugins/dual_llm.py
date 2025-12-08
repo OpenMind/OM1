@@ -97,9 +97,11 @@ class DualLLM(LLM[R]):
             "model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
         )
 
-        self.history_manager = LLMHistoryManager(self._config, None)
+        self.history_manager = LLMHistoryManager(self._config, self._eval_client)
 
-    async def _call_llm(self, llm: LLM, prompt: str, source: str) -> dict:
+    async def _call_llm(
+        self, llm: LLM, prompt: str, messages: T.List[T.Dict[str, T.Any]], source: str
+    ) -> dict:
         """
         Call an LLM and return result with timing info.
 
@@ -119,7 +121,10 @@ class DualLLM(LLM[R]):
         """
         start = time.time()
         try:
-            result = await llm._ask_raw(prompt)
+            if hasattr(llm, "_ask_raw"):
+                result = await llm._ask_raw(prompt, messages)
+            else:
+                result = await llm.ask(prompt, messages)
             return {"result": result, "time": time.time() - start, "source": source}
         except Exception as e:
             logging.error(f"{source} LLM error: {e}")
@@ -203,11 +208,12 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             )
 
             logging.info("Original user Question/Context:  " + prompt[:500])
-            logging.info(
-                f"Evaluation LLM raw output: {response.choices[0].message.content.strip()}"
-            )
 
-            result = response.choices[0].message.content.strip().upper()
+            content = response.choices[0].message.content
+            if content is None:
+                return "local"
+            result = content.strip().upper()
+            logging.info(f"Evaluation LLM raw output: {result}")
             return "local" if "A" in result else "cloud"
         except Exception:
             return "local"
@@ -273,10 +279,10 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             voice_input = _extract_voice_input(prompt)
 
             local_task = asyncio.create_task(
-                self._call_llm(self._local_llm, prompt, "local")
+                self._call_llm(self._local_llm, prompt, messages, "local")
             )
             cloud_task = asyncio.create_task(
-                self._call_llm(self._cloud_llm, prompt, "cloud")
+                self._call_llm(self._cloud_llm, prompt, messages, "cloud")
             )
             tasks = {"local": local_task, "cloud": cloud_task}
 

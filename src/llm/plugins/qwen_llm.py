@@ -131,18 +131,20 @@ class QwenLLM(LLM[R]):
             ]
             formatted.append({"role": "user", "content": prompt})
 
-            response = await self._client.chat.completions.create(
-                model=self._config.model,
-                messages=T.cast(T.Any, formatted),
-                tools=(
-                    T.cast(T.Any, self.function_schemas)
-                    if self.function_schemas
-                    else None
-                ),
-                tool_choice="required" if self.function_schemas else None,
-                timeout=self._config.timeout,
-                extra_body=self._extra_body,
-            )
+            model = self._config.model or "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
+
+            request_params: dict[str, T.Any] = {
+                "model": model,
+                "messages": formatted,
+                "timeout": self._config.timeout,
+                "extra_body": self._extra_body,
+            }
+
+            if self.function_schemas:
+                request_params["tools"] = self.function_schemas
+                request_params["tool_choice"] = "required"
+
+            response = await self._client.chat.completions.create(**request_params)
 
             message = response.choices[0].message
             logging.info(f"Qwen LLM raw output: {message}")
