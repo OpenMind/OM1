@@ -89,6 +89,14 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """
+        Connect to the output interface and process the AI movement command.
+
+        Parameters
+        ----------
+        output_interface : MoveInput
+            The output interface containing the AI movement command.
+        """
         logging.info(f"AI command.connect: {output_interface.action}")
 
         if self.mode == "guard" and self.face_presence_provider.unknown_faces > 0:
