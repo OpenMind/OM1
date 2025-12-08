@@ -64,7 +64,7 @@ class OpenAILLM(LLM[R]):
 
     async def _ask_raw(
         self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
-    ) -> R | None:
+    ) -> T.Optional[R]:
         """
         Send a prompt to the OpenAI API and get a structured response.
 
