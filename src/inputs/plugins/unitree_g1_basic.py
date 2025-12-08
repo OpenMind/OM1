@@ -1,3 +1,5 @@
+# type: ignore
+
 import asyncio
 import logging
 import time
@@ -9,8 +11,10 @@ from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusPro
 
 try:
     from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
-    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import BmsState_  # type: ignore
-    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowState_  # type: ignore
+    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import (
+        BmsState_,
+        LowState_,
+    )
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
