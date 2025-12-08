@@ -92,9 +92,34 @@ class RFmapper(Background):
 
         self.start()
 
-    async def scan(self):
+    async def scan(self) -> List[RFData]:
+        """
+        Perform a BLE scan for 5 seconds and return the top devices.
 
-        def detection_callback(device, advdata: AdvertisementData):
+        Scans for BLE devices, collects advertisement data, and returns
+        the top 20 devices by RSSI strength plus any devices with names.
+
+        Returns
+        -------
+        List[RFData]
+            List of RF data objects for detected BLE devices.
+        """
+
+        def detection_callback(device, advdata: AdvertisementData) -> None:
+            """
+            Callback function for BLE device detection.
+
+            Processes advertisement data from discovered BLE devices,
+            extracting name, manufacturer data, service UUIDs, RSSI, and TX power.
+            Updates or creates RFData entries in seen_devices dictionary.
+
+            Parameters
+            ----------
+            device : BLEDevice
+                The discovered BLE device object.
+            advdata : AdvertisementData
+                Advertisement data from the device.
+            """
 
             addr = device.address
 
@@ -179,7 +204,13 @@ class RFmapper(Background):
 
         return final_list
 
-    def _scan_task(self):
+    def _scan_task(self) -> None:
+        """
+        Background thread function for continuous BLE scanning.
+
+        Runs in a separate thread, continuously performs BLE scans
+        and updates scan_results with the latest data.
+        """
         asyncio.set_event_loop(self.loop)
         logging.info("Starting RF scan thread...")
         self.running = True
@@ -189,10 +220,16 @@ class RFmapper(Background):
             logging.info(f"RF scan last sent: {self.scan_last_sent}")
             time.sleep(0.5)
 
-    def start(self):
+    def start(self) -> None:
+        """
+        Start the BLE scanning thread.
+        """
         self.thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
+        """
+        Stop the BLE scanning thread gracefully.
+        """
         self.running = False
         time.sleep(1)
         self.thread.join()

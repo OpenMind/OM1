@@ -65,18 +65,36 @@ class GpsProvider:
         self._thread: Optional[threading.Thread] = None
         self.start()
 
-    def string_to_unix_timestamp(self, time_str):
+    def string_to_unix_timestamp(self, time_str: str) -> float:
         """
         Convert a time string in the format 'YYYY:MM:DD:HH:MM:SS:ms'
         to a Unix timestamp (UTC).
+
+        Parameters
+        ----------
+        time_str : str
+            Time string in 'YYYY:MM:DD:HH:MM:SS:ms' format.
+
+        Returns
+        -------
+        float
+            Unix timestamp in seconds.
         """
         dt = datetime.strptime(time_str, "%Y:%m:%d:%H:%M:%S:%f")
         dt = dt.replace(tzinfo=timezone.utc)
         return dt.timestamp()
 
-    def magGPSProcessor(self, data):
-        # Used whenever there is a connected
-        # nav Arduino on serial
+    def magGPSProcessor(self, data: str) -> None:
+        """
+        Process incoming serial data from GPS/MAG/BLE sensors.
+
+        Parses different types of sensor data packets and updates internal state.
+
+        Parameters
+        ----------
+        data : str
+            Raw serial data string from the sensor.
+        """
         try:
             if data.startswith("HDG:"):
                 parts = data.split(":")
@@ -162,7 +180,20 @@ class GpsProvider:
             "ble_scan": self.ble_scan,
         }
 
-    def compass_heading_to_direction(self, degrees):
+    def compass_heading_to_direction(self, degrees: float) -> str:
+        """
+        Convert compass heading in degrees to cardinal direction.
+
+        Parameters
+        ----------
+        degrees : float
+            Compass heading in degrees (0-360).
+
+        Returns
+        -------
+        str
+            Cardinal direction name.
+        """
         directions = [
             "North",
             "North East",
@@ -176,8 +207,20 @@ class GpsProvider:
         index = int((degrees + 22.5) % 360 / 45)
         return directions[index]
 
-    def parse_ble_triang_string(self, input_string):
+    def parse_ble_triang_string(self, input_string: str) -> List[RFDataRaw]:
+        """
+        Parse BLE triangulation data from serial input string.
 
+        Parameters
+        ----------
+        input_string : str
+            Raw BLE data string starting with "BLE:".
+
+        Returns
+        -------
+        List[RFDataRaw]
+            List of parsed RF data objects.
+        """
         if not input_string.startswith("BLE:"):
             return []
 
