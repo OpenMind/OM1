@@ -18,7 +18,11 @@
       "type": "UnitreeGo2Battery"
     },
     {
-      "type": "WalletCoinbase"
+      "type": "WalletCoinbase",
+      "config": {
+        // Configure the asset ID to track. Defaults to "eth" if not specified.
+        "asset_id": "eth"
+      }
     }
   ],
   "cortex_llm": {

@@ -1,12 +1,11 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 import serial
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
@@ -27,24 +26,7 @@ from providers.io_provider import IOProvider
 #
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class SerialReader(FuserInput[str]):
+class SerialReader(FuserInput[Optional[str]]):
     """
     Reads data from serial port, typically from an Arduino
 
@@ -79,16 +61,15 @@ class SerialReader(FuserInput[str]):
 
         self.descriptor_for_LLM = "Heart Rate and Grip Strength"
 
-    async def _poll(self) -> str | None:
+    async def _poll(self) -> Optional[str]:
         """
         Poll for serial data.
 
         Returns
         -------
-        str
-            message on serial bus
+        Optional[str]
+            The latest line read from the serial port, or None if no data
         """
-
         await asyncio.sleep(0.5)
 
         if self.ser is None:
@@ -103,15 +84,22 @@ class SerialReader(FuserInput[str]):
         else:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw string to higer level text description.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
         Returns
         -------
-        Message
-            Timestamped message containing description
+        Optional[Message]
+            A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
 
         if "Pulse:" in raw_input:
             value = raw_input.split(" ")
@@ -124,9 +112,14 @@ class SerialReader(FuserInput[str]):
 
         return Message(timestamp=time.time(), message=message)
 
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Update message buffer.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input to be processed, or None if no input is available
         """
         pending_message = await self._raw_to_text(raw_input)
 

@@ -2,23 +2,16 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.turtlebot4_camera_vlm_provider import TurtleBot4CameraVLMProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class TurtleBot4CameraVLMCloud(FuserInput[str]):
+class TurtleBot4CameraVLMCloud(FuserInput[Optional[str]]):
     """
     TurtleBot4 Camera VLM bridge.
 
@@ -63,7 +56,7 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
-    def _handle_vlm_message(self, raw_message: str):
+    def _handle_vlm_message(self, raw_message: Optional[str]):
         """
         Process incoming VLM messages.
 
@@ -72,9 +65,12 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
 
         Parameters
         ----------
-        raw_message : str
+        raw_message : Optional[str]
             Raw JSON message received from the VLM service
         """
+        if raw_message is None:
+            return
+
         try:
             json_message: Dict = json.loads(raw_message)
             if "vlm_reply" in json_message:
@@ -103,7 +99,7 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -112,14 +108,17 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

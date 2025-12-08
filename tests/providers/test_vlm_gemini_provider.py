@@ -22,8 +22,10 @@ def api_key():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    VLMGeminiProvider._instance = None
+    """Reset singleton instances between tests."""
+    VLMGeminiProvider.reset()  # type: ignore
     yield
+    VLMGeminiProvider.reset()  # type: ignore
 
 
 @pytest.fixture

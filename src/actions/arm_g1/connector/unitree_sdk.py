@@ -21,6 +21,11 @@ class ARMUnitreeSDKConnector(ActionConnector[ArmInput]):
     async def connect(self, output_interface: ArmInput) -> None:
         """
         Connects to the G1 Arm Action Client and executes the specified action.
+
+        Parameters
+        ----------
+        output_interface : ArmInput
+            The output interface containing the arm action command.
         """
         logging.info(f"AI command.action: {output_interface.action}")
 

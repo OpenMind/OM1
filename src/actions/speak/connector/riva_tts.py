@@ -64,6 +64,14 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
         self.tts.start()
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        """
+        Process a speak action by sending text to Riva TTS.
+
+        Parameters
+        ----------
+        output_interface : SpeakInput
+            The SpeakInput interface containing the text to be spoken.
+        """
         # Check if TTS is enabled
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping speak action")
