@@ -59,7 +59,9 @@ class TestWalletCoinbase:
             "COINBASE_API_SECRET": "s",
         }
         with patch.dict(os.environ, env, clear=True):
-            with patch("inputs.plugins.wallet_coinbase.Cdp.configure") as mock_configure:
+            with patch(
+                "inputs.plugins.wallet_coinbase.Cdp.configure"
+            ) as mock_configure:
                 with patch(
                     "inputs.plugins.wallet_coinbase.Wallet.fetch",
                     return_value=mock_wallet,
@@ -114,7 +116,9 @@ class TestWalletCoinbase:
             # Intentionally omit API key/secret
         }
         with patch.dict(os.environ, env, clear=True):
-            with patch("inputs.plugins.wallet_coinbase.Cdp.configure") as mock_configure:
+            with patch(
+                "inputs.plugins.wallet_coinbase.Cdp.configure"
+            ) as mock_configure:
                 with patch(
                     "inputs.plugins.wallet_coinbase.Wallet.fetch",
                     return_value=mock_wallet,
