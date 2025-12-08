@@ -1,5 +1,5 @@
 {
-  "include": ["src"],
+  "include": ["src", "tests"],
   "exclude": [
     "**/system_hw_test",
     "**/__pycache__",

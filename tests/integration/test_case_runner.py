@@ -396,7 +396,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Set cortex runtime reference for MockRPLidar cleanup
     for input_obj in cortex.config.agent_inputs:
         if hasattr(input_obj, "set_cortex_runtime"):
-            input_obj.set_cortex_runtime(cortex)
+            input_obj.set_cortex_runtime(cortex)  # type: ignore
 
     # Run a single tick of the cortex loop
     await cortex._tick()
