@@ -9,6 +9,7 @@ import openai
 from pydantic import BaseModel
 
 from llm import LLM, LLMConfig, load_llm
+from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -118,7 +119,7 @@ class DualLLM(LLM[R]):
         """
         start = time.time()
         try:
-            result = await llm.ask(prompt)
+            result = await llm._ask_raw(prompt)
             return {"result": result, "time": time.time() - start, "source": source}
         except Exception as e:
             logging.error(f"{source} LLM error: {e}")
@@ -231,20 +232,22 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
         dict
             The selected result entry.
         """
-        local_has = self._has_function_calls(local_entry)
-        cloud_has = self._has_function_calls(cloud_entry)
+        local_has_function_call = self._has_function_calls(local_entry)
+        cloud_has_function_call = self._has_function_calls(cloud_entry)
 
-        if local_has and not cloud_has:
+        if local_has_function_call and not cloud_has_function_call:
             return local_entry
-        if cloud_has and not local_has:
+        if cloud_has_function_call and not local_has_function_call:
             return cloud_entry
-        if not local_has and not cloud_has:
+        if not local_has_function_call and not cloud_has_function_call:
             return local_entry
 
         # Both have function calls → evaluate quality
         winner = await self._evaluate_quality(local_entry, cloud_entry, prompt)
         return local_entry if winner == "local" else cloud_entry
 
+    @AvatarLLMState.trigger_thinking()
+    @LLMHistoryManager.update_history()
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
     ) -> R | None:

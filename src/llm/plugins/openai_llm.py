@@ -62,9 +62,7 @@ class OpenAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
-    @AvatarLLMState.trigger_thinking()
-    @LLMHistoryManager.update_history()
-    async def ask(
+    async def _ask_raw(
         self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
     ) -> R | None:
         """
@@ -85,7 +83,6 @@ class OpenAILLM(LLM[R]):
         """
         try:
             logging.info(f"OpenAI LLM input: {prompt}")
-            logging.debug(f"OpenAI LLM messages: {messages}")
 
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
@@ -96,21 +93,31 @@ class OpenAILLM(LLM[R]):
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 
-            response = await self._client.chat.completions.create(
-                model=self._config.model or "gpt-5",
-                messages=T.cast(T.Any, formatted_messages),
-                tools=T.cast(T.Any, self.function_schemas),
-                tool_choice="auto",
-                timeout=self._config.timeout,
-            )
+            extra_body = getattr(self._config, "extra_body", None)
+            extra_args: dict[str, T.Any] = {}
+            if extra_body:
+                extra_args["extra_body"] = extra_body
+
+            api_params = {
+                "model": self._config.model or "gpt-4.1",
+                "messages": T.cast(T.Any, formatted_messages),
+                "timeout": self._config.timeout,
+                **extra_args,
+            }
+
+            if self.function_schemas:
+                api_params["tools"] = T.cast(T.Any, self.function_schemas)
+                api_params["tool_choice"] = "auto"
+
+            response = await self._client.chat.completions.create(**api_params)
 
             message = response.choices[0].message
+            logging.info(f"OpenAI LLM raw output: {message}")
             self.io_provider.llm_end_time = time.time()
 
-            if message.tool_calls:
-                logging.info(f"Received {len(message.tool_calls)} function calls")
-                logging.info(f"Function calls: {message.tool_calls}")
+            tool_calls = list(message.tool_calls or [])
 
+            if tool_calls:
                 function_call_data = [
                     {
                         "function": {
@@ -118,11 +125,9 @@ class OpenAILLM(LLM[R]):
                             "arguments": tc.function.arguments,
                         }
                     }
-                    for tc in message.tool_calls
+                    for tc in tool_calls
                 ]
-
                 actions = convert_function_calls_to_actions(function_call_data)
-
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"OpenAI LLM function call output: {result}")
                 return T.cast(R, result)
@@ -132,3 +137,14 @@ class OpenAILLM(LLM[R]):
         except Exception as e:
             logging.error(f"OpenAI API error: {e}")
             return None
+
+    @AvatarLLMState.trigger_thinking()
+    @LLMHistoryManager.update_history()
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
+    ) -> R | None:
+        """
+        Public method with decorators for standalone use.
+        Wraps _ask_raw with avatar state and history management.
+        """
+        return await self._ask_raw(prompt, messages)

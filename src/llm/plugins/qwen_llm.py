@@ -100,12 +100,11 @@ class QwenLLM(LLM[R]):
         self._extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
-    @AvatarLLMState.trigger_thinking()
-    @LLMHistoryManager.update_history()
-    async def ask(
+    async def _ask_raw(
         self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
     ) -> R | None:
         """
+        Core LLM call logic without decorators.
         Send prompt to local Qwen model and get structured response.
 
         Parameters
@@ -175,7 +174,6 @@ class QwenLLM(LLM[R]):
                     }
                     for tc in tool_calls
                 ]
-
                 actions = convert_function_calls_to_actions(function_call_data)
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"Qwen LLM function call output: {result}")
@@ -185,3 +183,14 @@ class QwenLLM(LLM[R]):
         except Exception as e:
             logging.error(f"Qwen LLM error: {e}")
             return None
+
+    @AvatarLLMState.trigger_thinking()
+    @LLMHistoryManager.update_history()
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
+    ) -> R | None:
+        """
+        Public method with decorators for standalone use.
+        Wraps _ask_raw with avatar state and history management.
+        """
+        return await self._ask_raw(prompt, messages)
