@@ -115,7 +115,9 @@ class LLM(T.Generic[R]):
         # Set up the IO provider
         self.io_provider = IOProvider()
 
-    async def ask(self, prompt: str, messages: T.List[T.Dict[str, str]] = []) -> R:
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the LLM and receive a typed response.
 

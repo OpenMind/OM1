@@ -12,8 +12,10 @@ def ws_url():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    ASRProvider._instance = None
+    """Reset singleton instances between tests."""
+    ASRProvider.reset()  # type: ignore
     yield
+    ASRProvider.reset()  # type: ignore
 
 
 @pytest.fixture

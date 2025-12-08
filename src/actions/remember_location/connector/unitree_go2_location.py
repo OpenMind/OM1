@@ -33,13 +33,13 @@ class UnitreeGo2RememberLocationConnector(ActionConnector[RememberLocationInput]
 
         self.elevenlabs_provider = ElevenLabsTTSProvider()
 
-    async def connect(self, input_protocol: RememberLocationInput) -> None:
+    async def connect(self, output_interface: RememberLocationInput) -> None:
         """
         Connect the input protocol to the remember location action for Go2.
 
         Parameters
         ----------
-        input_protocol : RememberLocationInput
+        output_interface : RememberLocationInput
             The input protocol containing the action details.
         """
         if not self.base_url:
@@ -48,8 +48,8 @@ class UnitreeGo2RememberLocationConnector(ActionConnector[RememberLocationInput]
 
         payload: dict[str, Any] = {
             "map_name": self.map_name,
-            "label": input_protocol.action,
-            "description": getattr(input_protocol, "description", ""),
+            "label": output_interface.action,
+            "description": getattr(output_interface, "description", ""),
         }
 
         headers = {"Content-Type": "application/json"}
@@ -62,10 +62,10 @@ class UnitreeGo2RememberLocationConnector(ActionConnector[RememberLocationInput]
                     text = await resp.text()
                     if resp.status >= 200 and resp.status < 300:
                         logging.info(
-                            f"RememberLocationGo2: stored '{input_protocol.action}' -> {resp.status} {text}"
+                            f"RememberLocationGo2: stored '{output_interface.action}' -> {resp.status} {text}"
                         )
                         self.elevenlabs_provider.add_pending_message(
-                            f"Location {input_protocol.action} remembered for Go2. Woof! Woof!"
+                            f"Location {output_interface.action} remembered for Go2. Woof! Woof!"
                         )
                     else:
                         logging.error(

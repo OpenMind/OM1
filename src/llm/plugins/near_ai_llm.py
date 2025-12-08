@@ -57,7 +57,7 @@ class NearAILLM(LLM[R]):
     @LLMHistoryManager.update_history()
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
-    ) -> R | None:
+    ) -> T.Optional[R]:
         """
         Send a prompt to the NearAI API and get a structured response.
 

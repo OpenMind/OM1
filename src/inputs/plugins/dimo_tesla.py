@@ -1,35 +1,17 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Queue
 from typing import List, Optional
 
 from dimo import DIMO
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class DIMOTesla(FuserInput[str]):
+class DIMOTesla(FuserInput[Optional[str]]):
     """
     DIMO Tesla input handler.
 
@@ -107,7 +89,7 @@ class DIMOTesla(FuserInput[str]):
 
         Returns
         -------
-        str
+        Optional[str]
             The latest Tesla data
         """
         await asyncio.sleep(0.5)
@@ -198,21 +180,33 @@ class DIMOTesla(FuserInput[str]):
             currentLocationLongitude=currentLocationLongitude,
         )
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped status or transaction notification
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Process Tesla data message buffer.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
         """
         pending_message = await self._raw_to_text(raw_input)
         if pending_message is not None:
