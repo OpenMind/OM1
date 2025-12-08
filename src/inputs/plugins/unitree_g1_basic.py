@@ -1,5 +1,3 @@
-# type: ignore
-
 import asyncio
 import logging
 import time
@@ -11,10 +9,7 @@ from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusPro
 
 try:
     from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
-    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import (
-        BmsState_,
-        LowState_,
-    )
+    from unitree.unitree_sdk2py.idl.unitree_hg.msg import dds_  # type: ignore
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
@@ -113,7 +108,7 @@ class UnitreeG1Basic(FuserInput[List[float]]):
         self.g1_lowbatt_percent = 20.0  # percent
         self.descriptor_for_LLM = "Energy Level"
 
-    def BMSStateHandler(self, msg: BmsState_):
+    def BMSStateHandler(self, msg: dds_.BmsState_):  # type: ignore
         self.bms_state = msg
         logging.debug(f"BmsState_: {msg}")
 
@@ -122,7 +117,7 @@ class UnitreeG1Basic(FuserInput[List[float]]):
         self.battery_percentage = float(msg.soc)  # type: ignore
         self.battery_temperature = float(msg.temperature[0])  # type: ignore
 
-    def LowStateHandler(self, msg: LowState_):
+    def LowStateHandler(self, msg: dds_.LowState_):  # type: ignore
         self.low_state = msg
         logging.debug(f"LowState_: {msg}")
 
