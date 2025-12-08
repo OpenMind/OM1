@@ -120,8 +120,6 @@ class QwenLLM(LLM[R]):
             Parsed response with actions, or None if parsing fails.
         """
         try:
-            logging.info(f"Qwen LLM input: {prompt}")
-
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
@@ -147,7 +145,6 @@ class QwenLLM(LLM[R]):
             response = await self._client.chat.completions.create(**request_params)
 
             message = response.choices[0].message
-            logging.info(f"Qwen LLM raw output: {message}")
             self.io_provider.llm_end_time = time.time()
 
             tool_calls = list(message.tool_calls or [])
@@ -178,7 +175,6 @@ class QwenLLM(LLM[R]):
                 ]
                 actions = convert_function_calls_to_actions(function_call_data)
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"Qwen LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None
