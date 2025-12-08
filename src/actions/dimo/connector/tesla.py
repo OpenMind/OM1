@@ -57,6 +57,14 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
                 self.vehicle_jwt = None
 
     async def connect(self, output_interface: TeslaInput) -> None:
+        """
+        Connect the input protocol to the DIMO Tesla action.
+
+        Parameters
+        ----------
+        output_interface : TeslaInput
+            The input protocol containing the action details.
+        """
         logging.info(f"DIMOTeslaConnector: {output_interface.action}")
         if output_interface.action != self.previouse_output:
             self.previouse_output = output_interface.action

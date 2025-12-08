@@ -130,6 +130,14 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        """
+        Process a speak action by sending text to Elevenlabs TTS.
+
+        Parameters
+        ----------
+        output_interface : SpeakInput
+            The SpeakInput interface containing the text to be spoken.
+        """
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping TTS action")
             return

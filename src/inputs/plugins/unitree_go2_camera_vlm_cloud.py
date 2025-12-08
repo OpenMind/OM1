@@ -2,23 +2,16 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_camera_vlm_provider import UnitreeCameraVLMProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class UnitreeGo2CameraVLMCloud(FuserInput[str]):
+class UnitreeGo2CameraVLMCloud(FuserInput[Optional[str]]):
     """
     Unitree Go2 Air Camera VLM bridge.
 
@@ -102,7 +95,7 @@ class UnitreeGo2CameraVLMCloud(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -111,14 +104,17 @@ class UnitreeGo2CameraVLMCloud(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

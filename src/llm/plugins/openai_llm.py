@@ -65,8 +65,8 @@ class OpenAILLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
-    ) -> R | None:
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the OpenAI API and get a structured response.
 

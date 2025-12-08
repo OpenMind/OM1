@@ -109,6 +109,14 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: EmergencyAlertInput) -> None:
+        """
+        Connect the input protocol to the ElevenLabs TTS action for emergency alerts.
+
+        Parameters
+        ----------
+        output_interface : EmergencyAlertInput
+            The input protocol containing the action details.
+        """
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping TTS action")
             return
