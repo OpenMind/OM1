@@ -1,24 +1,17 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
 import zenoh
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
 from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class TurtleBot4Battery(FuserInput[str]):
+class TurtleBot4Battery(FuserInput[List[str]]):
     """
     TurtleBot4 Battery inputs.
 
@@ -164,7 +157,7 @@ class TurtleBot4Battery(FuserInput[str]):
 
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped message containing description
         """
         if raw_input and raw_input[0]:

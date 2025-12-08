@@ -121,7 +121,9 @@ class AvatarLLMState:
         return any(getattr(a, "type", "").lower() == "face" for a in actions)
 
     @classmethod
-    def trigger_thinking(cls, func: Optional[Callable[..., Awaitable[T]]] = None):
+    def trigger_thinking(
+        cls, func: Optional[Callable[..., Awaitable[T]]] = None
+    ) -> Any:
         """
         Decorator to manage avatar state during LLM processing.
 
