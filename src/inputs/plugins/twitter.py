@@ -9,7 +9,7 @@ from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 
 
-class TwitterInput(FuserInput[str]):
+class TwitterInput(FuserInput[Optional[str]]):
     """Context query input handler for RAG."""
 
     def __init__(

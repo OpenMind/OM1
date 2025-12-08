@@ -19,13 +19,14 @@ sys.modules["pyaudio"] = mock_pyaudio
 
 # Import after mocking
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider  # noqa: E402
-from providers.singleton import singleton  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    singleton.instances = {}
+    """Reset singleton instances between tests."""
+    ElevenLabsTTSProvider.reset()  # type: ignore
     yield
+    ElevenLabsTTSProvider.reset()  # type: ignore
 
 
 def test_configure_no_restart_needed_when_not_running():

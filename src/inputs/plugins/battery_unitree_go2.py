@@ -1,10 +1,9 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
 
@@ -25,13 +24,7 @@ except ImportError:
             pass
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class UnitreeGo2Battery(FuserInput[str]):
+class UnitreeGo2Battery(FuserInput[List[float]]):
     """
     Unitree Go2 Lowstate bridge.
 
@@ -156,7 +149,7 @@ class UnitreeGo2Battery(FuserInput[str]):
 
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped message containing description
         """
 
