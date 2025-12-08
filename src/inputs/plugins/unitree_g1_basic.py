@@ -1,19 +1,16 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
 
 try:
-    from unitree.unitree_sdk2py.core.channel import ChannelSubscriber
-    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import (  # type: ignore
-        BmsState_,
-        LowState_,
-    )
+    from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
+    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import BmsState_  # type: ignore
+    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowState_  # type: ignore
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
@@ -26,12 +23,6 @@ except ImportError:
     class LowState_:
         def __init__(self):
             pass
-
-
-@dataclass
-class Message:
-    timestamp: float
-    message: str
 
 
 # Data structure documentation:
@@ -61,7 +52,7 @@ class Message:
 #     wireless_remote: types.array[types.uint8, 40]
 
 
-class UnitreeG1Basic(FuserInput[str]):
+class UnitreeG1Basic(FuserInput[List[float]]):
     """
     Unitree G1 Basic Functionality.
 
@@ -102,11 +93,11 @@ class UnitreeG1Basic(FuserInput[str]):
         # Joint angles e.g.
         if unitree_ethernet and unitree_ethernet != "":
             # only set up if we are connected to a robot
-            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
+            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)  # type: ignore
             self.lowstate_subscriber.Init(self.LowStateHandler, 10)
 
             # Battery specific data
-            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", BmsState_)
+            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", BmsState_)  # type: ignore
             self.bmsstate_subscriber.Init(self.BMSStateHandler, 10)
 
         # battery state

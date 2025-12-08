@@ -257,6 +257,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                 if self.movement_attempts > 0:
                     logging.info(f"Phase 2 - Forward/retreat GAP delta: {progress}m")
 
+                fb = 0
                 if goal_dx > 0:
                     if 4 not in self.lidar.advance:
                         logging.warning("Cannot advance due to barrier")

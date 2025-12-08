@@ -7,7 +7,7 @@
     "**/unitree",
     "**/ubtech"
   ],
-  "typeCheckingMode": "basic",
+  "typeCheckingMode": "standard",
   "reportMissingImports": "warning",
   "pythonVersion": "3.10"
 }

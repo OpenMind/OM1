@@ -2,23 +2,16 @@ import asyncio
 import logging
 import os
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
 from cdp import Cdp, Wallet
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class WalletCoinbase(FuserInput[float]):
+class WalletCoinbase(FuserInput[List[float]]):
     """
     Queries current balance of the configured asset and reports a balance increase
     """
