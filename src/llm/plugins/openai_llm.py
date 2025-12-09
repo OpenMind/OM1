@@ -84,9 +84,6 @@ class OpenAILLM(LLM[R]):
             parsing fails.
         """
         try:
-            logging.info(f"OpenAI LLM input: {prompt}")
-            logging.debug(f"OpenAI LLM messages: {messages}")
-
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
@@ -108,8 +105,6 @@ class OpenAILLM(LLM[R]):
             self.io_provider.llm_end_time = time.time()
 
             if message.tool_calls:
-                logging.info(f"Received {len(message.tool_calls)} function calls")
-                logging.info(f"Function calls: {message.tool_calls}")
 
                 function_call_data = [
                     {
@@ -124,7 +119,6 @@ class OpenAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None
