@@ -115,6 +115,7 @@ class LLM(T.Generic[R]):
         # Set up the IO provider
         self.io_provider = IOProvider()
 
+        # Enable state management by default
         self._skip_state_management: bool = False
 
     async def ask(
