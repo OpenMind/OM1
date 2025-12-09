@@ -141,6 +141,13 @@ class AvatarLLMState:
         def decorator(f: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
             @functools.wraps(f)
             async def wrapper(*args: Any, **kwargs: Any) -> T:
+
+                llm_self = args[0] if args else None
+                # Skip if flag is set
+
+                if llm_self and getattr(llm_self, "_skip_state_management", False):
+                    return await f(*args, **kwargs)
+
                 instance = cls()
                 instance._start_thinking()
 

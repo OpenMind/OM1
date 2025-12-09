@@ -90,6 +90,9 @@ class DualLLM(LLM[R]):
             config=LLMConfig(**cloud_cfg), available_actions=available_actions
         )
 
+        self._local_llm._skip_state_management = True
+        self._cloud_llm._skip_state_management = True
+
         self._eval_client = openai.AsyncClient(
             base_url="http://127.0.0.1:8000/v1", api_key="local"
         )
@@ -121,11 +124,7 @@ class DualLLM(LLM[R]):
         """
         start = time.time()
         try:
-            ask_raw = getattr(llm, "_ask_raw", None)
-            if ask_raw is not None:
-                result = await ask_raw(prompt, messages)
-            else:
-                result = await llm.ask(prompt, messages)
+            result = await llm.ask(prompt, messages)
             return {"result": result, "time": time.time() - start, "source": source}
         except Exception as e:
             logging.error(f"{source} LLM error: {e}")
@@ -208,13 +207,10 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
 
-            logging.info("Original user Question/Context:  " + prompt[:500])
-
             content = response.choices[0].message.content
             if content is None:
                 return "local"
             result = content.strip().upper()
-            logging.info(f"Evaluation LLM raw output: {result}")
             return "local" if "A" in result else "cloud"
         except Exception:
             return "local"
@@ -313,7 +309,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
             # Both in time → select best
             if len(in_time) == 2:
-                logging.info("Both LLMs responded in time, evaluating best response.")
+                logging.debug("Both LLMs responded in time, evaluating best response.")
                 chosen = await self._select_best(
                     in_time["local"], in_time["cloud"], voice_input
                 )
@@ -321,18 +317,18 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             # One in time → use it
             elif len(in_time) == 1:
                 chosen = list(in_time.values())[0]
-                logging.info(
+                logging.debug(
                     f"One LLM responded in time, using its response. {chosen['source']} LLM selected."
                 )
                 # Cancel the other task
                 for name, task in tasks.items():
                     if name not in in_time:
                         task.cancel()
-                        logging.info(f"Cancelled {name} LLM task due to timeout.")
+                        logging.debug(f"Cancelled {name} LLM task due to timeout.")
 
             # Neither in time → wait for first to complete
             else:
-                logging.info(
+                logging.debug(
                     "Neither LLM responded in time, waiting for first to complete."
                 )
                 pending = [t for t in tasks.values() if not t.done()]
@@ -341,12 +337,12 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                         pending, return_when=asyncio.FIRST_COMPLETED
                     )
                     chosen = list(done)[0].result()
-                    logging.info(
+                    logging.debug(
                         f"Using first completed LLM response from {chosen['source']} LLM."
                     )
                     for task in rest:
                         task.cancel()
-                        logging.info(f"Cancelled {task} LLM task due to timeout.")
+                        logging.debug(f"Cancelled {task} LLM task due to timeout.")
                 else:
                     # Both already completed (just late)
                     results = [t.result() for t in tasks.values()]
