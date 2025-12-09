@@ -211,6 +211,8 @@ class LLMHistoryManager:
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
             @functools.wraps(func)
             async def wrapper(self: Any, prompt: str, *args: Any, **kwargs: Any) -> R:
+                if getattr(self, "_skip_state_management", False):
+                    return await func(self, prompt, *args, **kwargs)
 
                 if self._config.history_length == 0:
                     response = await func(self, prompt, [], *args, **kwargs)
