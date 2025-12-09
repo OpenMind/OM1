@@ -28,7 +28,7 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
         Parameters
         ----------
         topic : str, optional
-            The topic on which to subscribe for frontier exploration messages (default is "om/frontier_exploration_pose").
+            The topic on which to subscribe for frontier exploration messages (default is "explore/status").
         """
         super().__init__(topic)
         logging.info("Frontier Exploration Provider initialized with topic: %s", topic)
