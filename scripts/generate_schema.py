@@ -2,6 +2,7 @@
 """Generate OM1 configuration schema from codebase."""
 
 import ast
+import json
 import logging
 import os
 import sys
@@ -54,7 +55,7 @@ class ConfigSchemaGenerator:
         transition_rules = self.scan_transition_rules()
 
         logging.info(
-            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks.get('available_functions', []))} hook modules"
+            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks.get('available_functions', []))} hook modules, {len(transition_rules.get('transition_types', []))} transition types"
         )
 
         schema = {
@@ -204,7 +205,6 @@ class ConfigSchemaGenerator:
         Dict[str, Any]
             The hooks schema structure with enums and field types.
         """
-        import json
 
         if not os.path.exists(self.schema_path):
             logging.warning(f"Schema file not found: {self.schema_path}")
@@ -262,7 +262,6 @@ class ConfigSchemaGenerator:
         Dict[str, Any]
             Transition rules schema with types and properties.
         """
-        import json
 
         if not os.path.exists(self.schema_path):
             logging.warning(f"Schema file not found: {self.schema_path}")
