@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import zenoh
 
@@ -68,7 +68,7 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
             except json.JSONDecodeError as e:
                 logging.error(f"Error decoding exploration message JSON: {e}")
 
-    def start(self):
+    def start(self, message_callback: Optional[Callable] = None):
         """
         Start the frontier exploration provider by registering the message callback.
         """
