@@ -1,29 +1,17 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Queue
 from typing import List, Optional
 
-# `requests` is **optional** while we mock — keep import guarded
-try:
-    import requests  # type: ignore
-except ImportError:  # unit‑test env without requests installed
-    requests = None  # pylint: disable=invalid-name
+import requests
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-# ────────────────────────────────────────────────────────────────────────────────
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class FabricClosestPeer(FuserInput[str]):
+class FabricClosestPeer(FuserInput[Optional[str]]):
     """Share our GPS position with the Fabric network and fetch the closest peer.
 
     **Mock‑friendly:** set `mock_mode=True` in the plugin config (or environment)
@@ -39,7 +27,6 @@ class FabricClosestPeer(FuserInput[str]):
         self.messages: List[str] = []
         self.msg_q: Queue[str] = Queue()
 
-        # endpoint / mock toggle -------------------------------------------------
         self.fabric_endpoint = getattr(
             config, "fabric_endpoint", "http://localhost:8545"
         )
@@ -47,11 +34,17 @@ class FabricClosestPeer(FuserInput[str]):
             getattr(config, "mock_mode", True)
         )  # default ON for now
 
-    # ────────────────────────────────────────────────────────────────────────
     async def _poll(self) -> Optional[str]:
+        """
+        Poll Fabric for the closest peer based on our current GPS position.
+
+        Returns
+        -------
+        Optional[str]
+            Human-readable message with closest peer coordinates, or None on error
+        """
         await asyncio.sleep(0.5)
 
-        # --------------------------------------------------------------------
         if self.mock_mode:
             peer_lat = getattr(self.config, "mock_lat")
             peer_lon = getattr(self.config, "mock_lon")
@@ -98,7 +91,6 @@ class FabricClosestPeer(FuserInput[str]):
                 )
                 return None
 
-        # store & enqueue ------------------------------------------------------
         self.io.add_dynamic_variable("closest_peer_lat", peer_lat)
         self.io.add_dynamic_variable("closest_peer_lon", peer_lon)
 
@@ -106,13 +98,35 @@ class FabricClosestPeer(FuserInput[str]):
         self.msg_q.put(human_msg)
         return human_msg
 
-    # ────────────────────────────────────────────────────────────────────────
     async def raw_to_text(self, raw_input: Optional[str]):
+        """
+        Process raw input to generate a timestamped message.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
+        Returns
+        -------
+        Optional[Message]
+            A timestamped message containing the processed input
+        """
         if raw_input is None:
             return
         self.messages.append(raw_input)
 
     def formatted_latest_buffer(self) -> Optional[str]:
+        """
+        Format and clear the latest buffer contents.
+
+        Returns
+        -------
+        Optional[str]
+            Formatted string containing the latest message and metadata,
+            or None if the buffer is empty
+
+        """
         if not self.msg_q.qsize():
             return None
         msg = self.msg_q.get()

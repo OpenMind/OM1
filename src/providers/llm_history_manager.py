@@ -67,6 +67,9 @@ class LLMHistoryManager:
         Summarize a list of messages using the OpenAI API.
         Returns a new message containing the summary.
         """
+        # Set timeout for API call
+        timeout = 10.0  # seconds
+
         try:
             if not messages:
                 logging.warning("No messages to summarize")
@@ -100,8 +103,6 @@ class LLMHistoryManager:
 
             logging.info(f"Information to summarize:\n{summary_prompt}")
 
-            # Set timeout for API call
-            timeout = 10.0  # seconds
             response = await asyncio.wait_for(
                 self.client.chat.completions.create(  # type: ignore
                     model=self.config.model or "gpt-4o-mini",
@@ -204,10 +205,14 @@ class LLMHistoryManager:
         return [{"role": msg.role, "content": msg.content} for msg in self.history]
 
     @staticmethod
-    def update_history():
+    def update_history() -> (
+        Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]
+    ):
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
             @functools.wraps(func)
-            async def wrapper(self: Any, prompt: str, *args, **kwargs) -> R:
+            async def wrapper(self: Any, prompt: str, *args: Any, **kwargs: Any) -> R:
+                if getattr(self, "_skip_state_management", False):
+                    return await func(self, prompt, *args, **kwargs)
 
                 if self._config.history_length == 0:
                     response = await func(self, prompt, [], *args, **kwargs)

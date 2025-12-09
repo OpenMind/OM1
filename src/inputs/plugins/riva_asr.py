@@ -5,14 +5,14 @@ import time
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 
 
-class RivaASRInput(FuserInput[str]):
+class RivaASRInput(FuserInput[Optional[str]]):
     """
     Automatic Speech Recognition (ASR) input handler.
 
@@ -100,23 +100,26 @@ class RivaASRInput(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> str:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert raw input to text format.
 
         Parameters
         ----------
-        raw_input : str
-            Raw input string to be converted
+        raw_input : Optional[str]
+            Raw input to be processed
 
         Returns
         -------
         Optional[str]
-            Converted text or None if conversion fails
+            Processed text message or None if input is None
         """
-        return raw_input
+        if raw_input is None:
+            return None
 
-    async def raw_to_text(self, raw_input: str):
+        return Message(timestamp=time.time(), message=raw_input)
+
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Convert raw input to processed text and manage buffer.
 
@@ -133,9 +136,9 @@ class RivaASRInput(FuserInput[str]):
 
         if pending_message is not None:
             if len(self.messages) == 0:
-                self.messages.append(pending_message)
+                self.messages.append(pending_message.message)
             else:
-                self.messages[-1] = f"{self.messages[-1]} {pending_message}"
+                self.messages[-1] = f"{self.messages[-1]} {pending_message.message}"
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """

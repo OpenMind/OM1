@@ -8,32 +8,14 @@ import asyncio
 import logging
 import random
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 import cv2
 from deepface import DeepFace
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-
-
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
 
 
 def check_webcam():
@@ -48,7 +30,7 @@ def check_webcam():
     return True
 
 
-class FaceEmotionCapture(FuserInput[cv2.typing.MatLike]):
+class FaceEmotionCapture(FuserInput[Optional[cv2.typing.MatLike]]):
     """
     Real-time facial emotion recognition using webcam input.
 
@@ -99,19 +81,21 @@ class FaceEmotionCapture(FuserInput[cv2.typing.MatLike]):
             ret, frame = self.cap.read()
             return frame
 
-    async def _raw_to_text(self, raw_input: cv2.typing.MatLike) -> Message:
+    async def _raw_to_text(
+        self, raw_input: Optional[cv2.typing.MatLike]
+    ) -> Optional[Message]:
         """
         Process video frame for emotion detection.
 
         Parameters
         ----------
-        raw_input : cv2.typing.MatLike
-            Input video frame
+        raw_input : Optional[cv2.typing.MatLike]
+            Captured video frame
 
         Returns
         -------
-        Message
-            Timestamped emotion detection result
+        Optional[Message]
+            Message containing detected emotion or status
         """
         if not self.have_cam:
             # simulate a model response
@@ -121,6 +105,10 @@ class FaceEmotionCapture(FuserInput[cv2.typing.MatLike]):
             return Message(timestamp=time.time(), message=message)
 
         frame = raw_input
+
+        # If no frame is captured, return None
+        if frame is None:
+            return None
 
         # Convert frame to grayscale
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -154,14 +142,14 @@ class FaceEmotionCapture(FuserInput[cv2.typing.MatLike]):
 
         return Message(timestamp=time.time(), message=message)
 
-    async def raw_to_text(self, raw_input: cv2.typing.MatLike):
+    async def raw_to_text(self, raw_input: Optional[cv2.typing.MatLike]):
         """
         Convert raw input to processed text and manage buffer.
 
         Parameters
         ----------
-        raw_input : Optional[str]
-            Raw input to be processed
+        raw_input : Optional[cv2.typing.MatLike]
+            Raw video frame to be processed
         """
         pending_message = await self._raw_to_text(raw_input)
 
