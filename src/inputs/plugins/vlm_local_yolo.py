@@ -3,13 +3,12 @@ import json
 import logging
 import os
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
 import cv2
 from ultralytics import YOLO
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.odom_provider import OdomProvider
@@ -24,23 +23,6 @@ RESOLUTIONS = [
     (800, 600),
     (640, 480),  # VGA fallback
 ]
-
-
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
 
 
 def set_best_resolution(cap, resolutions):
@@ -81,7 +63,7 @@ def check_webcam(index_to_check):
     return width, height
 
 
-class VLM_Local_YOLO(FuserInput[str]):
+class VLM_Local_YOLO(FuserInput[Optional[List]]):
     """ """
 
     def __init__(self, config: SensorConfig = SensorConfig()):
@@ -146,21 +128,29 @@ class VLM_Local_YOLO(FuserInput[str]):
         self.odom_yaw_m180_p180 = 0.0
 
     def update_filename(self):
+        """
+        Create a new filename with the current timestamp.
+        """
         unix_ts = round(time.time(), 6)
         logging.info(f"YOLO time: {unix_ts}")
         unix_ts = str(unix_ts).replace(".", "_")
         filename = f"dump/yolo_{unix_ts}Z.jsonl"
         return filename
 
-    def get_top_detection(self, detections):
+    def get_top_detection(self, detections: List[dict]) -> tuple:
         """
         Returns the class label and bbox of the detection with the highest confidence.
 
-        Parameters:
-            detections (list): List of detection dictionaries, each with 'class', 'confidence', 'bbox'.
+        Parameters
+        ----------
+        detections : List[dict]
+            List of detection dictionaries with 'class', 'confidence', and 'bbox' keys.
 
-        Returns:
-            tuple: (label, bbox) of the top detection, or (None, None) if list is empty.
+        Returns
+        -------
+        tuple
+            (class label, bbox) of the top detection or (None, None) if no detections
+            are available.
         """
         if not detections:
             return None, None
@@ -310,7 +300,7 @@ class VLM_Local_YOLO(FuserInput[str]):
             if sentence is not None:
                 return Message(timestamp=time.time(), message=sentence)
 
-    async def raw_to_text(self, raw_input: List):
+    async def raw_to_text(self, raw_input: Optional[List]):
         """
         Convert list of detections to text and update message buffer.
 

@@ -69,7 +69,8 @@ async def test_poll_empty_queue(asr_input):
 @pytest.mark.asyncio
 async def test_raw_to_text_conversion(asr_input):
     result = await asr_input._raw_to_text("test input")
-    assert result == "test input"
+    assert result.message == "test input"
+    assert isinstance(result.timestamp, float)
 
 
 @pytest.mark.asyncio

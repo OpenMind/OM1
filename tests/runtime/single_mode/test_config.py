@@ -17,6 +17,7 @@ from simulators.base import Simulator, SimulatorConfig
 @pytest.fixture
 def mock_config_data():
     return {
+        "version": "v1.0.1",
         "hertz": 10.0,
         "name": "test_config",
         "api_key": "global_test_api_key",
@@ -75,6 +76,7 @@ def mock_dependencies():
 @pytest.fixture
 def mock_empty_config_data():
     return {
+        "version": "v1.0.1",
         "hertz": 10.0,
         "name": "empty_config",
         "system_prompt_base": "",
@@ -90,6 +92,7 @@ def mock_empty_config_data():
 @pytest.fixture
 def mock_multiple_components_config():
     return {
+        "version": "v1.0.1",
         "hertz": 20.0,
         "name": "multiple_components",
         "system_prompt_base": "system prompt base",
@@ -229,6 +232,7 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
 
 def test_load_config_missing_required_fields():
     invalid_config = {
+        "version": "v1.0.1",
         "name": "invalid_config",
     }
 
@@ -237,8 +241,28 @@ def test_load_config_missing_required_fields():
             load_config("invalid_config")
 
 
+def test_load_config_invalid_version():
+    invalid_config = {
+        "version": "invalid_version",
+        "hertz": 10.0,
+        "name": "invalid_version_config",
+        "system_prompt_base": "system prompt base",
+        "system_governance": "system governance",
+        "system_prompt_examples": "system prompt examples",
+        "agent_inputs": [],
+        "cortex_llm": {"type": "test_llm", "config": {}},
+        "simulators": [],
+        "agent_actions": [],
+    }
+
+    with (patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))),):
+        with pytest.raises(ValueError):
+            load_config("invalid_version_config")
+
+
 def test_load_config_invalid_hertz():
     invalid_config = {
+        "version": "v1.0.1",
         "hertz": -1.0,
         "name": "invalid_hertz",
         "system_prompt_base": "system prompt base",
@@ -262,18 +286,13 @@ def test_load_config_missing_file():
 
 def test_load_config_invalid_json():
     with patch("builtins.open", mock_open(read_data="invalid json5")):
-
-        # try:
-        #     load_config("invalid_config")
-        # except Exception as error:
-        #     logging.info(f"{error} ERRORTYPE: {type(error).__name__}")
-
         with pytest.raises(ValueError):
             load_config("invalid_config")
 
 
 def test_load_config_invalid_component_type():
     invalid_config = {
+        "version": "v1.0.1",
         "hertz": 10.0,
         "name": "invalid_component",
         "system_prompt_base": "system prompt base",

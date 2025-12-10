@@ -1,5 +1,6 @@
 {
   // Test case metadata
+  "version": "v1.0.1",
   "name": "vila_indoor_test",
   "description": "Test VILA VLM in an indoor scene",
   "hertz": 1,
