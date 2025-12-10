@@ -53,8 +53,10 @@ def fps():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    UnitreeCameraVLMProvider._instance = None
+    """Reset singleton instances between tests."""
+    UnitreeCameraVLMProvider.reset()  # type: ignore
     yield
+    UnitreeCameraVLMProvider.reset()  # type: ignore
 
 
 @pytest.fixture

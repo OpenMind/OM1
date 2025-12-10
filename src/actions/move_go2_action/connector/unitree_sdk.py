@@ -49,8 +49,16 @@ class ActionUnitreeSDKConnector(ActionConnector[ActionInput]):
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
-    async def connect(self, input_protocol: ActionInput) -> None:
-        action = input_protocol.action
+    async def connect(self, output_interface: ActionInput) -> None:
+        """
+        Connect the input protocol to the Unitree Go2 action.
+
+        Parameters
+        ----------
+        output_interface : ActionInput
+            The input protocol containing the action details.
+        """
+        action = output_interface.action
         logging.info(f"ActionUnitreeSDKConnector received action: {action}")
 
         if action == "stand still" or action == "do nothing":

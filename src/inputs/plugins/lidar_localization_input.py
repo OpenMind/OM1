@@ -1,10 +1,9 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_go2_lidar_localization_provider import (
@@ -12,24 +11,7 @@ from providers.unitree_go2_lidar_localization_provider import (
 )
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class LidarLocalizationInput(FuserInput[str]):
+class LidarLocalizationInput(FuserInput[Optional[str]]):
     """
     Lidar localization status input plugin for LLM prompts.
 
@@ -96,7 +78,7 @@ class LidarLocalizationInput(FuserInput[str]):
             logging.error(f"Error polling localization status: {e}")
             return "LOCALIZATION ERROR: Unable to determine robot position. Navigation not recommended."
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert raw input string to Message dataclass.
 
@@ -110,6 +92,9 @@ class LidarLocalizationInput(FuserInput[str]):
         Message
             Message dataclass containing the status and timestamp
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

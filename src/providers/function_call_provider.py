@@ -112,8 +112,8 @@ class FunctionGenerator:
         return {
             "type": "function",
             "function": {
-                "name": method._llm_name,
-                "description": method._llm_description,
+                "name": getattr(method, "_llm_name", method.__name__),
+                "description": getattr(method, "_llm_description", ""),
                 "parameters": {
                     "type": "object",
                     "properties": properties,
@@ -140,11 +140,10 @@ class FunctionGenerator:
         functions = {}
 
         for _, method in inspect.getmembers(cls_instance, predicate=inspect.ismethod):
-            if (
-                hasattr(method.__func__, "_llm_function")
-                and method.__func__._llm_function
-            ):
+            if getattr(method.__func__, "_llm_function", False):
                 function_schema = FunctionGenerator.extract_function_schema(method)
-                functions[method.__func__._llm_name] = function_schema
+                functions[getattr(method, "_llm_name", method.__name__)] = (
+                    function_schema
+                )
 
         return functions

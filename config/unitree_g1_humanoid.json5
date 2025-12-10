@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0",
+  "version": "v1.0.1",
   hertz: 10,
   name: "iris",
   unitree_ethernet: "enP2p1s0",

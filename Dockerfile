@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     pkg-config \
     libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN python3 -m pip install --upgrade pip
 
