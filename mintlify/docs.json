@@ -134,12 +134,6 @@
                             "developer_cookbook/input",
                             "developer_cookbook/new_mode"
                         ]
-                    },
-                    {
-                        "group": "How to Manuals",
-                        "pages": [
-                            "api-reference/endpoints/account_and_key_management"
-                        ]
                     }
                 ]
             },
