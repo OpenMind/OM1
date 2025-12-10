@@ -51,7 +51,7 @@
     {
       "name": "navigate_location",
       "llm_label": "navigate_location",
-      "connector": "nav",
+      "connector": "unitree_go2_nav",
     },
     {
      "name": "speak",
