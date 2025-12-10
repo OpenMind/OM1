@@ -22,8 +22,10 @@ def api_key():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    VLMOpenAIProvider._instance = None
+    """Reset singleton instances between tests."""
+    VLMOpenAIProvider.reset()  # type: ignore
     yield
+    VLMOpenAIProvider.reset()  # type: ignore
 
 
 @pytest.fixture

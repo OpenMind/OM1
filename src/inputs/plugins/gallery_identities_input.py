@@ -1,34 +1,16 @@
 import asyncio
 import time
 from collections import deque
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Deque, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.gallery_identities_provider import GalleryIdentitiesProvider
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class GalleryIdentities(FuserInput[str]):
+class GalleryIdentities(FuserInput[Optional[str]]):
     """
     Async input that adapts the GalleryIdentitiesProvider to the fuser/LLM pipeline.
 
@@ -101,13 +83,21 @@ class GalleryIdentities(FuserInput[str]):
                 pass
 
     async def _poll(self) -> Optional[str]:
+        """
+        Poll for new messages from the gallery identities service.
+
+        Returns
+        -------
+        Optional[str]
+            The next message from the buffer if available, None otherwise
+        """
         await asyncio.sleep(0.5)
         try:
             return self.message_buffer.get_nowait()
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -116,14 +106,17 @@ class GalleryIdentities(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
@@ -140,7 +133,10 @@ class GalleryIdentities(FuserInput[str]):
         """
         if raw_input is None:
             return
-        self.messages.append(await self._raw_to_text(raw_input))
+
+        message = await self._raw_to_text(raw_input)
+        if message is not None:
+            self.messages.append(message)
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """

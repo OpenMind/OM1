@@ -201,7 +201,7 @@ def zenoh_scan(sample):
     )
 
     angles_final = np.flip(angles)
-    # angles now run from 360.0 to 0 degress
+    # angles now run from 360.0 to 0 degrees
     data = list(zip(angles_final, scan.ranges))
     array_ready = np.array(data)
     # print(f"Array {array_ready}")

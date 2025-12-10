@@ -11,7 +11,14 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         super().__init__(config)
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """
+        Connect the input protocol to the move action via Unitree SDK.
 
+        Parameters
+        ----------
+        output_interface : MoveInput
+            The input protocol containing the action details.
+        """
         new_msg = {"move": ""}
 
         # stub to show how to do this

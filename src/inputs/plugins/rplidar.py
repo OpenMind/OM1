@@ -1,33 +1,15 @@
 import asyncio
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.rplidar_provider import RPLidarProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class RPLidar(FuserInput[str]):
+class RPLidar(FuserInput[Optional[str]]):
     """
     RPLidar input handler.
 
@@ -75,7 +57,7 @@ class RPLidar(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -84,14 +66,17 @@ class RPLidar(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
@@ -157,7 +142,6 @@ class RPLidar(FuserInput[str]):
             "relevant_distance_min": getattr(config, "relevant_distance_min", 0.08),
             "sensor_mounting_angle": getattr(config, "sensor_mounting_angle", 180.0),
             "URID": getattr(config, "URID", ""),
-            "multicast_address": getattr(config, "multicast_address", ""),
             "machine_type": getattr(config, "machine_type", "go2"),
             "log_file": getattr(config, "log_file", False),
         }

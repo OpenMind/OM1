@@ -1,6 +1,6 @@
 {
   // Configuration version
-  "version": "v1.0.0",
+  "version": "v1.0.1",
 
   // Mode system configuration for Unitree Go2
   "default_mode": "welcome",
@@ -167,6 +167,9 @@
         },
         {
           "type": "UnitreeGo2Locations",
+        },
+        {
+          "type": "UnitreeGo2FrontierExploration",
         }
       ],
       "lifecycle_hooks": [
@@ -633,6 +636,14 @@
       "transition_type": "input_triggered",
       "trigger_keywords": ["navigate", "navigation mode", "go to location", "take me to"],
       "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "slam",
+      "to_mode": "navigation",
+      "transition_type": "context_aware",
+      "context_conditions": {"exploration_done": true},
+      "priority": 3,
       "cooldown_seconds": 5.0
     },
     {

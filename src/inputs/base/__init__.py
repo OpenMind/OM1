@@ -5,6 +5,23 @@ R = T.TypeVar("R")
 
 
 @dataclass
+class Message:
+    """
+    Container for timestamped messages.
+
+    Parameters
+    ----------
+    timestamp : float
+        Unix timestamp of the message
+    message : str
+        Content of the message
+    """
+
+    timestamp: float
+    message: str
+
+
+@dataclass
 class SensorConfig:
     """
     Configuration class for Sensor implementations.
@@ -38,7 +55,7 @@ class Sensor(T.Generic[R]):
         self.config = config
         pass
 
-    async def _raw_to_text(self, raw_input: R) -> str:
+    async def _raw_to_text(self, raw_input: R) -> T.Optional[Message]:
         """
         Convert raw input data into text format for processing.
 
@@ -49,8 +66,8 @@ class Sensor(T.Generic[R]):
 
         Returns
         -------
-        str
-            Text representation of the input
+        T.Optional[Message]
+            Message object containing the converted text
 
         Raises
         ------

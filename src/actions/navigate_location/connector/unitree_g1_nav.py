@@ -41,16 +41,16 @@ class UnitreeG1NavConnector(ActionConnector[NavigateLocationInput]):
             "[NavG1Connector] Using UnitreeG1 providers for locations and navigation."
         )
 
-    async def connect(self, input_protocol: NavigateLocationInput) -> None:
+    async def connect(self, output_interface: NavigateLocationInput) -> None:
         """
         Connect the input protocol to the navigate location action for G1.
 
         Parameters
         ----------
-        input_protocol : NavigateLocationInput
+        output_interface : NavigateLocationInput
             The input protocol containing the action details.
         """
-        label = input_protocol.action.lower().strip()
+        label = output_interface.action.lower().strip()
         for prefix in [
             "go to the ",
             "go to ",
