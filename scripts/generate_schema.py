@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 """Generate OM1 configuration schema from codebase."""
 
 import ast
+import json
 import logging
 import os
 import sys
@@ -51,9 +51,10 @@ class ConfigSchemaGenerator:
         backgrounds = self.scan_backgrounds()
         actions = self.scan_actions()
         hooks = self.scan_hooks()
+        transition_rules = self.scan_transition_rules()
 
         logging.info(
-            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks.get('available_functions', []))} hook modules"
+            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks.get('available_functions', []))} hook modules, {len(transition_rules.get('transition_types', []))} transition types"
         )
 
         schema = {
@@ -62,6 +63,7 @@ class ConfigSchemaGenerator:
             "backgrounds": backgrounds,
             "agent_actions": actions,
             "lifecycle_hooks": hooks,
+            "transition_rules": transition_rules,
         }
 
         schema_path = os.path.join(self.root_dir, "OM1_config_schema.json5")
@@ -202,7 +204,6 @@ class ConfigSchemaGenerator:
         Dict[str, Any]
             The hooks schema structure with enums and field types.
         """
-        import json
 
         if not os.path.exists(self.schema_path):
             logging.warning(f"Schema file not found: {self.schema_path}")
@@ -250,6 +251,45 @@ class ConfigSchemaGenerator:
             except Exception as e:
                 logging.error(f"Error parsing {filepath}: {e}")
         return results
+
+    # Transition Rules
+    def scan_transition_rules(self) -> Dict[str, Any]:
+        """Extract transition_rules schema from multi_mode_schema.json.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Transition rules schema with types and properties.
+        """
+
+        if not os.path.exists(self.schema_path):
+            logging.warning(f"Schema file not found: {self.schema_path}")
+            return {}
+
+        try:
+            with open(self.schema_path, "r") as f:
+                schema = json.load(f)
+
+            transition_schema = schema.get("properties", {}).get("transition_rules", {})
+            if not transition_schema:
+                return {}
+
+            items = transition_schema.get("items", {})
+            properties = items.get("properties", {})
+            required = items.get("required", [])
+
+            transition_types = []
+            if "transition_type" in properties:
+                transition_types = properties["transition_type"].get("enum", [])
+
+            return {
+                "required": required,
+                "transition_types": transition_types,
+                "properties": properties,
+            }
+        except Exception as e:
+            logging.error(f"Error parsing transition_rules schema: {e}")
+            return {}
 
     def _scan_plugins(
         self, directory: str, base_classes: List[str], category: str
