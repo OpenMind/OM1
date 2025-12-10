@@ -332,6 +332,7 @@ def temp_env(key: str, value: Optional[str]):
 def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
     """Test that missing OM_API_KEY logs warning but doesn't raise."""
     config_data = {
+        "version": "v1.0.1",
         "hertz": 10.0,
         "name": "test_missing_key",
         "api_key": "",  # Empty key should trigger env check
@@ -355,12 +356,16 @@ def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
         config = load_config("test_missing_key")
         assert isinstance(config, RuntimeConfig)
         # Should have logged warning about missing API key
-        assert any("API key" in record.message or "OM_API_KEY" in record.message for record in caplog.records)
+        assert any(
+            "API key" in record.message or "OM_API_KEY" in record.message
+            for record in caplog.records
+        )
 
 
 def test_load_config_empty_api_key_falls_back_to_env(caplog, mock_dependencies):
     """Test that empty api_key in config falls back to OM_API_KEY env var."""
     config_data = {
+        "version": "v1.0.1",
         "hertz": 10.0,
         "name": "test_env_key",
         "api_key": "openmind_free",  # Should trigger env check
@@ -386,4 +391,7 @@ def test_load_config_empty_api_key_falls_back_to_env(caplog, mock_dependencies):
         # API key should be taken from environment
         assert config.api_key == "test_env_api_key_12345"
         # Should log success message
-        assert any("OM_API_KEY" in record.message and "Success" in record.message for record in caplog.records)
+        assert any(
+            "OM_API_KEY" in record.message and "Success" in record.message
+            for record in caplog.records
+        )
