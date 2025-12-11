@@ -57,17 +57,21 @@ Add your new mode to the modes section:
 
 Specify which inputs your mode needs:
 ```bash
-    "agent_inputs": {
-        "type": "array",
-        "items": {
+        {
+        "agent_inputs": {
+            "type": "array",
+            "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [
+                "type"
+            ],
             "properties": {
-                "type": {"type": "string"},
-                "config": {"type": "object"}
+                "type": { "type": "string" },
+                "config": { "type": "object" }
+            }
             }
         }
-    }
+        }
 ```
 
 ### Step 4: Configure Actions
@@ -75,80 +79,113 @@ Specify which inputs your mode needs:
 Define what actions the mode can perform:
 
 ```bash
-    "agent_actions": {
-        "type": "array",
-        "items": {
+        {
+        "agent_actions": {
+            "type": "array",
+            "items": {
             "type": "object",
-            "required": ["name", "llm_label", "connector"],
+            "required": [
+                "name",
+                "llm_label",
+                "connector"
+            ],
             "properties": {
-                "name": {"type": "string"},
-                "llm_label": {"type": "string"},
-                "connector": {"type": "string"},
-                "config": {"type": "object"},
+                "name": { "type": "string" },
+                "llm_label": { "type": "string" },
+                "connector": { "type": "string" },
+                "config": { "type": "object" },
                 "exclude_from_prompt": {
-                    "type": "boolean",
-                    "default": false
+                "type": "boolean",
+                "default": false
                 }
             }
+            }
         }
-    }
+        }
 ```
 
 ### Step 5: Configure LLM (Optional: Can be overwritten for each mode if needed)
 
 ```bash
-    "cortex_llm": {
-        "type": "object",
-        "required": ["type"],
-        "properties": {
-            "type": {"type": "string"},
+        {
+        "cortex_llm": {
+            "type": "object",
+            "required": [
+            "type"
+            ],
+            "properties": {
+            "type": { "type": "string" },
             "config": {
                 "type": "object",
                 "properties": {
-                    "agent_name": {"type": "string"},
-                    "history_length": {"type": "integer"}
+                "agent_name": { "type": "string" },
+                "history_length": { "type": "integer" }
                 }
             }
+            }
         }
-    }
+        }
 ```
 
 ### Step 6 : Add Lifecycle hooks (Only required for multi-mode)
 
+A hook is a programmable event point that executes specific actions at key stages. To define lifecycle hooks, you can add the following to your config.
+
 ```bash
-    "lifecycle_hooks": {
-        "type": "array",
-        "items": {
+        {
+        "lifecycle_hooks": {
+            "type": "array",
+            "items": {
             "type": "object",
-            "required": ["hook_type", "handler_type", "handler_config"],
+            "required": [
+                "hook_type",
+                "handler_type",
+                "handler_config"
+            ],
             "properties": {
                 "hook_type": {
-                    "type": "string",
-                    "enum": ["on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout"]
+                "type": "string",
+                "enum": [
+                    "on_startup",
+                    "on_shutdown",
+                    "on_entry",
+                    "on_exit",
+                    "on_timeout"
+                ]
                 },
                 "handler_type": {
-                    "type": "string",
-                    "enum": ["message", "command", "function", "action"]
+                "type": "string",
+                "enum": [
+                    "message",
+                    "command",
+                    "function",
+                    "action"
+                ]
                 },
                 "handler_config": {
-                    "type": "object",
-                    "properties": {
-                        "message": {"type": "string"},
-                        "command": {"type": "string"},
-                        "function": {"type": "string"},
-                        "action": {"type": "string"}
-                    }
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string" },
+                    "command": { "type": "string" },
+                    "function": { "type": "string" },
+                    "action": { "type": "string" }
+                }
                 },
-                "priority": {"type": "integer"},
-                "async_execution": {"type": "boolean"},
-                "timeout_seconds": {"type": "number"},
+                "priority": { "type": "integer" },
+                "async_execution": { "type": "boolean" },
+                "timeout_seconds": { "type": "number" },
                 "on_failure": {
-                    "type": "string",
-                    "enum": ["log", "ignore", "abort"]
+                "type": "string",
+                "enum": [
+                    "log",
+                    "ignore",
+                    "abort"
+                ]
                 }
             }
+            }
         }
-    }
+        }
 ```
 
 ### Step 7: Add Transition Rules (Only required for multi-mode)
@@ -156,25 +193,33 @@ Define what actions the mode can perform:
 Add to the transition_rules section:
 
 ```bash
-    "transition_rules": {
-        "type": "array",
-        "items": {
+        {
+        "transition_rules": {
+            "type": "array",
+            "items": {
             "type": "object",
-            "required": ["from_mode", "to_mode", "transition_type", "trigger_keywords", "priority"],
+            "required": [
+                "from_mode",
+                "to_mode",
+                "transition_type",
+                "trigger_keywords",
+                "priority"
+            ],
             "properties": {
-                "from_mode": {"type": "string"},
-                "to_mode": {"type": "string"},
-                "transition_type": {"type": "string"},
+                "from_mode": { "type": "string" },
+                "to_mode": { "type": "string" },
+                "transition_type": { "type": "string" },
                 "trigger_keywords": {
-                    "type": "array",
-                    "items": {"type": "string"}
+                "type": "array",
+                "items": { "type": "string" }
                 },
-                "priority": {"type": "integer"},
-                "cooldown_seconds": {"type": "number"}
+                "priority": { "type": "integer" },
+                "cooldown_seconds": { "type": "number" }
+            }
             }
         }
-    }
-```
+        }
+    ```
 
 ### Step 8: Update Default Mode (Optional)
 
