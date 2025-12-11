@@ -1,4 +1,5 @@
 {
+  "version": "v1.0.1",
   "hertz": 0.01,
   "name": "conversation",
   "api_key": "openmind_free",
@@ -23,6 +24,11 @@
       "llm_label": "speak",
       "implementation": "passthrough",
       "connector": "elevenlabs_tts"
+    },
+    {
+      "name": "face",
+      "llm_label": "emotion",
+      "connector": "avatar"
     }
   ]
 }

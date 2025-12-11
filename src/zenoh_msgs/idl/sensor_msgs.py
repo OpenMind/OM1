@@ -217,3 +217,5 @@ class DockStatus(IdlStruct, typename="DockStatus"):
 class Paths(IdlStruct, typename="Paths"):
     header: Header
     paths: List[uint32]
+    blocked_by_obstacle_idx: List[uint32]
+    blocked_by_hazard_idx: List[uint32]

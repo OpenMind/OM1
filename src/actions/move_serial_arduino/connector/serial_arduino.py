@@ -1,3 +1,7 @@
+"""
+This only works if you actually have a serial port connected to your computer, such as, via a USB serial dongle. On Mac, you can determine the correct name to use via `ls /dev/cu.usb*`.
+"""
+
 import logging
 import time
 
@@ -5,10 +9,6 @@ import serial
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move.interface import MoveInput
-
-"""
-This only works if you actually have a serial port connected to your computer, such as, via a USB serial dongle. On Mac, you can determine the correct name to use via `ls /dev/cu.usb*`.
-"""
 
 
 class MoveSerialConnector(ActionConnector[MoveInput]):
@@ -25,7 +25,14 @@ class MoveSerialConnector(ActionConnector[MoveInput]):
             self.ser = serial.Serial(self.port, 9600)
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """
+        Connect the input protocol to the move action via serial to Arduino.
 
+        Parameters
+        ----------
+        output_interface : MoveInput
+            The input protocol containing the action details.
+        """
         new_msg = {"move": ""}
 
         if output_interface.action == "be still":
@@ -51,5 +58,7 @@ class MoveSerialConnector(ActionConnector[MoveInput]):
             logging.info(f"SerialNotOpen - Simulating transmit: {message}")
 
     def tick(self) -> None:
+        """
+        Periodic tick function to maintain connection.
+        """
         time.sleep(0.1)
-        # logging.info("Connector Tick")

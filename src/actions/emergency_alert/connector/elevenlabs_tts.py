@@ -109,6 +109,14 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: EmergencyAlertInput) -> None:
+        """
+        Connect the input protocol to the ElevenLabs TTS action for emergency alerts.
+
+        Parameters
+        ----------
+        output_interface : EmergencyAlertInput
+            The input protocol containing the action details.
+        """
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping TTS action")
             return
@@ -154,16 +162,16 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.info(f"Received TTS Control Status message: {tts_status}")
+        logging.debug(f"Received TTS Control Status message: {tts_status}")
 
         code = tts_status.code
 
         # Enable the TTS
         if code == 1:
             self.tts_enabled = True
-            logging.info("TTS Enabled")
+            logging.debug("TTS Enabled")
 
         # Disable the TTS
         if code == 0:
             self.tts_enabled = False
-            logging.info("TTS Disabled")
+            logging.debug("TTS Disabled")
