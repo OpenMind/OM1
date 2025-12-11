@@ -54,4 +54,3 @@ Once a security issue is resolved, we will:
 3. Communicate through appropriate channels (Discord, email, etc.)
 
 Thank you for helping keep OM1 and its users safe!
-
