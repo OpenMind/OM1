@@ -123,7 +123,9 @@ class QwenLLM(LLM[R]):
             Parsed response with actions, or None if parsing fails.
         """
         try:
-            logging.info(f"Qwen LLM input: {prompt}")
+            logging.info(f"Qwen input: {prompt}")
+            logging.info(f"Qwen messages: {messages}")
+
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
@@ -160,6 +162,9 @@ class QwenLLM(LLM[R]):
                 tool_calls = _parse_qwen_tool_calls(message.content)
 
             if tool_calls:
+                logging.info(f"Received {len(tool_calls)} function calls")
+                logging.info(f"Function calls: {tool_calls}")
+
                 function_call_data = [
                     {
                         "function": {

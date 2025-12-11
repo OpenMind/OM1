@@ -115,7 +115,7 @@ class GovernanceEthereum(FuserInput[Optional[str]]):
         self.POLL_INTERVAL = 5  # seconds
         self.rpc_url = "https://holesky.gateway.tenderly.co"  # Ethereum RPC URL
 
-        # The smart contract address of ther ERC-7777 Governance Smart Contract
+        # The smart contract address of the ERC-7777 Governance Smart Contract
         self.contract_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
 
         # getRuleSet() Function selector (first 4 bytes of Keccak hash).

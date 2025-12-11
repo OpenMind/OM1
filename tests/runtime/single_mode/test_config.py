@@ -1,3 +1,6 @@
+import os
+from contextlib import contextmanager
+from typing import Optional
 from unittest.mock import mock_open, patch
 
 import json5
@@ -307,3 +310,88 @@ def test_load_config_invalid_component_type():
     ):
         with pytest.raises(ImportError):
             load_config("invalid_config")
+
+
+@contextmanager
+def temp_env(key: str, value: Optional[str]):
+    """Temporarily set environment variable."""
+    old_value = os.environ.get(key)
+    if value is None:
+        os.environ.pop(key, None)
+    else:
+        os.environ[key] = value
+    try:
+        yield
+    finally:
+        if old_value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = old_value
+
+
+def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
+    """Test that missing OM_API_KEY logs warning but doesn't raise."""
+    config_data = {
+        "version": "v1.0.1",
+        "hertz": 10.0,
+        "name": "test_missing_key",
+        "api_key": "",  # Empty key should trigger env check
+        "system_prompt_base": "test",
+        "system_governance": "test",
+        "system_prompt_examples": "test",
+        "agent_inputs": [],
+        "cortex_llm": {"type": "test_llm", "config": {}},
+        "simulators": [],
+        "agent_actions": [],
+    }
+
+    with (
+        patch("builtins.open", mock_open(read_data=json5.dumps(config_data))),
+        patch(
+            "runtime.single_mode.config.load_llm",
+            return_value=mock_dependencies["llm"],
+        ),
+        temp_env("OM_API_KEY", None),  # Ensure OM_API_KEY is not set
+    ):
+        config = load_config("test_missing_key")
+        assert isinstance(config, RuntimeConfig)
+        # Should have logged warning about missing API key
+        assert any(
+            "API key" in record.message or "OM_API_KEY" in record.message
+            for record in caplog.records
+        )
+
+
+def test_load_config_empty_api_key_falls_back_to_env(caplog, mock_dependencies):
+    """Test that empty api_key in config falls back to OM_API_KEY env var."""
+    config_data = {
+        "version": "v1.0.1",
+        "hertz": 10.0,
+        "name": "test_env_key",
+        "api_key": "openmind_free",  # Should trigger env check
+        "system_prompt_base": "test",
+        "system_governance": "test",
+        "system_prompt_examples": "test",
+        "agent_inputs": [],
+        "cortex_llm": {"type": "test_llm", "config": {}},
+        "simulators": [],
+        "agent_actions": [],
+    }
+
+    with (
+        patch("builtins.open", mock_open(read_data=json5.dumps(config_data))),
+        patch(
+            "runtime.single_mode.config.load_llm",
+            return_value=mock_dependencies["llm"],
+        ),
+        temp_env("OM_API_KEY", "test_env_api_key_12345"),
+    ):
+        config = load_config("test_env_key")
+        assert isinstance(config, RuntimeConfig)
+        # API key should be taken from environment
+        assert config.api_key == "test_env_api_key_12345"
+        # Should log success message
+        assert any(
+            "OM_API_KEY" in record.message and "Success" in record.message
+            for record in caplog.records
+        )

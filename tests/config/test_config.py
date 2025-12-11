@@ -67,9 +67,7 @@ def assert_action_classes_exist(action_config):
             connector is not None
         ), f"No connector found for action {action_config['name']}"
     except (ImportError, ModuleNotFoundError):
-        # Skip connectors that fail to import due to missing optional dependencies
-        # This allows tests to pass even when optional SDKs are not installed
-        pass
+        assert False, f"Connector module not found for action {action_config['name']}"
 
 
 def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:
