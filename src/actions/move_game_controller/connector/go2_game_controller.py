@@ -2,12 +2,11 @@ import logging
 import threading
 import time
 
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
-
 from actions.base import ActionConfig, ActionConnector
 from actions.move_game_controller.interface import IDLEInput
 from providers.odom_provider import OdomProvider, RobotState
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
+from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import AudioStatus, open_zenoh_session
 
 try:
