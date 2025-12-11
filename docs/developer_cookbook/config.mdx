@@ -55,17 +55,17 @@ You can configure any subset of the available five modes, just two, or all five,
         These help shape its responses.
         You can add more examples if needed.
 
-5. Configure inputs
+4. Configure inputs
     Inputs provide the sensory capabilities that allow robots to perceive their environment
     ```bash
     "agent_inputs": [
-        { 
+        {
             "type": "GoogleASRInput" 
         }
     ]
     ```
 
-6. Configure the LLM
+5. Configure the LLM
 
     ```bash
     "cortex_llm": {
@@ -83,26 +83,26 @@ You can configure any subset of the available five modes, just two, or all five,
 
     history_length = how many turns of conversation to remember
 
-7. Set up agent actions
+6. Set up agent actions
 
-Actions define what your agent can do. You can define movement, TTS or any other actions here.
+    Actions define what your agent can do. You can define movement, TTS or any other actions here.
 
-    ```bash
-        "agent_actions": [
-            {
-            "name": "speak",
-            "llm_label": "speak",
-            "implementation": "passthrough",
-            "connector": "elevenlabs_tts"
-            },
-            {
-            "name": "face",
-            "llm_label": "emotion",
-            "connector": "avatar"
-            }
-        ]
-    ```
+        ```bash
+            "agent_actions": [
+                {
+                "name": "speak",
+                "llm_label": "speak",
+                "implementation": "passthrough",
+                "connector": "elevenlabs_tts"
+                },
+                {
+                "name": "face",
+                "llm_label": "emotion",
+                "connector": "avatar"
+                }
+            ]
+        ```
 
-8. Validate the config
+7. Validate the config
 
-Before using the file: Check for JSON errors, make sure commas, quotes, and braces are correct and confirm that correct API key is configured.
+    Before using the file: Check for JSON errors, make sure commas, quotes, and braces are correct and confirm that correct API key is configured.
