@@ -6,7 +6,8 @@ description: "Add a new mode"
 This guide walks you through creating a new mode for your robot system.
 
 ## Project Structure
-```
+
+```bash
 src/runtime/multi_mode/
 ├── config.py          # ModeConfig and ModeSystemConfig classes
 ├── manager.py         # ModeManager for transitions
@@ -23,137 +24,101 @@ config/
 
 ## Configuration
 
-Step 1: Create Configuration File
-    Create or modify a configuration file (e.g., `your_robot_modes.json5`) in the `/config/` directory.
+### Step 1: Create Configuration File
 
-Step 2: Add Mode Definition
-    Add your new mode to the `modes` section of your configuration file.
+Create or modify a configuration file (e.g., `your_robot_modes.json5`) in the `/config/` directory.
 
-    #### Mode Configuration Options
+### Step 2: Add Mode Definition
+
+Add your new mode to the `modes` section of your configuration file.
+
+    **Mode Configuration Options**
 
     #### **display_name** *string* — Required
 
-        The human-readable name shown in the UI for this mode.
+    The human-readable name shown in the UI for this mode.
 
-        **Example:** `"Your New Mode"`
+    **Example: "Your New Mode"**
 
-        #### **description**  *string* — Required
+    #### **description**  *string* — Required
 
-        Brief description explaining what this mode does and its purpose.
+    Brief description explaining what this mode does and its purpose.
 
-        **Example:** `"Brief description of what this mode does"`
+    **Example: "Brief description of what this mode does"**
 
-        #### **system_prompt_base**  *string* — Required
+    #### **system_prompt_base**  *string* — Required
 
-        The foundational system prompt that defines the agent's behavior and purpose in this mode.
+    The foundational system prompt that defines the agent's behavior and purpose in this mode.
 
-        **Example:** `"You are in [mode name]. Your purpose is..."`
+    **Example: "You are in [mode name]. Your purpose is..."**
 
-        #### **hertz**  *float* — Required
+    #### **hertz**  *float* — Required
 
-        The frequency (in Hz) at which the agent operates or processes information.
+    The frequency (in Hz) at which the agent operates or processes information.
 
-        **Example:** `1.0`
+    **Example: `1.0`**
 
-        #### **timeout_seconds** *integer* — Required
+    #### **timeout_seconds** *integer* — Required
 
-        Maximum duration (in seconds) before the agent times out during execution.
+    Maximum duration (in seconds) before the agent times out during execution.
 
-        **Example:** `300`
+    **Example: `300`**
 
-        #### **remember_locations** *boolean* — Required
+    #### **remember_locations** *boolean* — Required
 
-        Whether the agent should persist and recall location data across interactions.
+    Whether the agent should persist and recall location data across interactions.
 
-        **Example:** `false`
+    **Example: `false`**
 
-        #### **save_interactions** *boolean* — Required
+    #### **save_interactions** *boolean* — Required
 
-        Whether to save conversation history and interactions for this mode.
+    Whether to save conversation history and interactions for this mode.
 
-        **Example:** `true`
-
-        #### **agent_inputs** *array* — Required
-
-        List of input sources or data types the agent can accept in this mode.
-
-        **Example:** `[...]`
-
-        #### **agent_actions** *array* — Required
-
-        List of actions or capabilities the agent can perform in this mode.
-
-        **Example:** `[...]`
-
-        #### **lifecycle_hooks** *array* — Required
-
-        Event handlers triggered at specific points in the agent's lifecycle (startup, shutdown, etc.).
-
-        **Example:** `[...]`
-
-        #### **simulators** *array* — Required
-
-        List of simulation environments or tools available to the agent in this mode.
-
-        **Example:** `[...]`
-
-        #### **cortex_llm** *object* — Required
-
-        Configuration object for the language model powering the agent's cortex.
-
-        **Example:** `{...}`
-
-Step 3: Configure Input Plugins
-
-    Specify which inputs your mode needs:
+    **Example: `true`**
 
     #### **agent_inputs** *array* — Required
 
-        List of input sources or data types the agent can accept in this mode. Each item in the array is an object with the following properties:
-
-        #### **type** *string* — Required
-        
-        The input type identifier.
-        
-        **Example: "AudioInput"**
-
-        #### **config** *object* — Optional
-        
-        Configuration options specific to this input type.
-        
-        **Example: GoogleASRInput**
-
-Step 4: Configure Actions
-
-    Define what actions the mode can perform:
+    List of input sources or data types the agent can accept in this mode.
 
     #### **agent_actions** *array* — Required
 
-        List of actions or capabilities the agent can perform in this mode. Each item in the array is an object with the following properties:
+    List of actions or capabilities the agent can perform in this mode.
 
-        #### **name** *string* — Required
+    #### **lifecycle_hooks** *array* — Required
 
-        The action identifier name.
+    Event handlers triggered at specific points in the agent's lifecycle (startup, shutdown, etc.).
 
-        #### **llm_label** *string* — Required
+    #### **simulators** *array* — Required
 
-        The label used by the LLM to reference this action.
+    List of simulation environments or tools available to the agent in this mode.
 
-        #### **connector** *string* — Required
+    #### **cortex_llm** *object* — Required
 
-        The connector type that implements this action.
+    Configuration object for the language model powering the agent's cortex.
 
-        #### **config** *object* — Optional
+### Step 3: Configure Input Plugins
 
-        Configuration options specific to this action.
+Specify which inputs your mode needs:
 
-        #### **exclude_from_prompt** *boolean* — Optional
+    #### **agent_inputs** *array* — Required
 
-        Whether to exclude this action from the LLM prompt. Default: false.
+    List of input sources or data types the agent can accept in this mode. Each item in the array is an object with the following properties:
 
-        **Example: [{"name": "speak", "llm_label": "speak", "connector": "elevenlabstts", "config": {}, "exclude_from_prompt": false}]**
+    #### **type** *string* — Required
 
-Step 5: Configure LLM (Optional: Can be overwritten for each mode if needed)
+    The input type identifier.
+
+    **Example: "AudioInput"**
+
+    #### **config** *object* — Optional
+
+    Configuration options specific to this input type.
+
+    **Example: GoogleASRInput**
+
+### Step 4: Configure LLM (Optional - Can be overwritten for each mode)
+
+Define which LLM needs to be configured:
 
     #### **cortex_llm** *object* — Required
 
@@ -167,7 +132,7 @@ Step 5: Configure LLM (Optional: Can be overwritten for each mode if needed)
 
     #### **config** *object* — Optional
 
-    Agent name used in metadata
+    Configuration options specific to this LLM type.
 
     #### **agent_name** *string* — Optional
 
@@ -179,79 +144,124 @@ Step 5: Configure LLM (Optional: Can be overwritten for each mode if needed)
 
     Number of past messages to remember in the conversation.
 
-    **Example: "10"**
+    **Example: `10`**
 
-Step 6 : Add Lifecycle hooks (Only required for multi-mode)
+### Step 5: Configure actions
 
-    A hook is a programmable event point that executes specific actions at key stages. To define lifecycle hooks, you can add the following to your config.
+Actions define what your agent can do. You can define movement, TTS or any other actions here.
+
+    #### **agent_actions** *array* — Required
+
+    Defines actions the agent can execute.
+
+    #### **name** *string* — Required
+
+    Human-readable identifier for the action.
+
+    **Example: "speak"**
+
+    #### **llm_label** *string* — Required
+
+    Label the model uses to refer to this action.
+
+    **Example: "speak"**
+
+    #### **implementation** *string* — Optional
+
+    This defines the business logic, if any. If there's none defined, we use default value `passthrough`.
+
+    **Example: "passthrough"**
+
+    #### **connector** *string* — Required
+
+    Name of the connector. This field is the Python file name defined under `actions/action_name/connector`.
+
+    **Example: "elevenlabs_tts"**
+
+    #### **config** *object* — Optional
+
+    Configuration options specific to this action.
+
+    #### **exclude_from_prompt** *boolean* — Optional
+
+    Whether to exclude this action from the LLM prompt.
+
+    Default: false.
+
+    **Example: `[{"name": "speak", "llm_label": "speak", "connector": "elevenlabstts", "config": {}, "exclude_from_prompt": false}]`**
+
+### Step 6: Add Lifecycle hooks (Only required for multi-mode)
+
+A hook is a programmable event point that executes specific actions at key stages. To define lifecycle hooks, you can add the following to your config.
 
     #### **lifecycle_hooks** *array* — Required
 
     Event handlers triggered at specific points in the agent's lifecycle. Each item in the array is an object with the following properties:
 
-        #### **hook_type** *string* — Required
+    #### **hook_type** *string* — Required
 
-        The lifecycle event type. Allowed values: "on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout".
+    The lifecycle event type. Allowed values: "on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout".
 
-        #### **handler_type** *string* — Required
+    #### **handler_type** *string* — Required
 
-        The type of handler to execute. Allowed values: "message", "command", "function", "action".
+    The type of handler to execute. Allowed values: "message", "command", "function", "action".
 
-        #### **handler_config** *object* — Required
+    #### **handler_config** *object* — Required
 
-        Configuration for the handler containing one of: message, command, function, or action as a string property.
+    Configuration for the handler containing one of: message, command, function, or action as a string property.
 
-        #### **priority** *integer* — Optional
+    #### **priority** *integer* — Optional
 
-        Execution priority when multiple hooks exist for the same event.
+    Execution priority when multiple hooks exist for the same event.
 
-        #### **async_execution** *boolean* — Optional
+    #### **async_execution** *boolean* — Optional
 
-        Whether to execute the handler asynchronously.
+    Whether to execute the handler asynchronously.
 
-        #### **timeout_seconds** *number* — Optional
+    #### **timeout_seconds** *number* — Optional
 
-        Maximum duration for handler execution.
+    Maximum duration for handler execution.
 
-        #### **on_failure** *string* — Optional
+    #### **on_failure** *string* — Optional
 
-        Behavior when handler fails. Allowed values: "log", "ignore", "abort".
- 
-Step 7: Add Transition Rules (Only required for multi-mode)
+    Behavior when handler fails. Allowed values: "log", "ignore", "abort".
 
-    Add to the transition_rules section:
+### Step 7: Add Transition Rules (Only required for multi-mode)
 
-        #### **transition_rules** *array* — Required\
+Add to the transition_rules section:
 
-        Rules that define how the agent transitions between different modes. Each item in the array is an object with the following properties:
+    #### **transition_rules** *array* — Required
 
-        #### **from_mode** *string* — Required
+    Rules that define how the agent transitions between different modes. Each item in the array is an object with the following properties:
 
-        The source mode from which the transition originates.
+    #### **from_mode** *string* — Required
 
-        #### **to_mode** *string* — Required
+    The source mode from which the transition originates.
 
-        The target mode to which the agent will transition.
+    #### **to_mode** *string* — Required
 
-        #### **transition_type** *string* — Required
+    The target mode to which the agent will transition.
 
-        The type of transition mechanism.
+    #### **transition_type** *string* — Required
 
-        #### **trigger_keywords** *array* — Required
+    The type of transition mechanism.
 
-        List of keywords that trigger this transition. Each item is a string.
+    #### **trigger_keywords** *array* — Required
 
-        #### **priority** *integer* — Required
+    List of keywords that trigger this transition. Each item is a string.
 
-        Priority level for this transition rule when multiple rules match.
+    #### **priority** *integer* — Required
 
-        #### **cooldown_seconds** *number* — Optional
+    Priority level for this transition rule when multiple rules match.
 
-        Minimum time (in seconds) before this transition can be triggered again.
+    #### **cooldown_seconds** *number* — Optional
 
-Step 8: Update Default Mode (Optional)
+    Minimum time (in seconds) before this transition can be triggered again.
 
-    If "new_mode" should be the starting mode:
+### Step 8: Update Default Mode (Optional)
+
+If "new_mode" should be the starting mode, define
+
     ```bash
     "default_mode": "new_mode"
     ```

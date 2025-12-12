@@ -26,39 +26,39 @@ You can configure any subset of the available five modes, just two, or all five,
 2. Create a new config file config.json5
 
     #### **version** *string* — Required
-     
+
     The version of the configuration format.
-     
+
     **Example: "v1.0.0"**
 
     #### **hertz** *number* — Required
-     
+
     How often (in Hz) the agent runs its update loop.
-     
+
     **Example: 0.01**
 
     #### **name** *string* — Required
-     
+
     The name of the agent.
-     
+
     **Example: "conversation"**
 
     #### **api_key** *string* — Required
-     
+
     API key used to authenticate the agent.
-     
+
     **Example: "openmind_free"**
 
     #### **system_prompt_base** *string* — Required
-     
+
     Defines the agent’s core personality and behavior.
-     
+
     This serves as the primary system prompt for the LLM.
 
     #### **system_governance** *string* — Required
-     
+
     The laws or constraints that the agent must follow during operation.
-     
+
     Modeled similarly to Asimov’s laws.
 
     #### **system_prompt_examples** *string* — Optional
@@ -89,44 +89,44 @@ You can configure any subset of the available five modes, just two, or all five,
     #### **agent_inputs** *array* — Required
 
     List of input sources or data types the agent can accept in this mode. Each item in the array is an object with the following properties:
-    
+
     #### **type** *string* — Required
-    
+
     The input type identifier.
-    
+
     **Example: "AudioInput"**
 
     #### **config** *object* — Optional
-    
+
     Configuration options specific to this input type.
-    
+
     **Example: GoogleASRInput**
 
 5. Configure the LLM
     #### **cortex_llm** *object* — Required
-     
+
     Configures the Cortex LLM behavior.
 
     #### **type** *string* — Required
-    
+
     The LLM provider name.
-    
+
     **Example: "OpenAILLM"**
 
     #### **config** *object* — Optional
-    
+
     Agent name used in metadata
 
     #### **agent_name** *string* — Optional
-    
+
     Agent name used in metadata
-    
+
     **Example: "Spot"**
 
     ### **history_length** *integer* — Optional
-    
+
     Number of past messages to remember in the conversation.
-    
+
     **Example: "10"**
 
 6. Set up agent actions
@@ -134,31 +134,31 @@ You can configure any subset of the available five modes, just two, or all five,
     Actions define what your agent can do. You can define movement, TTS or any other actions here.
 
     #### **agent_actions** *Array* — Required
-    
+
     Defines actions the agent can execute.
 
     #### **name** *string* — Required
-    
+
     Human-readable identifier for the action.
-    
+
     **Example: "speak"**
 
     #### **llm_label** *string* — Required
-    
+
     Label the model uses to refer to this action.
-    
+
     **Example: "speak"**
 
     #### **implementation** *string* — Optional
-    
+
     This defines the business logic, if any. If there's none defined, we use default value `passthough`.
-    
+
     **Example: "passthrough"**
 
     #### **connector** *string* — Required
-    
+
     Name of the connector. This field is the python file name defined under `actions/action_name/connector`.
-    
+
     **Example: "elevenlabs_tts"**
 
 7. Validate the config
