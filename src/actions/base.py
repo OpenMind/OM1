@@ -3,6 +3,8 @@ import typing as T
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from pydantic import BaseModel, ConfigDict
+
 IT = T.TypeVar("IT")
 OT = T.TypeVar("OT")
 
@@ -17,20 +19,12 @@ class MoveCommand:
     speed: float = 0.5
 
 
-@dataclass
-class ActionConfig:
+class ActionConfig(BaseModel):
     """
     Configuration class for Action implementations.
-
-    Parameters
-    ----------
-    **kwargs : dict
-        Additional configuration parameters
     """
 
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    model_config = ConfigDict(extra="allow")
 
 
 @dataclass

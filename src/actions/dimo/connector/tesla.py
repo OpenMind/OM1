@@ -1,17 +1,53 @@
 import logging
 import time
+from typing import Optional
 
 import requests
 from dimo import DIMO
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.dimo.interface import TeslaInput
 from providers.io_provider import IOProvider
 
 
+class DIMOTeslaConfig(ActionConfig):
+    """
+    Configuration for DIMO Tesla connector.
+
+    Parameters:
+    ----------
+    client_id : Optional[str]
+        DIMO client ID.
+    domain : Optional[str]
+        DIMO domain.
+    private_key : Optional[str]
+        DIMO private key.
+    token_id : Optional[int]
+        DIMO token ID.
+    """
+
+    client_id: Optional[str] = Field(
+        default=None,
+        description="DIMO client ID",
+    )
+    domain: Optional[str] = Field(
+        default=None,
+        description="DIMO domain",
+    )
+    private_key: Optional[str] = Field(
+        default=None,
+        description="DIMO private key",
+    )
+    token_id: Optional[int] = Field(
+        default=None,
+        description="DIMO token ID",
+    )
+
+
 class DIMOTeslaConnector(ActionConnector[TeslaInput]):
 
-    def __init__(self, config: ActionConfig):
+    def __init__(self, config: DIMOTeslaConfig):
         super().__init__(config)
 
         self.io_provider = IOProvider()
@@ -28,10 +64,10 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
             self.dimo = DIMO("Production")
 
             # Configure the DIMO Tesla service
-            client_id = getattr(config, "client_id", None)
-            domain = getattr(config, "domain", None)
-            private_key = getattr(config, "private_key", None)
-            self.token_id = getattr(config, "token_id", None)
+            client_id = config.client_id
+            domain = config.domain
+            private_key = config.private_key
+            self.token_id = config.token_id
 
             if not client_id or not domain or not private_key or not self.token_id:
                 raise ValueError(

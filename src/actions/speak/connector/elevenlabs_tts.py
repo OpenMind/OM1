@@ -1,9 +1,11 @@
 import json
 import logging
 import time
+from typing import Optional
 from uuid import uuid4
 
 import zenoh
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
@@ -21,11 +23,51 @@ from zenoh_msgs import (
 )
 
 
+class SpeakElevenLabsTTSConfig(ActionConfig):
+    """
+    Configuration for ElevenLabs TTS connector.
+
+    Parameters:
+    ----------
+    elevenlabs_api_key : Optional[str]
+        ElevenLabs API key.
+    voice_id : str
+        ElevenLabs voice ID.
+    model_id : str
+        ElevenLabs model ID.
+    output_format : str
+        ElevenLabs output format.
+    silence_rate : int
+        Number of responses to skip before speaking.
+    """
+
+    elevenlabs_api_key: Optional[str] = Field(
+        default=None,
+        description="ElevenLabs API key",
+    )
+    voice_id: str = Field(
+        default="JBFqnCBsd6RMkjVDRZzb",
+        description="ElevenLabs voice ID",
+    )
+    model_id: str = Field(
+        default="eleven_flash_v2_5",
+        description="ElevenLabs model ID",
+    )
+    output_format: str = Field(
+        default="mp3_44100_128",
+        description="ElevenLabs output format",
+    )
+    silence_rate: int = Field(
+        default=0,
+        description="Number of responses to skip before speaking",
+    )
+
+
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
 class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
-    def __init__(self, config: ActionConfig):
+    def __init__(self, config: SpeakElevenLabsTTSConfig):
 
         super().__init__(config)
 
@@ -37,13 +79,13 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.last_voice_command_time = time.time()
 
         # Eleven Labs TTS configuration
-        elevenlabs_api_key = getattr(self.config, "elevenlabs_api_key", None)
-        voice_id = getattr(self.config, "voice_id", "JBFqnCBsd6RMkjVDRZzb")
-        model_id = getattr(self.config, "model_id", "eleven_flash_v2_5")
-        output_format = getattr(self.config, "output_format", "mp3_44100_128")
+        elevenlabs_api_key = config.elevenlabs_api_key
+        voice_id = config.voice_id
+        model_id = config.model_id
+        output_format = config.output_format
 
         # silence rate
-        self.silence_rate = getattr(self.config, "silence_rate", 0)
+        self.silence_rate = config.silence_rate
         self.silence_counter = 0
 
         # IO Provider
