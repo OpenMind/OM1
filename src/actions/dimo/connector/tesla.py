@@ -45,9 +45,20 @@ class DIMOTeslaConfig(ActionConfig):
     )
 
 
-class DIMOTeslaConnector(ActionConnector[TeslaInput]):
+class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
+    """
+    Connector that interacts with a Tesla vehicle via the DIMO platform.
+    """
 
     def __init__(self, config: DIMOTeslaConfig):
+        """
+        Initialize the DIMOTeslaConnector.
+
+        Parameters
+        ----------
+        config : DIMOTeslaConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
         self.io_provider = IOProvider()
@@ -64,10 +75,10 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
             self.dimo = DIMO("Production")
 
             # Configure the DIMO Tesla service
-            client_id = config.client_id
-            domain = config.domain
-            private_key = config.private_key
-            self.token_id = config.token_id
+            client_id = self.config.client_id
+            domain = self.config.domain
+            private_key = self.config.private_key
+            self.token_id = self.config.token_id
 
             if not client_id or not domain or not private_key or not self.token_id:
                 raise ValueError(

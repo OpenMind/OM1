@@ -3,33 +3,62 @@ import logging
 from typing import Any
 
 import aiohttp
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.remember_location.interface import RememberLocationInput
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
-class UnitreeG1RememberLocationConnector(ActionConnector[RememberLocationInput]):
+class UnitreeG1RememberLocationConfig(ActionConfig):
+    """
+    Configuration for Unitree G1 Remember Location connector.
+
+    Parameters:
+    ----------
+    base_url : str
+        The base URL for the remember location API.
+    timeout : int
+        Timeout for the HTTP requests in seconds.
+    map_name : str
+        The name of the map to use when remembering locations.
+    """
+
+    base_url: str = Field(
+        default="http://localhost:5000/maps/locations/add/slam",
+        description="The base URL for the remember location API.",
+    )
+    timeout: int = Field(
+        default=5,
+        description="Timeout for the HTTP requests in seconds.",
+    )
+    map_name: str = Field(
+        default="map",
+        description="The name of the map to use when remembering locations.",
+    )
+
+
+class UnitreeG1RememberLocationConnector(
+    ActionConnector[UnitreeG1RememberLocationConfig, RememberLocationInput]
+):
     """
     Connector that persists a remembered location for Unitree G1 by POSTing to an HTTP API.
     """
 
-    def __init__(self, config: ActionConfig):
+    def __init__(self, config: UnitreeG1RememberLocationConfig):
         """
         Initialize the RememberLocationG1Connector.
 
         Parameters
         ----------
-        config : ActionConfig
+        config : UnitreeG1RememberLocationConfig
             Configuration for the action connector.
         """
         super().__init__(config)
 
-        self.base_url = getattr(
-            config, "base_url", "http://localhost:5000/maps/locations/add/slam"
-        )
-        self.timeout = getattr(config, "timeout", 5)
-        self.map_name = getattr(config, "map_name", "map")
+        self.base_url = self.config.base_url
+        self.timeout = self.config.timeout
+        self.map_name = self.config.map_name
 
         self.elevenlabs_provider = ElevenLabsTTSProvider()
 
