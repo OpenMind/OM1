@@ -123,54 +123,62 @@ Step 4: Configure Actions
 
 Define what actions the mode can perform:
 
-```bash
-        {
-        "agent_actions": {
-            "type": "array",
-            "items": {
-            "type": "object",
-            "required": [
-                "name",
-                "llm_label",
-                "connector"
-            ],
-            "properties": {
-                "name": { "type": "string" },
-                "llm_label": { "type": "string" },
-                "connector": { "type": "string" },
-                "config": { "type": "object" },
-                "exclude_from_prompt": {
-                "type": "boolean",
-                "default": false
-                }
-            }
-            }
-        }
-        }
-```
+#### **agent_actions** *array* — Required
+
+List of actions or capabilities the agent can perform in this mode. Each item in the array is an object with the following properties:
+
+#### **name** *string* — Required
+
+The action identifier name.
+
+#### **llm_label** *string* — Required
+
+The label used by the LLM to reference this action.
+
+#### **connector** *string* — Required
+
+The connector type that implements this action.
+
+#### **config** *object* — Optional
+
+Configuration options specific to this action.
+
+#### **exclude_from_prompt** *boolean* — Optional
+
+Whether to exclude this action from the LLM prompt. Default: false.
+Example: [{"name": "speak", "llm_label": "speak", "connector": "elevenlabstts", "config": {}, "exclude_from_prompt": false}]
 
 Step 5: Configure LLM (Optional: Can be overwritten for each mode if needed)
 
-```bash
-        {
-        "cortex_llm": {
-            "type": "object",
-            "required": [
-            "type"
-            ],
-            "properties": {
-            "type": { "type": "string" },
-            "config": {
-                "type": "object",
-                "properties": {
-                "agent_name": { "type": "string" },
-                "history_length": { "type": "integer" }
-                }
-            }
-            }
-        }
-        }
-```
+#### **cortex_llm** *object* — Required
+
+Configuration object for the language model powering the agent's cortex.
+
+    #### **cortex_llm** *object* — Required
+     
+    Configures the Cortex LLM behavior.
+
+    #### **type** *string* — Required
+    
+    The LLM provider name.
+    
+    **Example: "OpenAILLM"**
+
+    #### **config** *object* — Optional
+    
+    Agent name used in metadata
+
+    #### **agent_name** *string* — Optional
+    
+    Agent name used in metadata
+    
+    **Example: "Spot"**
+
+    ### **history_length** *integer* — Optional
+    
+    Number of past messages to remember in the conversation.
+    
+    **Example: "10"**
 
 Step 6 : Add Lifecycle hooks (Only required for multi-mode)
 
