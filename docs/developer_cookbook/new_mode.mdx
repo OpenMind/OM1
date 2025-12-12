@@ -21,60 +21,105 @@ config/
 └── your_robot_modes.json5    # Mode configuration file
 ```
 
-### Step 1: Locate Your Configuration File
+Step 1: Locate Your Configuration File
 Create or modify a configuration file (e.g., your_robot_modes.json5) in the /config/ directory:
 
-### Step 2: Add Mode Definition
-Add your new mode to the modes section:
+Step 2: Add Mode Definition
+    Add your new mode to the modes section:
 
-```bash
-    "your_new_mode": {
-    "display_name": "Your New Mode",
-    "description": "Brief description of what this mode does",
-    "system_prompt_base": "You are in [mode name]. Your purpose is...",
-    "hertz": 1.0,
-    "timeout_seconds": 300,
-    "remember_locations": false,
-    "save_interactions": true,
-    "agent_inputs": [...],
-    "agent_actions": [...],
-    "lifecycle_hooks": [...],
-    "simulators": [...],
-    "cortex_llm": {...}
-    }
-```
-**Configuration Parameters**
+    #### **display_name** *string* — Required
 
-- display_name: Human-readable name shown in the UI
-- description: Brief explanation of the mode's purpose
-- system_prompt_base: Initial prompt that defines the mode's behavior
-- hertz: Execution frequency (cycles per second)
-- timeout_seconds: Maximum duration before automatic timeout
-- remember_locations: Whether to persist location data
-- save_interactions: Whether to log mode interactions
+    The human-readable name shown in the UI for this mode.
 
-### Step 3: Configure Input Plugins
+    **Example:** `"Your New Mode"`
 
-Specify which inputs your mode needs:
-```bash
-        {
-        "agent_inputs": {
-            "type": "array",
-            "items": {
-            "type": "object",
-            "required": [
-                "type"
-            ],
-            "properties": {
-                "type": { "type": "string" },
-                "config": { "type": "object" }
-            }
-            }
-        }
-        }
-```
+    #### **description**  *string* — Required
 
-### Step 4: Configure Actions
+    Brief description explaining what this mode does and its purpose.
+
+    **Example:** `"Brief description of what this mode does"`
+
+    #### **system_prompt_base**  *string* — Required
+
+    The foundational system prompt that defines the agent's behavior and purpose in this mode.
+
+    **Example:** `"You are in [mode name]. Your purpose is..."`
+
+    #### **hertz**  *float* — Required
+
+    The frequency (in Hz) at which the agent operates or processes information.
+
+    **Example:** `1.0`
+
+    #### **timeout_seconds** *integer* — Required
+
+    Maximum duration (in seconds) before the agent times out during execution.
+
+    **Example:** `300`
+
+    #### **remember_locations** *boolean* — Required
+
+    Whether the agent should persist and recall location data across interactions.
+
+    **Example:** `false`
+
+    #### **save_interactions** *boolean* — Required
+
+    Whether to save conversation history and interactions for this mode.
+
+    **Example:** `true`
+
+    #### **agent_inputs** *array* — Required
+
+    List of input sources or data types the agent can accept in this mode.
+
+    **Example:** `[...]`
+
+    #### **agent_actions** *array* — Required
+
+    List of actions or capabilities the agent can perform in this mode.
+
+    **Example:** `[...]`
+
+    #### **lifecycle_hooks** *array* — Required
+
+    Event handlers triggered at specific points in the agent's lifecycle (startup, shutdown, etc.).
+
+    **Example:** `[...]`
+
+    #### **simulators** *array* — Required
+
+    List of simulation environments or tools available to the agent in this mode.
+
+    **Example:** `[...]`
+
+    #### **cortex_llm** *object* — Required
+
+    Configuration object for the language model powering the agent's cortex.
+
+    **Example:** `{...}`
+
+Step 3: Configure Input Plugins
+
+    Specify which inputs your mode needs:
+
+    #### **agent_inputs** *array* — Required
+
+    List of input sources or data types the agent can accept in this mode. Each item in the array is an object with the following properties:
+    
+    #### **type** *string* — Required
+    
+    The input type identifier.
+    
+    **Example: "AudioInput"**
+
+    #### **config** *object* — Optional
+    
+    Configuration options specific to this input type.
+    
+    **Example: GoogleASRInput**
+
+Step 4: Configure Actions
 
 Define what actions the mode can perform:
 
@@ -104,7 +149,7 @@ Define what actions the mode can perform:
         }
 ```
 
-### Step 5: Configure LLM (Optional: Can be overwritten for each mode if needed)
+Step 5: Configure LLM (Optional: Can be overwritten for each mode if needed)
 
 ```bash
         {
@@ -127,99 +172,73 @@ Define what actions the mode can perform:
         }
 ```
 
-### Step 6 : Add Lifecycle hooks (Only required for multi-mode)
+Step 6 : Add Lifecycle hooks (Only required for multi-mode)
 
-A hook is a programmable event point that executes specific actions at key stages. To define lifecycle hooks, you can add the following to your config.
+    A hook is a programmable event point that executes specific actions at key stages. To define lifecycle hooks, you can add the following to your config.
 
-```bash
-        {
-        "lifecycle_hooks": {
-            "type": "array",
-            "items": {
-            "type": "object",
-            "required": [
-                "hook_type",
-                "handler_type",
-                "handler_config"
-            ],
-            "properties": {
-                "hook_type": {
-                "type": "string",
-                "enum": [
-                    "on_startup",
-                    "on_shutdown",
-                    "on_entry",
-                    "on_exit",
-                    "on_timeout"
-                ]
-                },
-                "handler_type": {
-                "type": "string",
-                "enum": [
-                    "message",
-                    "command",
-                    "function",
-                    "action"
-                ]
-                },
-                "handler_config": {
-                "type": "object",
-                "properties": {
-                    "message": { "type": "string" },
-                    "command": { "type": "string" },
-                    "function": { "type": "string" },
-                    "action": { "type": "string" }
-                }
-                },
-                "priority": { "type": "integer" },
-                "async_execution": { "type": "boolean" },
-                "timeout_seconds": { "type": "number" },
-                "on_failure": {
-                "type": "string",
-                "enum": [
-                    "log",
-                    "ignore",
-                    "abort"
-                ]
-                }
-            }
-            }
-        }
-        }
-```
+    #### **lifecycle_hooks** *array* — Required
 
+    Event handlers triggered at specific points in the agent's lifecycle. Each item in the array is an object with the following properties:
+
+        #### **hook_type** *string* — Required
+
+        The lifecycle event type. Allowed values: "on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout".
+
+        #### **handler_type** *string* — Required
+
+        The type of handler to execute. Allowed values: "message", "command", "function", "action".
+
+        #### **handler_config** *object* — Required
+        
+        Configuration for the handler containing one of: message, command, function, or action as a string property.
+
+        #### **priority** *integer* — Optional
+        
+        Execution priority when multiple hooks exist for the same event.
+
+        #### **async_execution** *boolean* — Optional
+        
+        Whether to execute the handler asynchronously.
+
+        #### **timeout_seconds** *number* — Optional
+        
+        Maximum duration for handler execution.
+
+        #### **on_failure** *string* — Optional
+        
+        Behavior when handler fails. Allowed values: "log", "ignore", "abort".
+ 
 ### Step 7: Add Transition Rules (Only required for multi-mode)
 
-Add to the transition_rules section:
+    Add to the transition_rules section:
 
-```bash
-        {
-        "transition_rules": {
-            "type": "array",
-            "items": {
-            "type": "object",
-            "required": [
-                "from_mode",
-                "to_mode",
-                "transition_type",
-                "trigger_keywords",
-                "priority"
-            ],
-            "properties": {
-                "from_mode": { "type": "string" },
-                "to_mode": { "type": "string" },
-                "transition_type": { "type": "string" },
-                "trigger_keywords": {
-                "type": "array",
-                "items": { "type": "string" }
-                },
-                "priority": { "type": "integer" },
-                "cooldown_seconds": { "type": "number" }
-            }
-            }
-        }
-        }
-    ```
+        #### **transition_rules** *array* — Required\
+
+        Rules that define how the agent transitions between different modes. Each item in the array is an object with the following properties:
+
+        #### **from_mode** *string* — Required
+
+        The source mode from which the transition originates.
+
+        #### **to_mode** *string* — Required
+
+        The target mode to which the agent will transition.
+
+        #### **transition_type** *string* — Required
+
+        The type of transition mechanism.
+
+        #### **trigger_keywords** *array* — Required
+        
+        List of keywords that trigger this transition. Each item is a string.
+
+        #### **priority** *integer* — Required
+        
+        Priority level for this transition rule when multiple rules match.
+
+        #### **cooldown_seconds** *number* — Optional
+        
+        Minimum time (in seconds) before this transition can be triggered again.
 
 ### Step 8: Update Default Mode (Optional)
 
