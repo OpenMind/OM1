@@ -145,19 +145,26 @@ command: ["unitree_go2_autonomy_advance"]
 
 ```bash
 cd OM1
-docker-compose up om1 -d --no-build
+docker compose up om1 -d --no-build
 ```
 - For unitree_sdk
 ```bash
 cd unitree_sdk
-docker-compose up orchestrator -d --no-build
-docker-compose up om1_sensor -d --no-build
-docker-compose up watchdog -d --no-build
+docker compose up orchestrator -d --no-build
+docker compose up om1_sensor -d --no-build
+docker compose up watchdog -d --no-build
+docker compose up zenoh_bridge -d --no-build
 ```
 - For OM1-avatar
 ```bash
 cd OM1-avatar
-docker-compose up om1_avatar -d --no-build
+docker compose up om1_avatar -d --no-build
+```
+
+- For OM1-video-processor
+```bash
+cd OM1-video-processor
+docker compose up -d
 ```
 ## Detailed Documentation
 
