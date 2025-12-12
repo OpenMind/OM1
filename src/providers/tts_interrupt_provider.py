@@ -92,7 +92,9 @@ class TTSInterruptProvider:
             text = asr_msg.text
 
             if text and len(text.strip()) > 0:
-                logging.debug(f"TTSInterruptProvider: Interrupting TTS due to ASR: {text}")
+                logging.debug(
+                    f"TTSInterruptProvider: Interrupting TTS due to ASR: {text}"
+                )
                 self._publish_interrupt()
         except Exception as e:
             logging.error(f"Error handling ASR text for interrupt: {e}")

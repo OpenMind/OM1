@@ -161,4 +161,6 @@ class ConfigResponse(IdlStruct, typename="ConfigResponse"):
 
 @dataclass
 class TTSInterrupt(IdlStruct, typename="TTSInterrupt"):
+    """Message type for TTS interrupt requests."""
+
     header: Header
