@@ -50,6 +50,7 @@ from .idl import (
     RegionOfInterest,
     String,
     Time,
+    TTSInterrupt,
     TTSStatusRequest,
     TTSStatusResponse,
     Twist,
@@ -86,6 +87,7 @@ __all__ = [
     "ConfigResponse",
     "ModeStatusRequest",
     "ModeStatusResponse",
+    "TTSInterrupt",
     "TTSStatusRequest",
     "TTSStatusResponse",
     # geographic_msgs

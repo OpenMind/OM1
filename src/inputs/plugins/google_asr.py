@@ -12,6 +12,7 @@ from providers.asr_provider import ASRProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
+from providers.tts_interrupt_provider import TTSInterruptProvider
 from zenoh_msgs import ASRText, open_zenoh_session, prepare_header
 
 LANGUAGE_CODE_MAP: dict = {
@@ -57,6 +58,7 @@ class GoogleASRInput(FuserInput[Optional[str]]):
         api_key = getattr(self.config, "api_key", None)
         rate = getattr(self.config, "rate", 48000)
         chunk = getattr(self.config, "chunk", 12144)
+        interrupt_mode = getattr(self.config, "interrupt_mode", "off") == "on"
         base_url = getattr(
             self.config,
             "base_url",
@@ -92,6 +94,7 @@ class GoogleASRInput(FuserInput[Optional[str]]):
             microphone_name=microphone_name,
             language_code=language_code,
             remote_input=remote_input,
+            disable_tts_mute=interrupt_mode,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
@@ -115,6 +118,13 @@ class GoogleASRInput(FuserInput[Optional[str]]):
             logging.warning(f"Could not initialize Zenoh for ASR broadcast: {e}")
             self.session = None
             self.asr_publisher = None
+
+        # Initialize TTS Interrupt Provider if interrupt mode is enabled
+        self.tts_interrupt_provider = None
+        if interrupt_mode:
+            self.tts_interrupt_provider = TTSInterruptProvider()
+            self.tts_interrupt_provider.enable()
+            logging.info("TTS interrupt mode enabled")
 
     def _handle_asr_message(self, raw_message: str):
         """

@@ -157,3 +157,8 @@ class ConfigResponse(IdlStruct, typename="ConfigResponse"):
     request_id: String
     config: String
     message: String
+
+
+@dataclass
+class TTSInterrupt(IdlStruct, typename="TTSInterrupt"):
+    header: Header

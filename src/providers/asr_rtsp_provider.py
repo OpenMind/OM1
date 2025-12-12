@@ -24,6 +24,7 @@ class ASRRTSPProvider:
         rate: int = 48000,
         chunk: Optional[int] = None,
         language_code: Optional[str] = None,
+        disable_tts_mute: bool = False,
     ):
         """
         Initialize the ASR Provider.
@@ -40,6 +41,8 @@ class ASRRTSPProvider:
             The audio chunk size for the audio stream; used the 200ms default if None
         language_code : str
             The language code for language in the audio stream; used the en-US default if None
+        disable_tts_mute : bool
+            If True, ASR continues listening during TTS playback; defaults to False.
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
@@ -49,6 +52,7 @@ class ASRRTSPProvider:
             chunk=chunk,
             audio_data_callback=self.ws_client.send_message,
             language_code=language_code,
+            disable_tts_mute=disable_tts_mute,
         )
 
     def register_message_callback(self, message_callback: Optional[Callable]):

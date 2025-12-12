@@ -46,6 +46,7 @@ from .status_msgs import (
     ConfigResponse,
     ModeStatusRequest,
     ModeStatusResponse,
+    TTSInterrupt,
     TTSStatusRequest,
     TTSStatusResponse,
 )
@@ -71,6 +72,7 @@ __all__ = [
     "ConfigResponse",
     "ModeStatusRequest",
     "ModeStatusResponse",
+    "TTSInterrupt",
     "TTSStatusRequest",
     "TTSStatusResponse",
     # geographic_msgs
