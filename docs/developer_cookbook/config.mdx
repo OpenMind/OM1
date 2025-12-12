@@ -85,19 +85,22 @@ You can configure any subset of the available five modes, just two, or all five,
 
 4. Configure inputs
     Inputs provide the sensory capabilities that allow robots to perceive their environment
+
     #### **agent_inputs** *array* — Required
 
     List of input sources or data types the agent can accept in this mode. Each item in the array is an object with the following properties:
-
+    
     #### **type** *string* — Required
-
+    
     The input type identifier.
+    
+    **Example: "AudioInput"**
 
     #### **config** *object* — Optional
-
+    
     Configuration options specific to this input type.
-
-    **Example: [{"type": "GoogleASRInput"}]**
+    
+    **Example: GoogleASRInput**
 
 5. Configure the LLM
     #### **cortex_llm** *object* — Required
