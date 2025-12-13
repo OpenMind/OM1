@@ -17,8 +17,10 @@ def fps():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    VLMVilaProvider._instance = None
+    """Reset singleton instances between tests."""
+    VLMVilaProvider.reset()  # type: ignore
     yield
+    VLMVilaProvider.reset()  # type: ignore
 
 
 @pytest.fixture

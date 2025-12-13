@@ -22,10 +22,10 @@
                 ]
             },
             {
-                "tab": "Guides",
+                "tab": "Get started",
                 "groups": [
                     {
-                        "group": "Getting Started",
+                        "group": "Quick start",
                         "pages": [
                             "developing/0_introduction",
                             "developing/1_get-started",
@@ -33,39 +33,6 @@
                             "developing/2_architecture",
                             "developing/3_configuration",
                             "developing/9_troubleshooting_guide"
-                        ]
-                    },
-                    {
-                        "group": "Input Plugins",
-                        "pages": [
-                            "developing/4_inputs",
-                            "robotics/gps_compass",
-                            {
-                                "group": "RPLidar",
-                                "pages": [
-                                    "robotics/motion_planning_lidarA1M8",
-                                    "robotics/motion_planning_unitree_go2",
-                                    "robotics/motion_planning_turtlebot4"
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "group": "LLM Integration",
-                        "pages": [
-                            "developing/5_llms"
-                        ]
-                    },
-                    {
-                        "group": "Background",
-                        "pages": [
-                            "developing/8_backgrounds"
-                        ]
-                    },
-                    {
-                        "group": "Action Plugins",
-                        "pages": [
-                            "developing/6_actions"
                         ]
                     },
                     {
@@ -101,15 +68,6 @@
                                     "full_autonomy_guidelines/om1_video_processor"
                                 ]
 
-                            },
-                            {
-                                "group": "Modes and Lifecycle",
-                                "pages": [
-                                    "full_autonomy_guidelines/modes",
-                                    "full_autonomy_guidelines/mode_selection",
-                                    "full_autonomy_guidelines/lifecycle"
-                                ]
-
                             }
                         ]
                     },
@@ -118,6 +76,63 @@
                         "pages": [
                             "robotics/asimov_governance",
                             "robotics/coinbase-x402"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Developer Cookbook",
+                "groups": [
+                    {
+                        "group": "Input Plugins",
+                        "pages": [
+                            "developing/4_inputs",
+                            "robotics/gps_compass",
+                            {
+                                "group": "RPLidar",
+                                "pages": [
+                                    "robotics/motion_planning_lidarA1M8",
+                                    "robotics/motion_planning_unitree_go2",
+                                    "robotics/motion_planning_turtlebot4"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "group": "LLM Integration",
+                        "pages": [
+                            "developing/5_llms"
+                        ]
+                    },
+                    {
+                        "group": "Background",
+                        "pages": [
+                            "developing/8_backgrounds"
+                        ]
+                    },
+                    {
+                        "group": "Action Plugins",
+                        "pages": [
+                            "developing/6_actions"
+                        ]
+                    },
+                    {
+                        "group": "Modes and Lifecycle",
+                        "pages": [
+                            "full_autonomy_guidelines/modes",
+                            "full_autonomy_guidelines/mode_selection",
+                            "full_autonomy_guidelines/lifecycle"
+                        ]
+
+                    },
+                    {
+                        "group": "Recipes",
+                        "pages": [
+
+                            "developer_cookbook/introduction",
+                            "developer_cookbook/config",
+                            "developer_cookbook/input",
+                            "developer_cookbook/new_mode"
                         ]
                     }
                 ]

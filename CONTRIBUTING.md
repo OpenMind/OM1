@@ -6,20 +6,20 @@ Before contributing, please take a moment to read through the following guidelin
 
 **Ways to Contribute:**
 
-*   **Report Bugs:** If you find a bug, please [open an issue](https://github.com/OpenmindAGI/OM1/issues) on GitHub. Be sure to include:
+*   **Report Bugs:** If you find a bug, please [open an issue](https://github.com/OpenMind/OM1/issues) on GitHub. Be sure to include:
     *   A clear and concise description of the bug.
     *   Steps to reproduce the bug.
     *   Your operating system and Python version.
     *   Relevant error messages or stack traces.
     *   Screenshots (if applicable).
 
-*   **Suggest Features:**  Have an idea for a new feature or improvement?  [Open an issue](https://github.com/OpenmindAGI/OM1/issues) on GitHub and describe your suggestion. Explain the motivation behind the feature and how it would benefit OM1 users.  We encourage discussion on feature requests before implementation.
+*   **Suggest Features:**  Have an idea for a new feature or improvement?  [Open an issue](https://github.com/OpenMind/OM1/issues) on GitHub and describe your suggestion. Explain the motivation behind the feature and how it would benefit OM1 users.  We encourage discussion on feature requests before implementation.
 
-*   **Improve Documentation:**  Good documentation is crucial.  If you find anything unclear, incomplete, or outdated in the documentation, please submit a pull request with your changes. This includes the README, docstrings, and any other documentation files. Visit [OM1 docs](https://docs.openmind.org/), and [source code](https://github.com/OpenmindAGI/OM1/tree/main/docs).
+*   **Improve Documentation:**  Good documentation is crucial.  If you find anything unclear, incomplete, or outdated in the documentation, please submit a pull request with your changes. This includes the README, docstrings, and any other documentation files. Visit [OM1 docs](https://docs.openmind.org/), and [source code](https://github.com/OpenMind/OM1/tree/main/docs).
 
-*   **Fix Bugs:** Browse the [open issues](https://github.com/OpenmindAGI/OM1/issues) and look for bugs labeled "bug" or "help wanted." If you want to tackle a bug, comment on the issue to let us know you're working on it.
+*   **Fix Bugs:** Browse the [open issues](https://github.com/OpenMind/OM1/issues) and look for bugs labeled "bug" or "help wanted." If you want to tackle a bug, comment on the issue to let us know you're working on it.
 
-*   **Implement Features:**  Check the [open issues](https://github.com/OpenmindAGI/OM1/issues) for features labeled "enhancement" or "bounty" or "help wanted".  It's best to discuss your approach in the issue comments *before* starting significant development.
+*   **Implement Features:**  Check the [open issues](https://github.com/OpenMind/OM1/issues) for features labeled "enhancement" or "bounty" or "help wanted".  It's best to discuss your approach in the issue comments *before* starting significant development.
 
 *   **Write Tests:**  OM1 aims for high test coverage.  If you're adding new code, please include corresponding tests. If you find areas with insufficient test coverage, adding tests is a great contribution.
 
@@ -53,7 +53,7 @@ Before contributing, please take a moment to read through the following guidelin
     git push origin your-branch-name
     ```
 
-7.  **Create a Pull Request (PR):**  Go to the [original OM1 repository](https://github.com/OpenmindAGI/OM1/) on GitHub. You should see a prompt to create a pull request from your newly pushed branch.  Click "Compare & pull request."
+7.  **Create a Pull Request (PR):**  Go to the [original OM1 repository](https://github.com/OpenMind/OM1/) on GitHub. You should see a prompt to create a pull request from your newly pushed branch.  Click "Compare & pull request."
 
 8.  **Write a Clear PR Description:**
     *   Describe the purpose of your pull request.
@@ -74,7 +74,7 @@ Before contributing, please take a moment to read through the following guidelin
 
 **Code of Conduct:**
 
-Please review and adhere to our [Code of Conduct](./). We expect all contributors to be respectful and inclusive.
+We expect all contributors to be respectful and inclusive. Please follow GitHub's community guidelines and maintain a positive, collaborative environment.
 
 **Getting Help:**
 

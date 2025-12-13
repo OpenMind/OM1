@@ -48,7 +48,7 @@ class ActionConnector(ABC, T.Generic[OT]):
         self.config = config
 
     @abstractmethod
-    async def connect(self, input_protocol: OT) -> None:
+    async def connect(self, output_interface: OT) -> None:
         pass
 
     def tick(self) -> None:

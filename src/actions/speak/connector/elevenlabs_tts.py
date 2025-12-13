@@ -91,6 +91,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         except Exception as e:
             logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
 
+        # ASR Provider
         base_url = getattr(
             self.config,
             "base_url",
@@ -98,6 +99,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         )
         self.asr = ASRRTSPProvider(ws_url=base_url)
 
+        # Initialize Eleven Labs TTS Provider
         self.tts = ElevenLabsTTSProvider(
             url="https://api.openmind.org/api/core/elevenlabs/tts",
             api_key=api_key,
@@ -107,6 +109,16 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             output_format=output_format,
         )
         self.tts.start()
+
+        # Configure Eleven Labs TTS Provider to ensure settings are applied
+        self.tts.configure(
+            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            api_key=api_key,
+            elevenlabs_api_key=elevenlabs_api_key,
+            voice_id=voice_id,
+            model_id=model_id,
+            output_format=output_format,
+        )
 
         # TTS status
         self.tts_enabled = True
@@ -118,6 +130,14 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        """
+        Process a speak action by sending text to Elevenlabs TTS.
+
+        Parameters
+        ----------
+        output_interface : SpeakInput
+            The SpeakInput interface containing the text to be spoken.
+        """
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping TTS action")
             return

@@ -241,6 +241,7 @@ class FabricDataSubmitter:
             json_dict = data.to_dict()
         except Exception as e:
             logging.error(f"Error converting to dict: {str(e)}")
+            return
 
         if self.write_to_local_file:
             self.write_dict_to_file(json_dict)

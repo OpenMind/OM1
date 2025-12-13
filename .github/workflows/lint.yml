@@ -61,6 +61,16 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
       - name: Run Ruff
         run: uv run ruff check .
 
