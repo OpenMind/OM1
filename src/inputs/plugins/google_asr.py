@@ -93,7 +93,7 @@ class GoogleASRInput(FuserInput[Optional[str]]):
             microphone_name=microphone_name,
             language_code=language_code,
             remote_input=remote_input,
-            disable_tts_mute=interrupt_mode,
+            enable_tts_interrupt=interrupt_mode,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)

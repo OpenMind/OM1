@@ -26,7 +26,10 @@
       "name": "speak",
       "llm_label": "speak",
       "implementation": "passthrough",
-      "connector": "elevenlabs_tts"
+      "connector": "elevenlabs_tts",
+      "config": {
+        "interrupt_mode": "on"
+      }
     },
     {
       "name": "face",

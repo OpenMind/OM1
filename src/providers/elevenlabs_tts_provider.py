@@ -26,6 +26,8 @@ class ElevenLabsTTSProvider:
         The name of the model for Eleven Labs TTS service (default is eleven_multilingual
     output_format : str, optional
         The output format for the audio stream (default is mp3_44100_128)
+    enable_tts_interrupt : bool, optional
+        If True, enables TTS interrupt when ASR detects speech (default: False)
     """
 
     def __init__(
@@ -36,6 +38,7 @@ class ElevenLabsTTSProvider:
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
         output_format: Optional[str] = "mp3_44100_128",
+        enable_tts_interrupt: bool = False,
     ):
         """
         Initialize the TTS provider with given URL.
@@ -48,6 +51,7 @@ class ElevenLabsTTSProvider:
         self._audio_stream: AudioOutputStream = AudioOutputStream(
             url=url,
             headers={"x-api-key": api_key} if api_key else None,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
 
         # Set Eleven Labs TTS parameters

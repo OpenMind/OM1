@@ -46,6 +46,9 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.silence_rate = getattr(self.config, "silence_rate", 0)
         self.silence_counter = 0
 
+        # TTS interrupt mode
+        enable_tts_interrupt = getattr(self.config, "interrupt_mode", "off") == "on"
+
         # IO Provider
         self.io_provider = IOProvider()
 
@@ -107,6 +110,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             voice_id=voice_id,
             model_id=model_id,
             output_format=output_format,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.tts.start()
 

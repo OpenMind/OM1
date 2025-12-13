@@ -27,7 +27,7 @@ class ASRProvider:
         chunk: Optional[int] = None,
         language_code: Optional[str] = None,
         remote_input: bool = False,
-        disable_tts_mute: bool = False,
+        enable_tts_interrupt: bool = False,
     ):
         """
         Initialize the ASR Provider.
@@ -48,8 +48,8 @@ class ASRProvider:
             The language code for language in the audio stream; used the en-US default if None
         remote_input : bool
             If True, the audio input is processed remotely; defaults to False.
-        disable_tts_mute : bool
-            If True, disables muting during TTS playback (for interrupt mode).
+        enable_tts_interrupt : bool
+            If True, enables TTS interrupt (does not mute during TTS playback).
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
@@ -64,7 +64,7 @@ class ASRProvider:
             audio_data_callback=self.ws_client.send_message,
             language_code=language_code,
             remote_input=remote_input,
-            disable_tts_mute=disable_tts_mute,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
 
     def register_message_callback(self, message_callback: Optional[Callable]):

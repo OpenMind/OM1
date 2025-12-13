@@ -80,7 +80,7 @@ class GoogleASRRTSPInput(FuserInput[Optional[str]]):
             rate=rate,
             ws_url=base_url,
             language_code=language_code,
-            disable_tts_mute=interrupt_mode,
+            enable_tts_interrupt=interrupt_mode,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
