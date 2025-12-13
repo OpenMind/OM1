@@ -3,7 +3,6 @@
   "exclude": [
     "**/system_hw_test",
     "**/__pycache__",
-    "**/tests",
     "**/unitree",
     "**/ubtech"
   ],

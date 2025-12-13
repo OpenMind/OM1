@@ -76,7 +76,7 @@ If you want to interact with the agent and see how it works, make sure ASR and T
 
 ## Interfacing with New Robot Hardware
 
-OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `actions/move_safe/connector/ros2.py`:
+OM1 assumes that robot hardware provides a high-level SDK that accepts elemental movement and action commands such as `backflip`, `run`, `gently pick up the red apple`, `move(0.37, 0, 0)`, and `smile`. An example is provided in `src/actions/move/connector/ros2.py`:
 
 ```python
 ...
@@ -145,19 +145,26 @@ command: ["unitree_go2_autonomy_advance"]
 
 ```bash
 cd OM1
-docker-compose up om1 -d --no-build
+docker compose up om1 -d --no-build
 ```
 - For unitree_sdk
 ```bash
 cd unitree_sdk
-docker-compose up orchestrator -d --no-build
-docker-compose up om1_sensor -d --no-build
-docker-compose up watchdog -d --no-build
+docker compose up orchestrator -d --no-build
+docker compose up om1_sensor -d --no-build
+docker compose up watchdog -d --no-build
+docker compose up zenoh_bridge -d --no-build
 ```
 - For OM1-avatar
 ```bash
 cd OM1-avatar
-docker-compose up om1_avatar -d --no-build
+docker compose up om1_avatar -d --no-build
+```
+
+- For OM1-video-processor
+```bash
+cd OM1-video-processor
+docker compose up -d
 ```
 ## Detailed Documentation
 
