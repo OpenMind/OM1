@@ -57,6 +57,7 @@ class GoogleASRRTSPInput(FuserInput[Optional[str]]):
         api_key = getattr(self.config, "api_key", None)
         rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/audio")
         rate = getattr(self.config, "rate", 16000)
+        interrupt_mode = getattr(self.config, "interrupt_mode", "off") == "on"
         base_url = getattr(
             self.config,
             "base_url",
@@ -79,6 +80,7 @@ class GoogleASRRTSPInput(FuserInput[Optional[str]]):
             rate=rate,
             ws_url=base_url,
             language_code=language_code,
+            disable_tts_mute=interrupt_mode,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)

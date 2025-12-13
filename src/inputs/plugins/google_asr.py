@@ -57,6 +57,7 @@ class GoogleASRInput(FuserInput[Optional[str]]):
         api_key = getattr(self.config, "api_key", None)
         rate = getattr(self.config, "rate", 48000)
         chunk = getattr(self.config, "chunk", 12144)
+        interrupt_mode = getattr(self.config, "interrupt_mode", "off") == "on"
         base_url = getattr(
             self.config,
             "base_url",
@@ -92,6 +93,7 @@ class GoogleASRInput(FuserInput[Optional[str]]):
             microphone_name=microphone_name,
             language_code=language_code,
             remote_input=remote_input,
+            disable_tts_mute=interrupt_mode,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
