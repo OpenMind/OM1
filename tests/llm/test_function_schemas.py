@@ -34,7 +34,7 @@ class SampleConnector(ActionConnector[ActionConfig, SampleOutput]):
 
 @pytest.fixture
 def action_config():
-    return ActionConfig(param1="test_value", param2=123)
+    return ActionConfig()
 
 
 @pytest.fixture
