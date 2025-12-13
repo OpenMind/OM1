@@ -1,31 +1,13 @@
 import asyncio
 import random
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 from PIL import Image
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-
-
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
 
 
 class DummyVLMLocal(FuserInput[Image.Image]):
@@ -125,7 +107,7 @@ class DummyVLMLocal(FuserInput[Image.Image]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

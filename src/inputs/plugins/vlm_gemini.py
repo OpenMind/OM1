@@ -1,36 +1,18 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
 from openai.types.chat import ChatCompletion
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_gemini_provider import VLMGeminiProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class VLMGemini(FuserInput[str]):
+class VLMGemini(FuserInput[Optional[str]]):
     """
     Vision Language Model input handler.
 
@@ -125,7 +107,7 @@ class VLMGemini(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -134,14 +116,17 @@ class VLMGemini(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

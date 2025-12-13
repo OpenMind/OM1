@@ -17,7 +17,7 @@ OM1 uses the TB4's RPLIDAR to tell the core LLMs about nearby objects. This info
 
 ### Core LLM Directed Motion
 
-Depending on the environment of the TB4, the core LLMs can generate contextually appropriate motion commands. 
+Depending on the environment of the TB4, the core LLMs can generate contextually appropriate motion commands.
 
 ```py
 # /actions/move_turtle/interface.py
@@ -67,17 +67,17 @@ if self.hazard is not None:
 * The LIDAR does not sense anything in proximity (within 1m or closer).
 * The collision switches are open.
 
-In this case, the TB4 moves about the room controlled by the core LLMs. 
+In this case, the TB4 moves about the room controlled by the core LLMs.
 
 ### Object Nearby and Possible Moves are Constrained
 
 * The LIDAR senses objects in proximity and informs the core LLMs about which paths are possible.
 * The collision switches are open.
 
-In this case, the core LLMs **should** command the TB4 to turn away from the object. 
+In this case, the core LLMs **should** command the TB4 to turn away from the object.
 
 ### Collision Switches Triggered
 
 * The collision switches are triggered.
 
-In this case, the firmware logic will command an immediate 10 cm retreat, and then, the `action` level collision avoidance code will command a 100 deg avoidance rotation. Once this rotation is complete, the system reverts to responding to commands from the core LLMs. 
+In this case, the firmware logic will command an immediate 10 cm retreat, and then, the `action` level collision avoidance code will command a 100 deg avoidance rotation. Once this rotation is complete, the system reverts to responding to commands from the core LLMs.

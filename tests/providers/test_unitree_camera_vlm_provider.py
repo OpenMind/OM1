@@ -28,6 +28,12 @@ class MockVideoClient:
 
 @pytest.fixture
 def mock_video_client():
+    # Check if VideoClient is available (might not be if Unitree SDK is not installed)
+    import providers.unitree_camera_vlm_provider as provider_module
+
+    if not hasattr(provider_module, "VideoClient"):
+        pytest.skip("Unitree SDK not available, VideoClient not found")
+
     mock_client = MockVideoClient()
     with patch(
         "providers.unitree_camera_vlm_provider.VideoClient", return_value=mock_client
@@ -47,8 +53,10 @@ def fps():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    UnitreeCameraVLMProvider._instance = None
+    """Reset singleton instances between tests."""
+    UnitreeCameraVLMProvider.reset()  # type: ignore
     yield
+    UnitreeCameraVLMProvider.reset()  # type: ignore
 
 
 @pytest.fixture

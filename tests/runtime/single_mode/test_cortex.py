@@ -1,4 +1,6 @@
 import asyncio
+import os
+import tempfile
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -52,7 +54,7 @@ def runtime(mock_config, mock_dependencies):
             return_value=mock_dependencies["background_orchestrator"],
         ),
     ):
-        return CortexRuntime(mock_config), mock_dependencies
+        return CortexRuntime(mock_config, "test_config"), mock_dependencies
 
 
 @pytest.mark.asyncio
@@ -162,13 +164,529 @@ async def test_start_input_listeners(runtime):
 async def test_run_full_runtime(runtime):
     cortex_runtime, _ = runtime
 
-    input_listener_task = asyncio.create_task(asyncio.sleep(0))
-    cortex_runtime._start_input_listeners = AsyncMock(return_value=input_listener_task)
+    cortex_runtime._start_orchestrators = AsyncMock()
+    cortex_runtime._cleanup_tasks = AsyncMock()
 
-    cortex_loop_task = asyncio.create_task(asyncio.sleep(0))
-    cortex_runtime._run_cortex_loop = AsyncMock(return_value=cortex_loop_task)
+    async def mock_cortex_loop():
+        await asyncio.sleep(0.01)
+        return
 
-    await cortex_runtime.run()
+    cortex_runtime._run_cortex_loop = AsyncMock(side_effect=mock_cortex_loop)
 
-    cortex_runtime._start_input_listeners.assert_called_once()
+    try:
+        await asyncio.wait_for(cortex_runtime.run(), timeout=1.0)
+    except asyncio.TimeoutError:
+        pass
+
+    cortex_runtime._start_orchestrators.assert_called_once()
     cortex_runtime._run_cortex_loop.assert_called_once()
+
+
+class TestCortexRuntimeHotReload:
+    """Test cases for hot reload functionality in CortexRuntime."""
+
+    @pytest.fixture
+    def temp_config_file(self):
+        """Create a temporary config file for testing hot reload."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            f.write('{"test": "config"}')
+            temp_path = f.name
+
+        yield temp_path
+
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+    def test_hot_reload_initialization_enabled(self, mock_config, mock_dependencies):
+        """Test hot reload initialization when enabled."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+            patch("os.path.getmtime", return_value=1234567890.0),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=30.0
+            )
+
+            assert runtime.hot_reload is True
+            assert runtime.check_interval == 30.0
+            assert runtime.last_modified == 1234567890.0
+            assert runtime.config_path.endswith(".runtime.json5")
+
+    def test_hot_reload_initialization_disabled(self, mock_config, mock_dependencies):
+        """Test hot reload initialization when disabled."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=False)
+
+            assert runtime.hot_reload is False
+            assert runtime.last_modified == 0.0
+
+    def test_get_file_mtime_existing_file(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """Test getting modification time of existing file."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+            runtime.config_path = temp_config_file
+
+            mtime = runtime._get_file_mtime()
+            assert mtime > 0
+
+    def test_get_file_mtime_nonexistent_file(self, mock_config, mock_dependencies):
+        """Test getting modification time of non-existent file."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+            runtime.config_path = "/nonexistent/file.json5"
+
+            mtime = runtime._get_file_mtime()
+            assert mtime == 0.0
+
+    @pytest.mark.asyncio
+    async def test_check_config_changes_file_changed(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """Test config change detection when file is modified."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.config_path = temp_config_file
+            runtime.last_modified = 1.0
+
+            runtime._reload_config = AsyncMock()
+
+            task = asyncio.create_task(runtime._check_config_changes())
+
+            try:
+                await asyncio.sleep(0.2)
+                task.cancel()
+
+                runtime._reload_config.assert_called_once()
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_check_config_changes_no_change(self, mock_config, mock_dependencies):
+        """Test config change detection when file is not modified."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+            patch("os.path.getmtime", return_value=1234567890.0),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.last_modified = 1234567890.0
+
+            runtime._reload_config = AsyncMock()
+
+            task = asyncio.create_task(runtime._check_config_changes())
+
+            try:
+                await asyncio.sleep(0.2)
+                task.cancel()
+
+                runtime._reload_config.assert_not_called()
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_reload_config_success(self, mock_config, mock_dependencies):
+        """Test successful config reload."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+            patch("runtime.single_mode.cortex.load_config") as mock_load_config,
+        ):
+            new_mock_config = Mock(spec=RuntimeConfig)
+            new_mock_config.hertz = 20.0
+            mock_load_config.return_value = new_mock_config
+
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            mock_load_config.assert_called_once()
+            runtime._stop_current_orchestrators.assert_called_once()
+            runtime._start_orchestrators.assert_called_once()
+
+            assert runtime.config == new_mock_config
+
+    @pytest.mark.asyncio
+    async def test_reload_config_no_config_name(self, mock_config, mock_dependencies):
+        """Test config reload with no config name."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+            patch("runtime.single_mode.cortex.load_config") as mock_load_config,
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+            runtime.config_name = ""
+
+            runtime._stop_current_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            mock_load_config.assert_not_called()
+            runtime._stop_current_orchestrators.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_reload_config_failure(self, mock_config, mock_dependencies):
+        """Test config reload failure handling."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.load_config",
+                side_effect=Exception("Load failed"),
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+
+            runtime._stop_current_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            runtime._stop_current_orchestrators.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stop_current_orchestrators(self, mock_config, mock_dependencies):
+        """Test stopping current orchestrators for hot reload."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+
+            mock_input_task = Mock()
+            mock_input_task.done.return_value = False
+            mock_input_task.cancel = Mock()
+
+            mock_simulator_task = Mock()
+            mock_simulator_task.done.return_value = False
+            mock_simulator_task.cancel = Mock()
+
+            mock_action_task = Mock()
+            mock_action_task.done.return_value = False
+            mock_action_task.cancel = Mock()
+
+            mock_background_task = Mock()
+            mock_background_task.done.return_value = False
+            mock_background_task.cancel = Mock()
+
+            runtime.input_listener_task = mock_input_task
+            runtime.simulator_task = mock_simulator_task
+            runtime.action_task = mock_action_task
+            runtime.background_task = mock_background_task
+
+            with patch("asyncio.wait", new_callable=AsyncMock) as mock_wait:
+                mock_wait.return_value = (
+                    {
+                        mock_input_task,
+                        mock_simulator_task,
+                        mock_action_task,
+                        mock_background_task,
+                    },
+                    set(),
+                )
+
+                await runtime._stop_current_orchestrators()
+
+                mock_input_task.cancel.assert_called_once()
+                mock_simulator_task.cancel.assert_called_once()
+                mock_action_task.cancel.assert_called_once()
+                mock_background_task.cancel.assert_called_once()
+
+                mock_wait.assert_called_once()
+
+                assert runtime.input_listener_task is None
+                assert runtime.simulator_task is None
+                assert runtime.action_task is None
+                assert runtime.background_task is None
+
+    @pytest.mark.asyncio
+    async def test_run_with_hot_reload_enabled(self, mock_config, mock_dependencies):
+        """Test run method with hot reload enabled."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=1.0
+            )
+
+            runtime._start_orchestrators = AsyncMock()
+            runtime._cleanup_tasks = AsyncMock()
+
+            async def mock_cortex_loop():
+                await asyncio.sleep(0.01)
+                return
+
+            async def mock_config_watcher():
+                await asyncio.sleep(0.01)
+                return
+
+            runtime._run_cortex_loop = AsyncMock(side_effect=mock_cortex_loop)
+            runtime._check_config_changes = AsyncMock(side_effect=mock_config_watcher)
+
+            try:
+                await asyncio.wait_for(runtime.run(), timeout=1.0)
+            except asyncio.TimeoutError:
+                pass
+
+            assert runtime.config_watcher_task is not None
+            runtime._check_config_changes.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_tasks_with_config_watcher(
+        self, mock_config, mock_dependencies
+    ):
+        """Test cleanup includes config watcher task when hot reload is enabled."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+
+            # Create mock config watcher task
+            mock_config_watcher = Mock()
+            mock_config_watcher.done.return_value = False
+            mock_config_watcher.cancel = Mock()
+            runtime.config_watcher_task = mock_config_watcher
+
+            with patch("asyncio.gather", new_callable=AsyncMock) as mock_gather:
+                await runtime._cleanup_tasks()
+
+                mock_config_watcher.cancel.assert_called_once()
+                mock_gather.assert_called_once()
