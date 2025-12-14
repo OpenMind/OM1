@@ -2,6 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "required": [
+        "version",
         "default_mode",
         "api_key",
         "system_governance",
@@ -9,9 +10,9 @@
         "modes"
     ],
     "properties": {
+        "version": {"type": "string"},
         "default_mode": {"type": "string"},
         "allow_manual_switching": {"type": "boolean"},
-        "transition_announcement": {"type": "boolean"},
         "mode_memory_enabled": {"type": "boolean"},
         "api_key": {"type": "string"},
         "URID": {"type": "string"},
@@ -31,6 +32,39 @@
                 }
             }
         },
+        "global_lifecycle_hooks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["hook_type", "handler_type", "handler_config"],
+                "properties": {
+                    "hook_type": {
+                        "type": "string",
+                        "enum": ["on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout"]
+                    },
+                    "handler_type": {
+                        "type": "string",
+                        "enum": ["message", "command", "function", "action"]
+                    },
+                    "handler_config": {
+                        "type": "object",
+                        "properties": {
+                            "message": {"type": "string"},
+                            "command": {"type": "string"},
+                            "function": {"type": "string"},
+                            "action": {"type": "string"}
+                        }
+                    },
+                    "priority": {"type": "integer"},
+                    "async_execution": {"type": "boolean"},
+                    "timeout_seconds": {"type": "number"},
+                    "on_failure": {
+                        "type": "string",
+                        "enum": ["log", "ignore", "abort"]
+                    }
+                }
+            }
+        },
         "modes": {
             "type": "object",
             "patternProperties": {
@@ -41,9 +75,8 @@
                         "display_name": {"type": "string"},
                         "description": {"type": "string"},
                         "system_prompt_base": {"type": "string"},
-                        "entry_message": {"type": "string"},
-                        "exit_message": {"type": "string"},
                         "hertz": {"type": "number"},
+                        "timeout_seconds": {"type": "number"},
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
                         "cortex_llm": {
@@ -56,6 +89,39 @@
                                     "properties": {
                                         "agent_name": {"type": "string"},
                                         "history_length": {"type": "integer"}
+                                    }
+                                }
+                            }
+                        },
+                        "lifecycle_hooks": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["hook_type", "handler_type", "handler_config"],
+                                "properties": {
+                                    "hook_type": {
+                                        "type": "string",
+                                        "enum": ["on_startup", "on_shutdown", "on_entry", "on_exit", "on_timeout"]
+                                    },
+                                    "handler_type": {
+                                        "type": "string",
+                                        "enum": ["message", "command", "function", "action"]
+                                    },
+                                    "handler_config": {
+                                        "type": "object",
+                                        "properties": {
+                                            "message": {"type": "string"},
+                                            "command": {"type": "string"},
+                                            "function": {"type": "string"},
+                                            "action": {"type": "string"}
+                                        }
+                                    },
+                                    "priority": {"type": "integer"},
+                                    "async_execution": {"type": "boolean"},
+                                    "timeout_seconds": {"type": "number"},
+                                    "on_failure": {
+                                        "type": "string",
+                                        "enum": ["log", "ignore", "abort"]
                                     }
                                 }
                             }
@@ -98,17 +164,33 @@
             "type": "array",
             "items": {
                 "type": "object",
-                "required": ["from_mode", "to_mode", "transition_type", "trigger_keywords", "priority"],
+                "required": ["from_mode", "to_mode", "transition_type", "priority"],
                 "properties": {
                     "from_mode": {"type": "string"},
                     "to_mode": {"type": "string"},
-                    "transition_type": {"type": "string"},
+                    "transition_type": {
+                        "type": "string",
+                        "enum": ["input_triggered", "time_based", "context_aware"]
+                    },
                     "trigger_keywords": {
                         "type": "array",
                         "items": {"type": "string"}
                     },
                     "priority": {"type": "integer"},
-                    "cooldown_seconds": {"type": "number"}
+                    "cooldown_seconds": {"type": "number"},
+                    "context_conditions": {
+                        "type": "object",
+                        "description": "Conditions that must be met in the user context for this transition to trigger. Values can be strings, numbers, booleans, arrays, or objects with operators like 'min', 'max', 'contains', 'one_of', 'not'",
+                        "additionalProperties": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "number"},
+                                {"type": "boolean"},
+                                {"type": "array"},
+                                {"type": "object"}
+                            ]
+                        }
+                    }
                 }
             }
         }

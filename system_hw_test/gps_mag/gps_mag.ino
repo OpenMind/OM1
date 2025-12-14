@@ -28,8 +28,8 @@ MotionCal can be downloaded here:
 
 https://github.com/PaulStoffregen/MotionCal
 
-If you do not see your Arduino in MotionCal's serial port 
-drop down menu, follow these instructions to compile MotionCal 
+If you do not see your Arduino in MotionCal's serial port
+drop down menu, follow these instructions to compile MotionCal
 for your OS and platform
 
 https://github.com/PaulStoffregen/MotionCal/issues/11#issuecomment-2412937251
@@ -58,13 +58,13 @@ void PrintFloatArray(float ar[], int n)
   }
 }
 
-// These are specific to each IMU and IMU environment - 
+// These are specific to each IMU and IMU environment -
 // Poor calibration values will prevent AHRS function
 // Add your device specific values below, in the init loop
 float mag_hardiron[]  = { 0.0, 0.0, 0.0 }; // in uTesla
 float mag_softiron[]  = { 1.0, 0.0, 0.0, \
                           0.0, 1.0, 0.0, \
-                          0.0, 0.0, 1.0 }; 
+                          0.0, 0.0, 1.0 };
 float gyro_zerorate[] = { 0.0, 0.0, 0.0 }; // in Radians/s
 
 //declination = +12° 50'
@@ -87,7 +87,7 @@ void setup()
     float mh[]  = { 22.84, -11.84, 3.96 }; // in uTesla
     float ms[]  = { +0.951, +0.059, -0.031, \
                     +0.059, +1.091, +0.001, \
-                    -0.031, +0.001, +0.968 }; 
+                    -0.031, +0.001, +0.968 };
     float gc[] = { 0.000,  0.020,  0.010}; // in Radians/s
     memcpy(mag_hardiron,  mh, sizeof(mag_hardiron));
     memcpy(mag_softiron,  ms, sizeof(mag_softiron));
@@ -97,7 +97,7 @@ void setup()
     float mh[]  = { -15.53, 5.38, 19.17 }; // in uTesla
     float ms[]  = { 0.934, 0.048, -0.021, \
                               0.048, 1.090, 0.003, \
-                              -0.021, 0.003, 0.985 }; 
+                              -0.021, 0.003, 0.985 };
     float gc[] = { 0.0, 0.0, 0.0 };
     memcpy(mag_hardiron,  mh, sizeof(mag_hardiron));
     memcpy(mag_softiron,  ms, sizeof(mag_softiron));
@@ -106,7 +106,7 @@ void setup()
     float mh[]  = { +12.26, -23.74, -9.67 }; // in uTesla
     float ms[]  = { +0.948, +0.046, -0.038, \
                     +0.047, +1.087, -0.033, \
-                    -0.036, -0.033, +0.974 }; 
+                    -0.036, -0.033, +0.974 };
     float gc[] = { -0.0055, 0.0111, 0.0017 };
     memcpy(mag_hardiron,  mh, sizeof(mag_hardiron));
     memcpy(mag_softiron,  ms, sizeof(mag_softiron));
@@ -115,12 +115,12 @@ void setup()
     float mh[]  = { -24.32, +4.52, +12.20 }; // in uTesla
     float ms[]  = { +0.954, +0.061, -0.033, \
                     +0.061, +1.085, +0.002, \
-                    -0.033, +0.002, +0.969 }; 
+                    -0.033, +0.002, +0.969 };
     float gc[] = { -0.0328, +0.0521, 0.0156 };
     memcpy(mag_hardiron,  mh, sizeof(mag_hardiron));
     memcpy(mag_softiron,  ms, sizeof(mag_softiron));
     memcpy(gyro_zerorate, gc, sizeof(gyro_zerorate));
-  } 
+  }
   else {
     Serial.println("CAUTION: Magnetometer not calibrated - code will yield garbage - please calibrate your Magnetometer and IMU");
   }
@@ -151,7 +151,7 @@ void setup()
 
   // --- Magnetometer init ---
   Serial.println("Booting LIS3MDL");
-  
+
   if (!lis3mdl.begin_I2C()) {
     Serial.println("Failed to find LIS3MDL");
     while (1) { delay(10); }
@@ -197,7 +197,7 @@ void loop()
   // approximately every 1 seconds or so, print out the current stats
   if (millis() - timerGPS > 1000) {
     timerGPS = millis(); // reset the timer
-  
+
     if (GPS.fix && CALIBRATION == false) {
 
       float latDecimal = ToDecimalDegrees(GPS.latitude);
@@ -206,12 +206,12 @@ void loop()
       // use this if you want DDMM.MMMM and DDDMM.MMMM
       // Degrees and minutes
       // Serial.print("GPS:");
-      // Serial.print(GPS.latitude, 4); 
+      // Serial.print(GPS.latitude, 4);
       // Serial.print(GPS.lat);
       // Serial.print(",");
-      // Serial.print(GPS.longitude, 4); 
+      // Serial.print(GPS.longitude, 4);
       // Serial.print(GPS.lon);
-      
+
       // use this if you want decimal degrees
       Serial.print("GPS:");
       Serial.print(latDecimal,8);
@@ -220,21 +220,21 @@ void loop()
       Serial.print(lonDecimal,8);
       Serial.print(GPS.lon);
 
-      Serial.print(",KN:"); 
+      Serial.print(",KN:");
       Serial.print(GPS.speed);
-      Serial.print(",HEAD:"); 
+      Serial.print(",HEAD:");
       Serial.print(GPS.angle);
-      Serial.print(",ALT:"); 
+      Serial.print(",ALT:");
       Serial.print(GPS.altitude);
-      Serial.print(",SAT:"); 
+      Serial.print(",SAT:");
       Serial.print((int)GPS.satellites);
-      Serial.print(",TIME:"); 
+      Serial.print(",TIME:");
       Serial.print(GPS.hour);
-      Serial.print(":"); 
+      Serial.print(":");
       Serial.print(GPS.minute);
-      Serial.print(":"); 
+      Serial.print(":");
       Serial.print(GPS.seconds);
-      Serial.print(":"); 
+      Serial.print(":");
       Serial.println(GPS.milliseconds);
     } else {
       Serial.print("STAT: Waiting for GPS fix. SAT:");
@@ -265,7 +265,7 @@ void loop()
       float gx = gyro.gyro.x;
       float gy = gyro.gyro.y;
       float gz = gyro.gyro.z;
-          
+
       // hard iron cal
       float mx = mag.magnetic.x;
       float my = mag.magnetic.y;
@@ -321,8 +321,8 @@ void loop()
 
     // /* Display the results (magnetic field is measured in uTesla) */
     // Serial.print("MAG:X:"); Serial.print(mag.magnetic.x);
-    // Serial.print("Y:"); Serial.print(mag.magnetic.y); 
-    // Serial.print("Z:"); Serial.print(mag.magnetic.z); 
+    // Serial.print("Y:"); Serial.print(mag.magnetic.y);
+    // Serial.print("Z:"); Serial.print(mag.magnetic.z);
     // Serial.println("uT");
 
     // Serial.print("DT(s):");
@@ -335,12 +335,12 @@ void loop()
     float gx = gyro.gyro.x + gyro_zerorate[0];
     float gy = gyro.gyro.y + gyro_zerorate[1];
     float gz = gyro.gyro.z + gyro_zerorate[2];
-        
+
     // hard iron cal
     float mx = mag.magnetic.x - mag_hardiron[0];
     float my = mag.magnetic.y - mag_hardiron[1];
     float mz = mag.magnetic.z - mag_hardiron[2];
-    
+
     // soft iron cal
     float mxCal = mx * mag_softiron[0] + my * mag_softiron[1] + mz * mag_softiron[2];
     float myCal = mx * mag_softiron[3] + my * mag_softiron[4] + mz * mag_softiron[5];
@@ -382,7 +382,7 @@ void loop()
                   * *(getQ()+3)), *getQ() * *getQ() - *(getQ()+1)
                   * *(getQ()+1) - *(getQ()+2) * *(getQ()+2) + *(getQ()+3)
                   * *(getQ()+3));
-  
+
     Serial.print("YPR: ");
     Serial.print(myIMUyaw *= RAD_TO_DEG, 2);
     Serial.print(", ");

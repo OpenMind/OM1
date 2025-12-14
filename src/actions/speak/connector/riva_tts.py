@@ -64,6 +64,14 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
         self.tts.start()
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        """
+        Process a speak action by sending text to Riva TTS.
+
+        Parameters
+        ----------
+        output_interface : SpeakInput
+            The SpeakInput interface containing the text to be spoken.
+        """
         # Check if TTS is enabled
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping speak action")
@@ -84,7 +92,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.info(f"Received TTS Control Status message: {tts_status}")
+        logging.debug(f"Received TTS Control Status message: {tts_status}")
 
         code = tts_status.code
         request_id = tts_status.request_id
@@ -106,7 +114,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
         # Enable the TTS
         if code == 1:
             self.tts_enabled = True
-            logging.info("TTS Enabled")
+            logging.debug("TTS Enabled")
 
             ai_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
@@ -121,7 +129,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
         # Disable the TTS
         if code == 0:
             self.tts_enabled = False
-            logging.info("TTS Disabled")
+            logging.debug("TTS Disabled")
             ai_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,

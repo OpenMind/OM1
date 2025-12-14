@@ -151,6 +151,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                         continue
 
     def _execute_command_thread(self, command: str) -> None:
+        """
+        Execute a Unitree command in a separate thread.
+
+        Parameters
+        ----------
+        command : str
+            The command to execute.
+        """
         try:
             if (
                 command == "StandUp"

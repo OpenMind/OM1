@@ -28,8 +28,8 @@ class SampleConnector(ActionConnector[SampleOutput]):
         super().__init__(config)
         self.last_output: Optional[SampleOutput] = None
 
-    async def connect(self, input_protocol: SampleOutput) -> None:
-        self.last_output = input_protocol
+    async def connect(self, output_interface: SampleOutput) -> None:
+        self.last_output = output_interface
 
 
 @pytest.fixture

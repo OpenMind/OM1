@@ -1,22 +1,15 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.locations_provider import LocationsProvider
+from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class LocationsInput(FuserInput[str]):
+class LocationsInput(FuserInput[Optional[str]]):
     """
     Input plugin that publishes available saved locations for LLM prompts.
 
@@ -42,7 +35,9 @@ class LocationsInput(FuserInput[str]):
         timeout = getattr(self.config, "timeout", 5)
         refresh_interval = getattr(self.config, "refresh_interval", 30)
 
-        self.locations_provider = LocationsProvider(base_url, timeout, refresh_interval)
+        self.locations_provider = UnitreeGo2LocationsProvider(
+            base_url, timeout, refresh_interval
+        )
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []
@@ -50,7 +45,7 @@ class LocationsInput(FuserInput[str]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll the LocationsProvider for the latest locations.
+        Poll the UnitreeGo2LocationsProvider for the latest locations.
 
         Returns
         -------
@@ -75,20 +70,23 @@ class LocationsInput(FuserInput[str]):
         logging.debug(f"LocationsInput: formatted {len(lines)} locations")
         return result
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert raw input string to Message dataclass.
 
         Parameters
         ----------
-        raw_input : str
-            Raw input string to be converted
+        raw_input : Optional[str]
+            Raw input to be processed
 
         Returns
         -------
-        Message
-            Message dataclass containing the input string and timestamp
+        Optional[Message]
+            Message dataclass containing the status and timestamp
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

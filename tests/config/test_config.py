@@ -58,13 +58,16 @@ def assert_action_classes_exist(action_config):
     ), f"No interface found for action {action_config['name']}"
 
     # Check connector exists
-    connector_module = importlib.import_module(
-        f"actions.{action_config['name']}.connector.{action_config['connector']}"
-    )
-    connector = find_subclass_in_module(connector_module, ActionConnector)
-    assert (
-        connector is not None
-    ), f"No connector found for action {action_config['name']}"
+    try:
+        connector_module = importlib.import_module(
+            f"actions.{action_config['name']}.connector.{action_config['connector']}"
+        )
+        connector = find_subclass_in_module(connector_module, ActionConnector)
+        assert (
+            connector is not None
+        ), f"No connector found for action {action_config['name']}"
+    except (ImportError, ModuleNotFoundError):
+        assert False, f"Connector module not found for action {action_config['name']}"
 
 
 def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:

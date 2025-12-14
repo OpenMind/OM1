@@ -91,6 +91,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         except Exception as e:
             logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
 
+        # ASR Provider
         base_url = getattr(
             self.config,
             "base_url",
@@ -98,6 +99,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         )
         self.asr = ASRRTSPProvider(ws_url=base_url)
 
+        # Initialize Eleven Labs TTS Provider
         self.tts = ElevenLabsTTSProvider(
             url="https://api.openmind.org/api/core/elevenlabs/tts",
             api_key=api_key,
@@ -107,6 +109,16 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             output_format=output_format,
         )
         self.tts.start()
+
+        # Configure Eleven Labs TTS Provider to ensure settings are applied
+        self.tts.configure(
+            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            api_key=api_key,
+            elevenlabs_api_key=elevenlabs_api_key,
+            voice_id=voice_id,
+            model_id=model_id,
+            output_format=output_format,
+        )
 
         # TTS status
         self.tts_enabled = True
@@ -118,6 +130,14 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        """
+        Process a speak action by sending text to Elevenlabs TTS.
+
+        Parameters
+        ----------
+        output_interface : SpeakInput
+            The SpeakInput interface containing the text to be spoken.
+        """
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping TTS action")
             return
@@ -170,7 +190,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.info(f"Received TTS Control Status message: {tts_status}")
+        logging.debug(f"Received TTS Control Status message: {tts_status}")
 
         code = tts_status.code
         request_id = tts_status.request_id
@@ -192,7 +212,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         # Enable the TTS
         if code == 1:
             self.tts_enabled = True
-            logging.info("TTS Enabled")
+            logging.debug("TTS Enabled")
 
             ai_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
@@ -207,7 +227,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         # Disable the TTS
         if code == 0:
             self.tts_enabled = False
-            logging.info("TTS Disabled")
+            logging.debug("TTS Disabled")
             ai_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,

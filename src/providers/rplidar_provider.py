@@ -399,7 +399,7 @@ class RPLidarProvider:
                 )
                 self.angles_final = np.flip(self.angles)
 
-            # angles now run from 360.0 to 0 degress
+            # angles now run from 360.0 to 0 degrees
             if self.angles_final is not None:
                 data = list(zip(self.angles_final, scan.ranges))
             else:

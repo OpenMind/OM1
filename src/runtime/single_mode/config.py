@@ -13,6 +13,7 @@ from inputs import load_input
 from inputs.base import Sensor, SensorConfig
 from llm import LLM, LLMConfig, load_llm
 from runtime.robotics import load_unitree
+from runtime.version import verify_runtime_version
 from simulators import load_simulator
 from simulators.base import Simulator, SimulatorConfig
 
@@ -20,6 +21,8 @@ from simulators.base import Simulator, SimulatorConfig
 @dataclass
 class RuntimeConfig:
     """Runtime configuration for the agent."""
+
+    version: str
 
     hertz: float
     name: str
@@ -45,13 +48,18 @@ class RuntimeConfig:
     # Optional Ethernet adapter setting for Unitree Robots
     unitree_ethernet: Optional[str] = None
 
+    # Optional mode information for multi-mode runtime configurations
+    mode: Optional[str] = None
+
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
         """Load a runtime configuration from a file."""
         return load_config(config_name)
 
 
-def load_config(config_name: str) -> RuntimeConfig:
+def load_config(
+    config_name: str, config_source_path: Optional[str] = None
+) -> RuntimeConfig:
     """
     Load and parse a runtime configuration from a JSON file.
 
@@ -59,6 +67,8 @@ def load_config(config_name: str) -> RuntimeConfig:
     ----------
     config_name : str
         Name of the configuration file (without .json extension)
+    config_source_path : Optional[str]
+        Optional path to the configuration file to load. If not provided, the default path based on config_name will be used.
 
     Returns
     -------
@@ -78,12 +88,19 @@ def load_config(config_name: str) -> RuntimeConfig:
     ValueError
         If configuration values are invalid (e.g., negative hertz)
     """
-    config_path = os.path.join(
-        os.path.dirname(__file__), "../../../config", config_name + ".json5"
+    config_path = (
+        os.path.join(
+            os.path.dirname(__file__), "../../../config", config_name + ".json5"
+        )
+        if config_source_path is None
+        else config_source_path
     )
 
     with open(config_path, "r+") as f:
         raw_config = json5.load(f)
+
+    config_version = raw_config.get("version")
+    verify_runtime_version(config_version, config_name)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -218,20 +235,13 @@ def load_config(config_name: str) -> RuntimeConfig:
     return RuntimeConfig(**parsed_config)
 
 
-def get_nested_value(data, keys):
-    if not keys:
-        return data
-    if isinstance(data, dict) and keys[0] in data:
-        return get_nested_value(data[keys[0]], keys[1:])
-    return None
-
-
 def add_meta(
     config: Dict,
     g_api_key: Optional[str],
     g_ut_eth: Optional[str],
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
+    g_mode: Optional[str] = None,
 ) -> dict[str, str]:
     """
     Add an API key and Robot configuration to a runtime configuration.
@@ -262,7 +272,8 @@ def add_meta(
         config["URID"] = g_URID
     if "robot_ip" not in config and g_robot_ip is not None:
         config["robot_ip"] = g_robot_ip
-    # logging.info(f"config after {config}")
+    if "mode" not in config and g_mode is not None:
+        config["mode"] = g_mode
     return config
 
 
@@ -324,6 +335,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         available_actions=agent_actions,
     )
     return RuntimeConfig(
+        version=config.get("version", "v1.0.0"),  # Default version if not specified
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
         system_prompt_base=config.get("system_prompt_base", ""),

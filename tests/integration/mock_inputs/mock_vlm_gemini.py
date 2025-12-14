@@ -80,7 +80,7 @@ class MockVLM_Gemini(VLMGemini):
 
             # Convert image to base64 string
             _, buffer = cv2.imencode(".jpg", image)
-            base64_image = base64.b64encode(buffer).decode("utf-8")
+            base64_image = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
             # Process the image using the VLM provider's frame callback
             if hasattr(self.vlm, "_process_frame"):

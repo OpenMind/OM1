@@ -3,7 +3,7 @@ title: Unitree G1 Humanoid
 description: "Unitree G1 Humanoid"
 ---
 
-## Useful links and Reading 
+## Useful links and Reading
 
 https://support.unitree.com/home/en/G1_developer
 https://github.com/unitreerobotics/avp_teleoperate
@@ -14,7 +14,7 @@ https://github.com/unitreerobotics/unitree_sdk2
 Python SDK
 https://github.com/unitreerobotics/unitree_sdk2_python
 
-## Basic Command 
+## Basic Command
 
 Run
 
@@ -33,11 +33,11 @@ Install cycloneDDS via https://cyclonedds.io/docs/cyclonedds/latest/installation
 ```bash
 git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
 cd cyclonedds && mkdir build install && cd build
-cmake -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=$HOME/Documents/GitHub/cyclonedds/install .. 
+cmake -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=$HOME/Documents/GitHub/cyclonedds/install ..
 cmake --build . --target install
 ```
 
-At this point, if you are connected to a robot and you run `./ddsperf sanity` (located in `$HOME/Documents/GitHub/cyclonedds/install/bin/` or whatever you chose) you should start to see data: 
+At this point, if you are connected to a robot and you run `./ddsperf sanity` (located in `$HOME/Documents/GitHub/cyclonedds/install/bin/` or whatever you chose) you should start to see data:
 
 ```
 [8268] 2.005  rss:4.7MB vcsw:0 ivcsw:472 tev:0%+1% recv:0%+1%
@@ -67,6 +67,8 @@ export CYCLONEDDS_URI='
 </CycloneDDS>'
 ```
 
+Then, compile and run the listtopics example:
+```bash
 cd $HOME/Documents/GitHub/cyclonedds/install/share/CycloneDDS/examples/listtopics
 cmake .
 cmake --build .
@@ -131,7 +133,7 @@ Then add the optional Python CycloneDDS module to OM1:
 uv pip install -r pyproject.toml --extra dds
 ```
 
-Note: on first invocation, the system sometimes cannot find the Unitree libraries. This should resolve by itself quickly. 
+Note: on first invocation, the system sometimes cannot find the Unitree libraries. This should resolve by itself quickly.
 
 ## ORIN System Description
 
@@ -173,35 +175,35 @@ The system is then ready to move using the `ai_sport` client. The system will re
 
 * Press "L1+A" -> EMERGENCY DAMP / SINK TO FLOOR
 * Press "L1+UP" -> Stand firmly (aka "lock stand"). The arms will move slightly. The system is now in the "ready" state.
-* Lower the G1 to the ground (but do not unclip her yet). Stability not yet running - she will fall over if let go. 
+* Lower the G1 to the ground (but do not unclip her yet). Stability not yet running - she will fall over if let go.
 * Press "R2+X" -> Start motion control. The arms will jump outwards and she will actively control her stability.
-* Press "Start" to switch back and forth between `stand` and `step in place`. 
+* Press "Start" to switch back and forth between `stand` and `step in place`.
 
 Other actions:
 
 * "SELECT + Y" -> Wave Hand. Alternates sides.
-* "SELECT + A" -> Handshake. Hold for movement to complete. Wait 3s and press again to relax arm to initial state. 
+* "SELECT + A" -> Handshake. Hold for movement to complete. Wait 3s and press again to relax arm to initial state.
 * "SELECT + X" -> Turn around and wave hand.s
 
 Use the joysticks to move forwards and backwards, and to rotate/turn
 
 ## Boot from Chair
 
-This is similar to boot from gantry, except, when you press "L1+UP", you have to help the humanoid stand up, while it straightens itself. For the sit-down procedure, back up the chair behind the robot, select "L1+LEFT", and help the humanoid settle back into the chair. 
+This is similar to boot from gantry, except, when you press "L1+UP", you have to help the humanoid stand up, while it straightens itself. For the sit-down procedure, back up the chair behind the robot, select "L1+LEFT", and help the humanoid settle back into the chair.
 
 ## Special DEBUG state
 
 **Avoid this mode** since it disables all high level motion since it turns off the `ai_sport` client.
 
-* Press L2+R2 -> Enter DEBUG STATE 
+* Press L2+R2 -> Enter DEBUG STATE
 * Press L2+A  -> Diagnostic Posture (Arms bent)
-* Press L2+B  -> Relax arms, damping state 
+* Press L2+B  -> Relax arms, damping state
 
 To exit this mode, reboot the G1.
 
 ## Using the Internal Orin
 
-SSH to Orin via 
+SSH to Orin via
 
 ```bash
 ssh unitree@192.168.123.164
@@ -209,7 +211,7 @@ ssh unitree@192.168.123.164
 
 The default password is `123` but you should obviously change this. Result:
 
-``` 
+```
 Welcome to Ubuntu 20.04.6 LTS (GNU/Linux 5.10.104-tegra aarch64)
 Last login: Thu Jan  1 08:30:46 1970
 ros:foxy(1) noetic(2) ?
@@ -219,7 +221,7 @@ Select `foxy(1)`.
 
 ## Fixing the broken CycloneDDS installation on the Nvidia Orin
 
-The default installation of CycloneDDS on the G1 Orin is broken, since it does not support the newer `unitree_hg` IDL data format for the G1. Solution: remove the default CycloneDDS installation and reinstall following the [Unitree ROS2 installation instructions](https://github.com/unitreerobotics/unitree_ros2). The `unitree_hg` bug was fixed in early Dec. 2024 in this commit: unitreerobotics/unitree_ros2@b34fdf7. 
+The default installation of CycloneDDS on the G1 Orin is broken, since it does not support the newer `unitree_hg` IDL data format for the G1. Solution: remove the default CycloneDDS installation and reinstall following the [Unitree ROS2 installation instructions](https://github.com/unitreerobotics/unitree_ros2). The `unitree_hg` bug was fixed in early Dec. 2024 in this commit: unitreerobotics/unitree_ros2@b34fdf7.
 
 You will need to export suitable env variables and correct the setting in `.bashrc` and in `$HOME/unitree_ros2/setup.sh`. Add this to the `.bashrc`:
 
@@ -240,7 +242,7 @@ export CYCLONEDDS_URI='<CycloneDDS><Domain><General><Interfaces>
 </Interfaces></General></Domain></CycloneDDS>'
 ```
 
-Source the `setup.sh` via `source ~/unitree_ros2/setup.sh`. Finally, you should start to see data. 
+Source the `setup.sh` via `source ~/unitree_ros2/setup.sh`. Finally, you should start to see data.
 
 ```bash ros2 topic echo lowstate
 version:

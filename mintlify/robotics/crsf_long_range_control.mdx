@@ -7,9 +7,9 @@ description: "CRSF Protocol Support"
 
 Current safety-focused manual control of robot motion typically uses Bluetooth game controllers, but these are not particularly reliable. The biggest problem is that most game controllers go to sleep after several minutes of inactivity, resulting in control gaps. True panic consists of giving OpenAI's o4-mini full control of a humanoid and then watching it head off to the nearest bus station while you realize that your "disable AI" game controller has gone to sleep to save battery. A more robust solution are professional drone control radios, such as the [TBS Tango2 II transmitter/receiver combination](https://www.team-blacksheep.com/products/prod:tbs_tango_2).
 
-## Pairing 
+## Pairing
 
-Set up the radio/receiver per the Tango II instructions. This is can be unexpectedly difficult, based on numerous PCB and firmware revisions and outdated/misleading documentation. Expect to spend several hours trying to find current instructions relevant to your transmitter/receiver, updating the transmitter/receiver firmware, and finally getting them to pair correctly. 
+Set up the radio/receiver per the Tango II instructions. This is can be unexpectedly difficult, based on numerous PCB and firmware revisions and outdated/misleading documentation. Expect to spend several hours trying to find current instructions relevant to your transmitter/receiver, updating the transmitter/receiver firmware, and finally getting them to pair correctly.
 
 *UPDATE* The best solution is the new [TBS Agent M browser based configurator](https://www.team-blacksheep.com/agentm/). This makes updating the entire system less painful.
 
@@ -37,20 +37,20 @@ Other suggested settings for the radio are:
 * External RF
 	- Mode OFF
 
-We suggest using a Baud setting of `420000`. 
+We suggest using a Baud setting of `420000`.
 
 ## Cabling
 
-Connect the receiver to a TTL->USB adapter, such as the [WaveShare Industrial USB to TTL Converter with Original FT232RNL](https://www.amazon.com/Waveshare-Industrial-USB-TTL-Protection/dp/B087RJ7X32). 
+Connect the receiver to a TTL->USB adapter, such as the [WaveShare Industrial USB to TTL Converter with Original FT232RNL](https://www.amazon.com/Waveshare-Industrial-USB-TTL-Protection/dp/B087RJ7X32).
 
-*WARNING* the fake CP2102 modules from Amazon do not work, but give CRC errors for unknown reasons. 
+*WARNING* the fake CP2102 modules from Amazon do not work, but give CRC errors for unknown reasons.
 
 ## Usage
 
 Find the serial port via:
 
 ```bash
-ls /dev/tty.*   
+ls /dev/tty.*
 ```
 
 It should be something like `/dev/tty.usbserial-0001` or `/dev/tty.usbserial-B003ABY3`. Then, start the driver:
@@ -59,12 +59,12 @@ It should be something like `/dev/tty.usbserial-0001` or `/dev/tty.usbserial-B00
 uv run parse_crsf_radio.py --port /dev/tty.usbserial-B003ABY3
 ```
 
-## Code Origin 
+## Code Origin
 
 The code is based on Bryan Mayland's CRSF ["Python Parser"](https://github.com/crsf-wg/crsf/wiki/Python-Parser). The code also uses the [public CRSF documentation](https://github.com/tbs-fpv/tbs-crsf-spec).
 
 ## Known Issues
 
-Occasionally, one of the RC_Channels has a value of >2000, which is noise. This is a problem, since it could signal the receiver that a switch was pressed, even though it was not. We therefore reject all data >2000. 
+Occasionally, one of the RC_Channels has a value of >2000, which is noise. This is a problem, since it could signal the receiver that a switch was pressed, even though it was not. We therefore reject all data >2000.
 
-A typical range for a valid RC signal is 174 to 1806 - this is true for both sticks and switches. We therefore clip all stick control values to the 174 to 1806 range, and then map this range to the `0.0<>1.0` interval. 
+A typical range for a valid RC signal is 174 to 1806 - this is true for both sticks and switches. We therefore clip all stick control values to the 174 to 1806 range, and then map this range to the `0.0<>1.0` interval.

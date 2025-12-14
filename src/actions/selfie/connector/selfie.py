@@ -205,7 +205,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
             logging.info("[Selfie] Enrolled selfie for '%s' successfully.", name)
             self.io_provider.add_input("SelfieStatus", f"ok id={name}", time.time())
             self.evelenlabs_tts_provider.add_pending_message(
-                f"Woof! Woof! I see you {name}!"
+                f"Woof! Woof! I remember you, {name}! You are now enrolled."
             )
 
         finally:

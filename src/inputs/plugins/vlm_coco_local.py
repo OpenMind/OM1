@@ -2,38 +2,18 @@ import asyncio
 import collections
 import logging
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 import cv2
 import numpy as np
 import torch
-from PIL import Image
 from torchvision.models import detection as detection_model
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 Detection = collections.namedtuple("Detection", "label, bbox, score")
-
-
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
 
 # if working on Mac, please disable continuity camera on your iphone
 # Settings > General > AirPlay & Continuity, and tunr off Continuity
@@ -51,7 +31,7 @@ def check_webcam(index_to_check):
     return True
 
 
-class VLM_COCO_Local(FuserInput[Image.Image]):
+class VLM_COCO_Local(FuserInput[Optional[np.ndarray]]):
     """
     Detects COCO objects in image and publishes messages.
     Uses PyTorch and FasterRCNN_MobileNet model from torchvision.
@@ -209,13 +189,13 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
         if sentence is not None:
             return Message(timestamp=time.time(), message=sentence)
 
-    async def raw_to_text(self, raw_input: np.ndarray):
+    async def raw_to_text(self, raw_input: Optional[np.ndarray]):
         """
         Convert raw image to text and update message buffer.
 
         Parameters
         ----------
-        raw_input : np.ndarray
+        raw_input : Optional[np.ndarray]
             Raw image to be processed
         """
         pending_message = await self._raw_to_text(raw_input)

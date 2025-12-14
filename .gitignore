@@ -42,3 +42,4 @@ logs/
 
 # Mode system state files
 config/memory
+config/.runtime.json5

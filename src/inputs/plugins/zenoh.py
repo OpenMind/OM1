@@ -7,14 +7,14 @@ from typing import List, Optional
 
 import zenoh
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.zenoh_listener_provider import ZenohListenerProvider
 
 
-class ZenohListener(FuserInput[str]):
+class ZenohListener(FuserInput[Optional[str]]):
     """
     Zenoh listener handler.
 
@@ -91,23 +91,26 @@ class ZenohListener(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> str:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert raw input to text format.
 
         Parameters
         ----------
-        raw_input : str
-            Raw input string to be converted
+        raw_input : Optional[str]
+            Raw input to be processed
 
         Returns
         -------
-        Optional[str]
-            Converted text or None if conversion fails
+        Optional[Message]
+            Processed message or None if input is None
         """
-        return raw_input
+        if raw_input is None:
+            return None
 
-    async def raw_to_text(self, raw_input: str):
+        return Message(timestamp=time.time(), message=raw_input)
+
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Convert raw input to processed text and manage buffer.
 
@@ -124,9 +127,9 @@ class ZenohListener(FuserInput[str]):
 
         if pending_message is not None:
             if len(self.messages) == 0:
-                self.messages.append(pending_message)
+                self.messages.append(pending_message.message)
             else:
-                self.messages[-1] = f"{self.messages[-1]} {pending_message}"
+                self.messages[-1] = f"{self.messages[-1]} {pending_message.message}"
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """

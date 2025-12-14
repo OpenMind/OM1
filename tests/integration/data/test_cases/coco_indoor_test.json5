@@ -1,5 +1,6 @@
 {
   // Test case metadata
+  "version": "v1.0.1",
   "name": "coco_indoor_detection",
   "description": "Test COCO object detection in an indoor scene",
   "hertz": 1,

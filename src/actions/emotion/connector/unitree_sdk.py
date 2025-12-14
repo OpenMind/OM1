@@ -31,7 +31,14 @@ class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
             self.ao_client.LedControl(0, 255, 0)
 
     async def connect(self, output_interface: EmotionInput) -> None:
+        """
+        Connect to the output interface and process the emotion command.
 
+        Parameters
+        ----------
+        output_interface : EmotionInput
+            The output interface containing the emotion command.
+        """
         if not self.ao_client:
             logging.error("No Unitree Emotion Client")
             return
@@ -54,5 +61,7 @@ class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
         logging.info(f"SendThisToUTClient: {output_interface.action}")
 
     def tick(self) -> None:
+        """
+        Periodic tick function to maintain connection.
+        """
         time.sleep(5)
-        # logging.info("MoveUnitreeSDKConnector Tick")

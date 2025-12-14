@@ -21,17 +21,17 @@ So the robot knows its wallet balance, add the `X402Input`:
   ]
 ```
 
-So that the robot can autonomously buy things it wants, such as electricity, transportation (e.g. Waymo rides) and compute, add the `x402_command`:	
+So that the robot can autonomously buy things it wants, such as electricity, transportation (e.g. Waymo rides) and compute, add the `x402_command`:
 
 ```
   "agent_actions": [
     {
       "name": "x402_command",
-      "llm_label": "Your payment wallet, which allows you to pay for things you would like to buy",	
+      "llm_label": "Your payment wallet, which allows you to pay for things you would like to buy",
       "implementation": "passthrough",
       "connector": "x402"
     }
   ]
 ```
 
-**CAUTION**: Suitably configured system prompts will result in autonomous (and inherently unpredictable) real world actions by your robot to increase its wallet balance. 
+**CAUTION**: Suitably configured system prompts will result in autonomous (and inherently unpredictable) real world actions by your robot to increase its wallet balance.

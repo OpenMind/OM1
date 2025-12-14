@@ -14,11 +14,22 @@ app = typer.Typer()
 @app.command()
 def modes(config_name: str) -> None:
     """
-    Show information about available modes in a mode-aware configuration.
+    Show detailed information about available modes, transition rules,
+    and settings within a specified mode-aware configuration file.
+
+    This command is crucial for debugging and understanding the current
+    state of the multi-mode system configuration.
 
     Parameters
     ----------
     config_name : str
+        The name of the configuration file (e.g., 'example' for 'example.json5')
+        located in the '../config' directory.
+
+    Raises
+    ------
+    typer.Exit(1)
+        If the configuration file is not found or fails to load.
     """
     try:
         mode_config = load_mode_config(config_name)
@@ -30,8 +41,11 @@ def modes(config_name: str) -> None:
             f"Manual Switching: {'Enabled' if mode_config.allow_manual_switching else 'Disabled'}"
         )
         print(
-            f"Announcements: {'Enabled' if mode_config.transition_announcement else 'Disabled'}"
+            f"Mode Memory: {'Enabled' if mode_config.mode_memory_enabled else 'Disabled'}"
         )
+
+        if mode_config.global_lifecycle_hooks:
+            print(f"Global Lifecycle Hooks: {len(mode_config.global_lifecycle_hooks)}")
         print()
 
         print("Available Modes:")
@@ -46,6 +60,8 @@ def modes(config_name: str) -> None:
                 print(f"  Timeout: {mode.timeout_seconds} seconds")
             print(f"  Inputs: {len(mode._raw_inputs)}")
             print(f"  Actions: {len(mode._raw_actions)}")
+            if mode.lifecycle_hooks:
+                print(f"  Lifecycle Hooks: {len(mode.lifecycle_hooks)}")
             print()
 
         print("Transition Rules:")
@@ -77,7 +93,11 @@ def modes(config_name: str) -> None:
 @app.command()
 def list_configs() -> None:
     """
-    List all available configuration files.
+    List all available configuration files found in the '../config' directory.
+
+    It categorizes the files into 'Mode-Aware Configurations' (those containing
+    'modes' and 'default_mode' keys) and 'Standard Configurations' (all others).
+    This helps the user quickly identify configurations for the multi-mode runtime.
     """
     config_dir = os.path.join(os.path.dirname(__file__), "../config")
 
