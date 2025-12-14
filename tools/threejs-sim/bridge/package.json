@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["om1", "simulator", "threejs", "websocket"],
   "author": "",
-  "license": "ISC",
-  "description": "",
+  "license": "MIT",
+  "description": "HTTP/WebSocket bridge for OM1 Three.js simulator",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
