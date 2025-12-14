@@ -82,7 +82,7 @@ class TestWalletCoinbase:
         mock_wallet.balance.return_value = "100.0"
 
         config = SensorConfig()
-        config.asset_id = "btc"
+        config.__dict__.update({"asset_id": "btc"})
 
         env = {
             "COINBASE_WALLET_ID": "test_wallet_id",
@@ -247,7 +247,7 @@ class TestWalletCoinbase:
     def test_formatted_latest_buffer_with_custom_asset_symbol(self):
         """Custom asset should appear in upper-case in formatted output."""
         config = SensorConfig()
-        config.asset_id = "btc"
+        config.__dict__.update({"asset_id": "btc"})
 
         env = {
             "COINBASE_WALLET_ID": "test_wallet_id",
