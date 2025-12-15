@@ -5,6 +5,8 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector
 from actions.move_ub.interface import MoveInput
 from ubtech.ubtechapi import YanAPI
@@ -73,9 +75,36 @@ class Motion:
                 setattr(self, field_name, default_val)
 
 
-class MoveRos2Connector(ActionConnector[MoveInput]):
+class MoveYansheeConfig(ActionConfig):
+    """
+    Configuration for Yanshee motion connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters:
+    ----------
+    robot_ip : str
+        IP address of the Yanshee robot.
+    """
+
+    robot_ip: str = Field(
+        default="127.0.0.1",
+        description="IP address of the Yanshee robot.",
+    )
+
+
+class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
+    """
+    Connector that sends move commands to a Yanshee robot using the UBTECH YanAPI.
+    """
+
+    def __init__(self, config: MoveYansheeConfig):
+        """
+        Initializes the connector with the given configuration.
+
+        Parameters
+        ----------
+        config : MoveYansheeConfig
+            Configuration for the Yanshee motion connector.
+        """
         super().__init__(config)
 
         self.joysticks = []
@@ -93,7 +122,7 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
         self.timeout = 8.0
 
         try:
-            robot_ip = getattr(self.config, "robot_ip", "127.0.0.1")
+            robot_ip = self.config.robot_ip
             YanAPI.yan_api_init(robot_ip)
         except Exception as e:
             logging.error(f"Error performing init: {e}")
@@ -108,6 +137,14 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
         self.thread_lock = threading.Lock()
 
     def _send_command(self, motion: Motion):
+        """
+        Send a motion command to the UBTECH robot.
+
+        Parameters
+        ----------
+        motion : Motion
+            The motion command to send.
+        """
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(YanAPI.sync_play_motion, **asdict(motion))
@@ -137,6 +174,14 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
             return False
 
     def _execute_command_thread(self, motion: Motion) -> None:
+        """
+        Execute a motion command in a separate thread.
+
+        Parameters
+        ----------
+        motion : Motion
+            The motion command to execute.
+        """
         try:
             self._send_command(motion)
 
@@ -148,7 +193,14 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
             self.thread_lock.release()
 
     def _execute_sport_command_sync(self, motion: Motion) -> None:
+        """
+        Execute a sport motion command synchronously.
 
+        Parameters
+        ----------
+        motion : Motion
+            The motion command to execute.
+        """
         if not self.thread_lock.acquire(blocking=False):
             logging.info("Action already in progress, skipping")
             return
@@ -163,7 +215,14 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
             self.thread_lock.release()
 
     async def _execute_sport_command(self, motion: Motion) -> None:
+        """
+        Execute a sport motion command asynchronously.
 
+        Parameters
+        ----------
+        motion : Motion
+            The motion command to execute.
+        """
         if not self.thread_lock.acquire(blocking=False):
             logging.info("Action already in progress, skipping")
             return
@@ -178,7 +237,14 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
             self.thread_lock.release()
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """
+        Process a move action by sending commands to the UBTECH robot.
 
+        Parameters
+        ----------
+        output_interface : MoveInput
+            The MoveInput interface containing the move action.
+        """
         if output_interface.action == "wave":
             logging.info("UB command: wave")
             await self._execute_sport_command(Motion("wave"))
@@ -243,5 +309,7 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
         logging.info(f"SendThisToUB: {output_interface.action}")
 
     def tick(self) -> None:
-
+        """
+        Periodic tick function to maintain connection.
+        """
         time.sleep(0.1)

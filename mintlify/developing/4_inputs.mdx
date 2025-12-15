@@ -9,6 +9,7 @@ description: "Input Plugin Overview"
 
 - `Sensor<T>` is the base abstract class that defines the core interface
 - `FuserInput<T>` extends `Sensor<T>` and implements the polling mechanism
+- `InputOrchestrator` manages multiple input sources
 - `YourCustomCode` extends `FuserInput<T>` and implements the specific input functionality
 
 ## Examples
@@ -17,9 +18,11 @@ description: "Input Plugin Overview"
 
 Here are a few examples for you to reuse and build on:
 
-- [Google ASR](https://github.com/OpenMind/OM1/blob/main/src/inputs/plugins/google_asr.py)
-- [Riva ASR](https://github.com/OpenMind/OM1/blob/main/src/inputs/plugins/riva_asr.py)
-- [RPLidar](https://github.com/OpenMind/OM1/blob/main/src/inputs/plugins/rplidar.py)
-- [VLM_COCO_Local](https://github.com/OpenMind/OM1/blob/main/src/inputs/plugins/vlm_coco_local.py)
-- [VLM_Vila](https://github.com/OpenMind/OM1/blob/main/src/inputs/plugins/vlm_vila.py)
-- [Arduino GPS](https://github.com/OpenMind/OM1/blob/main/src/inputs/plugins/gps.py)
+- [Google ASR](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/google_asr.py)
+- [Riva ASR](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/riva_asr.py)
+- [RPLidar](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/rplidar.py)
+- [VLM_COCO_Local](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/vlm_coco_local.py)
+- [VLM_Vila](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/vlm_vila.py)
+- [Arduino GPS](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/gps.py)
+
+Learn how to build a new input plugin [here](../developer_cookbook/input)

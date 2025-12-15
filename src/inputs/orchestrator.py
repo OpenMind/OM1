@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Sequence
 
 from inputs.base import Sensor
 
@@ -12,13 +13,13 @@ class InputOrchestrator:
 
     Parameters
     ----------
-    inputs : list[Sensor]
-        List of input sources to manage
+    inputs : Sequence[Sensor]
+        Sequence of input sources to manage
     """
 
-    inputs: list[Sensor]
+    inputs: Sequence[Sensor]
 
-    def __init__(self, inputs: list[Sensor]):
+    def __init__(self, inputs: Sequence[Sensor]):
         """
         Initialize InputOrchestrator instance with input sources.
         """

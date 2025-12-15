@@ -164,17 +164,33 @@
             "type": "array",
             "items": {
                 "type": "object",
-                "required": ["from_mode", "to_mode", "transition_type", "trigger_keywords", "priority"],
+                "required": ["from_mode", "to_mode", "transition_type", "priority"],
                 "properties": {
                     "from_mode": {"type": "string"},
                     "to_mode": {"type": "string"},
-                    "transition_type": {"type": "string"},
+                    "transition_type": {
+                        "type": "string",
+                        "enum": ["input_triggered", "time_based", "context_aware"]
+                    },
                     "trigger_keywords": {
                         "type": "array",
                         "items": {"type": "string"}
                     },
                     "priority": {"type": "integer"},
-                    "cooldown_seconds": {"type": "number"}
+                    "cooldown_seconds": {"type": "number"},
+                    "context_conditions": {
+                        "type": "object",
+                        "description": "Conditions that must be met in the user context for this transition to trigger. Values can be strings, numbers, booleans, arrays, or objects with operators like 'min', 'max', 'contains', 'one_of', 'not'",
+                        "additionalProperties": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "number"},
+                                {"type": "boolean"},
+                                {"type": "array"},
+                                {"type": "object"}
+                            ]
+                        }
+                    }
                 }
             }
         }

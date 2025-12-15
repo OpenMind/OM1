@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 import zenoh
@@ -75,7 +75,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         else:
             logging.warning("Received empty AMCL message")
 
-    def start(self):
+    def start(self, message_callback: Optional[Callable] = None):
         """
         Start the AMCL Provider by registering the message callback.
         """

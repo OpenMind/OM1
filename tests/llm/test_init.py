@@ -13,7 +13,7 @@ class DummyOutputModel(BaseModel):
 
 
 class MockLLM(LLM[BaseModel]):
-    async def ask(self, prompt: str) -> BaseModel:
+    async def ask(self, prompt: str, messages=None) -> BaseModel:
         raise NotImplementedError
 
 

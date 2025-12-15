@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.0",
+  "version": "v1.0.1",
   "hertz": 1,
   "unitree_ethernet": "eno1",
   "name": "bits",
@@ -51,7 +51,7 @@
     {
       "name": "navigate_location",
       "llm_label": "navigate_location",
-      "connector": "nav",
+      "connector": "unitree_go2_nav",
     },
     {
      "name": "speak",

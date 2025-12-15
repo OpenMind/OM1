@@ -65,8 +65,8 @@ class OpenAILLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
-    ) -> R | None:
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the OpenAI API and get a structured response.
 
@@ -84,8 +84,8 @@ class OpenAILLM(LLM[R]):
             parsing fails.
         """
         try:
-            logging.info(f"OpenAI LLM input: {prompt}")
-            logging.debug(f"OpenAI LLM messages: {messages}")
+            logging.info(f"OpenAI input: {prompt}")
+            logging.info(f"OpenAI messages: {messages}")
 
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
@@ -124,7 +124,6 @@ class OpenAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None
