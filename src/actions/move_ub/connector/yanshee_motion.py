@@ -5,6 +5,8 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector
 from actions.move_ub.interface import MoveInput
 from ubtech.ubtechapi import YanAPI
@@ -73,9 +75,36 @@ class Motion:
                 setattr(self, field_name, default_val)
 
 
-class MoveRos2Connector(ActionConnector[MoveInput]):
+class MoveYansheeConfig(ActionConfig):
+    """
+    Configuration for Yanshee motion connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters:
+    ----------
+    robot_ip : str
+        IP address of the Yanshee robot.
+    """
+
+    robot_ip: str = Field(
+        default="127.0.0.1",
+        description="IP address of the Yanshee robot.",
+    )
+
+
+class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
+    """
+    Connector that sends move commands to a Yanshee robot using the UBTECH YanAPI.
+    """
+
+    def __init__(self, config: MoveYansheeConfig):
+        """
+        Initializes the connector with the given configuration.
+
+        Parameters
+        ----------
+        config : MoveYansheeConfig
+            Configuration for the Yanshee motion connector.
+        """
         super().__init__(config)
 
         self.joysticks = []
@@ -93,7 +122,7 @@ class MoveRos2Connector(ActionConnector[MoveInput]):
         self.timeout = 8.0
 
         try:
-            robot_ip = getattr(self.config, "robot_ip", "127.0.0.1")
+            robot_ip = self.config.robot_ip
             YanAPI.yan_api_init(robot_ip)
         except Exception as e:
             logging.error(f"Error performing init: {e}")

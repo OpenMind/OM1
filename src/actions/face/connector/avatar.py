@@ -6,7 +6,7 @@ from actions.face.interface import FaceInput
 from providers.avatar_provider import AvatarProvider
 
 
-class FaceAvatarConnector(ActionConnector[FaceInput]):
+class FaceAvatarConnector(ActionConnector[ActionConfig, FaceInput]):
     def __init__(self, config: ActionConfig):
         """
         Initialize the FaceAvatarConnector with AvatarProvider.

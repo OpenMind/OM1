@@ -53,11 +53,15 @@ class MockSpeakRivaTTSConnector(ActionConnector):
 @pytest.fixture
 def action_config():
     config = ActionConfig()
-    config.microphone_device_id = "test_mic_id"
-    config.speaker_device_id = "test_speaker_id"
-    config.microphone_name = "test_mic"
-    config.speaker_name = "test_speaker"
-    config.api_key = "test_api_key"
+    config.__dict__.update(
+        {
+            "microphone_device_id": "test_mic_id",
+            "speaker_device_id": "test_speaker_id",
+            "microphone_name": "test_mic",
+            "speaker_name": "test_speaker",
+            "api_key": "test_api_key",
+        }
+    )
     return config
 
 
@@ -82,7 +86,7 @@ async def test_speak_connector_connect_with_valid_input():
 async def test_speak_connector_connect_with_empty_input():
     config = ActionConfig()
     connector = MockSpeakRivaTTSConnector(config)
-    speak_input = SpeakInput(action=None)
+    speak_input = SpeakInput(action="")
 
     await connector.connect(speak_input)
 
