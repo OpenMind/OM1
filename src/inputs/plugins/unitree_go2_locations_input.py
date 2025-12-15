@@ -1,22 +1,15 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class UnitreeGo2LocationsInput(FuserInput[str]):
+class UnitreeGo2LocationsInput(FuserInput[Optional[str]]):
     """
     Input plugin that publishes available saved locations for LLM prompts (Unitree Go2).
 
@@ -77,20 +70,23 @@ class UnitreeGo2LocationsInput(FuserInput[str]):
         logging.debug(f"UnitreeGo2LocationsInput: formatted {len(lines)} locations")
         return result
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert raw input string to Message dataclass.
 
         Parameters
         ----------
-        raw_input : str
-            Raw input string to be converted
+        raw_input : Optional[str]
+            Raw input string to be processed
 
         Returns
         -------
-        Message
-            Message dataclass containing the input string and timestamp
+        Optional[Message]
+            A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

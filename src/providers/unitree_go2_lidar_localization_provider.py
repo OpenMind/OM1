@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 import zenoh
 
@@ -65,7 +65,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         else:
             logging.warning("Received empty lidar localization message")
 
-    def start(self):
+    def start(self, message_callback: Optional[Callable] = None):
         """
         Start the Lidar Localization Provider by registering the message callback.
         """

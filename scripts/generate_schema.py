@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 """Generate OM1 configuration schema from codebase."""
 
 import ast
+import json
 import logging
 import os
 import sys
@@ -29,6 +29,9 @@ class ConfigSchemaGenerator:
         self.backgrounds_dir = os.path.join(self.src_dir, "backgrounds/plugins")
         self.actions_dir = os.path.join(self.src_dir, "actions")
         self.hooks_dir = os.path.join(self.src_dir, "hooks")
+        self.schema_path = os.path.join(
+            root_dir, "config/schema/multi_mode_schema.json"
+        )
 
     def generate(self) -> str:
         """Generate complete configuration schema and save to JSON5 file.
@@ -48,9 +51,10 @@ class ConfigSchemaGenerator:
         backgrounds = self.scan_backgrounds()
         actions = self.scan_actions()
         hooks = self.scan_hooks()
+        transition_rules = self.scan_transition_rules()
 
         logging.info(
-            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks)} hook modules"
+            f"Extracted from {len(inputs)} inputs, {len(llms)} LLMs, {len(backgrounds)} backgrounds, {len(actions)} actions, {len(hooks.get('available_functions', []))} hook modules, {len(transition_rules.get('transition_types', []))} transition types"
         )
 
         schema = {
@@ -59,6 +63,7 @@ class ConfigSchemaGenerator:
             "backgrounds": backgrounds,
             "agent_actions": actions,
             "lifecycle_hooks": hooks,
+            "transition_rules": transition_rules,
         }
 
         schema_path = os.path.join(self.root_dir, "OM1_config_schema.json5")
@@ -177,15 +182,54 @@ class ConfigSchemaGenerator:
         return results
 
     # Hooks
-    def scan_hooks(self) -> List[Dict[str, Any]]:
-        """Scan lifecycle hooks from the hooks directory.
+    def scan_hooks(self) -> Dict[str, Any]:
+        """Scan lifecycle hooks.
 
-        Identifies all async functions in hook modules as potential lifecycle hooks.
+        Returns
+        -------
+        Dict[str, Any]
+            Schema structure and available hook functions.
+        """
+        result = {
+            "schema": self._get_hooks_schema(),
+            "available_functions": self._scan_hook_functions(),
+        }
+        return result
+
+    def _get_hooks_schema(self) -> Dict[str, Any]:
+        """Extract lifecycle_hooks schema.
+
+        Returns
+        -------
+        Dict[str, Any]
+            The hooks schema structure with enums and field types.
+        """
+
+        if not os.path.exists(self.schema_path):
+            logging.warning(f"Schema file not found: {self.schema_path}")
+            return {}
+
+        try:
+            with open(self.schema_path, "r") as f:
+                schema = json.load(f)
+
+            hooks_schema = schema.get("properties", {}).get(
+                "global_lifecycle_hooks", {}
+            )
+            if hooks_schema:
+                return hooks_schema.get("items", {}).get("properties", {})
+            return {}
+        except Exception as e:
+            logging.error(f"Error parsing schema file: {e}")
+            return {}
+
+    def _scan_hook_functions(self) -> List[Dict[str, Any]]:
+        """Scan available hook functions from hooks directory.
 
         Returns
         -------
         List[Dict[str, Any]]
-            List of hook modules with their function names and arguments.
+            List of hook modules with their function names.
         """
         results = []
         if not os.path.exists(self.hooks_dir):
@@ -196,21 +240,56 @@ class ConfigSchemaGenerator:
                 module_name = os.path.basename(filepath)[:-3]
                 tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
 
-                functions = []
-                for node in tree.body:
-                    if isinstance(node, ast.AsyncFunctionDef):
-                        functions.append(
-                            {
-                                "name": node.name,
-                                "args": [arg.arg for arg in node.args.args],
-                            }
-                        )
+                functions = [
+                    node.name
+                    for node in tree.body
+                    if isinstance(node, ast.AsyncFunctionDef)
+                ]
 
                 if functions:
-                    results.append({"module": module_name, "functions": functions})
+                    results.append({"module_name": module_name, "functions": functions})
             except Exception as e:
                 logging.error(f"Error parsing {filepath}: {e}")
         return results
+
+    # Transition Rules
+    def scan_transition_rules(self) -> Dict[str, Any]:
+        """Extract transition_rules schema from multi_mode_schema.json.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Transition rules schema with types and properties.
+        """
+
+        if not os.path.exists(self.schema_path):
+            logging.warning(f"Schema file not found: {self.schema_path}")
+            return {}
+
+        try:
+            with open(self.schema_path, "r") as f:
+                schema = json.load(f)
+
+            transition_schema = schema.get("properties", {}).get("transition_rules", {})
+            if not transition_schema:
+                return {}
+
+            items = transition_schema.get("items", {})
+            properties = items.get("properties", {})
+            required = items.get("required", [])
+
+            transition_types = []
+            if "transition_type" in properties:
+                transition_types = properties["transition_type"].get("enum", [])
+
+            return {
+                "required": required,
+                "transition_types": transition_types,
+                "properties": properties,
+            }
+        except Exception as e:
+            logging.error(f"Error parsing transition_rules schema: {e}")
+            return {}
 
     def _scan_plugins(
         self, directory: str, base_classes: List[str], category: str
@@ -380,7 +459,7 @@ class ConfigSchemaGenerator:
                     else "number" if isinstance(default, (int, float)) else "string"
                 ),
                 "label": name.replace("_", " ").title(),
-                "required": default is None,
+                "required": default is not None,
             }
             if default is not None:
                 field["defaultValue"] = default
@@ -424,7 +503,11 @@ class ConfigSchemaGenerator:
                         if name.startswith("_") or name == "model_config":
                             continue
 
-                        default = self._get_pydantic_default(item.value)
+                        if item.value:
+                            default = self._get_pydantic_default(item.value)
+                        else:
+                            default = None
+
                         if default == "__SKIP__":
                             continue
 
@@ -433,7 +516,7 @@ class ConfigSchemaGenerator:
                                 "name": name,
                                 "type": self._annotation_to_type(item.annotation),
                                 "label": name.replace("_", " ").title(),
-                                "required": default is None,
+                                "required": default is not None,
                                 **(
                                     {"defaultValue": default}
                                     if default is not None
@@ -518,10 +601,10 @@ def main():
 
     try:
         schema_path = ConfigSchemaGenerator(root_dir).generate()
-        print(f"✓ Schema generated successfully: {schema_path}")
+        logging.info(f"✓ Schema generated successfully: {schema_path}")
         return 0
     except Exception as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
+        logging.error(f"✗ Error: {e}")
         import traceback
 
         traceback.print_exc()

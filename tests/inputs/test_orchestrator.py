@@ -61,7 +61,7 @@ async def test_listen_multiple_inputs():
     orchestrator = InputOrchestrator(inputs)
     await asyncio.wait_for(orchestrator.listen(), timeout=5.0)
     for input in inputs:
-        assert input.raw_to_text.call_count == 3
+        assert input.raw_to_text.call_count == 3  # type: ignore
 
 
 @pytest.mark.asyncio
