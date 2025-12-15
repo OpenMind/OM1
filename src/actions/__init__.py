@@ -14,11 +14,14 @@ def describe_action(
 
     interface = None
     action = importlib.import_module(f"actions.{action_name}.interface")
+
     for _, obj in action.__dict__.items():
         if isinstance(obj, type) and issubclass(obj, Interface) and obj != Interface:
             interface = obj
+
     if interface is None:
         raise ValueError(f"No interface found for action {action_name}")
+
     # Get docstring from interface class
     doc = interface.__doc__ or ""
     doc = doc.replace("\n", "")
@@ -42,8 +45,6 @@ def describe_action(
     # Format the full docstring
     type_hints = "\n".join(f"{desc}" for name, desc in hints.items())
     final_description = f"{llm_label.upper()}: {doc}\ntype={llm_label}\n{type_hints}"
-    # logging.info(f"final_description:{final_description}")
-    # remove indents
     final_description = final_description.replace("    ", "")
 
     return final_description
@@ -54,23 +55,41 @@ def load_action(
 ) -> AgentAction:
     interface = None
     action = importlib.import_module(f"actions.{action_config['name']}.interface")
+
     for _, obj in action.__dict__.items():
         if isinstance(obj, type) and issubclass(obj, Interface) and obj != Interface:
             interface = obj
+
     if interface is None:
         raise ValueError(f"No interface found for action {action_config['name']}")
+
     connector = importlib.import_module(
         f"actions.{action_config['name']}.connector.{action_config['connector']}"
     )
+
     connector_class = None
+    config_class = None
     for _, obj in connector.__dict__.items():
         if isinstance(obj, type) and issubclass(obj, ActionConnector):
             connector_class = obj
+        if (
+            isinstance(obj, type)
+            and issubclass(obj, ActionConfig)
+            and obj != ActionConfig
+        ):
+            config_class = obj
+
     if connector_class is None:
         raise ValueError(
             f"No connector found for action {action_config['name']} connector {action_config['connector']}"
         )
-    config = ActionConfig(**action_config.get("config", {}))  # type: ignore
+
+    if config_class is not None:
+        config_dict = action_config.get("config", {})
+        config = config_class(**(config_dict if isinstance(config_dict, dict) else {}))
+    else:
+        config_dict = action_config.get("config", {})
+        config = ActionConfig(**(config_dict if isinstance(config_dict, dict) else {}))
 
     exclude_from_prompt = False
     if "exclude_from_prompt" in action_config:
