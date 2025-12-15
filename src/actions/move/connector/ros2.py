@@ -5,7 +5,7 @@ from actions.base import ActionConfig, ActionConnector
 from actions.move.interface import MoveInput
 
 
-class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
+class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
 
     def __init__(self, config: ActionConfig):
         super().__init__(config)

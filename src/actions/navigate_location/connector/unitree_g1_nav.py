@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector
 from actions.navigate_location.interface import NavigateLocationInput
 from providers.io_provider import IOProvider
@@ -9,27 +11,53 @@ from providers.unitree_g1_navigation_provider import UnitreeG1NavigationProvider
 from zenoh_msgs import Header, Point, Pose, PoseStamped, Quaternion, Time
 
 
-class UnitreeG1NavConnector(ActionConnector[NavigateLocationInput]):
+class UnitreeG1NavConfig(ActionConfig):
+    """
+    Configuration for Unitree G1 Navigation connector.
+
+    Parameters:
+    ----------
+    base_url : str
+        The base URL for the locations API.
+    timeout : int
+        Timeout for the HTTP requests in seconds.
+    refresh_interval : int
+        Interval to refresh the locations list in seconds.
+    """
+
+    base_url: str = Field(
+        default="http://localhost:5000/maps/locations/list",
+        description="The base URL for the locations API.",
+    )
+    timeout: int = Field(
+        default=5,
+        description="Timeout for the HTTP requests in seconds.",
+    )
+    refresh_interval: int = Field(
+        default=30,
+        description="Interval to refresh the locations list in seconds.",
+    )
+
+
+class UnitreeG1NavConnector(ActionConnector[UnitreeG1NavConfig, NavigateLocationInput]):
     """
     Navigation/location connector for Unitree G1 robots.
     """
 
-    def __init__(self, config: ActionConfig):
+    def __init__(self, config: UnitreeG1NavConfig):
         """
         Initialize the UnitreeG1NavConnector.
 
         Parameters
         ----------
-        config : ActionConfig
+        config : UnitreeG1NavConfig
             Configuration for the action connector.
         """
         super().__init__(config)
 
-        base_url = getattr(
-            self.config, "base_url", "http://localhost:5000/maps/locations/list"
-        )
-        timeout = getattr(self.config, "timeout", 5)
-        refresh_interval = getattr(self.config, "refresh_interval", 30)
+        base_url = self.config.base_url
+        timeout = self.config.timeout
+        refresh_interval = self.config.refresh_interval
 
         self.location_provider = UnitreeG1LocationsProvider(
             base_url, timeout, refresh_interval
