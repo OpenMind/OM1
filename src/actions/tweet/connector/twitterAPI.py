@@ -8,7 +8,7 @@ from actions.base import ActionConfig, ActionConnector
 from actions.tweet.interface import TweetInput
 
 
-class TweetAPIConnector(ActionConnector[TweetInput]):
+class TweetAPIConnector(ActionConnector[ActionConfig, TweetInput]):
     """Connector for Twitter API."""
 
     def __init__(self, config: ActionConfig):
