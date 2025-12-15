@@ -8,7 +8,7 @@ from providers.io_provider import IOProvider
 from ..interface import MoveToPeerAction, MoveToPeerInput
 
 
-class MoveToPeerRos2Connector(ActionConnector[MoveToPeerInput]):
+class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
     """ROS 2 connector that turns toward the closest peer first, then drives.
 
     The algorithm:
@@ -30,6 +30,14 @@ class MoveToPeerRos2Connector(ActionConnector[MoveToPeerInput]):
     STOP_DIST = 4.0  # metres to stop in front of peer
 
     def __init__(self, config: ActionConfig):
+        """
+        Initialize the MoveToPeerRos2Connector.
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
         self.io = IOProvider()
         # defer heavy import; SportClient requires DDS initialisation
