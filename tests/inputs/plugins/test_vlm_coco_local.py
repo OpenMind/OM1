@@ -40,7 +40,7 @@ def mock_cv2_video_capture():
 @pytest.fixture
 def vlm_coco_local(mock_model, mock_check_webcam, mock_cv2_video_capture):
     config = SensorConfig()
-    config.camera_index = 0
+    config.__dict__.update({"camera_index": 0})
     return VLM_COCO_Local(config=config)
 
 

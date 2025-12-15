@@ -20,6 +20,9 @@ def test_simulator_init_default_name():
 def test_simulator_config_kwargs():
     """Test simulator config with additional kwargs."""
     config = SimulatorConfig(name="test_sim", host="localhost", port=8000)
-    assert config.name == "test_sim"
-    assert config.host == "localhost"
-    assert config.port == 8000
+    name = getattr(config, "name", None)
+    host = getattr(config, "host", None)
+    port = getattr(config, "port", None)
+    assert name == "test_sim"
+    assert host == "localhost"
+    assert port == 8000

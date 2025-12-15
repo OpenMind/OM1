@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import contextmanager
 from typing import Optional
@@ -6,7 +7,7 @@ from unittest.mock import mock_open, patch
 import json5
 import pytest
 
-from actions.base import AgentAction
+from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 from inputs.base import Sensor, SensorConfig
 from llm import LLM
 from llm.output_model import CortexOutputModel
@@ -48,14 +49,28 @@ def mock_dependencies():
         def __init__(self, config=SensorConfig()):
             super().__init__(config)
 
+    class MockInterface(Interface[str, str]):
+        """Mock interface for testing"""
+
+        pass
+
+    class MockConnector(ActionConnector[str]):
+        """Mock connector for testing"""
+
+        def __init__(self):
+            super().__init__(ActionConfig())
+
+        async def connect(self, output_interface: str) -> None:
+            pass
+
     class MockAction(AgentAction):
         def __init__(self):
             super().__init__(
                 name="mock_action",
                 llm_label="mock_llm_label",
-                interface="mock_interface",
-                connector="mock_connector",
-                exclude_from_prompt="mock_exclude_from_prompt",
+                interface=MockInterface,
+                connector=MockConnector(),
+                exclude_from_prompt=False,
             )
 
     class MockSimulator(Simulator):
@@ -153,11 +168,13 @@ def test_load_config(mock_config_data, mock_dependencies):
         assert config.api_key == mock_config_data["api_key"]
         assert len(config.agent_inputs) == 1
         assert isinstance(config.agent_inputs[0], mock_dependencies["input"])
-        assert config.agent_inputs[0].config.api_key == mock_config_data["api_key"]
+        api_key = getattr(config.agent_inputs[0].config, "api_key", None)
+        assert api_key == mock_config_data["api_key"]
         assert isinstance(config.cortex_llm, mock_dependencies["llm"])
         assert len(config.simulators) == 1
         assert isinstance(config.simulators[0], mock_dependencies["simulator"])
-        assert config.simulators[0].config.api_key == "sim_test_api_key"
+        api_key = getattr(config.simulators[0].config, "api_key", None)
+        assert api_key == "sim_test_api_key"
         assert len(config.agent_actions) == 1
         assert isinstance(config.agent_actions[0], mock_dependencies["action"])
 
@@ -236,7 +253,7 @@ def test_load_config_missing_required_fields():
         "name": "invalid_config",
     }
 
-    with (patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))),):
+    with patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))):
         with pytest.raises(KeyError):
             load_config("invalid_config")
 
@@ -255,7 +272,7 @@ def test_load_config_invalid_version():
         "agent_actions": [],
     }
 
-    with (patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))),):
+    with patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))):
         with pytest.raises(ValueError):
             load_config("invalid_version_config")
 
@@ -274,7 +291,7 @@ def test_load_config_invalid_hertz():
         "agent_actions": [],
     }
 
-    with (patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))),):
+    with patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))):
         with pytest.raises(ValueError):
             load_config("invalid_config")
 
@@ -351,7 +368,7 @@ def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
             "runtime.single_mode.config.load_llm",
             return_value=mock_dependencies["llm"],
         ),
-        temp_env("OM_API_KEY", None),  # Ensure OM_API_KEY is not set
+        temp_env("OM_API_KEY", None),
     ):
         config = load_config("test_missing_key")
         assert isinstance(config, RuntimeConfig)
@@ -364,11 +381,13 @@ def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
 
 def test_load_config_empty_api_key_falls_back_to_env(caplog, mock_dependencies):
     """Test that empty api_key in config falls back to OM_API_KEY env var."""
+    caplog.set_level(logging.INFO)
+
     config_data = {
         "version": "v1.0.1",
         "hertz": 10.0,
         "name": "test_env_key",
-        "api_key": "openmind_free",  # Should trigger env check
+        "api_key": "openmind_free",
         "system_prompt_base": "test",
         "system_governance": "test",
         "system_prompt_examples": "test",
