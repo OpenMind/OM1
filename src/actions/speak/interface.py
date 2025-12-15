@@ -5,6 +5,15 @@ from actions.base import Interface
 
 @dataclass
 class SpeakInput:
+    """
+    Input interface for the Speak action.
+
+    Parameters
+    ----------
+    action : str
+        The text to be spoken.
+    """
+
     action: str
 
 

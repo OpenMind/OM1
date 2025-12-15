@@ -6,6 +6,7 @@ from queue import Queue
 from typing import List, Optional
 
 import zenoh
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
@@ -23,9 +24,44 @@ from zenoh_msgs import (
 )
 
 
-class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
+class MoveUnitreeSDKAdvanceConfig(ActionConfig):
+    """
+    Configuration for MoveUnitreeSDKAdvance connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters:
+    ----------
+    unitree_ethernet : str
+        Ethernet channel for Unitree Go2 odometry data.
+    mode : Optional[str]
+        Operation mode, e.g., "guard".
+    """
+
+    unitree_ethernet: str = Field(
+        default="eth0",
+        description="Ethernet channel for Unitree Go2 odometry data.",
+    )
+    mode: Optional[str] = Field(
+        default=None,
+        description='Operation mode, e.g., "guard".',
+    )
+
+
+class MoveUnitreeSDKAdvanceConnector(
+    ActionConnector[MoveUnitreeSDKAdvanceConfig, MoveInput]
+):
+    """
+    Connector for Move Go2 Autonomy using Unitree SDK Advance.
+    """
+
+    def __init__(self, config: MoveUnitreeSDKAdvanceConfig):
+        """
+        Initialize the MoveUnitreeSDKAdvance connector.
+
+        Parameters
+        ----------
+        config : MoveUnitreeSDKAdvanceConfig
+            The configuration for the action connector.
+        """
         super().__init__(config)
 
         self.dog_attitude = None
@@ -56,7 +92,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         except Exception as e:
             logging.error(f"Error initializing Unitree sport client: {e}")
 
-        unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        unitree_ethernet = self.config.unitree_ethernet
         if unitree_ethernet is None:
             raise ValueError("unitree_ethernet must be specified in the config")
         self.odom = OdomProvider(channel=unitree_ethernet)
@@ -84,7 +120,7 @@ class MoveUnitreeSDKAdvanceConnector(ActionConnector[MoveInput]):
         self.ai_control_enabled = True
 
         # Mode
-        self.mode = getattr(self.config, "mode", None)
+        self.mode = self.config.mode
 
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
