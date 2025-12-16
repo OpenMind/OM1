@@ -6,18 +6,38 @@ from queue import Empty, Queue
 from typing import List, Optional
 
 import websockets
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class MockInput(FuserInput[Optional[str]]):
+class MockSensorConfig(SensorConfig):
+    """
+    Configuration for Mock Sensor.
+
+    Parameters
+    ----------
+    input_name : str
+        Name of the input.
+    host : str
+        Host address for the WebSocket server.
+    port : int
+        Port number for the WebSocket server.
+    """
+
+    input_name: str = Field(default="Mock Input", description="Input Name")
+    host: str = Field(default="localhost", description="Host")
+    port: int = Field(default=8765, description="Port")
+
+
+class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
     """
     This input can mock the behavior of any other input.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: MockSensorConfig):
         """
         Initialize ASRInput instance.
         """
@@ -27,15 +47,15 @@ class MockInput(FuserInput[Optional[str]]):
         self.messages: List[Message] = []
 
         # Set IO Provider
-        self.descriptor_for_LLM = getattr(self.config, "input_name", "Mock Input")
+        self.descriptor_for_LLM = self.config.input_name
         self.io_provider = IOProvider()
 
         # Buffer for storing messages
         self.message_buffer: Queue[str] = Queue()
 
         # WebSocket configuration
-        self.host = getattr(self.config, "host", "localhost")
-        self.port = getattr(self.config, "port", 8765)
+        self.host = self.config.host
+        self.port = self.config.port
         self.server = None
         self.connected_clients = set()
         self.loop = None
