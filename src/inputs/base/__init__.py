@@ -44,7 +44,7 @@ class Sensor(T.Generic[ConfigType, R]):
         The raw input type that this agent handles
     """
 
-    def __init__(self, config: ConfigType = SensorConfig()):
+    def __init__(self, config: ConfigType):
         """
         Initialize an Sensor instance.
         """

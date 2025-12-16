@@ -14,7 +14,7 @@ class FuserInput(Sensor[ConfigType, R]):
     as they become available.
     """
 
-    def __init__(self, config: ConfigType = SensorConfig()):
+    def __init__(self, config: ConfigType):
         """
         Initialize FuserInput instance.
         """
