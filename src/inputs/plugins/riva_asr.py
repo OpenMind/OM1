@@ -45,7 +45,7 @@ class RivaASRSensorConfig(SensorConfig):
         default="wss://api-asr.openmind.org", description="Base URL for the ASR service"
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
-    microphone_device_id: Optional[str] = Field(
+    microphone_device_id: Optional[int] = Field(
         default=None, description="Microphone Device ID"
     )
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")

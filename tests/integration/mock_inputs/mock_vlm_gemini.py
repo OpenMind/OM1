@@ -5,8 +5,7 @@ import time
 
 import cv2
 
-from inputs.base import SensorConfig
-from inputs.plugins.vlm_gemini import VLMGemini
+from inputs.plugins.vlm_gemini import VLMGemini, VLMGeminiConfig
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_next_opencv_image,
 )
@@ -20,13 +19,13 @@ class MockVLM_Gemini(VLMGemini):
     the mock image provider, while maintaining all the real object detection logic.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMGeminiConfig = VLMGeminiConfig()):
         """
         Initialize with the real VLM implementation but without opening camera.
 
         Parameters
         ----------
-        config : SensorConfig, optional
+        config : VLMGeminiConfig, optional
             Configuration for the sensor
         """
         # Initialize using the real VLM_Gemini implementation
