@@ -74,9 +74,9 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
         self.vehicle_jwt = None
 
         # Configure the DIMO Tesla service
-        client_id = config.client_id
-        domain = config.domain
-        private_key = config.private_key
+        client_id = self.config.client_id
+        domain = self.config.domain
+        private_key = self.config.private_key
 
         if (
             client_id is None
@@ -89,7 +89,7 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
             )
             return
 
-        self.token_id = config.token_id
+        self.token_id = self.config.token_id
         if self.token_id is None:
             logging.info("DIMOTesla: You did not provide a token_id - aborting")
             return

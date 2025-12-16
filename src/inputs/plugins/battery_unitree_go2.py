@@ -57,7 +57,7 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         """
         super().__init__(config)
 
-        api_key = config.api_key
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()

@@ -59,9 +59,9 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
         self.message_buffer: Queue[str] = Queue(maxsize=64)
 
         # Read config and construct the provider WITH required args
-        base_url = config.face_http_base_url
-        recent_sec = config.face_recent_sec
-        fps = config.face_poll_fps
+        base_url = self.config.face_http_base_url
+        recent_sec = self.config.face_recent_sec
+        fps = self.config.face_poll_fps
 
         self.provider: FacePresenceProvider = FacePresenceProvider(
             base_url=base_url, recent_sec=recent_sec, fps=fps, timeout_s=2.0
