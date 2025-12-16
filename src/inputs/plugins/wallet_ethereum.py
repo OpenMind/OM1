@@ -12,7 +12,7 @@ from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class WalletEthereum(FuserInput[List[float]]):
+class WalletEthereum(FuserInput[SensorConfig, List[float]]):
     """
     Ethereum wallet monitor that tracks ETH balance changes.
 
@@ -25,7 +25,7 @@ class WalletEthereum(FuserInput[List[float]]):
         If connection to Ethereum network fails
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize WalletEthereum instance.
         """
