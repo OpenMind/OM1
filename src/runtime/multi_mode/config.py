@@ -407,15 +407,17 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     # Load inputs
     mode_config.agent_inputs = [
         load_input(
-            inp["type"],
-            add_meta(
-                inp.get("config", {}),
-                g_api_key,
-                g_ut_eth,
-                g_URID,
-                g_robot_ip,
-                g_mode,
-            ),
+            {
+                **inp,
+                "config": add_meta(
+                    inp.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                    g_mode,
+                ),
+            }
         )
         for inp in mode_config._raw_inputs
     ]

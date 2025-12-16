@@ -172,10 +172,12 @@ def load_config(
         ],
         "agent_inputs": [
             load_input(
-                input["type"],
-                add_meta(
-                    input.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
+                {
+                    **input,
+                    "config": add_meta(
+                        input.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
+                    ),
+                }
             )
             for input in raw_config.get("agent_inputs", [])
         ],
@@ -293,8 +295,12 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     ]
     agent_inputs = [
         load_input(
-            inp["type"],
-            add_meta(inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip),
+            {
+                **inp,
+                "config": add_meta(
+                    inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
         )
         for inp in config.get("agent_inputs", [])
     ]

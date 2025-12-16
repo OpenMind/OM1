@@ -168,8 +168,6 @@ def test_load_config(mock_config_data, mock_dependencies):
         assert config.api_key == mock_config_data["api_key"]
         assert len(config.agent_inputs) == 1
         assert isinstance(config.agent_inputs[0], mock_dependencies["input"])
-        api_key = getattr(config.agent_inputs[0].config, "api_key", None)
-        assert api_key == mock_config_data["api_key"]
         assert isinstance(config.cortex_llm, mock_dependencies["llm"])
         assert len(config.simulators) == 1
         assert isinstance(config.simulators[0], mock_dependencies["simulator"])

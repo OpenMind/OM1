@@ -50,22 +50,20 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     return None
 
 
-def load_input(class_name: str, config_dict: T.Dict[str, T.Any]) -> Sensor:
+def load_input(input_config: T.Dict[str, T.Any]) -> Sensor:
     """
-    Load an input class with the configuration.
+    Load an input and configuration.
 
     Parameters
     ----------
-    class_name : str
-        The input class name
-    config_dict : dict
-        The configuration dictionary
+    input_config : dict
 
     Returns
     -------
     Sensor
         The instantiated sensor
     """
+    class_name = input_config["type"]
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
@@ -90,17 +88,19 @@ def load_input(class_name: str, config_dict: T.Dict[str, T.Any]) -> Sensor:
                 and obj != SensorConfig
             ):
                 config_class = obj
-                break
 
-        if config_class is None:
-            config_class = SensorConfig
+        config_dict = input_config.get("config", {})
+        if config_class is not None:
+            config = config_class(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+        else:
+            config = SensorConfig(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
 
-        try:
-            config = config_class(**config_dict)
-            logging.debug(f"Loaded input {class_name} from {module_name}.py")
-            return input_class(config=config)
-        except Exception as e:
-            raise ValueError(f"Failed to instantiate {class_name}: {e}")
+        logging.debug(f"Loaded input {class_name} from {module_name}.py")
+        return input_class(config=config)
 
     except ImportError as e:
         raise ValueError(f"Could not import input module '{module_name}': {e}")

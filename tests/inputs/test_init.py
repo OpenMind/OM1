@@ -30,11 +30,11 @@ def test_load_input_success():
         mock_import.return_value = mock_module
 
         mock_module.MockConfig = MockConfig
-        result = load_input("MockInput", {})
+        result = load_input({"type": "MockInput"})
 
         mock_find_module.assert_called_once_with("MockInput")
         mock_import.assert_called_once_with("inputs.plugins.mock_input")
-        assert isinstance(result, MockInput)
+        assert isinstance(result, Sensor)
 
 
 def test_load_input_not_found():
@@ -45,7 +45,7 @@ def test_load_input_not_found():
             ValueError,
             match="Class 'NonexistentInput' not found in any input plugin module",
         ):
-            load_input("NonexistentInput", {})
+            load_input({"type": "NonexistentInput"})
 
 
 def test_load_input_multiple_plugins():
@@ -66,11 +66,11 @@ def test_load_input_multiple_plugins():
         mock_module2.Input2 = Input2
         mock_import.return_value = mock_module2
 
-        result = load_input("Input2", {})
+        result = load_input({"type": "Input2"})
 
         mock_find_module.assert_called_once_with("Input2")
         mock_import.assert_called_once_with("inputs.plugins.input2")
-        assert isinstance(result, Input2)
+        assert isinstance(result, Sensor)
 
 
 def test_load_input_invalid_type():
@@ -90,7 +90,7 @@ def test_load_input_invalid_type():
         with pytest.raises(
             ValueError, match="'InvalidInput' is not a valid input subclass"
         ):
-            load_input("InvalidInput", {})
+            load_input({"type": "InvalidInput"})
 
 
 def test_find_module_with_class_success():

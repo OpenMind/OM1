@@ -37,7 +37,7 @@ def test_configs():
         assert isinstance(agent_actions, list)
 
         for input in agent_inputs:
-            assert load_input(input["type"]) is not None
+            assert load_input(input) is not None
 
         for simulator in simulators:
             assert load_simulator(simulator["type"]) is not None
