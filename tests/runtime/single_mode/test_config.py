@@ -141,7 +141,7 @@ def test_load_config(mock_config_data, mock_dependencies):
         patch("builtins.open", mock_open(read_data=json5.dumps(mock_config_data))),
         patch(
             "runtime.single_mode.config.load_input",
-            return_value=mock_dependencies["input"],
+            return_value=mock_dependencies["input"](),
         ),
         patch(
             "runtime.single_mode.config.load_action",
@@ -186,7 +186,7 @@ def test_load_empty_config(mock_empty_config_data, mock_dependencies):
         ),
         patch(
             "runtime.single_mode.config.load_input",
-            return_value=mock_dependencies["input"],
+            return_value=mock_dependencies["input"](),
         ),
         patch(
             "runtime.single_mode.config.load_action",
@@ -223,7 +223,7 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
         ),
         patch(
             "runtime.single_mode.config.load_input",
-            return_value=mock_dependencies["input"],
+            return_value=mock_dependencies["input"](),
         ),
         patch(
             "runtime.single_mode.config.load_action",

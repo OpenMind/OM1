@@ -290,7 +290,7 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading all component types."""
-        mock_load_input.return_value = lambda config: mock_sensor
+        mock_load_input.return_value = mock_sensor
         mock_load_simulator.return_value = lambda config: mock_simulator
         mock_load_action.return_value = mock_action
         mock_load_background.return_value = lambda config: mock_background

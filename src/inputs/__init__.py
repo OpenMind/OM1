@@ -5,7 +5,7 @@ import os
 import re
 import typing as T
 
-from inputs.base import Sensor
+from inputs.base import Sensor, SensorConfig
 
 
 def find_module_with_class(class_name: str) -> T.Optional[str]:
@@ -50,19 +50,21 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     return None
 
 
-def load_input(class_name: str) -> T.Type[Sensor]:
+def load_input(class_name: str, config_dict: T.Dict[str, T.Any]) -> Sensor:
     """
-    Load an input class by its class name.
+    Load an input class with the configuration.
 
     Parameters
     ----------
     class_name : str
-        The exact class name
+        The input class name
+    config_dict : dict
+        The configuration dictionary
 
     Returns
     -------
-    T.Type[Sensor]
-        The sensor class
+    Sensor
+        The instantiated sensor
     """
     module_name = find_module_with_class(class_name)
 
@@ -80,8 +82,25 @@ def load_input(class_name: str) -> T.Type[Sensor]:
         ):
             raise ValueError(f"'{class_name}' is not a valid input subclass")
 
-        logging.debug(f"Loaded input {class_name} from {module_name}.py")
-        return input_class
+        config_class = None
+        for _, obj in module.__dict__.items():
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, SensorConfig)
+                and obj != SensorConfig
+            ):
+                config_class = obj
+                break
+
+        if config_class is None:
+            config_class = SensorConfig
+
+        try:
+            config = config_class(**config_dict)
+            logging.debug(f"Loaded input {class_name} from {module_name}.py")
+            return input_class(config=config)
+        except Exception as e:
+            raise ValueError(f"Failed to instantiate {class_name}: {e}")
 
     except ImportError as e:
         raise ValueError(f"Could not import input module '{module_name}': {e}")
