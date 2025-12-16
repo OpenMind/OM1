@@ -26,10 +26,11 @@ class LocationsSensorConfig(SensorConfig):
     """
 
     base_url: str = Field(
-        default="http://localhost:5000/maps/locations/list", description="Base URL"
+        default="http://localhost:5000/maps/locations/list",
+        description="Base URL for the locations service",
     )
-    timeout: int = Field(default=5, description="Timeout")
-    refresh_interval: int = Field(default=30, description="Refresh Interval")
+    timeout: int = Field(default=5, description="Timeout in seconds")
+    refresh_interval: int = Field(default=30, description="Refresh interval in seconds")
 
 
 class LocationsInput(FuserInput[LocationsSensorConfig, Optional[str]]):

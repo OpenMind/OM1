@@ -36,7 +36,7 @@ class GPSOdomReaderConfig(SensorConfig):
         default=None, description="Origin Yaw Degrees"
     )
     unitree_ethernet: Optional[str] = Field(
-        default=None, description="Unitree Ethernet"
+        default=None, description="Unitree Ethernet Interface"
     )
 
 

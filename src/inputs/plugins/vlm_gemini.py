@@ -31,10 +31,11 @@ class VLMGeminiConfig(SensorConfig):
 
     api_key: Optional[str] = Field(default=None, description="API Key")
     base_url: str = Field(
-        default="https://api.openmind.org/api/core/gemini", description="Base URL"
+        default="https://api.openmind.org/api/core/gemini",
+        description="Base URL for the Gemini service",
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
-    camera_index: int = Field(default=0, description="Camera Index")
+    camera_index: int = Field(default=0, description="Index of the camera device")
 
 
 class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):

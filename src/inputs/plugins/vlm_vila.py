@@ -30,9 +30,12 @@ class VLMVilaConfig(SensorConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    base_url: str = Field(default="wss://api-vila.openmind.org", description="Base URL")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
-    camera_index: int = Field(default=0, description="Camera Index")
+    camera_index: int = Field(default=0, description="Index of the camera device")
 
 
 class VLMVila(FuserInput[VLMVilaConfig, Optional[str]]):

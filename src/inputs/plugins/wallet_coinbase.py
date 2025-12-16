@@ -22,7 +22,7 @@ class WalletCoinbaseConfig(SensorConfig):
         Asset ID to query.
     """
 
-    asset_id: str = Field(default="eth", description="Asset ID")
+    asset_id: str = Field(default="eth", description="Asset ID to query")
 
 
 class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):

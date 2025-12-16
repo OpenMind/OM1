@@ -20,7 +20,10 @@ class TwitterSensorConfig(SensorConfig):
         Query to search for on Twitter.
     """
 
-    query: str = Field(default="What's new in AI and technology?", description="Query")
+    query: str = Field(
+        default="What's new in AI and technology?",
+        description="Query to search for on Twitter",
+    )
 
 
 class TwitterInput(FuserInput[TwitterSensorConfig, Optional[str]]):

@@ -27,11 +27,17 @@ class VLMVilaRTSPConfig(SensorConfig):
         Image decode format (e.g., "H264").
     """
 
-    base_url: str = Field(default="wss://api-vila.openmind.org", description="Base URL")
-    rtsp_url: str = Field(
-        default="rtsp://localhost:8554/top_camera", description="RTSP URL"
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
     )
-    decode_format: str = Field(default="H264", description="Decode Format")
+    rtsp_url: str = Field(
+        default="rtsp://localhost:8554/top_camera",
+        description="RTSP URL for the camera stream",
+    )
+    decode_format: str = Field(
+        default="H264", description='Image decode format (e.g., "H264")'
+    )
 
 
 class VLMVilaRTSP(FuserInput[VLMVilaRTSPConfig, Optional[str]]):

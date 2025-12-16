@@ -60,14 +60,18 @@ class GoogleASRSensorConfig(SensorConfig):
     api_key: Optional[str] = Field(default=None, description="API Key")
     rate: int = Field(default=48000, description="Sampling rate")
     chunk: int = Field(default=12144, description="Chunk size")
-    base_url: Optional[str] = Field(default=None, description="Base URL")
+    base_url: Optional[str] = Field(
+        default=None, description="Base URL for the ASR service"
+    )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     microphone_device_id: Optional[str] = Field(
         default=None, description="Microphone Device ID"
     )
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
-    language: str = Field(default="english", description="Language")
-    remote_input: bool = Field(default=False, description="Remote Input")
+    language: str = Field(
+        default="english", description="Language for speech recognition"
+    )
+    remote_input: bool = Field(default=False, description="Whether to use remote input")
 
 
 class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):

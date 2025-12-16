@@ -27,9 +27,16 @@ class VLMVilaZenohConfig(SensorConfig):
         Image decode format (e.g., "H264").
     """
 
-    base_url: str = Field(default="wss://api-vila.openmind.org", description="Base URL")
-    topic: str = Field(default="rgb_image", description="Topic")
-    decode_format: str = Field(default="H264", description="Decode Format")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+    topic: str = Field(
+        default="rgb_image", description="Zenoh topic for receiving images"
+    )
+    decode_format: str = Field(
+        default="H264", description='Image decode format (e.g., "H264")'
+    )
 
 
 class VLMVilaZenoh(FuserInput[VLMVilaZenohConfig, Optional[str]]):

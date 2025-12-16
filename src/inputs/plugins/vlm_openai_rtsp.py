@@ -35,17 +35,21 @@ class VLMOpenAIRTSPConfig(SensorConfig):
 
     api_key: Optional[str] = Field(default=None, description="API Key")
     base_url: str = Field(
-        default="https://api.openmind.org/api/core/openai", description="Base URL"
+        default="https://api.openmind.org/api/core/openai",
+        description="Base URL for the OpenAI service",
     )
     rtsp_url: str = Field(
-        default="rtsp://localhost:8554/top_camera", description="RTSP URL"
+        default="rtsp://localhost:8554/top_camera",
+        description="RTSP URL for the camera stream",
     )
     prompt: str = Field(
         default="What is the most interesting aspect in this series of images?",
-        description="Prompt",
+        description="Prompt for the VLM",
     )
-    fps: int = Field(default=15, description="FPS")
-    descriptor_for_LLM: str = Field(default="Vision", description="Descriptor for LLM")
+    fps: int = Field(default=15, description="Frames per second to process")
+    descriptor_for_LLM: str = Field(
+        default="Vision", description="Descriptor for LLM context"
+    )
 
 
 class VLMOpenAIRTSP(FuserInput[VLMOpenAIRTSPConfig, Optional[str]]):

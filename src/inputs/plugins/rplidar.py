@@ -39,24 +39,26 @@ class RPLidarConfig(SensorConfig):
         Whether to log to a file.
     """
 
-    serial_port: Optional[str] = Field(default=None, description="Serial Port")
+    serial_port: Optional[str] = Field(
+        default=None, description="Serial Port to connect to"
+    )
     use_zenoh: bool = Field(default=False, description="Use Zenoh")
-    half_width_robot: float = Field(default=0.20, description="Half Width Robot")
+    half_width_robot: float = Field(default=0.20, description="Half width of the robot")
     angles_blanked: List[float] = Field(
-        default_factory=list, description="Angles Blanked"
+        default_factory=list, description="List of angles to blank out"
     )
     relevant_distance_max: float = Field(
-        default=1.1, description="Relevant Distance Max"
+        default=1.1, description="Maximum relevant distance"
     )
     relevant_distance_min: float = Field(
-        default=0.08, description="Relevant Distance Min"
+        default=0.08, description="Minimum relevant distance"
     )
     sensor_mounting_angle: float = Field(
-        default=180.0, description="Sensor Mounting Angle"
+        default=180.0, description="Mounting angle of the sensor"
     )
-    URID: str = Field(default="", description="URID")
-    machine_type: str = Field(default="go2", description="Machine Type")
-    log_file: bool = Field(default=False, description="Log File")
+    URID: str = Field(default="", description="Unique Robot ID")
+    machine_type: str = Field(default="go2", description="Type of the machine")
+    log_file: bool = Field(default=False, description="Whether to log to a file")
 
 
 class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):

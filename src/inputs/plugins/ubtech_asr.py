@@ -31,8 +31,10 @@ class UbtechASRSensorConfig(SensorConfig):
         Language for speech recognition.
     """
 
-    robot_ip: str = Field(default="", description="Robot IP")
-    language: str = Field(default="english", description="Language")
+    robot_ip: str = Field(default="", description="Robot IP address")
+    language: str = Field(
+        default="english", description="Language for speech recognition"
+    )
 
 
 class UbtechASRInput(FuserInput[UbtechASRSensorConfig, Optional[str]]):

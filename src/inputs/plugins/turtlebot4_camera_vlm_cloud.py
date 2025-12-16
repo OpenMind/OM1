@@ -30,9 +30,12 @@ class TurtleBot4CameraVLMCloudConfig(SensorConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    base_url: str = Field(default="wss://api-vila.openmind.org", description="Base URL")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
-    URID: str = Field(default="default", description="URID")
+    URID: str = Field(default="default", description="URID (Unitree ID)")
 
 
 class TurtleBot4CameraVLMCloud(

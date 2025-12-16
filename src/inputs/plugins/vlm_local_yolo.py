@@ -27,8 +27,8 @@ class VLM_Local_YOLOConfig(SensorConfig):
         Whether to enable file logging.
     """
 
-    camera_index: int = Field(default=0, description="Camera Index")
-    log_file: bool = Field(default=False, description="Log File")
+    camera_index: int = Field(default=0, description="Index of the camera device")
+    log_file: bool = Field(default=False, description="Whether to enable file logging")
 
 
 # Common resolutions to test (width, height), ordered high to low

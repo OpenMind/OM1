@@ -23,7 +23,10 @@ class UnitreeG1CameraVLMCloudConfig(SensorConfig):
         Base URL for the VLM service.
     """
 
-    base_url: str = Field(default="wss://api-vila.openmind.org", description="Base URL")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
 
 
 class UnitreeG1CameraVLMCloud(FuserInput[UnitreeG1CameraVLMCloudConfig, Optional[str]]):

@@ -26,10 +26,12 @@ class OdomConfig(SensorConfig):
         Ethernet channel for Unitree odometry.
     """
 
-    use_zenoh: bool = Field(default=False, description="Use Zenoh")
-    URID: str = Field(default="", description="URID")
+    use_zenoh: bool = Field(
+        default=False, description="Whether to use Zenoh for odometry"
+    )
+    URID: str = Field(default="", description="URID (Unitree ID)")
     unitree_ethernet: Optional[str] = Field(
-        default=None, description="Unitree Ethernet"
+        default=None, description="Ethernet channel for Unitree odometry"
     )
 
 

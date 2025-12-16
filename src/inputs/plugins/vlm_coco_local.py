@@ -25,7 +25,7 @@ class VLM_COCO_LocalConfig(SensorConfig):
         Index of the camera device.
     """
 
-    camera_index: int = Field(default=0, description="Camera Index")
+    camera_index: int = Field(default=0, description="Index of the camera device")
 
 
 Detection = collections.namedtuple("Detection", "label, bbox, score")

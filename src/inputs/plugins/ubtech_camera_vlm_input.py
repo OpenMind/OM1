@@ -25,8 +25,11 @@ class UbtechCameraVLMSensorConfig(SensorConfig):
         Base URL for the VLM service.
     """
 
-    robot_ip: str = Field(default="", description="Robot IP")
-    base_url: str = Field(default="wss://api-vila.openmind.org", description="Base URL")
+    robot_ip: str = Field(default="", description="Robot IP address")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
 
 
 class UbtechCameraVLMInput(FuserInput[UbtechCameraVLMSensorConfig, Optional[str]]):

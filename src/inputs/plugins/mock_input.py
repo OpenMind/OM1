@@ -27,9 +27,11 @@ class MockSensorConfig(SensorConfig):
         Port number for the WebSocket server.
     """
 
-    input_name: str = Field(default="Mock Input", description="Input Name")
-    host: str = Field(default="localhost", description="Host")
-    port: int = Field(default=8765, description="Port")
+    input_name: str = Field(default="Mock Input", description="Name of the input")
+    host: str = Field(
+        default="localhost", description="Host address for the WebSocket server"
+    )
+    port: int = Field(default=8765, description="Port number for the WebSocket server")
 
 
 class MockInput(FuserInput[MockSensorConfig, Optional[str]]):

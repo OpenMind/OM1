@@ -25,9 +25,12 @@ class GalleryIdentitiesConfig(SensorConfig):
     """
 
     face_http_base_url: str = Field(
-        default="http://127.0.0.1:6793", description="Face HTTP Base URL"
+        default="http://127.0.0.1:6793",
+        description="Base URL for the Face HTTP service",
     )
-    gallery_poll_fps: float = Field(default=1.0, description="Gallery Poll FPS")
+    gallery_poll_fps: float = Field(
+        default=1.0, description="Polling frequency in frames per second"
+    )
 
 
 class GalleryIdentities(FuserInput[GalleryIdentitiesConfig, Optional[str]]):

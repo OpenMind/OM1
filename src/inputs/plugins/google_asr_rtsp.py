@@ -50,10 +50,17 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    rtsp_url: str = Field(default="rtsp://localhost:8554/audio", description="RTSP URL")
-    rate: int = Field(default=16000, description="Sampling rate")
-    base_url: Optional[str] = Field(default=None, description="Base URL")
-    language: str = Field(default="english", description="Language")
+    rtsp_url: str = Field(
+        default="rtsp://localhost:8554/audio",
+        description="RTSP URL for the audio stream",
+    )
+    rate: int = Field(default=16000, description="Audio sampling rate")
+    base_url: Optional[str] = Field(
+        default=None, description="Base URL for the ASR service"
+    )
+    language: str = Field(
+        default="english", description="Language for speech recognition"
+    )
 
 
 class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
