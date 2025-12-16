@@ -54,7 +54,7 @@ def mock_dependencies():
 
         pass
 
-    class MockConnector(ActionConnector[str]):
+    class MockConnector(ActionConnector[ActionConfig, str]):
         """Mock connector for testing"""
 
         def __init__(self):
