@@ -10,17 +10,17 @@ To ensure your configuration is valid, follow the format defined [here](https://
 
 OpenMind supports two configuration schemas:
 
-1. Single-Mode Schema
+### Step 1. Single-Mode Schema
 
 Use this when your robot only needs to run one dedicated mode. For example, a pure conversation agent or a navigation-only setup.
 The entire agent is optimized around a single use case.
 
-2. Multi-Mode Schema
+### Step 2. Multi-Mode Schema
 
 Use this when you want the robot to switch between multiple modes at runtime based on user choice or context.
 You can configure any subset of the available five modes, just two, or all five, depending on your application.
 
-### Steps to build a new config file
+#### Steps to build a new config file
 
 1. Start with getting your API key from [OpenMind Portal](https://portal.openmind.org/). Copy it and save it, you'll paste it into the config later.
 2. Create a new config file config.json5
@@ -62,9 +62,10 @@ You can configure any subset of the available five modes, just two, or all five,
     Modeled similarly to Asimov’s laws.
 
     #### **system_prompt_examples** *string* — Optional
+
     Example interactions that help guide the model’s behavior.
 
-3. Customize the system prompts
+### Step 3. Customize the system prompts
 
     There are three key prompt fields:
 
@@ -79,11 +80,9 @@ You can configure any subset of the available five modes, just two, or all five,
 
     - system_prompt_examples
 
-        Give your model examples of how to respond.
-        These help shape its responses.
-        You can add more examples if needed.
+        Give your model examples of how to respond. These help shape its responses. You can add more examples if needed.
 
-4. Configure inputs
+### Step 4. Configure inputs
     Inputs provide the sensory capabilities that allow robots to perceive their environment
 
     #### **agent_inputs** *array* — Required
@@ -102,7 +101,7 @@ You can configure any subset of the available five modes, just two, or all five,
 
     **Example: GoogleASRInput**
 
-5. Configure the LLM
+### Step 5. Configure the LLM
     #### **cortex_llm** *object* — Required
 
     Configures the Cortex LLM behavior.
@@ -129,7 +128,7 @@ You can configure any subset of the available five modes, just two, or all five,
 
     **Example: "10"**
 
-6. Set up agent actions
+### Step 6. Set up agent actions
 
     Actions define what your agent can do. You can define movement, TTS or any other actions here.
 
@@ -161,6 +160,6 @@ You can configure any subset of the available five modes, just two, or all five,
 
     **Example: "elevenlabs_tts"**
 
-7. Validate the config
+### Step 7. Validate the config
 
     Before using the file: Check for JSON errors, make sure commas, quotes, and braces are correct and confirm that correct API key is configured.
