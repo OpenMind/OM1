@@ -1,5 +1,5 @@
-from providers.metamask import MetaMaskProvider
-from providers.metamask import MetaMaskProvider as MP
+from src.providers.metamask_provider import MetaMaskProvider
+from src.providers.metamask_provider import MetaMaskProvider as MP
 
 
 def test_metamask_provider_connect():

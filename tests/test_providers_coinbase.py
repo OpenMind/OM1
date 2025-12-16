@@ -1,4 +1,4 @@
-from providers.coinbase import CoinbaseProvider
+from src.providers.coinbase_provider import CoinbaseProvider
 
 
 class DummyWallet:
