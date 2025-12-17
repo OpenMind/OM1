@@ -91,9 +91,7 @@ class IOProvider:
         with self._lock:
             ts = timestamp if timestamp is not None else time.time()
             self._inputs[key] = Input(
-                input=value,
-                timestamp=ts,
-                tick=self._tick_counter
+                input=value, timestamp=ts, tick=self._tick_counter
             )
 
     def remove_input(self, key: str) -> None:
@@ -125,7 +123,7 @@ class IOProvider:
                 self._inputs[key] = Input(
                     input=existing_input.input,
                     timestamp=timestamp,
-                    tick=existing_input.tick
+                    tick=existing_input.tick,
                 )
 
     def get_input_timestamp(self, key: str) -> Optional[float]:
