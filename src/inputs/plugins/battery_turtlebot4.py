@@ -41,7 +41,7 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
     def __init__(self, config: TurtleBot4BatteryConfig):
         super().__init__(config)
 
-        api_key = config.api_key
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()
@@ -67,7 +67,7 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
 
         logging.info(f"Config: {self.config}")
 
-        self.URID = config.URID
+        self.URID = self.config.URID
         logging.info(f"Using TurtleBot4 URID: {self.URID}")
 
         logging.info("Creating Zenoh TurtleBot4 Subscribers")

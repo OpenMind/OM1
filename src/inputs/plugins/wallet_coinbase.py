@@ -33,7 +33,7 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
     def __init__(self, config: WalletCoinbaseConfig):
         super().__init__(config)
 
-        self.asset_id = config.asset_id
+        self.asset_id = self.config.asset_id
 
         # Track IO
         self.io_provider = IOProvider()

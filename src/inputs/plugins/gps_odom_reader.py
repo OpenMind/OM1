@@ -48,9 +48,9 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
     def __init__(self, config: GPSOdomReaderConfig):
         super().__init__(config)
 
-        self.lat0 = config.origin_lat
-        self.lon0 = config.origin_lon
-        yaw0_deg = config.origin_yaw_deg
+        self.lat0 = self.config.origin_lat
+        self.lon0 = self.config.origin_lon
+        yaw0_deg = self.config.origin_yaw_deg
         if self.lat0 is None or self.lon0 is None or yaw0_deg is None:
             logging.error(
                 "GPSOdomReader: origin_lat, origin_lon, and origin_yaw_deg must be set in the config."
@@ -66,7 +66,7 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
         self.buf: list[Message] = []
         self.descriptor_for_LLM = "Latitude, Longitude, and Yaw"
 
-        unitree_ethernet = config.unitree_ethernet
+        unitree_ethernet = self.config.unitree_ethernet
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Mapper Odom Provider: {self.odom}")
 

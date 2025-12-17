@@ -52,7 +52,7 @@ class TwitterInput(FuserInput[TwitterSensorConfig, Optional[str]]):
         self.context: Optional[str] = None
 
         # Use getattr instead of .get() since config is an object, not a dict
-        self.query = config.query
+        self.query = self.config.query
 
     async def __aenter__(self):
         """Async context manager entry"""

@@ -51,9 +51,9 @@ class LocationsInput(FuserInput[LocationsSensorConfig, Optional[str]]):
         """
         super().__init__(config)
 
-        base_url = config.base_url
-        timeout = config.timeout
-        refresh_interval = config.refresh_interval
+        base_url = self.config.base_url
+        timeout = self.config.timeout
+        refresh_interval = self.config.refresh_interval
 
         self.locations_provider = UnitreeGo2LocationsProvider(
             base_url, timeout, refresh_interval

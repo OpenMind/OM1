@@ -53,7 +53,7 @@ class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize ZenohListenerProvider provider
-        listen_topic = config.listen_topic
+        listen_topic = self.config.listen_topic
         if listen_topic is None:
             listen_topic = "speech"
             # Log the listen_topic being used

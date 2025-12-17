@@ -58,7 +58,7 @@ class UnitreeG1CameraVLMCloud(FuserInput[UnitreeG1CameraVLMCloudConfig, Optional
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = config.base_url
+        base_url = self.config.base_url
         self.vlm: UnitreeRealSenseDevVLMProvider = UnitreeRealSenseDevVLMProvider(
             ws_url=base_url
         )
