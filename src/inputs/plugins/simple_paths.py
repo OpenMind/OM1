@@ -9,7 +9,7 @@ from providers.io_provider import IOProvider
 from providers.simple_paths_provider import SimplePathsProvider
 
 
-class SimplePaths(FuserInput[Optional[str]]):
+class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
     """
     SimplePaths input handler.
 
@@ -17,7 +17,7 @@ class SimplePaths(FuserInput[Optional[str]]):
     It maintains an internal buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         super().__init__(config)
 
         # Track IO

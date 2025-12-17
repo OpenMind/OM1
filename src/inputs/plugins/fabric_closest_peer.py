@@ -5,13 +5,38 @@ from queue import Queue
 from typing import List, Optional
 
 import requests
+from pydantic import Field
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class FabricClosestPeer(FuserInput[Optional[str]]):
+class FabricClosestPeerConfig(SensorConfig):
+    """
+    Configuration for Fabric Closest Peer Sensor.
+
+    Parameters
+    ----------
+    fabric_endpoint : str
+        Fabric endpoint URL.
+    mock_mode : bool
+        Whether to enable mock mode.
+    mock_lat : Optional[float]
+        Mock latitude.
+    mock_lon : Optional[float]
+        Mock longitude.
+    """
+
+    fabric_endpoint: str = Field(
+        default="http://localhost:8545", description="Fabric Endpoint"
+    )
+    mock_mode: bool = Field(default=True, description="Mock Mode")
+    mock_lat: Optional[float] = Field(default=None, description="Mock Latitude")
+    mock_lon: Optional[float] = Field(default=None, description="Mock Longitude")
+
+
+class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
     """Share our GPS position with the Fabric network and fetch the closest peer.
 
     **Mock‑friendly:** set `mock_mode=True` in the plugin config (or environment)
@@ -19,7 +44,7 @@ class FabricClosestPeer(FuserInput[Optional[str]]):
     calling the REST endpoint.  Useful for local testing before the chain is up.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: FabricClosestPeerConfig):
         super().__init__(config)
 
         self.descriptor_for_LLM = "Closest Peer from Fabric"
@@ -27,12 +52,8 @@ class FabricClosestPeer(FuserInput[Optional[str]]):
         self.messages: List[str] = []
         self.msg_q: Queue[str] = Queue()
 
-        self.fabric_endpoint = getattr(
-            config, "fabric_endpoint", "http://localhost:8545"
-        )
-        self.mock_mode: bool = bool(
-            getattr(config, "mock_mode", True)
-        )  # default ON for now
+        self.fabric_endpoint = self.config.fabric_endpoint
+        self.mock_mode = self.config.mock_mode
 
     async def _poll(self) -> Optional[str]:
         """
@@ -46,8 +67,8 @@ class FabricClosestPeer(FuserInput[Optional[str]]):
         await asyncio.sleep(0.5)
 
         if self.mock_mode:
-            peer_lat = getattr(self.config, "mock_lat")
-            peer_lon = getattr(self.config, "mock_lon")
+            peer_lat = self.config.mock_lat
+            peer_lon = self.config.mock_lon
             logging.info(
                 f"FabricClosestPeer (mock): fabricated peer {peer_lat:.6f},{peer_lon:.6f}"
             )

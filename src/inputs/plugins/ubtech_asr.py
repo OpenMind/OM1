@@ -4,6 +4,8 @@ import time
 from queue import Empty, Queue
 from typing import List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
@@ -17,12 +19,30 @@ LANGUAGE_CODE_MAP: dict = {
 }
 
 
-class UbtechASRInput(FuserInput[Optional[str]]):
+class UbtechASRSensorConfig(SensorConfig):
+    """
+    Configuration for Ubtech ASR Sensor.
+
+    Parameters
+    ----------
+    robot_ip : str
+        Robot IP address.
+    language : str
+        Language for speech recognition.
+    """
+
+    robot_ip: str = Field(default="", description="Robot IP address")
+    language: str = Field(
+        default="english", description="Language for speech recognition"
+    )
+
+
+class UbtechASRInput(FuserInput[UbtechASRSensorConfig, Optional[str]]):
     """
     Ubtech Robot ASR input handler that uses the UbtechASRProvider.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UbtechASRSensorConfig):
         super().__init__(config)
         self.messages: List[str] = []
         self.descriptor_for_LLM = "Voice"
@@ -35,8 +55,8 @@ class UbtechASRInput(FuserInput[Optional[str]]):
         self.asr_resume_cooldown = 10.0
 
         # Get config for the provider
-        self.robot_ip = getattr(self.config, "robot_ip", "")
-        self.language = getattr(self.config, "language", "english").strip().lower()
+        self.robot_ip = self.config.robot_ip
+        self.language = self.config.language.strip().lower()
         self.language_code = LANGUAGE_CODE_MAP.get(self.language, "en")
 
         # Initialize and start the provider

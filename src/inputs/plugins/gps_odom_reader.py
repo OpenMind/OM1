@@ -4,6 +4,8 @@ import math
 import time
 from typing import Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
@@ -12,17 +14,43 @@ from providers.odom_provider import OdomProvider
 R_EARTH = 6_371_000.0  # mean Earth radius (m)
 
 
-class GPSOdomReader(FuserInput[Optional[str]]):
+class GPSOdomReaderConfig(SensorConfig):
+    """
+    Configuration for GPS Odom Reader Sensor.
+
+    Parameters
+    ----------
+    origin_lat : Optional[float]
+        Origin Latitude.
+    origin_lon : Optional[float]
+        Origin Longitude.
+    origin_yaw_deg : Optional[float]
+        Origin Yaw Degrees.
+    unitree_ethernet : Optional[str]
+        Unitree Ethernet Interface.
+    """
+
+    origin_lat: Optional[float] = Field(default=None, description="Origin Latitude")
+    origin_lon: Optional[float] = Field(default=None, description="Origin Longitude")
+    origin_yaw_deg: Optional[float] = Field(
+        default=None, description="Origin Yaw Degrees"
+    )
+    unitree_ethernet: Optional[str] = Field(
+        default=None, description="Unitree Ethernet Interface"
+    )
+
+
+class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
     """
     Maintains global pose (lat, lon, yaw) from Unitree Sport-mode state.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: GPSOdomReaderConfig):
         super().__init__(config)
 
-        self.lat0: float | None = getattr(config, "origin_lat", None)
-        self.lon0: float | None = getattr(config, "origin_lon", None)
-        yaw0_deg = getattr(config, "origin_yaw_deg", None)
+        self.lat0 = self.config.origin_lat
+        self.lon0 = self.config.origin_lon
+        yaw0_deg = self.config.origin_yaw_deg
         if self.lat0 is None or self.lon0 is None or yaw0_deg is None:
             logging.error(
                 "GPSOdomReader: origin_lat, origin_lon, and origin_yaw_deg must be set in the config."
@@ -38,7 +66,7 @@ class GPSOdomReader(FuserInput[Optional[str]]):
         self.buf: list[Message] = []
         self.descriptor_for_LLM = "Latitude, Longitude, and Yaw"
 
-        unitree_ethernet: str | None = getattr(config, "unitree_ethernet", None)
+        unitree_ethernet = self.config.unitree_ethernet
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Mapper Odom Provider: {self.odom}")
 

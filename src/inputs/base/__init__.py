@@ -1,7 +1,10 @@
 import typing as T
 from dataclasses import dataclass
 
+from pydantic import BaseModel, ConfigDict
+
 R = T.TypeVar("R")
+ConfigType = T.TypeVar("ConfigType", bound="SensorConfig")
 
 
 @dataclass
@@ -21,23 +24,16 @@ class Message:
     message: str
 
 
-@dataclass
-class SensorConfig:
+class SensorConfig(BaseModel):
     """
-    Configuration class for Sensor implementations.
+    Base configuration class for Inputs.
 
-    Parameters
-    ----------
-    **kwargs : dict
-        Additional configuration parameters
     """
 
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    model_config = ConfigDict(extra="allow")
 
 
-class Sensor(T.Generic[R]):
+class Sensor(T.Generic[ConfigType, R]):
     """
     Base class for all sensors. Provides the interface for converting raw inputs
     into text format for processing by the fuser.
@@ -48,7 +44,7 @@ class Sensor(T.Generic[R]):
         The raw input type that this agent handles
     """
 
-    def __init__(self, config: SensorConfig):
+    def __init__(self, config: ConfigType):
         """
         Initialize an Sensor instance.
         """

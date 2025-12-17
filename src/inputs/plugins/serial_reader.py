@@ -9,31 +9,31 @@ from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
-# simple code example to ingest serial data written by an Arduino, such as:
 
-#       if (grip_force > grip_force_threshold) {
-#         Serial.println("Grip: Elevated");
-#       } else {
-#         Serial.println("Grip: Normal");
-#       }
-
-#       if (pulse_rate > pulse_threshold) {
-#         Serial.println("Pulse: Elevated");
-#       } else {
-#         Serial.println("Pulse: Normal");
-#       }
-
-#
-
-
-class SerialReader(FuserInput[Optional[str]]):
+class SerialReader(FuserInput[SensorConfig, Optional[str]]):
     """
     Reads data from serial port, typically from an Arduino
 
     Maintains a buffer of messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    # simple code example to ingest serial data written by an Arduino, such as:
+
+    #       if (grip_force > grip_force_threshold) {
+    #         Serial.println("Grip: Elevated");
+    #       } else {
+    #         Serial.println("Grip: Normal");
+    #       }
+
+    #       if (pulse_rate > pulse_threshold) {
+    #         Serial.println("Pulse: Elevated");
+    #       } else {
+    #         Serial.println("Pulse: Normal");
+    #       }
+
+    #
+
+    def __init__(self, config: SensorConfig):
         """
         Initialize with empty message buffer.
         """

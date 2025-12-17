@@ -6,6 +6,7 @@ from queue import Empty, Queue
 from typing import List, Optional
 
 import zenoh
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -14,7 +15,20 @@ from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.zenoh_listener_provider import ZenohListenerProvider
 
 
-class ZenohListener(FuserInput[Optional[str]]):
+class ZenohListenerConfig(SensorConfig):
+    """
+    Configuration for Zenoh Listener Sensor.
+
+    Parameters
+    ----------
+    listen_topic : Optional[str]
+        Topic to listen to.
+    """
+
+    listen_topic: Optional[str] = Field(default=None, description="Listen Topic")
+
+
+class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
     """
     Zenoh listener handler.
 
@@ -22,7 +36,7 @@ class ZenohListener(FuserInput[Optional[str]]):
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: ZenohListenerConfig):
         """
         Initialize the ZenohListener instance.
         """
@@ -39,7 +53,7 @@ class ZenohListener(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize ZenohListenerProvider provider
-        listen_topic = getattr(self.config, "listen_topic", None)
+        listen_topic = self.config.listen_topic
         if listen_topic is None:
             listen_topic = "speech"
             # Log the listen_topic being used

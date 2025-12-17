@@ -5,13 +5,42 @@ import time
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_vila_rtsp_provider import VLMVilaRTSPProvider
 
 
-class VLMVilaRTSP(FuserInput[Optional[str]]):
+class VLMVilaRTSPConfig(SensorConfig):
+    """
+    Configuration for VLM Vila RTSP Sensor.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the VLM service.
+    rtsp_url : str
+        RTSP URL for the camera stream.
+    decode_format : str
+        Image decode format (e.g., "H264").
+    """
+
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+    rtsp_url: str = Field(
+        default="rtsp://localhost:8554/top_camera",
+        description="RTSP URL for the camera stream",
+    )
+    decode_format: str = Field(
+        default="H264", description='Image decode format (e.g., "H264")'
+    )
+
+
+class VLMVilaRTSP(FuserInput[VLMVilaRTSPConfig, Optional[str]]):
     """
     Vision Language Model input handler.
 
@@ -23,7 +52,7 @@ class VLMVilaRTSP(FuserInput[Optional[str]]):
     and provides formatted output of the latest processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMVilaRTSPConfig):
         """
         Initialize VLM input handler.
 
@@ -42,9 +71,9 @@ class VLMVilaRTSP(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/top_camera")
-        decode_format = getattr(self.config, "decode_format", "H264")
+        base_url = self.config.base_url
+        rtsp_url = self.config.rtsp_url
+        decode_format = self.config.decode_format
 
         self.vlm: VLMVilaRTSPProvider = VLMVilaRTSPProvider(
             ws_url=base_url, rtsp_url=rtsp_url, decode_format=decode_format
