@@ -7,11 +7,26 @@ from typing import Optional
 import cv2
 import numpy as np
 import torch
+from pydantic import Field
 from torchvision.models import detection as detection_model
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
+
+
+class VLM_COCO_LocalConfig(SensorConfig):
+    """
+    Configuration for Local COCO VLM Sensor.
+
+    Parameters
+    ----------
+    camera_index : int
+        Index of the camera device.
+    """
+
+    camera_index: int = Field(default=0, description="Index of the camera device")
+
 
 Detection = collections.namedtuple("Detection", "label, bbox, score")
 
@@ -31,14 +46,14 @@ def check_webcam(index_to_check):
     return True
 
 
-class VLM_COCO_Local(FuserInput[Optional[np.ndarray]]):
+class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
     """
     Detects COCO objects in image and publishes messages.
     Uses PyTorch and FasterRCNN_MobileNet model from torchvision.
     Bounding Boxes use image convention, ie center.y = 0 means top of image.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLM_COCO_LocalConfig):
         """
         Initialize VLM input handler with empty message buffer.
         """
@@ -47,7 +62,7 @@ class VLM_COCO_Local(FuserInput[Optional[np.ndarray]]):
         self.device = "cpu"
         self.detection_threshold = 0.2
 
-        self.camera_index = getattr(self.config, "camera_index", 0)
+        self.camera_index = self.config.camera_index
 
         # Track IO
         self.io_provider = IOProvider()

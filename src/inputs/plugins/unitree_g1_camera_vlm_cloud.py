@@ -5,13 +5,31 @@ import time
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_realsense_dev_vlm_provider import UnitreeRealSenseDevVLMProvider
 
 
-class UnitreeG1CameraVLMCloud(FuserInput[Optional[str]]):
+class UnitreeG1CameraVLMCloudConfig(SensorConfig):
+    """
+    Configuration for Unitree G1 Camera VLM Cloud Sensor.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the VLM service.
+    """
+
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+
+
+class UnitreeG1CameraVLMCloud(FuserInput[UnitreeG1CameraVLMCloudConfig, Optional[str]]):
     """
     Unitree G1 Camera VLM bridge.
 
@@ -19,7 +37,7 @@ class UnitreeG1CameraVLMCloud(FuserInput[Optional[str]]):
     converts the responses to text strings, and sends them to the fuser.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeG1CameraVLMCloudConfig):
         """
         Initialize VLM input handler.
 
@@ -40,7 +58,7 @@ class UnitreeG1CameraVLMCloud(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
+        base_url = self.config.base_url
         self.vlm: UnitreeRealSenseDevVLMProvider = UnitreeRealSenseDevVLMProvider(
             ws_url=base_url
         )

@@ -9,7 +9,7 @@ from providers.io_provider import IOProvider
 from providers.unitree_go2_amcl_provider import UnitreeGo2AMCLProvider
 
 
-class AMCLLocalizationInput(FuserInput[Optional[str]]):
+class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
     """
     AMCL Localization status input plugin for LLM prompts.
 
@@ -17,7 +17,7 @@ class AMCLLocalizationInput(FuserInput[Optional[str]]):
     clear feedback to the LLM about whether navigation is safe to proceed.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize the LocalizationInput plugin.
 

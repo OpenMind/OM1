@@ -3,13 +3,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from inputs.orchestrator import InputOrchestrator
 
 
-class MockInput(FuserInput[str]):
+class MockInput(FuserInput[SensorConfig, str]):
     def __init__(self):
-        super().__init__()
+        super().__init__(SensorConfig())
         self.poll_count = 0
         self.max_polls = 3
 

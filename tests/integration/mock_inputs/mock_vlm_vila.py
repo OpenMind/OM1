@@ -10,9 +10,8 @@ from typing import List, Optional
 import cv2
 from om1_vlm import VideoStream
 
-from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
-from inputs.plugins.vlm_vila import Message, VLMVila
+from inputs.plugins.vlm_vila import Message, VLMVila, VLMVilaConfig
 from providers.io_provider import IOProvider
 from providers.vlm_vila_provider import VLMVilaProvider
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
@@ -208,13 +207,13 @@ class MockVLM_Vila(VLMVila):
     the mock image provider, while maintaining all the real object detection logic.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMVilaConfig = VLMVilaConfig()):
         """
         Initialize with the real VLM implementation but without opening camera.
 
         Parameters
         ----------
-        config : SensorConfig, optional
+        config : VLMVilaConfig, optional
             Configuration for the sensor
         """
 
