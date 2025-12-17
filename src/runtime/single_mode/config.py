@@ -8,7 +8,7 @@ import json5
 from actions import load_action
 from actions.base import AgentAction
 from backgrounds import load_background
-from backgrounds.base import Background, BackgroundConfig
+from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, LLMConfig, load_llm
@@ -161,12 +161,13 @@ def load_config(
     parsed_config = {
         **raw_config,
         "backgrounds": [
-            load_background(bg["type"])(
-                config=BackgroundConfig(
-                    **add_meta(
+            load_background(
+                {
+                    **bg,
+                    "config": add_meta(
                         bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    )
-                )
+                    ),
+                }
             )
             for bg in raw_config.get("backgrounds", [])
         ],
@@ -286,10 +287,13 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     g_robot_ip = config.get("robot_ip")
 
     backgrounds = [
-        load_background(bg["type"])(
-            config=BackgroundConfig(
-                **add_meta(bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip)
-            )
+        load_background(
+            {
+                **bg,
+                "config": add_meta(
+                    bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
         )
         for bg in config.get("backgrounds", [])
     ]
