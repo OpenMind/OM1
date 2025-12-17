@@ -1,0 +1,4 @@
+mujoco==3.2.3
+numpy==1.26.4
+pydantic==2.9.2
+websockets==13.1
