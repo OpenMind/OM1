@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.plugins.riva_asr import RivaASRInput
+from inputs.plugins.riva_asr import RivaASRInput, RivaASRSensorConfig
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def mock_sleep_ticker():
 
 @pytest.fixture
 def asr_input(mock_asr_provider, mock_sleep_ticker):
-    return RivaASRInput()
+    return RivaASRInput(config=RivaASRSensorConfig())
 
 
 def test_init(asr_input, mock_asr_provider):

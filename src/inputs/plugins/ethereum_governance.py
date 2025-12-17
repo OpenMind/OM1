@@ -16,7 +16,7 @@ from providers.io_provider import IOProvider
 # interact with HOLESKY and decode the data, generating an ASCII string.
 
 
-class GovernanceEthereum(FuserInput[Optional[str]]):
+class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
     """
     Ethereum ERC-7777 reader that tracks governance rules.
 
@@ -103,7 +103,7 @@ class GovernanceEthereum(FuserInput[Optional[str]]):
             logging.error(f"Decoding error: {e}")
             return None
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize GovernanceEthereum instance.
         """

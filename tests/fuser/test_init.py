@@ -9,7 +9,7 @@ from runtime.single_mode.config import RuntimeConfig
 
 
 @dataclass
-class MockSensor(Sensor[Any]):
+class MockSensor(Sensor[SensorConfig, Any]):
     def __init__(self):
         super().__init__(SensorConfig())
 
@@ -69,7 +69,7 @@ def test_fuser_with_inputs_and_actions(mock_describe):
     config = create_mock_config(
         agent_actions=[MockAction("action1"), MockAction("action2")]
     )
-    inputs: list[Sensor[Any]] = [MockSensor()]
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
     io_provider = IOProvider()
 
     with patch("fuser.IOProvider", return_value=io_provider):
