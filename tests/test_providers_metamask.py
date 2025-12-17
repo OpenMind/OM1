@@ -11,7 +11,7 @@ def test_metamask_provider_connect():
 def test_metamask_verify_signature(monkeypatch):
     # stub Account.recover_message to return same address
     monkeypatch.setattr(
-        "providers.metamask.Account",
+        "src.providers.metamask_provider.Account",
         type(
             "A",
             (),
