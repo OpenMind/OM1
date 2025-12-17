@@ -224,13 +224,13 @@ class LLMHistoryManager:
                 cycle = self.history_manager.frame_index
                 logging.debug(f"LLM Tasking cycle debug tracker: {cycle}")
 
+                current_tick = self.io_provider.tick_counter
                 formatted_inputs = f"{self.agent_name} sensed the following: "
                 for input_type, input_info in self.io_provider.inputs.items():
-                    logging.debug(f"LLM: {input_type}")
-                    logging.debug(f"LLM: {input_info}")
-                    formatted_inputs += f"{input_type}. {input_info.input} | "
-
-                # formatted_inputs = f"**** sensed the following: {" | ".join(f"{input_type}: {input_info.input}" for input_type, input_info in self.io_provider.inputs.items())}"
+                    if input_info.tick == current_tick:
+                        logging.debug(f"LLM: {input_type} (tick #{input_info.tick})")
+                        logging.debug(f"LLM: {input_info}")
+                        formatted_inputs += f"{input_type}. {input_info.input} | "
 
                 formatted_inputs = formatted_inputs.replace("..", ".")
                 formatted_inputs = formatted_inputs.replace("  ", " ")
@@ -264,7 +264,7 @@ class LLMHistoryManager:
                     action_message = action_message.replace("****", self.agent_name)
 
                     self.history_manager.history.append(
-                        ChatMessage(role="user", content=action_message)
+                        ChatMessage(role="assistant", content=action_message)
                     )
 
                     if (

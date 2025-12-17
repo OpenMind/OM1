@@ -6,12 +6,30 @@ import time
 from typing import List, Optional
 
 import cv2
+from pydantic import Field
 from ultralytics import YOLO
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.odom_provider import OdomProvider
+
+
+class VLM_Local_YOLOConfig(SensorConfig):
+    """
+    Configuration for Local YOLO VLM Sensor.
+
+    Parameters
+    ----------
+    camera_index : int
+        Index of the camera device.
+    log_file : bool
+        Whether to enable file logging.
+    """
+
+    camera_index: int = Field(default=0, description="Index of the camera device")
+    log_file: bool = Field(default=False, description="Whether to enable file logging")
+
 
 # Common resolutions to test (width, height), ordered high to low
 RESOLUTIONS = [
@@ -63,16 +81,16 @@ def check_webcam(index_to_check):
     return width, height
 
 
-class VLM_Local_YOLO(FuserInput[Optional[List]]):
+class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
     """ """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLM_Local_YOLOConfig):
         """
         Initialize VLM input handler with empty message buffer.
         """
         super().__init__(config)
 
-        self.camera_index = getattr(self.config, "camera_index", 0)
+        self.camera_index = self.config.camera_index
 
         # Track IO
         self.io_provider = IOProvider()
@@ -87,8 +105,8 @@ class VLM_Local_YOLO(FuserInput[Optional[List]]):
         self.model = YOLO("yolov8n_aug.pt")
 
         self.write_to_local_file = False
-        if getattr(self.config, "log_file", None):
-            self.write_to_local_file = getattr(self.config, "log_file", False)
+        if self.config.log_file:
+            self.write_to_local_file = self.config.log_file
 
         self.filename_current = None
         self.max_file_size_bytes = 1024 * 1024

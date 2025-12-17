@@ -5,13 +5,42 @@ import time
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.turtlebot4_camera_vlm_provider import TurtleBot4CameraVLMProvider
 
 
-class TurtleBot4CameraVLMCloud(FuserInput[Optional[str]]):
+class TurtleBot4CameraVLMCloudConfig(SensorConfig):
+    """
+    Configuration for TurtleBot4 Camera VLM Cloud Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    base_url : str
+        Base URL for the VLM service.
+    stream_base_url : Optional[str]
+        Stream Base URL.
+    URID : str
+        URID (Unitree ID).
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
+    URID: str = Field(default="default", description="URID (Unitree ID)")
+
+
+class TurtleBot4CameraVLMCloud(
+    FuserInput[TurtleBot4CameraVLMCloudConfig, Optional[str]]
+):
     """
     TurtleBot4 Camera VLM bridge.
 
@@ -19,7 +48,7 @@ class TurtleBot4CameraVLMCloud(FuserInput[Optional[str]]):
     converts the responses to text strings, and sends them to the fuser.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: TurtleBot4CameraVLMCloudConfig):
         """
         Initialize VLM input handler.
 
@@ -40,15 +69,14 @@ class TurtleBot4CameraVLMCloud(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        stream_base_url = getattr(
-            self.config,
-            "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}",
+        base_url = self.config.base_url
+        stream_base_url = (
+            self.config.stream_base_url
+            or f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}"
         )
-        URID = getattr(self.config, "URID", "default")
+        URID = self.config.URID
 
         self.vlm: TurtleBot4CameraVLMProvider = TurtleBot4CameraVLMProvider(
             ws_url=base_url, URID=URID, stream_url=stream_base_url

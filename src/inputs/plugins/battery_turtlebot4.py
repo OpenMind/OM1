@@ -4,6 +4,7 @@ import time
 from typing import List, Optional
 
 import zenoh
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -11,7 +12,23 @@ from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusPro
 from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 
-class TurtleBot4Battery(FuserInput[List[str]]):
+class TurtleBot4BatteryConfig(SensorConfig):
+    """
+    Configuration for TurtleBot4 battery sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    URID : str
+        URID.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    URID: str = Field(default="default", description="URID")
+
+
+class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
     """
     TurtleBot4 Battery inputs.
 
@@ -21,10 +38,10 @@ class TurtleBot4Battery(FuserInput[List[str]]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: TurtleBot4BatteryConfig):
         super().__init__(config)
 
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()
@@ -50,7 +67,7 @@ class TurtleBot4Battery(FuserInput[List[str]]):
 
         logging.info(f"Config: {self.config}")
 
-        self.URID = getattr(self.config, "URID", "default")
+        self.URID = self.config.URID
         logging.info(f"Using TurtleBot4 URID: {self.URID}")
 
         logging.info("Creating Zenoh TurtleBot4 Subscribers")
