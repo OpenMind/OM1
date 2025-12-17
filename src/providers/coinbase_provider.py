@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from .base import ProviderBase
 
@@ -15,9 +15,9 @@ class CoinbaseProvider(ProviderBase):
 
     def __init__(self, wallet_id: Optional[str] = None):
         self.wallet_id = wallet_id or os.environ.get("COINBASE_WALLET_ID")
-        self.wallet = None
+        self.wallet: Any = None
         self._configured = False
-        self._Wallet = None  # reference to Wallet class after init()
+        self._Wallet: Optional[Any] = None  # reference to Wallet class after init()
 
     def init(self, config: Optional[dict] = None) -> None:
         """
@@ -35,8 +35,10 @@ class CoinbaseProvider(ProviderBase):
 
         api_key = os.environ.get("COINBASE_API_KEY")
         api_secret = os.environ.get("COINBASE_API_SECRET")
+
         if not api_key or not api_secret:
             raise RuntimeError("COINBASE_API_KEY/COINBASE_API_SECRET not set")
+
         Cdp.configure(api_key, api_secret)
         self._configured = True
         self._Wallet = Wallet
@@ -48,9 +50,15 @@ class CoinbaseProvider(ProviderBase):
         if not self._configured:
             logging.error("CoinbaseProvider: init() not called")
             return False
+
         if not self.wallet_id:
             logging.error("CoinbaseProvider: COINBASE_WALLET_ID not set")
             return False
+
+        if self._Wallet is None:
+            logging.error("CoinbaseProvider: Wallet class not loaded")
+            return False
+
         try:
             # use stored Wallet class reference from init()
             self.wallet = self._Wallet.fetch(self.wallet_id)
@@ -58,6 +66,7 @@ class CoinbaseProvider(ProviderBase):
             return True
         except Exception as e:
             logging.error(f"CoinbaseProvider.connect error: {e}")
+            return False
             return False
 
     def disconnect(self) -> None:
