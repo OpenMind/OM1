@@ -1,7 +1,10 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
 class Action(BaseModel):
+    force: Optional[float] = None
     """
     Executable action with its argument.
 

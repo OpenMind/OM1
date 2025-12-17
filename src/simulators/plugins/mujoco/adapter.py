@@ -16,7 +16,7 @@ class HTTPAdapter:
     class Handler(BaseHTTPRequestHandler):
         """HTTP request handler"""
 
-        ws_url = None  # Will be set by outer class
+        ws_url: str | None = None  # Will be set by outer class
 
         def _send(self, code, payload):
             self.send_response(code)
@@ -35,8 +35,12 @@ class HTTPAdapter:
                 j2 = float(data.get("j2", 0))
                 steps = int(data.get("steps", 200))
 
+                if self.ws_url is None:
+                    raise ValueError("WebSocket URL not set")
+                ws_url: str = self.ws_url
+
                 async def go():
-                    async with websockets.connect(self.ws_url) as ws:
+                    async with websockets.connect(ws_url) as ws:
                         await ws.send(json.dumps({"op": "reset"}))
                         await ws.recv()
                         await ws.send(

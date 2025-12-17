@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import mujoco
 import numpy as np
+
+from ._mujoco_typing import MjData, MjModel, mj_name2id, mj_resetData, mj_step, mjtObj
 
 
 @dataclass
@@ -11,11 +12,11 @@ class MJEnv:
     model_path: str
 
     def __post_init__(self):
-        self.model = mujoco.MjModel.from_xml_path(self.model_path)
-        self.data = mujoco.MjData(self.model)
+        self.model = MjModel.from_xml_path(self.model_path)
+        self.data = MjData(self.model)
 
     def reset(self):
-        mujoco.mj_resetData(self.model, self.data)
+        mj_resetData(self.model, self.data)
         return self._obs()
 
     def set_target_qpos(self, target: dict):
@@ -23,7 +24,7 @@ class MJEnv:
         target contoh: {"j1": 15, "j2": -30}  # derajat
         """
         for name, deg in target.items():
-            j_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, name)
+            j_id = mj_name2id(self.model, mjtObj.mjOBJ_JOINT, name)
             a_id = self._actuator_for_joint(j_id)
             if a_id >= 0:
                 self.data.ctrl[a_id] = np.deg2rad(float(deg))
@@ -31,7 +32,7 @@ class MJEnv:
     def step(self, n: int = 1):
         n = int(n)
         for _ in range(n):
-            mujoco.mj_step(self.model, self.data)
+            mj_step(self.model, self.data)
         return self._obs()
 
     def _actuator_for_joint(self, joint_id: int) -> int:
