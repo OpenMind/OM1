@@ -487,6 +487,10 @@ class CortexRuntime:
                 logging.debug("Skipping tick during config reload")
                 return
 
+            # Increment the tick counter at the start of each cycle
+            tick_num = self.io_provider.increment_tick()
+            logging.debug(f"Processing tick #{tick_num}")
+
             # collect all the latest inputs
             finished_promises, _ = await self.action_orchestrator.flush_promises()
 
