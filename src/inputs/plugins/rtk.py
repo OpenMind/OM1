@@ -10,12 +10,12 @@ from providers.io_provider import IOProvider
 from providers.rtk_provider import RtkProvider
 
 
-class Rtk(FuserInput[Optional[dict]]):
+class Rtk(FuserInput[SensorConfig, Optional[dict]]):
     """
     Reads RTK data from RTK provider.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         super().__init__(config)
 
         self.rtk = RtkProvider()

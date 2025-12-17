@@ -5,7 +5,7 @@ import os
 import re
 import typing as T
 
-from inputs.base import Sensor
+from inputs.base import Sensor, SensorConfig
 
 
 def find_module_with_class(class_name: str) -> T.Optional[str]:
@@ -50,20 +50,20 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     return None
 
 
-def load_input(class_name: str) -> T.Type[Sensor]:
+def load_input(input_config: T.Dict[str, T.Any]) -> Sensor:
     """
-    Load an input class by its class name.
+    Load an input and configuration.
 
     Parameters
     ----------
-    class_name : str
-        The exact class name
+    input_config : dict
 
     Returns
     -------
-    T.Type[Sensor]
-        The sensor class
+    Sensor
+        The instantiated sensor
     """
+    class_name = input_config["type"]
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
@@ -80,8 +80,27 @@ def load_input(class_name: str) -> T.Type[Sensor]:
         ):
             raise ValueError(f"'{class_name}' is not a valid input subclass")
 
+        config_class = None
+        for _, obj in module.__dict__.items():
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, SensorConfig)
+                and obj != SensorConfig
+            ):
+                config_class = obj
+
+        config_dict = input_config.get("config", {})
+        if config_class is not None:
+            config = config_class(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+        else:
+            config = SensorConfig(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+
         logging.debug(f"Loaded input {class_name} from {module_name}.py")
-        return input_class
+        return input_class(config=config)
 
     except ImportError as e:
         raise ValueError(f"Could not import input module '{module_name}': {e}")

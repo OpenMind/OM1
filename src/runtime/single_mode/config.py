@@ -10,7 +10,7 @@ from actions.base import AgentAction
 from backgrounds import load_background
 from backgrounds.base import Background, BackgroundConfig
 from inputs import load_input
-from inputs.base import Sensor, SensorConfig
+from inputs.base import Sensor
 from llm import LLM, LLMConfig, load_llm
 from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
@@ -171,12 +171,13 @@ def load_config(
             for bg in raw_config.get("backgrounds", [])
         ],
         "agent_inputs": [
-            load_input(input["type"])(
-                config=SensorConfig(
-                    **add_meta(
+            load_input(
+                {
+                    **input,
+                    "config": add_meta(
                         input.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    )
-                )
+                    ),
+                }
             )
             for input in raw_config.get("agent_inputs", [])
         ],
@@ -293,10 +294,13 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         for bg in config.get("backgrounds", [])
     ]
     agent_inputs = [
-        load_input(inp["type"])(
-            config=SensorConfig(
-                **add_meta(inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip)
-            )
+        load_input(
+            {
+                **inp,
+                "config": add_meta(
+                    inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
         )
         for inp in config.get("agent_inputs", [])
     ]

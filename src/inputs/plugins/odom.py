@@ -4,13 +4,38 @@ import time
 from queue import Empty, Queue
 from typing import List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.odom_provider import OdomProvider, RobotState
 
 
-class Odom(FuserInput[Optional[dict]]):
+class OdomConfig(SensorConfig):
+    """
+    Configuration for Odom Sensor.
+
+    Parameters
+    ----------
+    use_zenoh : bool
+        Whether to use Zenoh for odometry.
+    URID : str
+        URID (Unitree ID).
+    unitree_ethernet : Optional[str]
+        Ethernet channel for Unitree odometry.
+    """
+
+    use_zenoh: bool = Field(
+        default=False, description="Whether to use Zenoh for odometry"
+    )
+    URID: str = Field(default="", description="URID (Unitree ID)")
+    unitree_ethernet: Optional[str] = Field(
+        default=None, description="Ethernet channel for Unitree odometry"
+    )
+
+
+class Odom(FuserInput[OdomConfig, Optional[dict]]):
     """
     Odom input handler.
 
@@ -18,7 +43,7 @@ class Odom(FuserInput[Optional[dict]]):
     It maintains an internal buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: OdomConfig):
         super().__init__(config)
 
         # Track IO
@@ -32,9 +57,9 @@ class Odom(FuserInput[Optional[dict]]):
 
         logging.info(f"Config: {self.config}")
 
-        use_zenoh = getattr(self.config, "use_zenoh", False)
-        self.URID = getattr(config, "URID", "")
-        unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        use_zenoh = self.config.use_zenoh
+        self.URID = self.config.URID
+        unitree_ethernet = self.config.unitree_ethernet
         if use_zenoh:
             # probably a turtlebot
             logging.info(f"Odom using Zenoh and URID: {self.URID}")

@@ -11,7 +11,7 @@ from actions.base import AgentAction
 from backgrounds import load_background
 from backgrounds.base import Background, BackgroundConfig
 from inputs import load_input
-from inputs.base import Sensor, SensorConfig
+from inputs.base import Sensor
 from llm import LLM, LLMConfig, load_llm
 from runtime.multi_mode.hook import (
     LifecycleHook,
@@ -406,17 +406,18 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
 
     # Load inputs
     mode_config.agent_inputs = [
-        load_input(inp["type"])(
-            config=SensorConfig(
-                **add_meta(
+        load_input(
+            {
+                **inp,
+                "config": add_meta(
                     inp.get("config", {}),
                     g_api_key,
                     g_ut_eth,
                     g_URID,
                     g_robot_ip,
                     g_mode,
-                )
-            )
+                ),
+            }
         )
         for inp in mode_config._raw_inputs
     ]
