@@ -1,28 +1,45 @@
 import json
 import logging
 
+from pydantic import Field
+
 from backgrounds.base import Background, BackgroundConfig
 from providers.unitree_go2_frontier_exploration import (
     UnitreeGo2FrontierExplorationProvider,
 )
 
 
-class UnitreeGo2FrontierExploration(Background):
+class UnitreeGo2FrontierExplorationConfig(BackgroundConfig):
+    """
+    Configuration for Unitree Go2 Frontier Exploration Background.
+
+    Parameters
+    ----------
+    topic : str
+        Topic for exploration status.
+    context_aware_text : str
+        Context aware text as JSON string.
+    """
+
+    topic: str = Field(
+        default="explore/status", description="Topic for exploration status"
+    )
+    context_aware_text: str = Field(
+        default='{"exploration_done": true}',
+        description="Context aware text as JSON string",
+    )
+
+
+class UnitreeGo2FrontierExploration(Background[UnitreeGo2FrontierExplorationConfig]):
     """
     Start Frontier Exploration from UnitreeGo2FrontierExplorationProvider.
     """
 
-    def __init__(self, config: BackgroundConfig = BackgroundConfig()):
+    def __init__(self, config: UnitreeGo2FrontierExplorationConfig):
         super().__init__(config)
 
-        topic = getattr(
-            self.config,
-            "topic",
-            "explore/status",
-        )
-        context_aware_text = getattr(
-            self.config, "context_aware_text", json.dumps({"exploration_done": True})
-        )
+        topic = self.config.topic
+        context_aware_text = self.config.context_aware_text
 
         try:
             context_aware_text = json.loads(context_aware_text)

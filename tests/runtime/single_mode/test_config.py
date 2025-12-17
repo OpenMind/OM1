@@ -141,7 +141,7 @@ def test_load_config(mock_config_data, mock_dependencies):
         patch("builtins.open", mock_open(read_data=json5.dumps(mock_config_data))),
         patch(
             "runtime.single_mode.config.load_input",
-            return_value=mock_dependencies["input"],
+            return_value=mock_dependencies["input"](),
         ),
         patch(
             "runtime.single_mode.config.load_action",
@@ -168,8 +168,6 @@ def test_load_config(mock_config_data, mock_dependencies):
         assert config.api_key == mock_config_data["api_key"]
         assert len(config.agent_inputs) == 1
         assert isinstance(config.agent_inputs[0], mock_dependencies["input"])
-        api_key = getattr(config.agent_inputs[0].config, "api_key", None)
-        assert api_key == mock_config_data["api_key"]
         assert isinstance(config.cortex_llm, mock_dependencies["llm"])
         assert len(config.simulators) == 1
         assert isinstance(config.simulators[0], mock_dependencies["simulator"])
@@ -186,7 +184,7 @@ def test_load_empty_config(mock_empty_config_data, mock_dependencies):
         ),
         patch(
             "runtime.single_mode.config.load_input",
-            return_value=mock_dependencies["input"],
+            return_value=mock_dependencies["input"](),
         ),
         patch(
             "runtime.single_mode.config.load_action",
@@ -223,7 +221,7 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
         ),
         patch(
             "runtime.single_mode.config.load_input",
-            return_value=mock_dependencies["input"],
+            return_value=mock_dependencies["input"](),
         ),
         patch(
             "runtime.single_mode.config.load_action",

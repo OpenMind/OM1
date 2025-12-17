@@ -5,20 +5,51 @@ from queue import Queue
 from typing import List, Optional
 
 from dimo import DIMO
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class DIMOTesla(FuserInput[Optional[str]]):
+class DIMOTeslaConfig(SensorConfig):
+    """
+    Configuration for DIMO Tesla input.
+
+    Parameters
+    ----------
+    client_id : Optional[str]
+        Client ID for DIMO authentication.
+    domain : Optional[str]
+        Domain for DIMO authentication redirect.
+    private_key : Optional[str]
+        Private Key for DIMO authentication.
+    token_id : Optional[int]
+        Token ID for the specific vehicle/device.
+    """
+
+    client_id: Optional[str] = Field(
+        default=None, description="Client ID for DIMO authentication"
+    )
+    domain: Optional[str] = Field(
+        default=None, description="Domain for DIMO authentication redirect"
+    )
+    private_key: Optional[str] = Field(
+        default=None, description="Private Key for DIMO authentication"
+    )
+    token_id: Optional[int] = Field(
+        default=None, description="Token ID for the specific vehicle/device"
+    )
+
+
+class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
     """
     DIMO Tesla input handler.
 
     A class that process Tesla data and generates text descriptions
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: DIMOTeslaConfig):
         """
         Initialize DIMO Tesla input handler.
 
@@ -43,9 +74,9 @@ class DIMOTesla(FuserInput[Optional[str]]):
         self.vehicle_jwt = None
 
         # Configure the DIMO Tesla service
-        client_id = getattr(config, "client_id", None)
-        domain = getattr(config, "domain", None)
-        private_key = getattr(config, "private_key", None)
+        client_id = self.config.client_id
+        domain = self.config.domain
+        private_key = self.config.private_key
 
         if (
             client_id is None
@@ -58,7 +89,7 @@ class DIMOTesla(FuserInput[Optional[str]]):
             )
             return
 
-        self.token_id = getattr(config, "token_id", None)
+        self.token_id = self.config.token_id
         if self.token_id is None:
             logging.info("DIMOTesla: You did not provide a token_id - aborting")
             return

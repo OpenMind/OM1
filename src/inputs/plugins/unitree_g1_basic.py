@@ -3,6 +3,8 @@ import logging
 import time
 from typing import List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
@@ -51,7 +53,25 @@ except ImportError:
 #     wireless_remote: types.array[types.uint8, 40]
 
 
-class UnitreeG1Basic(FuserInput[List[float]]):
+class UnitreeG1BasicConfig(SensorConfig):
+    """
+    Configuration for Unitree G1 Basic Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    unitree_ethernet : Optional[str]
+        Unitree Ethernet Interface.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    unitree_ethernet: Optional[str] = Field(
+        default=None, description="Unitree Ethernet Interface"
+    )
+
+
+class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
     """
     Unitree G1 Basic Functionality.
 
@@ -64,13 +84,13 @@ class UnitreeG1Basic(FuserInput[List[float]]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeG1BasicConfig):
         """
         Initialize Unitree bridge with empty message buffer.
         """
         super().__init__(config)
 
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()
@@ -86,7 +106,7 @@ class UnitreeG1Basic(FuserInput[List[float]]):
         self.lowstate_subscriber = None
         self.bmsstate_subscriber = None
 
-        unitree_ethernet = getattr(self.config, "unitree_ethernet", None)
+        unitree_ethernet = self.config.unitree_ethernet
         logging.info(f"UnitreeG1Basic using ethernet: {unitree_ethernet}")
 
         # Joint angles e.g.

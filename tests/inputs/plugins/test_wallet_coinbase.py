@@ -14,8 +14,7 @@ if "providers.io_provider" not in sys.modules:
     sys.modules["providers.io_provider"] = MagicMock()
     sys.modules["src.providers.io_provider"] = sys.modules["providers.io_provider"]
 
-from inputs.base import SensorConfig
-from inputs.plugins.wallet_coinbase import Message, WalletCoinbase
+from inputs.plugins.wallet_coinbase import Message, WalletCoinbase, WalletCoinbaseConfig
 
 
 class TestWalletCoinbase:
@@ -24,7 +23,7 @@ class TestWalletCoinbase:
     def test_initialization_with_missing_wallet_id(self):
         """Missing COINBASE_WALLET_ID should fall back to a safe zero state."""
         with patch.dict(os.environ, {}, clear=True):
-            wallet = WalletCoinbase()
+            wallet = WalletCoinbase(config=WalletCoinbaseConfig())
             assert wallet.wallet is None
             assert wallet.balance == 0.0
             assert wallet.balance_previous == 0.0
@@ -42,7 +41,7 @@ class TestWalletCoinbase:
                 with patch("inputs.plugins.wallet_coinbase.Wallet.fetch") as mock_fetch:
                     mock_fetch.side_effect = Exception("Network error")
 
-                    wallet = WalletCoinbase()
+                    wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
                     assert wallet.wallet is None
                     assert wallet.balance == 0.0
@@ -66,7 +65,7 @@ class TestWalletCoinbase:
                     "inputs.plugins.wallet_coinbase.Wallet.fetch",
                     return_value=mock_wallet,
                 ):
-                    wallet = WalletCoinbase()
+                    wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
                     assert wallet.wallet == mock_wallet
                     assert wallet.asset_id == "eth"
@@ -81,8 +80,7 @@ class TestWalletCoinbase:
         mock_wallet = MagicMock()
         mock_wallet.balance.return_value = "100.0"
 
-        config = SensorConfig()
-        config.__dict__.update({"asset_id": "btc"})
+        config = WalletCoinbaseConfig(asset_id="btc")
 
         env = {
             "COINBASE_WALLET_ID": "test_wallet_id",
@@ -123,7 +121,7 @@ class TestWalletCoinbase:
                     "inputs.plugins.wallet_coinbase.Wallet.fetch",
                     return_value=mock_wallet,
                 ):
-                    wallet = WalletCoinbase()
+                    wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
                     assert wallet.wallet == mock_wallet
                     assert wallet.balance == 3.0
@@ -144,7 +142,7 @@ class TestWalletCoinbase:
                 with patch("inputs.plugins.wallet_coinbase.Wallet.fetch") as mock_fetch:
                     mock_fetch.side_effect = Exception("Network error")
 
-                    wallet = WalletCoinbase()
+                    wallet = WalletCoinbase(config=WalletCoinbaseConfig())
                     # Avoid real sleep
                     with patch(
                         "inputs.plugins.wallet_coinbase.asyncio.sleep",
@@ -172,7 +170,7 @@ class TestWalletCoinbase:
                     "inputs.plugins.wallet_coinbase.Wallet.fetch",
                     return_value=mock_wallet,
                 ):
-                    wallet = WalletCoinbase()
+                    wallet = WalletCoinbase(config=WalletCoinbaseConfig())
                     wallet.balance_previous = 1.5
 
                     with patch(
@@ -188,7 +186,7 @@ class TestWalletCoinbase:
     async def test_raw_to_text_positive_balance_change(self):
         """_raw_to_text should return Message for positive deltas."""
         with patch.dict(os.environ, {}, clear=True):
-            wallet = WalletCoinbase()
+            wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
         raw_input = [2.0, 0.5]
 
@@ -204,7 +202,7 @@ class TestWalletCoinbase:
     async def test_raw_to_text_zero_balance_change(self):
         """_raw_to_text should return None for zero deltas."""
         with patch.dict(os.environ, {}, clear=True):
-            wallet = WalletCoinbase()
+            wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
         raw_input = [2.0, 0.0]
         result = await wallet._raw_to_text(raw_input)
@@ -215,7 +213,7 @@ class TestWalletCoinbase:
     async def test_raw_to_text_negative_balance_change(self):
         """_raw_to_text should return None for negative deltas."""
         with patch.dict(os.environ, {}, clear=True):
-            wallet = WalletCoinbase()
+            wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
         raw_input = [2.0, -0.1]
         result = await wallet._raw_to_text(raw_input)
@@ -225,7 +223,7 @@ class TestWalletCoinbase:
     def test_formatted_latest_buffer_with_multiple_transactions(self):
         """formatted_latest_buffer should sum messages, write IO, and clear buffer."""
         with patch.dict(os.environ, {}, clear=True):
-            wallet = WalletCoinbase()
+            wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
         wallet.io_provider = MagicMock()
 
@@ -246,8 +244,7 @@ class TestWalletCoinbase:
 
     def test_formatted_latest_buffer_with_custom_asset_symbol(self):
         """Custom asset should appear in upper-case in formatted output."""
-        config = SensorConfig()
-        config.__dict__.update({"asset_id": "btc"})
+        config = WalletCoinbaseConfig(asset_id="btc")
 
         env = {
             "COINBASE_WALLET_ID": "test_wallet_id",
@@ -283,7 +280,7 @@ class TestWalletCoinbase:
     def test_formatted_latest_buffer_with_empty_buffer(self):
         """Empty buffer should return None."""
         with patch.dict(os.environ, {}, clear=True):
-            wallet = WalletCoinbase()
+            wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
         result = wallet.formatted_latest_buffer()
         assert result is None

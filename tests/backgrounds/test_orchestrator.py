@@ -19,8 +19,10 @@ class MockBackground(Background):
 @pytest.fixture
 def mock_background():
     config = Mock(spec=BackgroundConfig)
-    background1 = MockBackground(config=BackgroundConfig(name="bg1"))
-    background2 = MockBackground(config=BackgroundConfig(name="bg2"))
+    background1 = MockBackground(config=BackgroundConfig())
+    background1.name = "bg1"
+    background2 = MockBackground(config=BackgroundConfig())
+    background2.name = "bg2"
     config.backgrounds = [background1, background2]
     return config
 
