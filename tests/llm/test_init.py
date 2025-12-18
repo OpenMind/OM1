@@ -66,7 +66,7 @@ def test_load_llm_mock_implementation():
     ):
         mock_find_module.return_value = "mock_llm"
         mock_module = types.ModuleType("mock_llm")
-        mock_module.MockLLM = MockLLM
+        setattr(mock_module, "MockLLM", MockLLM)
         mock_import.return_value = mock_module
 
         result = load_llm({"type": "MockLLM"})
@@ -100,7 +100,7 @@ def test_load_llm_invalid_type():
             pass
 
         mock_module = types.ModuleType("invalid_llm")
-        mock_module.InvalidLLM = InvalidLLM
+        setattr(mock_module, "InvalidLLM", InvalidLLM)
         mock_import.return_value = mock_module
 
         with pytest.raises(

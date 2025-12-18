@@ -20,7 +20,7 @@ def test_load_simulator_success():
     ):
         mock_find_module.return_value = "mock_simulator"
         mock_module = types.ModuleType("mock_simulator")
-        mock_module.MockSimulator = MockSimulator
+        setattr(mock_module, "MockSimulator", MockSimulator)
         mock_import.return_value = mock_module
 
         result = load_simulator({"type": "MockSimulator"})
@@ -51,7 +51,7 @@ def test_load_simulator_multiple_plugins():
         mock_find_module.return_value = "sim2"
         Simulator2 = type("Simulator2", (Simulator,), {})
         mock_module2 = types.ModuleType("sim2")
-        mock_module2.Simulator2 = Simulator2
+        setattr(mock_module2, "Simulator2", Simulator2)
         mock_import.return_value = mock_module2
 
         result = load_simulator({"type": "Simulator2"})
@@ -74,7 +74,7 @@ def test_load_simulator_invalid_type():
             pass
 
         mock_module = types.ModuleType("invalid_simulator")
-        mock_module.InvalidSimulator = InvalidSimulator
+        setattr(mock_module, "InvalidSimulator", InvalidSimulator)
         mock_import.return_value = mock_module
 
         with pytest.raises(
