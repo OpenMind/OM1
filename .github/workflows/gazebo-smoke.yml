@@ -1,0 +1,14 @@
+name: Gazebo Smoke Test
+on:
+  push: { branches: [ main, feat/**, fix/**, chore/** ] }
+  pull_request: { branches: [ main ] }
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker --version
+      - run: docker run --rm osrf/gazebo:classic gazebo --version
+      - run: |
+          docker run --rm -v "$PWD":/ws -w /ws osrf/gazebo:classic bash -lc \
+            "gazebo --version && gazebo -r --seed 12345 worlds/bounty363.world --pause & pid=\$!; sleep 3; kill \$pid || true"
