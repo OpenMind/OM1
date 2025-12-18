@@ -48,6 +48,49 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     return None
 
 
+def get_simulator_class(class_name: str) -> T.Type[Simulator]:
+    """
+    Get a Simulator class by its class name.
+
+    Parameters
+    ----------
+    class_name : str
+        The exact class name
+
+    Returns
+    -------
+    T.Type[Simulator]
+        The Simulator class
+    """
+    module_name = find_module_with_class(class_name)
+
+    if module_name is None:
+        raise ValueError(
+            f"Class '{class_name}' not found in any simulator plugin module"
+        )
+
+    try:
+        module = importlib.import_module(f"simulators.plugins.{module_name}")
+        simulator_class = getattr(module, class_name)
+
+        if not (
+            inspect.isclass(simulator_class)
+            and issubclass(simulator_class, Simulator)
+            and simulator_class != Simulator
+        ):
+            raise ValueError(f"'{class_name}' is not a valid Simulator subclass")
+
+        logging.debug(f"Got Simulator class {class_name} from {module_name}.py")
+        return simulator_class
+
+    except ImportError as e:
+        raise ValueError(f"Could not import simulator module '{module_name}': {e}")
+    except AttributeError:
+        raise ValueError(
+            f"Class '{class_name}' not found in simulator module '{module_name}'"
+        )
+
+
 def load_simulator(simulator_config: T.Dict[str, T.Any]) -> Simulator:
     """
     Load a Simulator instance with its configuration.

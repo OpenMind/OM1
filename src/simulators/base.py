@@ -33,7 +33,7 @@ class Simulator:
             Configuration object for the simulator
         """
         self.config = config
-        self.name = getattr(config, "name", "Simulator")
+        self.name = config.name or "Simulator"
 
     def sim(self, actions: List[Action]) -> None:
         """

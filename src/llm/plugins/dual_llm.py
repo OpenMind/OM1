@@ -101,6 +101,8 @@ class DualLLM(LLM[R]):
     ):
         super().__init__(config, available_actions)
 
+        self._config: DualLLMConfig
+
         local_type = self._config.local_llm_type
         local_cfg = self._config.local_llm_config.copy()
         cloud_type = self._config.cloud_llm_type

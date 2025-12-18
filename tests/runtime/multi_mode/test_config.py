@@ -291,10 +291,10 @@ class TestLoadModeComponents:
     ):
         """Test loading all component types."""
         mock_load_input.return_value = mock_sensor
-        mock_load_simulator.return_value = lambda config: mock_simulator
+        mock_load_simulator.return_value = mock_simulator
         mock_load_action.return_value = mock_action
         mock_load_background.return_value = mock_background
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_inputs = [{"type": "test_input", "config": {}}]
         sample_mode_config._raw_simulators = [{"type": "test_simulator", "config": {}}]
@@ -325,7 +325,7 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading components with global LLM configuration."""
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_llm = None
         sample_system_config.global_cortex_llm = {"type": "global_llm", "config": {}}
@@ -333,7 +333,7 @@ class TestLoadModeComponents:
         _load_mode_components(sample_mode_config, sample_system_config)
 
         assert sample_mode_config.cortex_llm == mock_llm
-        mock_load_llm.assert_called_once_with("global_llm")
+        mock_load_llm.assert_called_once()
 
     def test_load_mode_components_no_llm_raises_error(
         self,
