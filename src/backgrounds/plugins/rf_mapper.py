@@ -2,10 +2,11 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from bleak import BleakScanner
 from bleak.backends.scanner import AdvertisementData
+from pydantic import Field
 
 from backgrounds.base import Background, BackgroundConfig
 from providers.fabric_map_provider import (
@@ -19,28 +20,52 @@ from providers.odom_provider import OdomProvider
 from providers.rtk_provider import RtkProvider
 
 
-class RFmapper(Background):
+class RFmapperConfig(BackgroundConfig):
+    """
+    Configuration for RFmapper Background.
+
+    Parameters
+    ----------
+    name : str
+        Name of the RF mapper.
+    api_key : Optional[str]
+        API key for Fabric.
+    URID : Optional[str]
+        Unique Robot ID.
+    unitree_ethernet : Optional[str]
+        Unitree Ethernet channel.
+    """
+
+    name: str = Field(default="RFmapper", description="Name of the RF mapper")
+    api_key: Optional[str] = Field(default=None, description="API key")
+    URID: Optional[str] = Field(default=None, description="Unique Robot ID")
+    unitree_ethernet: Optional[str] = Field(
+        default=None, description="Unitree Ethernet channel"
+    )
+
+
+class RFmapper(Background[RFmapperConfig]):
     """
     Assemble location and BLE data.
     """
 
-    def __init__(self, config: BackgroundConfig = BackgroundConfig()):
+    def __init__(self, config: RFmapperConfig):
         """
         Initialize the RFmapper with configuration.
 
         Parameters
         ----------
-        config : BackgroundConfig
+        config : RFmapperConfig
             Configuration object for the background.
         """
         super().__init__(config)
 
         logging.info(f"Mapper config: {config}")
 
-        self.name = getattr(config, "name", "RFmapper")
-        self.api_key = getattr(config, "api_key", None)
-        self.URID = getattr(config, "URID", None)
-        self.unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        self.name = self.config.name
+        self.api_key = self.config.api_key
+        self.URID = self.config.URID
+        self.unitree_ethernet = self.config.unitree_ethernet
 
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._scan_task)
