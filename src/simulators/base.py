@@ -1,25 +1,21 @@
 import time
-from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from llm.output_model import Action
 
 
-@dataclass
-class SimulatorConfig:
+class SimulatorConfig(BaseModel):
     """
     Configuration class for Simulator implementations.
-
-    Parameters
-    ----------
-    **kwargs : dict
-        Additional configuration parameters
     """
 
-    def __init__(self, **kwargs):
-        # Store any config parameters
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    model_config = ConfigDict(extra="allow")
+
+    name: Optional[str] = Field(default=None, description="Name of the simulator")
+    host: Optional[str] = Field(default=None, description="Host address for simulator")
+    port: Optional[int] = Field(default=None, description="Port number for simulator")
 
 
 class Simulator:

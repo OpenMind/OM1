@@ -5,7 +5,7 @@ import os
 import re
 import typing as T
 
-from simulators.base import Simulator
+from simulators.base import Simulator, SimulatorConfig
 
 
 def find_module_with_class(class_name: str) -> T.Optional[str]:
@@ -48,20 +48,21 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     return None
 
 
-def load_simulator(class_name: str) -> T.Type[Simulator]:
+def load_simulator(simulator_config: T.Dict[str, T.Any]) -> Simulator:
     """
-    Load an Simulator class by its class name.
+    Load a Simulator instance with its configuration.
 
     Parameters
     ----------
-    class_name : str
-        The exact class name
+    simulator_config : dict
+        Configuration dictionary
 
     Returns
     -------
-    T.Type[Simulator]
-        The Simulator class
+    Simulator
+        The instantiated simulator
     """
+    class_name = simulator_config["type"]
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
@@ -80,8 +81,27 @@ def load_simulator(class_name: str) -> T.Type[Simulator]:
         ):
             raise ValueError(f"'{class_name}' is not a valid simulator subclass")
 
+        config_class = None
+        for _, obj in module.__dict__.items():
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, SimulatorConfig)
+                and obj != SimulatorConfig
+            ):
+                config_class = obj
+
+        config_dict = simulator_config.get("config", {})
+        if config_class is not None:
+            config = config_class(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+        else:
+            config = SimulatorConfig(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+
         logging.debug(f"Loaded simulator {class_name} from {module_name}.py")
-        return simulator_class
+        return simulator_class(config=config)
 
     except ImportError as e:
         raise ValueError(f"Could not import simulator module '{module_name}': {e}")

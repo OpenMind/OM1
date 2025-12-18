@@ -65,13 +65,14 @@ def test_load_llm_mock_implementation():
         mock_find_module.return_value = "mock_llm"
         mock_module = Mock()
         mock_module.MockLLM = MockLLM
+        mock_module.__dict__ = {"MockLLM": MockLLM}
         mock_import.return_value = mock_module
 
-        result = load_llm("MockLLM")
+        result = load_llm({"type": "MockLLM"})
 
         mock_find_module.assert_called_once_with("MockLLM")
         mock_import.assert_called_once_with("llm.plugins.mock_llm")
-        assert result == MockLLM
+        assert isinstance(result, LLM)
 
 
 def test_load_llm_not_found():
@@ -80,9 +81,9 @@ def test_load_llm_not_found():
 
         with pytest.raises(
             ValueError,
-            match="Class 'NonexistentLLM' not found in any LLM plugin module",
+            match="Class 'NonexistentLLM' not found in .*LLM plugin module",
         ):
-            load_llm("NonexistentLLM")
+            load_llm({"type": "NonexistentLLM"})
 
 
 def test_load_llm_invalid_type():
@@ -97,12 +98,13 @@ def test_load_llm_invalid_type():
 
         mock_module = Mock()
         mock_module.InvalidLLM = InvalidLLM
+        mock_module.__dict__ = {"InvalidLLM": InvalidLLM}
         mock_import.return_value = mock_module
 
         with pytest.raises(
             ValueError, match="'InvalidLLM' is not a valid LLM subclass"
         ):
-            load_llm("InvalidLLM")
+            load_llm({"type": "InvalidLLM"})
 
 
 def test_find_module_with_class_success():
