@@ -1,3 +1,4 @@
+import types
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -12,7 +13,6 @@ class MockSimulator(Simulator):
 
 
 def test_load_simulator_success():
-    import types
 
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
@@ -42,7 +42,6 @@ def test_load_simulator_not_found():
 
 
 def test_load_simulator_multiple_plugins():
-    import types
 
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
@@ -62,7 +61,6 @@ def test_load_simulator_multiple_plugins():
 
 
 def test_load_simulator_invalid_type():
-    import types
 
     with (
         patch("simulators.find_module_with_class") as mock_find_module,

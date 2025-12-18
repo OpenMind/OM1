@@ -1,3 +1,4 @@
+import types
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -58,7 +59,6 @@ def test_llm_config():
 
 
 def test_load_llm_mock_implementation():
-    import types
 
     with (
         patch("llm.find_module_with_class") as mock_find_module,
@@ -88,7 +88,6 @@ def test_load_llm_not_found():
 
 
 def test_load_llm_invalid_type():
-    import types
 
     with (
         patch("llm.find_module_with_class") as mock_find_module,
