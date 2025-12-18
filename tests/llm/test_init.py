@@ -1,4 +1,4 @@
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 import pytest
 from pydantic import BaseModel
@@ -58,14 +58,15 @@ def test_llm_config():
 
 
 def test_load_llm_mock_implementation():
+    import types
+
     with (
         patch("llm.find_module_with_class") as mock_find_module,
-        patch("importlib.import_module") as mock_import,
+        patch("llm.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "mock_llm"
-        mock_module = Mock()
+        mock_module = types.ModuleType("mock_llm")
         mock_module.MockLLM = MockLLM
-        mock_module.__dict__ = {"MockLLM": MockLLM}
         mock_import.return_value = mock_module
 
         result = load_llm({"type": "MockLLM"})
@@ -87,18 +88,19 @@ def test_load_llm_not_found():
 
 
 def test_load_llm_invalid_type():
+    import types
+
     with (
         patch("llm.find_module_with_class") as mock_find_module,
-        patch("importlib.import_module") as mock_import,
+        patch("llm.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "invalid_llm"
 
         class InvalidLLM:
             pass
 
-        mock_module = Mock()
+        mock_module = types.ModuleType("invalid_llm")
         mock_module.InvalidLLM = InvalidLLM
-        mock_module.__dict__ = {"InvalidLLM": InvalidLLM}
         mock_import.return_value = mock_module
 
         with pytest.raises(

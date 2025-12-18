@@ -1,4 +1,4 @@
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 import pytest
 
@@ -12,14 +12,15 @@ class MockSimulator(Simulator):
 
 
 def test_load_simulator_success():
+    import types
+
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
-        patch("importlib.import_module") as mock_import,
+        patch("simulators.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "mock_simulator"
-        mock_module = Mock()
+        mock_module = types.ModuleType("mock_simulator")
         mock_module.MockSimulator = MockSimulator
-        mock_module.__dict__ = {"MockSimulator": MockSimulator}
         mock_import.return_value = mock_module
 
         result = load_simulator({"type": "MockSimulator"})
@@ -41,15 +42,16 @@ def test_load_simulator_not_found():
 
 
 def test_load_simulator_multiple_plugins():
+    import types
+
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
-        patch("importlib.import_module") as mock_import,
+        patch("simulators.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "sim2"
         Simulator2 = type("Simulator2", (Simulator,), {})
-        mock_module2 = Mock()
+        mock_module2 = types.ModuleType("sim2")
         mock_module2.Simulator2 = Simulator2
-        mock_module2.__dict__ = {"Simulator2": Simulator2}
         mock_import.return_value = mock_module2
 
         result = load_simulator({"type": "Simulator2"})
@@ -60,18 +62,19 @@ def test_load_simulator_multiple_plugins():
 
 
 def test_load_simulator_invalid_type():
+    import types
+
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
-        patch("importlib.import_module") as mock_import,
+        patch("simulators.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "invalid_simulator"
 
         class InvalidSimulator:
             pass
 
-        mock_module = Mock()
+        mock_module = types.ModuleType("invalid_simulator")
         mock_module.InvalidSimulator = InvalidSimulator
-        mock_module.__dict__ = {"InvalidSimulator": InvalidSimulator}
         mock_import.return_value = mock_module
 
         with pytest.raises(
