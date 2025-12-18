@@ -4,7 +4,12 @@ from actions.base import ActionConfig, ActionConnector
 from actions.face.interface import FaceInput
 
 
+feat/gazebo-improve-bounty-363
 class FaceRos2Connector(ActionConnector[FaceInput]):
+
+class FaceRos2Connector(ActionConnector[ActionConfig, FaceInput]):
+
+main
     def __init__(self, config: ActionConfig):
         """
         Initialize the FaceRos2Connector with the given configuration.

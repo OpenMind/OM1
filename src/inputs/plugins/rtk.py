@@ -1,39 +1,21 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty
 from typing import Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.rtk_provider import RtkProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class Rtk(FuserInput[str]):
+class Rtk(FuserInput[SensorConfig, Optional[dict]]):
     """
     Reads RTK data from RTK provider.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         super().__init__(config)
 
         self.rtk = RtkProvider()
@@ -60,7 +42,7 @@ class Rtk(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: dict) -> Optional[Message]:
+    async def _raw_to_text(self, raw_input: Optional[dict]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -69,7 +51,7 @@ class Rtk(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : dict
+        raw_input : Optional[dict]
             Raw input to be processed
 
         Returns
@@ -107,7 +89,7 @@ class Rtk(FuserInput[str]):
         else:
             return None
 
-    async def raw_to_text(self, raw_input: dict):
+    async def raw_to_text(self, raw_input: Optional[dict]):
         """
         Update message buffer.
         """

@@ -10,7 +10,7 @@ on:
       - 'src/backgrounds/plugins/**'
       - 'src/llm/plugins/**'
       - 'src/hooks/**'
-      - 'src/providers/config_schema_provider.py'
+      - 'config/schema/multi_mode_schema.json'
       - 'scripts/generate_schema.py'
   workflow_dispatch:
 

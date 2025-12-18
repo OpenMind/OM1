@@ -1,33 +1,67 @@
 import asyncio
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.rplidar_provider import RPLidarProvider
 
 
-@dataclass
-class Message:
+class RPLidarConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for RPLidar Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    serial_port : Optional[str]
+        Serial Port to connect to.
+    use_zenoh : bool
+        Whether to use Zenoh.
+    half_width_robot : float
+        Half width of the robot.
+    angles_blanked : List[float]
+        List of angles to blank out.
+    relevant_distance_max : float
+        Maximum relevant distance.
+    relevant_distance_min : float
+        Minimum relevant distance.
+    sensor_mounting_angle : float
+        Mounting angle of the sensor.
+    URID : str
+        Unique Robot ID.
+    machine_type : str
+        Type of the machine.
+    log_file : bool
+        Whether to log to a file.
     """
 
-    timestamp: float
-    message: str
+    serial_port: Optional[str] = Field(
+        default=None, description="Serial Port to connect to"
+    )
+    use_zenoh: bool = Field(default=False, description="Use Zenoh")
+    half_width_robot: float = Field(default=0.20, description="Half width of the robot")
+    angles_blanked: List[float] = Field(
+        default_factory=list, description="List of angles to blank out"
+    )
+    relevant_distance_max: float = Field(
+        default=1.1, description="Maximum relevant distance"
+    )
+    relevant_distance_min: float = Field(
+        default=0.08, description="Minimum relevant distance"
+    )
+    sensor_mounting_angle: float = Field(
+        default=180.0, description="Mounting angle of the sensor"
+    )
+    URID: str = Field(default="", description="Unique Robot ID")
+    machine_type: str = Field(default="go2", description="Type of the machine")
+    log_file: bool = Field(default=False, description="Whether to log to a file")
 
 
-class RPLidar(FuserInput[str]):
+class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
     """
     RPLidar input handler.
 
@@ -35,7 +69,7 @@ class RPLidar(FuserInput[str]):
     It maintains an internal buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: RPLidarConfig):
         super().__init__(config)
 
         # Track IO
@@ -75,7 +109,7 @@ class RPLidar(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -84,14 +118,17 @@ class RPLidar(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
@@ -146,20 +183,19 @@ class RPLidar(FuserInput[str]):
 
         return result
 
-    def _extract_lidar_config(self, config: SensorConfig) -> dict:
+    def _extract_lidar_config(self, config: RPLidarConfig) -> dict:
         """Extract lidar configuration parameters from sensor config."""
         lidar_config = {
-            "serial_port": getattr(config, "serial_port", None),
-            "use_zenoh": getattr(config, "use_zenoh", False),
-            "half_width_robot": getattr(config, "half_width_robot", 0.20),
-            "angles_blanked": getattr(config, "angles_blanked", []),
-            "relevant_distance_max": getattr(config, "relevant_distance_max", 1.1),
-            "relevant_distance_min": getattr(config, "relevant_distance_min", 0.08),
-            "sensor_mounting_angle": getattr(config, "sensor_mounting_angle", 180.0),
-            "URID": getattr(config, "URID", ""),
-            "multicast_address": getattr(config, "multicast_address", ""),
-            "machine_type": getattr(config, "machine_type", "go2"),
-            "log_file": getattr(config, "log_file", False),
+            "serial_port": config.serial_port,
+            "use_zenoh": config.use_zenoh,
+            "half_width_robot": config.half_width_robot,
+            "angles_blanked": config.angles_blanked,
+            "relevant_distance_max": config.relevant_distance_max,
+            "relevant_distance_min": config.relevant_distance_min,
+            "sensor_mounting_angle": config.sensor_mounting_angle,
+            "URID": config.URID,
+            "machine_type": config.machine_type,
+            "log_file": config.log_file,
         }
 
         return lidar_config

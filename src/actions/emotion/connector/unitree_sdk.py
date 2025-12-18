@@ -1,13 +1,48 @@
 import logging
 import time
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector
 from actions.emotion.interface import EmotionInput
 from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
 
 
+feat/gazebo-improve-bounty-363
 class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
     def __init__(self, config: ActionConfig):
+
+class EmotionUnitreeConfig(ActionConfig):
+    """
+    Configuration for Emotion Unitree connector.
+
+    Parameters:
+    ----------
+    unitree_ethernet : Optional[str]
+        The Ethernet adapter name for Unitree connection.
+    """
+
+    unitree_ethernet: str = Field(
+        default="",
+        description="The Ethernet adapter name for Unitree connection.",
+    )
+
+
+class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput]):
+    """
+    Connector that manages emotional expressions on Unitree robots.
+    """
+
+    def __init__(self, config: EmotionUnitreeConfig):
+        """
+        Initialize the EmotionUnitreeConnector.
+
+        Parameters
+        ----------
+        config : EmotionUnitreeConfig
+            Configuration for the action connector.
+        """
+main
         super().__init__(config)
 
         logging.info(f"Emotion system config {config}")
@@ -15,7 +50,7 @@ class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
         # create audio_optical client
         self.ao_client = None
 
-        self.unitree_ethernet = getattr(self.config, "unitree_ethernet", None)
+        self.unitree_ethernet = self.config.unitree_ethernet
         logging.info(f"EmotionUnitreeConnector using ethernet: {self.unitree_ethernet}")
 
         if self.unitree_ethernet and self.unitree_ethernet != "":
@@ -30,6 +65,17 @@ class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
             self.ao_client.LedControl(0, 255, 0)
 
     async def connect(self, output_interface: EmotionInput) -> None:
+feat/gazebo-improve-bounty-363
+
+        """
+        Connect to the output interface and process the emotion command.
+
+        Parameters
+        ----------
+        output_interface : EmotionInput
+            The output interface containing the emotion command.
+        """
+main
         if not self.ao_client:
             logging.error("No Unitree Emotion Client")
             return
@@ -52,5 +98,7 @@ class EmotionUnitreeConnector(ActionConnector[EmotionInput]):
         logging.info(f"SendThisToUTClient: {output_interface.action}")
 
     def tick(self) -> None:
+        """
+        Periodic tick function to maintain connection.
+        """
         time.sleep(5)
-        # logging.info("MoveUnitreeSDKConnector Tick")

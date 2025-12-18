@@ -33,12 +33,24 @@ class LLMConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    base_url: T.Optional[str] = None
-    api_key: T.Optional[str] = None
-    model: T.Optional[str] = None
-    timeout: T.Optional[int] = 10
-    agent_name: T.Optional[str] = "IRIS"
-    history_length: T.Optional[int] = 0
+    base_url: T.Optional[str] = Field(
+        default=None, description="Base URL for the LLM API endpoint"
+    )
+    api_key: T.Optional[str] = Field(
+        default=None, description="Authentication key for the LLM service"
+    )
+    model: T.Optional[str] = Field(
+        default=None, description="Name of the LLM model to use"
+    )
+    timeout: T.Optional[int] = Field(
+        default=10, description="Request timeout in seconds"
+    )
+    agent_name: T.Optional[str] = Field(
+        default="IRIS", description="Name of the agent identity"
+    )
+    history_length: T.Optional[int] = Field(
+        default=0, description="Number of past interactions to keep in context"
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
@@ -115,7 +127,12 @@ class LLM(T.Generic[R]):
         # Set up the IO provider
         self.io_provider = IOProvider()
 
-    async def ask(self, prompt: str, messages: T.List[T.Dict[str, str]] = []) -> R:
+        # Enable state management by default
+        self._skip_state_management: bool = False
+
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the LLM and receive a typed response.
 

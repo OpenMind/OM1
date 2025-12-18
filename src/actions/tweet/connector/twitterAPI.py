@@ -8,7 +8,7 @@ from actions.base import ActionConfig, ActionConnector
 from actions.tweet.interface import TweetInput
 
 
-class TweetAPIConnector(ActionConnector[TweetInput]):
+class TweetAPIConnector(ActionConnector[ActionConfig, TweetInput]):
     """Connector for Twitter API."""
 
     def __init__(self, config: ActionConfig):
@@ -29,7 +29,14 @@ class TweetAPIConnector(ActionConnector[TweetInput]):
             )
 
     async def connect(self, output_interface: TweetInput) -> None:
-        """Send tweet via Twitter API."""
+        """
+        Send tweet via Twitter API.
+
+        Parameters
+        ----------
+        output_interface : TweetInput
+            The TweetInput interface containing the tweet text.
+        """
         try:
             # Log the tweet we're about to send
             tweet_to_make = {"action": output_interface.tweet}  # type: ignore

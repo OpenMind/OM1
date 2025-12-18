@@ -507,6 +507,9 @@ class ModeCortexRuntime:
             logging.debug("Skipping tick during config reload")
             return
 
+        tick_num = self.io_provider.increment_tick()
+        logging.debug(f"Processing tick #{tick_num}")
+
         finished_promises, _ = await self.action_orchestrator.flush_promises()
 
         prompt = self.fuser.fuse(self.current_config.agent_inputs, finished_promises)

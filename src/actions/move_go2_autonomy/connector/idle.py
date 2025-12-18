@@ -4,7 +4,15 @@ from actions.base import ActionConfig, ActionConnector
 from actions.move_go2_autonomy.interface import MoveInput
 
 
+feat/gazebo-improve-bounty-363
 class IDELEConnector(ActionConnector[MoveInput]):
+
+class IDELEConnector(ActionConnector[ActionConfig, MoveInput]):
+    """
+    IDLE connector for Go2 that performs no action.
+    """
+
+main
     def __init__(self, config: ActionConfig):
         """
         Initialize the IDLE connector.

@@ -1,9 +1,11 @@
 import json
 import logging
 import time
+from typing import Optional
 from uuid import uuid4
 
 import zenoh
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.emergency_alert.interface import EmergencyAlertInput
@@ -20,10 +22,70 @@ from zenoh_msgs import (
 )
 
 
+class SpeakElevenLabsTTSConfig(ActionConfig):
+    """
+    Configuration for ElevenLabs TTS connector.
+
+    Parameters:
+    ----------
+    elevenlabs_api_key : Optional[str]
+        ElevenLabs API key.
+    voice_id : str
+        ElevenLabs voice ID.
+    model_id : str
+        ElevenLabs model ID.
+    output_format : str
+        ElevenLabs output format.
+    silence_rate : int
+        Number of responses to skip before speaking.
+    """
+
+    elevenlabs_api_key: Optional[str] = Field(
+        default=None,
+        description="ElevenLabs API key",
+    )
+    voice_id: str = Field(
+        default="JBFqnCBsd6RMkjVDRZzb",
+        description="ElevenLabs voice ID",
+    )
+    model_id: str = Field(
+        default="eleven_flash_v2_5",
+        description="ElevenLabs model ID",
+    )
+    output_format: str = Field(
+        default="mp3_44100_128",
+        description="ElevenLabs output format",
+    )
+    silence_rate: int = Field(
+        default=0,
+        description="Number of responses to skip before speaking",
+    )
+
+
 # unstable / not released
 # from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
+feat/gazebo-improve-bounty-363
 class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput]):
     def __init__(self, config: ActionConfig):
+
+class EmergencyAlertElevenLabsTTSConnector(
+    ActionConnector[SpeakElevenLabsTTSConfig, EmergencyAlertInput]
+):
+    """
+    Connector that uses ElevenLabs TTS for emergency alerts.
+    """
+
+    def __init__(self, config: SpeakElevenLabsTTSConfig):
+        """
+        Initialize the EmergencyAlertElevenLabsTTSConnector.
+
+        Parameters
+        ----------
+        config : SpeakElevenLabsTTSConfig
+            Configuration for the action connector.
+        """
+
+main
         super().__init__(config)
 
         # OM API key
@@ -34,10 +96,10 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
         self.last_voice_command_time = time.time()
 
         # Eleven Labs TTS configuration
-        elevenlabs_api_key = getattr(self.config, "elevenlabs_api_key", None)
-        voice_id = getattr(self.config, "voice_id", "JBFqnCBsd6RMkjVDRZzb")
-        model_id = getattr(self.config, "model_id", "eleven_flash_v2_5")
-        output_format = getattr(self.config, "output_format", "mp3_44100_128")
+        elevenlabs_api_key = self.config.elevenlabs_api_key
+        voice_id = self.config.voice_id
+        model_id = self.config.model_id
+        output_format = self.config.output_format
 
         # IO Provider
         self.io_provider = IOProvider()
@@ -107,6 +169,14 @@ class EmergencyAlertElevenLabsTTSConnector(ActionConnector[EmergencyAlertInput])
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: EmergencyAlertInput) -> None:
+        """
+        Connect the input protocol to the ElevenLabs TTS action for emergency alerts.
+
+        Parameters
+        ----------
+        output_interface : EmergencyAlertInput
+            The input protocol containing the action details.
+        """
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping TTS action")
             return

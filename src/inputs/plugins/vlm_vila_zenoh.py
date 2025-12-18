@@ -2,34 +2,44 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_vila_zenoh_provider import VLMVilaZenohProvider
 
 
-@dataclass
-class Message:
+class VLMVilaZenohConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for VLM Vila Zenoh Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    base_url : str
+        Base URL for the VLM service.
+    topic : str
+        Zenoh topic for receiving images.
+    decode_format : str
+        Image decode format (e.g., "H264").
     """
 
-    timestamp: float
-    message: str
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+    topic: str = Field(
+        default="rgb_image", description="Zenoh topic for receiving images"
+    )
+    decode_format: str = Field(
+        default="H264", description='Image decode format (e.g., "H264")'
+    )
 
 
-class VLMVilaZenoh(FuserInput[str]):
+class VLMVilaZenoh(FuserInput[VLMVilaZenohConfig, Optional[str]]):
     """
     Vision Language Model input handler.
 
@@ -41,7 +51,7 @@ class VLMVilaZenoh(FuserInput[str]):
     and provides formatted output of the latest processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMVilaZenohConfig):
         """
         Initialize VLM input handler.
 
@@ -60,9 +70,9 @@ class VLMVilaZenoh(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        topic = getattr(self.config, "topic", "rgb_image")
-        decode_format = getattr(self.config, "decode_format", "H264")
+        base_url = self.config.base_url
+        topic = self.config.topic
+        decode_format = self.config.decode_format
 
         self.vlm: VLMVilaZenohProvider = VLMVilaZenohProvider(
             ws_url=base_url, topic=topic, decode_format=decode_format
@@ -112,7 +122,7 @@ class VLMVilaZenoh(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -121,14 +131,17 @@ class VLMVilaZenoh(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

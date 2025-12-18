@@ -2,30 +2,38 @@ import asyncio
 import logging
 import os
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
 from cdp import Cdp, Wallet
+from pydantic import Field
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-# TODO(Kyle): Support Cryptos other than ETH
-class WalletCoinbase(FuserInput[float]):
+class WalletCoinbaseConfig(SensorConfig):
     """
-    Queries current ETH balance and reports a balance increase
+    Configuration for Wallet Coinbase Sensor.
+
+    Parameters
+    ----------
+    asset_id : str
+        Asset ID to query.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    asset_id: str = Field(default="eth", description="Asset ID to query")
+
+
+class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
+    """
+    Queries current balance of the configured asset and reports a balance increase
+    """
+
+    def __init__(self, config: WalletCoinbaseConfig):
         super().__init__(config)
+
+        self.asset_id = self.config.asset_id
 
         # Track IO
         self.io_provider = IOProvider()
@@ -58,13 +66,13 @@ class WalletCoinbase(FuserInput[float]):
             self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
             logging.info(f"Wallet: {self.wallet}")
 
-            self.ETH_balance = float(self.wallet.balance("eth"))
-            self.ETH_balance_previous = self.ETH_balance
+            self.balance = float(self.wallet.balance(self.asset_id))
+            self.balance_previous = self.balance
         except Exception as e:
             logging.error(f"Error fetching Coinbase Wallet data: {e}")
             self.wallet = None
-            self.ETH_balance = 0.0
-            self.ETH_balance_previous = 0.0
+            self.balance = 0.0
+            self.balance_previous = 0.0
 
         logging.info("Testing: WalletCoinbase: Initialized")
 
@@ -88,16 +96,16 @@ class WalletCoinbase(FuserInput[float]):
         try:
             self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)  # type: ignore
             logging.info(
-                f"WalletCoinbase: Wallet refreshed: {self.wallet.balance('eth')}, the current balance is {self.ETH_balance}"
+                f"WalletCoinbase: Wallet refreshed: {self.wallet.balance(self.asset_id)}, the current balance is {self.balance}"
             )
-            self.ETH_balance = float(self.wallet.balance("eth"))
-            balance_change = self.ETH_balance - self.ETH_balance_previous
-            self.ETH_balance_previous = self.ETH_balance
+            self.balance = float(self.wallet.balance(self.asset_id))
+            balance_change = self.balance - self.balance_previous
+            self.balance_previous = self.balance
         except Exception as e:
             logging.error(f"Error refreshing wallet data: {e}")
             balance_change = 0.0
 
-        return [self.ETH_balance, balance_change]
+        return [self.balance, balance_change]
 
     async def _raw_to_text(self, raw_input: List[float]) -> Optional[Message]:
         """
@@ -142,7 +150,7 @@ class WalletCoinbase(FuserInput[float]):
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """
-        Format and clear the buffer contents. If there are multiple ETH transactions,
+        Format and clear the buffer contents. If there are multiple transactions,
         combine them into a single message.
 
         Returns
@@ -162,7 +170,7 @@ class WalletCoinbase(FuserInput[float]):
         last_message = self.messages[-1]
         result_message = Message(
             timestamp=last_message.timestamp,
-            message=f"You just received {transaction_sum:.5f} ETH.",
+            message=f"You just received {transaction_sum:.5f} {self.asset_id.upper()}.",
         )
 
         result = f"""

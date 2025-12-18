@@ -533,8 +533,9 @@ class ModeManager:
 
             self._is_transitioning = True
 
+        from_mode = self.state.current_mode
+
         try:
-            from_mode = self.state.current_mode
 
             if from_mode == target_mode:
                 logging.debug(

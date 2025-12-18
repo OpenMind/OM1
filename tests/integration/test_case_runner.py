@@ -4,7 +4,7 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from unittest.mock import MagicMock, patch
 
 import json5
@@ -348,15 +348,15 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     original_action_promise = cortex.action_orchestrator.promise
 
     # Mock the simulator and action promises to capture outputs
-    async def mock_simulator_promise(commands):
-        output_results["actions"] = commands
-        logging.info(f"Simulator received commands: {commands}")
-        return await original_simulator_promise(commands)
+    async def mock_simulator_promise(actions):
+        output_results["actions"] = actions
+        logging.info(f"Simulator received commands: {actions}")
+        return await original_simulator_promise(actions)
 
-    async def mock_action_promise(commands):
-        output_results["actions"] = commands
-        logging.info(f"Action orchestrator received commands: {commands}")
-        return await original_action_promise(commands)
+    async def mock_action_promise(actions):
+        output_results["actions"] = actions
+        logging.info(f"Action orchestrator received commands: {actions}")
+        return await original_action_promise(actions)
 
     # Replace the original methods with our mocked versions
     cortex.simulator_orchestrator.promise = mock_simulator_promise
@@ -365,14 +365,14 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Mock LLM ask method to capture raw response
     original_llm_ask = cortex.config.cortex_llm.ask
 
-    async def mock_llm_ask(prompt):
+    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
         logging.info(
             f"Generated prompt: {prompt[:200]}..."
         )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
         try:
-            response = await original_llm_ask(prompt)
+            response = await original_llm_ask(prompt, messages)
             # If response is None (API error), create a mock response
             if response is None:
                 logging.warning(
@@ -396,7 +396,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Set cortex runtime reference for MockRPLidar cleanup
     for input_obj in cortex.config.agent_inputs:
         if hasattr(input_obj, "set_cortex_runtime"):
-            input_obj.set_cortex_runtime(cortex)
+            input_obj.set_cortex_runtime(cortex)  # type: ignore
 
     # Run a single tick of the cortex loop
     await cortex._tick()
@@ -727,7 +727,7 @@ async def evaluate_with_llm(
     actual_output: Dict[str, Any],
     expected_output: Dict[str, Any],
     api_key: str,
-    config: Dict[str, Any] = None,
+    config: Optional[Dict[str, Any]] = None,
 ) -> Tuple[float, str]:
     """
     Evaluate test results using LLM-based comparison.
@@ -861,14 +861,18 @@ async def evaluate_with_llm(
 
         # Parse the rating and reasoning
         try:
-            rating_match = re.search(r"Rating:\s*(\d*\.?\d+)", content)
+            rating_match = (
+                re.search(r"Rating:\s*(\d*\.?\d+)", content) if content else None
+            )
             rating = float(rating_match.group(1)) if rating_match else 0.5
 
             # Extract reasoning
-            reasoning_match = re.search(r"Reasoning:\s*(.*)", content, re.DOTALL)
+            reasoning_match = (
+                re.search(r"Reasoning:\s*(.*)", content, re.DOTALL) if content else None
+            )
             reasoning = reasoning_match.group(1).strip() if reasoning_match else content
 
-            return rating, reasoning
+            return rating, reasoning if reasoning is not None else ""
 
         except Exception as e:
             logging.error(f"Error parsing LLM evaluation response: {e}")
@@ -883,7 +887,7 @@ async def evaluate_test_results(
     results: Dict[str, Any],
     expected: Dict[str, Any],
     api_key: str,
-    config: Dict[str, Any] = None,
+    config: Optional[Dict[str, Any]] = None,
 ) -> Tuple[bool, float, str]:
     """
     Evaluate test results against expected output using both heuristic and LLM-based evaluation.
@@ -1160,7 +1164,7 @@ def discover_test_cases() -> Dict[str, TestCategory]:
     return categories
 
 
-def get_test_cases_by_tags(tags: List[str] = None) -> List[Path]:
+def get_test_cases_by_tags(tags: Optional[List[str]] = None) -> List[Path]:
     """
     Get test cases filtered by tags.
 

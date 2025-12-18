@@ -290,10 +290,10 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading all component types."""
-        mock_load_input.return_value = lambda config: mock_sensor
+        mock_load_input.return_value = mock_sensor
         mock_load_simulator.return_value = lambda config: mock_simulator
         mock_load_action.return_value = mock_action
-        mock_load_background.return_value = lambda config: mock_background
+        mock_load_background.return_value = mock_background
         mock_load_llm.return_value = lambda config, available_actions: mock_llm
 
         sample_mode_config._raw_inputs = [{"type": "test_input", "config": {}}]
@@ -365,7 +365,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_env_fallback(self):
         """Test that environment variables are used as fallback."""
         config_data = {
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "name": "env_test",
             "default_mode": "default",
             "robot_ip": "",
@@ -403,7 +403,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "name": "unitree_test",
             "default_mode": "default",
             "unitree_ethernet": "eth0",
