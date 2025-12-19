@@ -1,0 +1,385 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="om1_test_robot">
+
+    <!-- Base Link (Robot Body) -->
+    <link name="base_link">
+      <pose>0 0 0.1 0 0 0</pose>
+
+      <inertial>
+        <mass>10.0</mass>
+        <inertia>
+          <ixx>0.1</ixx>
+          <iyy>0.1</iyy>
+          <izz>0.1</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Collision -->
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.5 0.4 0.3</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Visual -->
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.5 0.4 0.3</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.8 1</ambient>
+          <diffuse>0.2 0.2 0.8 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+    </link>
+
+    <!-- Left Wheel -->
+    <link name="left_wheel">
+      <pose>0 0.25 0.1 1.5707 0 0</pose>
+
+      <inertial>
+        <mass>1.0</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <iyy>0.01</iyy>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <!-- Right Wheel -->
+    <link name="right_wheel">
+      <pose>0 -0.25 0.1 1.5707 0 0</pose>
+
+      <inertial>
+        <mass>1.0</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <iyy>0.01</iyy>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.1</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <!-- Caster Wheel (for stability) -->
+    <link name="caster">
+      <pose>0.2 0 0.05 0 0 0</pose>
+
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <iyy>0.001</iyy>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="collision">
+        <geometry>
+          <sphere>
+            <radius>0.05</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <sphere>
+            <radius>0.05</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0.3 0.3 0.3 1</ambient>
+          <diffuse>0.3 0.3 0.3 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <!-- Camera Link -->
+    <link name="camera_link">
+      <pose>0.25 0 0.2 0 0 0</pose>
+
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0001</ixx>
+          <iyy>0.0001</iyy>
+          <izz>0.0001</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.05 0.05 0.05</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- RGB Camera Sensor -->
+      <sensor name="camera" type="camera">
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>30</update_rate>
+        <visualize>true</visualize>
+        <topic>/om1_test_robot/camera/image_raw</topic>
+      </sensor>
+    </link>
+
+    <!-- Depth Camera Link -->
+    <link name="depth_camera_link">
+      <pose>0.25 0.08 0.2 0 0 0</pose>
+
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0001</ixx>
+          <iyy>0.0001</iyy>
+          <izz>0.0001</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.05 0.05 0.05</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0 1 0 1</ambient>
+          <diffuse>0 1 0 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- Depth Camera Sensor -->
+      <sensor name="depth_camera" type="depth">
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>10</far>
+          </clip>
+        </camera>
+        <always_on>1</always_on>
+        <update_rate>20</update_rate>
+        <visualize>true</visualize>
+        <topic>/om1_test_robot/depth_camera/depth</topic>
+      </sensor>
+    </link>
+
+    <!-- IMU Link -->
+    <link name="imu_link">
+      <pose>0 0 0.15 0 0 0</pose>
+
+      <inertial>
+        <mass>0.01</mass>
+        <inertia>
+          <ixx>0.00001</ixx>
+          <iyy>0.00001</iyy>
+          <izz>0.00001</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.02 0.02 0.02</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 1 0 1</ambient>
+          <diffuse>1 1 0 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- IMU Sensor -->
+      <sensor name="imu" type="imu">
+        <always_on>1</always_on>
+        <update_rate>100</update_rate>
+        <visualize>true</visualize>
+        <topic>/om1_test_robot/imu/data</topic>
+        <imu>
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.0002</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.0002</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.0002</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.01</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.01</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.01</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+      </sensor>
+    </link>
+
+    <!-- Joints -->
+
+    <!-- Left Wheel Joint -->
+    <joint name="left_wheel_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>left_wheel</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e16</lower>
+          <upper>1e16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Right Wheel Joint -->
+    <joint name="right_wheel_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>right_wheel</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e16</lower>
+          <upper>1e16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Caster Joint -->
+    <joint name="caster_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>caster</child>
+    </joint>
+
+    <!-- Camera Joint -->
+    <joint name="camera_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>camera_link</child>
+    </joint>
+
+    <!-- Depth Camera Joint -->
+    <joint name="depth_camera_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>depth_camera_link</child>
+    </joint>
+
+    <!-- IMU Joint -->
+    <joint name="imu_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>imu_link</child>
+    </joint>
+
+    <!-- Differential Drive Plugin -->
+    <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <update_rate>50</update_rate>
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.5</wheel_separation>
+      <wheel_diameter>0.2</wheel_diameter>
+      <max_wheel_torque>20</max_wheel_torque>
+      <command_topic>/om1_test_robot/cmd_vel</command_topic>
+      <odometry_topic>/om1_test_robot/odom</odometry_topic>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+    </plugin>
+
+  </model>
+</sdf>

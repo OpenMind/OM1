@@ -7,5 +7,12 @@
       <max_step_size>0.001</max_step_size>
       <real_time_update_rate>1000</real_time_update_rate>
     </physics>
+    <!-- ========== SPAWN OM1 TEST ROBOT ========== -->
+    <include>
+      <uri>model://om1_test_robot</uri>
+      <pose>0 -5 0 0 0 0</pose>
+      <name>om1_robot</name>
+    </include>
+
   </world>
 </sdf>
