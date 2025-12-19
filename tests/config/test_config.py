@@ -7,7 +7,8 @@ import json5
 from actions.base import ActionConnector, Interface
 from inputs import find_module_with_class
 from inputs.base import Sensor
-from runtime.single_mode.config import load_llm, load_simulator
+from llm import get_llm_class
+from simulators import get_simulator_class
 
 
 def test_configs():
@@ -30,7 +31,7 @@ def test_configs():
         cortex_llm = raw_config.get("cortex_llm", {})
         assert isinstance(cortex_llm, dict)
         assert "type" in cortex_llm, f"'type' key missing in cortex_llm of {file_name}"
-        assert load_llm(cortex_llm["type"]) is not None
+        assert get_llm_class(cortex_llm["type"]) is not None
 
         simulators = raw_config.get("simulators", [])
         assert isinstance(simulators, list)
@@ -42,7 +43,7 @@ def test_configs():
             assert_input_class_exists(input_config)
 
         for simulator in simulators:
-            assert load_simulator(simulator["type"]) is not None
+            assert get_simulator_class(simulator["type"]) is not None
 
         for action in agent_actions:
             assert_action_classes_exist(action)
