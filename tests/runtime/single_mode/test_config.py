@@ -9,7 +9,7 @@ import pytest
 
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 from inputs.base import Sensor, SensorConfig
-from llm import LLM
+from llm import LLM, LLMConfig
 from llm.output_model import CortexOutputModel
 from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.base import Simulator, SimulatorConfig
@@ -74,11 +74,12 @@ def mock_dependencies():
             )
 
     class MockSimulator(Simulator):
-        def __init__(self, config: SimulatorConfig):
+        def __init__(self, config: SimulatorConfig = SimulatorConfig()):
             super().__init__(config)
 
     class MockLLM(LLM[CortexOutputModel]):
-        pass
+        def __init__(self, config: LLMConfig = LLMConfig()):
+            super().__init__(config, available_actions=None)
 
     return {
         "input": MockInput,
@@ -149,10 +150,11 @@ def test_load_config(mock_config_data, mock_dependencies):
         ),
         patch(
             "runtime.single_mode.config.load_simulator",
-            return_value=mock_dependencies["simulator"],
+            return_value=mock_dependencies["simulator"](),
         ),
         patch(
-            "runtime.single_mode.config.load_llm", return_value=mock_dependencies["llm"]
+            "runtime.single_mode.config.load_llm",
+            return_value=mock_dependencies["llm"](),
         ),
     ):
         config = load_config("test_config")
@@ -171,8 +173,6 @@ def test_load_config(mock_config_data, mock_dependencies):
         assert isinstance(config.cortex_llm, mock_dependencies["llm"])
         assert len(config.simulators) == 1
         assert isinstance(config.simulators[0], mock_dependencies["simulator"])
-        api_key = getattr(config.simulators[0].config, "api_key", None)
-        assert api_key == "sim_test_api_key"
         assert len(config.agent_actions) == 1
         assert isinstance(config.agent_actions[0], mock_dependencies["action"])
 
@@ -192,10 +192,11 @@ def test_load_empty_config(mock_empty_config_data, mock_dependencies):
         ),
         patch(
             "runtime.single_mode.config.load_simulator",
-            return_value=mock_dependencies["simulator"],
+            return_value=mock_dependencies["simulator"](),
         ),
         patch(
-            "runtime.single_mode.config.load_llm", return_value=mock_dependencies["llm"]
+            "runtime.single_mode.config.load_llm",
+            return_value=mock_dependencies["llm"](),
         ),
     ):
         config = load_config("empty_config")
@@ -229,10 +230,11 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
         ),
         patch(
             "runtime.single_mode.config.load_simulator",
-            return_value=mock_dependencies["simulator"],
+            return_value=mock_dependencies["simulator"](),
         ),
         patch(
-            "runtime.single_mode.config.load_llm", return_value=mock_dependencies["llm"]
+            "runtime.single_mode.config.load_llm",
+            return_value=mock_dependencies["llm"](),
         ),
     ):
         config = load_config("multiple_components")

@@ -81,7 +81,42 @@ class ConfigSchemaGenerator:
         List[Dict[str, Any]]
             List of input component schemas.
         """
-        return self._scan_plugins(self.inputs_dir, ["FuserInput", "Sensor"], "input")
+        results = []
+        if not os.path.exists(self.inputs_dir):
+            return results
+
+        for filepath in self._py_files(self.inputs_dir):
+            try:
+                tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+
+                config_node = None
+                sensor_node = None
+
+                for node in tree.body:
+                    if isinstance(node, ast.ClassDef):
+                        if self._extends(node, ["InputConfig", "SensorConfig"]):
+                            config_node = node
+                        if self._extends(node, ["FuserInput", "Sensor"]):
+                            sensor_node = node
+
+                if sensor_node:
+                    fields = (
+                        self._parse_pydantic_fields_from_node(config_node)
+                        if config_node
+                        else []
+                    )
+
+                    results.append(
+                        {
+                            "type": sensor_node.name,
+                            "category": "input",
+                            "fields": fields,
+                            "description": ast.get_docstring(sensor_node) or "",
+                        }
+                    )
+            except Exception as e:
+                logging.error(f"Error parsing {filepath}: {e}")
+        return results
 
     # LLM
     def scan_llms(self) -> List[Dict[str, Any]]:
@@ -102,20 +137,32 @@ class ConfigSchemaGenerator:
         for filepath in self._py_files(self.llm_dir):
             try:
                 tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+
+                config_node = None
+                llm_node = None
+
                 for node in tree.body:
-                    if isinstance(node, ast.ClassDef) and self._extends(node, ["LLM"]):
-                        fields = {f["name"]: f for f in base_fields}
-                        for f in self._parse_getattr(node):
+                    if isinstance(node, ast.ClassDef):
+                        if self._extends(node, ["LLMConfig"]):
+                            config_node = node
+                        if self._extends(node, ["LLM"]):
+                            llm_node = node
+
+                if llm_node:
+                    fields = {f["name"]: f for f in base_fields}
+
+                    if config_node:
+                        for f in self._parse_pydantic_fields_from_node(config_node):
                             fields[f["name"]] = f
 
-                        results.append(
-                            {
-                                "type": node.name,
-                                "category": "llm",
-                                "fields": list(fields.values()),
-                                "description": ast.get_docstring(node) or "",
-                            }
-                        )
+                    results.append(
+                        {
+                            "type": llm_node.name,
+                            "category": "llm",
+                            "fields": list(fields.values()),
+                            "description": ast.get_docstring(llm_node) or "",
+                        }
+                    )
             except Exception as e:
                 logging.error(f"Error parsing {filepath}: {e}")
         return results
@@ -129,7 +176,42 @@ class ConfigSchemaGenerator:
         List[Dict[str, Any]]
             List of background component schemas.
         """
-        return self._scan_plugins(self.backgrounds_dir, ["Background"], "background")
+        results = []
+        if not os.path.exists(self.backgrounds_dir):
+            return results
+
+        for filepath in self._py_files(self.backgrounds_dir):
+            try:
+                tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+
+                config_node = None
+                background_node = None
+
+                for node in tree.body:
+                    if isinstance(node, ast.ClassDef):
+                        if self._extends(node, ["BackgroundConfig"]):
+                            config_node = node
+                        if self._extends(node, ["Background"]):
+                            background_node = node
+
+                if background_node:
+                    fields = (
+                        self._parse_pydantic_fields_from_node(config_node)
+                        if config_node
+                        else []
+                    )
+
+                    results.append(
+                        {
+                            "type": background_node.name,
+                            "category": "background",
+                            "fields": fields,
+                            "description": ast.get_docstring(background_node) or "",
+                        }
+                    )
+            except Exception as e:
+                logging.error(f"Error parsing {filepath}: {e}")
+        return results
 
     # Action
     def scan_actions(self) -> List[Dict[str, Any]]:
@@ -156,27 +238,41 @@ class ConfigSchemaGenerator:
             for filepath in self._py_files(connector_dir):
                 try:
                     tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
-                    for node in tree.body:
-                        if isinstance(node, ast.ClassDef) and self._extends_connector(
-                            node
-                        ):
-                            connector = os.path.basename(filepath)[:-3]
-                            type_name = (
-                                action_name
-                                if connector == "default"
-                                else f"{action_name}_{connector}"
-                            )
 
-                            results.append(
-                                {
-                                    "type": type_name,
-                                    "category": "action",
-                                    "fields": self._parse_getattr(node),
-                                    "description": ast.get_docstring(node) or "",
-                                    "action_name": action_name,
-                                    "connector_name": connector,
-                                }
-                            )
+                    # Find config class and connector class in the file
+                    config_node = None
+                    connector_node = None
+
+                    for node in tree.body:
+                        if isinstance(node, ast.ClassDef):
+                            if self._extends(node, ["ActionConfig"]):
+                                config_node = node
+                            if self._extends_connector(node):
+                                connector_node = node
+
+                    if connector_node:
+                        if config_node:
+                            fields = self._parse_pydantic_fields_from_node(config_node)
+                        else:
+                            fields = []
+
+                        connector = os.path.basename(filepath)[:-3]
+                        type_name = (
+                            action_name
+                            if connector == "default"
+                            else f"{action_name}_{connector}"
+                        )
+
+                        results.append(
+                            {
+                                "type": type_name,
+                                "category": "action",
+                                "fields": fields,
+                                "description": ast.get_docstring(connector_node) or "",
+                                "action_name": action_name,
+                                "connector_name": connector,
+                            }
+                        )
                 except Exception as e:
                     logging.error(f"Error parsing {filepath}: {e}")
         return results
@@ -291,48 +387,6 @@ class ConfigSchemaGenerator:
             logging.error(f"Error parsing transition_rules schema: {e}")
             return {}
 
-    def _scan_plugins(
-        self, directory: str, base_classes: List[str], category: str
-    ) -> List[Dict[str, Any]]:
-        """Generic scanner for plugin directories.
-
-        Parameters
-        ----------
-        directory : str
-            Path to the plugins directory to scan.
-        base_classes : List[str]
-            List of base class names to match in inheritance.
-        category : str
-            Category label for the schema.
-
-        Returns
-        -------
-        List[Dict[str, Any]]
-            List of component schemas with extracted fields.
-        """
-        results = []
-        if not os.path.exists(directory):
-            return results
-
-        for filepath in self._py_files(directory):
-            try:
-                tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
-                for node in tree.body:
-                    if isinstance(node, ast.ClassDef) and self._extends(
-                        node, base_classes
-                    ):
-                        results.append(
-                            {
-                                "type": node.name,
-                                "category": category,
-                                "fields": self._parse_getattr(node),
-                                "description": ast.get_docstring(node) or "",
-                            }
-                        )
-            except Exception as e:
-                logging.error(f"Error parsing {filepath}: {e}")
-        return results
-
     def _py_files(self, directory: str) -> List[str]:
         """List Python files in a directory, excluding init files.
 
@@ -396,77 +450,6 @@ class ConfigSchemaGenerator:
                     return True
         return False
 
-    def _parse_getattr(self, class_node: ast.ClassDef) -> List[Dict[str, Any]]:
-        """Extract configuration parameters from getattr() calls in __init__.
-
-        Parameters
-        ----------
-        class_node : ast.ClassDef
-            The class definition node to extract parameters from.
-
-        Returns
-        -------
-        List[Dict[str, Any]]
-            List of field definitions.
-        """
-        fields = []
-        init = next(
-            (
-                n
-                for n in class_node.body
-                if isinstance(n, ast.FunctionDef) and n.name == "__init__"
-            ),
-            None,
-        )
-        if not init:
-            return fields
-
-        for node in ast.walk(init):
-            if not (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id == "getattr"
-            ):
-                continue
-            if len(node.args) < 2:
-                continue
-
-            arg0 = node.args[0]
-            if not (
-                (isinstance(arg0, ast.Attribute) and arg0.attr == "config")
-                or (isinstance(arg0, ast.Name) and arg0.id == "config")
-            ):
-                continue
-
-            if not (
-                isinstance(node.args[1], ast.Constant)
-                and isinstance(node.args[1].value, str)
-            ):
-                continue
-            name = node.args[1].value
-
-            default = (
-                node.args[2].value
-                if len(node.args) > 2 and isinstance(node.args[2], ast.Constant)
-                else None
-            )
-
-            field = {
-                "name": name,
-                "type": (
-                    "boolean"
-                    if isinstance(default, bool)
-                    else "number" if isinstance(default, (int, float)) else "string"
-                ),
-                "label": name.replace("_", " ").title(),
-                "required": default is not None,
-            }
-            if default is not None:
-                field["defaultValue"] = default
-            fields.append(field)
-
-        return fields
-
     def _parse_pydantic_class(
         self, class_name: str, file_path: str
     ) -> List[Dict[str, Any]]:
@@ -484,49 +467,84 @@ class ConfigSchemaGenerator:
         List[Dict[str, Any]]
             List of field definitions extracted from the Pydantic model.
         """
-        fields = []
         if not os.path.exists(file_path):
-            return fields
+            return []
 
         try:
             tree = ast.parse(open(file_path, "r", encoding="utf-8").read())
             for node in tree.body:
                 if isinstance(node, ast.ClassDef) and node.name == class_name:
-                    for item in node.body:
-                        if not (
-                            isinstance(item, ast.AnnAssign)
-                            and isinstance(item.target, ast.Name)
-                        ):
-                            continue
-
-                        name = item.target.id
-                        if name.startswith("_") or name == "model_config":
-                            continue
-
-                        if item.value:
-                            default = self._get_pydantic_default(item.value)
-                        else:
-                            default = None
-
-                        if default == "__SKIP__":
-                            continue
-
-                        fields.append(
-                            {
-                                "name": name,
-                                "type": self._annotation_to_type(item.annotation),
-                                "label": name.replace("_", " ").title(),
-                                "required": default is not None,
-                                **(
-                                    {"defaultValue": default}
-                                    if default is not None
-                                    else {}
-                                ),
-                            }
-                        )
-                    break
+                    return self._parse_pydantic_fields_from_node(node)
         except Exception as e:
             logging.error(f"Error parsing Pydantic class: {e}")
+        return []
+
+    def _parse_pydantic_fields_from_node(
+        self, node: ast.ClassDef
+    ) -> List[Dict[str, Any]]:
+        """Extract fields from a Pydantic ClassDef node.
+
+        Parameters
+        ----------
+        node : ast.ClassDef
+            The class definition node.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of extracted fields.
+        """
+        fields = []
+        for item in node.body:
+            if not (
+                isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name)
+            ):
+                continue
+
+            name = item.target.id
+            if name.startswith("_") or name == "model_config":
+                continue
+
+            description = ""
+            default = None
+
+            if item.value:
+                default = self._get_pydantic_default(item.value)
+
+                if (
+                    isinstance(item.value, ast.Call)
+                    and isinstance(item.value.func, ast.Name)
+                    and item.value.func.id == "Field"
+                ):
+                    for keyword in item.value.keywords:
+                        if keyword.arg == "description" and isinstance(
+                            keyword.value, ast.Constant
+                        ):
+                            description = keyword.value.value
+            else:
+                default = None
+
+            if default == "__SKIP__":
+                continue
+
+            has_default = default is not None
+            if default == "__HAS_DEFAULT__":
+                has_default = True
+                default = None
+
+            field = {
+                "name": name,
+                "type": self._annotation_to_type(item.annotation),
+                "label": name.replace("_", " ").title(),
+                "required": has_default,
+                "description": description,
+            }
+
+            if default is not None:
+                field["defaultValue"] = default
+
+            fields.append(field)
+
         return fields
 
     def _annotation_to_type(self, annotation: ast.expr) -> str:
@@ -591,6 +609,15 @@ class ConfigSchemaGenerator:
         if isinstance(value_node, ast.Constant):
             return value_node.value
         if isinstance(value_node, ast.Call):
+            if isinstance(value_node.func, ast.Name) and value_node.func.id == "Field":
+                for keyword in value_node.keywords:
+                    if keyword.arg == "default":
+                        return self._get_pydantic_default(keyword.value)
+                    if keyword.arg == "default_factory":
+                        return "__HAS_DEFAULT__"
+                if value_node.args:
+                    return self._get_pydantic_default(value_node.args[0])
+                return None
             return "__SKIP__"
         return None
 
