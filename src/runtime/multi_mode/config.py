@@ -12,7 +12,7 @@ from backgrounds import load_background
 from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
-from llm import LLM, LLMConfig, load_llm
+from llm import LLM, load_llm
 from runtime.multi_mode.hook import (
     LifecycleHook,
     LifecycleHookType,
@@ -23,7 +23,7 @@ from runtime.robotics import load_unitree
 from runtime.single_mode.config import RuntimeConfig, add_meta
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
-from simulators.base import Simulator, SimulatorConfig
+from simulators.base import Simulator
 
 
 class TransitionType(Enum):
@@ -424,10 +424,10 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
 
     # Load simulators
     mode_config.simulators = [
-        load_simulator(sim["type"])(
-            config=SimulatorConfig(
-                name=sim["type"],
-                **add_meta(
+        load_simulator(
+            {
+                **sim,
+                "config": add_meta(
                     sim.get("config", {}),
                     g_api_key,
                     g_ut_eth,
@@ -435,7 +435,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_robot_ip,
                     g_mode,
                 ),
-            )
+            }
         )
         for sim in mode_config._raw_simulators
     ]
@@ -479,18 +479,18 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     # Load LLM
     llm_config = mode_config._raw_llm or system_config.global_cortex_llm
     if llm_config:
-        llm_class = load_llm(llm_config["type"])
-        mode_config.cortex_llm = llm_class(
-            config=LLMConfig(
-                **add_meta(  # type: ignore
+        mode_config.cortex_llm = load_llm(
+            {
+                **llm_config,
+                "config": add_meta(
                     llm_config.get("config", {}),
                     g_api_key,
                     g_ut_eth,
                     g_URID,
                     g_robot_ip,
                     g_mode,
-                )
-            ),
+                ),
+            },
             available_actions=mode_config.agent_actions,
         )
     else:

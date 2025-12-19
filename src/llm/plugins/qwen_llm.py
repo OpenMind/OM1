@@ -84,7 +84,7 @@ class QwenLLM(LLM[R]):
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         super().__init__(config, available_actions)
