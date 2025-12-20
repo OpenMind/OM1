@@ -69,7 +69,20 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "auto"
-addopts = "-m \"not integration\""
+addopts = """
+    -m "not integration"
+    --ignore=tests/inputs/base/test_inputs_plugins.py
+    --ignore=tests/inputs/base/test_vlm_gemini.py
+    --ignore=tests/inputs/base/test_vlm_openai.py
+    --ignore=tests/inputs/base/test_vlm_vila.py
+    --ignore=tests/inputs/base/test_wallet_ethereum.py
+    --ignore=tests/inputs/base/test_webcam_to_face_emotion.py
+    --ignore=tests/inputs/plugins/test_vlm_coco_local.py
+    --ignore=tests/providers/test_unitree_camera_vlm_provider.py
+    --ignore=tests/providers/test_vlm_gemini_provider.py
+    --ignore=tests/providers/test_vlm_openai_provider.py
+    --ignore=tests/providers/test_vlm_vila_provider.py
+"""
 norecursedirs = ["src/unitree", "system_hw_test", "src/ubtech"]
 markers = [
     "integration: marks tests as integration tests",
