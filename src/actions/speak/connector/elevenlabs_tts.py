@@ -61,6 +61,10 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
         default=0,
         description="Number of responses to skip before speaking",
     )
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt when ASR detects speech during playback",
+    )
 
 
 # unstable / not released
@@ -96,6 +100,7 @@ class SpeakElevenLabsTTSConnector(
         voice_id = self.config.voice_id
         model_id = self.config.model_id
         output_format = self.config.output_format
+        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         # silence rate
         self.silence_rate = self.config.silence_rate
@@ -162,6 +167,7 @@ class SpeakElevenLabsTTSConnector(
             voice_id=voice_id,
             model_id=model_id,
             output_format=output_format,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.tts.start()
 
@@ -173,6 +179,7 @@ class SpeakElevenLabsTTSConnector(
             voice_id=voice_id,
             model_id=model_id,
             output_format=output_format,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
 
         # TTS status
