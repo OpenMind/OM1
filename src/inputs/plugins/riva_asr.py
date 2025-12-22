@@ -50,6 +50,10 @@ class RivaASRSensorConfig(SensorConfig):
     )
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
     remote_input: bool = Field(default=False, description="Whether to use remote input")
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt (does not mute mic during TTS playback)",
+    )
 
 
 class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
@@ -88,6 +92,7 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
         remote_input = self.config.remote_input
+        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         self.asr: ASRProvider = ASRProvider(
             rate=rate,
@@ -97,6 +102,7 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
             device_id=microphone_device_id,
             microphone_name=microphone_name,
             remote_input=remote_input,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
