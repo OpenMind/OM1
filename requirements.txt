@@ -1,0 +1,4 @@
+
+# Vector Memory Dependencies (issue #856)
+sentence-transformers>=2.2.0
+qdrant-client>=1.7.0

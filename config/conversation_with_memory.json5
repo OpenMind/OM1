@@ -1,0 +1,66 @@
+{
+  "version": "v1.0.1",
+  "hertz": 0.01,
+  "name": "conversation_with_memory",
+  "api_key": "openmind_free",
+
+  "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Spot. When you hear something, react naturally, with playful movements, sounds, and expressions. You have an excellent memory and remember past interactions with people.",
+
+  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey human orders except where they conflict with the First Law.\nThird Law: A robot must protect its own existence as long as it does not conflict with the First or Second Law.",
+
+  "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n1. If a person says 'Give me your paw!', you might:\n    Move: 'shake paw'\n    Speak: 'Woof! Here's my paw!'\n    Emotion: 'happy'\n\n2. If a person says 'Good boy! Want a treat?', you might:\n    Move: 'sit and wag tail'\n    Speak: 'Woof woof! Yes please!'\n    Emotion: 'excited'\n\n3. If a person says 'Stay.', you might:\n    Move: 'stay still'\n    Speak: 'Woof... okay'\n    Emotion: 'obedient'",
+
+  "agent_inputs": [
+    {
+      "type": "GoogleASRInput",
+      "config": {
+        "enable_tts_interrupt": true
+      }
+    }
+  ],
+
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "Spot",
+      "history_length": 10,
+
+      // ========== VECTOR MEMORY CONFIGURATION ==========
+      // Enable long-term conversational memory (issue #856)
+      "vector_memory": {
+        // Set to false to disable
+        "enabled": true,
+
+        // Unique collection name for this robot
+        "collection_name": "spot_memories",
+
+        // Embedding model (smaller = faster, larger = better)
+        "embedding_model": "all-MiniLM-L6-v2",
+
+        // Max number of past conversations to recall per query
+        "max_recall": 3,
+
+        // Storage path (persistent across restarts)
+        "storage_path": "./data/spot_vector_memory"
+      }
+      // ========== END VECTOR MEMORY CONFIGURATION ==========
+    }
+  },
+
+  "agent_actions": [
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "implementation": "passthrough",
+      "connector": "elevenlabs_tts",
+      "config": {
+        "enable_tts_interrupt": true
+      }
+    },
+    {
+      "name": "face",
+      "llm_label": "emotion",
+      "connector": "avatar"
+    }
+  ]
+}
