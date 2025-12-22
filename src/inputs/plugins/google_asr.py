@@ -72,6 +72,10 @@ class GoogleASRSensorConfig(SensorConfig):
         default="english", description="Language for speech recognition"
     )
     remote_input: bool = Field(default=False, description="Whether to use remote input")
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt (does not mute mic during TTS playback)",
+    )
 
 
 class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
@@ -126,6 +130,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         logging.info(f"Using language code {language_code} for Google ASR")
 
         remote_input = self.config.remote_input
+        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         self.asr: ASRProvider = ASRProvider(
             rate=rate,
@@ -136,6 +141,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             microphone_name=microphone_name,
             language_code=language_code,
             remote_input=remote_input,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
