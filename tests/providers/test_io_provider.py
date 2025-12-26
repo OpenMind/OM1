@@ -11,18 +11,20 @@ def io_provider():
     provider = IOProvider()
     yield provider
     provider._inputs.clear()
-    provider._input_timestamps.clear()
     provider._fuser_start_time = None
     provider._fuser_end_time = None
     provider._llm_prompt = None
     provider._llm_start_time = None
     provider._llm_end_time = None
+    provider._tick_counter = 0
 
 
 def test_add_input_with_timestamp(io_provider):
     timestamp = time.time()
     io_provider.add_input("key1", "value1", timestamp)
-    assert io_provider.inputs["key1"] == Input(input="value1", timestamp=timestamp)
+    assert io_provider.inputs["key1"] == Input(
+        input="value1", timestamp=timestamp, tick=0
+    )
 
 
 def test_remove_input(io_provider):

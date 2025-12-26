@@ -4,13 +4,41 @@ from collections import deque
 from queue import Empty, Queue
 from typing import Deque, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.face_presence_provider import FacePresenceProvider
 from providers.io_provider import IOProvider
 
 
-class FacePresence(FuserInput[Optional[str]]):
+class FacePresenceConfig(SensorConfig):
+    """
+    Configuration for Face Presence Sensor.
+
+    Parameters
+    ----------
+    face_http_base_url : str
+        Base URL for the Face HTTP service.
+    face_recent_sec : float
+        Time window in seconds to consider a face present.
+    face_poll_fps : float
+        Polling frequency in frames per second.
+    """
+
+    face_http_base_url: str = Field(
+        default="http://127.0.0.1:6793",
+        description="Base URL for the Face HTTP service",
+    )
+    face_recent_sec: float = Field(
+        default=2.0, description="Time window in seconds to consider a face present"
+    )
+    face_poll_fps: float = Field(
+        default=5.0, description="Polling frequency in frames per second"
+    )
+
+
+class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
     """
     Async input that adapts the FacePresenceProvider to the fuser/LLM pipeline.
 
@@ -23,7 +51,7 @@ class FacePresence(FuserInput[Optional[str]]):
     - Produce a compact, prompt-ready block via `formatted_latest_buffer()`.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: FacePresenceConfig):
         """
         Initialize the face presence input
         """
@@ -36,9 +64,9 @@ class FacePresence(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue(maxsize=64)
 
         # Read config and construct the provider WITH required args
-        base_url = getattr(self.config, "face_http_base_url", "http://127.0.0.1:6793")
-        recent_sec = float(getattr(self.config, "face_recent_sec", 2.0))
-        fps = float(getattr(self.config, "face_poll_fps", 5.0))
+        base_url = self.config.face_http_base_url
+        recent_sec = self.config.face_recent_sec
+        fps = self.config.face_poll_fps
 
         self.provider: FacePresenceProvider = FacePresenceProvider(
             base_url=base_url, recent_sec=recent_sec, fps=fps, timeout_s=2.0

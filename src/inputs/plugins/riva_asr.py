@@ -5,6 +5,8 @@ import time
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.asr_provider import ASRProvider
@@ -12,7 +14,49 @@ from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 
 
-class RivaASRInput(FuserInput[Optional[str]]):
+class RivaASRSensorConfig(SensorConfig):
+    """
+    Configuration for Riva ASR Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    rate : int
+        Sampling rate.
+    chunk : int
+        Chunk size.
+    base_url : str
+        Base URL for the ASR service.
+    stream_base_url : Optional[str]
+        Stream Base URL.
+    microphone_device_id : Optional[str]
+        Microphone Device ID.
+    microphone_name : Optional[str]
+        Microphone Name.
+    remote_input : bool
+        Whether to use remote input.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    rate: int = Field(default=48000, description="Sampling rate")
+    chunk: int = Field(default=12144, description="Chunk size")
+    base_url: str = Field(
+        default="wss://api-asr.openmind.org", description="Base URL for the ASR service"
+    )
+    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
+    microphone_device_id: Optional[int] = Field(
+        default=None, description="Microphone Device ID"
+    )
+    microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
+    remote_input: bool = Field(default=False, description="Whether to use remote input")
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt (does not mute mic during TTS playback)",
+    )
+
+
+class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
     """
     Automatic Speech Recognition (ASR) input handler.
 
@@ -20,7 +64,7 @@ class RivaASRInput(FuserInput[Optional[str]]):
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: RivaASRSensorConfig):
         """
         Initialize ASRInput instance.
         """
@@ -37,18 +81,18 @@ class RivaASRInput(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize ASR provider
-        api_key = getattr(self.config, "api_key", None)
-        rate = getattr(self.config, "rate", 48000)
-        chunk = getattr(self.config, "chunk", 12144)
-        base_url = getattr(self.config, "base_url", "wss://api-asr.openmind.org")
-        stream_base_url = getattr(
-            self.config,
-            "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream/audio?api_key={api_key}",
+        api_key = self.config.api_key
+        rate = self.config.rate
+        chunk = self.config.chunk
+        base_url = self.config.base_url
+        stream_base_url = (
+            self.config.stream_base_url
+            or f"wss://api.openmind.org/api/core/teleops/stream/audio?api_key={api_key}"
         )
-        microphone_device_id = getattr(self.config, "microphone_device_id", None)
-        microphone_name = getattr(self.config, "microphone_name", None)
-        remote_input = getattr(self.config, "remote_input", False)
+        microphone_device_id = self.config.microphone_device_id
+        microphone_name = self.config.microphone_name
+        remote_input = self.config.remote_input
+        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         self.asr: ASRProvider = ASRProvider(
             rate=rate,
@@ -58,6 +102,7 @@ class RivaASRInput(FuserInput[Optional[str]]):
             device_id=microphone_device_id,
             microphone_name=microphone_name,
             remote_input=remote_input,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)

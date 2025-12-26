@@ -6,9 +6,9 @@ import time
 import typing as T
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from llm import LLM, LLMConfig, load_llm
+from llm import LLM, LLMConfig, get_llm_class
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -33,6 +33,38 @@ def _extract_voice_input(prompt: str) -> str:
     if match:
         return match.group(1).strip()
     return ""
+
+
+class DualLLMConfig(LLMConfig):
+    """
+    Configuration for DualLLM.
+
+    Parameters
+    ----------
+    local_llm_type : str
+        Class name of the local LLM (default: "QwenLLM").
+    local_llm_config : dict
+        Configuration for the local LLM.
+    cloud_llm_type : str
+        Class name of the cloud LLM (default: "OpenAILLM").
+    cloud_llm_config : dict
+        Configuration for the cloud LLM.
+    """
+
+    local_llm_type: str = Field(
+        default="QwenLLM", description="Class name of the local LLM"
+    )
+    local_llm_config: T.Dict[str, T.Any] = Field(
+        default_factory=lambda: {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},
+        description="Configuration for the local LLM",
+    )
+    cloud_llm_type: str = Field(
+        default="OpenAILLM", description="Class name of the cloud LLM"
+    )
+    cloud_llm_config: T.Dict[str, T.Any] = Field(
+        default_factory=lambda: {"model": "gpt-4.1"},
+        description="Configuration for the cloud LLM",
+    )
 
 
 class DualLLM(LLM[R]):
@@ -64,24 +96,22 @@ class DualLLM(LLM[R]):
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: DualLLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         super().__init__(config, available_actions)
 
-        local_type = getattr(config, "local_llm_type", "QwenLLM")
-        local_cfg = getattr(
-            config,
-            "local_llm_config",
-            {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},
-        )
-        cloud_type = getattr(config, "cloud_llm_type", "OpenAILLM")
-        cloud_cfg = getattr(config, "cloud_llm_config", {"model": "gpt-4.1"})
+        self._config: DualLLMConfig
 
-        cloud_cfg["api_key"] = config.api_key
+        local_type = self._config.local_llm_type
+        local_cfg = self._config.local_llm_config.copy()
+        cloud_type = self._config.cloud_llm_type
+        cloud_cfg = self._config.cloud_llm_config.copy()
 
-        LocalLLMClass = load_llm(local_type)
-        CloudLLMClass = load_llm(cloud_type)
+        cloud_cfg["api_key"] = self._config.api_key
+
+        LocalLLMClass = get_llm_class(local_type)
+        CloudLLMClass = get_llm_class(cloud_type)
 
         self._local_llm: LLM = LocalLLMClass(
             config=LLMConfig(**local_cfg), available_actions=available_actions

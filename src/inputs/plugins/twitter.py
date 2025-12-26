@@ -4,27 +4,44 @@ from queue import Empty, Queue
 from typing import AsyncIterator, List, Optional
 
 import aiohttp
+from pydantic import Field
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 
 
-class TwitterInput(FuserInput[Optional[str]]):
+class TwitterSensorConfig(SensorConfig):
+    """
+    Configuration for Twitter Sensor.
+
+    Parameters
+    ----------
+    query : str
+        Query to search for on Twitter.
+    """
+
+    query: str = Field(
+        default="What's new in AI and technology?",
+        description="Query to search for on Twitter",
+    )
+
+
+class TwitterInput(FuserInput[TwitterSensorConfig, Optional[str]]):
     """Context query input handler for RAG."""
 
     def __init__(
         self,
-        config: Optional[SensorConfig] = None,
+        config: Optional[TwitterSensorConfig],
     ):
         """Initialize TwitterInput with configuration.
 
         Parameters
         ----------
-        config : Optional[SensorConfig]
+        config : Optional[TwitterSensorConfig]
             Configuration object from the runtime
         """
         if config is None:
-            config = SensorConfig()
+            config = TwitterSensorConfig()
 
         super().__init__(config)
 
@@ -35,7 +52,7 @@ class TwitterInput(FuserInput[Optional[str]]):
         self.context: Optional[str] = None
 
         # Use getattr instead of .get() since config is an object, not a dict
-        self.query = getattr(config, "query", "What's new in AI and technology?")
+        self.query = self.config.query
 
     async def __aenter__(self):
         """Async context manager entry"""

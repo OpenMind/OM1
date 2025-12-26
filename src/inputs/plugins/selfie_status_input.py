@@ -10,7 +10,7 @@ from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class SelfieStatus(FuserInput[Optional[str]]):
+class SelfieStatus(FuserInput[SensorConfig, Optional[str]]):
     """
     Surfaces 'SelfieStatus' lines written by the connector as a single INPUT block
     when a NEW timestamp arrives. One-shot per status.
@@ -23,7 +23,7 @@ class SelfieStatus(FuserInput[Optional[str]]):
       failed reason=bad_id
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         super().__init__(config)
         self.io_provider = IOProvider()
         self.messages: Deque[Message] = deque(maxlen=50)

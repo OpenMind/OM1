@@ -10,7 +10,7 @@ from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class DummyVLMLocal(FuserInput[Image.Image]):
+class DummyVLMLocal(FuserInput[SensorConfig, Image.Image]):
     """
     Vision Language Model input handler.
 
@@ -18,7 +18,7 @@ class DummyVLMLocal(FuserInput[Image.Image]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize VLM input handler with empty message buffer.
         """

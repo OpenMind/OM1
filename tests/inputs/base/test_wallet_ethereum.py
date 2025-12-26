@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.plugins.wallet_ethereum import Message, WalletEthereum
+from inputs.base import Message, SensorConfig
+from inputs.plugins.wallet_ethereum import WalletEthereum
 
 
 @pytest.fixture
@@ -30,7 +31,7 @@ def mock_io_provider():
 @pytest.fixture
 def wallet_eth(mock_web3, mock_io_provider):
     with patch.dict("os.environ", {"ETH_ADDRESS": "0xTestAddress"}):
-        return WalletEthereum()
+        return WalletEthereum(config=SensorConfig())
 
 
 def test_init(wallet_eth, mock_web3, mock_io_provider):
@@ -46,7 +47,7 @@ def test_init_connection_failed(mock_web3):
     mock_web3.is_connected.return_value = False
     with pytest.raises(Exception) as exc_info:
         with patch.dict("os.environ", {"ETH_ADDRESS": "0xTestAddress"}):
-            WalletEthereum()
+            WalletEthereum(config=SensorConfig())
     assert str(exc_info.value) == "Failed to connect to Ethereum"
 
 

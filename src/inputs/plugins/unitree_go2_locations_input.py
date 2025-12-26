@@ -3,37 +3,59 @@ import logging
 import time
 from typing import List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_go2_locations_provider import UnitreeGo2LocationsProvider
 
 
-class UnitreeGo2LocationsInput(FuserInput[Optional[str]]):
+class UnitreeGo2LocationsSensorConfig(SensorConfig):
+    """
+    Configuration for Unitree Go2 Locations Sensor.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the locations service.
+    timeout : int
+        Timeout in seconds.
+    refresh_interval : int
+        Refresh interval in seconds.
+    """
+
+    base_url: str = Field(
+        default="http://localhost:5000/maps/locations/list",
+        description="Base URL for the locations service",
+    )
+    timeout: int = Field(default=5, description="Timeout in seconds")
+    refresh_interval: int = Field(default=30, description="Refresh interval in seconds")
+
+
+class UnitreeGo2LocationsInput(
+    FuserInput[UnitreeGo2LocationsSensorConfig, Optional[str]]
+):
     """
     Input plugin that publishes available saved locations for LLM prompts (Unitree Go2).
 
     Reads locations from IOProvider (populated by Locations background task).
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeGo2LocationsSensorConfig):
         """
         Initialize the UnitreeGo2LocationsInput plugin.
 
         Parameters
         ----------
-        config : SensorConfig
+        config : UnitreeGo2LocationsSensorConfig
             Configuration for the sensor input.
         """
         super().__init__(config)
 
-        base_url = getattr(
-            self.config,
-            "base_url",
-            "http://localhost:5000/maps/locations/list",
-        )
-        timeout = getattr(self.config, "timeout", 5)
-        refresh_interval = getattr(self.config, "refresh_interval", 30)
+        base_url = self.config.base_url
+        timeout = self.config.timeout
+        refresh_interval = self.config.refresh_interval
 
         self.locations_provider = UnitreeGo2LocationsProvider(
             base_url, timeout, refresh_interval

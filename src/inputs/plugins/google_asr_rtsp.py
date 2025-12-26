@@ -6,6 +6,8 @@ from queue import Empty, Queue
 from typing import Dict, List, Optional
 from uuid import uuid4
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.asr_rtsp_provider import ASRRTSPProvider
@@ -29,7 +31,43 @@ LANGUAGE_CODE_MAP: dict = {
 }
 
 
-class GoogleASRRTSPInput(FuserInput[Optional[str]]):
+class GoogleASRRTSPSensorConfig(SensorConfig):
+    """
+    Configuration for Google ASR RTSP Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    rtsp_url : str
+        RTSP URL for the audio stream.
+    rate : int
+        Audio sampling rate.
+    base_url : Optional[str]
+        Base URL for the ASR service.
+    language : str
+        Language for speech recognition.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    rtsp_url: str = Field(
+        default="rtsp://localhost:8554/audio",
+        description="RTSP URL for the audio stream",
+    )
+    rate: int = Field(default=16000, description="Audio sampling rate")
+    base_url: Optional[str] = Field(
+        default=None, description="Base URL for the ASR service"
+    )
+    language: str = Field(
+        default="english", description="Language for speech recognition"
+    )
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt (does not mute mic during TTS playback)",
+    )
+
+
+class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
     """
     Automatic Speech Recognition (ASR) input handler.
 
@@ -37,7 +75,7 @@ class GoogleASRRTSPInput(FuserInput[Optional[str]]):
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: GoogleASRRTSPSensorConfig):
         """
         Initialize ASRInput instance.
         """
@@ -54,16 +92,15 @@ class GoogleASRRTSPInput(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize ASR provider
-        api_key = getattr(self.config, "api_key", None)
-        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/audio")
-        rate = getattr(self.config, "rate", 16000)
-        base_url = getattr(
-            self.config,
-            "base_url",
-            f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
+        api_key = self.config.api_key
+        rtsp_url = self.config.rtsp_url
+        rate = self.config.rate
+        base_url = (
+            self.config.base_url
+            or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
         )
 
-        language = getattr(self.config, "language", "english").strip().lower()
+        language = self.config.language.strip().lower()
 
         if language not in LANGUAGE_CODE_MAP:
             logging.error(
@@ -74,11 +111,14 @@ class GoogleASRRTSPInput(FuserInput[Optional[str]]):
         language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
         logging.info(f"Using language code {language_code} for Google ASR")
 
+        enable_tts_interrupt = self.config.enable_tts_interrupt
+
         self.asr: ASRRTSPProvider = ASRRTSPProvider(
             rtsp_url=rtsp_url,
             rate=rate,
             ws_url=base_url,
             language_code=language_code,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
