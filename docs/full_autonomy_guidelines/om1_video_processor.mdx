@@ -36,9 +36,9 @@ It runs entirely on the **robot's edge device** and automatically blurs the face
 
 ### How it works
 
-- Find faces (SCRFD) – Each frame is scanned with the face detector. The model is robust to different angles and lighting. It is optimized by tensorrt so the inference is pretty fast.
+- Find faces (SCRFD) – Each frame is scanned with the face detector. The model is robust to different angles and lighting. It is optimized with TensorRT, so inference is fast.
 - After it locates the face with bounding box, we expand the region around the face bounding box, create a smooth mask, and apply strong Gaussian blur  so identity wouldn't leak or recovered.
-We priotize safety and want to protect everyone's identity – when in doubt (low confidence, motion blur, occlusion), we focus on the side of privacy and blur anyway.
+We prioritize safety and want to protect everyone's identity – when in doubt (low confidence, motion blur, occlusion), we focus on the side of privacy and blur anyway.
 
 ## System Requirements
 
@@ -60,8 +60,8 @@ We priotize safety and want to protect everyone's identity – when in doubt (lo
 
     Get OM_API_KEY and OM_API_KEY_ID from [OpenMind portal](https://portal.openmind.org/).
     Once you generate a new API key, copy the key and paste it in the OM_API_KEY environment variable.
-    
-    To get your API key ID, copy the 16 digit id from your API key as highlighted in the image below: 
+
+    To get your API key ID, copy the 16 digit id from your API key as highlighted in the image below:
     ![OM_API_KEY_ID](../assets/om_api_key_id.png)
     ```bash
     export OM_API_KEY_ID="your_api_key_id"
@@ -91,7 +91,7 @@ We priotize safety and want to protect everyone's identity – when in doubt (lo
 
 1. Start the streaming service:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 2. The system will automatically:
@@ -175,7 +175,7 @@ To modify the om_face_recog_stream parameters, edit the command in video_process
 vim video_processor/supervisord.conf
 ```
 
-Modified parameters - 
+Modified parameters -
 ```bash
 --device: Camera device path
 --rtsp-mic-device: Microphone device identifier
@@ -201,7 +201,7 @@ uv run om_face_recog_stream --help
 - **No video feed**:
   - Verify camera device permissions
   - Check if the camera is being used by another application
-  
+
 - **Audio not working**:
   - Verify the correct audio device is specified
   - Check PulseAudio configuration

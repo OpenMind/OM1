@@ -117,3 +117,43 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
 class ASRText(IdlStruct, typename="ASRText"):
     header: Header
     text: str
+
+
+@dataclass
+class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
+    class Code(Enum):
+        SWITCH_FACE = 0
+        STATUS = 1
+
+    header: Header
+    request_id: String
+    code: int8
+    face_text: String
+
+
+@dataclass
+class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
+    class Code(Enum):
+        ACTIVE = 0
+        INACTIVE = 1
+        UNKNOWN = 2
+
+    header: Header
+    request_id: String
+    code: int8
+    message: String
+
+
+@dataclass
+class ConfigRequest(IdlStruct, typename="ConfigRequest"):
+    header: Header
+    request_id: String
+    config: String = String("")  # ignored for GET_CONFIG
+
+
+@dataclass
+class ConfigResponse(IdlStruct, typename="ConfigResponse"):
+    header: Header
+    request_id: String
+    config: String
+    message: String

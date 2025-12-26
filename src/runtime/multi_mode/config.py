@@ -9,10 +9,10 @@ import json5
 from actions import load_action
 from actions.base import AgentAction
 from backgrounds import load_background
-from backgrounds.base import Background, BackgroundConfig
+from backgrounds.base import Background
 from inputs import load_input
-from inputs.base import Sensor, SensorConfig
-from llm import LLM, LLMConfig, load_llm
+from inputs.base import Sensor
+from llm import LLM, load_llm
 from runtime.multi_mode.hook import (
     LifecycleHook,
     LifecycleHookType,
@@ -21,8 +21,9 @@ from runtime.multi_mode.hook import (
 )
 from runtime.robotics import load_unitree
 from runtime.single_mode.config import RuntimeConfig, add_meta
+from runtime.version import verify_runtime_version
 from simulators import load_simulator
-from simulators.base import Simulator, SimulatorConfig
+from simulators.base import Simulator
 
 
 class TransitionType(Enum):
@@ -82,6 +83,8 @@ class ModeConfig:
     Configuration for a specific mode.
     """
 
+    version: str
+
     name: str
     display_name: str
     description: str
@@ -125,6 +128,7 @@ class ModeConfig:
             raise ValueError(f"No LLM configured for mode {self.name}")
 
         return RuntimeConfig(
+            version=self.version,
             hertz=self.hertz,
             mode=self.name,
             name=f"{global_config.name}_{self.name}",
@@ -295,6 +299,9 @@ def load_mode_config(
     with open(config_path, "r") as f:
         raw_config = json5.load(f)
 
+    config_version = raw_config.get("version")
+    verify_runtime_version(config_version, config_name)
+
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
         logging.warning("No robot ip found in mode config. Checking .env file.")
@@ -344,6 +351,7 @@ def load_mode_config(
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
         mode_config = ModeConfig(
+            version=mode_data.get("version", "1.0"),
             name=mode_name,
             display_name=mode_data.get("display_name", mode_name),
             description=mode_data.get("description", ""),
@@ -398,27 +406,28 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
 
     # Load inputs
     mode_config.agent_inputs = [
-        load_input(inp["type"])(
-            config=SensorConfig(
-                **add_meta(
+        load_input(
+            {
+                **inp,
+                "config": add_meta(
                     inp.get("config", {}),
                     g_api_key,
                     g_ut_eth,
                     g_URID,
                     g_robot_ip,
                     g_mode,
-                )
-            )
+                ),
+            }
         )
         for inp in mode_config._raw_inputs
     ]
 
     # Load simulators
     mode_config.simulators = [
-        load_simulator(sim["type"])(
-            config=SimulatorConfig(
-                name=sim["type"],
-                **add_meta(
+        load_simulator(
+            {
+                **sim,
+                "config": add_meta(
                     sim.get("config", {}),
                     g_api_key,
                     g_ut_eth,
@@ -426,7 +435,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
                     g_robot_ip,
                     g_mode,
                 ),
-            )
+            }
         )
         for sim in mode_config._raw_simulators
     ]
@@ -451,17 +460,18 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
 
     # Load backgrounds
     mode_config.backgrounds = [
-        load_background(bg["type"])(
-            config=BackgroundConfig(
-                **add_meta(
+        load_background(
+            {
+                **bg,
+                "config": add_meta(
                     bg.get("config", {}),
                     g_api_key,
                     g_ut_eth,
                     g_URID,
                     g_robot_ip,
                     g_mode,
-                )
-            )
+                ),
+            }
         )
         for bg in mode_config._raw_backgrounds
     ]
@@ -469,18 +479,18 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     # Load LLM
     llm_config = mode_config._raw_llm or system_config.global_cortex_llm
     if llm_config:
-        llm_class = load_llm(llm_config["type"])
-        mode_config.cortex_llm = llm_class(
-            config=LLMConfig(
-                **add_meta(  # type: ignore
+        mode_config.cortex_llm = load_llm(
+            {
+                **llm_config,
+                "config": add_meta(
                     llm_config.get("config", {}),
                     g_api_key,
                     g_ut_eth,
                     g_URID,
                     g_robot_ip,
                     g_mode,
-                )
-            ),
+                ),
+            },
             available_actions=mode_config.agent_actions,
         )
     else:

@@ -8,18 +8,21 @@ import json5
 from actions import load_action
 from actions.base import AgentAction
 from backgrounds import load_background
-from backgrounds.base import Background, BackgroundConfig
+from backgrounds.base import Background
 from inputs import load_input
-from inputs.base import Sensor, SensorConfig
-from llm import LLM, LLMConfig, load_llm
+from inputs.base import Sensor
+from llm import LLM, load_llm
 from runtime.robotics import load_unitree
+from runtime.version import verify_runtime_version
 from simulators import load_simulator
-from simulators.base import Simulator, SimulatorConfig
+from simulators.base import Simulator
 
 
 @dataclass
 class RuntimeConfig:
     """Runtime configuration for the agent."""
+
+    version: str
 
     hertz: float
     name: str
@@ -96,6 +99,9 @@ def load_config(
     with open(config_path, "r+") as f:
         raw_config = json5.load(f)
 
+    config_version = raw_config.get("version")
+    verify_runtime_version(config_version, config_name)
+
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
         logging.warning(
@@ -155,37 +161,39 @@ def load_config(
     parsed_config = {
         **raw_config,
         "backgrounds": [
-            load_background(bg["type"])(
-                config=BackgroundConfig(
-                    **add_meta(
+            load_background(
+                {
+                    **bg,
+                    "config": add_meta(
                         bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    )
-                )
+                    ),
+                }
             )
             for bg in raw_config.get("backgrounds", [])
         ],
         "agent_inputs": [
-            load_input(input["type"])(
-                config=SensorConfig(
-                    **add_meta(
+            load_input(
+                {
+                    **input,
+                    "config": add_meta(
                         input.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    )
-                )
+                    ),
+                }
             )
             for input in raw_config.get("agent_inputs", [])
         ],
         "simulators": [
-            load_simulator(simulator["type"])(
-                config=SimulatorConfig(
-                    name=simulator["type"],
-                    **add_meta(
+            load_simulator(
+                {
+                    **simulator,
+                    "config": add_meta(
                         simulator.get("config", {}),
                         g_api_key,
                         g_ut_eth,
                         g_URID,
                         g_robot_ip,
                     ),
-                )
+                }
             )
             for simulator in raw_config.get("simulators", [])
         ],
@@ -206,35 +214,23 @@ def load_config(
         ],
     }
 
-    cortex_llm = (
-        load_llm(raw_config["cortex_llm"]["type"])(
-            config=LLMConfig(
-                **add_meta(  # type: ignore
-                    raw_config["cortex_llm"].get("config", {}),
-                    g_api_key,
-                    g_ut_eth,
-                    g_URID,
-                    g_robot_ip,
-                )
+    cortex_llm = load_llm(
+        {
+            **raw_config["cortex_llm"],
+            "config": add_meta(
+                raw_config["cortex_llm"].get("config", {}),
+                g_api_key,
+                g_ut_eth,
+                g_URID,
+                g_robot_ip,
             ),
-            available_actions=parsed_config["agent_actions"],
-        ),
+        },
+        available_actions=parsed_config["agent_actions"],
     )
 
-    if len(cortex_llm) != 1:
-        raise ValueError("Expected exactly one cortex_llm instance.")
-
-    parsed_config["cortex_llm"] = cortex_llm[0]
+    parsed_config["cortex_llm"] = cortex_llm
 
     return RuntimeConfig(**parsed_config)
-
-
-def get_nested_value(data, keys):
-    if not keys:
-        return data
-    if isinstance(data, dict) and keys[0] in data:
-        return get_nested_value(data[keys[0]], keys[1:])
-    return None
 
 
 def add_meta(
@@ -287,29 +283,35 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     g_robot_ip = config.get("robot_ip")
 
     backgrounds = [
-        load_background(bg["type"])(
-            config=BackgroundConfig(
-                **add_meta(bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip)
-            )
+        load_background(
+            {
+                **bg,
+                "config": add_meta(
+                    bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
         )
         for bg in config.get("backgrounds", [])
     ]
     agent_inputs = [
-        load_input(inp["type"])(
-            config=SensorConfig(
-                **add_meta(inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip)
-            )
+        load_input(
+            {
+                **inp,
+                "config": add_meta(
+                    inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
         )
         for inp in config.get("agent_inputs", [])
     ]
     simulators = [
-        load_simulator(sim["type"])(
-            config=SimulatorConfig(
-                name=sim["type"],
-                **add_meta(
+        load_simulator(
+            {
+                **sim,
+                "config": add_meta(
                     sim.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
                 ),
-            )
+            }
         )
         for sim in config.get("simulators", [])
     ]
@@ -324,19 +326,21 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         )
         for action in config.get("agent_actions", [])
     ]
-    cortex_llm = load_llm(config["cortex_llm"]["type"])(
-        config=LLMConfig(
-            **add_meta(  # type: ignore
+    cortex_llm = load_llm(
+        {
+            **config["cortex_llm"],
+            "config": add_meta(
                 config["cortex_llm"].get("config", {}),
                 api_key,
                 g_ut_eth,
                 g_URID,
                 g_robot_ip,
-            )
-        ),
+            ),
+        },
         available_actions=agent_actions,
     )
     return RuntimeConfig(
+        version=config.get("version", "v1.0.0"),  # Default version if not specified
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
         system_prompt_base=config.get("system_prompt_base", ""),

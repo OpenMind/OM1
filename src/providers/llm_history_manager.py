@@ -67,6 +67,9 @@ class LLMHistoryManager:
         Summarize a list of messages using the OpenAI API.
         Returns a new message containing the summary.
         """
+        # Set timeout for API call
+        timeout = 10.0  # seconds
+
         try:
             if not messages:
                 logging.warning("No messages to summarize")
@@ -100,8 +103,6 @@ class LLMHistoryManager:
 
             logging.info(f"Information to summarize:\n{summary_prompt}")
 
-            # Set timeout for API call
-            timeout = 10.0  # seconds
             response = await asyncio.wait_for(
                 self.client.chat.completions.create(  # type: ignore
                     model=self.config.model or "gpt-4o-mini",
@@ -204,10 +205,14 @@ class LLMHistoryManager:
         return [{"role": msg.role, "content": msg.content} for msg in self.history]
 
     @staticmethod
-    def update_history():
+    def update_history() -> (
+        Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]
+    ):
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
             @functools.wraps(func)
-            async def wrapper(self: Any, prompt: str, *args, **kwargs) -> R:
+            async def wrapper(self: Any, prompt: str, *args: Any, **kwargs: Any) -> R:
+                if getattr(self, "_skip_state_management", False):
+                    return await func(self, prompt, *args, **kwargs)
 
                 if self._config.history_length == 0:
                     response = await func(self, prompt, [], *args, **kwargs)
@@ -219,13 +224,13 @@ class LLMHistoryManager:
                 cycle = self.history_manager.frame_index
                 logging.debug(f"LLM Tasking cycle debug tracker: {cycle}")
 
+                current_tick = self.io_provider.tick_counter
                 formatted_inputs = f"{self.agent_name} sensed the following: "
                 for input_type, input_info in self.io_provider.inputs.items():
-                    logging.debug(f"LLM: {input_type}")
-                    logging.debug(f"LLM: {input_info}")
-                    formatted_inputs += f"{input_type}. {input_info.input} | "
-
-                # formatted_inputs = f"**** sensed the following: {" | ".join(f"{input_type}: {input_info.input}" for input_type, input_info in self.io_provider.inputs.items())}"
+                    if input_info.tick == current_tick:
+                        logging.debug(f"LLM: {input_type} (tick #{input_info.tick})")
+                        logging.debug(f"LLM: {input_info}")
+                        formatted_inputs += f"{input_type}. {input_info.input} | "
 
                 formatted_inputs = formatted_inputs.replace("..", ".")
                 formatted_inputs = formatted_inputs.replace("  ", " ")
@@ -259,7 +264,7 @@ class LLMHistoryManager:
                     action_message = action_message.replace("****", self.agent_name)
 
                     self.history_manager.history.append(
-                        ChatMessage(role="user", content=action_message)
+                        ChatMessage(role="assistant", content=action_message)
                     )
 
                     if (

@@ -4,6 +4,7 @@ import time
 from enum import Enum
 
 from om1_utils import ws
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move_go2_teleops.interface import MoveInput
@@ -17,23 +18,41 @@ class RobotState(Enum):
     SITTING = "sitting"
 
 
-class MoveGo2Remote(ActionConnector[MoveInput]):
+class MoveGo2RemoteConfig(ActionConfig):
     """
-    MoveGo2Remote connector for the Move action.
+    Configuration for MoveGo2Remote connector.
+
+    Parameters:
+    ----------
+    api_key : Optional[str]
+        OM API key.
     """
 
-    def __init__(self, config: ActionConfig):
+    api_key: str = Field(
+        default="",
+        description="OM API key.",
+    )
+
+
+class MoveGo2RemoteConnector(ActionConnector[MoveGo2RemoteConfig, MoveInput]):
+    """
+    Remote connector for the Move Go2 teleops action.
+
+    NOTE: This connector has been deprecated. OM1 Orchestrator docker automatically supports remote teleops
+    """
+
+    def __init__(self, config: MoveGo2RemoteConfig):
         """
         Initialize the MoveGo2Remote connector.
 
         Parameters
         ----------
-        config : ActionConfig
+        config : MoveGo2RemoteConfig
             The configuration for the action connector.
         """
         super().__init__(config)
 
-        api_key = getattr(config, "api_key", None)
+        api_key = self.config.api_key
 
         self.sport_client = None
         try:

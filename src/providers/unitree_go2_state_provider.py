@@ -87,7 +87,7 @@ def go2_state_processor(
         """
         return state_machine_codes.get(code, "unknown")
 
-    def state_callback(msg: SportModeState_):
+    def state_callback(msg: SportModeState_):  # type: ignore
         """
         Callback for receiving sport mode state messages.
 
@@ -95,10 +95,10 @@ def go2_state_processor(
         -----------
         msg: SportModeState_
         """
-        go2_sport_mode_state_msg = msg
-        go2_state_code = msg.error_code
-        go2_state = get_state_from_code(msg.error_code)
-        go2_action_progress = msg.progress
+        go2_sport_mode_state_msg = msg  # type: ignore
+        go2_state_code = msg.error_code  # type: ignore
+        go2_state = get_state_from_code(msg.error_code)  # type: ignore
+        go2_action_progress = msg.progress  # type: ignore
 
         data = {
             "go2_sport_mode_state_msg": go2_sport_mode_state_msg,
@@ -117,13 +117,13 @@ def go2_state_processor(
                 pass
 
     try:
-        ChannelFactoryInitialize(0, channel)
+        ChannelFactoryInitialize(0, channel)  # type: ignore
     except Exception as e:
         logging.error(f"Error initializing Unitree Go2 odom channel: {e}")
         return
 
     try:
-        subscriber = ChannelSubscriber(channel, SportModeState_)
+        subscriber = ChannelSubscriber(channel, SportModeState_)  # type: ignore
         subscriber.Init(state_callback, 10)
         logging.info(f"Subscribed to {channel} for Unitree Go2 state data")
     except Exception as e:
