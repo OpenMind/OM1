@@ -349,7 +349,7 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
         # special case for no data if the D-pad or LT and RT is kept pressed
         if data is None or len(data) == 0:
             if self.rt_previous > 0 or self.lt_previous > 0:
-                # we always excute the left turn first
+                # we always execute the left turn first
                 if self.lt_previous > 0:
                     logging.info(
                         "Left Trigger is kept pressed - Counter-clockwise rotation"
