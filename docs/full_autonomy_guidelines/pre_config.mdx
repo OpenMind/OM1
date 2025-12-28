@@ -10,20 +10,29 @@ Our boot sequence is as follows:
     - Wait 5 seconds to set up the speaker and microphone with echo cancellation
     - Wait 15 seconds before restarting om1
 
-Follow the steps below to get the system up and running
-
-- Setup the API key
+- Setup environment variables
     Get you API key from [OM1 Portal](https://portal.openmind.org/)
 
     For Bash:
     Open the bashrc file
-    ```vim ~/.bashrc or ~/.bash_profile.``` and add ``` export OM_API_KEY="your API key" ```
+    ```vim ~/.bashrc or ~/.bash_profile.``` and add ``` export OM_API_KEY=your API key ```
 
-- Install ROS2-humble and CycloneDDS on the edge device.
+    For Unitree G1, Add the following as well
+    ```bash
+    export ROBOT_TYPE=g1
+    export CYCLONEDDS_INTERFACE=enP2p1s0
+    ```
+
+    Note: By default, the docker container has `CYCLONEDDS_INTERFACE` set to `eno1`, it is necessary to update it to the correct interface for G1 setup. Ideally `ROBOT_TYPE` can also be setup for Go2 but it is not mandatory.
+
+    The cyclone dds interface can be found by running `ifconfig` in your terminal and selecting the name of the ethernet connection. Usually for the dog it is `eno1` and for g1 it is `enP2p1s0`.
+
+- Install ROS2-jazzy and CycloneDDS on the edge device. (Optional)
+    [ROS2 installation link](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html#id7)
 
 - Establish Ethernet and DDS connectivity
 
-    Open the network settings and find the network interface that is connected to the Go2 EDU. In the IPv4 settings, change the IPv4 mode to manual, set the address to 192.168.123.99, and set the mask to 255.255.255.0. After completion, click apply (or equivalent) and wait for the network to reconnect.
+    Open the network settings and find the network interface that is connected to the Go2 EDU/G1. In the IPv4 settings, change the IPv4 mode to manual, set the address to 192.168.123.99, and set the mask to 255.255.255.0. After completion, click apply (or equivalent) and wait for the network to reconnect.
 
 - Create cyclonedds.xml file inside /Documents/Github/cyclonedds/
     ```vi cyclonedds.xml```
@@ -48,7 +57,12 @@ Follow the steps below to get the system up and running
     ```
     Make sure you configure the correct IP address for control station 2. It should be the same you configure in IPv4 settings above.
 
-- Set CYCLONEDDS_HOME, CMAKE_PREFIX_PATH, and CYCLONEDDS_URI
+    For Unitree G1, make sure you update the following
+    ```bash
+    <NetworkInterface name="enP2p1s0" priority="default" multicast="default" />
+    ```
+
+- Set CYCLONEDDS_HOME, CMAKE_PREFIX_PATH, and CYCLONEDDS_URI (Optional)
     ```bash
     source /opt/ros/humble/setup.bash
     export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
@@ -180,10 +194,17 @@ Note: To stop the kiosk service, use sudo systemctl stop kiosk.service.
         systemctl --user start audio-defaults.service
         ```
 
+- Settings to be updated for edge device
+
+    Go to your system settings and update the following
+        - Set **screen blank** to **Never**
+        - Disable **Automate suspend**
+        - Enable **Autohide Dock**
+
 - Restart the OM1 container to apply these changes when the system starts to do audio configuration:
-```bash
-docker-compose restart om1
-```
+    ```bash
+    docker-compose restart om1
+    ```
 
 - Add this service to /etc/systemd/system/om1-container.service to automatically restart the OM1 container on boot (Optional):
     ```bash
