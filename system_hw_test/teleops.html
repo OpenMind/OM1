@@ -1,40 +1,188 @@
-<h3>Remote Control</h3><!DOCTYPE html>
+<h3>Remote Control</h3>
+<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSocket Video Stream with Remote Control</title>
+    <!-- Google Fonts - Inter for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
+        /* CSS Custom Properties for Theme Support */
+        :root {
+            /* Light Theme (default) */
+            --bg-primary: #f4f6f9;
+            --bg-secondary: #ffffff;
+            --bg-panel: #f8fafc;
+            --bg-command-status: #ecfdf5;
+            --bg-control-btn: #ffffff;
+            --bg-control-btn-disabled: #e2e8f0;
+            --bg-input: #ffffff;
+            --bg-video: #0f172a;
+
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-disabled: #94a3b8;
+            --text-heading: #0f172a;
+
+            --border-primary: #e2e8f0;
+            --border-control-btn: #cbd5e1;
+            --border-disabled: #e2e8f0;
+            --border-input-focus: #3b82f6;
+
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --shadow-hover: rgba(0, 0, 0, 0.12);
+
+            --accent-primary: #3b82f6;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --accent-red: #ef4444;
+            --accent-red-hover: #dc2626;
+            --accent-orange: #f59e0b;
+
+            --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        [data-theme="dark"] {
+            /* Dark Theme - Premium dark with subtle blue undertones */
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-panel: #242b3d;
+            --bg-command-status: #1a3a2f;
+            --bg-control-btn: #2d3548;
+            --bg-control-btn-disabled: #1f2937;
+            --bg-input: #2d3548;
+            --bg-video: #000000;
+
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-disabled: #64748b;
+            --text-heading: #ffffff;
+
+            --border-primary: #374151;
+            --border-control-btn: #4b5563;
+            --border-disabled: #374151;
+            --border-input-focus: #60a5fa;
+
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --shadow-hover: rgba(0, 0, 0, 0.6);
+
+            --accent-primary: #60a5fa;
+            --accent-green: #34d399;
+            --accent-green-hover: #10b981;
+            --accent-red: #f87171;
+            --accent-red-hover: #ef4444;
+            --accent-orange: #fbbf24;
+
+            --gradient-primary: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            --gradient-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            --gradient-danger: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .container {
             text-align: center;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            max-width: 900px;
+            background-color: var(--bg-secondary);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px var(--shadow-color);
+            max-width: 960px;
             width: 100%;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--border-primary);
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--shadow-hover);
+        }
+
+        .theme-toggle:active {
+            transform: translateY(0);
+        }
+
+        .theme-toggle .sun-icon {
+            display: none;
+        }
+
+        .theme-toggle .moon-icon {
+            display: block;
+        }
+
+        [data-theme="dark"] .theme-toggle .sun-icon {
+            display: block;
+        }
+
+        [data-theme="dark"] .theme-toggle .moon-icon {
+            display: none;
         }
 
         h1 {
-            color: #333;
-            margin-bottom: 20px;
+            color: var(--text-heading);
+            margin-bottom: 24px;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        h3 {
+            color: var(--text-heading);
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            letter-spacing: -0.01em;
         }
 
         .main-content {
             display: flex;
-            gap: 20px;
+            gap: 24px;
             align-items: flex-start;
             justify-content: center;
             flex-wrap: wrap;
@@ -46,7 +194,7 @@
         }
 
         .control-section {
-            flex: 0 0 300px;
+            flex: 0 0 320px;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -57,8 +205,11 @@
             width: 100%;
             max-width: 640px;
             margin: 20px auto;
-            border: 1px solid #ddd;
-            background-color: #000;
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            background-color: var(--bg-video);
+            overflow: hidden;
+            box-shadow: 0 4px 16px var(--shadow-color);
         }
 
         #videoDisplay {
@@ -68,135 +219,269 @@
         }
 
         .connection-panel {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+            background-color: var(--bg-panel);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-primary);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .control-panel {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+            background-color: var(--bg-panel);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-primary);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .control-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            max-width: 200px;
-            margin: 15px auto;
+            gap: 12px;
+            max-width: 220px;
+            margin: 20px auto;
         }
 
         .control-btn {
-            width: 60px;
-            height: 60px;
-            font-size: 24px;
-            font-weight: bold;
-            border: 2px solid #333;
-            border-radius: 8px;
-            background-color: #fff;
+            width: 64px;
+            height: 64px;
+            font-size: 22px;
+            font-weight: 600;
+            border: 1px solid var(--border-control-btn);
+            border-radius: 12px;
+            background-color: var(--bg-control-btn);
+            color: var(--text-primary);
             cursor: pointer;
-            transition: all 0.1s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 2px 8px var(--shadow-color);
         }
 
-        .control-btn:active, .control-btn.active {
-            background-color: #4CAF50;
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-hover);
+        }
+
+        .control-btn:active,
+        .control-btn.active {
+            background: var(--gradient-success);
             color: white;
-            transform: scale(0.95);
+            transform: scale(0.96);
+            border-color: transparent;
         }
 
         .control-btn:disabled {
-            background-color: #ccc;
-            color: #666;
+            background-color: var(--bg-control-btn-disabled);
+            color: var(--text-disabled);
             cursor: not-allowed;
-            border-color: #999;
+            border-color: var(--border-disabled);
+            box-shadow: none;
         }
 
         .empty-cell {
-            width: 60px;
-            height: 60px;
+            width: 64px;
+            height: 64px;
         }
 
         button {
-            background-color: #4CAF50;
+            background: var(--gradient-success);
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 12px 24px;
             text-align: center;
             text-decoration: none;
             display: inline-block;
-            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
             margin: 4px 2px;
             cursor: pointer;
-            border-radius: 4px;
+            border-radius: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
         }
 
         button:disabled {
-            background-color: #cccccc;
+            background: var(--bg-control-btn-disabled);
+            color: var(--text-disabled);
             cursor: not-allowed;
+            box-shadow: none;
         }
 
         #disconnectBtn {
-            background-color: #f44336;
+            background: var(--gradient-danger);
+            color: white;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        #disconnectBtn:hover:not(:disabled) {
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
         #statusIndicator {
-            width: 15px;
-            height: 15px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background-color: #ff0000;
+            background-color: var(--accent-red);
             display: inline-block;
-            margin-right: 10px;
+            margin-right: 8px;
             vertical-align: middle;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
         }
 
         #statusText {
             display: inline-block;
             vertical-align: middle;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
         }
 
         .status-connected {
-            background-color: #4CAF50 !important;
+            background-color: var(--accent-green) !important;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5) !important;
+            animation: none !important;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--accent-red);
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+            animation: pulse 2s infinite;
         }
 
         .url-input {
-            padding: 10px;
-            width: 80%;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-right: 5px;
-            font-size: 16px;
+            padding: 12px 16px;
+            width: 100%;
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            background-color: var(--bg-input);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .url-input:focus {
+            border-color: var(--border-input-focus);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .url-input::placeholder {
+            color: var(--text-secondary);
         }
 
         #stats {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #666;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        #stats div {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #stats span {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
         }
 
         .command-status {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: #e8f5e8;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 14px;
+            margin-top: 20px;
+            padding: 14px 16px;
+            background-color: var(--bg-command-status);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent-green);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
         .instructions {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #666;
+            margin-top: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
             text-align: left;
+            line-height: 1.8;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .instructions strong {
+            color: var(--text-heading);
+            font-size: 14px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .instructions kbd {
+            display: inline-block;
+            padding: 3px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+            background: var(--bg-panel);
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px var(--shadow-color);
+            margin-right: 4px;
         }
 
         .api-key-section {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Labels and text elements */
+        strong {
+            color: var(--text-heading);
+            font-weight: 600;
+        }
+
+        em {
+            color: var(--text-secondary);
+            font-style: italic;
         }
 
         @media (max-width: 768px) {
@@ -208,10 +493,25 @@
                 flex: none;
                 width: 100%;
             }
+
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
         }
     </style>
 </head>
+
 <body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle Dark/Light Mode">
+        <span class="sun-icon">☀️</span>
+        <span class="moon-icon">🌙</span>
+    </button>
+
     <div class="container">
         <h1>WebSocket Video Stream with Remote Control</h1>
 
@@ -224,9 +524,9 @@
                         <span id="statusIndicator"></span>
                         <span id="statusText">Disconnected</span>
                     </div>
-                    <div style="margin-top: 10px;">
+                    <div style="margin-top: 12px;">
                         <strong>Robot Control:</strong>
-                        <span id="controlStatusIndicator" style="width: 15px; height: 15px; border-radius: 50%; background-color: #ff0000; display: inline-block; margin-right: 10px; vertical-align: middle;"></span>
+                        <span id="controlStatusIndicator" class="status-indicator"></span>
                         <span id="controlStatusText">Control Disconnected</span>
                     </div>
                 </div>
@@ -251,7 +551,7 @@
                     <h3>API Connection</h3>
 
                     <div class="api-key-section">
-                        <input type="password" id="apiKey" class="url-input" placeholder="Enter OM API Key" style="width: 70%;">
+                        <input type="password" id="apiKey" class="url-input" placeholder="Enter your OM API Key">
                         <button id="connectBtn">Connect</button>
                     </div>
 
@@ -270,11 +570,12 @@
                     </div>
 
                     <div class="instructions">
-                        <strong>Keyboard Controls:</strong><br>
-                        W - Move Forward<br>
-                        S - Move Backward<br>
-                        A - Turn Left<br>
-                        D - Turn Right<br><br>
+                        <strong>Keyboard Controls</strong>
+                        <div><kbd>W</kbd> Move Forward</div>
+                        <div><kbd>S</kbd> Move Backward</div>
+                        <div><kbd>A</kbd> Turn Left</div>
+                        <div><kbd>D</kbd> Turn Right</div>
+                        <br>
                         <em>Use keyboard or click buttons above</em>
                     </div>
 
@@ -287,7 +588,63 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
+            // ============================================
+            // DARK MODE / THEME TOGGLE FUNCTIONALITY
+            // ============================================
+            const themeToggle = document.getElementById('themeToggle');
+            const html = document.documentElement;
+
+            // Check for saved theme preference, otherwise check system preference
+            function getPreferredTheme() {
+                const savedTheme = localStorage.getItem('om1-theme');
+                if (savedTheme) {
+                    return savedTheme;
+                }
+                // Check system preference
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    return 'dark';
+                }
+                return 'light';
+            }
+
+            // Apply theme to document
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    html.setAttribute('data-theme', 'dark');
+                } else {
+                    html.removeAttribute('data-theme');
+                }
+            }
+
+            // Toggle theme and save preference
+            function toggleTheme() {
+                const currentTheme = html.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                applyTheme(newTheme);
+                localStorage.setItem('om1-theme', newTheme);
+            }
+
+            // Initialize theme on page load
+            applyTheme(getPreferredTheme());
+
+            // Theme toggle button click handler
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // Listen for system theme changes
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                    // Only auto-switch if user hasn't manually set a preference
+                    if (!localStorage.getItem('om1-theme')) {
+                        applyTheme(e.matches ? 'dark' : 'light');
+                    }
+                });
+            }
+
+            // ============================================
+            // ORIGINAL TELEOPS FUNCTIONALITY
+            // ============================================
+
             // Video stream elements
             const connectBtn = document.getElementById('connectBtn');
             const disconnectBtn = document.getElementById('disconnectBtn');
@@ -326,7 +683,7 @@
             let isManualDisconnect = false;
 
             // Unified connection functionality
-            connectBtn.addEventListener('click', function() {
+            connectBtn.addEventListener('click', function () {
                 const inputApiKey = apiKeyInput.value.trim();
                 if (!inputApiKey) {
                     alert('Please enter your OM API Key');
@@ -339,14 +696,14 @@
                 connectToServices(apiKey);
             });
 
-            disconnectBtn.addEventListener('click', function() {
+            disconnectBtn.addEventListener('click', function () {
                 isManualDisconnect = true;
                 clearReconnectTimers();
                 disconnectAll();
             });
 
             // Keyboard event listeners
-            document.addEventListener('keydown', function(event) {
+            document.addEventListener('keydown', function (event) {
                 if (!isControlConnected) return;
 
                 const key = event.key.toLowerCase();
@@ -360,7 +717,7 @@
                 }
             });
 
-            document.addEventListener('keyup', function(event) {
+            document.addEventListener('keyup', function (event) {
                 if (!isControlConnected) return;
 
                 const key = event.key.toLowerCase();
@@ -376,21 +733,21 @@
             controlButtons.forEach(button => {
                 const key = button.dataset.key;
                 if (key) {
-                    button.addEventListener('mousedown', function() {
+                    button.addEventListener('mousedown', function () {
                         if (!isControlConnected) return;
                         keysPressed.add(key);
                         updateControlButtons();
                         updateMovement();
                     });
 
-                    button.addEventListener('mouseup', function() {
+                    button.addEventListener('mouseup', function () {
                         if (!isControlConnected) return;
                         keysPressed.delete(key);
                         updateControlButtons();
                         updateMovement();
                     });
 
-                    button.addEventListener('mouseleave', function() {
+                    button.addEventListener('mouseleave', function () {
                         if (!isControlConnected) return;
                         keysPressed.delete(key);
                         updateControlButtons();
@@ -435,7 +792,7 @@
                 const delay = Math.min(baseReconnectDelay * Math.pow(2, controlReconnectAttempts), 30000); // Max 30 seconds
                 controlReconnectAttempts++;
 
-                updateControlStatus(`Reconnecting in ${Math.ceil(delay/1000)}s (attempt ${controlReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
+                updateControlStatus(`Reconnecting in ${Math.ceil(delay / 1000)}s (attempt ${controlReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
 
                 controlReconnectTimer = setTimeout(() => {
                     console.log(`Control reconnect attempt ${controlReconnectAttempts}/${maxReconnectAttempts}`);
@@ -454,7 +811,7 @@
                 const delay = Math.min(baseReconnectDelay * Math.pow(2, videoReconnectAttempts), 30000); // Max 30 seconds
                 videoReconnectAttempts++;
 
-                updateStatus(`Reconnecting in ${Math.ceil(delay/1000)}s (attempt ${videoReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
+                updateStatus(`Reconnecting in ${Math.ceil(delay / 1000)}s (attempt ${videoReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
 
                 videoReconnectTimer = setTimeout(() => {
                     console.log(`Video reconnect attempt ${videoReconnectAttempts}/${maxReconnectAttempts}`);
@@ -469,7 +826,7 @@
                     updateStatus('Connecting...', 'orange');
                     connectBtn.disabled = true;
 
-                    websocket.onopen = function() {
+                    websocket.onopen = function () {
                         console.log('Video WebSocket connection established');
                         updateStatus('Connected', 'green');
                         disconnectBtn.disabled = false;
@@ -483,16 +840,16 @@
                         }
                     };
 
-                    websocket.onmessage = function(event) {
+                    websocket.onmessage = function (event) {
                         processVideoFrame(event.data);
                     };
 
-                    websocket.onerror = function(error) {
+                    websocket.onerror = function (error) {
                         console.error('Video WebSocket error:', error);
                         updateStatus('Error: ' + error.message, 'red');
                     };
 
-                    websocket.onclose = function(event) {
+                    websocket.onclose = function (event) {
                         console.log('Video WebSocket connection closed', event);
                         updateStatus('Disconnected', 'red');
                         connectBtn.disabled = false;
@@ -519,7 +876,7 @@
                     updateControlStatus('Connecting...', 'orange');
                     connectBtn.disabled = true;
 
-                    controlWebsocket.onopen = function() {
+                    controlWebsocket.onopen = function () {
                         console.log('Control WebSocket connection established');
                         updateControlStatus('Control Connected', 'green');
                         disconnectBtn.disabled = false;
@@ -532,12 +889,12 @@
                         }
                     };
 
-                    controlWebsocket.onerror = function(error) {
+                    controlWebsocket.onerror = function (error) {
                         console.error('Control WebSocket error:', error);
                         updateControlStatus('Control Error: ' + error.message, 'red');
                     };
 
-                    controlWebsocket.onclose = function(event) {
+                    controlWebsocket.onclose = function (event) {
                         console.log('Control WebSocket connection closed', event);
                         updateControlStatus('Control Disconnected', 'red');
                         connectBtn.disabled = false;
@@ -582,7 +939,7 @@
                         videoDisplay.src = `data:image/jpeg;base64,${base64Data}`;
                     } else {
                         const reader = new FileReader();
-                        reader.onload = function() {
+                        reader.onload = function () {
                             const base64 = reader.result.split(',')[1];
                             videoDisplay.src = `data:image/jpeg;base64,${base64}`;
                         };
@@ -665,7 +1022,7 @@
             }
 
             // Continuous command publishing (similar to Python version)
-            setInterval(function() {
+            setInterval(function () {
                 if (isControlConnected && keysPressed.size > 0) {
                     publishCommand();
                 }
@@ -677,4 +1034,5 @@
         });
     </script>
 </body>
+
 </html>
