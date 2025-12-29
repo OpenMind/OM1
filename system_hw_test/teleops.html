@@ -6,12 +6,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSocket Video Stream with Remote Control</title>
-    <!-- Google Fonts - Inter for modern typography -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
     <style>
         /* CSS Custom Properties for Theme Support */
         :root {
@@ -91,7 +85,7 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -293,7 +287,7 @@
             text-align: center;
             text-decoration: none;
             display: inline-block;
-            font-family: 'Inter', sans-serif;
+            font-family: inherit;
             font-size: 14px;
             font-weight: 600;
             margin: 4px 2px;
@@ -384,7 +378,7 @@
             width: 100%;
             border: 1px solid var(--border-primary);
             border-radius: 8px;
-            font-family: 'Inter', sans-serif;
+            font-family: inherit;
             font-size: 14px;
             background-color: var(--bg-input);
             color: var(--text-primary);
@@ -417,7 +411,7 @@
         #stats span {
             font-weight: 600;
             color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
         }
 
         .command-status {
@@ -425,7 +419,7 @@
             padding: 14px 16px;
             background-color: var(--bg-command-status);
             border-radius: 8px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
             font-weight: 500;
             color: var(--accent-green);
@@ -455,7 +449,7 @@
         .instructions kbd {
             display: inline-block;
             padding: 3px 8px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 12px;
             font-weight: 500;
             color: var(--text-primary);
