@@ -36,18 +36,21 @@ class ElevenLabsTTSProvider:
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
         output_format: Optional[str] = "mp3_44100_128",
+        enable_tts_interrupt: bool = False,
     ):
         """
         Initialize the TTS provider with given URL.
         """
         self.api_key = api_key
         self.elevenlabs_api_key = elevenlabs_api_key
+        self._enable_tts_interrupt = enable_tts_interrupt
 
         # Initialize TTS provider
         self.running: bool = False
         self._audio_stream: AudioOutputStream = AudioOutputStream(
             url=url,
             headers={"x-api-key": api_key} if api_key else None,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
 
         # Set Eleven Labs TTS parameters
@@ -63,6 +66,7 @@ class ElevenLabsTTSProvider:
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
         output_format: Optional[str] = "mp3_44100_128",
+        enable_tts_interrupt: bool = False,
     ):
         """
         Configure the TTS provider with given parameters.
@@ -79,6 +83,8 @@ class ElevenLabsTTSProvider:
             The name of the model for Eleven Labs TTS service.
         output_format : str, optional
             The output format for the audio stream.
+        enable_tts_interrupt : bool
+            If True, enables TTS interrupt when ASR detects speech.
         """
         restart_needed = (
             url != self._audio_stream._url
@@ -87,6 +93,7 @@ class ElevenLabsTTSProvider:
             or voice_id != self._voice_id
             or model_id != self._model_id
             or output_format != self._output_format
+            or enable_tts_interrupt != self._enable_tts_interrupt
         )
 
         if not restart_needed:
@@ -100,10 +107,12 @@ class ElevenLabsTTSProvider:
         self._voice_id = voice_id
         self._model_id = model_id
         self._output_format = output_format
+        self._enable_tts_interrupt = enable_tts_interrupt
 
         self._audio_stream: AudioOutputStream = AudioOutputStream(
             url=url,
             headers={"x-api-key": api_key} if api_key else None,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self._audio_stream.start()
 

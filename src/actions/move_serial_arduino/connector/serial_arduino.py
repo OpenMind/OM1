@@ -6,20 +6,45 @@ import logging
 import time
 
 import serial
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move.interface import MoveInput
 
 
-class MoveSerialConnector(ActionConnector[MoveInput]):
+class MoveSerialConfig(ActionConfig):
+    """
+    Configuration for Serial to Arduino connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters:
+    ----------
+    port : str
+        The serial port to connect to the Arduino (e.g., COM3 or /dev/cu.usbmodem14101). Leave empty to simulate.
+    """
+
+    port: str = Field(
+        default="",
+        description="The serial port to connect to the Arduino (e.g., COM3 or /dev/cu.usbmodem14101). Leave empty to simulate.",
+    )
+
+
+class MoveSerialConnector(ActionConnector[MoveSerialConfig, MoveInput]):
+    """
+    Connector that sends move commands via serial to an Arduino.
+    """
+
+    def __init__(self, config: MoveSerialConfig):
+        """
+        Initialize the MoveSerialConnector.
+
+        Parameters
+        ----------
+        config : MoveSerialConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
-        # Open the serial port
-        self.port = (
-            ""  # specify your serial port here, such as COM1 or /dev/cu.usbmodem14101
-        )
+        self.port = self.config.port
         self.ser = None
         if self.port:
             self.ser = serial.Serial(self.port, 9600)

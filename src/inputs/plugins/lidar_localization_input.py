@@ -11,7 +11,7 @@ from providers.unitree_go2_lidar_localization_provider import (
 )
 
 
-class LidarLocalizationInput(FuserInput[Optional[str]]):
+class LidarLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
     """
     Lidar localization status input plugin for LLM prompts.
 
@@ -19,7 +19,7 @@ class LidarLocalizationInput(FuserInput[Optional[str]]):
     clear feedback to the LLM about whether navigation is safe to proceed.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize the LocalizationInput plugin.
 

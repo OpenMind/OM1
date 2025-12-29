@@ -3,6 +3,8 @@ import logging
 import time
 from typing import List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
@@ -24,7 +26,20 @@ except ImportError:
             pass
 
 
-class UnitreeGo2Battery(FuserInput[List[float]]):
+class UnitreeGo2BatteryConfig(SensorConfig):
+    """
+    Configuration for Unitree Go2 Battery Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+
+
+class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
     """
     Unitree Go2 Lowstate bridge.
 
@@ -36,13 +51,13 @@ class UnitreeGo2Battery(FuserInput[List[float]]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeGo2BatteryConfig):
         """
         Initialize Unitree bridge with empty message buffer.
         """
         super().__init__(config)
 
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()

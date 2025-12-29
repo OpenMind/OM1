@@ -6,6 +6,8 @@ from queue import Empty, Queue
 from typing import Dict, List, Optional
 from uuid import uuid4
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.asr_provider import ASRProvider
@@ -29,7 +31,54 @@ LANGUAGE_CODE_MAP: dict = {
 }
 
 
-class GoogleASRInput(FuserInput[Optional[str]]):
+class GoogleASRSensorConfig(SensorConfig):
+    """
+    Configuration for Google ASR Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    rate : int
+        Sampling rate.
+    chunk : int
+        Chunk size.
+    base_url : Optional[str]
+        Base URL for the ASR service.
+    stream_base_url : Optional[str]
+        Stream Base URL.
+    microphone_device_id : Optional[str]
+        Microphone Device ID.
+    microphone_name : Optional[str]
+        Microphone Name.
+    language : str
+        Language for speech recognition.
+    remote_input : bool
+        Whether to use remote input.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    rate: int = Field(default=48000, description="Sampling rate")
+    chunk: int = Field(default=12144, description="Chunk size")
+    base_url: Optional[str] = Field(
+        default=None, description="Base URL for the ASR service"
+    )
+    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
+    microphone_device_id: Optional[int] = Field(
+        default=None, description="Microphone Device ID"
+    )
+    microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
+    language: str = Field(
+        default="english", description="Language for speech recognition"
+    )
+    remote_input: bool = Field(default=False, description="Whether to use remote input")
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt (does not mute mic during TTS playback)",
+    )
+
+
+class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
     """
     Automatic Speech Recognition (ASR) input handler.
 
@@ -37,7 +86,7 @@ class GoogleASRInput(FuserInput[Optional[str]]):
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: GoogleASRSensorConfig):
         """
         Initialize ASRInput instance.
         """
@@ -54,23 +103,22 @@ class GoogleASRInput(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize ASR provider
-        api_key = getattr(self.config, "api_key", None)
-        rate = getattr(self.config, "rate", 48000)
-        chunk = getattr(self.config, "chunk", 12144)
-        base_url = getattr(
-            self.config,
-            "base_url",
-            f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
+        # Initialize ASR provider
+        api_key = self.config.api_key
+        rate = self.config.rate
+        chunk = self.config.chunk
+        base_url = (
+            self.config.base_url
+            or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
         )
-        stream_base_url = getattr(
-            self.config,
-            "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream/audio?api_key={api_key}",
+        stream_base_url = (
+            self.config.stream_base_url
+            or f"wss://api.openmind.org/api/core/teleops/stream/audio?api_key={api_key}"
         )
-        microphone_device_id = getattr(self.config, "microphone_device_id", None)
-        microphone_name = getattr(self.config, "microphone_name", None)
+        microphone_device_id = self.config.microphone_device_id
+        microphone_name = self.config.microphone_name
 
-        language = getattr(self.config, "language", "english").strip().lower()
+        language = self.config.language.strip().lower()
 
         if language not in LANGUAGE_CODE_MAP:
             logging.error(
@@ -81,7 +129,8 @@ class GoogleASRInput(FuserInput[Optional[str]]):
         language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
         logging.info(f"Using language code {language_code} for Google ASR")
 
-        remote_input = getattr(self.config, "remote_input", False)
+        remote_input = self.config.remote_input
+        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         self.asr: ASRProvider = ASRProvider(
             rate=rate,
@@ -92,6 +141,7 @@ class GoogleASRInput(FuserInput[Optional[str]]):
             microphone_name=microphone_name,
             language_code=language_code,
             remote_input=remote_input,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)

@@ -94,7 +94,8 @@ OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or web
 
 OM1 is developed on:
 
-* Jetson AGX Orin 64GB (running Ubuntu 22.04 and JetPack 6.1)
+* Nvidia Thor (running JetPak 7.0) - full support
+* Jetson AGX Orin 64GB (running Ubuntu 22.04 and JetPack 6.1) - limited support
 * Mac Studio with Apple M2 Ultra with 48 GB unified memory (running MacOS Sequoia)
 * Mac Mini with Apple M4 Pro with 48 GB unified memory (running MacOS Sequoia)
 * Generic Linux machines (running Ubuntu 22.04)
@@ -104,7 +105,7 @@ OM1 _should_ run on other platforms (such as Windows) and microcontrollers such 
 
 ## Full Autonomy Guidance
 
-We're excited to introduce **full autonomy mode**, where four services work together in a loop without manual intervention:
+We're excited to introduce **full autonomy** for Unitree Go2 and G1. Full autonomy has four services that work together in a loop without manual intervention:
 
 - **om1**
 - **unitree_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
@@ -147,6 +148,7 @@ command: ["unitree_go2_autonomy_advance"]
 cd OM1
 docker compose up om1 -d --no-build
 ```
+
 - For unitree_sdk
 ```bash
 cd unitree_sdk
@@ -155,6 +157,7 @@ docker compose up om1_sensor -d --no-build
 docker compose up watchdog -d --no-build
 docker compose up zenoh_bridge -d --no-build
 ```
+
 - For OM1-avatar
 ```bash
 cd OM1-avatar
@@ -166,6 +169,7 @@ docker compose up om1_avatar -d --no-build
 cd OM1-video-processor
 docker compose up -d
 ```
+
 ## Detailed Documentation
 
 More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).

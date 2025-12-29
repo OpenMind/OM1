@@ -5,6 +5,8 @@ import time
 from queue import Queue
 from typing import List, Optional
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
 from providers.odom_provider import OdomProvider, RobotState
@@ -13,9 +15,36 @@ from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
-class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
+class MoveUnitreeSDKConfig(ActionConfig):
+    """
+    Configuration for MoveUnitreeSDK connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters:
+    ----------
+    unitree_ethernet : str
+        Ethernet channel for Unitree Go2 odometry.
+    """
+
+    unitree_ethernet: str = Field(
+        default="eth0",
+        description="Ethernet channel for Unitree Go2 odometry.",
+    )
+
+
+class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
+    """
+    Unitree SDK connector for the Move Go2 autonomy action.
+    """
+
+    def __init__(self, config: MoveUnitreeSDKConfig):
+        """
+        Initialize the MoveUnitreeSDK connector.
+
+        Parameters
+        ----------
+        config : MoveUnitreeSDKConfig
+            The configuration for the action connector.
+        """
         super().__init__(config)
 
         self.dog_attitude = None
@@ -44,7 +73,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         except Exception as e:
             logging.error(f"Error initializing Unitree sport client: {e}")
 
-        unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        unitree_ethernet = self.config.unitree_ethernet
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 

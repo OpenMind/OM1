@@ -30,7 +30,7 @@ def check_webcam():
     return True
 
 
-class FaceEmotionCapture(FuserInput[Optional[cv2.typing.MatLike]]):
+class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]]):
     """
     Real-time facial emotion recognition using webcam input.
 
@@ -38,7 +38,7 @@ class FaceEmotionCapture(FuserInput[Optional[cv2.typing.MatLike]]):
     Processes video frames to detect faces and classify emotions.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize FaceEmotionCapture instance.
         """

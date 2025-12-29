@@ -5,21 +5,35 @@ import time
 from typing import List, Optional
 
 from cdp import Cdp, Wallet
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class WalletCoinbase(FuserInput[List[float]]):
+class WalletCoinbaseConfig(SensorConfig):
+    """
+    Configuration for Wallet Coinbase Sensor.
+
+    Parameters
+    ----------
+    asset_id : str
+        Asset ID to query.
+    """
+
+    asset_id: str = Field(default="eth", description="Asset ID to query")
+
+
+class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
     """
     Queries current balance of the configured asset and reports a balance increase
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: WalletCoinbaseConfig):
         super().__init__(config)
 
-        self.asset_id = getattr(self.config, "asset_id", "eth")
+        self.asset_id = self.config.asset_id
 
         # Track IO
         self.io_provider = IOProvider()

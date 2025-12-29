@@ -5,13 +5,41 @@ import time
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
+from pydantic import Field
+
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_vila_zenoh_provider import VLMVilaZenohProvider
 
 
-class VLMVilaZenoh(FuserInput[Optional[str]]):
+class VLMVilaZenohConfig(SensorConfig):
+    """
+    Configuration for VLM Vila Zenoh Sensor.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the VLM service.
+    topic : str
+        Zenoh topic for receiving images.
+    decode_format : str
+        Image decode format (e.g., "H264").
+    """
+
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+    topic: str = Field(
+        default="rgb_image", description="Zenoh topic for receiving images"
+    )
+    decode_format: str = Field(
+        default="H264", description='Image decode format (e.g., "H264")'
+    )
+
+
+class VLMVilaZenoh(FuserInput[VLMVilaZenohConfig, Optional[str]]):
     """
     Vision Language Model input handler.
 
@@ -23,7 +51,7 @@ class VLMVilaZenoh(FuserInput[Optional[str]]):
     and provides formatted output of the latest processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMVilaZenohConfig):
         """
         Initialize VLM input handler.
 
@@ -42,9 +70,9 @@ class VLMVilaZenoh(FuserInput[Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        topic = getattr(self.config, "topic", "rgb_image")
-        decode_format = getattr(self.config, "decode_format", "H264")
+        base_url = self.config.base_url
+        topic = self.config.topic
+        decode_format = self.config.decode_format
 
         self.vlm: VLMVilaZenohProvider = VLMVilaZenohProvider(
             ws_url=base_url, topic=topic, decode_format=decode_format
