@@ -479,21 +479,132 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: 8px;
+            }
+
+            .container {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 1.1rem;
+                margin-bottom: 8px;
+            }
+
+            h3 {
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+            }
+
             .main-content {
                 flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .video-section {
+                flex: 1 1 100%;
+                min-width: unset;
+            }
+
+            #videoContainer {
+                max-width: 100%;
+                margin: 4px auto;
+                max-height: 150px;
+                overflow: hidden;
+            }
+
+            #videoDisplay {
+                max-height: 150px;
+                object-fit: cover;
+            }
+
+            .connection-panel {
+                padding: 8px;
+                margin-bottom: 0;
+            }
+
+            .connection-panel h3 {
+                margin-bottom: 6px;
+            }
+
+            /* Hide non-essential elements on mobile */
+            #stats {
+                display: none;
+            }
+
+            #connectionControls {
+                margin-top: 6px;
+            }
+
+            #connectionControls button {
+                padding: 6px 12px;
+                font-size: 12px;
             }
 
             .control-section {
-                flex: none;
+                flex: 1 1 100%;
                 width: 100%;
             }
 
+            .control-panel {
+                padding: 10px;
+                text-align: center;
+            }
+
+            .control-panel h3 {
+                margin-bottom: 8px;
+            }
+
+            .control-grid {
+                margin: 6px auto;
+                gap: 4px;
+                max-width: 130px;
+            }
+
+            .control-btn {
+                width: 38px;
+                height: 38px;
+                font-size: 14px;
+            }
+
+            .empty-cell {
+                width: 38px;
+                height: 38px;
+            }
+
+            .api-key-section {
+                margin-bottom: 8px;
+                gap: 6px;
+            }
+
+            .url-input {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            button {
+                padding: 8px 14px;
+                font-size: 12px;
+            }
+
+            .instructions {
+                display: none;
+            }
+
+            .command-status {
+                margin-top: 8px;
+                padding: 8px;
+                font-size: 11px;
+            }
+
             .theme-toggle {
-                top: 10px;
-                right: 10px;
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
+                top: 6px;
+                right: 6px;
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
             }
         }
     </style>
