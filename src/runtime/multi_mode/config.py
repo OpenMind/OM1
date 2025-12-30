@@ -128,10 +128,6 @@ class ModeConfig:
         Raw action configurations before loading. Defaults to empty list.
     _raw_backgrounds : List[Dict], optional
         Raw background configurations before loading. Defaults to empty list.
-    _raw_action_execution_mode : Optional[str], optional
-        Raw action execution mode before loading. e.g., "concurrent", "sequential", "dependencies". Defaults to concurrent.
-    _raw_action_dependencies : Optional[Dict[str, List[str]]], optional
-        Raw action dependencies before loading. Defaults to None.
     """
 
     version: str
@@ -163,8 +159,6 @@ class ModeConfig:
     _raw_simulators: List[Dict] = field(default_factory=list)
     _raw_actions: List[Dict] = field(default_factory=list)
     _raw_backgrounds: List[Dict] = field(default_factory=list)
-    _raw_action_execution_mode: Optional[str] = None
-    _raw_action_dependencies: Optional[Dict[str, List[str]]] = None
 
     def to_runtime_config(self, global_config: "ModeSystemConfig") -> RuntimeConfig:
         """
@@ -460,8 +454,6 @@ def load_mode_config(
             _raw_actions=mode_data.get("agent_actions", []),
             _raw_backgrounds=mode_data.get("backgrounds", []),
             _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
-            _raw_action_execution_mode=mode_data.get("action_execution_mode"),
-            _raw_action_dependencies=mode_data.get("action_dependencies"),
         )
 
         mode_system_config.modes[mode_name] = mode_config

@@ -178,8 +178,6 @@ class ActionOrchestrator:
         actions : list[Action]
             List of actions to promise to connectors.
         """
-        tasks = []
-
         for action in actions:
             logging.debug(f"Sending command (with dependencies): {action}")
             action = self._normalize_action(action)
@@ -191,7 +189,6 @@ class ActionOrchestrator:
             action_response = asyncio.create_task(
                 self._promise_action_with_deps(agent_action, action)
             )
-            tasks.append(action_response)
             self.promise_queue.append(action_response)
 
     async def _promise_action_with_deps(
