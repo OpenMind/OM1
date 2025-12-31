@@ -8,7 +8,6 @@ from typing import List, Optional
 import serial
 
 from providers.fabric_map_provider import RFDataRaw
-
 from .singleton import singleton
 
 
@@ -17,20 +16,11 @@ class GpsProvider:
     """
     GPS Provider.
 
-    This class implements a singleton pattern to manage:
-        * GPS data from serial
-
-    Parameters
-    ----------
-    serial_port: str = ""
-        The Serial port the Arduino is connected to
+    Singleton pattern for handling:
+        * GPS / MAG / BLE data from serial
     """
 
     def __init__(self, serial_port: str = ""):
-        """
-        Robot and sensor configuration
-        """
-
         logging.info(f"GPS_Provider booting GPS Provider at serial: {serial_port}")
 
         baudrate = 115200
@@ -44,7 +34,7 @@ class GpsProvider:
             self.serial_connection.reset_input_buffer()
             logging.info(f"Connected to {serial_port} at {baudrate} baud")
         except serial.SerialException as e:
-            logging.error(f"Error: {e}")
+            logging.error(f"GPS serial connection error: {e}")
 
         self._gps: Optional[dict] = None
 
@@ -65,104 +55,22 @@ class GpsProvider:
         self._thread: Optional[threading.Thread] = None
         self.start()
 
-    def string_to_unix_timestamp(self, time_str):
-        """
-        Convert a time string in the format 'YYYY:MM:DD:HH:MM:SS:ms'
-        to a Unix timestamp (UTC).
-        """
-        dt = datetime.strptime(time_str, "%Y:%m:%d:%H:%M:%S:%f")
-        dt = dt.replace(tzinfo=timezone.utc)
-        return dt.timestamp()
+    #
+    # ---------- UTIL ----------
+    #
 
-    def magGPSProcessor(self, data):
-        # Used whenever there is a connected
-        # nav Arduino on serial
+    def string_to_unix_timestamp(self, time_str: str) -> float:
+        """
+        Convert 'YYYY:MM:DD:HH:MM:SS:ms' → Unix timestamp
+        """
         try:
-            if data.startswith("HDG:"):
-                parts = data.split(":")
-                if len(parts) >= 2:
-                    # that's a HDG packet
-                    self.yaw_mag_0_360 = float(parts[1])
-                    self.yaw_mag_cardinal = self.compass_heading_to_direction(
-                        self.yaw_mag_0_360
-                    )
-                    logging.debug(f"MAG: {self.yaw_mag_0_360}")
-                else:
-                    logging.warning(f"Unable to parse heading: {data}")
-            elif data.startswith("YPR:"):
-                yaw, pitch, roll = map(str.strip, data[4:].split(","))
-                logging.debug(
-                    f"Orientation is Yaw: {yaw}°, Pitch: {pitch}°, Roll: {roll}°."
-                )
-            elif data.startswith("SAT:"):
-                logging.info(f"{data}")
-            elif data.startswith("GPS:"):
-                try:
-                    logging.info(f"{data}")
-                    parts = data[4:].split(",")
-                    lat = parts[0]
-                    lon = parts[1]
-                    heading = parts[3].split(":")[1]
-                    alt = parts[4].split(":")[1]
-                    sat = parts[5].split(":")[1]
-                    time = parts[6][5:]
-                    # turn 25 into full year -> 2025, for example
-                    self.gps_unix_ts = self.string_to_unix_timestamp("20" + time)
-
-                    qua = 0
-                    if len(parts) > 7:
-                        qua = parts[7].split(":")[1]
-
-                    if "N" in lat:
-                        self.lat = float(lat.replace("N", ""))
-                    else:
-                        self.lat = -1.0 * float(lat.replace("S", ""))
-
-                    if "W" in lon:
-                        self.lon = -1.0 * float(lon.replace("W", ""))
-                    else:
-                        self.lon = float(lon.replace("E", ""))
-
-                    # round to 10 cm localisation in x,y, and 1 cm in z
-                    self.lon = round(self.lon, 6)
-                    self.lat = round(self.lat, 6)
-                    self.alt = round(float(alt), 2)
-
-                    self.sat = int(sat)
-                    self.qua = int(qua)
-
-                    logging.debug(
-                        (
-                            f"Current location is {self.lat}, {self.lon} at {alt}m altitude. "
-                            f"GPS Heading {heading}° with {sat} satellites locked. "
-                            f"The unix timestamp is {self.gps_unix_ts}. "
-                            f"The fix quality is {self.qua}."
-                        )
-                    )
-                except Exception as e:
-                    logging.warning(f"Failed to parse GPS: {data} ({e})")
-            elif data.startswith("BLE:"):
-                try:
-                    self.ble_scan = self.parse_ble_triang_string(data)
-                    logging.debug(f"nRF BLE data {self.ble_scan}")
-                except Exception as e:
-                    logging.warning(f"Failed to parse BLE: {data} ({e})")
+            dt = datetime.strptime(time_str, "%Y:%m:%d:%H:%M:%S:%f")
+            return dt.replace(tzinfo=timezone.utc).timestamp()
         except Exception as e:
-            logging.warning(f"Error processing serial MAG/GPS/BLE input: {data} ({e})")
+            logging.warning(f"Invalid GPS time format '{time_str}' ({e})")
+            return 0.0
 
-        self._gps = {
-            "yaw_mag_0_360": self.yaw_mag_0_360,
-            "yaw_mag_cardinal": self.yaw_mag_cardinal,
-            "gps_lat": self.lat,
-            "gps_lon": self.lon,
-            "gps_alt": self.alt,
-            "gps_sat": self.sat,
-            "gps_qua": self.qua,
-            "gps_unix_ts": self.gps_unix_ts,
-            "ble_scan": self.ble_scan,
-        }
-
-    def compass_heading_to_direction(self, degrees):
+    def compass_heading_to_direction(self, degrees: float) -> str:
         directions = [
             "North",
             "North East",
@@ -176,7 +84,11 @@ class GpsProvider:
         index = int((degrees + 22.5) % 360 / 45)
         return directions[index]
 
-    def parse_ble_triang_string(self, input_string):
+    #
+    # ---------- BLE PARSER ----------
+    #
+
+    def parse_ble_triang_string(self, input_string: str) -> List[RFDataRaw]:
 
         if not input_string.startswith("BLE:"):
             return []
@@ -188,21 +100,161 @@ class GpsProvider:
 
         devices: List[RFDataRaw] = []
 
-        for match in matches:
-            address = match[0].upper()
-            rssi = int(match[1])
-            packet = match[2].lower()
-            devices.append(
-                RFDataRaw(unix_ts=unix_ts, address=address, rssi=rssi, packet=packet)
-            )
+        for addr, rssi, packet in matches:
+            try:
+                devices.append(
+                    RFDataRaw(
+                        unix_ts=unix_ts,
+                        address=addr.upper(),
+                        rssi=int(rssi),
+                        packet=packet.lower(),
+                    )
+                )
+            except Exception as e:
+                logging.warning(f"Failed to parse BLE device '{addr}' ({e})")
 
         return devices
 
+    #
+    # ---------- CORE SERIAL PROCESSOR ----------
+    #
+
+    def magGPSProcessor(self, data: str):
+        """
+        Handles MAG / GPS / BLE serial packets.
+        More defensive & fault-tolerant parsing.
+        """
+
+        try:
+            #
+            # ---- HEADING ----
+            #
+            if data.startswith("HDG:"):
+                parts = data.split(":")
+                if len(parts) >= 2:
+                    try:
+                        self.yaw_mag_0_360 = float(parts[1])
+                        self.yaw_mag_cardinal = self.compass_heading_to_direction(
+                            self.yaw_mag_0_360
+                        )
+                        logging.debug(f"MAG Heading: {self.yaw_mag_0_360}")
+                    except ValueError:
+                        logging.warning(f"Invalid HDG value: {parts[1]}")
+                else:
+                    logging.warning(f"Incomplete HDG packet: {data}")
+
+            #
+            # ---- ORIENTATION ----
+            #
+            elif data.startswith("YPR:"):
+                try:
+                    yaw, pitch, roll = map(str.strip, data[4:].split(","))
+                    logging.debug(
+                        f"Orientation → Yaw:{yaw} Pitch:{pitch} Roll:{roll}"
+                    )
+                except Exception:
+                    logging.warning(f"Invalid YPR packet: {data}")
+
+            #
+            # ---- GPS ----
+            #
+            elif data.startswith("GPS:"):
+                try:
+                    logging.info(data)
+
+                    parts = data[4:].split(",")
+
+                    if len(parts) < 7:
+                        logging.warning(f"Incomplete GPS packet: {data}")
+                        return
+
+                    lat_str = parts[0]
+                    lon_str = parts[1]
+
+                    heading = parts[3].split(":")[-1]
+                    alt = parts[4].split(":")[-1]
+                    sat = parts[5].split(":")[-1]
+                    time_raw = parts[6][5:]
+
+                    self.gps_unix_ts = self.string_to_unix_timestamp("20" + time_raw)
+
+                    qua = 0
+                    if len(parts) > 7:
+                        qua = parts[7].split(":")[-1]
+
+                    #
+                    # Latitude
+                    #
+                    if lat_str.endswith("N"):
+                        self.lat = float(lat_str.replace("N", ""))
+                    elif lat_str.endswith("S"):
+                        self.lat = -float(lat_str.replace("S", ""))
+                    else:
+                        logging.warning(f"Invalid latitude format: {lat_str}")
+
+                    #
+                    # Longitude
+                    #
+                    if lon_str.endswith("E"):
+                        self.lon = float(lon_str.replace("E", ""))
+                    elif lon_str.endswith("W"):
+                        self.lon = -float(lon_str.replace("W", ""))
+                    else:
+                        logging.warning(f"Invalid longitude format: {lon_str}")
+
+                    self.lat = round(self.lat, 6)
+                    self.lon = round(self.lon, 6)
+                    self.alt = round(float(alt), 2)
+
+                    self.sat = int(sat)
+                    self.qua = int(qua)
+
+                    logging.debug(
+                        (
+                            f"GPS FIX lat={self.lat}, lon={self.lon}, alt={self.alt}m "
+                            f"heading={heading} sats={self.sat} ts={self.gps_unix_ts} "
+                            f"quality={self.qua}"
+                        )
+                    )
+
+                except Exception as e:
+                    logging.warning(f"Failed to parse GPS packet '{data}' ({e})")
+
+            #
+            # ---- BLE ----
+            #
+            elif data.startswith("BLE:"):
+                try:
+                    self.ble_scan = self.parse_ble_triang_string(data)
+                    logging.debug(f"BLE scan: {self.ble_scan}")
+                except Exception as e:
+                    logging.warning(f"Failed to parse BLE data '{data}' ({e})")
+
+        except Exception as e:
+            logging.warning(
+                f"Error processing serial MAG/GPS/BLE input: {data} ({e})"
+            )
+
+        #
+        # snapshot state
+        #
+        self._gps = {
+            "yaw_mag_0_360": self.yaw_mag_0_360,
+            "yaw_mag_cardinal": self.yaw_mag_cardinal,
+            "gps_lat": self.lat,
+            "gps_lon": self.lon,
+            "gps_alt": self.alt,
+            "gps_sat": self.sat,
+            "gps_qua": self.qua,
+            "gps_unix_ts": self.gps_unix_ts,
+            "ble_scan": self.ble_scan,
+        }
+
+    #
+    # ---------- THREAD LOOP ----------
+    #
+
     def start(self):
-        """
-        Starts the GPS Provider and processing thread
-        if not already running.
-        """
         if self._thread and self._thread.is_alive():
             return
 
@@ -211,23 +263,23 @@ class GpsProvider:
         self._thread.start()
 
     def _run(self):
-        """
-        Main loop for the GPS provider.
-        WARNING: this assumes that the data from the Arduino are arriving
-        relatively slowly.
-        """
         while self.running:
             if self.serial_connection:
-                # Read a line, decode, and remove whitespace
-                data = self.serial_connection.readline().decode("utf-8").strip()
-                logging.debug(f"Serial GPS/MAG: {data}")
-                self.magGPSProcessor(data)
+                try:
+                    data = (
+                        self.serial_connection.readline()
+                        .decode("utf-8", errors="ignore")
+                        .strip()
+                    )
+                    if data:
+                        logging.debug(f"Serial GPS/MAG: {data}")
+                        self.magGPSProcessor(data)
+                except Exception as e:
+                    logging.warning(f"Serial read error ({e})")
+
             time.sleep(0.1)
 
     def stop(self):
-        """
-        Stop the GPS provider.
-        """
         self.running = False
         if self._thread:
             logging.info("Stopping GPS provider")
@@ -235,7 +287,4 @@ class GpsProvider:
 
     @property
     def data(self) -> Optional[dict]:
-        # """
-        # Get the current robot gps data
-        # """
         return self._gps
