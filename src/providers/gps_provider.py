@@ -1,14 +1,13 @@
+from datetime import datetime, timezone
 import logging
 import re
 import threading
 import time
-from datetime import datetime, timezone
 from typing import List, Optional
 
 import serial
 
 from providers.fabric_map_provider import RFDataRaw
-
 from .singleton import singleton
 
 
@@ -30,7 +29,9 @@ class GpsProvider:
         self.serial_connection = None
         try:
             self.serial_connection = serial.Serial(
-                serial_port, baudrate, timeout=timeout
+                serial_port,
+                baudrate,
+                timeout=timeout,
             )
             self.serial_connection.reset_input_buffer()
             logging.info(f"Connected to {serial_port} at {baudrate} baud")
@@ -55,7 +56,6 @@ class GpsProvider:
         self.running = False
         self._thread: Optional[threading.Thread] = None
         self.start()
-
     #
     # ---------- UTIL ----------
     #
