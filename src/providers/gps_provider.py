@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
 import logging
 import re
 import threading
 import time
+from datetime import datetime, timezone
 from typing import List, Optional
 
 import serial
