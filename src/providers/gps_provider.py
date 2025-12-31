@@ -8,8 +8,8 @@ from typing import List, Optional
 import serial
 
 from providers.fabric_map_provider import RFDataRaw
-from .singleton import singleton
 
+from .singleton import singleton
 
 @singleton
 class GpsProvider:
