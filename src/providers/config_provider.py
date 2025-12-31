@@ -1,11 +1,14 @@
 import json
 import logging
 import os
+import shutil
 from uuid import uuid4
 
 import json5
 import zenoh
+from jsonschema import ValidationError, validate
 
+from runtime.version import verify_runtime_version
 from zenoh_msgs import (
     ConfigRequest,
     ConfigResponse,
@@ -100,23 +103,136 @@ class ConfigProvider:
     def _handle_set_config(self, request_id: String, config_str: str):
         """
         Handle request to update runtime configuration.
+
         """
         try:
-            new_config = json5.loads(config_str)
+            try:
+                new_config = json5.loads(config_str)
+            except (ValueError, json5.JSON5DecodeError) as e:
+                error_msg = f"Invalid JSON5 syntax: {e}"
+                logging.error(error_msg)
+                self._send_error_response(request_id, error_msg)
+                return
+            except Exception as e:
+                error_msg = f"Failed to parse configuration: {e}"
+                logging.error(error_msg)
+                self._send_error_response(request_id, error_msg)
+                return
 
-            temp_path = self.config_path + ".tmp"
-            with open(temp_path, "w") as f:
-                json.dump(new_config, f, indent=2)
+            is_multi_mode = "modes" in new_config and "default_mode" in new_config
 
-            os.rename(temp_path, self.config_path)
+            try:
+                schema_file = (
+                    "multi_mode_schema.json"
+                    if is_multi_mode
+                    else "single_mode_schema.json"
+                )
+                schema_path = os.path.join(
+                    os.path.dirname(__file__),
+                    "../../config/schema",
+                    schema_file,
+                )
 
-            logging.info(f"Updated runtime config file: {self.config_path}")
+                if not os.path.exists(schema_path):
+                    error_msg = (
+                        f"Schema file not found: {schema_path}. "
+                        "Cannot validate configuration."
+                    )
+                    logging.error(error_msg)
+                    self._send_error_response(request_id, error_msg)
+                    return
 
-            self._send_config_response(request_id)
+                with open(schema_path, "r") as f:
+                    schema = json.load(f)
+
+                validate(instance=new_config, schema=schema)
+                logging.debug(
+                    f"Schema validation passed for {'multi-mode' if is_multi_mode else 'single-mode'} configuration"
+                )
+
+            except ValidationError as e:
+                field_path = ".".join(str(p) for p in e.path) if e.path else "root"
+                error_msg = (
+                    f"Schema validation failed at field '{field_path}': {e.message}"
+                )
+                logging.error(error_msg)
+                self._send_error_response(request_id, error_msg)
+                return
+            except Exception as e:
+                error_msg = f"Schema validation error: {e}"
+                logging.error(error_msg)
+                self._send_error_response(request_id, error_msg)
+                return
+
+            try:
+                config_version = new_config.get("version")
+                verify_runtime_version(
+                    config_version, config_name="runtime configuration update"
+                )
+                logging.debug(f"Version compatibility verified: {config_version}")
+            except ValueError as e:
+                error_msg = f"Version compatibility check failed: {e}"
+                logging.error(error_msg)
+                self._send_error_response(request_id, error_msg)
+                return
+            except Exception as e:
+                error_msg = f"Version verification error: {e}"
+                logging.error(error_msg)
+                self._send_error_response(request_id, error_msg)
+                return
+
+            try:
+                backup_path = None
+                if os.path.exists(self.config_path):
+                    backup_path = self.config_path + ".backup"
+                    try:
+                        shutil.copy2(self.config_path, backup_path)
+                        logging.debug(f"Created backup: {backup_path}")
+                    except Exception as backup_error:
+                        logging.warning(
+                            f"Failed to create backup: {backup_error}. "
+                            "Continuing with update..."
+                        )
+
+                temp_path = self.config_path + ".tmp"
+                with open(temp_path, "w") as f:
+                    json.dump(new_config, f, indent=2)
+
+                os.rename(temp_path, self.config_path)
+
+                if backup_path and os.path.exists(backup_path):
+                    try:
+                        os.remove(backup_path)
+                        logging.debug(f"Removed backup: {backup_path}")
+                    except Exception:
+                        pass
+
+                logging.info(
+                    f"Successfully updated runtime config file: {self.config_path}"
+                )
+                self._send_config_response(request_id)
+
+            except OSError as e:
+                error_msg = f"File system error while writing config: {e}"
+                logging.error(error_msg)
+                if backup_path and os.path.exists(backup_path):
+                    try:
+                        shutil.copy2(backup_path, self.config_path)
+                        logging.info("Restored config from backup after write failure")
+                    except Exception:
+                        pass
+                self._send_error_response(request_id, error_msg)
+                return
+            except Exception as e:
+                error_msg = f"Unexpected error writing config file: {e}"
+                logging.error(error_msg)
+                self._send_error_response(request_id, error_msg)
+                return
 
         except Exception as e:
-            logging.error(f"Failed to update config: {e}")
-            self._send_error_response(request_id, f"Failed to update config: {e}")
+            error_msg = f"Unexpected error in config update: {e}"
+            logging.error(error_msg, exc_info=True)
+            self._send_error_response(request_id, error_msg)
 
     def _send_config_response(self, request_id: String):
         """
