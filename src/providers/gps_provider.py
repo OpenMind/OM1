@@ -57,6 +57,7 @@ class GpsProvider:
         self.running = False
         self._thread: Optional[threading.Thread] = None
         self.start()
+
     #
     # ---------- UTIL ----------
     #
@@ -151,9 +152,7 @@ class GpsProvider:
             elif data.startswith("YPR:"):
                 try:
                     yaw, pitch, roll = map(str.strip, data[4:].split(","))
-                    logging.debug(
-                        f"Orientation → Yaw:{yaw} Pitch:{pitch} Roll:{roll}"
-                    )
+                    logging.debug(f"Orientation → Yaw:{yaw} Pitch:{pitch} Roll:{roll}")
                 except Exception:
                     logging.warning(f"Invalid YPR packet: {data}")
 
@@ -233,9 +232,7 @@ class GpsProvider:
                     logging.warning(f"Failed to parse BLE data '{data}' ({e})")
 
         except Exception as e:
-            logging.warning(
-                f"Error processing serial MAG/GPS/BLE input: {data} ({e})"
-            )
+            logging.warning(f"Error processing serial MAG/GPS/BLE input: {data} ({e})")
 
         #
         # snapshot state
