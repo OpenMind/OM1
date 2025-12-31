@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 from uuid import uuid4
+from typing import Any, Dict
 
 import json5
 import zenoh
@@ -27,31 +28,22 @@ class ConfigProvider:
     """
 
     def __init__(self):
-        """
-        Initialize the ConfigProvider.
-        """
         self.session = None
         self.config_response_publisher = None
         self.config_request_subscriber = None
         self.running = False
 
         self.config_path = self._get_runtime_config_path()
-
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
-        """
-        Initialize Zenoh session, publishers, and subscriber.
-        """
         try:
             self.session = open_zenoh_session()
 
-            # Publisher for config responses
             self.config_response_publisher = self.session.declare_publisher(
                 "om/config/response"
             )
 
-            # Subscriber for config requests
             self.config_request_subscriber = self.session.declare_subscriber(
                 "om/config/request", self._handle_config_request
             )
@@ -62,39 +54,19 @@ class ConfigProvider:
             logging.error(f"Failed to initialize ConfigProvider Zenoh session: {e}")
 
     def _get_runtime_config_path(self) -> str:
-        """
-        Get the path to the runtime config file in memory folder.
-
-        Returns
-        -------
-        str
-            Path to config/memory/.runtime.json5
-        """
         memory_folder_path = os.path.join(
             os.path.dirname(__file__), "../../config", "memory"
         )
         return os.path.abspath(os.path.join(memory_folder_path, ".runtime.json5"))
 
     def _handle_config_request(self, sample: zenoh.Sample):
-        """
-        Handle incoming config requests from Zenoh subscriber.
-
-        Responds with current runtime configuration.
-
-        Parameters
-        ----------
-        sample : zenoh.Sample
-            The Zenoh sample containing the serialized ConfigRequest message.
-        """
         try:
             request = ConfigRequest.deserialize(sample.payload.to_bytes())
             logging.debug(f"Received config request: {request.request_id}")
 
             if request.config and request.config.data:
-                # This is a set_config request
                 self._handle_set_config(request.request_id, request.config.data)
             else:
-                # This is a get_config request
                 self._send_config_response(request.request_id)
 
         except Exception as e:
@@ -103,12 +75,16 @@ class ConfigProvider:
     def _handle_set_config(self, request_id: String, config_str: str):
         """
         Handle request to update runtime configuration.
-
         """
         try:
             try:
-                new_config = json5.loads(config_str)
-            except (ValueError, json5.JSON5DecodeError) as e:
+                new_config: Any = json5.loads(config_str)
+
+                # ensure parsed object is a dictionary
+                if not isinstance(new_config, dict):
+                    raise ValueError("Configuration root must be a JSON object")
+
+            except ValueError as e:
                 error_msg = f"Invalid JSON5 syntax: {e}"
                 logging.error(error_msg)
                 self._send_error_response(request_id, error_msg)
@@ -119,7 +95,12 @@ class ConfigProvider:
                 self._send_error_response(request_id, error_msg)
                 return
 
-            is_multi_mode = "modes" in new_config and "default_mode" in new_config
+            # Safe multi-mode detection
+            is_multi_mode = (
+                isinstance(new_config, dict)
+                and "modes" in new_config
+                and "default_mode" in new_config
+            )
 
             try:
                 schema_file = (
@@ -127,6 +108,7 @@ class ConfigProvider:
                     if is_multi_mode
                     else "single_mode_schema.json"
                 )
+
                 schema_path = os.path.join(
                     os.path.dirname(__file__),
                     "../../config/schema",
@@ -165,11 +147,16 @@ class ConfigProvider:
                 return
 
             try:
-                config_version = new_config.get("version")
+                config_version = (
+                    new_config.get("version") if isinstance(new_config, dict) else None
+                )
+
                 verify_runtime_version(
                     config_version, config_name="runtime configuration update"
                 )
+
                 logging.debug(f"Version compatibility verified: {config_version}")
+
             except ValueError as e:
                 error_msg = f"Version compatibility check failed: {e}"
                 logging.error(error_msg)
@@ -181,8 +168,10 @@ class ConfigProvider:
                 self._send_error_response(request_id, error_msg)
                 return
 
+            # ensure backup_path always defined
+            backup_path: str | None = None
+
             try:
-                backup_path = None
                 if os.path.exists(self.config_path):
                     backup_path = self.config_path + ".backup"
                     try:
@@ -215,17 +204,14 @@ class ConfigProvider:
             except OSError as e:
                 error_msg = f"File system error while writing config: {e}"
                 logging.error(error_msg)
+
                 if backup_path and os.path.exists(backup_path):
                     try:
                         shutil.copy2(backup_path, self.config_path)
                         logging.info("Restored config from backup after write failure")
                     except Exception:
                         pass
-                self._send_error_response(request_id, error_msg)
-                return
-            except Exception as e:
-                error_msg = f"Unexpected error writing config file: {e}"
-                logging.error(error_msg)
+
                 self._send_error_response(request_id, error_msg)
                 return
 
@@ -235,11 +221,7 @@ class ConfigProvider:
             self._send_error_response(request_id, error_msg)
 
     def _send_config_response(self, request_id: String):
-        """
-        Send current runtime configuration as response.
-        """
         try:
-            # Get current config
             config_snapshot = self._get_config_snapshot()
             config_json_str = json.dumps(config_snapshot, indent=2)
 
@@ -259,9 +241,6 @@ class ConfigProvider:
             self._send_error_response(request_id, str(e))
 
     def _send_error_response(self, request_id: String, error_message: str):
-        """
-        Send error response.
-        """
         try:
             response = ConfigResponse(
                 header=prepare_header(str(uuid4())),
@@ -277,10 +256,7 @@ class ConfigProvider:
         except Exception as e:
             logging.error(f"Failed to send error response: {e}")
 
-    def _get_config_snapshot(self) -> dict:
-        """
-        Get a snapshot of the current runtime configuration.
-        """
+    def _get_config_snapshot(self) -> Dict[str, Any]:
         try:
             if not os.path.exists(self.config_path):
                 logging.warning(
@@ -289,16 +265,15 @@ class ConfigProvider:
                 return {}
 
             with open(self.config_path, "r") as f:
-                return json5.load(f)
+                data = json5.load(f)
+
+            return data if isinstance(data, dict) else {}
 
         except Exception as e:
             logging.error(f"Failed to read config file {self.config_path}: {e}")
             return {}
 
     def stop(self):
-        """
-        Stop the ConfigProvider and cleanup Zenoh session.
-        """
         if not self.running:
             logging.info("ConfigProvider is not running")
             return
