@@ -39,7 +39,7 @@ def simple_paths_processor(
         msg: zenoh.Sample
             The message containing paths data.
         """
-        paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
+        paths = sensor_msgs.Path.deserialize(msg.payload.to_bytes())
         msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
         current_time = time.time()
         latency = current_time - msg_time
