@@ -4,14 +4,22 @@ import multiprocessing as mp
 import threading
 import time
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional, Union, Any
+from queue import Empty  # <-- mp.queues.Empty yerine
 
 import zenoh
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 
+# ----------------------------------------------------------------------
+# Unitree opsiyonel import – unbound olmaması için güvenli tanım
+# ----------------------------------------------------------------------
+
+ChannelSubscriber: Optional[Any] = None
+ChannelFactoryInitialize: Optional[Any] = None
+PoseStamped_: Optional[Any] = None
+
 try:
-    # Needed for Unitree but not TurtleBot4
     from unitree.unitree_sdk2py.core.channel import (
         ChannelFactoryInitialize,
         ChannelSubscriber,
@@ -19,7 +27,8 @@ try:
     from unitree.unitree_sdk2py.idl.geometry_msgs.msg.dds_ import PoseStamped_
 except ImportError:
     logging.warning(
-        "Unitree SDK or CycloneDDS not found. You do not need this unless you are connecting to a Unitree robot."
+        "Unitree SDK or CycloneDDS not found. "
+        "You only need this if connecting to a Unitree robot."
     )
 
 from zenoh_msgs import (
@@ -40,6 +49,10 @@ class RobotState(Enum):
     SITTING = "sitting"
 
 
+# ----------------------------------------------------------------------
+# Worker Process
+# ----------------------------------------------------------------------
+
 def odom_processor(
     channel: str,
     data_queue: mp.Queue,
@@ -49,73 +62,55 @@ def odom_processor(
 ) -> None:
     """
     Process function for the Odom Provider.
-    This function runs in a separate process to periodically retrieve the odometry
-    and pose data from the robot and put it into a multiprocessing queue.
-
-    Parameters
-    ----------
-    channel : str
-        The channel to connect to the robot.
-    data_queue : mp.Queue
-        Queue for sending the retrieved odometry and pose data.
-    URID : str, optional
-        The URID needed to connect to the Zenoh publisher in the local network.
-        This is typically used for TurtleBot4.
-    use_zenoh : bool, optional
-        If True, get odom/pose data from Zenoh (typically used by TurtleBot4).
-        Otherwise, use CycloneDDS (e.g., for Unitree Go2).
-    logging_config : LoggingConfig, optional
-        Optional logging configuration. If provided, it will override the default logging settings.
+    Runs in a separate process and forwards odom / pose into a queue.
     """
+
     setup_logging("odom_processor", logging_config=logging_config)
 
     def zenoh_odom_handler(data: zenoh.Sample):
-        """
-        Zenoh handler for odometry data.
-
-        Parameters
-        ----------
-        data : zenoh.Sample
-            The Zenoh sample containing the odometry data.
-        """
-        odom: Odometry = nav_msgs.Odometry.deserialize(data.payload.to_bytes())
-        logging.debug(f"Zenoh odom handler: {odom}")
-
-        data_queue.put(
-            PoseWithCovarianceStamped(header=odom.header, pose=odom.pose.pose)  # type: ignore
-        )
+        try:
+            odom: Odometry = nav_msgs.Odometry.deserialize(data.payload.to_bytes())
+            data_queue.put(
+                PoseWithCovarianceStamped(
+                    header=odom.header,
+                    pose=odom.pose.pose,
+                )
+            )
+        except Exception as e:
+            logging.error(f"Zenoh odom handler error: {e}")
 
     def pose_message_handler(data: PoseStamped_):  # type: ignore
-        """
-        Handler for pose messages from CycloneDDS.
+        try:
+            data_queue.put(data)  # type: ignore
+        except Exception as e:
+            logging.error(f"CycloneDDS pose handler error: {e}")
 
-        Parameters
-        ----------
-        data : PoseStamped_
-            The PoseStamped message containing the pose data.
-        """
-        logging.debug(f"Pose message handler: {data}")  # type: ignore
-        data_queue.put(data)  # type: ignore
+    # -------- Turtlebot / Zenoh --------
 
     if use_zenoh:
-        # typically, TurtleBot4
-        if URID is None:
+        if not URID:
             logging.warning("Aborting TurtleBot4 Navigation system, no URID provided")
-            return None
-        else:
-            logging.info(f"TurtleBot4 Navigation system is using URID: {URID}")
+            return
+
+        logging.info(f"TurtleBot4 Navigation system is using URID: {URID}")
 
         try:
             session = open_zenoh_session()
             logging.info(f"Zenoh navigation provider opened {session}")
-            logging.info(f"TurtleBot4 navigation listeners starting with URID: {URID}")
             session.declare_subscriber(f"{URID}/c3/odom", zenoh_odom_handler)
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
-            return None
+            return
+
+    # -------- Unitree / CycloneDDS --------
 
     if not use_zenoh:
-        # we are using CycloneDDS e.g. for the Unitree Go2
+        if ChannelFactoryInitialize is None or ChannelSubscriber is None:
+            logging.error(
+                "Unitree SDK not available — cannot initialize CycloneDDS odom channel"
+            )
+            return
+
         try:
             ChannelFactoryInitialize(0, channel)  # type: ignore
         except Exception as e:
@@ -123,43 +118,35 @@ def odom_processor(
             return
 
         try:
-            pose_subscriber = ChannelSubscriber("rt/utlidar/robot_pose", PoseStamped_)  # type: ignore
+            pose_subscriber = ChannelSubscriber(
+                "rt/utlidar/robot_pose", PoseStamped_
+            )  # type: ignore
             pose_subscriber.Init(pose_message_handler, 10)
             logging.info("CycloneDDS pose subscriber initialized successfully")
         except Exception as e:
             logging.error(f"Error opening CycloneDDS client: {e}")
-            return None
+            return
 
     while True:
         time.sleep(0.1)
 
 
+# ----------------------------------------------------------------------
+# Provider
+# ----------------------------------------------------------------------
+
 @singleton
 class OdomProvider:
     """
-    Odom Provider.
-
-    This class implements a singleton pattern to manage:
-        * Odom and pose data using either Zenoh or CycloneDDS
-
-    Parameters
-    ----------
-    URID: str = ""
-        The URID needed to connect to the right Zenoh publisher in the local network
-    use_zenoh: bool = False
-        If true, get odom/pose data from Zenoh - typically used by TurtleBot4
-        Otherwise, use CycloneDDS
-    channel: str = ""
-        The channel to connect to the robot, used for CycloneDDS (e.g., Unitree Go2).
-        If not specified, it will raise an error when starting the provider.
+    Provides odom + pose processing with motion stability filtering & safety guards.
     """
 
     def __init__(
-        self, URID: str = "", use_zenoh: bool = False, channel: Optional[str] = ""
+        self,
+        URID: str = "",
+        use_zenoh: bool = False,
+        channel: Optional[str] = "",
     ):
-        """
-        Robot and sensor configuration
-        """
 
         logging.info("Booting Odom Provider")
 
@@ -193,123 +180,149 @@ class OdomProvider:
 
         self.start()
 
+    # ---------- safety helpers ----------
+
+    def _is_invalid_number(self, v: float) -> bool:
+        return math.isnan(v) or math.isinf(v)
+
+    # ---------- startup ----------
+
     def start(self) -> None:
-        """
-        Start the Odom Provider.
-        """
         if self._odom_reader_thread and self._odom_reader_thread.is_alive():
             logging.warning("Odom Provider is already running.")
             return
-        else:
-            if not self.channel and not self.use_zenoh:
-                logging.error("Channel must be specified to start the Odom Provider.")
-                return
 
-            logging.info(
-                f"Starting Unitree Go2 Odom Provider on channel: {self.channel}"
-            )
+        if not self.channel and not self.use_zenoh:
+            logging.error("Channel must be specified to start the Odom Provider.")
+            return
 
-            self._odom_reader_thread = mp.Process(
-                target=odom_processor,
-                args=(
-                    self.channel,
-                    self.data_queue,
-                    self.URID,
-                    self.use_zenoh,
-                    get_logging_config(),
-                ),
-                daemon=True,
-            )
-            self._odom_reader_thread.start()
+        logging.info(f"Starting Odom Provider on channel: {self.channel}")
+
+        self._odom_reader_thread = mp.Process(
+            target=odom_processor,
+            args=(
+                self.channel,
+                self.data_queue,
+                self.URID,
+                self.use_zenoh,
+                get_logging_config(),
+            ),
+            daemon=True,
+        )
+        self._odom_reader_thread.start()
 
         if self._odom_processor_thread and self._odom_processor_thread.is_alive():
             logging.warning("Odom processor thread is already running.")
             return
-        else:
-            logging.info("Starting Odom processor thread")
-            self._odom_processor_thread = threading.Thread(
-                target=self.process_odom, daemon=True
-            )
-            self._odom_processor_thread.start()
 
-    def euler_from_quaternion(self, x: float, y: float, z: float, w: float) -> tuple:
-        """
-        https://automaticaddison.com/how-to-convert-a-quaternion-into-euler-angles-in-python/
-        Convert a quaternion into euler angles (roll, pitch, yaw)
-        roll is rotation around x in radians (counterclockwise)
-        pitch is rotation around y in radians (counterclockwise)
-        yaw is rotation around z in radians (counterclockwise)
+        self._odom_processor_thread = threading.Thread(
+            target=self.process_odom, daemon=True
+        )
+        self._odom_processor_thread.start()
 
-        Parameters
-        ----------
-        x : float
-            The x component of the quaternion.
-        y : float
-            The y component of the quaternion.
-        z : float
-            The z component of the quaternion.
-        w : float
-            The w component of the quaternion.
+    # ---------- math ----------
 
-        Returns
-        -------
-        tuple
-            A tuple containing the roll, pitch, and yaw angles in radians.
-        """
+    def euler_from_quaternion(self, x, y, z, w):
         t0 = +2.0 * (w * x + y * z)
         t1 = +1.0 - 2.0 * (x * x + y * y)
         roll_x = math.atan2(t0, t1)
 
         t2 = +2.0 * (w * y - z * x)
-        t2 = +1.0 if t2 > +1.0 else t2
-        t2 = -1.0 if t2 < -1.0 else t2
+        t2 = max(min(t2, +1.0), -1.0)
         pitch_y = math.asin(t2)
 
         t3 = +2.0 * (w * z + x * y)
         t4 = +1.0 - 2.0 * (y * y + z * z)
         yaw_z = math.atan2(t3, t4)
 
-        return roll_x, pitch_y, yaw_z  # in radians
+        return roll_x, pitch_y, yaw_z
+
+    # ---------- main loop ----------
 
     def process_odom(self):
-        """
-        Process the odom data and update the internal state.
 
-        Parameters
-        ----------
-        pose : PoseWithCovariance
-            The pose data containing position and orientation.
-        """
+        MOVE_THRESHOLD = 0.012
+
         while not self._stop_event.is_set():
             try:
-                pose_data = self.data_queue.get()
+                pose_data = self.data_queue.get(timeout=1.0)
+            except Empty:  # <-- Pylance-safe
+                continue
             except Exception as e:
-                logging.error(f"Error getting pose from queue: {e}")
-                time.sleep(1)
+                logging.error(f"OdomProvider: queue error: {e}")
+                time.sleep(0.2)
                 continue
 
             pose = pose_data.pose
             header = pose_data.header
 
-            # this is the time according to the RockChip. It may be off by several seconds from
-            # UTC
-            self.odom_rockchip_ts = header.stamp.sec + header.stamp.nanosec * 1e-9
+            # ---------- timestamp monotonicity ----------
 
-            # The local timestamp
+            incoming_ts = header.stamp.sec + header.stamp.nanosec * 1e-9
+
+            if self.odom_rockchip_ts and incoming_ts < self.odom_rockchip_ts:
+                logging.warning(
+                    "OdomProvider: non-monotonic odom timestamp — keeping last value"
+                )
+            else:
+                self.odom_rockchip_ts = incoming_ts
+
             self.odom_subscriber_ts = time.time()
 
+            # ---------- posture detection (Unitree only) ----------
+
             if self.channel and not self.use_zenoh:
-                # only relevant to Unitree Go2
                 self.body_height_cm = round(pose.position.z * 100.0)
+
                 if self.body_height_cm > 24:
                     self.body_attitude = RobotState.STANDING
                 elif self.body_height_cm > 3:
                     self.body_attitude = RobotState.SITTING
 
-            x = pose.orientation.x
-            y = pose.orientation.y
-            z = pose.orientation.z
-            w = pose.orientation.w
+            # ---------- SAFETY VALIDATION GUARDS ----------
+
+            if any(
+                self._is_invalid_number(v)
+                for v in [
+                    pose.position.x,
+                    pose.position.y,
+                    pose.position.z,
+                ]
+            ):
+                logging.warning(
+                    "OdomProvider: received invalid position values — frame skipped"
+                )
+                continue
+
+            quat = [
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w,
+            ]
+
+            if any(self._is_invalid_number(q) for q in quat):
+                logging.warning(
+                    "OdomProvider: received invalid quaternion — frame skipped"
+                )
+                continue
+
+            norm = math.sqrt(sum(q * q for q in quat))
+
+            if norm != 0:
+                quat = [q / norm for q in quat]
+                (
+                    pose.orientation.x,
+                    pose.orientation.y,
+                    pose.orientation.z,
+                    pose.orientation.w,
+                ) = quat
+            else:
+                logging.warning(
+                    "OdomProvider: quaternion norm = 0 — using last valid orientation"
+                )
+
+            # ---------- motion stability filter ----------
 
             dx = (pose.position.x - self.previous_x) ** 2
             dy = (pose.position.y - self.previous_y) ** 2
@@ -321,63 +334,44 @@ class OdomProvider:
 
             delta = math.sqrt(dx + dy + dz)
 
-            # moving? Use a decay kernel
-            self.move_history = 0.7 * delta + 0.3 * self.move_history
+            if delta < 1e-6:
+                delta = 0.0
 
-            if delta > 0.01 or self.move_history > 0.01:
-                self.moving = True
-                logging.info(
-                    f"delta moving (m): {round(delta,3)} {round(self.move_history,3)}"
-                )
-            else:
-                # logging.info(
-                #     f"delta moving (m): {round(delta,3)} {round(self.move_history,3)}"
-                # )
-                self.moving = False
+            self.move_history = max(0.0, 0.7 * delta + 0.3 * self.move_history)
 
-            angles = self.euler_from_quaternion(x, y, z, w)
+            self.moving = delta > MOVE_THRESHOLD or self.move_history > MOVE_THRESHOLD
 
-            # this is in the standard robot convention
-            # yaw increases when you turn LEFT
-            # (counter-clockwise rotation about the vertical axis
+            # ---------- orientation ----------
+
+            angles = self.euler_from_quaternion(
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w,
+            )
+
             self.odom_yaw_m180_p180 = round(angles[2] * rad_to_deg, 4)
 
-            # we also provide a second data product, where
-            # * yaw increases when you turn RIGHT (CW), and
-            # * the range runs from 0 to 360 Deg
             flip = -1.0 * self.odom_yaw_m180_p180
             if flip < 0.0:
-                flip = flip + 360.0
+                flip += 360.0
 
             self.odom_yaw_0_360 = round(flip, 4)
 
-            # current position in world frame
             self.x = round(pose.position.x, 4)
             self.y = round(pose.position.y, 4)
+
             logging.debug(
-                f"odom: X:{self.x} Y:{self.y} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
+                f"odom: X:{self.x} Y:{self.y} "
+                f"W:{self.odom_yaw_m180_p180} "
+                f"H:{self.odom_yaw_0_360} "
+                f"T:{self.odom_rockchip_ts}"
             )
+
+    # ---------- public api ----------
 
     @property
     def position(self) -> dict:
-        """
-        Get the current robot position in world frame.
-        Returns a dictionary with x, y, and odom_yaw_0_360.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the current position and orientation of the robot.
-            Keys include:
-            - x: The x coordinate of the robot in the world frame.
-            - y: The y coordinate of the robot in the world frame.
-            - moving: A boolean indicating if the robot is currently moving.
-            - odom_yaw_0_360: The yaw angle of the robot in degrees, ranging from 0 to 360.
-            - body_height_cm: The height of the robot's body in centimeters.
-            - body_attitude: The current attitude of the robot (e.g., sitting or standing).
-            - odom_rockchip_ts: The unix timestamp of the last odometry update. Provided by the CycloneDDS publisher.
-            - odom_subscriber_ts: The unix timestamp of the last odometry update according to the subscriber.
-        """
         return {
             "odom_x": self.x,
             "odom_y": self.y,
@@ -391,9 +385,6 @@ class OdomProvider:
         }
 
     def stop(self):
-        """
-        Stop the OdomProvider and clean up resources.
-        """
         self._stop_event.set()
 
         if self._odom_reader_thread:
