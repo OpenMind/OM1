@@ -13,6 +13,7 @@ from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 from zenoh_msgs import (
     Odometry,
     PoseStamped,
+    PoseWithCovariance,
     PoseWithCovarianceStamped,
     nav_msgs,
     open_zenoh_session,
@@ -71,12 +72,17 @@ def odom_processor(
     def zenoh_odom_handler(data: zenoh.Sample):
         try:
             odom: Odometry = nav_msgs.Odometry.deserialize(data.payload.to_bytes())
+
             data_queue.put(
                 PoseWithCovarianceStamped(
                     header=odom.header,
-                    pose=odom.pose.pose,
+                    pose=PoseWithCovariance(
+                        pose=odom.pose.pose,
+                        covariance=odom.pose.covariance,
+                    ),
                 )
             )
+
         except Exception as e:
             logging.error(f"Zenoh odom handler error: {e}")
 
