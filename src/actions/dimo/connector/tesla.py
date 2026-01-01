@@ -65,7 +65,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
 
         self.base_url = "https://devices-api.dimo.zone/v1/vehicle"
 
-        self.previouse_output = None
+        self.previous_output = None
 
         self.token_id = self.io_provider.get_dynamic_variable("token_id")
         self.vehicle_jwt = self.io_provider.get_dynamic_variable("vehicle_jwt")
@@ -113,8 +113,8 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
             The input protocol containing the action details.
         """
         logging.info(f"DIMOTeslaConnector: {output_interface.action}")
-        if output_interface.action != self.previouse_output:
-            self.previouse_output = output_interface.action
+        if output_interface.action != self.previous_output:
+            self.previous_output = output_interface.action
 
             # checkout timeout of vehicle_jwt
             if (

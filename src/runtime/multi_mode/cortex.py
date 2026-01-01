@@ -648,7 +648,7 @@ class ModeCortexRuntime:
             logging.info("Loading configuration from the new runtime file")
             new_mode_config = load_mode_config(
                 self.mode_config_name,
-                mode_soure_path=self.mode_manager._get_runtime_config_path(),
+                mode_source_path=self.mode_manager._get_runtime_config_path(),
             )
 
             self.mode_config = new_mode_config
