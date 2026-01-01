@@ -181,3 +181,38 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 ## License
 
 This project is licensed under the terms of the MIT License, which is a permissive free software license that allows users to freely use, modify, and distribute the software. The MIT License is a widely used and well-established license that is known for its simplicity and flexibility. By using the MIT License, this project aims to encourage collaboration, modification, and distribution of the software.
+
+## Dark Mode Feature
+
+<!-- Dark Mode Support -->
+<style>
+  /* Light Mode (Default) */
+  body {
+    background-color: #ffffff;
+    color: #000000;
+  }
+  
+  /* Dark Mode */
+  body.dark-mode {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+</style>
+
+<button onclick="toggleDarkMode()" class="dark-btn">
+  🌙 Dark Mode
+</button>
+
+<script>
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  localStorage.setItem('darkMode', 
+    document.body.classList.contains('dark-mode')
+  );
+}
+
+// Auto-load saved preference
+if (localStorage.getItem('darkMode') === 'true') {
+  document.body.classList.add('dark-mode');
+}
+</script>
