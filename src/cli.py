@@ -2,7 +2,11 @@ import json
 import logging
 import multiprocessing as mp
 import os
+import platform
 import re
+import shutil
+import subprocess
+import sys
 import traceback
 
 import dotenv
@@ -799,6 +803,294 @@ def _print_config_summary(raw_config: dict, is_multi_mode: bool):
         print(f"   Frequency: {raw_config.get('hertz', 'N/A')} Hz")
         print(f"   Inputs: {len(raw_config.get('agent_inputs', []))}")
         print(f"   Actions: {len(raw_config.get('agent_actions', []))}")
+
+
+@app.command()
+def check(
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show detailed diagnostic information"
+    ),
+    config_name: str = typer.Option(
+        None, "--config", "-c", help="Specific config file to check"
+    ),
+) -> None:
+    """
+    Run setup diagnostics to verify your OM1 environment.
+
+    This command checks:
+    - Python version compatibility (3.10+ required)
+    - Package manager (uv) availability
+    - Configuration files
+    - API key configuration
+    - Hardware availability (webcam, microphone)
+    - Key dependencies
+
+    Examples:
+        uv run python src/cli.py check
+        uv run python src/cli.py check --verbose
+        uv run python src/cli.py check --config spot
+    """
+    print()
+    print("OM1 Setup Diagnostics")
+    print("=" * 50)
+
+    results = {"pass": 0, "warn": 0, "fail": 0}
+
+    # System checks
+    print()
+    print("System")
+    print("-" * 50)
+    _run_check("Python version", _check_python_version, results, verbose)
+    _run_check("Package manager (uv)", _check_uv_installed, results, verbose)
+    _run_check("Operating system", _check_os, results, verbose)
+
+    # Configuration checks
+    print()
+    print("Configuration")
+    print("-" * 50)
+    _run_check("Config directory", _check_config_directory, results, verbose)
+    _run_check("API key", _check_api_key_env, results, verbose)
+    if config_name:
+        _run_check(
+            f"Config file ({config_name})",
+            lambda: _check_specific_config(config_name),
+            results,
+            verbose,
+        )
+
+    # Hardware checks
+    print()
+    print("Hardware")
+    print("-" * 50)
+    _run_check("Webcam", _check_webcam, results, verbose)
+    _run_check("Microphone", _check_microphone, results, verbose)
+
+    # Dependency checks
+    print()
+    print("Dependencies")
+    print("-" * 50)
+    _run_check(
+        "opencv-python", lambda: _check_package("cv2", "opencv-python"),
+        results, verbose
+    )
+    _run_check(
+        "pyaudio", lambda: _check_package("pyaudio", "pyaudio"),
+        results, verbose
+    )
+    _run_check(
+        "openai", lambda: _check_package("openai", "openai"),
+        results, verbose
+    )
+
+    # Summary
+    print()
+    print("=" * 50)
+    if results["fail"] > 0:
+        print(f"Result: {results['fail']} issue(s) found")
+        print("  Fix the issues above before running OM1.")
+        raise typer.Exit(1)
+    elif results["warn"] > 0:
+        print(f"Result: Ready to run ({results['warn']} warning(s))")
+    else:
+        print("Result: All checks passed!")
+    print()
+
+
+def _run_check(
+    name: str,
+    check_func,
+    results: dict,
+    verbose: bool,
+) -> None:
+    """
+    Run a single diagnostic check and print the result.
+
+    Parameters
+    ----------
+    name : str
+        Name of the check
+    check_func : callable
+        Function that returns (status, message, hint)
+        status: 'pass', 'warn', or 'fail'
+    results : dict
+        Results accumulator
+    verbose : bool
+        Whether to show detailed output
+    """
+    try:
+        status, message, hint = check_func()
+    except Exception as e:
+        status, message, hint = "fail", f"Error: {e}", None
+
+    results[status] += 1
+
+    # Format output
+    if status == "pass":
+        symbol = "✓"
+    elif status == "warn":
+        symbol = "⚠"
+    else:
+        symbol = "✗"
+
+    print(f"  {symbol} {name}: {message}")
+    if hint and (status != "pass" or verbose):
+        print(f"    → {hint}")
+
+
+def _check_python_version() -> tuple:
+    """Check Python version compatibility."""
+    version = sys.version_info
+    version_str = f"{version.major}.{version.minor}.{version.micro}"
+
+    if version >= (3, 10):
+        return "pass", f"Python {version_str}", None
+    else:
+        return (
+            "fail",
+            f"Python {version_str}",
+            "Python 3.10+ required. Install from python.org",
+        )
+
+
+def _check_uv_installed() -> tuple:
+    """Check if uv package manager is installed."""
+    uv_path = shutil.which("uv")
+    if uv_path:
+        try:
+            result = subprocess.run(
+                ["uv", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            version = result.stdout.strip().replace("uv ", "")
+            return "pass", f"uv {version}", None
+        except Exception:
+            return "pass", "uv installed", None
+    else:
+        return (
+            "fail",
+            "uv not found",
+            "Install with: curl -LsSf https://astral.sh/uv/install.sh | sh",
+        )
+
+
+def _check_os() -> tuple:
+    """Check operating system."""
+    os_name = platform.system()
+    os_version = platform.release()
+    return "pass", f"{os_name} {os_version}", None
+
+
+def _check_config_directory() -> tuple:
+    """Check if config directory exists and has config files."""
+    config_dir = os.path.join(os.path.dirname(__file__), "../config")
+
+    if not os.path.exists(config_dir):
+        return (
+            "fail", "Config directory not found",
+            "Clone the repo with git submodules"
+        )
+
+    config_files = [f for f in os.listdir(config_dir) if f.endswith(".json5")]
+    if config_files:
+        return "pass", f"Found {len(config_files)} config files", None
+    else:
+        return "warn", "No config files found", "Add a .json5 config file to config/"
+
+
+def _check_api_key_env() -> tuple:
+    """Check if API key is configured."""
+    env_api_key = os.environ.get("OM_API_KEY", "")
+
+    if env_api_key and env_api_key != "openmind_free":
+        return "pass", "Configured", None
+    else:
+        return (
+            "warn",
+            "Not configured (using limited free tier)",
+            "Get your key at https://portal.openmind.org",
+        )
+
+
+def _check_specific_config(config_name: str) -> tuple:
+    """Check if a specific config file exists and is valid."""
+    try:
+        config_path = _resolve_config_path(config_name)
+        with open(config_path, "r") as f:
+            json5.load(f)
+        return "pass", "Valid", None
+    except FileNotFoundError:
+        return "fail", "Not found", f"Create config/{config_name}.json5"
+    except Exception as e:
+        return "fail", f"Invalid: {e}", "Fix the JSON5 syntax errors"
+
+
+def _check_webcam() -> tuple:
+    """Check if webcam is available."""
+    try:
+        import cv2
+
+        cap = cv2.VideoCapture(0)
+        if cap.isOpened():
+            cap.release()
+            return "pass", "Detected (index 0)", None
+        else:
+            cap.release()
+            return (
+                "warn",
+                "Not detected",
+                "Agent will run in simulation mode (no vision)",
+            )
+    except ImportError:
+        return "warn", "Cannot check (opencv not installed)", None
+    except Exception:
+        return "warn", "Not detected", "Agent will run in simulation mode"
+
+
+def _check_microphone() -> tuple:
+    """Check if microphone is available."""
+    try:
+        import pyaudio
+
+        pa = pyaudio.PyAudio()
+        device_count = pa.get_device_count()
+        input_devices = 0
+
+        for i in range(device_count):
+            info = pa.get_device_info_by_index(i)
+            if info.get("maxInputChannels", 0) > 0:
+                input_devices += 1
+
+        pa.terminate()
+
+        if input_devices > 0:
+            return "pass", f"Detected ({input_devices} input device(s))", None
+        else:
+            return (
+                "warn",
+                "No input devices",
+                "Voice input will be disabled",
+            )
+    except ImportError:
+        return "warn", "Cannot check (pyaudio not installed)", None
+    except Exception as e:
+        return "warn", f"Cannot access: {e}", "Voice input may not work"
+
+
+def _check_package(import_name: str, package_name: str) -> tuple:
+    """Check if a Python package is installed."""
+    try:
+        module = __import__(import_name)
+        version = getattr(module, "__version__", "installed")
+        return "pass", version, None
+    except ImportError:
+        return (
+            "fail",
+            "Not installed",
+            f"Install with: pip install {package_name}",
+        )
+
 
 
 if __name__ == "__main__":

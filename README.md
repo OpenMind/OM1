@@ -67,6 +67,15 @@ After launching OM1, the Spot agent will interact with you and perform (simulate
 Note: This is just an example agent configuration.
 If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
 
+### Verify Your Setup
+
+If you encounter issues, run the diagnostics command to check your environment:
+```bash
+uv run python src/cli.py check
+```
+
+This will verify Python version, dependencies, hardware (webcam, microphone), and configuration files.
+
 ## What's Next?
 
 * Try out some [examples](https://docs.openmind.org/examples)
