@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import typing as T
@@ -12,6 +13,15 @@ from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
+
+# Network-related exceptions that should trigger retry
+RETRYABLE_EXCEPTIONS = (
+    openai.APIConnectionError,
+    openai.APITimeoutError,
+    ConnectionError,
+    TimeoutError,
+    OSError,  # Includes network unreachable errors
+)
 
 
 class OpenAILLM(LLM[R]):
@@ -69,6 +79,8 @@ class OpenAILLM(LLM[R]):
         """
         Send a prompt to the OpenAI API and get a structured response.
 
+        Implements retry logic with exponential backoff for network-related errors.
+
         Parameters
         ----------
         prompt : str
@@ -82,51 +94,86 @@ class OpenAILLM(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
-        try:
-            logging.info(f"OpenAI input: {prompt}")
-            logging.info(f"OpenAI messages: {messages}")
+        logging.info(f"OpenAI input: {prompt}")
+        logging.info(f"OpenAI messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
-            self.io_provider.set_llm_prompt(prompt)
+        self.io_provider.llm_start_time = time.time()
+        self.io_provider.set_llm_prompt(prompt)
 
-            formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
-            ]
-            formatted_messages.append({"role": "user", "content": prompt})
+        formatted_messages = [
+            {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+            for msg in messages
+        ]
+        formatted_messages.append({"role": "user", "content": prompt})
 
-            response = await self._client.chat.completions.create(
-                model=self._config.model or "gpt-5",
-                messages=T.cast(T.Any, formatted_messages),
-                tools=T.cast(T.Any, self.function_schemas),
-                tool_choice="auto",
-                timeout=self._config.timeout,
-            )
+        max_retries = self._config.max_retries
+        retry_delay = self._config.retry_delay
+        last_exception: T.Optional[Exception] = None
 
-            message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+        for attempt in range(max_retries + 1):
+            try:
+                response = await self._client.chat.completions.create(
+                    model=self._config.model or "gpt-5",
+                    messages=T.cast(T.Any, formatted_messages),
+                    tools=T.cast(T.Any, self.function_schemas),
+                    tool_choice="auto",
+                    timeout=self._config.timeout,
+                )
 
-            if message.tool_calls:
-                logging.info(f"Received {len(message.tool_calls)} function calls")
-                logging.info(f"Function calls: {message.tool_calls}")
+                # If we got here after retries, log the recovery
+                if attempt > 0:
+                    logging.info(
+                        f"OpenAI API connection restored after {attempt} retry attempt(s)"
+                    )
 
-                function_call_data = [
-                    {
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                message = response.choices[0].message
+                self.io_provider.llm_end_time = time.time()
+
+                if message.tool_calls:
+                    logging.info(f"Received {len(message.tool_calls)} function calls")
+                    logging.info(f"Function calls: {message.tool_calls}")
+
+                    function_call_data = [
+                        {
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            }
                         }
-                    }
-                    for tc in message.tool_calls
-                ]
+                        for tc in message.tool_calls
+                    ]
 
-                actions = convert_function_calls_to_actions(function_call_data)
+                    actions = convert_function_calls_to_actions(function_call_data)
 
-                result = CortexOutputModel(actions=actions)
-                return T.cast(R, result)
+                    result = CortexOutputModel(actions=actions)
+                    return T.cast(R, result)
 
-            return None
+                return None
 
-        except Exception as e:
-            logging.error(f"OpenAI API error: {e}")
-            return None
+            except RETRYABLE_EXCEPTIONS as e:
+                last_exception = e
+                if attempt < max_retries:
+                    current_delay = retry_delay * (2**attempt)  # Exponential backoff
+                    logging.warning(
+                        f"OpenAI API connection error (attempt {attempt + 1}/{max_retries + 1}): {e}. "
+                        f"Retrying in {current_delay:.1f}s..."
+                    )
+                    await asyncio.sleep(current_delay)
+                else:
+                    logging.error(
+                        f"OpenAI API connection failed after {max_retries + 1} attempts: {e}"
+                    )
+
+            except Exception as e:
+                # Non-retryable errors (auth, validation, etc.) - fail immediately
+                logging.error(f"OpenAI API error (non-retryable): {e}")
+                return None
+
+        # All retries exhausted
+        if last_exception:
+            logging.error(
+                f"OpenAI API: All {max_retries + 1} connection attempts failed. "
+                "Check network connectivity."
+            )
+        return None
+

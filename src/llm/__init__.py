@@ -51,6 +51,14 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+    max_retries: int = Field(
+        default=3,
+        description="Maximum number of retry attempts for network-related errors",
+    )
+    retry_delay: float = Field(
+        default=1.0,
+        description="Initial delay between retries in seconds (with exponential backoff)",
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:

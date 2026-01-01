@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import typing as T
@@ -12,6 +13,15 @@ from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
+
+# Network-related exceptions that should trigger retry
+RETRYABLE_EXCEPTIONS = (
+    openai.APIConnectionError,
+    openai.APITimeoutError,
+    ConnectionError,
+    TimeoutError,
+    OSError,
+)
 
 
 class GeminiLLM(LLM[R]):
@@ -57,7 +67,9 @@ class GeminiLLM(LLM[R]):
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
     ) -> T.Optional[R]:
         """
-        Execute LLM query and parse response
+        Execute LLM query and parse response.
+
+        Implements retry logic with exponential backoff for network-related errors.
 
         Parameters
         ----------
@@ -72,51 +84,84 @@ class GeminiLLM(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
-        try:
-            logging.debug(f"Gemini LLM input: {prompt}")
-            logging.debug(f"Gemini LLM messages: {messages}")
+        logging.debug(f"Gemini LLM input: {prompt}")
+        logging.debug(f"Gemini LLM messages: {messages}")
 
-            self.io_provider.llm_start_time = time.time()
-            self.io_provider.set_llm_prompt(prompt)
+        self.io_provider.llm_start_time = time.time()
+        self.io_provider.set_llm_prompt(prompt)
 
-            formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
-            ]
-            formatted_messages.append({"role": "user", "content": prompt})
+        formatted_messages = [
+            {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+            for msg in messages
+        ]
+        formatted_messages.append({"role": "user", "content": prompt})
 
-            response = await self._client.chat.completions.create(
-                model=self._config.model or "gemini-2.0-flash-exp",
-                messages=T.cast(T.Any, formatted_messages),
-                tools=T.cast(T.Any, self.function_schemas),
-                tool_choice="auto",
-                timeout=self._config.timeout,
-            )
+        max_retries = self._config.max_retries
+        retry_delay = self._config.retry_delay
+        last_exception: T.Optional[Exception] = None
 
-            message = response.choices[0].message
-            self.io_provider.llm_end_time = time.time()
+        for attempt in range(max_retries + 1):
+            try:
+                response = await self._client.chat.completions.create(
+                    model=self._config.model or "gemini-2.5-flash",
+                    messages=T.cast(T.Any, formatted_messages),
+                    tools=T.cast(T.Any, self.function_schemas),
+                    tool_choice="auto",
+                    timeout=self._config.timeout,
+                )
 
-            if message.tool_calls:
-                logging.info(f"Received {len(message.tool_calls)} function calls")
-                logging.info(f"Function calls: {message.tool_calls}")
+                if attempt > 0:
+                    logging.info(
+                        f"Gemini API connection restored after {attempt} retry attempt(s)"
+                    )
 
-                function_call_data = [
-                    {
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                message = response.choices[0].message
+                self.io_provider.llm_end_time = time.time()
+
+                if message.tool_calls:
+                    logging.info(f"Received {len(message.tool_calls)} function calls")
+                    logging.info(f"Function calls: {message.tool_calls}")
+
+                    function_call_data = [
+                        {
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            }
                         }
-                    }
-                    for tc in message.tool_calls
-                ]
+                        for tc in message.tool_calls
+                    ]
 
-                actions = convert_function_calls_to_actions(function_call_data)
+                    actions = convert_function_calls_to_actions(function_call_data)
 
-                result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
-                return T.cast(R, result)
+                    result = CortexOutputModel(actions=actions)
+                    logging.info(f"Gemini LLM function call output: {result}")
+                    return T.cast(R, result)
 
-            return None
-        except Exception as e:
-            logging.error(f"Gemini API error: {e}")
-            return None
+                return None
+
+            except RETRYABLE_EXCEPTIONS as e:
+                last_exception = e
+                if attempt < max_retries:
+                    current_delay = retry_delay * (2**attempt)
+                    logging.warning(
+                        f"Gemini API connection error (attempt {attempt + 1}/{max_retries + 1}): {e}. "
+                        f"Retrying in {current_delay:.1f}s..."
+                    )
+                    await asyncio.sleep(current_delay)
+                else:
+                    logging.error(
+                        f"Gemini API connection failed after {max_retries + 1} attempts: {e}"
+                    )
+
+            except Exception as e:
+                logging.error(f"Gemini API error (non-retryable): {e}")
+                return None
+
+        if last_exception:
+            logging.error(
+                f"Gemini API: All {max_retries + 1} connection attempts failed. "
+                "Check network connectivity."
+            )
+        return None
+
