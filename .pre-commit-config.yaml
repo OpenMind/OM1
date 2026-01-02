@@ -32,3 +32,9 @@ repos:
       - id: detect-secrets
         args: [--exclude-secrets, 'openmind_free']
         files: ^config/.*$
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.28.3
+    hooks:
+      - id: typos
+        exclude: ^(src/unitree|src/ubtech)/

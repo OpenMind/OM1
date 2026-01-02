@@ -56,7 +56,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: "Set up Python"
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
@@ -71,17 +71,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-
 
-      - name: Run Ruff
+      - name: Run ruff
         run: uv run ruff check .
 
-      - name: Run Black
+      - name: Run black
         run: uv run black --check .
 
       - name: Run isort
         run: uv run isort --check-only .
 
-      - name: Run Pyright
+      - name: Run pyright
         run: uv run pyright --project ./pyrightconfig.json
+
+      - name: Run vulture
+        run: uv run vulture src/
 
       - name: Install pre-commit
         run: pip install pre-commit
