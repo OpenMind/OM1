@@ -1,21 +1,20 @@
+import argparse
 import asyncio
 import logging
 import multiprocessing as mp
 import os
 import shutil
+import sys
 from typing import Optional, Tuple
 
 import dotenv
 import json5
-import typer
 
 from runtime.logging import setup_logging
 from runtime.multi_mode.config import load_mode_config
 from runtime.multi_mode.cortex import ModeCortexRuntime
 from runtime.single_mode.config import load_config
 from runtime.single_mode.cortex import CortexRuntime
-
-app = typer.Typer()
 
 
 def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
@@ -41,7 +40,7 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
             logging.error(
                 "Please provide a config_name or ensure .runtime.json5 exists in config/memory/"
             )
-            raise typer.Exit(1)
+            sys.exit(1)
 
         config_name = ".runtime"
         config_path = os.path.join(
@@ -61,21 +60,12 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
     return config_name, config_path
 
 
-@app.command()
 def start(
-    config_name: Optional[str] = typer.Argument(
-        None,
-        help="The name of the configuration file (without extension) located in the config directory. If not provided, uses .runtime.json5 from memory folder.",
-    ),
-    hot_reload: bool = typer.Option(
-        True, help="Enable hot-reload of configuration files."
-    ),
-    check_interval: int = typer.Option(
-        60,
-        help="Interval in seconds between config file checks when hot_reload is enabled.",
-    ),
-    log_level: str = typer.Option("INFO", help="The logging level to use."),
-    log_to_file: bool = typer.Option(False, help="Whether to log output to a file."),
+    config_name: Optional[str],
+    hot_reload: bool,
+    check_interval: int,
+    log_level: str,
+    log_to_file: bool,
 ) -> None:
     """
     Start the OM1 agent with a specific configuration.
@@ -131,10 +121,10 @@ def start(
 
     except FileNotFoundError:
         logging.error(f"Configuration file not found: {config_path}")
-        raise typer.Exit(1)
+        sys.exit(1)
     except Exception as e:
         logging.error(f"Error loading configuration: {e}")
-        raise typer.Exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
@@ -144,4 +134,56 @@ if __name__ == "__main__":
         mp.set_start_method("spawn")
 
     dotenv.load_dotenv()
-    app()
+
+    parser = argparse.ArgumentParser(
+        description="OM1 Runtime: Launch and manage AI agents with multimodal capabilities. Load agent configurations from the config/ directory to control behavior and capabilities.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    # Agent Selection
+    agent_group = parser.add_argument_group("Agent Selection")
+    agent_group.add_argument(
+        "config_name",
+        nargs="?",
+        help="Agent configuration name (e.g., 'spot', 'turtlebot4'). Loads <name>.json5 from config/ directory. If not provided, uses memory/.runtime.json5 as default.",
+    )
+
+    # Runtime Options
+    runtime_group = parser.add_argument_group("Runtime Options")
+    runtime_group.add_argument(
+        "--hot-reload",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Automatically reload configuration when files change. Useful for iterative development and tuning.",
+    )
+    runtime_group.add_argument(
+        "--check-interval",
+        type=int,
+        default=60,
+        help="Interval (seconds) to check for configuration changes. Used only when --hot-reload is enabled.",
+    )
+
+    # Debugging & Logging
+    debug_group = parser.add_argument_group("Debugging & Logging")
+    debug_group.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Verbosity level for console output. DEBUG provides detailed trace information.",
+    )
+    debug_group.add_argument(
+        "--log-to-file",
+        action="store_true",
+        help="Write logs to a file in the logs/ directory in addition to console output.",
+    )
+
+    args = parser.parse_args()
+
+    start(
+        config_name=args.config_name,
+        hot_reload=args.hot_reload,
+        check_interval=args.check_interval,
+        log_level=args.log_level,
+        log_to_file=args.log_to_file,
+    )
