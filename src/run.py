@@ -24,8 +24,8 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
     Parameters
     ----------
     config_name : str, optional
-        The name of the configuration file (without extension) located in the config directory.
-        If not provided, uses .runtime.json5 from memory folder.
+        The name of the configuration file (without extension) located in the
+        config directory. If not provided, uses .runtime.json5 from memory folder.
     """
     # If no config_name is provided, use the default .runtime.json5 from memory
     if config_name is None:
@@ -38,7 +38,8 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
                 f"Default runtime configuration file not found: {runtime_config_path}"
             )
             logging.error(
-                "Please provide a config_name or ensure .runtime.json5 exists in config/memory/"
+                "Please provide a config_name or ensure .runtime.json5 exists in "
+                "config/memory/"
             )
             sys.exit(1)
 
@@ -50,7 +51,8 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
         shutil.copy2(runtime_config_path, config_path)
         logging.info("Using default runtime configuration from memory folder")
         logging.info(
-            f"Copied config/memory/.runtime.json5 to config/{config_name}.json5 for system compatibility"
+            f"Copied config/memory/.runtime.json5 to config/{config_name}.json5 "
+            "for system compatibility"
         )
     else:
         config_path = os.path.join(
@@ -136,7 +138,11 @@ if __name__ == "__main__":
     dotenv.load_dotenv()
 
     parser = argparse.ArgumentParser(
-        description="OM1 Runtime: Launch and manage AI agents with multimodal capabilities. Load agent configurations from the config/ directory to control behavior and capabilities.",
+        description=(
+            "OM1 Runtime: Launch and manage AI agents with multimodal capabilities. "
+            "Load agent configurations from the config/ directory to control behavior "
+            "and capabilities."
+        ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
@@ -145,7 +151,10 @@ if __name__ == "__main__":
     agent_group.add_argument(
         "config_name",
         nargs="?",
-        help="Agent configuration name (e.g., 'spot', 'turtlebot4'). Loads <name>.json5 from config/ directory. If not provided, uses memory/.runtime.json5 as default.",
+        help=(
+            "Agent configuration name (e.g., 'spot', 'turtlebot4'). Loads <name>.json5 "
+            "from config/ directory. If not provided, uses memory/.runtime.json5 as default."
+        ),
     )
 
     # Runtime Options
@@ -154,13 +163,19 @@ if __name__ == "__main__":
         "--hot-reload",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Automatically reload configuration when files change. Useful for iterative development and tuning.",
+        help=(
+            "Automatically reload configuration when files change. Useful for "
+            "iterative development and tuning."
+        ),
     )
     runtime_group.add_argument(
         "--check-interval",
         type=int,
         default=60,
-        help="Interval (seconds) to check for configuration changes. Used only when --hot-reload is enabled.",
+        help=(
+            "Interval (seconds) to check for configuration changes. Used only when "
+            "--hot-reload is enabled."
+        ),
     )
 
     # Debugging & Logging
@@ -170,7 +185,10 @@ if __name__ == "__main__":
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Verbosity level for console output. DEBUG provides detailed trace information.",
+        help=(
+            "Verbosity level for console output. DEBUG provides detailed trace "
+            "information."
+        ),
     )
     debug_group.add_argument(
         "--log-to-file",
