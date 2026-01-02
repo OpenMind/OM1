@@ -10,14 +10,13 @@
         "modes"
     ],
     "properties": {
-        "version": {"type": "string"},
-        "default_mode": {"type": "string"},
-        "allow_manual_switching": {"type": "boolean"},
-        "mode_memory_enabled": {"type": "boolean"},
-        "api_key": {"type": "string"},
-        "URID": {"type": "string"},
-        "unitree_ethernet": {"type": "string"},
-        "system_governance": {"type": "string"},
+        "version": {"type": "string", "description": "The version of the configuration schema."},
+        "default_mode": {"type": "string", "description": "The mode to initialize on startup."},
+        "allow_manual_switching": {"type": "boolean", "description": "Whether the user can manually switch modes."},
+        "mode_memory_enabled": {"type": "boolean", "description": "Whether to persist mode state across sessions."},
+        "api_key": {"type": "string", "description": "API key for the OM1 system."},
+        "uritree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
+        "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
         "cortex_llm": {
             "type": "object",
             "required": ["type"],
@@ -154,9 +153,7 @@
                                 }
                             }
                         }
-                    },
-                    "additionalProperties": true
-                }
+                    }
             },
             "additionalProperties": false
         },
@@ -195,5 +192,6 @@
             }
         }
     },
-    "additionalProperties": true
+    "additionalProperties": false
+}
 }

@@ -92,7 +92,7 @@ class GalleryIdentitiesProvider:
 
     def register_message_callback(self, fn: Callable[[str], None]) -> None:
         """
-        Subscribe a consumer to receive each emitted galleryidentities line.
+        Subscribe a consumer to receive each emitted gallery identities line.
 
         Parameters
         ----------
@@ -129,7 +129,7 @@ class GalleryIdentitiesProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to strop"""
+        """Request the background thread to stop"""
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)
