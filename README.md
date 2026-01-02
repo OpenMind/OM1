@@ -85,6 +85,7 @@ sudo apt-get install portaudio19-dev python-dev ffmpeg
 ### Obtain an OpenMind API Key
 
 Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp env.example .env` and add your key to the `.env`. 
+Additional note: Using a .env file is the preferred method for separating sensitive information from configuration files.
 
 ### Launching OM1
 
