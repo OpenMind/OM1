@@ -1,20 +1,21 @@
-import argparse
 import asyncio
 import logging
 import multiprocessing as mp
 import os
 import shutil
-import sys
 from typing import Optional, Tuple
 
 import dotenv
 import json5
+import typer
 
 from runtime.logging import setup_logging
 from runtime.multi_mode.config import load_mode_config
 from runtime.multi_mode.cortex import ModeCortexRuntime
 from runtime.single_mode.config import load_config
 from runtime.single_mode.cortex import CortexRuntime
+
+app = typer.Typer()
 
 
 def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
@@ -24,8 +25,8 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
     Parameters
     ----------
     config_name : str, optional
-        The name of the configuration file (without extension) located in the
-        config directory. If not provided, uses .runtime.json5 from memory folder.
+        The name of the configuration file (without extension) located in the config directory.
+        If not provided, defaults to using config/memory/.runtime.json5.
     """
     # If no config_name is provided, use the default .runtime.json5 from memory
     if config_name is None:
@@ -38,10 +39,9 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
                 f"Default runtime configuration file not found: {runtime_config_path}"
             )
             logging.error(
-                "Please provide a config_name or ensure .runtime.json5 exists in "
-                "config/memory/"
+                "Please provide a config_name or ensure .runtime.json5 exists in config/memory/"
             )
-            sys.exit(1)
+            raise typer.Exit(1)
 
         config_name = ".runtime"
         config_path = os.path.join(
@@ -51,8 +51,7 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
         shutil.copy2(runtime_config_path, config_path)
         logging.info("Using default runtime configuration from memory folder")
         logging.info(
-            f"Copied config/memory/.runtime.json5 to config/{config_name}.json5 "
-            "for system compatibility"
+            f"Copied config/memory/.runtime.json5 to config/{config_name}.json5 for system compatibility"
         )
     else:
         config_path = os.path.join(
@@ -62,12 +61,40 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
     return config_name, config_path
 
 
+@app.command()
 def start(
-    config_name: Optional[str],
-    hot_reload: bool,
-    check_interval: int,
-    log_level: str,
-    log_to_file: bool,
+    config_name: Optional[str] = typer.Argument(
+        None,
+        help=(
+            "The name of the configuration file (without extension) located in the "
+            "config directory (e.g., 'spot', 'turtlebot4'). If not provided, "
+            "defaults to using config/memory/.runtime.json5."
+        ),
+    ),
+    hot_reload: bool = typer.Option(
+        True,
+        help=(
+            "Enable hot-reload of configuration files. Useful for iterative "
+            "development and tuning without restarting."
+        ),
+    ),
+    check_interval: int = typer.Option(
+        60,
+        help=(
+            "Interval in seconds between config file checks. Only applies when "
+            "hot_reload is enabled."
+        ),
+    ),
+    log_level: str = typer.Option(
+        "INFO",
+        help=(
+            "The logging level to use (e.g., 'DEBUG' for verbose output, 'INFO' "
+            "for standard operational logs)."
+        ),
+    ),
+    log_to_file: bool = typer.Option(
+        False, help="Whether to log output to a file in addition to the console."
+    ),
 ) -> None:
     """
     Start the OM1 agent with a specific configuration.
@@ -75,16 +102,20 @@ def start(
     Parameters
     ----------
     config_name : str, optional
-        The name of the configuration file (without extension) located in the config directory.
-        If not provided, uses .runtime.json5 from memory folder as default.
+        The name of the configuration file (without extension) located in the config directory
+        (e.g., 'spot', 'turtlebot4'). If not provided, defaults to using
+        config/memory/.runtime.json5.
     hot_reload : bool, optional
-        Enable hot-reload of configuration files (default is True).
+        Enable hot-reload of configuration files. Useful for iterative development and
+        tuning without restarting (default is True).
     check_interval : int, optional
-        Interval in seconds between config file checks when hot_reload is enabled (default is 60).
+        Interval in seconds between config file checks. Only applies when hot_reload is
+        enabled (default is 60).
     log_level : str, optional
-        The logging level to use (default is "INFO").
+        The logging level to use (e.g., 'DEBUG' for verbose output, 'INFO' for standard
+        operational logs) (default is "INFO").
     log_to_file : bool, optional
-        Whether to log output to a file (default is False).
+        Whether to log output to a file in addition to the console (default is False).
     """
     config_name, config_path = setup_config_file(config_name)
     setup_logging(config_name, log_level, log_to_file)
@@ -123,10 +154,10 @@ def start(
 
     except FileNotFoundError:
         logging.error(f"Configuration file not found: {config_path}")
-        sys.exit(1)
+        raise typer.Exit(1)
     except Exception as e:
         logging.error(f"Error loading configuration: {e}")
-        sys.exit(1)
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
@@ -136,72 +167,4 @@ if __name__ == "__main__":
         mp.set_start_method("spawn")
 
     dotenv.load_dotenv()
-
-    parser = argparse.ArgumentParser(
-        description=(
-            "OM1 Runtime: Launch and manage AI agents with multimodal capabilities. "
-            "Load agent configurations from the config/ directory to control behavior "
-            "and capabilities."
-        ),
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-
-    # Agent Selection
-    agent_group = parser.add_argument_group("Agent Selection")
-    agent_group.add_argument(
-        "config_name",
-        nargs="?",
-        help=(
-            "Agent configuration name (e.g., 'spot', 'turtlebot4'). Loads <name>.json5 "
-            "from config/ directory. If not provided, uses memory/.runtime.json5 as default."
-        ),
-    )
-
-    # Runtime Options
-    runtime_group = parser.add_argument_group("Runtime Options")
-    runtime_group.add_argument(
-        "--hot-reload",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help=(
-            "Automatically reload configuration when files change. Useful for "
-            "iterative development and tuning."
-        ),
-    )
-    runtime_group.add_argument(
-        "--check-interval",
-        type=int,
-        default=60,
-        help=(
-            "Interval (seconds) to check for configuration changes. Used only when "
-            "--hot-reload is enabled."
-        ),
-    )
-
-    # Debugging & Logging
-    debug_group = parser.add_argument_group("Debugging & Logging")
-    debug_group.add_argument(
-        "--log-level",
-        type=str,
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help=(
-            "Verbosity level for console output. DEBUG provides detailed trace "
-            "information."
-        ),
-    )
-    debug_group.add_argument(
-        "--log-to-file",
-        action="store_true",
-        help="Write logs to a file in the logs/ directory in addition to console output.",
-    )
-
-    args = parser.parse_args()
-
-    start(
-        config_name=args.config_name,
-        hot_reload=args.hot_reload,
-        check_interval=args.check_interval,
-        log_level=args.log_level,
-        log_to_file=args.log_to_file,
-    )
+    app()
