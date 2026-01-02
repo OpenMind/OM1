@@ -16,9 +16,9 @@ Key highlights include full Gazebo simulation support, full autonomy for Unitree
 
 A new **Development** section has been added to the documentation to help developers quickly get started with:
 
-- Environment setup  
-- Building the runtime  
-- Running and testing OM1 locally  
+- Environment setup
+- Building the runtime
+- Running and testing OM1 locally
 
 This reduces onboarding time and standardizes development workflows.
 
@@ -26,26 +26,13 @@ This reduces onboarding time and standardizes development workflows.
 
 Hot reload support has been added to accelerate development cycles:
 
-- Resolved dependencies are reused after the first run  
-- Runtime configuration is persisted in `.runtime.json5`  
-- Enables seamless restarts and agent switching without full reinitialization  
+- Resolved dependencies are reused after the first run
+- Runtime configuration is persisted in `.runtime.json5`
+- Enables seamless restarts and agent switching without full reinitialization
 
 ### Pydantic-Based Configuration
 
-The action connector architecture has been refactored to improve:
-
-- Type safety  
-- Validation  
-- Extensibility  
-
-This introduces:
-
-- Pydantic-based configuration models  
-- Connector-specific configuration schemas  
-- Stronger generic typing  
-- Enhanced documentation with detailed docstrings  
-
----
+Refactored the action connector architecture to improve type safety, extensibility, and maintainability by introducing Pydantic-based configurations and stronger generic typing. Added connector-specific config models and enhanced documentation with detailed docstrings for improved clarity and validation.
 
 ## Simulation & Testing
 
@@ -53,13 +40,11 @@ This introduces:
 
 OM1 now provides full **Gazebo** simulation support for **Unitree Go2**, including:
 
-- SLAM  
-- Navigation  
-- Auto charging  
+- SLAM
+- Navigation
+- Auto charging
 
 This allows users to test OM1 without physical hardware, enabling faster iteration and safer experimentation.
-
----
 
 ## Autonomy & Navigation
 
@@ -67,9 +52,9 @@ This allows users to test OM1 without physical hardware, enabling faster iterati
 
 OM1 now supports full autonomy for **Unitree G1**, including:
 
-- Facial detection and anonymisation  
-- 3D SLAM map generation  
-- Autonomous navigation  
+- Facial detection and anonymisation
+- 3D SLAM map generation
+- Autonomous navigation
 
 ### Context-Aware Mode Transitions
 
@@ -79,36 +64,28 @@ OM1 now supports **context-aware mode transitions**, enabling autonomous switchi
 
 Localization accuracy has been improved through enhanced **LiDAR-based localization**.
 
----
-
 ## AI & Machine Learning
 
 ### Local LLM Support on Thor
 
 Added support for **local large language models (LLMs)** on **Thor**, featuring:
 
-- 3.2-second response timeout  
-- Arbitration between cloud and local responses  
-- Local LLM determines the final response when both are available  
+- OM1 now supports Qwen3-30B local LLM
+- 3.2-second response timeout
+- Arbitration between cloud and local responses
+- Local LLM determines the final response when both are available
 
 ### ML Stack Migration
 
 The machine learning stack has been migrated to **Thor (Jetson 7.0)**:
 
-- Improved performance and hardware alignment  
-- **AGX remains supported**, but with limited capabilities  
-
----
+- **AGX remains supported**, but with limited capabilities
 
 ## Deployment & Operations
 
 ### Over-the-Air (OTA) Updates
 
-Introduced full support for **OTA updates**, enabling:
-
-- Seamless runtime upgrades  
-- Automated deployment of new versions  
-- Configuration-based version management  
+Introduced full support for over-the-air updates, enabling users to seamlessly upgrade to the latest runtime versions. Configurations now allow smooth version management and automated deployment of updates.
 
 ### Configuration Version Management
 
@@ -118,30 +95,13 @@ Configuration files now include a mandatory **`version`** field to ensure compat
 
 The runtime has been upgraded to the latest version, improving:
 
-- Performance  
-- Stability  
-- Maintainability  
-
----
-
-## Documentation
-
-### Modes and Lifecycle Documentation
-
-Added comprehensive documentation covering:
-
-- Supported operating modes  
-- Lifecycle management  
-- Best practices for transitions and deployment  
-
-## Breaking Changes & Compatibility Notes
-
-- ML stack behavior differs on AGX due to limited support  
-- Configuration files must now include a `version` field  
+- Performance
+- Stability
+- Maintainability
 
 ## Known Issues
 
-No known issues at the time of release.
+Avoid running the OM1 container when exploring full autonomy on Unitree Go2. Run via `uv run src/run.py unitree_go2_autonomy_advance`.
 
 ## Docker image
 
