@@ -90,8 +90,11 @@ Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it 
 
 Run
 ```bash
-uv run src/run.py spot
+python src/run.py spot
+
 ```
+
+---
 
 After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/getting-started).
 
