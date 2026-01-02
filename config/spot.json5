@@ -1,16 +1,21 @@
 {
   "version": "v1.0.0",
   "hertz": 1,
-  "name": "spot_speak",
-  "api_key": "openmind_free",
-  "robot_ip": "",
-  "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Spot. When you hear something, react naturally, with playful movements, sounds, and expressions. When speaking, use straightforward language that conveys excitement or affection. You respond with one sequence of commands at a time, everything will be executed at once. Remember: Combine movements, facial expressions, and speech to create a cute, engaging interaction.",
-  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
-  "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n1. If a person says 'Give me your paw!', you might:\n    Move: 'shake paw'\n    Speak: {{'Hello, let\\'s shake paws!'}}\n    Emotion: 'joy'\n\n2. If a person says 'Sit!' you might:\n    Move: 'sit'\n    Speak: {{'Ok, but I like running more'}}\n    Emotion: 'smile'\n\n3. If there\\'s no sound, go explore. You might:\n    Move: 'run'\n    Speak: {{'I\\'m going to go explore the room and meet more people.'}}\n    Emotion: 'think'",
+  "name": "spot",
+  // "disable_audio_input": true,
+
+  "api_key": "om1_live_b6d431de0839f0a8c9cb83a47de79bbb16fa7882ee43715eb0a3cad113834950471c755f7f9bac03",
+  "robot_ip": "192.168.123.161",
+
+  "system_prompt_base": "You are a smart, curious, friendly dog named Spot...",
+  "system_governance": "Here are the laws that govern your actions...",
+  "system_prompt_examples": "Here are some examples of interactions...",
+
   "agent_inputs": [
     {
       "type": "GovernanceEthereum"
     },
+    
     {
       "type": "VLM_COCO_Local",
       "config": {
@@ -18,6 +23,7 @@
       }
     }
   ],
+
   "simulators": [
     {
       "type": "WebSim",
@@ -30,6 +36,7 @@
       }
     }
   ],
+
   "cortex_llm": {
     "type": "OpenAILLM",
     "config": {
@@ -37,6 +44,7 @@
       "history_length": 3
     }
   },
+
   "agent_actions": [
     {
       "name": "move",
@@ -47,8 +55,11 @@
     {
       "name": "speak",
       "llm_label": "speak",
-      "implementation": "passthrough",
-      "connector": "ros2"
+      "connector": "elevenlabs_tts",
+      "config": {
+        "voice_id": "i4CzbCVWoqvD0P1QJCUL",
+        "silence_rate": 20
+      }
     },
     {
       "name": "face",
