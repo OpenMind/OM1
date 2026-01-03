@@ -84,3 +84,15 @@ config/memory/
 
 # Saved locations
 locations/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Test artifacts
+.tox/
+.eggs/
+
