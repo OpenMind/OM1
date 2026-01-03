@@ -1,0 +1,8 @@
+def normalize_text(text: str) -> str:
+    """
+    Normalize text by trimming whitespace and converting to lowercase.
+    """
+    if not isinstance(text, str):
+        return ""
+
+    return " ".join(text.strip().lower().split())
