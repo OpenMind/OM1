@@ -31,7 +31,7 @@ Before contributing, please take a moment to read through the following guidelin
 
 2.  **Clone Your Fork with CLI:**
     ```bash
-    git clone [https://github.com/](https://github.com/)<your-username>/OM1.git
+    git clone https://github.com/<your-username>/OM1.git
     cd OM1
     ```
     (Replace `<your-username>` with your GitHub username.)
