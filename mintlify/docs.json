@@ -57,6 +57,7 @@
                         "pages": [
                             "full_autonomy_guidelines/brainpack_introduction",
                             "full_autonomy_guidelines/architecture_overview",
+                            "full_autonomy_guidelines/om1_system_setup",
                             "full_autonomy_guidelines/pre_config",
                             "robotics/nvidia_thor",
                             {
