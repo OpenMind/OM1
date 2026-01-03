@@ -190,15 +190,15 @@ class VectorMemoryProvider:
             query_embedding = self.embedding_model.encode(query).tolist()
 
             # Search
-            results = self.client.search(
+            results = self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_embedding,
+                query=query_embedding,
                 limit=search_limit,
             )
 
             # Convert to ConversationTurn objects
             memories = []
-            for result in results:
+            for result in results.points:
                 memories.append(
                     ConversationTurn(
                         user_message=result.payload["user_message"],
