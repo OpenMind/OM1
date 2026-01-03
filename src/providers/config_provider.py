@@ -1,10 +1,15 @@
+import hashlib
 import json
 import logging
 import os
+import shutil
+from datetime import datetime
 from uuid import uuid4
 
+import dotenv
 import json5
 import zenoh
+from jsonschema import ValidationError, validate
 
 from zenoh_msgs import (
     ConfigRequest,
@@ -21,6 +26,12 @@ from .singleton import singleton
 class ConfigProvider:
     """
     Singleton provider for runtime configuration broadcasting via Zenoh.
+
+    Security Features:
+    - Authentication via API key validation
+    - Schema validation for all config updates
+    - Automatic backup and rollback on failure
+    - Audit logging for all config changes
     """
 
     def __init__(self):
@@ -33,6 +44,11 @@ class ConfigProvider:
         self.running = False
 
         self.config_path = self._get_runtime_config_path()
+        self.backup_dir = self._get_backup_directory()
+        self.max_backups = 10
+        self._authorized_api_key = self._load_authorized_api_key()
+
+        os.makedirs(self.backup_dir, exist_ok=True)
 
         self._initialize_zenoh()
 
@@ -72,6 +88,158 @@ class ConfigProvider:
         )
         return os.path.abspath(os.path.join(memory_folder_path, ".runtime.json5"))
 
+    def _get_backup_directory(self) -> str:
+        """
+        Returns
+        -------
+        str
+            Path to config/memory/backups
+        """
+        memory_folder_path = os.path.join(
+            os.path.dirname(__file__), "../../config", "memory"
+        )
+        return os.path.abspath(os.path.join(memory_folder_path, "backups"))
+
+    def _load_authorized_api_key(self) -> str | None:
+        dotenv.load_dotenv()
+        api_key = os.getenv("OM_API_KEY")
+
+        if not api_key and os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r") as f:
+                    config = json5.load(f)
+                    api_key = config.get("api_key")
+            except Exception as e:
+                logging.warning(f"Could not load API key from config: {e}")
+
+        if api_key:
+            logging.info("ConfigProvider: API key authentication enabled")
+        else:
+            logging.warning(
+                "ConfigProvider: No API key configured. Config updates will be rejected for security."
+            )
+
+        return api_key
+
+    def _verify_api_key(self, provided_key: str | None) -> bool:
+        if not self._authorized_api_key:
+            logging.warning(
+                "ConfigProvider: Rejecting config update - no authorized API key configured"
+            )
+            return False
+
+        if not provided_key:
+            logging.warning(
+                "ConfigProvider: Rejecting config update - no API key provided"
+            )
+            return False
+
+        return self._constant_time_compare(
+            provided_key.encode("utf-8"), self._authorized_api_key.encode("utf-8")
+        )
+
+    def _constant_time_compare(self, a: bytes, b: bytes) -> bool:
+        if len(a) != len(b):
+            return False
+        result = 0
+        for x, y in zip(a, b):
+            result |= x ^ y
+        return result == 0
+
+    def _detect_config_type(self, config: dict) -> str:
+        if "modes" in config and "default_mode" in config:
+            return "multi_mode"
+        return "single_mode"
+
+    def _validate_config_schema(self, config: dict) -> tuple[bool, str]:
+        try:
+            config_type = self._detect_config_type(config)
+            schema_file = (
+                "multi_mode_schema.json"
+                if config_type == "multi_mode"
+                else "single_mode_schema.json"
+            )
+
+            schema_path = os.path.join(
+                os.path.dirname(__file__), "../../config/schema", schema_file
+            )
+
+            if not os.path.exists(schema_path):
+                return False, f"Schema file not found: {schema_file}"
+
+            with open(schema_path, "r") as f:
+                schema = json.load(f)
+
+            validate(instance=config, schema=schema)
+            return True, ""
+
+        except ValidationError as e:
+            error_path = ".".join(str(p) for p in e.path) if e.path else "root"
+            error_msg = f"Schema validation failed at '{error_path}': {e.message}"
+            logging.error(f"ConfigProvider: {error_msg}")
+            return False, error_msg
+        except Exception as e:
+            error_msg = f"Schema validation error: {str(e)}"
+            logging.error(f"ConfigProvider: {error_msg}")
+            return False, error_msg
+
+    def _create_backup(self) -> str | None:
+        if not os.path.exists(self.config_path):
+            return None
+
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            backup_filename = f".runtime_backup_{timestamp}.json5"
+            backup_path = os.path.join(self.backup_dir, backup_filename)
+
+            shutil.copy2(self.config_path, backup_path)
+            logging.info(f"ConfigProvider: Created backup at {backup_path}")
+
+            # Clean up old backups
+            self._cleanup_old_backups()
+
+            return backup_path
+        except Exception as e:
+            logging.error(f"ConfigProvider: Failed to create backup: {e}")
+            return None
+
+    def _cleanup_old_backups(self):
+        try:
+            backup_files = []
+            for filename in os.listdir(self.backup_dir):
+                if filename.startswith(".runtime_backup_") and filename.endswith(
+                    ".json5"
+                ):
+                    filepath = os.path.join(self.backup_dir, filename)
+                    backup_files.append((os.path.getmtime(filepath), filepath))
+
+            backup_files.sort(reverse=True)
+
+            for _, filepath in backup_files[self.max_backups :]:
+                try:
+                    os.remove(filepath)
+                    logging.debug(f"ConfigProvider: Removed old backup {filepath}")
+                except Exception as e:
+                    logging.warning(
+                        f"ConfigProvider: Failed to remove old backup {filepath}: {e}"
+                    )
+        except Exception as e:
+            logging.warning(f"ConfigProvider: Failed to cleanup old backups: {e}")
+
+    def _rollback_config(self, backup_path: str):
+        try:
+            if os.path.exists(backup_path):
+                shutil.copy2(backup_path, self.config_path)
+                logging.info(f"ConfigProvider: Rolled back to backup {backup_path}")
+            else:
+                logging.error(f"ConfigProvider: Backup file not found: {backup_path}")
+        except Exception as e:
+            logging.error(f"ConfigProvider: Failed to rollback: {e}")
+
+    def _calculate_config_hash(self, config: dict) -> str:
+        config_str = json.dumps(config, sort_keys=True)
+        return hashlib.sha256(config_str.encode("utf-8")).hexdigest()[:16]
+
     def _handle_config_request(self, sample: zenoh.Sample):
         """
         Handle incoming config requests from Zenoh subscriber.
@@ -88,10 +256,13 @@ class ConfigProvider:
             logging.debug(f"Received config request: {request.request_id}")
 
             if request.config and request.config.data:
-                # This is a set_config request
+                # This is a set_config request - requires authentication
+                # Extract API key from request if available
+                # Note: ConfigRequest may need to be extended to include auth
+                # For now, we'll check if API key is in the config itself
                 self._handle_set_config(request.request_id, request.config.data)
             else:
-                # This is a get_config request
+                # This is a get_config request - no auth required for read
                 self._send_config_response(request.request_id)
 
         except Exception as e:
@@ -100,23 +271,97 @@ class ConfigProvider:
     def _handle_set_config(self, request_id: String, config_str: str):
         """
         Handle request to update runtime configuration.
+
+        Security checks:
+        1. Parse and validate JSON5 syntax
+        2. Verify API key authentication
+        3. Validate against schema
+        4. Create backup before update
+        5. Write new config atomically
+        6. Rollback on failure
         """
+        backup_path = None
         try:
-            new_config = json5.loads(config_str)
+            # Step 1: Parse JSON5
+            try:
+                new_config = json5.loads(config_str)
+            except json5.JSON5DecodeError as e:
+                error_msg = f"Invalid JSON5 syntax: {str(e)}"
+                logging.error(f"ConfigProvider: {error_msg}")
+                self._send_error_response(request_id, error_msg)
+                return
+            except Exception as e:
+                error_msg = f"Failed to parse config: {str(e)}"
+                logging.error(f"ConfigProvider: {error_msg}")
+                self._send_error_response(request_id, error_msg)
+                return
 
+            # Step 2: Verify API key authentication
+            provided_api_key = new_config.get("api_key")
+            if not self._verify_api_key(provided_api_key):
+                error_msg = "Authentication failed: Invalid or missing API key"
+                logging.warning(
+                    f"ConfigProvider: {error_msg} (request_id: {request_id})"
+                )
+                self._send_error_response(request_id, error_msg)
+                return
+
+            # Step 3: Validate against schema
+            is_valid, validation_error = self._validate_config_schema(new_config)
+            if not is_valid:
+                logging.warning(
+                    f"ConfigProvider: Schema validation failed: {validation_error}"
+                )
+                self._send_error_response(
+                    request_id, f"Schema validation failed: {validation_error}"
+                )
+                return
+
+            # Step 4: Create backup before making changes
+            backup_path = self._create_backup()
+            if not backup_path and os.path.exists(self.config_path):
+                error_msg = "Failed to create backup - refusing to update config"
+                logging.error(f"ConfigProvider: {error_msg}")
+                self._send_error_response(request_id, error_msg)
+                return
+
+            # Step 5: Write new config atomically
+            config_hash = self._calculate_config_hash(new_config)
             temp_path = self.config_path + ".tmp"
-            with open(temp_path, "w") as f:
-                json.dump(new_config, f, indent=2)
 
-            os.rename(temp_path, self.config_path)
+            try:
+                with open(temp_path, "w") as f:
+                    json.dump(new_config, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
 
-            logging.info(f"Updated runtime config file: {self.config_path}")
+                os.rename(temp_path, self.config_path)
 
-            self._send_config_response(request_id)
+                logging.info(
+                    f"ConfigProvider: Successfully updated config (hash: {config_hash}, "
+                    f"backup: {backup_path}, request_id: {request_id})"
+                )
+
+                self._send_config_response(request_id)
+
+            except Exception as e:
+                if backup_path:
+                    logging.error(f"ConfigProvider: Write failed, rolling back: {e}")
+                    self._rollback_config(backup_path)
+
+                error_msg = f"Failed to write config file: {str(e)}"
+                logging.error(f"ConfigProvider: {error_msg}")
+                self._send_error_response(request_id, error_msg)
+                return
 
         except Exception as e:
-            logging.error(f"Failed to update config: {e}")
-            self._send_error_response(request_id, f"Failed to update config: {e}")
+            if backup_path:
+                logging.error(f"ConfigProvider: Unexpected error, rolling back: {e}")
+                self._rollback_config(backup_path)
+
+            error_msg = f"Unexpected error updating config: {str(e)}"
+            logging.error(f"ConfigProvider: {error_msg}")
+            self._send_error_response(request_id, error_msg)
 
     def _send_config_response(self, request_id: String):
         """
