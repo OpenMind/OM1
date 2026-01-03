@@ -36,58 +36,20 @@ class RuntimeConfig:
     agent_actions: List[AgentAction]
     backgrounds: List[Background]
 
-    # Optional robot IP address for the runtime configuration
     robot_ip: Optional[str] = None
-
-    # Optional API key for the runtime configuration
     api_key: Optional[str] = None
-
-    # Optional URID robot id key for the runtime configuration
     URID: Optional[str] = None
-
-    # Optional Ethernet adapter setting for Unitree Robots
     unitree_ethernet: Optional[str] = None
-
-    # Optional mode information for multi-mode runtime configurations
     mode: Optional[str] = None
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
-        """Load a runtime configuration from a file."""
         return load_config(config_name)
 
 
 def load_config(
     config_name: str, config_source_path: Optional[str] = None
 ) -> RuntimeConfig:
-    """
-    Load and parse a runtime configuration from a JSON file.
-
-    Parameters
-    ----------
-    config_name : str
-        Name of the configuration file (without .json extension)
-    config_source_path : Optional[str]
-        Optional path to the configuration file to load. If not provided, the default path based on config_name will be used.
-
-    Returns
-    -------
-    RuntimeConfig
-        Parsed runtime configuration object
-
-    Raises
-    ------
-    FileNotFoundError
-        If the configuration file does not exist
-    json.JSONDecodeError
-        If the configuration file contains invalid JSON
-    KeyError
-        If required configuration fields are missing
-    ImportError
-        If component types specified in config cannot be imported
-    ValueError
-        If configuration values are invalid (e.g., negative hertz)
-    """
     config_path = (
         os.path.join(
             os.path.dirname(__file__), "../../../config", config_name + ".json5"
@@ -102,92 +64,94 @@ def load_config(
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
 
-    g_robot_ip = raw_config.get("robot_ip", None)
-    if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
-        logging.warning(
-            "No robot ip found in the configuration file. Checking for backup robot ip in your .env file."
-        )
-        backup_key = os.environ.get("ROBOT_IP")
-        g_robot_ip = backup_key
-        if backup_key:
-            raw_config["robot_ip"] = backup_key
-            logging.info("Success - Found ROBOT_IP in your .env file.")
-        else:
-            logging.warning(
-                "Could not find robot ip address. Please find your robot IP address and add it to the configuration file or .env file."
-            )
-    g_api_key = raw_config.get("api_key", None)
-    if g_api_key is None or g_api_key == "" or g_api_key == "openmind_free":
-        logging.warning(
-            "No API key found in the configuration file. Checking for backup OM_API_KEY in your .env file."
-        )
-        backup_key = os.environ.get("OM_API_KEY")
-        g_api_key = backup_key
-        if backup_key:
-            raw_config["api_key"] = backup_key
-            logging.info("Success - Found OM_API_KEY in your .env file.")
-        else:
-            logging.warning(
-                "Could not find any API keys. Please get a free key at portal.openmind.org."
-            )
+    # ------------------------------------------------------------------
+    # ENV FLAGS (HEADLESS / VPS MODE)
+    # ------------------------------------------------------------------
+    TEXT_ONLY_MODE = (
+        os.getenv("OM_FORCE_TEXT_MODE") == "1"
+        or os.getenv("OM_DISABLE_ASR") == "1"
+    )
 
-    g_URID = raw_config.get("URID", None)
-    if g_URID is None or g_URID == "":
+    if TEXT_ONLY_MODE:
         logging.warning(
-            "No URID found in the configuration file. Multirobot deployments will conflict."
+            "Text-only mode enabled (OM_FORCE_TEXT_MODE / OM_DISABLE_ASR). "
+            "All audio/ASR inputs will be skipped."
         )
+
+    # ------------------------------------------------------------------
+    # ROBOT / API / URID
+    # ------------------------------------------------------------------
+    g_robot_ip = raw_config.get("robot_ip")
+    if not g_robot_ip or g_robot_ip == "192.168.0.241":
+        logging.warning(
+            "No robot ip found in the configuration file. Checking .env."
+        )
+        g_robot_ip = os.environ.get("ROBOT_IP")
+        if g_robot_ip:
+            raw_config["robot_ip"] = g_robot_ip
+            logging.info("Found ROBOT_IP in .env.")
+        else:
+            logging.warning("Robot IP not found.")
+
+    g_api_key = raw_config.get("api_key")
+    if not g_api_key or g_api_key == "openmind_free":
+        logging.warning(
+            "No API key found in config. Checking OM_API_KEY in .env."
+        )
+        g_api_key = os.environ.get("OM_API_KEY")
+        if g_api_key:
+            raw_config["api_key"] = g_api_key
+            logging.info("Found OM_API_KEY in .env.")
+        else:
+            logging.warning("No API key found.")
+
+    g_URID = raw_config.get("URID")
+    if not g_URID:
+        logging.warning("No URID found. Multirobot deployments may conflict.")
 
     if g_URID == "default":
-        logging.info("Checking for backup URID in your .env file.")
         backup_URID = os.environ.get("URID")
         if backup_URID:
             g_URID = backup_URID
-            logging.info("Success - Found URID in your .env file.")
-        else:
-            logging.warning(
-                "Could not find backup URID in your .env file. Using 'default'. Multirobot deployments will conflict."
-            )
+            logging.info("Found URID in .env.")
 
-    g_ut_eth = raw_config.get("unitree_ethernet", None)
-    if g_ut_eth is None or g_ut_eth == "":
-        logging.info("No robot hardware ethernet port provided.")
-    else:
-        # Load Unitree robot communication channel, if needed
+    g_ut_eth = raw_config.get("unitree_ethernet")
+    if g_ut_eth:
         load_unitree(g_ut_eth)
+    else:
+        logging.info("No robot hardware ethernet port provided.")
 
-    conf = raw_config["cortex_llm"].get("config", {})
-    logging.debug(f"config.py: {conf}")
+    # ------------------------------------------------------------------
+    # BACKGROUNDS
+    # ------------------------------------------------------------------
+    backgrounds = [
+        load_background(
+            {
+                **bg,
+                "config": add_meta(
+                    bg.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                ),
+            }
+        )
+        for bg in raw_config.get("backgrounds", [])
+    ]
 
-    parsed_config = {
-        **raw_config,
-        "backgrounds": [
-            load_background(
-                {
-                    **bg,
-                    "config": add_meta(
-                        bg.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    ),
-                }
-            )
-            for bg in raw_config.get("backgrounds", [])
-        ],
-        "agent_inputs": [
+    # ------------------------------------------------------------------
+    # AGENT INPUTS (FIX: SKIP AUDIO / ASR IN TEXT-ONLY MODE)
+    # ------------------------------------------------------------------
+    if TEXT_ONLY_MODE:
+        agent_inputs: List[Sensor] = []
+    else:
+        agent_inputs = [
             load_input(
                 {
-                    **input,
+                    **inp,
                     "config": add_meta(
-                        input.get("config", {}), g_api_key, g_ut_eth, g_URID, g_robot_ip
-                    ),
-                }
-            )
-            for input in raw_config.get("agent_inputs", [])
-        ],
-        "simulators": [
-            load_simulator(
-                {
-                    **simulator,
-                    "config": add_meta(
-                        simulator.get("config", {}),
+                        inp.get("config", {}),
                         g_api_key,
                         g_ut_eth,
                         g_URID,
@@ -195,25 +159,50 @@ def load_config(
                     ),
                 }
             )
-            for simulator in raw_config.get("simulators", [])
-        ],
-        "agent_actions": [
-            load_action(
-                {
-                    **action,
-                    "config": add_meta(
-                        action.get("config", {}),
-                        g_api_key,
-                        g_ut_eth,
-                        g_URID,
-                        g_robot_ip,
-                    ),
-                }
-            )
-            for action in raw_config.get("agent_actions", [])
-        ],
-    }
+            for inp in raw_config.get("agent_inputs", [])
+        ]
 
+    # ------------------------------------------------------------------
+    # SIMULATORS
+    # ------------------------------------------------------------------
+    simulators = [
+        load_simulator(
+            {
+                **sim,
+                "config": add_meta(
+                    sim.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                ),
+            }
+        )
+        for sim in raw_config.get("simulators", [])
+    ]
+
+    # ------------------------------------------------------------------
+    # ACTIONS
+    # ------------------------------------------------------------------
+    agent_actions = [
+        load_action(
+            {
+                **action,
+                "config": add_meta(
+                    action.get("config", {}),
+                    g_api_key,
+                    g_ut_eth,
+                    g_URID,
+                    g_robot_ip,
+                ),
+            }
+        )
+        for action in raw_config.get("agent_actions", [])
+    ]
+
+    # ------------------------------------------------------------------
+    # LLM
+    # ------------------------------------------------------------------
     cortex_llm = load_llm(
         {
             **raw_config["cortex_llm"],
@@ -225,12 +214,17 @@ def load_config(
                 g_robot_ip,
             ),
         },
-        available_actions=parsed_config["agent_actions"],
+        available_actions=agent_actions,
     )
 
-    parsed_config["cortex_llm"] = cortex_llm
-
-    return RuntimeConfig(**parsed_config)
+    return RuntimeConfig(
+        **raw_config,
+        agent_inputs=agent_inputs,
+        backgrounds=backgrounds,
+        simulators=simulators,
+        agent_actions=agent_actions,
+        cortex_llm=cortex_llm,
+    )
 
 
 def add_meta(
@@ -240,28 +234,7 @@ def add_meta(
     g_URID: Optional[str],
     g_robot_ip: Optional[str],
     g_mode: Optional[str] = None,
-) -> dict[str, str]:
-    """
-    Add an API key and Robot configuration to a runtime configuration.
-
-    Parameters
-    ----------
-    config : dict
-        The runtime configuration to update.
-    g_api_key : str
-        The API key to add.
-    g_ut_eth : str
-        The Robot ethernet port to add.
-    g_URID : str
-        The Robot URID to use.
-
-    Returns
-    -------
-    dict
-        The updated runtime configuration.
-    """
-
-    # logging.info(f"config before {config}")
+) -> dict:
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key
     if "unitree_ethernet" not in config and g_ut_eth is not None:
@@ -273,82 +246,3 @@ def add_meta(
     if "mode" not in config and g_mode is not None:
         config["mode"] = g_mode
     return config
-
-
-# this is for testing only
-def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
-    api_key = config.get("api_key")
-    g_ut_eth = config.get("unitree_ethernet")
-    g_URID = config.get("URID")
-    g_robot_ip = config.get("robot_ip")
-
-    backgrounds = [
-        load_background(
-            {
-                **bg,
-                "config": add_meta(
-                    bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for bg in config.get("backgrounds", [])
-    ]
-    agent_inputs = [
-        load_input(
-            {
-                **inp,
-                "config": add_meta(
-                    inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for inp in config.get("agent_inputs", [])
-    ]
-    simulators = [
-        load_simulator(
-            {
-                **sim,
-                "config": add_meta(
-                    sim.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for sim in config.get("simulators", [])
-    ]
-    agent_actions = [
-        load_action(
-            {
-                **action,
-                "config": add_meta(
-                    action.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for action in config.get("agent_actions", [])
-    ]
-    cortex_llm = load_llm(
-        {
-            **config["cortex_llm"],
-            "config": add_meta(
-                config["cortex_llm"].get("config", {}),
-                api_key,
-                g_ut_eth,
-                g_URID,
-                g_robot_ip,
-            ),
-        },
-        available_actions=agent_actions,
-    )
-    return RuntimeConfig(
-        version=config.get("version", "v1.0.0"),  # Default version if not specified
-        hertz=config.get("hertz", 1),
-        name=config.get("name", "TestAgent"),
-        system_prompt_base=config.get("system_prompt_base", ""),
-        system_governance=config.get("system_governance", ""),
-        system_prompt_examples=config.get("system_prompt_examples", ""),
-        agent_inputs=agent_inputs,
-        cortex_llm=cortex_llm,
-        simulators=simulators,
-        agent_actions=agent_actions,
-        backgrounds=backgrounds,
-    )
