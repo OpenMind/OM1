@@ -1,1 +1,88 @@
+OM1 Automated Setup Scripts
+This contribution adds automated setup scripts to make installing OM1 easier for developers across different operating systems.
 
+📋 What's Included
+1. setup.sh (Bash Script)
+Cross-platform bash setup script for macOS and Linux users.
+
+Features:
+
+✅ Automatic OS detection (macOS, Linux, Windows)
+
+✅ Python 3.10+ verification
+
+✅ UV package manager installation
+
+✅ System dependencies installation (portaudio, ffmpeg)
+
+✅ Git repository and submodule setup
+
+✅ Virtual environment creation
+
+✅ Python dependencies installation
+
+✅ Environment variables setup (.env configuration)
+
+✅ Setup validation
+
+✅ Colored output with progress indicators
+
+✅ Error handling and recovery
+
+Usage:
+
+bash
+# From the OM1 repository root
+bash setup.sh
+2. setup.py (Python Script)
+Cross-platform Python setup script compatible with Windows, macOS, and Linux.
+
+Features:
+
+✅ All features of setup.sh in pure Python
+
+✅ Better Windows compatibility
+
+✅ Type hints and better code documentation
+
+✅ Graceful error handling
+
+✅ Modular function design
+
+✅ Progress tracking
+
+Usage:
+
+bash
+# From the OM1 repository root
+python3 setup.py
+🎯 Why These Scripts?
+Problem They Solve
+Currently, setting up OM1 requires users to:
+
+Manually install Python 3.10+
+
+Install UV package manager separately
+
+Install system dependencies (portaudio, ffmpeg) based on their OS
+
+Clone repository and initialize submodules
+
+Create virtual environment
+
+Install Python dependencies
+
+Configure .env file
+
+This is error-prone and has a high barrier to entry for new contributors.
+
+Solution Benefits
+Faster Onboarding: New developers can get started in 2-3 minutes instead of 15-20 minutes
+
+Fewer Errors: Automation prevents common setup mistakes
+
+Better DX: Clear progress indicators and helpful error messages
+
+Cross-Platform: Works on macOS, Linux, and Windows
+
+Maintainability: Easier to update dependenc
