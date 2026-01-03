@@ -96,7 +96,7 @@ def valid_multi_mode_config():
 def config_provider_with_auth(temp_config_dir, mock_zenoh_session):
     """Create ConfigProvider with authentication enabled."""
     # Reset singleton instance
-    ConfigProvider.reset()
+    ConfigProvider.reset()  # type: ignore[attr-defined]
 
     with patch(
         "providers.config_provider.open_zenoh_session", return_value=mock_zenoh_session
@@ -123,14 +123,14 @@ def config_provider_with_auth(temp_config_dir, mock_zenoh_session):
 
             yield provider
             # Cleanup
-            ConfigProvider.reset()
+            ConfigProvider.reset()  # type: ignore[attr-defined]
 
 
 @pytest.fixture
 def config_provider_no_auth(temp_config_dir, mock_zenoh_session):
     """Create ConfigProvider without authentication."""
     # Reset singleton instance
-    ConfigProvider.reset()
+    ConfigProvider.reset()  # type: ignore[attr-defined]
 
     with patch(
         "providers.config_provider.open_zenoh_session", return_value=mock_zenoh_session
@@ -157,7 +157,7 @@ def config_provider_no_auth(temp_config_dir, mock_zenoh_session):
 
             yield provider
             # Cleanup
-            ConfigProvider.reset()
+            ConfigProvider.reset()  # type: ignore[attr-defined]
 
 
 class TestAuthentication:
