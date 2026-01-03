@@ -270,7 +270,7 @@ class ModeSystemConfig:
 
 
 def load_mode_config(
-    config_name: str, mode_soure_path: Optional[str] = None
+    config_name: str, mode_source_path: Optional[str] = None
 ) -> ModeSystemConfig:
     """
     Load a mode-aware configuration from a JSON5 file.
@@ -279,7 +279,7 @@ def load_mode_config(
     ----------
     config_name : str
         Name of the configuration file (without .json5 extension)
-    mode_soure_path : Optional[str]
+    mode_source_path : Optional[str]
         Optional path to the configuration file. If None, defaults to the config directory.
         The path is relative to the ../../../config directory.
 
@@ -292,8 +292,8 @@ def load_mode_config(
         os.path.join(
             os.path.dirname(__file__), "../../../config", config_name + ".json5"
         )
-        if mode_soure_path is None
-        else mode_soure_path
+        if mode_source_path is None
+        else mode_source_path
     )
 
     with open(config_path, "r") as f:
