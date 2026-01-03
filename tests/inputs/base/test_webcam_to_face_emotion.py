@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
+from inputs.base import SensorConfig
 from inputs.plugins.webcam_to_face_emotion import FaceEmotionCapture, Message
 
 
@@ -36,7 +37,7 @@ def mock_io_provider():
 @pytest.fixture
 def face_emotion(mock_cv2, mock_io_provider, mock_deepface):
     with patch("inputs.plugins.webcam_to_face_emotion.check_webcam", return_value=True):
-        instance = FaceEmotionCapture()
+        instance = FaceEmotionCapture(config=SensorConfig())
         instance.face_cascade.detectMultiScale = Mock(return_value=[(10, 10, 50, 50)])
         instance.have_cam = True
         mock_cap = Mock()

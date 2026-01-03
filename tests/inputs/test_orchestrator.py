@@ -3,13 +3,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from inputs.orchestrator import InputOrchestrator
 
 
-class MockInput(FuserInput[str]):
+class MockInput(FuserInput[SensorConfig, str]):
     def __init__(self):
-        super().__init__()
+        super().__init__(SensorConfig())
         self.poll_count = 0
         self.max_polls = 3
 
@@ -61,7 +62,7 @@ async def test_listen_multiple_inputs():
     orchestrator = InputOrchestrator(inputs)
     await asyncio.wait_for(orchestrator.listen(), timeout=5.0)
     for input in inputs:
-        assert input.raw_to_text.call_count == 3
+        assert input.raw_to_text.call_count == 3  # type: ignore
 
 
 @pytest.mark.asyncio

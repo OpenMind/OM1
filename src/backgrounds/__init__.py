@@ -5,7 +5,7 @@ import os
 import re
 import typing as T
 
-from backgrounds.base import Background
+from backgrounds.base import Background, BackgroundConfig
 
 
 def find_module_with_class(class_name: str) -> T.Optional[str]:
@@ -50,20 +50,21 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     return None
 
 
-def load_background(class_name: str) -> T.Type[Background]:
+def load_background(background_config: T.Dict[str, T.Any]) -> Background:
     """
-    Load a background class by its class name.
+    Load a background instance with its configuration.
 
     Parameters
     ----------
-    class_name : str
-        The exact class name
+    background_config : dict
+        Configuration dictionary
 
     Returns
     -------
-    T.Type[Background]
-        The background class
+    Background
+        The instantiated background
     """
+    class_name = background_config["type"]
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
@@ -82,8 +83,27 @@ def load_background(class_name: str) -> T.Type[Background]:
         ):
             raise ValueError(f"'{class_name}' is not a valid background subclass")
 
+        config_class = None
+        for _, obj in module.__dict__.items():
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, BackgroundConfig)
+                and obj != BackgroundConfig
+            ):
+                config_class = obj
+
+        config_dict = background_config.get("config", {})
+        if config_class is not None:
+            config = config_class(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+        else:
+            config = BackgroundConfig(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+
         logging.debug(f"Loaded background {class_name} from {module_name}.py")
-        return background_class
+        return background_class(config=config)
 
     except ImportError as e:
         raise ValueError(f"Could not import background module '{module_name}': {e}")

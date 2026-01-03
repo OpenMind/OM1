@@ -6,15 +6,29 @@ from queue import Empty, Queue
 from typing import List, Optional
 
 import zenoh
+from pydantic import Field
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.zenoh_listener_provider import ZenohListenerProvider
 
 
-class ZenohListener(FuserInput[str]):
+class ZenohListenerConfig(SensorConfig):
+    """
+    Configuration for Zenoh Listener Sensor.
+
+    Parameters
+    ----------
+    listen_topic : Optional[str]
+        Topic to listen to.
+    """
+
+    listen_topic: Optional[str] = Field(default=None, description="Listen Topic")
+
+
+class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
     """
     Zenoh listener handler.
 
@@ -22,7 +36,7 @@ class ZenohListener(FuserInput[str]):
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: ZenohListenerConfig):
         """
         Initialize the ZenohListener instance.
         """
@@ -39,7 +53,7 @@ class ZenohListener(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize ZenohListenerProvider provider
-        listen_topic = getattr(self.config, "listen_topic", None)
+        listen_topic = self.config.listen_topic
         if listen_topic is None:
             listen_topic = "speech"
             # Log the listen_topic being used
@@ -91,23 +105,26 @@ class ZenohListener(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> str:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert raw input to text format.
 
         Parameters
         ----------
-        raw_input : str
-            Raw input string to be converted
+        raw_input : Optional[str]
+            Raw input to be processed
 
         Returns
         -------
-        Optional[str]
-            Converted text or None if conversion fails
+        Optional[Message]
+            Processed message or None if input is None
         """
-        return raw_input
+        if raw_input is None:
+            return None
 
-    async def raw_to_text(self, raw_input: str):
+        return Message(timestamp=time.time(), message=raw_input)
+
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Convert raw input to processed text and manage buffer.
 
@@ -124,9 +141,9 @@ class ZenohListener(FuserInput[str]):
 
         if pending_message is not None:
             if len(self.messages) == 0:
-                self.messages.append(pending_message)
+                self.messages.append(pending_message.message)
             else:
-                self.messages[-1] = f"{self.messages[-1]} {pending_message}"
+                self.messages[-1] = f"{self.messages[-1]} {pending_message.message}"
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """

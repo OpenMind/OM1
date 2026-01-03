@@ -1,0 +1,173 @@
+---
+title: Unitree SDK
+description: "Unitree SDK"
+---
+
+This provides the full ROS2 system for running the Unitree Go2 and G1 SDK.
+
+### System Overiew
+
+The ROS2 SDK consists of three main services:
+
+- **orchestrator**: Manages SLAM, navigation, and map storage. Provides REST API endpoints for control and integration.
+- **om1_sensor**: Handles all low-level sensor drivers (Intel RealSense D435, RPLidar) and publishes ROS2 topics for localization and mapping.
+- **watchdog**: Monitors sensor and topic health, automatically restarting om1_sensor if issues are detected.
+
+**Service Interaction:**
+1. `om1_sensor` collects and publishes sensor data.
+2. `orchestrator` consumes this data for SLAM and navigation.
+3. `watchdog` ensures continuous operation by monitoring data streams.
+4. `zenoh_bridge` acts as a bridge between OM1 and OM1_sensor to publish and subscribe to/from ROS2 topics.
+
+---
+
+## Starting the System
+
+1. Clone the repository
+```bash
+git clone https://github.com/OpenMind/unitree-sdk.git
+```
+2. Open a terminal in the `unitree_sdk` directory.
+3. Run the following commands to start all services:
+```bash
+docker compose up orchestrator -d --no-build
+docker compose up om1_sensor -d --no-build
+docker compose up watchdog -d --no-build
+docker compose up zenoh_bridge -d --no-build
+```
+After initial setup, the system will auto-start when the robot boots.
+
+### Components Overview
+#### 1. watchdog
+
+- If any topics or sensors stop publishing data, the watchdog automatically restarts **om1_sensor**.
+- Ensures system stability during long-running sessions.
+
+#### 2. om1_sensor
+
+The **om1_sensor** container manages all low-level sensor drivers:
+
+- **Intel RealSense D435** (depth camera)
+- **RPLidar** (LiDAR scanning)
+
+It publishes ROS2 topics consumed by the rest of the system:
+
+- `/om/paths` — Processed path and localization data
+- `/scan` — Raw LiDAR scan data
+
+#### **3. orchestrator**
+
+The **orchestrator** service provides an API endpoint and cloud service integration.
+
+It manages:
+
+- SLAM (Simultaneous Localization and Mapping)
+- Navigation (**Nav2**)
+- Map storage and loading
+
+You can interact with it via REST APIs:
+
+### **API Usage**
+
+#### **Start SLAM**
+
+```bash
+curl --location 'http://localhost:5000/start/slam' \
+     --header 'Content-Type: application/json' \
+     --data '{}'
+```
+
+#### **Stop SLAM**
+
+```bash
+curl --location 'http://localhost:5000/stop/slam' \
+     --header 'Content-Type: application/json' \
+     --data '{}'
+```
+
+#### **Save a Map**
+
+```bash
+curl --location 'http://localhost:5000/maps/save' \
+     --header 'Content-Type: application/json' \
+     --data '{"map_name": "office"}'
+```
+
+#### **Start Navigation (Nav2)**
+
+```bash
+curl --location 'http://localhost:5000/start/nav2' \
+     --header 'Content-Type: application/json' \
+     --data '{"map_name": "maps/office/office.yaml"}'
+```
+
+#### **Stop Navigation (Nav2)**
+
+```bash
+curl --location 'http://localhost:5000/stop/nav2' \
+     --header 'Content-Type: application/json' \
+     --data '{}'
+```
+
+## Development Guidance
+
+- This section provides guidance for developers working on the new OM backpack system.
+
+- You can connect your Linux machine to one of the Ethernet ports of the OM backpack.
+
+- Open the network settings and find the network interface that the robot is connected to. In IPv4 settings, change the IPv4 mode to manual, set the address to 192.168.123.100, and set the mask to 255.255.255.0. After completion, click apply and wait for the network to reconnect.
+
+- Then you can subscribe to the topics published by the Orin AGX and the Unitree Go2/G1 robot.
+
+
+## Troubleshooting
+
+### RPLiDAR Connection Issues
+
+1. Check USB connection:
+```bash
+ls -la /dev/ttyUSB*
+```
+
+2. Verify permissions:
+```bash
+sudo chmod 777 /dev/ttyUSB0
+```
+
+3. Add user to dialout group:
+```bash
+sudo usermod -a -G dialout $USER
+```
+
+### SLAM Performance Issues
+
+- Reduce `scan_buffer_size` if experiencing dropped messages
+- Adjust `correlation_search_space_dimension` for better loop closure
+- Modify `loop_search_maximum_distance` based on environment size
+
+### Transform Issues
+
+- Ensure all required transforms are being published
+- Check TF tree with: `ros2 run tf2_tools view_frames`
+- Verify timing with: `ros2 topic echo /tf`
+
+### Robot Control Issues
+
+- Check `cmd_vel` messages:
+  ```bash
+  ros2 topic echo /cmd_vel
+  ```
+- Ensure robot is in correct mode for movement commands.
+
+---
+
+## Additional Resources
+
+- [OM1 Documentation](https://docs.openmind.org/)
+- [ROS2 Tutorials](https://docs.ros.org/en/humble/Tutorials.html)
+- [Unitree Go2 Documentation](https://www.unitree.com/go2)
+- [Unitree G1 Documentation](https://www.unitree.com/g1)
+
+---
+
+If you encounter issues not listed here, please contact the OM1 support team or join our community on Discord.

@@ -19,6 +19,7 @@ def sample_mode_configs():
     """Sample mode configurations for testing."""
     return {
         "default": ModeConfig(
+            version="v1.0.0",
             name="default",
             display_name="Default Mode",
             description="Default operational mode",
@@ -26,12 +27,14 @@ def sample_mode_configs():
             timeout_seconds=300.0,
         ),
         "advanced": ModeConfig(
+            version="v1.0.0",
             name="advanced",
             display_name="Advanced Mode",
             description="Advanced test mode",
             system_prompt_base="You are an advanced test agent",
         ),
         "emergency": ModeConfig(
+            version="v1.0.0",
             name="emergency",
             display_name="Emergency Mode",
             description="Emergency test mode",
@@ -73,6 +76,51 @@ def sample_transition_rules():
             transition_type=TransitionType.INPUT_TRIGGERED,
             trigger_keywords=["normal", "safe", "ok"],
             priority=5,
+        ),
+        TransitionRule(
+            from_mode="default",
+            to_mode="advanced",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"location": "lab"},
+            priority=4,
+        ),
+        TransitionRule(
+            from_mode="default",
+            to_mode="emergency",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"battery_level": {"min": 0, "max": 15}},
+            priority=8,
+        ),
+        TransitionRule(
+            from_mode="*",
+            to_mode="advanced",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={
+                "user_skill": "expert",
+                "complexity_level": ["high", "very_high"],
+            },
+            priority=6,
+        ),
+        TransitionRule(
+            from_mode="advanced",
+            to_mode="default",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"task_completion": True},
+            priority=2,
+        ),
+        TransitionRule(
+            from_mode="default",
+            to_mode="emergency",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"error_message": {"contains": "critical"}},
+            priority=9,
+        ),
+        TransitionRule(
+            from_mode="emergency",
+            to_mode="default",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"status": {"not": "error"}},
+            priority=3,
         ),
     ]
 
@@ -438,13 +486,9 @@ class TestModeManager:
         with patch.object(
             mode_manager, "check_time_based_transitions", return_value="advanced"
         ):
-            with patch.object(
-                mode_manager, "_execute_transition", return_value=True
-            ) as mock_execute:
-                result = await mode_manager.process_tick()
+            result = await mode_manager.process_tick("some input")
 
-                assert result == "advanced"
-                mock_execute.assert_called_once_with("advanced", "timeout")
+            assert result == ("advanced", "time_based")
 
     @pytest.mark.asyncio
     async def test_process_tick_input_transition(self, mode_manager):
@@ -457,13 +501,9 @@ class TestModeManager:
                 "check_input_triggered_transitions",
                 return_value="emergency",
             ):
-                with patch.object(
-                    mode_manager, "_execute_transition", return_value=True
-                ) as mock_execute:
-                    result = await mode_manager.process_tick("emergency help")
+                result = await mode_manager.process_tick("emergency help")
 
-                    assert result == "emergency"
-                    mock_execute.assert_called_once_with("emergency", "input_triggered")
+                assert result == ("emergency", "input_triggered")
 
     @pytest.mark.asyncio
     async def test_process_tick_no_transition(self, mode_manager):
@@ -484,15 +524,14 @@ class TestModeManager:
         with patch.object(
             mode_manager, "check_time_based_transitions", return_value="advanced"
         ):
-            with patch.object(mode_manager, "_execute_transition", return_value=False):
-                result = await mode_manager.process_tick()
+            result = await mode_manager.process_tick("some input")
 
-                assert result is None
+            assert result == ("advanced", "time_based")
 
     def test_get_state_file_path(self, mode_manager):
         """Test getting state file path."""
         path = mode_manager._get_state_file_path()
-        assert path.endswith(".test_config.json5")
+        assert path.endswith(".test_config.memory.json5")
         assert "memory" in path
 
     def test_save_mode_state_disabled(self, mode_manager):
@@ -601,3 +640,333 @@ class TestModeManager:
             import os
 
             os.unlink(temp_file)
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_no_matching_rules(
+        self, mode_manager
+    ):
+        """Test context-aware transitions with no matching rules."""
+        mode_manager.state.user_context = {"location": "office"}
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_simple_equality(self, mode_manager):
+        """Test context-aware transitions with simple equality condition."""
+        mode_manager.state.user_context = {"location": "lab"}
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result == "advanced"
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_numeric_range(self, mode_manager):
+        """Test context-aware transitions with numeric range conditions."""
+        mode_manager.state.user_context = {"battery_level": 10}
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result == "emergency"
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_multiple_conditions(
+        self, mode_manager
+    ):
+        """Test context-aware transitions with multiple conditions."""
+        mode_manager.state.user_context = {
+            "user_skill": "expert",
+            "complexity_level": "high",
+        }
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result == "advanced"
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_priority_ordering(
+        self, mode_manager
+    ):
+        """Test that higher priority context-aware transitions are selected."""
+        mode_manager.state.user_context = {
+            "location": "lab",
+            "battery_level": 10,  # This should trigger emergency (priority 8) over advanced (priority 4)
+        }
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result == "emergency"
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_wildcard_from_mode(
+        self, mode_manager
+    ):
+        """Test context-aware transitions with wildcard from_mode."""
+        mode_manager.state.current_mode = "emergency"
+        mode_manager.state.user_context = {
+            "user_skill": "expert",
+            "complexity_level": "very_high",
+        }
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result == "advanced"
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_cooldown_active(self, mode_manager):
+        """Test context-aware transitions blocked by cooldown."""
+        mode_manager.config.transition_rules[4].cooldown_seconds = 5.0
+        mode_manager.transition_cooldowns["default->advanced"] = time.time()
+
+        mode_manager.state.user_context = {"location": "lab"}
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result is None
+
+    def test_evaluate_context_conditions_empty_conditions(self, mode_manager):
+        """Test evaluating context conditions with empty conditions returns True."""
+        rule = TransitionRule(
+            from_mode="default",
+            to_mode="advanced",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={},
+        )
+
+        result = mode_manager._evaluate_context_conditions(rule)
+        assert result is True
+
+    def test_evaluate_context_conditions_missing_context_key(self, mode_manager):
+        """Test evaluating context conditions when required key is missing."""
+        rule = TransitionRule(
+            from_mode="default",
+            to_mode="advanced",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"location": "lab"},
+        )
+        mode_manager.state.user_context = {"other_key": "value"}
+
+        result = mode_manager._evaluate_context_conditions(rule)
+        assert result is False
+
+    def test_evaluate_context_conditions_simple_equality_match(self, mode_manager):
+        """Test evaluating context conditions with simple equality that matches."""
+        rule = TransitionRule(
+            from_mode="default",
+            to_mode="advanced",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"location": "lab"},
+        )
+        mode_manager.state.user_context = {"location": "lab"}
+
+        result = mode_manager._evaluate_context_conditions(rule)
+        assert result is True
+
+    def test_evaluate_context_conditions_simple_equality_no_match(self, mode_manager):
+        """Test evaluating context conditions with simple equality that doesn't match."""
+        rule = TransitionRule(
+            from_mode="default",
+            to_mode="advanced",
+            transition_type=TransitionType.CONTEXT_AWARE,
+            context_conditions={"location": "lab"},
+        )
+        mode_manager.state.user_context = {"location": "office"}
+
+        result = mode_manager._evaluate_context_conditions(rule)
+        assert result is False
+
+    def test_evaluate_single_condition_numeric_range_within(self, mode_manager):
+        """Test evaluating single condition with numeric range - value within range."""
+        user_context = {"battery_level": 10}
+
+        result = mode_manager._evaluate_single_condition(
+            "battery_level", {"min": 0, "max": 15}, user_context
+        )
+        assert result is True
+
+    def test_evaluate_single_condition_numeric_range_below_min(self, mode_manager):
+        """Test evaluating single condition with numeric range - value below minimum."""
+        user_context = {"battery_level": -5}
+
+        result = mode_manager._evaluate_single_condition(
+            "battery_level", {"min": 0, "max": 15}, user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_numeric_range_above_max(self, mode_manager):
+        """Test evaluating single condition with numeric range - value above maximum."""
+        user_context = {"battery_level": 20}
+
+        result = mode_manager._evaluate_single_condition(
+            "battery_level", {"min": 0, "max": 15}, user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_numeric_range_only_min(self, mode_manager):
+        """Test evaluating single condition with only minimum value."""
+        user_context = {"score": 85}
+
+        result = mode_manager._evaluate_single_condition(
+            "score", {"min": 80}, user_context
+        )
+        assert result is True
+
+    def test_evaluate_single_condition_numeric_range_only_max(self, mode_manager):
+        """Test evaluating single condition with only maximum value."""
+        user_context = {"temperature": 25}
+
+        result = mode_manager._evaluate_single_condition(
+            "temperature", {"max": 30}, user_context
+        )
+        assert result is True
+
+    def test_evaluate_single_condition_numeric_range_non_numeric_value(
+        self, mode_manager
+    ):
+        """Test evaluating numeric range condition with non-numeric value."""
+        user_context = {"battery_level": "low"}
+
+        result = mode_manager._evaluate_single_condition(
+            "battery_level", {"min": 0, "max": 15}, user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_contains_match(self, mode_manager):
+        """Test evaluating contains condition with matching string."""
+        user_context = {"error_message": "CRITICAL ERROR: System failure"}
+
+        result = mode_manager._evaluate_single_condition(
+            "error_message", {"contains": "critical"}, user_context
+        )
+        assert result is True
+
+    def test_evaluate_single_condition_contains_no_match(self, mode_manager):
+        """Test evaluating contains condition with non-matching string."""
+        user_context = {"error_message": "Minor warning: Low disk space"}
+
+        result = mode_manager._evaluate_single_condition(
+            "error_message", {"contains": "critical"}, user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_contains_non_string_value(self, mode_manager):
+        """Test evaluating contains condition with non-string value."""
+        user_context = {"error_code": 404}
+
+        result = mode_manager._evaluate_single_condition(
+            "error_code", {"contains": "404"}, user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_one_of_match(self, mode_manager):
+        """Test evaluating one_of condition with matching value."""
+        user_context = {"status": "running"}
+
+        result = mode_manager._evaluate_single_condition(
+            "status", {"one_of": ["running", "active", "ready"]}, user_context
+        )
+        assert result is True
+
+    def test_evaluate_single_condition_one_of_no_match(self, mode_manager):
+        """Test evaluating one_of condition with non-matching value."""
+        user_context = {"status": "error"}
+
+        result = mode_manager._evaluate_single_condition(
+            "status", {"one_of": ["running", "active", "ready"]}, user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_not_match(self, mode_manager):
+        """Test evaluating not condition with matching negation."""
+        user_context = {"status": "running"}
+
+        result = mode_manager._evaluate_single_condition(
+            "status", {"not": "error"}, user_context
+        )
+        assert result is True
+
+    def test_evaluate_single_condition_not_no_match(self, mode_manager):
+        """Test evaluating not condition with non-matching negation."""
+        user_context = {"status": "error"}
+
+        result = mode_manager._evaluate_single_condition(
+            "status", {"not": "error"}, user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_list_membership_match(self, mode_manager):
+        """Test evaluating list membership condition with matching value."""
+        user_context = {"priority": "high"}
+
+        result = mode_manager._evaluate_single_condition(
+            "priority", ["high", "critical", "urgent"], user_context
+        )
+        assert result is True
+
+    def test_evaluate_single_condition_list_membership_no_match(self, mode_manager):
+        """Test evaluating list membership condition with non-matching value."""
+        user_context = {"priority": "low"}
+
+        result = mode_manager._evaluate_single_condition(
+            "priority", ["high", "critical", "urgent"], user_context
+        )
+        assert result is False
+
+    def test_evaluate_single_condition_simple_equality(self, mode_manager):
+        """Test evaluating simple equality condition."""
+        user_context = {"mode": "auto"}
+
+        result = mode_manager._evaluate_single_condition("mode", "auto", user_context)
+        assert result is True
+
+    def test_evaluate_single_condition_missing_key(self, mode_manager):
+        """Test evaluating condition when key is missing from context."""
+        user_context = {"other_key": "value"}
+
+        result = mode_manager._evaluate_single_condition(
+            "missing_key", "expected_value", user_context
+        )
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_complex_conditions(
+        self, mode_manager
+    ):
+        """Test context-aware transitions with complex multi-condition rule."""
+        mode_manager.state.user_context = {
+            "user_skill": "expert",
+            "complexity_level": "high",
+            "location": "lab",
+        }
+
+        result = await mode_manager.check_context_aware_transitions()
+        # Should match the rule with user_skill and complexity_level (priority 6)
+        # over the simple location rule (priority 4)
+        assert result == "advanced"
+
+    @pytest.mark.asyncio
+    async def test_check_context_aware_transitions_partial_match(self, mode_manager):
+        """Test context-aware transitions where only some conditions match."""
+        mode_manager.state.user_context = {
+            "user_skill": "expert",
+            "complexity_level": "low",  # This doesn't match the list requirement
+        }
+
+        result = await mode_manager.check_context_aware_transitions()
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_process_tick_context_aware_transition(self, mode_manager):
+        """Test process_tick with context-aware transition."""
+        mode_manager.state.user_context = {"location": "lab"}
+
+        with patch.object(
+            mode_manager, "check_time_based_transitions", return_value=None
+        ):
+            result = await mode_manager.process_tick("some input")
+            assert result == ("advanced", "context_aware")
+
+    @pytest.mark.asyncio
+    async def test_process_tick_context_aware_priority_over_input(self, mode_manager):
+        """Test that time-based transitions take precedence over context-aware."""
+        mode_manager.state.user_context = {"location": "lab"}
+
+        with patch.object(
+            mode_manager, "check_time_based_transitions", return_value="emergency"
+        ):
+            result = await mode_manager.process_tick("advanced mode")
+            assert result == ("emergency", "time_based")

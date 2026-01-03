@@ -5,9 +5,8 @@ from typing import Optional
 import numpy as np
 from torchvision.models import detection as detection_model
 
-from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
-from inputs.plugins.vlm_coco_local import VLM_COCO_Local
+from inputs.plugins.vlm_coco_local import VLM_COCO_Local, VLM_COCO_LocalConfig
 from providers.io_provider import IOProvider
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_next_opencv_image,
@@ -22,13 +21,13 @@ class MockVLM_COCO(VLM_COCO_Local):
     the mock image provider, while maintaining all the real object detection logic.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLM_COCO_LocalConfig = VLM_COCO_LocalConfig()):
         """
         Initialize with the real VLM implementation but without opening camera.
 
         Parameters
         ----------
-        config : SensorConfig, optional
+        config : VLM_COCO_LocalConfig, optional
             Configuration for the sensor
         """
         # Initialize base FuserInput class

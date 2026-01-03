@@ -6,6 +6,7 @@ from queue import Queue
 from typing import List, Optional
 
 import zenoh
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_turtle.interface import MoveInput
@@ -14,10 +15,36 @@ from providers.rplidar_provider import RPLidarProvider
 from zenoh_msgs import geometry_msgs, open_zenoh_session, sensor_msgs
 
 
-class MoveZenohConnector(ActionConnector[MoveInput]):
+class MoveZenohConfig(ActionConfig):
+    """
+    Configuration for Zenoh connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters:
+    ----------
+    URID : Optional[str]
+        URID for Zenoh topics.
+    """
 
+    URID: Optional[str] = Field(
+        default=None,
+        description="URID for Zenoh topics.",
+    )
+
+
+class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
+    """
+    Zenoh connector for the Move Turtlebot4 action.
+    """
+
+    def __init__(self, config: MoveZenohConfig):
+        """
+        Initialize the Zenoh connector.
+
+        Parameters
+        ----------
+        config : MoveZenohConfig
+            The configuration for the action connector.
+        """
         super().__init__(config)
 
         self.turn_speed = 0.8
@@ -31,7 +58,7 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
 
         self.session = None
 
-        URID = getattr(self.config, "URID", None)
+        URID = self.config.URID
 
         if URID is None:
             logging.warning("Aborting TurtleBot4 Move system, no URID provided")
@@ -88,9 +115,16 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
                             self.hazard = "TURN_RIGHT"
                     logging.info(f"Hazard decision: {self.hazard}")
 
-    def move(self, vx, vyaw):
+    def move(self, vx: float, vyaw: float) -> None:
         """
         generate movement commands
+
+        Parameters
+        ----------
+        vx : float
+            Linear velocity in the x direction.
+        vyaw : float
+            Angular velocity around the z axis.
         """
         logging.debug("move: {} - {}".format(vx, vyaw))
 
@@ -106,7 +140,14 @@ class MoveZenohConnector(ActionConnector[MoveInput]):
         self.session.put(self.cmd_vel, t.serialize())
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """
+        Connect to the output interface and process the move action.
 
+        Parameters
+        ----------
+        output_interface : MoveInput
+            The output interface for the move action.
+        """
         logging.info(f"AI motion command: {output_interface.action}")
 
         if self.pending_movements.qsize() > 0:

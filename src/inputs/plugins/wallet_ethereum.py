@@ -3,34 +3,16 @@ import logging
 import os
 import random
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
 from web3 import Web3
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class WalletEthereum(FuserInput[float]):
+class WalletEthereum(FuserInput[SensorConfig, List[float]]):
     """
     Ethereum wallet monitor that tracks ETH balance changes.
 
@@ -43,7 +25,7 @@ class WalletEthereum(FuserInput[float]):
         If connection to Ethereum network fails
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize WalletEthereum instance.
         """

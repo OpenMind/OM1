@@ -1,0 +1,165 @@
+---
+title: Build a fresh config file
+description: "Config"
+---
+
+The config file defines the agent that runs on your machine.
+It tells OM1 which modules to load, how the robot should behave, and which modes are available.
+
+To ensure your configuration is valid, follow the format defined [here](https://github.com/OpenMind/OM1/tree/main/config/schema).
+
+OpenMind supports two configuration schemas:
+
+### Step 1. Single-Mode Schema
+
+Use this when your robot only needs to run one dedicated mode. For example, a pure conversation agent or a navigation-only setup.
+The entire agent is optimized around a single use case.
+
+### Step 2. Multi-Mode Schema
+
+Use this when you want the robot to switch between multiple modes at runtime based on user choice or context.
+You can configure any subset of the available five modes, just two, or all five, depending on your application.
+
+#### Steps to build a new config file
+
+1. Start with getting your API key from [OpenMind Portal](https://portal.openmind.org/). Copy it and save it, you'll paste it into the config later.
+2. Create a new config file config.json5
+
+    #### **version** *string* — Required
+
+    The version of the configuration format.
+
+    **Example: "v1.0.0"**
+
+    #### **hertz** *number* — Required
+
+    How often (in Hz) the agent runs its update loop.
+
+    **Example: 0.01**
+
+    #### **name** *string* — Required
+
+    The name of the agent.
+
+    **Example: "conversation"**
+
+    #### **api_key** *string* — Required
+
+    API key used to authenticate the agent.
+
+    **Example: "openmind_free"**
+
+    #### **system_prompt_base** *string* — Required
+
+    Defines the agent’s core personality and behavior.
+
+    This serves as the primary system prompt for the LLM.
+
+    #### **system_governance** *string* — Required
+
+    The laws or constraints that the agent must follow during operation.
+
+    Modeled similarly to Asimov’s laws.
+
+    #### **system_prompt_examples** *string* — Optional
+
+    Example interactions that help guide the model’s behavior.
+
+### Step 3. Customize the system prompts
+
+    There are three key prompt fields:
+
+    - system_prompt_base
+
+        Defines your agent’s personality and behavior.
+        You can keep the “Spot the dog” behavior or edit it to match your needs. You can also provide context to the LLM here.
+
+    - system_governance
+
+        Hard-coded rules the agent must follow (Asimovs laws).
+
+    - system_prompt_examples
+
+        Give your model examples of how to respond. These help shape its responses. You can add more examples if needed.
+
+### Step 4. Configure inputs
+    Inputs provide the sensory capabilities that allow robots to perceive their environment
+
+    #### **agent_inputs** *array* — Required
+
+    List of input sources or data types the agent can accept in this mode. Each item in the array is an object with the following properties:
+
+    #### **type** *string* — Required
+
+    The input type identifier.
+
+    **Example: "AudioInput"**
+
+    #### **config** *object* — Optional
+
+    Configuration options specific to this input type.
+
+    **Example: GoogleASRInput**
+
+### Step 5. Configure the LLM
+    #### **cortex_llm** *object* — Required
+
+    Configures the Cortex LLM behavior.
+
+    #### **type** *string* — Required
+
+    The LLM provider name.
+
+    **Example: "OpenAILLM"**
+
+    #### **config** *object* — Optional
+
+    Agent name used in metadata
+
+    #### **agent_name** *string* — Optional
+
+    Agent name used in metadata
+
+    **Example: "Spot"**
+
+    ### **history_length** *integer* — Optional
+
+    Number of past messages to remember in the conversation.
+
+    **Example: "10"**
+
+### Step 6. Set up agent actions
+
+    Actions define what your agent can do. You can define movement, TTS or any other actions here.
+
+    #### **agent_actions** *Array* — Required
+
+    Defines actions the agent can execute.
+
+    #### **name** *string* — Required
+
+    Human-readable identifier for the action.
+
+    **Example: "speak"**
+
+    #### **llm_label** *string* — Required
+
+    Label the model uses to refer to this action.
+
+    **Example: "speak"**
+
+    #### **implementation** *string* — Optional
+
+    This defines the business logic, if any. If there's none defined, we use default value `passthrough`.
+
+    **Example: "passthrough"**
+
+    #### **connector** *string* — Required
+
+    Name of the connector. This field is the python file name defined under `actions/action_name/connector`.
+
+    **Example: "elevenlabs_tts"**
+
+### Step 7. Validate the config
+
+    Before using the file: Check for JSON errors, make sure commas, quotes, and braces are correct and confirm that correct API key is configured.
