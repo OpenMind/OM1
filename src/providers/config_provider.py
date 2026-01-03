@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 from datetime import datetime
+from typing import Any, Dict
 from uuid import uuid4
 
 import dotenv
@@ -283,9 +284,16 @@ class ConfigProvider:
         backup_path = None
         try:
             # Step 1: Parse JSON5
+            new_config: Dict[str, Any]
             try:
-                new_config = json5.loads(config_str)
-            except json5.JSON5DecodeError as e:
+                parsed = json5.loads(config_str)
+                if not isinstance(parsed, dict):
+                    error_msg = "Config must be a JSON object"
+                    logging.error(f"ConfigProvider: {error_msg}")
+                    self._send_error_response(request_id, error_msg)
+                    return
+                new_config = parsed
+            except (ValueError, TypeError) as e:
                 error_msg = f"Invalid JSON5 syntax: {str(e)}"
                 logging.error(f"ConfigProvider: {error_msg}")
                 self._send_error_response(request_id, error_msg)
