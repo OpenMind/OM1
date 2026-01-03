@@ -127,8 +127,18 @@ def list_configs() -> None:
                     )
                 else:
                     configs.append((config_name, raw_config.get("name", config_name)))
-            except Exception as _:
-                configs.append((config_name, "Invalid config"))
+            except IOError as e:
+                error_reason = f"Cannot read file: {e.strerror}"
+                logging.debug(f"Failed to load config {config_name}: {e}", exc_info=True)
+                configs.append((config_name, f"Invalid config ({error_reason})"))
+            except (json5.JSONDecodeError, ValueError) as e:
+                error_reason = f"Invalid JSON5 syntax at line {getattr(e, 'lineno', '?')}"
+                logging.debug(f"Failed to parse config {config_name}: {e}", exc_info=True)
+                configs.append((config_name, f"Invalid config ({error_reason})"))
+            except Exception as e:
+                error_reason = f"Unexpected error: {type(e).__name__}"
+                logging.debug(f"Failed to load config {config_name}: {e}", exc_info=True)
+                configs.append((config_name, f"Invalid config ({error_reason})"))
 
     print("-" * 32)
     if mode_configs:
