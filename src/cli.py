@@ -129,15 +129,22 @@ def list_configs() -> None:
                     configs.append((config_name, raw_config.get("name", config_name)))
             except IOError as e:
                 error_reason = f"Cannot read file: {e.strerror}"
-                logging.debug(f"Failed to load config {config_name}: {e}", exc_info=True)
+                logging.debug(
+                    "Failed to load config %s: %s", config_name, e, exc_info=True
+                )
                 configs.append((config_name, f"Invalid config ({error_reason})"))
             except (json5.JSONDecodeError, ValueError) as e:
-                error_reason = f"Invalid JSON5 syntax at line {getattr(e, 'lineno', '?')}"
-                logging.debug(f"Failed to parse config {config_name}: {e}", exc_info=True)
+                lineno = getattr(e, "lineno", "?")
+                error_reason = f"Invalid JSON5 syntax at line {lineno}"
+                logging.debug(
+                    "Failed to parse config %s: %s", config_name, e, exc_info=True
+                )
                 configs.append((config_name, f"Invalid config ({error_reason})"))
             except Exception as e:
                 error_reason = f"Unexpected error: {type(e).__name__}"
-                logging.debug(f"Failed to load config {config_name}: {e}", exc_info=True)
+                logging.debug(
+                    "Failed to load config %s: %s", config_name, e, exc_info=True
+                )
                 configs.append((config_name, f"Invalid config ({error_reason})"))
 
     print("-" * 32)
