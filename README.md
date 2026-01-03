@@ -181,3 +181,22 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 ## License
 
 This project is licensed under the terms of the MIT License, which is a permissive free software license that allows users to freely use, modify, and distribute the software. The MIT License is a widely used and well-established license that is known for its simplicity and flexibility. By using the MIT License, this project aims to encourage collaboration, modification, and distribution of the software.
+
+## Quick Start
+
+This section provides a minimal setup guide for new contributors.
+
+### Requirements
+- Git
+- Python 3.9+
+- Basic knowledge of GitHub workflows
+
+### Setup
+1. Fork the repository on GitHub
+2. Clone your fork locally
+3. Create a new branch for your changes
+4. Commit and push your changes
+5. Open a Pull Request
+
+This helps first-time contributors get started quickly.
+
