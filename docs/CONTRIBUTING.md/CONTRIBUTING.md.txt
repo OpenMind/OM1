@@ -1,0 +1,17 @@
+# Contributing Guidelines
+
+Thank you for your interest in contributing to OpenMind!
+
+## How to Contribute
+- Fork the repository
+- Create a new branch for your change
+- Make small, focused commits
+- Open a Pull Request with a clear description
+
+## Contribution Types
+- Bug fixes
+- Documentation improvements
+- Utility functions
+- Code cleanup
+
+We appreciate every contribution, big or small.
