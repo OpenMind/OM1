@@ -97,7 +97,7 @@ def config_provider_with_auth(temp_config_dir, mock_zenoh_session):
     """Create ConfigProvider with authentication enabled."""
     # Reset singleton instance
     ConfigProvider.reset()
-    
+
     with patch(
         "providers.config_provider.open_zenoh_session", return_value=mock_zenoh_session
     ):
@@ -107,10 +107,10 @@ def config_provider_with_auth(temp_config_dir, mock_zenoh_session):
             os.makedirs(memory_dir, exist_ok=True)
             backup_dir = os.path.join(memory_dir, "backups")
             os.makedirs(backup_dir, exist_ok=True)
-            
+
             # Create instance (will use singleton)
             provider = ConfigProvider()
-            
+
             # Override attributes after creation
             provider.session = mock_zenoh_session
             provider.config_response_publisher = MagicMock()
@@ -131,7 +131,7 @@ def config_provider_no_auth(temp_config_dir, mock_zenoh_session):
     """Create ConfigProvider without authentication."""
     # Reset singleton instance
     ConfigProvider.reset()
-    
+
     with patch(
         "providers.config_provider.open_zenoh_session", return_value=mock_zenoh_session
     ):
@@ -141,10 +141,10 @@ def config_provider_no_auth(temp_config_dir, mock_zenoh_session):
             os.makedirs(memory_dir, exist_ok=True)
             backup_dir = os.path.join(memory_dir, "backups")
             os.makedirs(backup_dir, exist_ok=True)
-            
+
             # Create instance (will use singleton)
             provider = ConfigProvider()
-            
+
             # Override attributes after creation
             provider.session = mock_zenoh_session
             provider.config_response_publisher = MagicMock()
