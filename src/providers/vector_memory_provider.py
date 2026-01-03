@@ -199,6 +199,8 @@ class VectorMemoryProvider:
             # Convert to ConversationTurn objects
             memories = []
             for result in results.points:
+                if result.payload is None:
+                    continue
                 memories.append(
                     ConversationTurn(
                         user_message=result.payload["user_message"],
