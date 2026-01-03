@@ -1,0 +1,8 @@
+def clean_text(text: str) -> str:
+    """
+    Normalize input text by trimming spaces and converting to lowercase.
+    """
+    if not isinstance(text, str):
+        return ""
+
+    return " ".join(text.strip().lower().split())
