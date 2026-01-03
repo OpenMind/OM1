@@ -51,6 +51,10 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+    vector_memory: T.Optional[T.Dict[str, T.Any]] = Field(
+        default=None,
+        description="Vector memory configuration for semantic memory retrieval",
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
