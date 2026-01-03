@@ -133,7 +133,7 @@ def list_configs() -> None:
                     "Failed to load config %s: %s", config_name, e, exc_info=True
                 )
                 configs.append((config_name, f"Invalid config ({error_reason})"))
-            except (json5.JSONDecodeError, ValueError) as e:
+            except ValueError as e:
                 lineno = getattr(e, "lineno", "?")
                 error_reason = f"Invalid JSON5 syntax at line {lineno}"
                 logging.debug(
