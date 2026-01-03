@@ -95,51 +95,69 @@ def valid_multi_mode_config():
 @pytest.fixture
 def config_provider_with_auth(temp_config_dir, mock_zenoh_session):
     """Create ConfigProvider with authentication enabled."""
+    # Reset singleton instance
+    ConfigProvider.reset()
+    
     with patch(
         "providers.config_provider.open_zenoh_session", return_value=mock_zenoh_session
     ):
         with patch.dict(os.environ, {"OM_API_KEY": "authorized_key_12345"}):
-            provider = ConfigProvider.__new__(ConfigProvider)
+            # Override paths before initialization
+            memory_dir = os.path.join(temp_config_dir, "memory")
+            os.makedirs(memory_dir, exist_ok=True)
+            backup_dir = os.path.join(memory_dir, "backups")
+            os.makedirs(backup_dir, exist_ok=True)
+            
+            # Create instance (will use singleton)
+            provider = ConfigProvider()
+            
+            # Override attributes after creation
             provider.session = mock_zenoh_session
             provider.config_response_publisher = MagicMock()
             provider.config_request_subscriber = MagicMock()
             provider.running = True
-
-            # Override paths to use temp directory
-            memory_dir = os.path.join(temp_config_dir, "memory")
-            os.makedirs(memory_dir, exist_ok=True)
             provider.config_path = os.path.join(memory_dir, ".runtime.json5")
-            provider.backup_dir = os.path.join(memory_dir, "backups")
-            os.makedirs(provider.backup_dir, exist_ok=True)
+            provider.backup_dir = backup_dir
             provider.max_backups = 10
             provider._authorized_api_key = "authorized_key_12345"
 
-            return provider
+            yield provider
+            # Cleanup
+            ConfigProvider.reset()
 
 
 @pytest.fixture
 def config_provider_no_auth(temp_config_dir, mock_zenoh_session):
     """Create ConfigProvider without authentication."""
+    # Reset singleton instance
+    ConfigProvider.reset()
+    
     with patch(
         "providers.config_provider.open_zenoh_session", return_value=mock_zenoh_session
     ):
         with patch.dict(os.environ, {}, clear=True):
-            provider = ConfigProvider.__new__(ConfigProvider)
+            # Override paths before initialization
+            memory_dir = os.path.join(temp_config_dir, "memory")
+            os.makedirs(memory_dir, exist_ok=True)
+            backup_dir = os.path.join(memory_dir, "backups")
+            os.makedirs(backup_dir, exist_ok=True)
+            
+            # Create instance (will use singleton)
+            provider = ConfigProvider()
+            
+            # Override attributes after creation
             provider.session = mock_zenoh_session
             provider.config_response_publisher = MagicMock()
             provider.config_request_subscriber = MagicMock()
             provider.running = True
-
-            # Override paths to use temp directory
-            memory_dir = os.path.join(temp_config_dir, "memory")
-            os.makedirs(memory_dir, exist_ok=True)
             provider.config_path = os.path.join(memory_dir, ".runtime.json5")
-            provider.backup_dir = os.path.join(memory_dir, "backups")
-            os.makedirs(provider.backup_dir, exist_ok=True)
+            provider.backup_dir = backup_dir
             provider.max_backups = 10
             provider._authorized_api_key = None
 
-            return provider
+            yield provider
+            # Cleanup
+            ConfigProvider.reset()
 
 
 class TestAuthentication:
