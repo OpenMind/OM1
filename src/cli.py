@@ -87,10 +87,10 @@ def modes(config_name: str) -> None:
             print()
 
     except FileNotFoundError:
-        logging.error(f"Configuration file not found: {config_name}.json5")
+        logging.error("Configuration file not found: %s.json5", config_name)
         raise typer.Exit(1)
     except Exception as e:
-        logging.error(f"Error loading mode configuration: {e}")
+        logging.error("Error loading mode configuration: %s", e)
         raise typer.Exit(1)
 
 
