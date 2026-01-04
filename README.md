@@ -90,6 +90,54 @@ If your robot hardware does not yet provide a suitable HAL (hardware abstraction
 
 OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or websockets. For an example of an advanced humanoid HAL, please see [Unitree's C++ SDK](https://github.com/unitreerobotics/unitree_sdk2/blob/adee312b081c656ecd0bb4e936eed96325546296/example/g1/high_level/g1_loco_client_example.cpp#L159). Frequently, a HAL, especially ROS2 code, will be dockerized and can then interface with OM1 through DDS middleware or websockets.
 
+## Capability Introspection
+
+OM1 includes a **runtime capability awareness layer** that allows HAL components (actions, sensors) to expose their capabilities, constraints, and supported features at runtime. This enables agents to adapt to available hardware instead of assuming ideal conditions.
+
+### How It Works
+
+Every action connector or sensor can optionally implement a `get_capabilities()` method that returns a capability descriptor:
+
+```python
+from capabilities import CapabilityDescriptor, ComponentType, Constraint
+
+def get_capabilities(self) -> CapabilityDescriptor:
+    return CapabilityDescriptor(
+        component_name="move",
+        component_type=ComponentType.ACTION,
+        supported_features=["walk", "run", "jump", "shake paw"],
+        constraints=[
+            Constraint(name="max_speed", value=1.2, unit="m/s"),
+            Constraint(name="max_rotation", value=45, unit="deg/s"),
+        ],
+        is_available=True,
+        description="Movement control for robot",
+    )
+```
+
+At startup, OM1 collects these capability descriptors and injects a summary into the agent context before inference:
+
+```
+RUNTIME CAPABILITIES:
+Available actions: move, speak, emotion
+Available sensors: camera_vlm, GoogleASRInput
+Constraints:
+  max_speed=1.2 m/s
+  update_rate=2.0 Hz
+Unavailable: broken_sensor
+```
+
+### Benefits
+
+- **Adaptive Behavior**: Agents reason within runtime-verified limits instead of assuming ideal hardware
+- **Portability**: Same agent configuration works across humanoids, quadrupeds, phones, and simulation
+- **Graceful Degradation**: If a sensor drops or action isn't available, the agent adapts its strategy
+- **Hardware Abstraction**: True hardware-agnostic autonomy through capability negotiation
+
+### Example Implementations
+
+See `src/actions/move/connector/ros2.py` and `src/inputs/plugins/vlm_openai.py` for reference implementations.
+
 ## Recommended Development Platforms
 
 OM1 is developed on:
