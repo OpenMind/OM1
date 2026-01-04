@@ -7,6 +7,7 @@ from typing import List, Optional
 from openai.types.chat import ChatCompletion
 from pydantic import Field
 
+from capabilities import CapabilityDescriptor, ComponentType, Constraint
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
@@ -90,6 +91,46 @@ class VLMOpenAI(FuserInput[VLMOpenAIConfig, Optional[str]]):
         self.vlm.register_message_callback(self._handle_vlm_message)
 
         self.descriptor_for_LLM = "Vision"
+
+    def get_capabilities(self) -> Optional[CapabilityDescriptor]:
+        """
+        Get capability descriptor for the VLM OpenAI sensor.
+
+        Returns
+        -------
+        CapabilityDescriptor
+            Describes vision capabilities and constraints
+        """
+        return CapabilityDescriptor(
+            component_name="camera_vlm",
+            component_type=ComponentType.SENSOR,
+            supported_features=[
+                "image_capture",
+                "scene_description",
+                "object_detection",
+                "text_recognition"
+            ],
+            constraints=[
+                Constraint(
+                    name="update_rate",
+                    value=2.0,
+                    unit="Hz",
+                    description="VLM inference frequency"
+                ),
+                Constraint(
+                    name="camera_index",
+                    value=self.config.camera_index,
+                    description="Active camera device index"
+                ),
+            ],
+            is_available=True,
+            description="Vision Language Model sensor using OpenAI API",
+            metadata={
+                "model_type": "vlm",
+                "provider": "openai",
+                "base_url": self.config.base_url,
+            },
+        )
 
     def _handle_vlm_message(self, raw_message: ChatCompletion):
         """

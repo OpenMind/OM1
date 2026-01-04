@@ -79,6 +79,11 @@ class Fuser:
         if self.config.system_prompt_examples:
             system_prompt += "\n\nEXAMPLES:\n" + self.config.system_prompt_examples
 
+        # Inject runtime capabilities into agent context
+        capabilities_summary = self.config.get_capabilities_summary()
+        if capabilities_summary:
+            system_prompt += "\n\n" + capabilities_summary
+
         # descriptions of possible actions
         actions_fused = ""
 

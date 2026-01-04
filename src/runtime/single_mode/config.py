@@ -9,6 +9,12 @@ from actions import load_action
 from actions.base import AgentAction
 from backgrounds import load_background
 from backgrounds.base import Background
+from capabilities import (
+    CapabilityDescriptor,
+    CapabilityRegistry,
+    ComponentType,
+    get_capability_registry,
+)
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
@@ -47,6 +53,8 @@ class RuntimeConfig:
         List of agent actions.
     backgrounds : List[Background]
         List of background processes.
+    capability_registry : Optional[CapabilityRegistry]
+        Registry of runtime capabilities from all components.
     mode : Optional[str]
         Optional mode setting.
     api_key : Optional[str]
@@ -77,6 +85,8 @@ class RuntimeConfig:
     agent_actions: List[AgentAction]
     backgrounds: List[Background]
 
+    capability_registry: Optional[CapabilityRegistry] = None
+
     mode: Optional[str] = None
 
     api_key: Optional[str] = None
@@ -87,6 +97,19 @@ class RuntimeConfig:
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+
+    def get_capabilities_summary(self) -> str:
+        """
+        Get a formatted summary of runtime capabilities for agent context.
+
+        Returns
+        -------
+        str
+            Formatted capability summary string, or empty string if no registry
+        """
+        if self.capability_registry is None:
+            return ""
+        return self.capability_registry.generate_summary().to_prompt_string()
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
@@ -267,7 +290,86 @@ def load_config(
 
     parsed_config["cortex_llm"] = cortex_llm
 
+    # Build capability registry from loaded components
+    capability_registry = _build_capability_registry(
+        parsed_config["agent_actions"],
+        parsed_config["agent_inputs"],
+    )
+    parsed_config["capability_registry"] = capability_registry
+
     return RuntimeConfig(**parsed_config)
+
+
+def _build_capability_registry(
+    agent_actions: List[AgentAction],
+    agent_inputs: List[Sensor],
+) -> CapabilityRegistry:
+    """
+    Build a capability registry from loaded components.
+
+    Collects capability descriptors from all actions and sensors that
+    implement the get_capabilities() method.
+
+    Parameters
+    ----------
+    agent_actions : List[AgentAction]
+        List of loaded agent actions
+    agent_inputs : List[Sensor]
+        List of loaded agent input sensors
+
+    Returns
+    -------
+    CapabilityRegistry
+        Registry populated with all available capability descriptors
+    """
+    registry = get_capability_registry()
+
+    # Collect capabilities from actions
+    for action in agent_actions:
+        try:
+            caps = action.connector.get_capabilities()
+            if caps is not None:
+                registry.register(caps)
+                logging.debug(f"Registered capabilities for action: {action.name}")
+            else:
+                # Create a basic capability descriptor for actions without explicit capabilities
+                basic_caps = CapabilityDescriptor(
+                    component_name=action.llm_label,
+                    component_type=ComponentType.ACTION,
+                    supported_features=[action.llm_label],
+                    is_available=True,
+                    description=f"Action: {action.name}",
+                )
+                registry.register(basic_caps)
+        except Exception as e:
+            logging.warning(f"Failed to get capabilities for action {action.name}: {e}")
+
+    # Collect capabilities from sensors
+    for sensor in agent_inputs:
+        try:
+            caps = sensor.get_capabilities()
+            if caps is not None:
+                registry.register(caps)
+                logging.debug(
+                    f"Registered capabilities for sensor: {caps.component_name}"
+                )
+            else:
+                # Create a basic capability descriptor for sensors without explicit capabilities
+                sensor_name = sensor.__class__.__name__
+                basic_caps = CapabilityDescriptor(
+                    component_name=sensor_name,
+                    component_type=ComponentType.SENSOR,
+                    supported_features=[sensor_name],
+                    is_available=True,
+                    description=f"Sensor: {sensor_name}",
+                )
+                registry.register(basic_caps)
+        except Exception as e:
+            logging.warning(f"Failed to get capabilities for sensor: {e}")
+
+    logging.info(f"Capability registry built with {len(registry.get_all())} components")
+
+    return registry
 
 
 def add_meta(
@@ -389,6 +491,10 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         },
         available_actions=agent_actions,
     )
+
+    # Build capability registry for test case
+    capability_registry = _build_capability_registry(agent_actions, agent_inputs)
+
     return RuntimeConfig(
         version=config.get("version", "v1.0.1"),
         hertz=config.get("hertz", 1),
@@ -401,4 +507,5 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         simulators=simulators,
         agent_actions=agent_actions,
         backgrounds=backgrounds,
+        capability_registry=capability_registry,
     )

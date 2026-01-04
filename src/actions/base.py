@@ -5,6 +5,9 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict
 
+if T.TYPE_CHECKING:
+    from capabilities import CapabilityDescriptor
+
 IT = T.TypeVar("IT")
 OT = T.TypeVar("OT")
 CT = T.TypeVar("CT", bound="ActionConfig")
@@ -91,6 +94,21 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
             The input protocol containing the action details.
         """
         pass
+
+    def get_capabilities(self) -> T.Optional["CapabilityDescriptor"]:
+        """
+        Get the capability descriptor for this action connector.
+
+        Override this method to expose runtime capabilities, supported features,
+        and constraints. If not overridden, returns None indicating no
+        capability information is available.
+
+        Returns
+        -------
+        Optional[CapabilityDescriptor]
+            A descriptor of this connector's capabilities, or None if not implemented
+        """
+        return None
 
     def tick(self) -> None:
         """
