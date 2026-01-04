@@ -7,13 +7,13 @@ Usage example:
 >>> lidar = RPLidar('/dev/ttyUSB0')
 >>>
 >>> info = lidar.get_info()
->>> print(info)
+>>> logging.info(info)
 >>>
 >>> health = lidar.get_health()
->>> print(health)
+>>> logging.info(health)
 >>>
 >>> for i, scan in enumerate(lidar.iter_scans()):
-...  print('%d: Got %d measures' % (i, len(scan)))
+...  logging.info('%d: Got %d measures' % (i, len(scan)))
 ...  if i > 10:
 ...   break
 ...
