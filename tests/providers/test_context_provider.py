@@ -1,7 +1,7 @@
 import json
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from src.providers.context_provider import ContextProvider
 
 

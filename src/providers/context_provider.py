@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 import zenoh
 
 from zenoh_msgs import open_zenoh_session
+
 from .singleton import singleton
 
 
