@@ -8,78 +8,63 @@ from .singleton import singleton
 @singleton
 class SleepTickerProvider:
     """
-    A singleton provider for managing asynchronous sleep operations with cancellation support.
+    A singleton provider for managing asynchronous sleep operations with
+    cancellation and reset support.
 
-    This class provides a thread-safe way to manage sleep operations that can be
-    skipped/cancelled. It uses a lock mechanism to ensure thread safety when
-    modifying the skip state.
+    This provider ensures:
+    - Thread-safe state updates
+    - Proper async task lifecycle handling
+    - Deterministic cancellation behavior
     """
 
-    def __init__(self):
-        """
-        Initialize the SleepTickerProvider with default values.
-
-        The provider starts with sleep enabled (_skip_sleep = False) and no active
-        sleep task.
-        """
-        self._lock: threading.Lock = threading.Lock()
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
         self._skip_sleep: bool = False
         self._current_sleep_task: Optional[asyncio.Task] = None
 
     @property
     def skip_sleep(self) -> bool:
-        """
-        Get the current skip sleep state.
-
-        Returns
-        -------
-        bool
-            True if sleep operations should be skipped, False otherwise.
-        """
         with self._lock:
             return self._skip_sleep
 
     @skip_sleep.setter
     def skip_sleep(self, value: bool) -> None:
-        """
-        Set the skip sleep state and optionally cancel current sleep task.
-
-        Parameters
-        ----------
-        value : bool
-            The new skip sleep state. If True and there's an active sleep task,
-            the task will be cancelled.
-        """
         with self._lock:
             self._skip_sleep = value
-            if value and self._current_sleep_task:
-                self._current_sleep_task.cancel()
+            if value:
+                self._cancel_current_task()
+
+    def _cancel_current_task(self) -> None:
+        task = self._current_sleep_task
+        if task and not task.done():
+            task.cancel()
+
+    def reset(self) -> None:
+        """
+        Reset the sleep ticker state.
+
+        Clears the skip flag and cancels any active sleep task.
+        """
+        with self._lock:
+            self._skip_sleep = False
+            self._cancel_current_task()
 
     async def sleep(self, duration: float) -> None:
         """
-        Create and await an asynchronous sleep task.
+        Await an asynchronous sleep operation unless skipped.
 
-        Creates a new sleep task and stores it as the current task. The task can
-        be cancelled if skip_sleep is set to True while the sleep is in progress.
-
-        Parameters
-        ----------
-        duration : float
-            The duration to sleep in seconds.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        asyncio.CancelledError
-            If the sleep operation is cancelled, though this is caught internally.
+        If skip_sleep is enabled, this method returns immediately.
         """
+        if self.skip_sleep or duration <= 0:
+            return
+
+        task = asyncio.create_task(asyncio.sleep(duration))
+        self._current_sleep_task = task
+
         try:
-            self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
-            await self._current_sleep_task
+            await task
         except asyncio.CancelledError:
             pass
         finally:
-            self._current_sleep_task = None
+            if self._current_sleep_task is task:
+                self._current_sleep_task = None
