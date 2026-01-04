@@ -12,15 +12,22 @@ from runtime.single_mode.config import RuntimeConfig
 
 class ActionOrchestrator:
     """
-    Manages data flow for the actions.
+    Coordinates and manages the execution flow of agent actions.
 
-    Supports three execution modes:
-    - concurrent: All actions execute simultaneously (default)
-    - sequential: Actions execute one after another in order
-    - dependencies: Actions wait for their dependencies to complete before executing
+    The ActionOrchestrator is responsible for dispatching actions according
+    to the configured execution strategy and ensuring proper synchronization
+    between concurrent, sequential, or dependency-based workflows.
 
-    Note: It is very important that the actions do not block the event loop.
+    Supported execution modes:
+    - concurrent: Executes all actions concurrently (default behavior)
+    - sequential: Executes actions one by one in a defined order
+    - dependencies: Executes actions only after their dependencies are resolved
+
+    Important:
+    Actions must be non-blocking to avoid stalling the event loop and
+    degrading overall system performance.
     """
+
 
     promise_queue: T.List[asyncio.Task[T.Any]]
     _config: RuntimeConfig
@@ -323,3 +330,5 @@ class ActionOrchestrator:
         Clean up the ActionOrchestrator by stopping the executor.
         """
         self.stop()
+
+
