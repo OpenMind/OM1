@@ -25,8 +25,11 @@ dependencies = [
     "typer>=0.15.1",
     "opencv-python",
     "deepface>=0.0.81",
-    "tensorflow>=2.15.0",
-    "tf_keras>=2.15.0",
+
+    # 🚫 Tensorflow Windows'ta kurulmasın
+    "tensorflow>=2.15.0; sys_platform != 'win32'",
+    "tf_keras>=2.15.0; sys_platform != 'win32'",
+
     "web3",
     "numpy",
     "cdp-sdk==0.21.0",
@@ -50,9 +53,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dds = [
-    "cyclonedds==0.10.2"
-]
+dds = ["cyclonedds==0.10.2"]
 macos = ["osascript"]
 
 [dependency-groups]
@@ -72,9 +73,7 @@ pythonpath = ["src"]
 asyncio_mode = "auto"
 addopts = "-m \"not integration\""
 norecursedirs = ["src/unitree", "system_hw_test", "src/ubtech"]
-markers = [
-    "integration: marks tests as integration tests",
-]
+markers = ["integration: marks tests as integration tests"]
 
 [tool.black]
 line-length = 88
@@ -98,10 +97,13 @@ exclude = ["src/unitree", "src/ubtech"]
 select = ["E", "F", "I"]
 ignore = ["E203", "E501"]
 fixable = ["ALL"]
-unfixable = []
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.vulture]
 exclude = ["src/unitree/", "src/ubtech/", "system_hw_test/"]
 min_confidence = 80
 paths = ["src"]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'win32' and platform_machine == 'AMD64'"
+]
