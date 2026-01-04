@@ -1,5 +1,4 @@
 from unittest.mock import MagicMock, patch
-from typing import Any
 
 import pytest
 
@@ -18,16 +17,14 @@ def mock_serial():
 @pytest.fixture
 def gps_provider(mock_serial):
     """Create GpsProvider instance with mocked serial"""
-
-    # Reset singleton safely for Pyright
+    # Reset singleton safely for tests (Pyright-safe)
     if hasattr(GpsProvider, "_instances"):
-        setattr(GpsProvider, "_instances", {})  # <-- no pyright error
+        setattr(GpsProvider, "_instances", {})
 
     provider = GpsProvider(serial_port="/dev/ttyUSB0")
     yield provider
 
-    # Cleanup
-    if provider.running:
+    if getattr(provider, "running", False):
         provider.stop()
 
 
