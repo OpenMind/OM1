@@ -53,15 +53,21 @@ def test_init_connection_failed(mock_web3):
 
 @pytest.mark.asyncio
 async def test_poll(wallet_eth, mock_web3):
-    mock_web3.eth.block_number = 12345
-    mock_web3.eth.get_balance.return_value = 1000000000000000000  # 1 ETH in Wei
-    mock_web3.from_wei.return_value = 1.0
+    mock_web3.eth.get_balance.side_effect = [
+        1000000000000000000,  # 1 ETH
+        2000000000000000000,  # 2 ETH
+    ]
+    mock_web3.from_wei.side_effect = [1.0, 2.0]
 
-    result = await wallet_eth._poll()
-    assert isinstance(result, list)
-    assert len(result) == 2
-    assert isinstance(result[0], float)  # current balance
-    assert isinstance(result[1], float)  # balance change
+    result1 = await wallet_eth._poll()
+    assert result1 == [1.0, 1.0]  # balance, change
+    assert wallet_eth.ETH_balance == 1.0
+    assert wallet_eth.ETH_balance_previous == 0
+
+    result2 = await wallet_eth._poll()
+    assert result2 == [2.0, 1.0]
+    assert wallet_eth.ETH_balance == 2.0
+    assert wallet_eth.ETH_balance_previous == 1.0
 
     mock_web3.eth.get_balance.assert_called_once_with(wallet_eth.ACCOUNT_ADDRESS)
     mock_web3.from_wei.assert_called_once()
@@ -75,6 +81,16 @@ async def test_raw_to_text_conversion_balance_change(wallet_eth):
     assert isinstance(result, Message)
     assert "received 1.000 ETH" in result.message
     assert isinstance(result.timestamp, float)
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_conversion_negative_change(wallet_eth):
+    raw_input = [9.0, -1.0]  # balance and negative change
+
+    result = await wallet_eth._raw_to_text(raw_input)
+
+    assert isinstance(result, Message)
+    assert "sent 1.000 ETH" in result.message.lower()
 
 
 @pytest.mark.asyncio
@@ -107,6 +123,24 @@ def test_formatted_latest_buffer_with_message(wallet_eth):
     assert len(wallet_eth.messages) == 0
     wallet_eth.io_provider.add_input.assert_called_once_with(
         "WalletEthereum", "test balance update", current_time
+    )
+
+
+def test_formatted_latest_buffer_drains_fifo(wallet_eth):
+    ts1 = time.time()
+    ts2 = ts1 + 1
+
+    wallet_eth.messages = [
+        Message(timestamp=ts1, message="msg1"),
+        Message(timestamp=ts2, message="msg2"),
+    ]
+
+    result = wallet_eth.formatted_latest_buffer()
+
+    assert "msg2" in result
+    assert wallet_eth.messages == []
+    wallet_eth.io_provider.add_input.assert_called_once_with(
+        "WalletEthereum", "msg2", ts2
     )
 
 
