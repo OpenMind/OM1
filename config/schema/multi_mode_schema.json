@@ -19,11 +19,13 @@
         "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
         "cortex_llm": {
             "type": "object",
+            "description": "Configuration for the Cortex Large Language Model used by the system.",
             "required": ["type"],
             "properties": {
-                "type": {"type": "string"},
+                "type": {"type": "string", "description": "The type or provider of the LLM."},
                 "config": {
                     "type": "object",
+                    "description": "Specific configuration parameters for the chosen LLM.",
                     "properties": {
                         "agent_name": {"type": "string"},
                         "history_length": {"type": "integer"}
@@ -33,6 +35,7 @@
         },
         "global_lifecycle_hooks": {
             "type": "array",
+            "description": "Hooks that execute during global system lifecycle events.",
             "items": {
                 "type": "object",
                 "required": ["hook_type", "handler_type", "handler_config"],
@@ -66,25 +69,28 @@
         },
         "modes": {
             "type": "object",
+            "description": "Definitions for the various operational modes of the system.",
             "patternProperties": {
                 "^[a-zA-Z_][a-zA-Z0-9_]*$": {
                     "type": "object",
                     "required": ["display_name", "description", "system_prompt_base", "hertz", "agent_inputs", "agent_actions"],
                     "properties": {
-                        "display_name": {"type": "string"},
-                        "description": {"type": "string"},
-                        "system_prompt_base": {"type": "string"},
-                        "hertz": {"type": "number"},
+                        "display_name": {"type": "string", "description": "Human-readable name for the mode."},
+                        "description": {"type": "string", "description": "Description of the mode's purpose and behavior."},
+                        "system_prompt_base": {"type": "string", "description": "The base system prompt used for the LLM in this mode."},
+                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs."},
                         "timeout_seconds": {"type": "number"},
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
                         "cortex_llm": {
                             "type": "object",
+                            "description": "Mode-specific Cortex LLM configuration.",
                             "required": ["type"],
                             "properties": {
-                                "type": {"type": "string"},
+                                "type": {"type": "string", "description": "The type or provider of the LLM."},
                                 "config": {
                                     "type": "object",
+                                    "description": "Specific configuration parameters for the chosen LLM.",
                                     "properties": {
                                         "agent_name": {"type": "string"},
                                         "history_length": {"type": "integer"}
@@ -152,6 +158,17 @@
                                     }
                                 }
                             }
+                        },
+                        "action_execution_mode": {
+                            "type": "string",
+                            "enum": ["concurrent", "sequential", "dependencies"]
+                        },
+                        "action_dependencies": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            }
                         }
                     }
             },
@@ -159,6 +176,7 @@
         },
         "transition_rules": {
             "type": "array",
+            "description": "Rules defining how and when the system transitions between modes.",
             "items": {
                 "type": "object",
                 "required": ["from_mode", "to_mode", "transition_type", "priority"],
