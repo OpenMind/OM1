@@ -81,6 +81,53 @@ class TransitionRule:
 class ModeConfig:
     """
     Configuration for a specific mode.
+
+    Parameters
+    ----------
+    version : str
+        Version of the mode configuration.
+    name : str
+        Unique name of the mode.
+    display_name : str
+        Human-readable name of the mode.
+    description : str
+        Description of the mode's purpose and behavior.
+    system_prompt_base : str
+        Base system prompt to use for the mode.
+    hertz : float, optional
+        Frequency in Hz at which the mode operates. Defaults to 1.0.
+    timeout_seconds : Optional[float], optional
+        Optional timeout in seconds for mode operations. Defaults to None.
+    remember_locations : bool, optional
+        Whether the mode should remember locations. Defaults to False.
+    save_interactions : bool, optional
+        Whether to save interactions in this mode. Defaults to False.
+    lifecycle_hooks : List[LifecycleHook], optional
+        List of lifecycle hooks associated with this mode. Defaults to empty list.
+    agent_inputs : List[Sensor], optional
+        List of input sensors for the mode. Defaults to empty list.
+    cortex_llm : Optional[LLM], optional
+        The LLM used for the mode. Defaults to None.
+    simulators : List[Simulator], optional
+        List of simulators used in the mode. Defaults to empty list.
+    agent_actions : List[AgentAction], optional
+        List of actions available to the agent in this mode. Defaults to empty list.
+    backgrounds : List[Background], optional
+        List of background processes for the mode. Defaults to empty list.
+    action_execution_mode : Optional[str], optional
+        Execution mode for actions (e.g., "concurrent", "sequential", "dependencies"). Defaults to concurrent.
+    action_dependencies : Optional[Dict[str, List[str]]], optional
+        Dependencies between actions for execution order. Defaults to None.
+    _raw_inputs : List[Dict], optional
+        Raw input configurations before loading. Defaults to empty list.
+    _raw_llm : Optional[Dict], optional
+        Raw LLM configuration before loading. Defaults to None.
+    _raw_simulators : List[Dict], optional
+        Raw simulator configurations before loading. Defaults to empty list.
+    _raw_actions : List[Dict], optional
+        Raw action configurations before loading. Defaults to empty list.
+    _raw_backgrounds : List[Dict], optional
+        Raw background configurations before loading. Defaults to empty list.
     """
 
     version: str
@@ -103,6 +150,9 @@ class ModeConfig:
     simulators: List[Simulator] = field(default_factory=list)
     agent_actions: List[AgentAction] = field(default_factory=list)
     backgrounds: List[Background] = field(default_factory=list)
+
+    action_execution_mode: Optional[str] = None
+    action_dependencies: Optional[Dict[str, List[str]]] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
@@ -144,6 +194,8 @@ class ModeConfig:
             api_key=global_config.api_key,
             URID=global_config.URID,
             unitree_ethernet=global_config.unitree_ethernet,
+            action_execution_mode=self.action_execution_mode,
+            action_dependencies=self.action_dependencies,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -213,6 +265,39 @@ class ModeConfig:
 class ModeSystemConfig:
     """
     Complete configuration for a mode-aware system.
+
+    Parameters
+    ----------
+    name : str
+        Name of the mode system.
+    default_mode : str
+        The default mode to start in.
+    config_name : str
+        Name of the configuration file.
+    allow_manual_switching : bool
+        Whether manual mode switching is allowed. Defaults to True.
+    mode_memory_enabled : bool
+        Whether mode memory is enabled. Defaults to True.
+    api_key : Optional[str]
+        Global API key for services.
+    robot_ip : Optional[str]
+        Global robot IP address.
+    URID : Optional[str]
+        Global URID robot identifier.
+    unitree_ethernet : Optional[str]
+        Global Unitree ethernet port.
+    system_governance : str
+        Global system governance prompt.
+    system_prompt_examples : str
+        Global system prompt examples.
+    global_cortex_llm : Optional[Dict]
+        Global default LLM configuration if mode doesn't override.
+    global_lifecycle_hooks : List[LifecycleHook], optional
+        List of global lifecycle hooks executed for all modes. Defaults to empty list.
+    modes : Dict[str, ModeConfig], optional
+        Mapping of mode names to their configurations. Defaults to empty dict.
+    transition_rules : List[TransitionRule], optional
+        List of rules for transitioning between modes. Defaults to empty list.
     """
 
     # Global settings
@@ -351,7 +436,7 @@ def load_mode_config(
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
         mode_config = ModeConfig(
-            version=mode_data.get("version", "1.0"),
+            version=mode_data.get("version", "1.0.1"),
             name=mode_name,
             display_name=mode_data.get("display_name", mode_name),
             description=mode_data.get("description", ""),
@@ -361,6 +446,8 @@ def load_mode_config(
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
             save_interactions=mode_data.get("save_interactions", False),
+            action_execution_mode=mode_data.get("action_execution_mode"),
+            action_dependencies=mode_data.get("action_dependencies"),
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
             _raw_simulators=mode_data.get("simulators", []),
