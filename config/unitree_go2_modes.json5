@@ -52,6 +52,7 @@
           "type":"SelfieStatus"
         },
       ],
+      "action_execution_mode": "concurrent",
       "agent_actions": [
         {
           "name": "speak",
@@ -134,6 +135,7 @@
           "history_length": 0
         }
       },
+      "action_execution_mode": "concurrent",
       "agent_actions": [
         {
           "name": "face",
@@ -291,6 +293,7 @@
           "model": "gpt-4.1"
         }
       },
+      "action_execution_mode": "concurrent",
       "agent_actions": [
         {
           "name": "face",
@@ -419,6 +422,7 @@
           "type":"FacePresence"
         },
       ],
+      "action_execution_mode": "concurrent",
       "agent_actions": [
         {
           "name": "face",
@@ -524,6 +528,7 @@
           "type":"FacePresence"
         }
       ],
+      "action_execution_mode": "concurrent",
       "agent_actions": [
         {
           "name": "face",

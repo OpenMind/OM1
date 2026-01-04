@@ -20,7 +20,48 @@ from simulators.base import Simulator
 
 @dataclass
 class RuntimeConfig:
-    """Runtime configuration for the agent."""
+    """
+    Runtime configuration for the agent.
+
+    Parameters
+    ----------
+    version : str
+        Configuration version.
+    hertz : float
+        Execution frequency.
+    name : str
+        Config name.
+    system_prompt_base : str
+        Base system prompt.
+    system_governance : str
+        Governance rules for the system.
+    system_prompt_examples : str
+        Example prompts for the system.
+    agent_inputs : List[Sensor]
+        List of agent input sensors.
+    cortex_llm : LLM
+        The main LLM for the agent.
+    simulators : List[Simulator]
+        List of simulators.
+    agent_actions : List[AgentAction]
+        List of agent actions.
+    backgrounds : List[Background]
+        List of background processes.
+    mode : Optional[str]
+        Optional mode setting.
+    api_key : Optional[str]
+        Optional API key.
+    robot_ip : Optional[str]
+        Optional robot IP address.
+    URID : Optional[str]
+        Optional unique robot identifier.
+    unitree_ethernet : Optional[str]
+        Optional Unitree ethernet port.
+    action_execution_mode : Optional[str]
+        Optional action execution mode (e.g., "concurrent", "sequential", "dependencies"). Defaults to "concurrent".
+    action_dependencies : Optional[Dict[str, List[str]]]
+        Optional mapping of action dependencies.
+    """
 
     version: str
 
@@ -36,20 +77,16 @@ class RuntimeConfig:
     agent_actions: List[AgentAction]
     backgrounds: List[Background]
 
-    # Optional robot IP address for the runtime configuration
-    robot_ip: Optional[str] = None
+    mode: Optional[str] = None
 
-    # Optional API key for the runtime configuration
     api_key: Optional[str] = None
 
-    # Optional URID robot id key for the runtime configuration
+    robot_ip: Optional[str] = None
     URID: Optional[str] = None
-
-    # Optional Ethernet adapter setting for Unitree Robots
     unitree_ethernet: Optional[str] = None
 
-    # Optional mode information for multi-mode runtime configurations
-    mode: Optional[str] = None
+    action_execution_mode: Optional[str] = None
+    action_dependencies: Optional[Dict[str, List[str]]] = None
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
@@ -275,8 +312,21 @@ def add_meta(
     return config
 
 
-# this is for testing only
+# Dev utility to build runtime config from test case dict
 def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
+    """
+    Build a RuntimeConfig object from a test case dictionary.
+
+    Parameters
+    ----------
+    config : dict
+        Test case configuration dictionary.
+
+    Returns
+    -------
+    RuntimeConfig
+        Constructed RuntimeConfig object.
+    """
     api_key = config.get("api_key")
     g_ut_eth = config.get("unitree_ethernet")
     g_URID = config.get("URID")
@@ -340,7 +390,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         available_actions=agent_actions,
     )
     return RuntimeConfig(
-        version=config.get("version", "v1.0.0"),  # Default version if not specified
+        version=config.get("version", "v1.0.1"),
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
         system_prompt_base=config.get("system_prompt_base", ""),
