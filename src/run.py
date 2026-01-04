@@ -145,3 +145,12 @@ if __name__ == "__main__":
 
     dotenv.load_dotenv()
     app()
+
+def normalize_text(text: str) -> str:
+    """
+    Normalizes input text by stripping whitespace and converting to lowercase.
+    """
+    if not isinstance(text, str):
+        raise TypeError("Input must be a string")
+    return text.strip().lower()
+
