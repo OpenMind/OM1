@@ -118,18 +118,18 @@ class TestMagGPSProcessor:
         gps_provider.magGPSProcessor("HDG:")
 
     def test_gps_packet_processing(self, gps_provider):
-            gps_data = (
-                "GPS:40.7128N,74.0060W,0,"
-                "HDG:180,ALT:10.5,SAT:8,"
-                "TIME:25:01:01:12:00:00:000000"
-            )
+        gps_data = (
+            "GPS:40.7128N,74.0060W,0,"
+            "HDG:180,ALT:10.5,SAT:8,"
+            "TIME:25:01:01:12:00:00:000000"
+        )
 
-            gps_provider.magGPSProcessor(gps_data)
+        gps_provider.magGPSProcessor(gps_data)
 
-            assert gps_provider.lat == 40.7128
-            assert gps_provider.lon == -74.0060
-            assert gps_provider.alt == 10.5
-            assert gps_provider.sat == 8
+        assert gps_provider.lat == 40.7128
+        assert gps_provider.lon == -74.0060
+        assert gps_provider.alt == 10.5
+        assert gps_provider.sat == 8
 
     def test_malformed_gps_no_crash(self, gps_provider):
         gps_provider.magGPSProcessor("GPS:malformed,data")
