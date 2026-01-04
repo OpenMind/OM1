@@ -1,10 +1,11 @@
-import os
 import json
-import pytest
-import json5
+from typing import cast
 
+import json5
+from zenoh import Publisher
+
+from providers.config_provider import ConfigProvider
 from zenoh_msgs import String
-from config_provider import ConfigProvider
 
 
 class DummyPublisher:
@@ -52,7 +53,7 @@ def test_send_config_response_uses_publisher(tmp_path):
         json.dump({"foo": "bar"}, f)
 
     dummy = DummyPublisher()
-    provider.config_response_publisher = dummy
+    provider.config_response_publisher = cast(Publisher, dummy)
 
     provider._send_config_response(String("req-1"))
 
@@ -63,7 +64,7 @@ def test_send_error_response_uses_publisher():
     provider = ConfigProvider()
 
     dummy = DummyPublisher()
-    provider.config_response_publisher = dummy
+    provider.config_response_publisher = cast(Publisher, dummy)
 
     provider._send_error_response(String("req-2"), "something failed")
 
