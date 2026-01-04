@@ -85,10 +85,10 @@ production systems.
 
 The validation pipeline includes:
 
-- **JSON5 syntax validation**  
+- **JSON5 syntax validation**
   Ensures the configuration file is valid JSON5 and can be safely parsed.
 
-- **Schema validation (single-mode / multi-mode)**  
+- **Schema validation (single-mode / multi-mode)**
   The runtime automatically detects whether the configuration is single-mode or
   multi-mode and validates it against the corresponding schema.
 
@@ -96,11 +96,11 @@ The validation pipeline includes:
   - `config/schema/single_mode_schema.json`
   - `config/schema/multi_mode_schema.json`
 
-- **Runtime version compatibility checks**  
+- **Runtime version compatibility checks**
   The `version` field is validated against the currently running runtime version to
   prevent incompatible configuration updates.
 
-- **Atomic writes with backup & restore**  
+- **Atomic writes with backup & restore**
   Configuration updates are written atomically:
   - Existing config files are backed up before writing
   - Temporary files are used during updates
