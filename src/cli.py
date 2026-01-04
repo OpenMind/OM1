@@ -4,6 +4,8 @@ import multiprocessing as mp
 import os
 import re
 import traceback
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 import dotenv
 import json5
@@ -799,6 +801,252 @@ def _print_config_summary(raw_config: dict, is_multi_mode: bool):
         print(f"   Frequency: {raw_config.get('hertz', 'N/A')} Hz")
         print(f"   Inputs: {len(raw_config.get('agent_inputs', []))}")
         print(f"   Actions: {len(raw_config.get('agent_actions', []))}")
+
+
+def _scan_input_plugins() -> List[Tuple[str, str]]:
+    """
+    Scan input plugins directory and extract component information.
+
+    Returns
+    -------
+    List[Tuple[str, str]]
+        List of tuples containing (component_name, file_path)
+    """
+    components = []
+    src_dir = Path(__file__).parent
+    plugins_dir = src_dir / "inputs" / "plugins"
+
+    if not plugins_dir.exists():
+        return components
+
+    for file_path in plugins_dir.glob("*.py"):
+        if file_path.name == "__init__.py":
+            continue
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Find class definitions that inherit from Sensor/FuserInput
+            pattern = r"^class\s+(\w+)\s*\([^)]*(?:Sensor|FuserInput)[^)]*\)\s*:"
+            matches = re.finditer(pattern, content, re.MULTILINE)
+
+            for match in matches:
+                class_name = match.group(1)
+                if class_name not in ["Sensor", "SensorConfig"]:
+                    components.append((class_name, file_path.stem))
+
+        except Exception as e:
+            logging.debug(f"Error scanning {file_path.name}: {e}")
+            continue
+
+    return sorted(components, key=lambda x: x[0].lower())
+
+
+def _scan_action_plugins() -> List[Tuple[str, str]]:
+    """
+    Scan action directories and extract component information.
+
+    Returns
+    -------
+    List[Tuple[str, str]]
+        List of tuples containing (component_name, directory_name)
+    """
+    components = []
+    src_dir = Path(__file__).parent
+    actions_dir = src_dir / "actions"
+
+    if not actions_dir.exists():
+        return components
+
+    for action_dir in actions_dir.iterdir():
+        if not action_dir.is_dir() or action_dir.name.startswith("_"):
+            continue
+
+        # Look for action.py or main Python file
+        action_file = action_dir / "action.py"
+        if not action_file.exists():
+            py_files = list(action_dir.glob("*.py"))
+            if not py_files:
+                continue
+            action_file = py_files[0]
+
+        try:
+            with open(action_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Find class definitions that inherit from Action
+            pattern = r"^class\s+(\w+)\s*\([^)]*Action[^)]*\)\s*:"
+            matches = re.finditer(pattern, content, re.MULTILINE)
+
+            for match in matches:
+                class_name = match.group(1)
+                if class_name != "Action":
+                    components.append((class_name, action_dir.name))
+                    break
+            else:
+                # If no class found, use directory name as fallback
+                components.append((action_dir.name, action_dir.name))
+
+        except Exception:
+            components.append((action_dir.name, action_dir.name))
+            continue
+
+    return sorted(components, key=lambda x: x[0].lower())
+
+
+def _scan_providers() -> List[Tuple[str, str]]:
+    """
+    Scan provider files and extract component information.
+
+    Returns
+    -------
+    List[Tuple[str, str]]
+        List of tuples containing (component_name, file_name)
+    """
+    components = []
+    src_dir = Path(__file__).parent
+    providers_dir = src_dir / "providers"
+
+    if not providers_dir.exists():
+        return components
+
+    for file_path in providers_dir.glob("*.py"):
+        if file_path.name == "__init__.py":
+            continue
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Find class definitions that end with Provider
+            pattern = r"^class\s+(\w+Provider)\s*\([^)]*\)\s*:"
+            matches = re.finditer(pattern, content, re.MULTILINE)
+
+            for match in matches:
+                class_name = match.group(1)
+                components.append((class_name, file_path.stem))
+
+        except Exception as e:
+            logging.debug(f"Error scanning {file_path.name}: {e}")
+            continue
+
+    return sorted(components, key=lambda x: x[0].lower())
+
+
+@app.command()
+def list_components(
+    component_type: str = typer.Option(
+        None,
+        "--type",
+        "-t",
+        help="Filter by component type: 'inputs', 'actions', or 'providers'",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Show additional information including file paths",
+    ),
+) -> None:
+    """
+    List all OM1 components detected in the codebase.
+
+    This command performs a lightweight filesystem scan to discover available
+    inputs, actions, and providers without importing or executing any modules.
+
+    Examples
+    --------
+    List all components:
+        $ python -m src.cli list-components
+
+    List only inputs:
+        $ python -m src.cli list-components --type inputs
+
+    Show verbose output with file paths:
+        $ python -m src.cli list-components --verbose
+    """
+    print()
+    print("🔍 Scanning OM1 Components...")
+    print()
+
+    # Validate component_type if provided
+    valid_types = ["inputs", "actions", "providers"]
+    if component_type and component_type not in valid_types:
+        print(f"❌ Error: Invalid component type '{component_type}'")
+        print(f"   Valid types: {', '.join(valid_types)}")
+        raise typer.Exit(1)
+
+    # Scan components
+    results: Dict[str, List[Tuple[str, str]]] = {}
+
+    if not component_type or component_type == "inputs":
+        results["inputs"] = _scan_input_plugins()
+
+    if not component_type or component_type == "actions":
+        results["actions"] = _scan_action_plugins()
+
+    if not component_type or component_type == "providers":
+        results["providers"] = _scan_providers()
+
+    # Display results
+    total_count = 0
+
+    if "inputs" in results:
+        inputs = results["inputs"]
+        print(f"📥 Inputs ({len(inputs)} detected):")
+        print("-" * 50)
+        if inputs:
+            for component_name, file_name in inputs:
+                if verbose:
+                    print(f"  • {component_name}")
+                    print(f"    File: inputs/plugins/{file_name}.py")
+                else:
+                    print(f"  • {component_name}")
+            total_count += len(inputs)
+        else:
+            print("  No inputs detected")
+        print()
+
+    if "actions" in results:
+        actions = results["actions"]
+        print(f"⚡ Actions ({len(actions)} detected):")
+        print("-" * 50)
+        if actions:
+            for component_name, dir_name in actions:
+                if verbose:
+                    print(f"  • {component_name}")
+                    print(f"    Directory: actions/{dir_name}/")
+                else:
+                    print(f"  • {component_name}")
+            total_count += len(actions)
+        else:
+            print("  No actions detected")
+        print()
+
+    if "providers" in results:
+        providers = results["providers"]
+        print(f"🔌 Providers ({len(providers)} detected):")
+        print("-" * 50)
+        if providers:
+            for component_name, file_name in providers:
+                if verbose:
+                    print(f"  • {component_name}")
+                    print(f"    File: providers/{file_name}.py")
+                else:
+                    print(f"  • {component_name}")
+            total_count += len(providers)
+        else:
+            print("  No providers detected")
+        print()
+
+    print("-" * 50)
+    print(f"✅ Total: {total_count} components detected")
+    print()
+
+    if not verbose:
+        print("💡 Tip: Use --verbose flag to see file paths")
+        print()
 
 
 if __name__ == "__main__":
