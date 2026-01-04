@@ -88,5 +88,16 @@
             }
         }
     },
+        "action_execution_mode": {
+            "type": "string",
+            "enum": ["concurrent", "sequential", "dependencies"]
+        },
+        "action_dependencies": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {"type": "string"}
+            }
+        },
     "additionalProperties": true
 }
