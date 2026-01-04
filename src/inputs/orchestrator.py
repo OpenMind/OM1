@@ -47,3 +47,20 @@ class InputOrchestrator:
         """
         async for event in input.listen():
             await input.raw_to_text(event)
+def validate_and_normalize_input(value: str) -> str:
+    """
+    Validates and normalizes input strings used by the input orchestrator.
+    Returns a stripped, lowercase string or raises an error for invalid input.
+    """
+    if value is None:
+        raise ValueError("Input value cannot be None")
+
+    if not isinstance(value, str):
+        raise TypeError("Input value must be a string")
+
+    normalized = value.strip().lower()
+
+    if not normalized:
+        raise ValueError("Input value cannot be empty or whitespace")
+
+    return normalized
