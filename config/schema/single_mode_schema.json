@@ -86,8 +86,7 @@
                     "config": {"type": "object"}
                 }
             }
-        }
-    },
+        },
         "action_execution_mode": {
             "type": "string",
             "enum": ["concurrent", "sequential", "dependencies"]
@@ -98,6 +97,7 @@
                 "type": "array",
                 "items": {"type": "string"}
             }
-        },
+        }
+    },
     "additionalProperties": true
 }
