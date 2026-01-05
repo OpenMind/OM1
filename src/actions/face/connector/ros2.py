@@ -5,12 +5,15 @@ from actions.face.interface import FaceInput
 
 
 class FaceRos2Connector(ActionConnector[ActionConfig, FaceInput]):
+    """
+    Connector to link Face action with ROS2.
+    """
 
     def __init__(self, config: ActionConfig):
         """
         Initialize the FaceRos2Connector with the given configuration.
 
-        Parameters:
+        Parameters
         ----------
         config : ActionConfig
             Configuration parameters for the connector.
@@ -21,7 +24,7 @@ class FaceRos2Connector(ActionConnector[ActionConfig, FaceInput]):
         """
         Connect to the ROS2 system and send the appropriate face command.
 
-        Parameters:
+        Parameters
         ----------
         output_interface : FaceInput
             The face input containing the action to be performed.
