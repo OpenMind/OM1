@@ -26,7 +26,7 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
     """
     Configuration for ElevenLabs TTS connector.
 
-    Parameters:
+    Parameters
     ----------
     elevenlabs_api_key : Optional[str]
         ElevenLabs API key.
@@ -80,7 +80,6 @@ class EmergencyAlertElevenLabsTTSConnector(
         config : SpeakElevenLabsTTSConfig
             Configuration for the action connector.
         """
-
         super().__init__(config)
 
         # OM API key
@@ -161,6 +160,14 @@ class EmergencyAlertElevenLabsTTSConnector(
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
     def zenoh_audio_message(self, data: zenoh.Sample):
+        """
+        Process an incoming audio status message.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The Zenoh sample received, which should have a 'payload' attribute.
+        """
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: EmergencyAlertInput) -> None:

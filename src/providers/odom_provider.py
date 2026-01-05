@@ -36,6 +36,10 @@ rad_to_deg = 57.2958
 
 
 class RobotState(Enum):
+    """
+    Enumeration for robot states.
+    """
+
     STANDING = "standing"
     SITTING = "sitting"
 
@@ -158,9 +162,8 @@ class OdomProvider:
         self, URID: str = "", use_zenoh: bool = False, channel: Optional[str] = ""
     ):
         """
-        Robot and sensor configuration
+        Robot and sensor configuration.
         """
-
         logging.info("Booting Odom Provider")
 
         self.use_zenoh = use_zenoh
@@ -238,7 +241,7 @@ class OdomProvider:
         Convert a quaternion into euler angles (roll, pitch, yaw)
         roll is rotation around x in radians (counterclockwise)
         pitch is rotation around y in radians (counterclockwise)
-        yaw is rotation around z in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise).
 
         Parameters
         ----------
