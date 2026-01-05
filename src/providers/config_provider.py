@@ -94,9 +94,7 @@ class ConfigProvider:
                 self._send_error_response(request_id, error_msg)
                 return
 
-            is_multi_mode = (
-                "modes" in new_config and "default_mode" in new_config
-            )
+            is_multi_mode = "modes" in new_config and "default_mode" in new_config
 
             try:
                 schema_file = (
