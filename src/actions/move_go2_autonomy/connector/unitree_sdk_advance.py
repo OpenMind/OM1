@@ -7,7 +7,6 @@ from typing import List, Optional
 
 import zenoh
 from pydantic import Field
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
@@ -15,6 +14,7 @@ from providers.face_presence_provider import FacePresenceProvider
 from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
+from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
     AIStatusRequest,
     AIStatusResponse,
