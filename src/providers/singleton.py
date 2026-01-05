@@ -1,15 +1,16 @@
 import threading
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Protocol, TypeVar, cast
 
 T = TypeVar("T")
 
 
-class SingletonCallable(Generic[T]):
+class SingletonCallable(Protocol[T]):
     """
-    Callable wrapper returned by the @singleton decorator.
+    Callable singleton wrapper that still behaves like a class for typing.
     """
 
-    _singleton_class: type[T]
+    __name__: str
+    __qualname__: str
 
     def __call__(self, *args: Any, **kwargs: Any) -> T:
         """Return the singleton instance."""
@@ -20,19 +21,14 @@ class SingletonCallable(Generic[T]):
         ...
 
 
-def singleton(cls: type[T]) -> Callable[..., T]:
+def singleton(cls: type[T]) -> SingletonCallable[T]:
     """
-    Thread-safe singleton decorator.
-
-    Ensures only one instance of the decorated class exists.
+    Thread-safe singleton decorator that preserves class typing.
     """
-    lock = threading.Lock()
     instance: T | None = None
+    lock = threading.Lock()
 
     def get_instance(*args: Any, **kwargs: Any) -> T:
-        """
-        Return the singleton instance, creating it if necessary.
-        """
         nonlocal instance
         with lock:
             if instance is None:
@@ -40,15 +36,12 @@ def singleton(cls: type[T]) -> Callable[..., T]:
             return instance
 
     def reset() -> None:
-        """
-        Reset the stored singleton instance.
-        """
         nonlocal instance
         with lock:
             instance = None
 
-    # typing + runtime metadata
     get_instance.reset = reset  # type: ignore[attr-defined]
-    get_instance._singleton_class = cls  # type: ignore[attr-defined]
+    get_instance.__name__ = cls.__name__
+    get_instance.__qualname__ = cls.__qualname__
 
-    return get_instance
+    return cast(SingletonCallable[T], get_instance)
