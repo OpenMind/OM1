@@ -1,39 +1,60 @@
 {
+  // Configuration version
   "version": "v1.0.1",
+  // Update frequency in Hz (0.01 = updates every 100 seconds, suitable for conversation mode)
   "hertz": 0.01,
+  // Agent name identifier
   "name": "conversation",
+  // OpenMind API key (replace "openmind_free" with your actual API key from https://portal.openmind.org/)
   "api_key": "openmind_free",
+  // Core personality and behavior prompt for the LLM
   "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Spot. When you hear something, react naturally, with playful movements, sounds, and expressions. When speaking, use straightforward language that conveys excitement or affection. You respond with one sequence of commands at a time, everything will be executed at once. Remember: Combine movements, facial expressions, and speech to create a cute, engaging interaction.",
+  // Safety constraints and rules the agent must follow (Asimov's laws)
   "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  // Example interactions to guide the agent's behavior
   "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n1. If a person says 'Give me your paw!', you might:\n    Move: 'shake paw'\n    Speak: {{'sentence': 'Hello, let\\'s shake paws!'}}\n    Face: 'joy'\n\n2. If a person says 'Sit!' you might:\n    Move: 'sit'\n    Speak: {{'sentence': 'Ok, but I like running more'}}\n    Face: 'smile'\n\n3. If there\\'s no sound, go explore. You might:\n    Move: 'run'\n    Speak: {{'sentence': 'I\\'m going to go explore the room and meet more people.'}}\n    Face: 'think'",
+  // Input sources for the agent (e.g., voice, camera, sensors)
   "agent_inputs": [
     {
       "type": "GoogleASRInput",
       "config": {
+        // Allow new voice input to interrupt ongoing text-to-speech output
         "enable_tts_interrupt": true
       }
     }
   ],
+  // Large Language Model configuration
   "cortex_llm": {
     "type": "OpenAILLM",
     "config": {
+      // Name used in conversation context
       "agent_name": "Spot",
+      // Number of previous conversation turns to include in context (higher = more memory, but more tokens)
       "history_length": 10
     }
   },
+  // Actions the agent can perform (outputs)
   "agent_actions": [
     {
+      // Internal action name (used by the system)
       "name": "speak",
+      // Label the LLM uses to identify this action in its output
       "llm_label": "speak",
+      // "passthrough" means the LLM output is directly passed to the connector without transformation
       "implementation": "passthrough",
+      // TTS service connector (ElevenLabs text-to-speech)
       "connector": "elevenlabs_tts",
       "config": {
+        // Allow new voice input to interrupt ongoing speech playback
         "enable_tts_interrupt": true
       }
     },
     {
+      // Internal action name for facial expressions
       "name": "face",
+      // LLM label for emotion/expression output
       "llm_label": "emotion",
+      // Avatar connector for displaying facial expressions
       "connector": "avatar"
     }
   ]
