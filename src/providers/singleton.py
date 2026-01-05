@@ -1,25 +1,42 @@
 import threading
-from typing import Any, Callable, TypeVar, cast
+from typing import TypeVar, Type, Any, cast
 
 T = TypeVar("T")
 
 
-def singleton(cls: type[T]) -> Callable[..., T]:
-    lock = threading.Lock()
-    instance: dict[str, T] = {}
+def singleton(cls: Type[T]) -> Type[T]:
+    """
+    Thread-safe singleton class decorator.
 
-    def get_instance(*args: Any, **kwargs: Any) -> T:
-        with lock:
-            if "value" not in instance:
-                instance["value"] = cls(*args, **kwargs)
-            return instance["value"]
+    Ensures that only one instance of the decorated class is created.
+    The class type is preserved for static type checkers (pyright, mypy).
+    """
 
-    def reset() -> None:
-        with lock:
-            instance.clear()
+    _lock = threading.Lock()
+    _instance: T | None = None
 
-    setattr(get_instance, "reset", reset)
-    setattr(get_instance, "_singleton_class", cls)
+    original_new = cls.__new__
 
-    return cast(Callable[..., T], get_instance)
-    __all__ = ["singleton"]
+    def __new__(inner_cls: Type[T], *args: Any, **kwargs: Any) -> T:
+        nonlocal _instance
+        if _instance is None:
+            with _lock:
+                if _instance is None:
+                    _instance = cast(
+                        T,
+                        original_new(inner_cls)
+                        if original_new is not object.__new__
+                        else object.__new__(inner_cls),
+                    )
+        return _instance
+
+    cls.__new__ = __new__  # type: ignore[assignment]
+
+    def reset_instance() -> None:
+        nonlocal _instance
+        with _lock:
+            _instance = None
+
+    cls.reset = reset_instance  # type: ignore[attr-defined]
+
+    return cls
