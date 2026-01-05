@@ -1,9 +1,6 @@
-import hashlib
 import json
 import logging
 import os
-import shutil
-from datetime import datetime
 from typing import Any, Dict
 from uuid import uuid4
 
@@ -31,8 +28,6 @@ class ConfigProvider:
     Security Features:
     - Authentication via API key validation
     - Schema validation for all config updates
-    - Automatic backup and rollback on failure
-    - Audit logging for all config changes
     """
 
     def __init__(self):
@@ -45,11 +40,7 @@ class ConfigProvider:
         self.running = False
 
         self.config_path = self._get_runtime_config_path()
-        self.backup_dir = self._get_backup_directory()
-        self.max_backups = 10
         self._authorized_api_key = self._load_authorized_api_key()
-
-        os.makedirs(self.backup_dir, exist_ok=True)
 
         self._initialize_zenoh()
 
@@ -88,18 +79,6 @@ class ConfigProvider:
             os.path.dirname(__file__), "../../config", "memory"
         )
         return os.path.abspath(os.path.join(memory_folder_path, ".runtime.json5"))
-
-    def _get_backup_directory(self) -> str:
-        """
-        Returns
-        -------
-        str
-            Path to config/memory/backups
-        """
-        memory_folder_path = os.path.join(
-            os.path.dirname(__file__), "../../config", "memory"
-        )
-        return os.path.abspath(os.path.join(memory_folder_path, "backups"))
 
     def _load_authorized_api_key(self) -> str | None:
         dotenv.load_dotenv()
@@ -184,63 +163,6 @@ class ConfigProvider:
             logging.error(f"ConfigProvider: {error_msg}")
             return False, error_msg
 
-    def _create_backup(self) -> str | None:
-        if not os.path.exists(self.config_path):
-            return None
-
-        try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-            backup_filename = f".runtime_backup_{timestamp}.json5"
-            backup_path = os.path.join(self.backup_dir, backup_filename)
-
-            shutil.copy2(self.config_path, backup_path)
-            logging.info(f"ConfigProvider: Created backup at {backup_path}")
-
-            # Clean up old backups
-            self._cleanup_old_backups()
-
-            return backup_path
-        except Exception as e:
-            logging.error(f"ConfigProvider: Failed to create backup: {e}")
-            return None
-
-    def _cleanup_old_backups(self):
-        try:
-            backup_files = []
-            for filename in os.listdir(self.backup_dir):
-                if filename.startswith(".runtime_backup_") and filename.endswith(
-                    ".json5"
-                ):
-                    filepath = os.path.join(self.backup_dir, filename)
-                    backup_files.append((os.path.getmtime(filepath), filepath))
-
-            backup_files.sort(reverse=True)
-
-            for _, filepath in backup_files[self.max_backups :]:
-                try:
-                    os.remove(filepath)
-                    logging.debug(f"ConfigProvider: Removed old backup {filepath}")
-                except Exception as e:
-                    logging.warning(
-                        f"ConfigProvider: Failed to remove old backup {filepath}: {e}"
-                    )
-        except Exception as e:
-            logging.warning(f"ConfigProvider: Failed to cleanup old backups: {e}")
-
-    def _rollback_config(self, backup_path: str):
-        try:
-            if os.path.exists(backup_path):
-                shutil.copy2(backup_path, self.config_path)
-                logging.info(f"ConfigProvider: Rolled back to backup {backup_path}")
-            else:
-                logging.error(f"ConfigProvider: Backup file not found: {backup_path}")
-        except Exception as e:
-            logging.error(f"ConfigProvider: Failed to rollback: {e}")
-
-    def _calculate_config_hash(self, config: dict) -> str:
-        config_str = json.dumps(config, sort_keys=True)
-        return hashlib.sha256(config_str.encode("utf-8")).hexdigest()[:16]
-
     def _handle_config_request(self, sample: zenoh.Sample):
         """
         Handle incoming config requests from Zenoh subscriber.
@@ -277,11 +199,8 @@ class ConfigProvider:
         1. Parse and validate JSON5 syntax
         2. Verify API key authentication
         3. Validate against schema
-        4. Create backup before update
-        5. Write new config atomically
-        6. Rollback on failure
+        4. Write new config atomically
         """
-        backup_path = None
         try:
             # Step 1: Parse JSON5
             new_config: Dict[str, Any]
@@ -325,16 +244,7 @@ class ConfigProvider:
                 )
                 return
 
-            # Step 4: Create backup before making changes
-            backup_path = self._create_backup()
-            if not backup_path and os.path.exists(self.config_path):
-                error_msg = "Failed to create backup - refusing to update config"
-                logging.error(f"ConfigProvider: {error_msg}")
-                self._send_error_response(request_id, error_msg)
-                return
-
-            # Step 5: Write new config atomically
-            config_hash = self._calculate_config_hash(new_config)
+            # Step 4: Write new config atomically
             temp_path = self.config_path + ".tmp"
 
             try:
@@ -346,27 +256,18 @@ class ConfigProvider:
                 os.rename(temp_path, self.config_path)
 
                 logging.info(
-                    f"ConfigProvider: Successfully updated config (hash: {config_hash}, "
-                    f"backup: {backup_path}, request_id: {request_id})"
+                    f"ConfigProvider: Successfully updated config (request_id: {request_id})"
                 )
 
                 self._send_config_response(request_id)
 
             except Exception as e:
-                if backup_path:
-                    logging.error(f"ConfigProvider: Write failed, rolling back: {e}")
-                    self._rollback_config(backup_path)
-
                 error_msg = f"Failed to write config file: {str(e)}"
                 logging.error(f"ConfigProvider: {error_msg}")
                 self._send_error_response(request_id, error_msg)
                 return
 
         except Exception as e:
-            if backup_path:
-                logging.error(f"ConfigProvider: Unexpected error, rolling back: {e}")
-                self._rollback_config(backup_path)
-
             error_msg = f"Unexpected error updating config: {str(e)}"
             logging.error(f"ConfigProvider: {error_msg}")
             self._send_error_response(request_id, error_msg)

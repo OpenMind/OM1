@@ -4,7 +4,6 @@ Comprehensive tests for ConfigProvider security features.
 Tests cover:
 - API key authentication
 - Schema validation
-- Backup and rollback mechanisms
 - Error handling
 - Security against timing attacks
 """
@@ -105,8 +104,6 @@ def config_provider_with_auth(temp_config_dir, mock_zenoh_session):
             # Override paths before initialization
             memory_dir = os.path.join(temp_config_dir, "memory")
             os.makedirs(memory_dir, exist_ok=True)
-            backup_dir = os.path.join(memory_dir, "backups")
-            os.makedirs(backup_dir, exist_ok=True)
 
             # Create instance (will use singleton)
             provider = ConfigProvider()
@@ -117,8 +114,6 @@ def config_provider_with_auth(temp_config_dir, mock_zenoh_session):
             provider.config_request_subscriber = MagicMock()
             provider.running = True
             provider.config_path = os.path.join(memory_dir, ".runtime.json5")
-            provider.backup_dir = backup_dir
-            provider.max_backups = 10
             provider._authorized_api_key = "authorized_key_12345"
 
             yield provider
@@ -139,8 +134,6 @@ def config_provider_no_auth(temp_config_dir, mock_zenoh_session):
             # Override paths before initialization
             memory_dir = os.path.join(temp_config_dir, "memory")
             os.makedirs(memory_dir, exist_ok=True)
-            backup_dir = os.path.join(memory_dir, "backups")
-            os.makedirs(backup_dir, exist_ok=True)
 
             # Create instance (will use singleton)
             provider = ConfigProvider()
@@ -151,8 +144,6 @@ def config_provider_no_auth(temp_config_dir, mock_zenoh_session):
             provider.config_request_subscriber = MagicMock()
             provider.running = True
             provider.config_path = os.path.join(memory_dir, ".runtime.json5")
-            provider.backup_dir = backup_dir
-            provider.max_backups = 10
             provider._authorized_api_key = None
 
             yield provider
@@ -294,81 +285,6 @@ class TestSchemaValidation:
         )
 
 
-class TestBackupAndRollback:
-    """Test backup and rollback functionality."""
-
-    def test_create_backup(self, config_provider_with_auth, valid_single_mode_config):
-        """Test that backup is created successfully."""
-        # Create initial config file
-        with open(config_provider_with_auth.config_path, "w") as f:
-            json.dump(valid_single_mode_config, f, indent=2)
-
-        backup_path = config_provider_with_auth._create_backup()
-        assert backup_path is not None
-        assert os.path.exists(backup_path)
-
-        # Verify backup content matches original
-        with open(backup_path, "r") as f:
-            backup_config = json5.load(f)
-        assert backup_config == valid_single_mode_config
-
-    def test_backup_not_created_when_no_config(self, config_provider_with_auth):
-        """Test that backup is not created when config file doesn't exist."""
-        backup_path = config_provider_with_auth._create_backup()
-        assert backup_path is None
-
-    def test_rollback_config(self, config_provider_with_auth, valid_single_mode_config):
-        """Test rollback to previous backup."""
-        # Create initial config
-        with open(config_provider_with_auth.config_path, "w") as f:
-            json.dump(valid_single_mode_config, f, indent=2)
-
-        # Create backup
-        backup_path = config_provider_with_auth._create_backup()
-        assert backup_path is not None
-
-        # Modify config
-        modified_config = valid_single_mode_config.copy()
-        modified_config["name"] = "modified_config"
-        with open(config_provider_with_auth.config_path, "w") as f:
-            json.dump(modified_config, f, indent=2)
-
-        # Rollback
-        config_provider_with_auth._rollback_config(backup_path)
-
-        # Verify original config is restored
-        with open(config_provider_with_auth.config_path, "r") as f:
-            restored_config = json5.load(f)
-        assert restored_config["name"] == "test_config"
-
-    def test_cleanup_old_backups(
-        self, config_provider_with_auth, valid_single_mode_config
-    ):
-        """Test that old backups are cleaned up."""
-        # Create initial config
-        with open(config_provider_with_auth.config_path, "w") as f:
-            json.dump(valid_single_mode_config, f, indent=2)
-
-        # Set max_backups to 3 for testing
-        config_provider_with_auth.max_backups = 3
-
-        # Create 5 backups
-        for i in range(5):
-            with open(config_provider_with_auth.config_path, "w") as f:
-                config = valid_single_mode_config.copy()
-                config["name"] = f"config_{i}"
-                json.dump(config, f, indent=2)
-            config_provider_with_auth._create_backup()
-
-        # Check that only 3 backups remain
-        backup_files = [
-            f
-            for f in os.listdir(config_provider_with_auth.backup_dir)
-            if f.startswith(".runtime_backup_") and f.endswith(".json5")
-        ]
-        assert len(backup_files) == 3
-
-
 class TestConfigUpdate:
     """Test config update functionality with security checks."""
 
@@ -481,103 +397,6 @@ class TestConfigUpdate:
         with open(config_provider_with_auth.config_path, "r") as f:
             saved_config = json5.load(f)
         assert saved_config["name"] == "test_config"  # Original name unchanged
-
-    def test_update_config_creates_backup(
-        self, config_provider_with_auth, valid_single_mode_config
-    ):
-        """Test that backup is created before config update."""
-        # Create initial config
-        with open(config_provider_with_auth.config_path, "w") as f:
-            json.dump(valid_single_mode_config, f, indent=2)
-
-        # Count existing backups
-        initial_backups = len(
-            [
-                f
-                for f in os.listdir(config_provider_with_auth.backup_dir)
-                if f.startswith(".runtime_backup_")
-            ]
-        )
-
-        # Update config
-        updated_config = valid_single_mode_config.copy()
-        updated_config["api_key"] = "authorized_key_12345"
-        request_id = String("test_request_123")
-        config_str = json5.dumps(updated_config)
-
-        config_provider_with_auth._handle_set_config(request_id, config_str)
-
-        # Verify backup was created
-        final_backups = len(
-            [
-                f
-                for f in os.listdir(config_provider_with_auth.backup_dir)
-                if f.startswith(".runtime_backup_")
-            ]
-        )
-        assert final_backups == initial_backups + 1
-
-    def test_update_config_rollback_on_failure(
-        self, config_provider_with_auth, valid_single_mode_config
-    ):
-        """Test that config is rolled back on write failure."""
-        # Create initial config
-        with open(config_provider_with_auth.config_path, "w") as f:
-            json.dump(valid_single_mode_config, f, indent=2)
-
-        # Simulate write failure by making directory read-only
-        # (This is a simplified test - in practice you'd mock the file operations)
-        updated_config = valid_single_mode_config.copy()
-        updated_config["api_key"] = "authorized_key_12345"
-        request_id = String("test_request_123")
-        config_str = json5.dumps(updated_config)
-
-        # Mock os.rename to raise an exception
-        with patch("os.rename", side_effect=OSError("Permission denied")):
-            config_provider_with_auth._handle_set_config(request_id, config_str)
-
-        # Verify config was rolled back (original config still exists)
-        with open(config_provider_with_auth.config_path, "r") as f:
-            saved_config = json5.load(f)
-        assert saved_config["name"] == "test_config"  # Original name unchanged
-
-
-class TestConfigHash:
-    """Test config hash calculation for audit logging."""
-
-    def test_calculate_config_hash(
-        self, config_provider_with_auth, valid_single_mode_config
-    ):
-        """Test that config hash is calculated correctly."""
-        hash1 = config_provider_with_auth._calculate_config_hash(
-            valid_single_mode_config
-        )
-        assert isinstance(hash1, str)
-        assert len(hash1) == 16  # First 16 chars of SHA256
-
-    def test_config_hash_consistency(
-        self, config_provider_with_auth, valid_single_mode_config
-    ):
-        """Test that same config produces same hash."""
-        hash1 = config_provider_with_auth._calculate_config_hash(
-            valid_single_mode_config
-        )
-        hash2 = config_provider_with_auth._calculate_config_hash(
-            valid_single_mode_config
-        )
-        assert hash1 == hash2
-
-    def test_config_hash_different_for_different_configs(
-        self, config_provider_with_auth, valid_single_mode_config
-    ):
-        """Test that different configs produce different hashes."""
-        config1 = valid_single_mode_config.copy()
-        config2 = valid_single_mode_config.copy()
-        config2["name"] = "different_name"
-
-        hash1 = config_provider_with_auth._calculate_config_hash(config1)
-        hash2 = config_provider_with_auth._calculate_config_hash(config2)
-        assert hash1 != hash2
 
 
 class TestErrorHandling:
