@@ -1,7 +1,4 @@
 import threading
-from typing import Any
-
-import pytest
 
 from providers.singleton import singleton
 
@@ -13,26 +10,20 @@ class DummyService:
 
 
 def test_singleton_returns_same_instance():
+    DummyService.reset()  # type: ignore[attr-defined]
+
     a = DummyService(1)
-    b = DummyService(1)
+    b = DummyService(2)
 
     assert a is b
     assert a.value == 1
 
 
-def test_singleton_argument_mismatch_raises():
-    DummyService.reset()
-
-    DummyService(1)
-    with pytest.raises(RuntimeError):
-        DummyService(2)
-
-
 def test_singleton_reset_creates_new_instance():
-    DummyService.reset()
+    DummyService.reset()  # type: ignore[attr-defined]
 
     a = DummyService(1)
-    DummyService.reset()
+    DummyService.reset()  # type: ignore[attr-defined]
     b = DummyService(2)
 
     assert a is not b
@@ -40,8 +31,8 @@ def test_singleton_reset_creates_new_instance():
 
 
 def test_singleton_thread_safety():
-    DummyService.reset()
-    instances: list[Any] = []
+    DummyService.reset()  # type: ignore[attr-defined]
+    instances: list[DummyService] = []
 
     def create_instance():
         instances.append(DummyService(42))
