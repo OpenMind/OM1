@@ -1,0 +1,24 @@
+---
+name: Typo Check
+
+on:
+  pull_request:
+    branches: [main, development]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  typo-check:
+    name: Check for typos
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for typos
+        uses: crate-ci/typos@v1.28.3
+        with:
+          files: .
+          config: .typos.toml
