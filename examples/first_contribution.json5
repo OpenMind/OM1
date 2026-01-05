@@ -1,19 +1,75 @@
 {
-  "name": "friendly_wave",
-  "description": "Spot waves paw and says hello when greeted",
-  "triggers": ["hello", "hi", "hey Spot"],
-  "actions": [
+  "name": "interactive_friendly_wave",
+  "description": "Spot reacts dynamically: waves, speaks, and shows emotion based on input",
+  "triggers": [
     {
-      "type": "move",
-      "value": "shake paw"
+      "input": "greet",
+      "actions": [
+        {
+          "type": "move",
+          "value": "shake paw"
+        },
+        {
+          "type": "speak",
+          "value": "Hi there! Nice to meet you!"
+        },
+        {
+          "type": "emotion",
+          "value": "happy"
+        }
+      ]
     },
     {
-      "type": "speak",
-      "value": "Hello! Nice to meet you!"
+      "input": "attention",
+      "actions": [
+        {
+          "type": "move",
+          "value": "wag tail"
+        },
+        {
+          "type": "speak",
+          "value": "I’m paying attention! Tell me more!"
+        },
+        {
+          "type": "emotion",
+          "value": "curious"
+        }
+      ]
     },
     {
-      "type": "emotion",
-      "value": "happy"
+      "input": "play",
+      "actions": [
+        {
+          "type": "move",
+          "value": "run"
+        },
+        {
+          "type": "speak",
+          "value": "Yay! Let’s play together!"
+        },
+        {
+          "type": "emotion",
+          "value": "excited"
+        }
+      ]
+    },
+    {
+      "input": "calm",
+      "actions": [
+        {
+          "type": "move",
+          "value": "sit"
+        },
+        {
+          "type": "speak",
+          "value": "Okay, I’ll relax now."
+        },
+        {
+          "type": "emotion",
+          "value": "think"
+        }
+      ]
     }
   ]
 }
+
