@@ -1,0 +1,19 @@
+{
+  "name": "friendly_wave",
+  "description": "Spot waves paw and says hello when greeted",
+  "triggers": ["hello", "hi", "hey Spot"],
+  "actions": [
+    {
+      "type": "move",
+      "value": "shake paw"
+    },
+    {
+      "type": "speak",
+      "value": "Hello! Nice to meet you!"
+    },
+    {
+      "type": "emotion",
+      "value": "happy"
+    }
+  ]
+}
