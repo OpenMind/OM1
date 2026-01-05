@@ -274,6 +274,9 @@ class ConfigProvider:
             return {}
 
     def stop(self):
+        """
+        Stop the ConfigProvider and close the Zenoh session.
+        """
         if not self.running:
             logging.info("ConfigProvider is not running")
             return
