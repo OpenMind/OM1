@@ -60,7 +60,7 @@ def simple_paths_processor(
     try:
         session = open_zenoh_session()
         session.declare_subscriber("om/paths", paths_callback)
-        logging.info("Zenoh is open for SimplePathProvider")
+        logging.info("Zenoh is open for SimplePathsProvider")
     except Exception as e:
         logging.error(f"Failed to open Zenoh session: {e}")
 

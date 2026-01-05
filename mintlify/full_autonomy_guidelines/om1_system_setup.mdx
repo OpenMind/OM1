@@ -16,10 +16,10 @@ Clone the repo -
 Get all the services up and running
 
 ```bash
-    cd OM!-system-setup
+    cd OM1-system-setup
     docker compose up -d ota_agent
     docker compose up -d ota_updater
-    docker compose up -d ota_monitor
+    docker compose up -d om1_monitor
 ```
 
 ### ota_agent
@@ -41,7 +41,7 @@ Key functions:
 - Ensures compatibility with new features and fixes
 - This service guarantees that the OTA system can evolve without manual intervention.
 
-### ota_monitor
+### om1_monitor
 This service is used for setting up the Wi-Fi, local network, and local status page.
 
 Key functions:
