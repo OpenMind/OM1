@@ -33,7 +33,6 @@ def setup_logging(
 ) -> None:
     """
     Set up the logging configuration for the application.
-
     Parameters
     ----------
     config_name : str

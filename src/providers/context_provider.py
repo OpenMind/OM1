@@ -67,11 +67,14 @@ class ContextProvider:
                 "timestamp": self._last_updated,
             }
 
+        if self.publisher is None:
+         logging.error("Context update skipped: publisher not available")
+         return
+
         try:
-            assert self.publisher is not None
-            context_json = json.dumps(payload)
-            self.publisher.put(context_json.encode("utf-8"))
-            logging.debug(f"Context updated: {context}")
+           context_json = json.dumps(payload)
+           self.publisher.put(context_json.encode("utf-8"))
+           logging.debug(f"Context updated: {context}")
 
         except Exception as e:
             logging.error(f"Failed to publish context update: {e}")
@@ -95,14 +98,18 @@ class ContextProvider:
         if not self._ensure_initialized():
             return
 
+        if self.publisher is None:
+         logging.error("Context clear skipped: publisher not available")
+         return
+
         try:
-            assert self.publisher is not None
             payload = {
-                "context": {},
-                "timestamp": self._last_updated,
-            }
+            "context": {},
+            "timestamp": self._last_updated,
+                }
             self.publisher.put(json.dumps(payload).encode("utf-8"))
             logging.info("Context cleared")
+
 
         except Exception as e:
             logging.error(f"Failed to publish context clear event: {e}")

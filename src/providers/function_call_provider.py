@@ -71,7 +71,7 @@ class FunctionGenerator:
             param_schema["description"] = f"Parameter `{param_name}`"
             properties[param_name] = param_schema
 
-            if param.default is inspect.Parameter.empty:
+            if param.default == inspect.Parameter.empty:
                 required.append(param_name)
 
         return {
