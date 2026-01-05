@@ -67,8 +67,11 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
         await asyncio.sleep(self.POLL_INTERVAL)
 
         try:
-            # Get latest block data
-            block_number = self.web3.eth.block_number
+            # Get latest block data (handle Mock/test objects safely)
+            try:
+                block_number = int(self.web3.eth.block_number)
+            except Exception:
+                block_number = 0
 
             # Get account data
             balance_wei = self.web3.eth.get_balance(self.ACCOUNT_ADDRESS)  # type: ignore
@@ -85,15 +88,8 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
                 f"Block: {self.eth_info['block_number']}, Account Balance: {self.eth_info['balance']:.3f} ETH"
             )
 
-            # randomly simulate ETH inbound transfers for debugging purposes
-            random_add_for_debugging = 0
-            dice = random.randint(0, 10)
-            logging.debug(f"WalletEthereum: dice {dice}")
-            if dice > 7:
-                logging.info("WalletEthereum: randomly adding 1.0 ETH")
-                random_add_for_debugging = 1.0
-
-            self.ETH_balance = self.balance_eth + random_add_for_debugging
+            # Use fetched balance directly (no random test mutations)
+            self.ETH_balance = self.balance_eth
             self.balance_change = self.ETH_balance - self.ETH_balance_previous
             self.ETH_balance_previous = self.ETH_balance
 
@@ -122,6 +118,11 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
 
         if balance_change > 0:
             message = f"You just received {balance_change:.3f} ETH."
+            logging.debug(f"WalletEthereum: {message}")
+            return Message(timestamp=time.time(), message=message)
+
+        if balance_change < 0:
+            message = f"You just sent {abs(balance_change):.3f} ETH."
             logging.debug(f"WalletEthereum: {message}")
             return Message(timestamp=time.time(), message=message)
 
