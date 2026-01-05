@@ -1,0 +1,134 @@
+// ========================================
+// OM1 Configuration Example: Simple Chatbot
+// OM1 配置示例：简单聊天机器人
+// ========================================
+//
+// Description | 描述:
+// A voice-based chatbot that listens and responds in Chinese.
+// Perfect for beginners who want to add voice interaction.
+// 
+// 基于语音的聊天机器人，能听能说中文。
+// 适合想要添加语音交互的新手。
+//
+// Requirements | 需求:
+// - Microphone | 麦克风
+// - Speakers/Headphones | 扬声器/耳机
+// - OpenMind API Key | OpenMind API 密钥
+//
+// Difficulty | 难度: ⭐⭐ (Beginner | 新手)
+// Estimated time | 预计时间: 10 minutes | 10分钟
+// ========================================
+
+{
+  // ========================================
+  // INPUT MODULES | 输入模块
+  // ========================================
+  
+  "inputs": [
+    {
+      // Microphone input for voice | 麦克风输入语音
+      "type": "microphone",
+      
+      // Voice Activity Detection - only process when someone is speaking
+      // 语音活动检测 - 仅在有人说话时处理
+      "vad_enabled": true,
+      
+      // Language for speech recognition | 语音识别语言
+      // Options: "en-US", "zh-CN", "ja-JP", "ko-KR", etc.
+      // 选项：英文、中文、日语、韩语等
+      "language": "zh-CN",
+      
+      // Minimum audio duration to process (seconds)
+      // 处理的最小音频时长（秒）
+      "min_duration": 1.0,
+      
+      // Sample rate | 采样率
+      "sample_rate": 16000
+    }
+  ],
+  
+  // ========================================
+  // OUTPUT ACTIONS | 输出动作
+  // ========================================
+  
+  "actions": [
+    {
+      // Text-to-Speech output | 文字转语音输出
+      "type": "speech",
+      
+      // Voice selection | 语音选择
+      // Options for Chinese: "alloy", "nova", "shimmer"
+      // 中文可选："alloy"、"nova"、"shimmer"
+      "voice": "nova",
+      
+      // Language | 语言
+      "language": "zh-CN",
+      
+      // Speech speed (0.5 - 2.0) | 语速（0.5 - 2.0）
+      // 1.0 = normal speed | 1.0 = 正常速度
+      "speed": 1.0,
+      
+      // Audio format | 音频格式
+      "format": "mp3"
+    },
+    {
+      // Also display text in console for debugging
+      // 同时在控制台显示文字以便调试
+      "type": "text_output",
+      "display": true,
+      "format": "plain"
+    }
+  ],
+  
+  // ========================================
+  // LANGUAGE MODEL CONFIGURATION | 语言模型配置
+  // ========================================
+  
+  "llm": {
+    "provider": "openai",
+    
+    // Use gpt-4o for better Chinese language understanding
+    // 使用 gpt-4o 以获得更好的中文理解
+    "model": "gpt-4o",
+    
+    "api_key": "${OPENMIND_API_KEY}",
+    
+    // Higher temperature for more natural conversation
+    // 较高温度使对话更自然
+    "temperature": 0.8,
+    
+    // Moderate response length | 适中的响应长度
+    "max_tokens": 500,
+    
+    // Keep conversation context | 保持对话上下文
+    "context_window": 10  // Remember last 10 exchanges | 记住最近10轮对话
+  },
+  
+  // ========================================
+  // SYSTEM PROMPT | 系统提示词
+  // ========================================
+  // Define personality and behavior | 定义个性和行为
+  
+  "system_prompt": "你是一个友好、幽默的中文AI助手。你的特点：\n\n1. 说话风格：简短、自然、口语化（每次回答2-3句话）\n2. 个性：热情、有趣、善解人意\n3. 能力：回答问题、闲聊、讲笑话、提供建议\n4. 原则：尊重用户、保护隐私、拒绝不当请求\n\n记住：你在进行语音对话，所以回答要适合朗读，避免使用复杂符号或长篇大论。",
+  
+  // ========================================
+  // OPTIONAL SETTINGS | 可选设置
+  // ========================================
+  
+  // Conversation settings | 对话设置
+  "conversation": {
+    // Auto-save conversation history | 自动保存对话历史
+    "save_history": true,
+    
+    // Maximum conversation length | 最大对话长度
+    "max_exchanges": 50,
+    
+    // Timeout for user response (seconds) | 用户响应超时（秒）
+    "timeout": 300  // 5 minutes | 5分钟
+  },
+  
+  // Debug settings | 调试设置
+  "log_level": "info",
+  "debug": false
+}
+

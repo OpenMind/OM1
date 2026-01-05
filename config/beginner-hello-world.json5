@@ -1,0 +1,116 @@
+// ========================================
+// OM1 Configuration Example: Hello World
+// OM1 配置示例：Hello World
+// ========================================
+//
+// Description | 描述:
+// The simplest OM1 configuration for beginners.
+// Uses webcam to detect objects and outputs text descriptions.
+// 
+// 最简单的 OM1 新手配置。
+// 使用摄像头检测物体并输出文字描述。
+//
+// Requirements | 需求:
+// - Webcam | 摄像头
+// - OpenMind API Key | OpenMind API 密钥
+// - No special hardware needed | 无需特殊硬件
+//
+// Difficulty | 难度: ⭐ (Beginner | 新手)
+// Estimated time | 预计时间: 5 minutes | 5分钟
+// ========================================
+
+{
+  // ========================================
+  // INPUT MODULES | 输入模块
+  // ========================================
+  // Define what data sources the agent will use
+  // 定义智能体将使用哪些数据源
+  
+  "inputs": [
+    {
+      // Webcam input | 摄像头输入
+      "type": "webcam",
+      
+      // Capture frequency (frames per second)
+      // 捕获频率（每秒帧数）
+      // Lower frequency = less resource intensive
+      // 较低频率 = 较少资源占用
+      "frequency": 1.0,
+      
+      // Enable image captioning (describe what's in the image)
+      // 启用图像描述（描述图像中的内容）
+      "caption": true,
+      
+      // Camera settings | 摄像头设置
+      "camera_index": 0,  // 0 = default camera | 0 = 默认摄像头
+      "resolution": [640, 480]  // Width x Height | 宽 x 高
+    }
+  ],
+  
+  // ========================================
+  // OUTPUT ACTIONS | 输出动作
+  // ========================================
+  // Define how the agent will respond
+  // 定义智能体如何响应
+  
+  "actions": [
+    {
+      // Text output to console | 文字输出到控制台
+      "type": "text_output",
+      
+      // Display in terminal | 在终端显示
+      "display": true,
+      
+      // Output format | 输出格式
+      "format": "plain"  // Options: plain, json | 选项：plain（纯文本）, json
+    }
+  ],
+  
+  // ========================================
+  // LANGUAGE MODEL CONFIGURATION | 语言模型配置
+  // ========================================
+  // Settings for the AI that processes inputs and generates responses
+  // AI 处理输入并生成响应的设置
+  
+  "llm": {
+    // API provider | API 提供商
+    "provider": "openai",
+    
+    // Model to use | 使用的模型
+    // gpt-4o-mini is cheaper and faster for simple tasks
+    // gpt-4o-mini 对于简单任务更便宜、更快
+    "model": "gpt-4o-mini",
+    
+    // API key (use environment variable for security)
+    // API 密钥（使用环境变量以确保安全）
+    "api_key": "${OPENMIND_API_KEY}",
+    
+    // Temperature (0-1): Lower = more predictable, Higher = more creative
+    // 温度（0-1）：较低 = 更可预测，较高 = 更有创意
+    "temperature": 0.7,
+    
+    // Maximum response length | 最大响应长度
+    "max_tokens": 300
+  },
+  
+  // ========================================
+  // SYSTEM PROMPT | 系统提示词
+  // ========================================
+  // Instructions that define the AI's behavior and personality
+  // 定义 AI 行为和个性的指令
+  
+  "system_prompt": "You are a friendly AI assistant observing the world through a camera. Describe what you see in simple, clear language. Keep your descriptions brief (2-3 sentences) and interesting. If you see people, describe their actions but respect privacy by not identifying individuals.\n\n你是一个友好的 AI 助手，通过摄像头观察世界。用简单、清晰的语言描述你看到的东西。保持描述简短（2-3句话）且有趣。如果看到人，描述他们的动作，但通过不识别个人来尊重隐私。",
+  
+  // ========================================
+  // OPTIONAL SETTINGS | 可选设置
+  // ========================================
+  
+  // Logging level | 日志级别
+  // Options: debug, info, warning, error
+  // 选项：debug（调试）, info（信息）, warning（警告）, error（错误）
+  "log_level": "info",
+  
+  // Debug mode | 调试模式
+  "debug": false
+}
+

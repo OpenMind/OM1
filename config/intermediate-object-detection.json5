@@ -1,0 +1,167 @@
+// ========================================
+// OM1 Configuration Example: Object Detection
+// OM1 配置示例：物体检测
+// ========================================
+//
+// Description | 描述:
+// Real-time object detection using webcam and YOLO.
+// Displays bounding boxes and tracks detected objects.
+// 
+// 使用摄像头和YOLO进行实时物体检测。
+// 显示检测框并追踪检测到的物体。
+//
+// Requirements | 需求:
+// - Webcam | 摄像头
+// - OpenMind API Key | OpenMind API 密钥
+// - (Optional) GPU for better performance | （可选）GPU以获得更好性能
+//
+// Difficulty | 难度: ⭐⭐⭐ (Intermediate | 中级)
+// Estimated time | 预计时间: 15 minutes | 15分钟
+// ========================================
+
+{
+  // ========================================
+  // INPUT MODULES | 输入模块
+  // ========================================
+  
+  "inputs": [
+    {
+      "type": "webcam",
+      
+      // Higher frequency for real-time detection
+      // 更高频率以实现实时检测
+      "frequency": 2.0,  // 2 frames per second | 每秒2帧
+      
+      // Enable captioning | 启用图像描述
+      "caption": true,
+      
+      // Object Detection Settings | 物体检测设置
+      "detection": {
+        // Enable YOLO object detection | 启用YOLO物体检测
+        "enabled": true,
+        
+        // Model selection | 模型选择
+        // Options: "yolov8n" (fastest), "yolov8s", "yolov8m", "yolov8l", "yolov8x" (most accurate)
+        // 选项：yolov8n（最快）到 yolov8x（最准确）
+        "model": "yolov8n",
+        
+        // Confidence threshold (0.0 - 1.0) | 置信度阈值（0.0 - 1.0）
+        // Only detect objects with confidence above this value
+        // 仅检测置信度高于此值的物体
+        "confidence": 0.5,
+        
+        // IOU threshold for Non-Maximum Suppression | NMS的IOU阈值
+        "iou_threshold": 0.45,
+        
+        // Specific object classes to detect (leave empty for all)
+        // 要检测的特定物体类别（留空则检测所有）
+        "classes": [
+          "person",      // 人
+          "cup",         // 杯子
+          "laptop",      // 笔记本电脑
+          "mouse",       // 鼠标
+          "keyboard",    // 键盘
+          "cell phone",  // 手机
+          "book",        // 书
+          "bottle"       // 瓶子
+        ],
+        
+        // Track objects across frames | 跨帧追踪物体
+        "tracking": {
+          "enabled": true,
+          "max_age": 30  // Keep tracking for 30 frames after last detection
+                         // 最后检测后继续追踪30帧
+        }
+      },
+      
+      // Camera settings | 摄像头设置
+      "camera_index": 0,
+      "resolution": [1280, 720]  // Higher resolution for better detection
+                                  // 更高分辨率以获得更好的检测效果
+    }
+  ],
+  
+  // ========================================
+  // OUTPUT ACTIONS | 输出动作
+  // ========================================
+  
+  "actions": [
+    {
+      // WebSim for visual debugging with bounding boxes
+      // WebSim用于带检测框的可视化调试
+      "type": "websim",
+      
+      // Port for web interface | Web界面端口
+      "port": 8000,
+      
+      // Display bounding boxes | 显示检测框
+      "show_bounding_boxes": true,
+      
+      // Display confidence scores | 显示置信度分数
+      "show_confidence": true,
+      
+      // Display object IDs for tracking | 显示追踪的物体ID
+      "show_tracking_ids": true,
+      
+      // Color scheme for bounding boxes | 检测框配色方案
+      "color_scheme": "rainbow"  // Options: rainbow, class-based, random
+                                  // 选项：彩虹色、基于类别、随机
+    },
+    {
+      // Structured JSON output for further processing
+      // 结构化JSON输出以供进一步处理
+      "type": "text_output",
+      "display": true,
+      "format": "json",  // Output detection results as JSON
+                         // 以JSON格式输出检测结果
+      
+      // Save to file | 保存到文件
+      "save_to_file": {
+        "enabled": true,
+        "path": "detections.jsonl",  // JSON Lines format | JSON行格式
+        "append": true  // Append to existing file | 追加到现有文件
+      }
+    }
+  ],
+  
+  // ========================================
+  // LANGUAGE MODEL CONFIGURATION | 语言模型配置
+  // ========================================
+  
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "api_key": "${OPENMIND_API_KEY}",
+    
+    // Lower temperature for more consistent descriptions
+    // 较低温度使描述更一致
+    "temperature": 0.5,
+    "max_tokens": 400
+  },
+  
+  // ========================================
+  // SYSTEM PROMPT | 系统提示词
+  // ========================================
+  
+  "system_prompt": "You are an intelligent vision system analyzing detected objects. Based on the detected objects and their locations:\n\n1. Describe the scene layout and object relationships\n2. Infer possible activities or scenarios\n3. Note any unusual or interesting patterns\n4. Provide insights about the environment\n\nKeep descriptions concise but informative (3-4 sentences).\n\n你是一个智能视觉系统，分析检测到的物体。基于检测到的物体及其位置：\n\n1. 描述场景布局和物体关系\n2. 推断可能的活动或场景\n3. 注意任何不寻常或有趣的模式\n4. 提供关于环境的见解\n\n保持描述简洁但信息丰富（3-4句话）。",
+  
+  // ========================================
+  // PERFORMANCE SETTINGS | 性能设置
+  // ========================================
+  
+  "performance": {
+    // Use GPU if available | 如果可用则使用GPU
+    "use_gpu": true,
+    
+    // Batch size for detection | 检测批量大小
+    "batch_size": 1,
+    
+    // Maximum processing queue size | 最大处理队列大小
+    "queue_size": 3
+  },
+  
+  // Logging | 日志
+  "log_level": "info",
+  "debug": false
+}
+

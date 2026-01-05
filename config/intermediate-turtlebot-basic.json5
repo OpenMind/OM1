@@ -1,0 +1,186 @@
+// ========================================
+// OM1 Configuration Example: TurtleBot Basic Control
+// OM1 配置示例：TurtleBot 基础控制
+// ========================================
+//
+// Description | 描述:
+// Voice-controlled TurtleBot 4 with safety features.
+// Combines voice commands, vision, and safe movement.
+// 
+// 带安全功能的语音控制 TurtleBot 4。
+// 结合语音命令、视觉和安全移动。
+//
+// Requirements | 需求:
+// - TurtleBot 4 robot | TurtleBot 4 机器人
+// - ROS2 (Humble or newer) | ROS2（Humble或更新版本）
+// - Microphone | 麦克风
+// - Webcam | 摄像头
+// - OpenMind API Key | OpenMind API 密钥
+//
+// Difficulty | 难度: ⭐⭐⭐ (Intermediate | 中级)
+// Estimated time | 预计时间: 20 minutes | 20分钟
+// ========================================
+
+{
+  // ========================================
+  // INPUT MODULES | 输入模块
+  // ========================================
+  
+  "inputs": [
+    {
+      // Voice commands | 语音命令
+      "type": "microphone",
+      "vad_enabled": true,
+      "language": "en-US",  // English commands | 英文命令
+      "min_duration": 0.5
+    },
+    {
+      // Visual awareness | 视觉感知
+      "type": "webcam",
+      "frequency": 1.0,
+      "caption": true,
+      
+      // Basic obstacle detection | 基础障碍物检测
+      "detection": {
+        "enabled": true,
+        "model": "yolov8n",
+        "confidence": 0.6,
+        "classes": ["person", "chair", "couch", "potted plant"]  // Common obstacles | 常见障碍物
+      },
+      
+      "camera_index": 0,
+      "resolution": [640, 480]
+    }
+  ],
+  
+  // ========================================
+  // OUTPUT ACTIONS | 输出动作
+  // ========================================
+  
+  "actions": [
+    {
+      // ROS2 Movement Control | ROS2 运动控制
+      "type": "ros2_movement",
+      
+      // Robot type | 机器人类型
+      "robot_type": "turtlebot4",
+      
+      // ROS2 interface settings | ROS2接口设置
+      "interface": "ros2",
+      "ros_domain_id": 0,  // ROS_DOMAIN_ID environment variable
+                           // ROS_DOMAIN_ID 环境变量
+      
+      // Topic for publishing commands | 发布命令的话题
+      "cmd_vel_topic": "/cmd_vel",
+      
+      // Safety Configuration | 安全配置
+      "safety": {
+        // Maximum speed limits | 最大速度限制
+        "max_linear_speed": 0.5,   // m/s | 米/秒
+        "max_angular_speed": 1.0,  // rad/s | 弧度/秒
+        
+        // Enable collision detection | 启用碰撞检测
+        "collision_detection": true,
+        "collision_distance": 0.3,  // Stop if obstacle within 30cm
+                                     // 如果障碍物在30厘米内则停止
+        
+        // Emergency stop | 紧急停止
+        "emergency_stop": true,
+        "emergency_stop_button": "space",  // Press spacebar to stop
+                                           // 按空格键停止
+        
+        // Timeout for commands | 命令超时
+        "command_timeout": 5.0,  // Stop if no command for 5 seconds
+                                 // 如果5秒内没有命令则停止
+        
+        // Safe zone | 安全区域
+        "boundary": {
+          "enabled": false,  // Set true to limit movement area
+                             // 设为true以限制移动区域
+          "min_x": -5.0,
+          "max_x": 5.0,
+          "min_y": -5.0,
+          "max_y": 5.0
+        }
+      },
+      
+      // Predefined movement commands | 预定义移动命令
+      "commands": {
+        // Basic movements | 基础移动
+        "forward": {"linear": 0.3, "angular": 0.0},
+        "backward": {"linear": -0.2, "angular": 0.0},
+        "turn_left": {"linear": 0.0, "angular": 0.8},
+        "turn_right": {"linear": 0.0, "angular": -0.8},
+        "stop": {"linear": 0.0, "angular": 0.0},
+        
+        // Combined movements | 组合移动
+        "forward_left": {"linear": 0.25, "angular": 0.4},
+        "forward_right": {"linear": 0.25, "angular": -0.4},
+        
+        // Precise movements | 精确移动
+        "slow_forward": {"linear": 0.1, "angular": 0.0},
+        "rotate_180": {"linear": 0.0, "angular": 0.5, "duration": 3.14}  // π seconds for 180°
+      }
+    },
+    {
+      // Voice feedback | 语音反馈
+      "type": "speech",
+      "voice": "nova",
+      "language": "en-US",
+      "speed": 1.1  // Slightly faster for robot commands
+                    // 稍快以适应机器人命令
+    },
+    {
+      // Text output for logging | 文字输出用于日志
+      "type": "text_output",
+      "display": true,
+      "format": "plain"
+    }
+  ],
+  
+  // ========================================
+  // LANGUAGE MODEL CONFIGURATION | 语言模型配置
+  // ========================================
+  
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "api_key": "${OPENMIND_API_KEY}",
+    
+    // Lower temperature for consistent command interpretation
+    // 较低温度以保证命令解释的一致性
+    "temperature": 0.3,
+    "max_tokens": 300
+  },
+  
+  // ========================================
+  // SYSTEM PROMPT | 系统提示词
+  // ========================================
+  
+  "system_prompt": "You are a TurtleBot 4 robot control assistant. Your role:\n\n1. **Safety First**: Always prioritize safety. If a command is unclear or potentially unsafe, ask for confirmation.\n\n2. **Command Interpretation**: Convert natural language to movement commands:\n   - \"go forward\" → forward\n   - \"turn around\" → rotate_180\n   - \"move left\" → forward_left\n   - \"stop\" → stop\n\n3. **Environment Awareness**: Use visual input to:\n   - Warn about obstacles\n   - Suggest safe paths\n   - Avoid collisions\n\n4. **Communication**: \n   - Confirm commands before executing\n   - Report status clearly\n   - Alert about safety concerns\n\n5. **Examples**:\n   - User: \"Go forward\"\n   - You: \"Moving forward at 0.3 m/s. I see a clear path ahead.\"\n   \n   - User: \"Turn left\"\n   - You: \"Turning left. Checking for obstacles...\"\n\nAlways be concise, clear, and safety-conscious.",
+  
+  // ========================================
+  // ROS2 SETTINGS | ROS2 设置
+  // ========================================
+  
+  "ros2": {
+    // QoS (Quality of Service) settings | QoS（服务质量）设置
+    "qos": {
+      "reliability": "reliable",  // Options: reliable, best_effort
+                                   // 选项：可靠、尽力而为
+      "durability": "volatile",    // Options: volatile, transient_local
+                                   // 选项：易失、瞬态本地
+      "history": "keep_last",
+      "depth": 10
+    },
+    
+    // Node settings | 节点设置
+    "node_name": "om1_turtlebot_controller",
+    "namespace": ""  // Leave empty for default | 留空使用默认值
+  },
+  
+  // Logging | 日志
+  "log_level": "info",
+  "debug": false
+}
+
