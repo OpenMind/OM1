@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 from queue import Empty, Queue
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import zenoh
 from zenoh import ZBytes
@@ -14,100 +14,94 @@ from zenoh_msgs import open_zenoh_session
 class ZenohPublisherProvider:
     """
     Publisher provider for sending messages using a Zenoh session.
-
-    This class manages a Zenoh session, a message queue, and a worker thread that
-    continuously publishes queued messages to a specified topic.
     """
 
-    def __init__(self, topic: str = "speech"):
-        """
-        Initialize the Zenoh publisher provider and create a Zenoh session.
+    def __init__(self, topic: str = "speech", max_queue_size: int = 1000):
+        self.pub_topic = topic
+        self.running: bool = False
 
-        Parameters
-        ----------
-        topic : str, optional
-            The topic on which to publish messages (default is "speech").
-        """
+        self._pending_messages: Queue[Dict[str, Any]] = Queue(
+            maxsize=max_queue_size
+        )
+        self._lock = threading.Lock()
+        self._thread: Optional[threading.Thread] = None
         self.session: Optional[zenoh.Session] = None
 
+        self._open_session()
+
+    def _open_session(self):
         try:
             self.session = open_zenoh_session()
-            logging.info("Zenoh client opened")
+            logging.info("Zenoh session opened")
         except Exception as e:
-            logging.error(f"Error opening Zenoh client: {e}")
+            logging.exception("Failed to open Zenoh session: %s", e)
             self.session = None
 
-        self.pub_topic = topic
+    def add_pending_message(self, text: str) -> bool:
+        msg = {
+            "time_stamp": time.time(),
+            "message": text,
+        }
 
-        # Pending message queue and threading constructs
-        self._pending_messages = Queue()
-        self._lock = threading.Lock()
-        self.running: bool = False
-        self._thread: Optional[threading.Thread] = None
+        try:
+            self._pending_messages.put_nowait(msg)
+            return True
+        except Exception:
+            logging.warning("Pending message queue is full, dropping message")
+            return False
 
-    def add_pending_message(self, text: str):
-        """
-        Create a speech data message from the provided text and add it to the queue.
-
-        Parameters
-        ----------
-        text : str
-            The textual content to be published as a message.
-        """
-        msg = {"time_stamp": time.time(), "message": text}
-        logging.info(f"Queueing message: {msg}")
-        self._pending_messages.put(msg)
-
-    def _publish_message(self, msg: dict):
-        """
-        Publish a single message using the Zenoh session.
-
-        Parameters
-        ----------
-        msg : The message to be published.
-        """
-        # Attempt to write the message with a timeout of 0.5 seconds
-
-        if self.session is None:
-            logging.info("No open Zenoh session, returning")
+    def _publish_message(self, msg: Dict[str, Any]):
+        if not self.session:
+            logging.warning("No active Zenoh session, skipping publish")
             return
-        logging.info("Publishing message: {} ".format(msg))
-        payload = ZBytes(json.dumps(msg))
-        self.session.put(self.pub_topic, payload)
+
+        try:
+            payload = ZBytes(json.dumps(msg))
+            self.session.put(self.pub_topic, payload)
+            logging.debug("Published message to %s", self.pub_topic)
+        except Exception as e:
+            logging.exception("Failed to publish message: %s", e)
 
     def start(self):
-        """
-        Start the publisher provider by launching the processing thread.
-        """
-        if self.running:
-            return
+        with self._lock:
+            if self.running:
+                logging.warning("Zenoh Publisher Provider already running")
+                return
 
-        self.running = True
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
+            self.running = True
+            self._thread = threading.Thread(
+                target=self._run, name="zenoh-publisher", daemon=True
+            )
+            self._thread.start()
+
         logging.info("Zenoh Publisher Provider started")
 
     def _run(self):
-        """
-        Internal loop that processes and publishes pending messages.
-        """
         while self.running:
             try:
-                # Wait up to 0.5 seconds for a message.
                 msg = self._pending_messages.get(timeout=0.5)
                 self._publish_message(msg)
             except Empty:
                 continue
             except Exception as e:
-                logging.exception("Exception in publisher thread: %s", e)
+                logging.exception("Unhandled exception in publisher loop: %s", e)
 
     def stop(self):
-        """
-        Stop the publisher provider and clean up resources.
-        """
-        self.running = False
+        with self._lock:
+            if not self.running:
+                return
+            self.running = False
+
         if self._thread:
             self._thread.join(timeout=5)
-        if self.session is not None:
-            self.session.close()
+
+        if self.session:
+            try:
+                self.session.close()
+                logging.info("Zenoh session closed")
+            except Exception as e:
+                logging.exception("Error while closing Zenoh session: %s", e)
+            finally:
+                self.session = None
+
         logging.info("Zenoh Publisher Provider stopped")
