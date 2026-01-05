@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 
 from om1_utils import ws
 from om1_vlm import VideoStream
@@ -13,10 +14,6 @@ from .singleton import singleton
 class VLMOpenAIProvider:
     """
     VLM Provider that handles video streaming and OpenAI API communication.
-
-    This class implementationements a singleton pattern to manage video input streaming and API
-    communication for vlm services. It runs in a separate thread to handle
-    continuous vlm processing.
     """
 
     def __init__(
@@ -26,91 +23,84 @@ class VLMOpenAIProvider:
         fps: int = 10,
         stream_url: Optional[str] = None,
         camera_index: int = 0,
+        model: str = "gpt-4o-mini",
+        prompt: str = "What is the most interesting aspect in this series of images?",
+        max_tokens: int = 300,
     ):
-        """
-        Initialize the VLM Provider.
-
-        Parameters
-        ----------
-        base_url : str
-            The base URL for the OM API.
-        api_key : str
-            The API key for the OM API.
-        fps : int
-            The frames per second for the video stream.
-        stream_url : str, optional
-            The URL for the video stream. If not provided, defaults to None.
-        camera_index : int
-            The camera index for the video stream device. Defaults to 0.
-        """
         self.running: bool = False
-        self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self.model = model
+        self.prompt = prompt
+        self.max_tokens = max_tokens
+
+        self.api_client: AsyncOpenAI = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+        )
+
         self.stream_ws_client: Optional[ws.Client] = (
             ws.Client(url=stream_url) if stream_url else None
         )
+
+        self._lock = asyncio.Lock()
+
         self.video_stream: VideoStream = VideoStream(
-            frame_callback=self._process_frame, fps=fps, device_index=camera_index  # type: ignore
+            frame_callback=self._process_frame,
+            fps=fps,
+            device_index=camera_index,  # type: ignore
         )
-        self.message_callback: Optional[Callable] = None
+
+        self.message_callback: Optional[Callable[[Any], None]] = None
 
     async def _process_frame(self, frame: str):
-        """
-        Process a video frame using the LLM API.
+        if not self.running:
+            return
 
-        Parameters
-        ----------
-        frame : str
-            The base64 encoded video frame to process.
-        """
-        processing_start = time.perf_counter()
-        try:
-            response = await self.api_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "What is the most interesting aspect in this series of images?",
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{frame}",
-                                    "detail": "low",
+        async with self._lock:
+            if not self.running:
+                return
+
+            processing_start = time.perf_counter()
+
+            try:
+                response = await self.api_client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": self.prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{frame}",
+                                        "detail": "low",
+                                    },
                                 },
-                            },
-                        ],
-                    }
-                ],
-                max_tokens=300,
-            )
-            processing_latency = time.perf_counter() - processing_start
-            logging.debug(f"Processing latency: {processing_latency:.3f} seconds")
-            logging.debug(f"OpenAI LLM VLM Response: {response}")
-            if self.message_callback:
-                self.message_callback(response)
-        except Exception as e:
-            logging.error(f"Error processing frame: {e}")
+                            ],
+                        }
+                    ],
+                    max_tokens=self.max_tokens,
+                )
 
-    def register_message_callback(self, message_callback: Optional[Callable]):
-        """
-        Register a callback for processing VLM results.
+                latency = time.perf_counter() - processing_start
+                logging.debug("VLM processing latency: %.3f seconds", latency)
 
-        Parameters
-        ----------
-        callback : callable
-            The callback function to process VLM results.
-        """
+                if self.message_callback:
+                    self.message_callback(response)
+
+            except asyncio.CancelledError:
+                logging.info("VLM frame processing cancelled")
+                raise
+
+            except Exception as e:
+                logging.exception("Error while processing VLM frame: %s", e)
+
+    def register_message_callback(
+        self, message_callback: Optional[Callable[[Any], None]]
+    ):
         self.message_callback = message_callback
 
     def start(self):
-        """
-        Start the VLM provider.
-
-        Initializes the video stream and starts the processing thread.
-        """
         if self.running:
             logging.warning("VLM provider is already running")
             return
@@ -127,13 +117,13 @@ class VLMOpenAIProvider:
         logging.info("OpenAI VLM provider started")
 
     def stop(self):
-        """
-        Stop the VLM provider.
+        if not self.running:
+            return
 
-        Stops the video stream and processing thread.
-        """
         self.running = False
         self.video_stream.stop()
 
         if self.stream_ws_client:
             self.stream_ws_client.stop()
+
+        logging.info("OpenAI VLM provider stopped")
