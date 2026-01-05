@@ -37,6 +37,7 @@ class ConfigProvider:
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
+        """Initialize the Zenoh session and publishers/subscribers."""
         try:
             self.session = open_zenoh_session()
 
@@ -54,12 +55,14 @@ class ConfigProvider:
             logging.error(f"Failed to initialize ConfigProvider Zenoh session: {e}")
 
     def _get_runtime_config_path(self) -> str:
+        """Return the absolute path of the runtime configuration file."""
         memory_folder_path = os.path.join(
             os.path.dirname(__file__), "../../config", "memory"
         )
         return os.path.abspath(os.path.join(memory_folder_path, ".runtime.json5"))
 
     def _handle_config_request(self, sample: zenoh.Sample):
+        """Handle incoming configuration requests."""
         try:
             request = ConfigRequest.deserialize(sample.payload.to_bytes())
             logging.debug(f"Received config request: {request.request_id}")
@@ -73,14 +76,10 @@ class ConfigProvider:
             logging.error(f"Error handling config request: {e}")
 
     def _handle_set_config(self, request_id: String, config_str: str):
-        """
-        Handle request to update runtime configuration.
-        """
+        """Handle requests to update the runtime configuration."""
         try:
             try:
                 new_config: Any = json5.loads(config_str)
-
-                # ensure parsed object is a dictionary
                 if not isinstance(new_config, dict):
                     raise ValueError("Configuration root must be a JSON object")
 
@@ -95,11 +94,8 @@ class ConfigProvider:
                 self._send_error_response(request_id, error_msg)
                 return
 
-            # Safe multi-mode detection
             is_multi_mode = (
-                isinstance(new_config, dict)
-                and "modes" in new_config
-                and "default_mode" in new_config
+                "modes" in new_config and "default_mode" in new_config
             )
 
             try:
@@ -116,10 +112,7 @@ class ConfigProvider:
                 )
 
                 if not os.path.exists(schema_path):
-                    error_msg = (
-                        f"Schema file not found: {schema_path}. "
-                        "Cannot validate configuration."
-                    )
+                    error_msg = f"Schema file not found: {schema_path}"
                     logging.error(error_msg)
                     self._send_error_response(request_id, error_msg)
                     return
@@ -128,9 +121,6 @@ class ConfigProvider:
                     schema = json.load(f)
 
                 validate(instance=new_config, schema=schema)
-                logging.debug(
-                    f"Schema validation passed for {'multi-mode' if is_multi_mode else 'single-mode'} configuration"
-                )
 
             except ValidationError as e:
                 field_path = ".".join(str(p) for p in e.path) if e.path else "root"
@@ -147,58 +137,32 @@ class ConfigProvider:
                 return
 
             try:
-                config_version = (
-                    new_config.get("version") if isinstance(new_config, dict) else None
-                )
-
+                config_version = new_config.get("version")
                 verify_runtime_version(
                     config_version, config_name="runtime configuration update"
                 )
-
-                logging.debug(f"Version compatibility verified: {config_version}")
-
-            except ValueError as e:
-                error_msg = f"Version compatibility check failed: {e}"
-                logging.error(error_msg)
-                self._send_error_response(request_id, error_msg)
-                return
             except Exception as e:
                 error_msg = f"Version verification error: {e}"
                 logging.error(error_msg)
                 self._send_error_response(request_id, error_msg)
                 return
 
-            # ensure backup_path always defined
             backup_path: str | None = None
 
             try:
                 if os.path.exists(self.config_path):
                     backup_path = self.config_path + ".backup"
-                    try:
-                        shutil.copy2(self.config_path, backup_path)
-                        logging.debug(f"Created backup: {backup_path}")
-                    except Exception as backup_error:
-                        logging.warning(
-                            f"Failed to create backup: {backup_error}. "
-                            "Continuing with update..."
-                        )
+                    shutil.copy2(self.config_path, backup_path)
 
                 temp_path = self.config_path + ".tmp"
                 with open(temp_path, "w") as f:
                     json.dump(new_config, f, indent=2)
 
-                os.rename(temp_path, self.config_path)
+                os.replace(temp_path, self.config_path)
 
                 if backup_path and os.path.exists(backup_path):
-                    try:
-                        os.remove(backup_path)
-                        logging.debug(f"Removed backup: {backup_path}")
-                    except Exception:
-                        pass
+                    os.remove(backup_path)
 
-                logging.info(
-                    f"Successfully updated runtime config file: {self.config_path}"
-                )
                 self._send_config_response(request_id)
 
             except OSError as e:
@@ -206,14 +170,9 @@ class ConfigProvider:
                 logging.error(error_msg)
 
                 if backup_path and os.path.exists(backup_path):
-                    try:
-                        shutil.copy2(backup_path, self.config_path)
-                        logging.info("Restored config from backup after write failure")
-                    except Exception:
-                        pass
+                    shutil.copy2(backup_path, self.config_path)
 
                 self._send_error_response(request_id, error_msg)
-                return
 
         except Exception as e:
             error_msg = f"Unexpected error in config update: {e}"
@@ -221,6 +180,7 @@ class ConfigProvider:
             self._send_error_response(request_id, error_msg)
 
     def _send_config_response(self, request_id: String):
+        """Send the current configuration snapshot as a response."""
         try:
             config_snapshot = self._get_config_snapshot()
             config_json_str = json.dumps(config_snapshot, indent=2)
@@ -234,13 +194,13 @@ class ConfigProvider:
 
             if self.config_response_publisher:
                 self.config_response_publisher.put(response.serialize())
-                logging.info("ConfigProvider sent config response")
 
         except Exception as e:
             logging.error(f"Failed to send config response: {e}")
             self._send_error_response(request_id, str(e))
 
     def _send_error_response(self, request_id: String, error_message: str):
+        """Send an error response for a configuration request."""
         try:
             response = ConfigResponse(
                 header=prepare_header(str(uuid4())),
@@ -251,17 +211,14 @@ class ConfigProvider:
 
             if self.config_response_publisher:
                 self.config_response_publisher.put(response.serialize())
-                logging.warning(f"ConfigProvider sent error response: {error_message}")
 
         except Exception as e:
             logging.error(f"Failed to send error response: {e}")
 
     def _get_config_snapshot(self) -> Dict[str, Any]:
+        """Return the current runtime configuration snapshot."""
         try:
             if not os.path.exists(self.config_path):
-                logging.warning(
-                    f"ConfigProvider: Config file not found: {self.config_path}"
-                )
                 return {}
 
             with open(self.config_path, "r") as f:
@@ -274,13 +231,11 @@ class ConfigProvider:
             return {}
 
     def stop(self):
+        """Stop the ConfigProvider and close the Zenoh session."""
         if not self.running:
-            logging.info("ConfigProvider is not running")
             return
 
         self.running = False
 
         if self.session:
             self.session.close()
-
-        logging.info("ConfigProvider stopped and Zenoh session closed")
