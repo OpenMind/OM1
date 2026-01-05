@@ -27,6 +27,16 @@ Before contributing, please take a moment to read through the following guidelin
 
 *   **Code Review:** Reviewing pull requests is a valuable way to contribute.  It helps ensure code quality and maintainability.
 
+**Out of Scope**
+
+- Documentation Translations: Multilingual versions of documentation are not supported. PRs translating docs will be closed.
+
+- Stylistic or Minor Changes: Changes that only affect formatting, variable names, or style without functional improvement are out of scope.
+
+- Trivial or Cosmetic Fixes: Small changes that do not fix bugs or meaningfully improve usability are out of scope.
+
+- Opinion-Driven Refactors: Refactors made solely for personal style or preference without measurable benefit are out of scope.
+
 **Contribution Workflow (Pull Requests):**
 
 1.  **Fork the Repository:**  Click the "Fork" button on the top-right of the OM1 repository page to create your own copy.
@@ -67,7 +77,6 @@ Before contributing, please take a moment to read through the following guidelin
     ```bash
     uv run pytest --log-cli-level=DEBUG -s
     ```
-
 
 8.  **Push Changes:** Once all the tests pass locally, push your branch to your forked repository.
     ```bash
