@@ -5,6 +5,10 @@ from actions.base import Interface
 
 
 class MovementAction(str, Enum):
+    """
+    Enumeration of possible movement actions.
+    """
+
     TURN_LEFT = "turn left"
     TURN_RIGHT = "turn right"
     MOVE_FORWARDS = "move forwards"
@@ -13,6 +17,10 @@ class MovementAction(str, Enum):
 
 @dataclass
 class MoveInput:
+    """
+    Input interface for the Move action.
+    """
+
     action: MovementAction
 
 

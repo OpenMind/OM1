@@ -201,7 +201,7 @@ class IOProvider:
     @fuser_available_actions.setter
     def fuser_available_actions(self, value: Optional[str]) -> None:
         """
-        set the fuser available actions.
+        Set the fuser available actions.
         """
         with self._lock:
             self._fuser_available_actions = value
