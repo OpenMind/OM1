@@ -141,14 +141,10 @@ class GpsProvider:
                 self.gps_unix_ts = self.string_to_unix_timestamp("20" + time_raw)
 
                 self.lat = (
-                    float(lat_str[:-1])
-                    if lat_str.endswith("N")
-                    else -float(lat_str[:-1])
+                    float(lat_str[:-1]) if lat_str.endswith("N") else -float(lat_str[:-1])
                 )
                 self.lon = (
-                    float(lon_str[:-1])
-                    if lon_str.endswith("E")
-                    else -float(lon_str[:-1])
+                    float(lon_str[:-1]) if lon_str.endswith("E") else -float(lon_str[:-1])
                 )
 
                 self.alt = round(float(alt), 2)

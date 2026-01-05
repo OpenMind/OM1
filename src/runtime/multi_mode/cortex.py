@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
@@ -30,9 +30,9 @@ class ModeCortexRuntime:
     mode_config: ModeSystemConfig
     mode_config_name: str
     mode_manager: ModeManager
-    io_provider: IOProvider
-    sleep_ticker_provider: SleepTickerProvider
-    config_provider: ConfigProvider
+    io_provider: Any
+    sleep_ticker_provider: Any
+    config_provider: Any
 
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
