@@ -19,7 +19,7 @@
       "type": "GoogleASRInput",
       "config": {
         // Allow new voice input to interrupt ongoing text-to-speech output
-        "enable_tts_interrupt": true
+        "enable_tts_interrupt": false
       }
     }
   ],
@@ -46,7 +46,7 @@
       "connector": "elevenlabs_tts",
       "config": {
         // Allow new voice input to interrupt ongoing speech playback
-        "enable_tts_interrupt": true
+        "enable_tts_interrupt": false
       }
     },
     {

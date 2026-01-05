@@ -15,6 +15,10 @@ R = TypeVar("R")
 
 @dataclass
 class ChatMessage:
+    """
+    Represents a chat message with role and content.
+    """
+
     role: str
     content: str
 
@@ -27,6 +31,10 @@ ACTION_MAP = {
 
 
 class LLMHistoryManager:
+    """
+    Manages the history of interactions for LLMs, including summarization.
+    """
+
     def __init__(
         self,
         config: LLMConfig,
@@ -208,6 +216,15 @@ class LLMHistoryManager:
     def update_history() -> (
         Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]
     ):
+        """
+        Decorator to manage LLM history around an async function.
+
+        Returns
+        -------
+        Callable
+            Decorator function.
+        """
+
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
             @functools.wraps(func)
             async def wrapper(self: Any, prompt: str, *args: Any, **kwargs: Any) -> R:

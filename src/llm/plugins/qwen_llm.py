@@ -67,6 +67,7 @@ class QwenLLM(LLM[R]):
                 "model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
             }
         }
+
     Parameters
     ----------
     config : LLMConfig
