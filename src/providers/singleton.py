@@ -1,57 +1,54 @@
 import threading
-from typing import Any
+from typing import Any, Callable, Generic, TypeVar
+
+T = TypeVar("T")
 
 
-def singleton(cls):
+class SingletonCallable(Generic[T]):
     """
-    A thread-safe singleton decorator that ensures only one instance of a class exists.
-
-    This decorator implements a singleton pattern with thread safety using a lock.
-    Multiple threads attempting to create an instance will be synchronized to prevent
-    race conditions.
-
-    Args:
-        cls: The class to be converted into a singleton.
-
-    Returns
-    -------
-        function: A getter function that returns the singleton instance.
+    Callable wrapper returned by the @singleton decorator.
     """
-    if not hasattr(cls, "_singleton_instance"):
-        cls._singleton_instance = None
+
+    _singleton_class: type[T]
+
+    def __call__(self, *args: Any, **kwargs: Any) -> T:
+        """Return the singleton instance."""
+        ...
+
+    def reset(self) -> None:
+        """Reset the singleton instance."""
+        ...
+
+
+def singleton(cls: type[T]) -> Callable[..., T]:
+    """
+    Thread-safe singleton decorator.
+
+    Ensures only one instance of the decorated class exists.
+    """
     lock = threading.Lock()
+    instance: T | None = None
 
-    def get_instance(*args, **kwargs) -> Any:
+    def get_instance(*args: Any, **kwargs: Any) -> T:
         """
-        Returns the singleton instance of the decorated class.
-
-        If the instance doesn't exist, creates it with the provided arguments.
-        Thread-safe implementation using a lock.
-
-        Args:
-            *args: Positional arguments to pass to the class constructor.
-            **kwargs: Keyword arguments to pass to the class constructor.
-
-        Returns
-        -------
-            Any: The singleton instance of the decorated class.
+        Return the singleton instance, creating it if necessary.
         """
+        nonlocal instance
         with lock:
-            if cls._singleton_instance is None:
-                cls._singleton_instance = cls(*args, **kwargs)
-            return cls._singleton_instance
+            if instance is None:
+                instance = cls(*args, **kwargs)
+            return instance
 
-    def reset_instance():
+    def reset() -> None:
         """
-        Resets the singleton instance of the decorated class.
-
-        This method sets the singleton instance to None, allowing a new instance
-        to be created on the next call to get_instance.
+        Reset the stored singleton instance.
         """
+        nonlocal instance
         with lock:
-            cls._singleton_instance = None
+            instance = None
 
-    get_instance._singleton_class = cls  # type: ignore
-    get_instance.reset = reset_instance  # type: ignore
+    # typing + runtime metadata
+    get_instance.reset = reset  # type: ignore[attr-defined]
+    get_instance._singleton_class = cls  # type: ignore[attr-defined]
 
     return get_instance
