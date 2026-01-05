@@ -5,39 +5,85 @@ description: "Quadruped Simulation and Control"
 
 ## Simulation Instructions
 
-The Gazebo simulator is an industry standard simulator for robots. The robot shape/size is specified via `.dae` files and those robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses. 
+The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
 
-### MacOS (Gazebo Harmonic)
+To get started with **Gazebo** and **Unitree SDK**, please install **ROS2 Humble** first and use this **CycloneDDS** configuration. It uses `lo` as the network interface.
+
+```xml
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+    </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>
+```
+
+We recommend that you export this in your `.bashrc` or equivalent configuration file.
 
 ```bash
-./gazebo/macOS.sh
+export CYCLONEDDS_URI='
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+    </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>'
 ```
-The script also checks and installs Gazebo Harmonic https://gazebosim.org/docs/harmonic/getstarted/ if not already installed. If this is your first time installing Gazebo, grab a coffee, since this will take a while (1/2 hour or more). 
 
-This will open a gazebo room with a bathtub and chairs. Now, add your robot!
-
-### Ubuntu (Gazebo Classic)
+Next, clone the [unitree-sdk](https://github.com/OpenMind/unitree-sdk) repository:
 
 ```bash
-./gazebo/ubuntu.sh
+git clone https://github.com/OpenMind/unitree-sdk.git
 ```
 
-For now, ROS2 is required for the simulation to interact with OM1 in Gazebo Classic, check https://docs.ros.org/en/humble/Installation.html for installation instructions.
+Then install all necessary dependencies:
 
-`ffmpeg` is required for streaming the simulated video feed to OM1. If your system doesn't have `ffmpeg`, you should install it using `sudo apt-get install ffmpeg`.
+```bash
+cd unitree-sdk
+rosdep install --from-paths . --ignore-src -r -y
+pip install -r requirements.txt
+```
 
-Note: The simulated camera feed is streamed to a virtual video device at `/dev/video10`, thus requiring the `camera_index` in the VLM config to be 10. Modify as needed if the virtual camera needs to be reordered or if OM1 needs to read from another camera.
+Then build all packages:
 
-Note: It is also possible to run the Gazebo Harmonic simulation on Ubuntu.
+```bash
+colcon build
+```
+
+Now you should be able to launch the **Gazebo Simulator**.
+
+Open the first terminal and run:
+
+```bash
+source install/setup.bash
+ros2 launch go2_gazebo_sim go2_launch.py
+```
+
+Then open a second terminal and run:
+
+```bash
+source install/setup.bash
+ros2 launch go2_sdk sensor_launch.py use_sim:=true
+```
+
+This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
 ## Start OM1
 
 Refer to the [Installation Guide](../developing/1_get-started.mdx) for detailed instructions.
 
 ```bash
-uv run src/run.py quadruped_sim
+uv run src/run.py unitree_go2_autonomy_sim
 ```
-
-**Finally, start the simulation by clicking the "play" (>) button in the Gazebo simulator.**
-
-Note: Remember to set the correct API key in the `config/quadruped_sim.json5` file or in your `.env`.

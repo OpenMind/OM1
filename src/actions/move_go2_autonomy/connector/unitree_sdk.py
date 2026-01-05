@@ -5,6 +5,8 @@ import time
 from queue import Queue
 from typing import List, Optional
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
 from providers.odom_provider import OdomProvider, RobotState
@@ -13,9 +15,36 @@ from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
-class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
+class MoveUnitreeSDKConfig(ActionConfig):
+    """
+    Configuration for MoveUnitreeSDK connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters
+    ----------
+    unitree_ethernet : str
+        Ethernet channel for Unitree Go2 odometry.
+    """
+
+    unitree_ethernet: str = Field(
+        default="eth0",
+        description="Ethernet channel for Unitree Go2 odometry.",
+    )
+
+
+class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
+    """
+    Unitree SDK connector for the Move Go2 autonomy action.
+    """
+
+    def __init__(self, config: MoveUnitreeSDKConfig):
+        """
+        Initialize the MoveUnitreeSDK connector.
+
+        Parameters
+        ----------
+        config : MoveUnitreeSDKConfig
+            The configuration for the action connector.
+        """
         super().__init__(config)
 
         self.dog_attitude = None
@@ -44,12 +73,19 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         except Exception as e:
             logging.error(f"Error initializing Unitree sport client: {e}")
 
-        unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        unitree_ethernet = self.config.unitree_ethernet
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """
+        Connect to the output interface and process the AI movement command.
 
+        Parameters
+        ----------
+        output_interface : MoveInput
+            The output interface containing the AI movement command.
+        """
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
@@ -123,8 +159,8 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         """
         Move the robot with specified velocities.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         vx : float
             Linear velocity in the x direction (m/s).
         vy : float
@@ -257,6 +293,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
                 if self.movement_attempts > 0:
                     logging.info(f"Phase 2 - Forward/retreat GAP delta: {progress}m")
 
+                fb = 0
                 if goal_dx > 0:
                     if 4 not in self.lidar.advance:
                         logging.warning("Cannot advance due to barrier")
@@ -384,13 +421,13 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         """
         Normalize angle to [-180, 180] range.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         angle : float
             Angle in degrees to normalize.
 
-        Returns:
-        --------
+        Returns
+        -------
         float
             Normalized angle in degrees within the range [-180, 180].
         """
@@ -404,15 +441,15 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         """
         Calculate shortest angular distance between two angles.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         current : float
             Current angle in degrees.
         target : float
             Target angle in degrees.
 
-        Returns:
-        --------
+        Returns
+        -------
         float
             Shortest angular distance in degrees, rounded to 2 decimal places.
         """
@@ -427,13 +464,13 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveInput]):
         """
         Execute turn based on gap direction and lidar constraints.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         gap : float
             The angle gap in degrees to turn.
 
-        Returns:
-        --------
+        Returns
+        -------
         bool
             True if the turn was executed successfully, False if blocked by a barrier.
         """

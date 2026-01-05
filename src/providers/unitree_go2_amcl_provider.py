@@ -1,10 +1,10 @@
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 import zenoh
 
-from zenoh_msgs import Pose, nav_msgs, open_zenoh_session
+from zenoh_msgs import Pose, nav_msgs
 
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
@@ -24,6 +24,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
     ):
         """
         Initialize the AMCL Provider with a specific topic.
+
         Parameters
         ----------
         topic : str, optional
@@ -41,25 +42,10 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         self.pose_tolerance = pose_tolerance
         self.yaw_tolerance = yaw_tolerance
 
-        self.topic = "om/ai/request"
-        self.session: Optional[zenoh.Session] = None
-        self.pub = None
-
-        self.last_status_publish_time = 0.0
-        self.status_publish_interval = 5.0
-
-        try:
-            self.session = open_zenoh_session()
-            self.pub = self.session.declare_publisher(self.topic)
-            logging.info("Zenoh client opened for AMCL Provider")
-        except Exception as e:
-            logging.error(f"Error opening Zenoh client: {e}")
-            self.session = None
-            self.pub = None
-
     def amcl_message_callback(self, data: zenoh.Sample):
         """
         Process an incoming AMCL message.
+
         Parameters
         ----------
         data : zenoh.Sample
@@ -89,7 +75,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         else:
             logging.warning("Received empty AMCL message")
 
-    def start(self):
+    def start(self, message_callback: Optional[Callable] = None):
         """
         Start the AMCL Provider by registering the message callback.
         """
@@ -104,6 +90,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
     def is_localized(self) -> bool:
         """
         Check if the robot is localized based on the AMCL data.
+
         Returns
         -------
         bool
@@ -115,6 +102,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
     def pose(self) -> Optional[Pose]:
         """
         Get the current localization pose.
+
         Returns
         -------
         Optional[Pose]

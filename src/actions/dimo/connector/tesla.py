@@ -1,24 +1,71 @@
 import logging
 import time
+from typing import Optional
 
 import requests
 from dimo import DIMO
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.dimo.interface import TeslaInput
 from providers.io_provider import IOProvider
 
 
-class DIMOTeslaConnector(ActionConnector[TeslaInput]):
+class DIMOTeslaConfig(ActionConfig):
+    """
+    Configuration for DIMO Tesla connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters
+    ----------
+    client_id : Optional[str]
+        DIMO client ID.
+    domain : Optional[str]
+        DIMO domain.
+    private_key : Optional[str]
+        DIMO private key.
+    token_id : Optional[int]
+        DIMO token ID.
+    """
+
+    client_id: Optional[str] = Field(
+        default=None,
+        description="DIMO client ID",
+    )
+    domain: Optional[str] = Field(
+        default=None,
+        description="DIMO domain",
+    )
+    private_key: Optional[str] = Field(
+        default=None,
+        description="DIMO private key",
+    )
+    token_id: Optional[int] = Field(
+        default=None,
+        description="DIMO token ID",
+    )
+
+
+class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
+    """
+    Connector that interacts with a Tesla vehicle via the DIMO platform.
+    """
+
+    def __init__(self, config: DIMOTeslaConfig):
+        """
+        Initialize the DIMOTeslaConnector.
+
+        Parameters
+        ----------
+        config : DIMOTeslaConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
         self.io_provider = IOProvider()
 
         self.base_url = "https://devices-api.dimo.zone/v1/vehicle"
 
-        self.previouse_output = None
+        self.previous_output = None
 
         self.token_id = self.io_provider.get_dynamic_variable("token_id")
         self.vehicle_jwt = self.io_provider.get_dynamic_variable("vehicle_jwt")
@@ -28,10 +75,10 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
             self.dimo = DIMO("Production")
 
             # Configure the DIMO Tesla service
-            client_id = getattr(config, "client_id", None)
-            domain = getattr(config, "domain", None)
-            private_key = getattr(config, "private_key", None)
-            self.token_id = getattr(config, "token_id", None)
+            client_id = self.config.client_id
+            domain = self.config.domain
+            private_key = self.config.private_key
+            self.token_id = self.config.token_id
 
             if not client_id or not domain or not private_key or not self.token_id:
                 raise ValueError(
@@ -57,11 +104,19 @@ class DIMOTeslaConnector(ActionConnector[TeslaInput]):
                 self.vehicle_jwt = None
 
     async def connect(self, output_interface: TeslaInput) -> None:
-        logging.info(f"DIMOTeslaConnector: {output_interface.action}")
-        if output_interface.action != self.previouse_output:
-            self.previouse_output = output_interface.action
+        """
+        Connect the input protocol to the DIMO Tesla action.
 
-            # chekcout timeout of vehicle_jwt
+        Parameters
+        ----------
+        output_interface : TeslaInput
+            The input protocol containing the action details.
+        """
+        logging.info(f"DIMOTeslaConnector: {output_interface.action}")
+        if output_interface.action != self.previous_output:
+            self.previous_output = output_interface.action
+
+            # checkout timeout of vehicle_jwt
             if (
                 self.vehicle_jwt_expires is not None
                 and time.time() > self.vehicle_jwt_expires

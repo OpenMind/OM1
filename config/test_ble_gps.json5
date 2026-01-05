@@ -1,5 +1,6 @@
 {
-  "hertz": 10,
+  "version": "v1.0.1",
+  "hertz": 1,
   "name": "bits",
   "unitree_ethernet": "en0",
   "api_key": "openmind_free",

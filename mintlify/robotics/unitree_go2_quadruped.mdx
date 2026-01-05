@@ -49,7 +49,7 @@ cmake --build .
 ./listtopics
 ```
 
-On Mac, you **might** need to `allow incoming connections` in the popup the first time you run `listtopics`. 
+On Mac, you **might** need to `allow incoming connections` in the popup the first time you run `listtopics`.
 
 Running `listtopics` should result in an extensive data dump of available topics:
 
@@ -159,7 +159,7 @@ Add the `dds` python module to your code base: `uv pip install -r pyproject.toml
 
 ## Step 3 - Connect an Game Controller
 
-On Mac, if you are using an Xbox controller, **make sure that it is running the most recent firmware**, otherwise you will be able to pair but not connect to the controller. You will need a PC with `Xbox Accessories` to update the Xbox controller's firmware. Many Mac OS updates hose support for the Xbox controller, which is then fixed (after some delay) via an Xbox firmware update. 
+On Mac, if you are using an Xbox controller, **make sure that it is running the most recent firmware**, otherwise you will be able to pair but not connect to the controller. You will need a PC with `Xbox Accessories` to update the Xbox controller's firmware. Many Mac OS updates hose support for the Xbox controller, which is then fixed (after some delay) via an Xbox firmware update.
 
 On Mac, you will need to install `hidapi`:
 
@@ -195,16 +195,16 @@ Lowstate system/joint data:
 uv run system_hw_test/go2_data_stream.py en0
 ```
 
-Lidar: 
+Lidar:
 ```bash
 uv run system_hw_test/go2_lidar.py en0
 ```
 
-Note - the internal Go2 LIDAR is currently not used - a separate RPLIDAR mounted to the top of the dog's head is used instead. 
+Note - the internal Go2 LIDAR is currently not used - a separate RPLIDAR mounted to the top of the dog's head is used instead.
 
 ## Minimal Quadruped Functionality
 
-In this configuration, the quadruped observes its environment, listens and speaks, but there is no AI-controlled movement. You can manually control the dog's movements with an game controller. 
+In this configuration, the quadruped observes its environment, listens and speaks, but there is no AI-controlled movement. You can manually control the dog's movements with an game controller.
 
 Run
 ```bash
@@ -231,4 +231,4 @@ See the [Quadruped Configurations](unitree_go2_quadruped_configurations) for add
 ping 192.168.123.161
 ```
 
-Assuming you can `ping` the robot, then test the CycloneDDS middleware (see **STEP 1**). Once you see data flowing, then the rest of the system should work. 
+Assuming you can `ping` the robot, then test the CycloneDDS middleware (see **STEP 1**). Once you see data flowing, then the rest of the system should work.

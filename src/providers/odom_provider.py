@@ -36,6 +36,10 @@ rad_to_deg = 57.2958
 
 
 class RobotState(Enum):
+    """
+    Enumeration for robot states.
+    """
+
     STANDING = "standing"
     SITTING = "sitting"
 
@@ -85,7 +89,7 @@ def odom_processor(
             PoseWithCovarianceStamped(header=odom.header, pose=odom.pose.pose)  # type: ignore
         )
 
-    def pose_message_handler(data: PoseStamped_):
+    def pose_message_handler(data: PoseStamped_):  # type: ignore
         """
         Handler for pose messages from CycloneDDS.
 
@@ -94,8 +98,8 @@ def odom_processor(
         data : PoseStamped_
             The PoseStamped message containing the pose data.
         """
-        logging.debug(f"Pose message handler: {data}")
-        data_queue.put(data)
+        logging.debug(f"Pose message handler: {data}")  # type: ignore
+        data_queue.put(data)  # type: ignore
 
     if use_zenoh:
         # typically, TurtleBot4
@@ -117,13 +121,13 @@ def odom_processor(
     if not use_zenoh:
         # we are using CycloneDDS e.g. for the Unitree Go2
         try:
-            ChannelFactoryInitialize(0, channel)
+            ChannelFactoryInitialize(0, channel)  # type: ignore
         except Exception as e:
             logging.error(f"Error initializing Unitree Go2 odom channel: {e}")
             return
 
         try:
-            pose_subscriber = ChannelSubscriber("rt/utlidar/robot_pose", PoseStamped_)
+            pose_subscriber = ChannelSubscriber("rt/utlidar/robot_pose", PoseStamped_)  # type: ignore
             pose_subscriber.Init(pose_message_handler, 10)
             logging.info("CycloneDDS pose subscriber initialized successfully")
         except Exception as e:
@@ -158,9 +162,8 @@ class OdomProvider:
         self, URID: str = "", use_zenoh: bool = False, channel: Optional[str] = ""
     ):
         """
-        Robot and sensor configuration
+        Robot and sensor configuration.
         """
-
         logging.info("Booting Odom Provider")
 
         self.use_zenoh = use_zenoh
@@ -170,6 +173,7 @@ class OdomProvider:
         self.data_queue: mp.Queue[PoseStamped] = mp.Queue()
         self._odom_reader_thread: Optional[mp.Process] = None
         self._odom_processor_thread: Optional[threading.Thread] = None
+        self._stop_event = threading.Event()
 
         self.body_height_cm = 0
         self.body_attitude: Optional[RobotState] = None
@@ -180,7 +184,7 @@ class OdomProvider:
         self.previous_z = 0
         self.move_history = 0
 
-        self._odom: Optional[Union[Odometry, PoseStamped_]] = None
+        self._odom: Optional[Union[Odometry, PoseStamped_]] = None  # type: ignore
 
         self.x = 0.0
         self.y = 0.0
@@ -237,7 +241,7 @@ class OdomProvider:
         Convert a quaternion into euler angles (roll, pitch, yaw)
         roll is rotation around x in radians (counterclockwise)
         pitch is rotation around y in radians (counterclockwise)
-        yaw is rotation around z in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise).
 
         Parameters
         ----------
@@ -279,7 +283,7 @@ class OdomProvider:
         pose : PoseWithCovariance
             The pose data containing position and orientation.
         """
-        while True:
+        while not self._stop_event.is_set():
             try:
                 pose_data = self.data_queue.get()
             except Exception as e:
@@ -320,7 +324,7 @@ class OdomProvider:
 
             delta = math.sqrt(dx + dy + dz)
 
-            # moving? Use a decay kernal
+            # moving? Use a decay kernel
             self.move_history = 0.7 * delta + 0.3 * self.move_history
 
             if delta > 0.01 or self.move_history > 0.01:
@@ -388,3 +392,18 @@ class OdomProvider:
             "odom_rockchip_ts": self.odom_rockchip_ts,
             "odom_subscriber_ts": self.odom_subscriber_ts,
         }
+
+    def stop(self):
+        """
+        Stop the OdomProvider and clean up resources.
+        """
+        self._stop_event.set()
+
+        if self._odom_reader_thread:
+            self._odom_reader_thread.terminate()
+            self._odom_reader_thread.join()
+            logging.info("OdomProvider reader thread stopped.")
+
+        if self._odom_processor_thread:
+            self._odom_processor_thread.join()
+            logging.info("OdomProvider processor thread stopped.")

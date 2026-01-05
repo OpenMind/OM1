@@ -13,11 +13,15 @@ rclpy.init()
 
 
 class ROS2PublisherProvider(Node):
+    """
+    Publisher provider for ROS 2.
+    """
+
     def __init__(self, topic: str = "speak_topic"):
         try:
             super().__init__("ROS2_publisher_provider")
         except Exception as e:
-            print(f"Node initialization error: {e}")
+            logging.error(f"Node initialization error: {e}")
 
         # Initialize the publisher.
         try:
@@ -33,7 +37,14 @@ class ROS2PublisherProvider(Node):
         self._thread: Optional[threading.Thread] = None
 
     def add_pending_message(self, text: str):
-        """Queue a message to be published."""
+        """
+        Queue a message to be published.
+
+        Parameters
+        ----------
+        text : str
+            The text message to publish.
+        """
         try:
             msg = String()
             # Append a timestamp to the message text.
@@ -44,7 +55,14 @@ class ROS2PublisherProvider(Node):
             logging.exception(f"Error adding pending message: {e}")
 
     def _publish_message(self, msg: String):
-        """Publish a single message and log the result."""
+        """
+        Publish a single message and log the result.
+
+        Parameters
+        ----------
+        msg : String
+            The ROS 2 String message to publish.
+        """
         try:
             self.publisher_.publish(msg)
             logging.info(f"Published message: {msg.data}")

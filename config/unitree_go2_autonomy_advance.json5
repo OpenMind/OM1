@@ -1,4 +1,5 @@
 {
+  "version": "v1.0.1",
   "hertz": 1,
   "unitree_ethernet": "eno1",
   "name": "bits",
@@ -15,9 +16,6 @@
   7. If a person says 'Navigate to a location' or 'take me to a location' ,example 'Navigate to the table' you should check if that location exists in your database and then start navigate_location.\n \
   8. Do not navigate_location If there is no 'Navigate to a location' or 'take me to a location' command given by the person",
   "agent_inputs": [
-    {
-      "type": "GoogleASRInput"
-    },
     {
       "type": "LocationsInput",
     },
@@ -53,7 +51,7 @@
     {
       "name": "navigate_location",
       "llm_label": "navigate_location",
-      "connector": "nav",
+      "connector": "unitree_go2_nav",
     },
     {
      "name": "speak",
@@ -61,8 +59,8 @@
       "connector": "elevenlabs_tts",
       "config": {
         "voice_id": "TbMNBJ27fH2U0VgpSNko",
-        "silence_rate": 6, // vocalize every 6th speech output
-      }
+        "silence_rate": 6,
+      },
     },
     {
       "name": "face",
@@ -72,7 +70,11 @@
   ],
   "backgrounds": [
     {
-      "type": "Avatar"
+      "type": "ElevenLabsTTS",
+      "config": {
+        "voice_id": "TbMNBJ27fH2U0VgpSNko",
+        "silence_rate": 6,
+      },
     },
     {
       "type": "UnitreeGo2State",
@@ -84,10 +86,7 @@
       "type": "UnitreeGo2Navigation",
     },
     {
-      "type": "UnitreeGo2Location",
-    },
-    {
-      "type": "Locations",
+      "type": "UnitreeGo2Locations",
     }
   ]
 }

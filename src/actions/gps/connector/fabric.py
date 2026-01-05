@@ -1,28 +1,59 @@
 import logging
 
 import requests
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.gps.interface import GPSAction, GPSInput
 from providers.io_provider import IOProvider
 
 
-class GPSFabricConnector(ActionConnector[GPSInput]):
+class GPSFabricConfig(ActionConfig):
+    """
+    Configuration for GPS Fabric connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters
+    ----------
+    fabric_endpoint : str
+        The endpoint URL for the Fabric network.
+    """
+
+    fabric_endpoint: str = Field(
+        default="http://localhost:8545",
+        description="The endpoint URL for the Fabric network.",
+    )
+
+
+class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
+    """
+    Connector that shares GPS coordinates via a Fabric network.
+    """
+
+    def __init__(self, config: GPSFabricConfig):
+        """
+        Initialize the GPSFabricConnector.
+
+        Parameters
+        ----------
+        config : GPSFabricConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
         # Set IO Provider
         self.io_provider = IOProvider()
 
         # Set fabric endpoint configuration
-        self.fabric_endpoint = getattr(
-            self.config, "fabric_endpoint", "http://localhost:8545"
-        )
+        self.fabric_endpoint = self.config.fabric_endpoint
 
     async def connect(self, output_interface: GPSInput) -> None:
         """
         Connect to the Fabric network and send GPS coordinates.
+
+        Parameters
+        ----------
+        output_interface : GPSInput
+            The GPS input containing the action to be performed.
         """
         logging.info(f"GPSFabricConnector: {output_interface.action}")
 

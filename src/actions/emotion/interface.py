@@ -5,6 +5,10 @@ from actions.base import Interface
 
 
 class EmotionAction(str, Enum):
+    """
+    Enumeration of possible emotions.
+    """
+
     HAPPY = "happy"
     SAD = "sad"
     MAD = "mad"
@@ -13,6 +17,10 @@ class EmotionAction(str, Enum):
 
 @dataclass
 class EmotionInput:
+    """
+    Input interface for the Emotion action.
+    """
+
     action: EmotionAction
 
 

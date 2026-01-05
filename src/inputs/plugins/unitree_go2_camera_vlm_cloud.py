@@ -2,23 +2,42 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_camera_vlm_provider import UnitreeCameraVLMProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+class UnitreeGo2CameraVLMCloudConfig(SensorConfig):
+    """
+    Configuration for Unitree Go2 Camera VLM Cloud input.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    base_url : str
+        Base URL for the VLM service.
+    stream_base_url : Optional[str]
+        Stream Base URL.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
 
 
-class UnitreeGo2CameraVLMCloud(FuserInput[str]):
+class UnitreeGo2CameraVLMCloud(
+    FuserInput[UnitreeGo2CameraVLMCloudConfig, Optional[str]]
+):
     """
     Unitree Go2 Air Camera VLM bridge.
 
@@ -26,7 +45,7 @@ class UnitreeGo2CameraVLMCloud(FuserInput[str]):
     converts the responses to text strings, and sends them to the fuser.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeGo2CameraVLMCloudConfig):
         """
         Initialize VLM input handler.
 
@@ -47,13 +66,12 @@ class UnitreeGo2CameraVLMCloud(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        stream_base_url = getattr(
-            self.config,
-            "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream?api_key={api_key}",
+        base_url = self.config.base_url
+        stream_base_url = (
+            self.config.stream_base_url
+            or f"wss://api.openmind.org/api/core/teleops/stream?api_key={api_key}"
         )
 
         self.vlm: UnitreeCameraVLMProvider = UnitreeCameraVLMProvider(
@@ -102,7 +120,7 @@ class UnitreeGo2CameraVLMCloud(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -111,14 +129,17 @@ class UnitreeGo2CameraVLMCloud(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

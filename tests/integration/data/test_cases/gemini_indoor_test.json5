@@ -1,5 +1,6 @@
 {
   // Test case metadata
+  "version": "v1.0.1",
   "name": "gemini_indoor_test",
   "description": "Test Gemini LLM and VLM in an indoor scene",
   "hertz": 1,

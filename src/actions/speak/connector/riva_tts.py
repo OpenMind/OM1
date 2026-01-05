@@ -1,6 +1,8 @@
 import logging
+from typing import Optional
 
 import zenoh
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
@@ -15,17 +17,57 @@ from zenoh_msgs import (
 )
 
 
-class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
+class SpeakRivaTTSConfig(ActionConfig):
+    """
+    Configuration for Riva TTS connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters
+    ----------
+    api_key : Optional[str]
+        OM API key.
+    microphone_device_id : Optional[int]
+        Microphone device ID.
+    microphone_name : Optional[str]
+        Microphone name.
+    """
+
+    api_key: Optional[str] = Field(
+        default=None,
+        description="OM API key",
+    )
+    microphone_device_id: Optional[int] = Field(
+        default=None,
+        description="Microphone device ID",
+    )
+    microphone_name: Optional[str] = Field(
+        default=None,
+        description="Microphone name",
+    )
+
+
+class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
+    """
+    A "Speak" connector that uses the RivaTTSProvider to perform Text-to-Speech.
+    This connector is compatible with the standard SpeakInput interface.
+    """
+
+    def __init__(self, config: SpeakRivaTTSConfig):
+        """
+        Initializes the connector and its underlying TTS provider.
+
+        Parameters
+        ----------
+        config : SpeakRivaTTSConfig
+            Configuration for the connector.
+        """
         super().__init__(config)
 
         # Get microphone and speaker device IDs and names
-        microphone_device_id = getattr(self.config, "microphone_device_id", None)
-        microphone_name = getattr(self.config, "microphone_name", None)
+        microphone_device_id = self.config.microphone_device_id
+        microphone_name = self.config.microphone_name
 
         # OM API key
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         # Zenoh topics
         self.tts_status_request_topic = "om/tts/request"
@@ -64,6 +106,14 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
         self.tts.start()
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        """
+        Process a speak action by sending text to Riva TTS.
+
+        Parameters
+        ----------
+        output_interface : SpeakInput
+            The SpeakInput interface containing the text to be spoken.
+        """
         # Check if TTS is enabled
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping speak action")
@@ -84,7 +134,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.info(f"Received TTS Control Status message: {tts_status}")
+        logging.debug(f"Received TTS Control Status message: {tts_status}")
 
         code = tts_status.code
         request_id = tts_status.request_id
@@ -106,7 +156,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
         # Enable the TTS
         if code == 1:
             self.tts_enabled = True
-            logging.info("TTS Enabled")
+            logging.debug("TTS Enabled")
 
             ai_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
@@ -121,7 +171,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakInput]):
         # Disable the TTS
         if code == 0:
             self.tts_enabled = False
-            logging.info("TTS Disabled")
+            logging.debug("TTS Disabled")
             ai_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,

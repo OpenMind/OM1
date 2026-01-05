@@ -2,6 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "required": [
+        "version",
         "hertz",
         "name",
         "api_key",
@@ -13,6 +14,7 @@
         "agent_actions"
     ],
     "properties": {
+        "version": {"type": "string"},
         "hertz": {"type": "number"},
         "name": {"type": "string"},
         "api_key": {"type": "string"},
@@ -83,6 +85,17 @@
                     "type": {"type": "string"},
                     "config": {"type": "object"}
                 }
+            }
+        },
+        "action_execution_mode": {
+            "type": "string",
+            "enum": ["concurrent", "sequential", "dependencies"]
+        },
+        "action_dependencies": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {"type": "string"}
             }
         }
     },

@@ -1,26 +1,39 @@
 import typing as T
 from dataclasses import dataclass
 
+from pydantic import BaseModel, ConfigDict
+
 R = T.TypeVar("R")
+ConfigType = T.TypeVar("ConfigType", bound="SensorConfig")
 
 
 @dataclass
-class SensorConfig:
+class Message:
     """
-    Configuration class for Sensor implementations.
+    Container for timestamped messages.
 
     Parameters
     ----------
-    **kwargs : dict
-        Additional configuration parameters
+    timestamp : float
+        Unix timestamp of the message
+    message : str
+        Content of the message
     """
 
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    timestamp: float
+    message: str
 
 
-class Sensor(T.Generic[R]):
+class SensorConfig(BaseModel):
+    """
+    Base configuration class for Inputs.
+
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+
+class Sensor(T.Generic[ConfigType, R]):
     """
     Base class for all sensors. Provides the interface for converting raw inputs
     into text format for processing by the fuser.
@@ -31,14 +44,14 @@ class Sensor(T.Generic[R]):
         The raw input type that this agent handles
     """
 
-    def __init__(self, config: SensorConfig):
+    def __init__(self, config: ConfigType):
         """
         Initialize an Sensor instance.
         """
         self.config = config
         pass
 
-    async def _raw_to_text(self, raw_input: R) -> str:
+    async def _raw_to_text(self, raw_input: R) -> T.Optional[Message]:
         """
         Convert raw input data into text format for processing.
 
@@ -49,8 +62,8 @@ class Sensor(T.Generic[R]):
 
         Returns
         -------
-        str
-            Text representation of the input
+        T.Optional[Message]
+            Message object containing the converted text
 
         Raises
         ------
