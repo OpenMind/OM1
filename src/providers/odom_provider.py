@@ -46,6 +46,10 @@ rad_to_deg = 57.2958
 
 
 class RobotState(Enum):
+    """
+    Enumeration for robot states.
+    """
+
     STANDING = "standing"
     SITTING = "sitting"
 

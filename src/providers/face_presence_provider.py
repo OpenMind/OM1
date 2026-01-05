@@ -11,7 +11,7 @@ from .singleton import singleton
 @dataclass
 class PresenceSnapshot:
     """
-    Canonical record returned by `/who`
+    Canonical record returned by `/who`.
 
     Attributes
     ----------
@@ -122,7 +122,6 @@ class FacePresenceProvider:
         timeout_s : float, default 2.0
             HTTP request timeout in seconds.
         """
-
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
         self.period = 1.0 / max(1e-6, float(fps))
@@ -172,7 +171,7 @@ class FacePresenceProvider:
                 pass
 
     def start(self) -> None:
-        """Start the background polling thread"""
+        """Start the background polling thread."""
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
@@ -182,7 +181,7 @@ class FacePresenceProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to strop"""
+        """Request the background thread to strop."""
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)
@@ -245,6 +244,7 @@ class FacePresenceProvider:
         ----------
         recent_sec : Optional[float]
             Lookback window in seconds (overrides self.recent_sec if given).
+
         Returns
         -------
         PresenceSnapshot

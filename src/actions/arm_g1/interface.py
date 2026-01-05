@@ -5,6 +5,10 @@ from actions.base import Interface
 
 
 class ArmAction(str, Enum):
+    """
+    Enumeration of possible arm actions.
+    """
+
     IDLE = "idle"
     LEFT_KISS = "left kiss"
     RIGHT_KISS = "right kiss"
@@ -17,6 +21,10 @@ class ArmAction(str, Enum):
 
 @dataclass
 class ArmInput:
+    """
+    Input interface for the Arm action.
+    """
+
     action: ArmAction
 
 
