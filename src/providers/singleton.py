@@ -1,4 +1,3 @@
-
 import threading
 from typing import Any, Type, TypeVar, cast
 
