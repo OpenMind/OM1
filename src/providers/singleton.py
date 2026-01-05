@@ -1,5 +1,5 @@
 import threading
-from typing import TypeVar, Type, Any, cast
+from typing import Any, Type, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -11,7 +11,6 @@ def singleton(cls: Type[T]) -> Type[T]:
     Ensures that only one instance of the decorated class is created.
     The class type is preserved for static type checkers (pyright, mypy).
     """
-
     _lock = threading.Lock()
     _instance: T | None = None
 
@@ -24,9 +23,11 @@ def singleton(cls: Type[T]) -> Type[T]:
                 if _instance is None:
                     _instance = cast(
                         T,
-                        original_new(inner_cls)
-                        if original_new is not object.__new__
-                        else object.__new__(inner_cls),
+                        (
+                            original_new(inner_cls)
+                            if original_new is not object.__new__
+                            else object.__new__(inner_cls)
+                        ),
                     )
         return _instance
 

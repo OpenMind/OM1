@@ -272,3 +272,20 @@ class ConfigProvider:
         except Exception as e:
             logging.error(f"Failed to read config file {self.config_path}: {e}")
             return {}
+
+    def stop(self) -> None:
+        """
+        Stop the ConfigProvider and close the Zenoh session.
+
+        This method is safe to call multiple times.
+        """
+        if not self.running:
+            logging.info("ConfigProvider is not running")
+            return
+
+        self.running = False
+
+        if self.session:
+            self.session.close()
+
+        logging.info("ConfigProvider stopped and Zenoh session closed")
