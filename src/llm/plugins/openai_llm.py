@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -24,8 +25,7 @@ class OpenAILLM(LLM[R]):
     Parameters
     ----------
     config : LLMConfig
-        Configuration object containing API settings. If not provided, defaults
-        will be used.
+        Configuration object containing API settings.
     available_actions : list[AgentAction], optional
         List of available actions for function call generation. If provided,
         the LLM will use function calls instead of structured JSON output.
@@ -33,7 +33,7 @@ class OpenAILLM(LLM[R]):
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -41,7 +41,7 @@ class OpenAILLM(LLM[R]):
 
         Parameters
         ----------
-        config : LLMConfig, optional
+        config : OpenAILLMConfig, optional
             Configuration settings for the LLM.
         available_actions : list[AgentAction], optional
             List of available actions for function calling.
@@ -61,10 +61,11 @@ class OpenAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
+    @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
-    ) -> R | None:
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the OpenAI API and get a structured response.
 
@@ -82,8 +83,8 @@ class OpenAILLM(LLM[R]):
             parsing fails.
         """
         try:
-            logging.info(f"OpenAI LLM input: {prompt}")
-            logging.debug(f"OpenAI LLM messages: {messages}")
+            logging.info(f"OpenAI input: {prompt}")
+            logging.info(f"OpenAI messages: {messages}")
 
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
@@ -122,7 +123,6 @@ class OpenAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None

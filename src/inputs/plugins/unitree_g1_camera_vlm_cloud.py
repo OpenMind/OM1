@@ -2,23 +2,34 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_realsense_dev_vlm_provider import UnitreeRealSenseDevVLMProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+class UnitreeG1CameraVLMCloudConfig(SensorConfig):
+    """
+    Configuration for Unitree G1 Camera VLM Cloud Sensor.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the VLM service.
+    """
+
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
 
 
-class UnitreeG1CameraVLMCloud(FuserInput[str]):
+class UnitreeG1CameraVLMCloud(FuserInput[UnitreeG1CameraVLMCloudConfig, Optional[str]]):
     """
     Unitree G1 Camera VLM bridge.
 
@@ -26,7 +37,7 @@ class UnitreeG1CameraVLMCloud(FuserInput[str]):
     converts the responses to text strings, and sends them to the fuser.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeG1CameraVLMCloudConfig):
         """
         Initialize VLM input handler.
 
@@ -47,7 +58,7 @@ class UnitreeG1CameraVLMCloud(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
+        base_url = self.config.base_url
         self.vlm: UnitreeRealSenseDevVLMProvider = UnitreeRealSenseDevVLMProvider(
             ws_url=base_url
         )
@@ -94,7 +105,7 @@ class UnitreeG1CameraVLMCloud(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -103,14 +114,17 @@ class UnitreeG1CameraVLMCloud(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
@@ -154,7 +168,7 @@ class UnitreeG1CameraVLMCloud(FuserInput[str]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

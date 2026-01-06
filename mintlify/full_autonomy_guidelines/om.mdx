@@ -4,7 +4,9 @@ description: "OM1"
 ---
 
 OM1 is the core agentic software that enables autonomous decision-making and control for your robot. It runs as a dedicated Docker image, making deployment and integration straightforward.
-Full autonomy is currently supported for Go2.
+Full autonomy is currently supported for Unitree Go2 and G1.
+
+Note : Run OM1 via `uv run src/run.py config` for development purposes and keep the Docker container disabled.
 
 ## Get started
 
@@ -39,8 +41,8 @@ vim config/unitree_go2_autonomy_advance.json5
 
 For Bash: vim ~/.bashrc or ~/.bash_profile.
 
-Add 
-```bash 
+Add
+```bash
 export OM_API_KEY="your_api_key"
 ```
 
@@ -56,7 +58,7 @@ command: ["unitree_go2_autonomy_advance"]
 The OM1 service is provided as a Docker image for easy setup:
 ```bash
 cd OM1
-docker-compose up om1 -d --no-build
+docker compose up om1 -d --no-build
 ```
 
 This image contains all necessary dependencies and configuration for running OM1.

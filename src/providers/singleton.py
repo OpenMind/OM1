@@ -13,11 +13,12 @@ def singleton(cls):
     Args:
         cls: The class to be converted into a singleton.
 
-    Returns:
+    Returns
+    -------
         function: A getter function that returns the singleton instance.
     """
-    if not hasattr(singleton, "instances"):
-        singleton.instances = {}
+    if not hasattr(cls, "_singleton_instance"):
+        cls._singleton_instance = None
     lock = threading.Lock()
 
     def get_instance(*args, **kwargs) -> Any:
@@ -31,12 +32,26 @@ def singleton(cls):
             *args: Positional arguments to pass to the class constructor.
             **kwargs: Keyword arguments to pass to the class constructor.
 
-        Returns:
+        Returns
+        -------
             Any: The singleton instance of the decorated class.
         """
         with lock:
-            if cls not in singleton.instances:
-                singleton.instances[cls] = cls(*args, **kwargs)
-            return singleton.instances[cls]
+            if cls._singleton_instance is None:
+                cls._singleton_instance = cls(*args, **kwargs)
+            return cls._singleton_instance
+
+    def reset_instance():
+        """
+        Resets the singleton instance of the decorated class.
+
+        This method sets the singleton instance to None, allowing a new instance
+        to be created on the next call to get_instance.
+        """
+        with lock:
+            cls._singleton_instance = None
+
+    get_instance._singleton_class = cls  # type: ignore
+    get_instance.reset = reset_instance  # type: ignore
 
     return get_instance

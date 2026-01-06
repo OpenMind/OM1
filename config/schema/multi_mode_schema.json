@@ -2,6 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "required": [
+        "version",
         "default_mode",
         "api_key",
         "system_governance",
@@ -9,20 +10,22 @@
         "modes"
     ],
     "properties": {
-        "default_mode": {"type": "string"},
-        "allow_manual_switching": {"type": "boolean"},
-        "mode_memory_enabled": {"type": "boolean"},
-        "api_key": {"type": "string"},
-        "URID": {"type": "string"},
-        "unitree_ethernet": {"type": "string"},
-        "system_governance": {"type": "string"},
+        "version": {"type": "string", "description": "The version of the configuration schema."},
+        "default_mode": {"type": "string", "description": "The mode to initialize on startup."},
+        "allow_manual_switching": {"type": "boolean", "description": "Whether the user can manually switch modes."},
+        "mode_memory_enabled": {"type": "boolean", "description": "Whether to persist mode state across sessions."},
+        "api_key": {"type": "string", "description": "API key for the OM1 system."},
+        "uritree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
+        "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
         "cortex_llm": {
             "type": "object",
+            "description": "Configuration for the Cortex Large Language Model used by the system.",
             "required": ["type"],
             "properties": {
-                "type": {"type": "string"},
+                "type": {"type": "string", "description": "The type or provider of the LLM."},
                 "config": {
                     "type": "object",
+                    "description": "Specific configuration parameters for the chosen LLM.",
                     "properties": {
                         "agent_name": {"type": "string"},
                         "history_length": {"type": "integer"}
@@ -32,6 +35,7 @@
         },
         "global_lifecycle_hooks": {
             "type": "array",
+            "description": "Hooks that execute during global system lifecycle events.",
             "items": {
                 "type": "object",
                 "required": ["hook_type", "handler_type", "handler_config"],
@@ -65,25 +69,28 @@
         },
         "modes": {
             "type": "object",
+            "description": "Definitions for the various operational modes of the system.",
             "patternProperties": {
                 "^[a-zA-Z_][a-zA-Z0-9_]*$": {
                     "type": "object",
                     "required": ["display_name", "description", "system_prompt_base", "hertz", "agent_inputs", "agent_actions"],
                     "properties": {
-                        "display_name": {"type": "string"},
-                        "description": {"type": "string"},
-                        "system_prompt_base": {"type": "string"},
-                        "hertz": {"type": "number"},
+                        "display_name": {"type": "string", "description": "Human-readable name for the mode."},
+                        "description": {"type": "string", "description": "Description of the mode's purpose and behavior."},
+                        "system_prompt_base": {"type": "string", "description": "The base system prompt used for the LLM in this mode."},
+                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs."},
                         "timeout_seconds": {"type": "number"},
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
                         "cortex_llm": {
                             "type": "object",
+                            "description": "Mode-specific Cortex LLM configuration.",
                             "required": ["type"],
                             "properties": {
-                                "type": {"type": "string"},
+                                "type": {"type": "string", "description": "The type or provider of the LLM."},
                                 "config": {
                                     "type": "object",
+                                    "description": "Specific configuration parameters for the chosen LLM.",
                                     "properties": {
                                         "agent_name": {"type": "string"},
                                         "history_length": {"type": "integer"}
@@ -151,31 +158,58 @@
                                     }
                                 }
                             }
+                        },
+                        "action_execution_mode": {
+                            "type": "string",
+                            "enum": ["concurrent", "sequential", "dependencies"]
+                        },
+                        "action_dependencies": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            }
                         }
-                    },
-                    "additionalProperties": true
-                }
+                    }
             },
             "additionalProperties": false
         },
         "transition_rules": {
             "type": "array",
+            "description": "Rules defining how and when the system transitions between modes.",
             "items": {
                 "type": "object",
-                "required": ["from_mode", "to_mode", "transition_type", "trigger_keywords", "priority"],
+                "required": ["from_mode", "to_mode", "transition_type", "priority"],
                 "properties": {
                     "from_mode": {"type": "string"},
                     "to_mode": {"type": "string"},
-                    "transition_type": {"type": "string"},
+                    "transition_type": {
+                        "type": "string",
+                        "enum": ["input_triggered", "time_based", "context_aware"]
+                    },
                     "trigger_keywords": {
                         "type": "array",
                         "items": {"type": "string"}
                     },
                     "priority": {"type": "integer"},
-                    "cooldown_seconds": {"type": "number"}
+                    "cooldown_seconds": {"type": "number"},
+                    "context_conditions": {
+                        "type": "object",
+                        "description": "Conditions that must be met in the user context for this transition to trigger. Values can be strings, numbers, booleans, arrays, or objects with operators like 'min', 'max', 'contains', 'one_of', 'not'",
+                        "additionalProperties": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "number"},
+                                {"type": "boolean"},
+                                {"type": "array"},
+                                {"type": "object"}
+                            ]
+                        }
+                    }
                 }
             }
         }
     },
-    "additionalProperties": true
+    "additionalProperties": false
+}
 }

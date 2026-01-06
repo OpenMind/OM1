@@ -10,7 +10,7 @@ from .singleton import singleton
 @dataclass
 class Input:
     """
-    A dataclass representing an input with an optional timestamp.
+    A dataclass representing an input with optional timestamp and tick counter.
 
     Parameters
     ----------
@@ -18,10 +18,13 @@ class Input:
         The input value.
     timestamp : float, optional
         The timestamp associated with the input (default is None).
+    tick : int, optional
+        The tick counter when this input was added (default is None).
     """
 
     input: str
     timestamp: Optional[float] = None
+    tick: Optional[int] = None
 
 
 @singleton
@@ -39,8 +42,7 @@ class IOProvider:
         """
         self._lock: threading.Lock = threading.Lock()
 
-        self._inputs: Dict[str, str] = {}
-        self._input_timestamps: Dict[str, float] = {}
+        self._inputs: Dict[str, Input] = {}
 
         self._fuser_system_prompt: Optional[str] = None
         self._fuser_inputs: Optional[str] = None
@@ -57,10 +59,13 @@ class IOProvider:
         # Additional variables storage
         self._variables: Dict[str, Any] = {}
 
+        # Tick counter for tracking system cycles
+        self._tick_counter: int = 0
+
     @property
     def inputs(self) -> Dict[str, Input]:
         """
-        Get all inputs with their timestamps.
+        Get all inputs with their timestamps and tick counters.
 
         Returns
         -------
@@ -68,18 +73,11 @@ class IOProvider:
             Dictionary mapping input keys to Input objects.
         """
         with self._lock:
-            result = {}
-            for name, value in self._inputs.items():
-                timestamp = self._input_timestamps.get(name)
-                if timestamp is not None:
-                    result[name] = Input(input=value, timestamp=timestamp)
-                else:
-                    result[name] = Input(input=value)
-            return result
+            return dict(self._inputs)
 
     def add_input(self, key: str, value: str, timestamp: Optional[float]) -> None:
         """
-        Add an input with optional timestamp.
+        Add an input with optional timestamp and automatic tick tracking.
 
         Parameters
         ----------
@@ -91,15 +89,14 @@ class IOProvider:
             The timestamp for the input.
         """
         with self._lock:
-            self._inputs[key] = value
-            if timestamp is not None:
-                self._input_timestamps[key] = timestamp
-            else:
-                self._input_timestamps[key] = time.time()
+            ts = timestamp if timestamp is not None else time.time()
+            self._inputs[key] = Input(
+                input=value, timestamp=ts, tick=self._tick_counter
+            )
 
     def remove_input(self, key: str) -> None:
         """
-        Remove an input and its timestamp.
+        Remove an input and its associated metadata.
 
         Parameters
         ----------
@@ -108,7 +105,6 @@ class IOProvider:
         """
         with self._lock:
             self._inputs.pop(key, None)
-            self._input_timestamps.pop(key, None)
 
     def add_input_timestamp(self, key: str, timestamp: float) -> None:
         """
@@ -122,7 +118,13 @@ class IOProvider:
             The timestamp to add.
         """
         with self._lock:
-            self._input_timestamps[key] = timestamp
+            if key in self._inputs:
+                existing_input = self._inputs[key]
+                self._inputs[key] = Input(
+                    input=existing_input.input,
+                    timestamp=timestamp,
+                    tick=existing_input.tick,
+                )
 
     def get_input_timestamp(self, key: str) -> Optional[float]:
         """
@@ -139,7 +141,8 @@ class IOProvider:
             The timestamp if it exists, None otherwise.
         """
         with self._lock:
-            return self._input_timestamps.get(key)
+            input_obj = self._inputs.get(key)
+            return input_obj.timestamp if input_obj else None
 
     @property
     def fuser_system_prompt(self) -> Optional[str]:
@@ -198,7 +201,7 @@ class IOProvider:
     @fuser_available_actions.setter
     def fuser_available_actions(self, value: Optional[str]) -> None:
         """
-        set the fuser available actions.
+        Set the fuser available actions.
         """
         with self._lock:
             self._fuser_available_actions = value
@@ -408,3 +411,36 @@ class IOProvider:
         """
         with self._lock:
             self._mode_transition_input = None
+
+    @property
+    def tick_counter(self) -> int:
+        """
+        Get the current tick counter value.
+
+        Returns
+        -------
+        int
+            The current tick counter value.
+        """
+        with self._lock:
+            return self._tick_counter
+
+    def increment_tick(self) -> int:
+        """
+        Increment the tick counter and return the new value.
+
+        Returns
+        -------
+        int
+            The new tick counter value after incrementing.
+        """
+        with self._lock:
+            self._tick_counter += 1
+            return self._tick_counter
+
+    def reset_tick_counter(self) -> None:
+        """
+        Reset the tick counter to zero.
+        """
+        with self._lock:
+            self._tick_counter = 0

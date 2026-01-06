@@ -172,7 +172,7 @@ class Custom:
 
         """
         The x,y,z data are a spatial map composed of about 1435 points
-        Each point is a LIDAR return from a particular place in the space around the sensor. 
+        Each point is a LIDAR return from a particular place in the space around the sensor.
         The data are already correctly compensated for the angle/orientatiuon of the sensor
         Occasionally, there are significant data glitches
         """

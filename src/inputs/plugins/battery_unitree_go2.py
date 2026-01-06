@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
 
@@ -17,21 +18,36 @@ except ImportError:
     )
 
     class ChannelSubscriber:
+        """
+        Placeholder for ChannelSubscriber when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
     class LowState_:
+        """
+        Placeholder for LowState_ when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+class UnitreeGo2BatteryConfig(SensorConfig):
+    """
+    Configuration for Unitree Go2 Battery Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
 
 
-class UnitreeGo2Battery(FuserInput[str]):
+class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
     """
     Unitree Go2 Lowstate bridge.
 
@@ -43,13 +59,13 @@ class UnitreeGo2Battery(FuserInput[str]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeGo2BatteryConfig):
         """
         Initialize Unitree bridge with empty message buffer.
         """
         super().__init__(config)
 
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()
@@ -131,7 +147,6 @@ class UnitreeGo2Battery(FuserInput[str]):
         List[float]
             list of floats
         """
-
         await asyncio.sleep(2.0)
         await self.report_status()
 
@@ -156,10 +171,9 @@ class UnitreeGo2Battery(FuserInput[str]):
 
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped message containing description
         """
-
         battery_percentage = raw_input[0]
         logging.debug(f"Battery percentage: {battery_percentage}")
 

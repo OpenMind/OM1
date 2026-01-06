@@ -5,9 +5,20 @@ from actions.base import ActionConfig, ActionConnector
 from unitree.unitree_sdk2py.g1.arm.g1_arm_action_client import G1ArmActionClient
 
 
-class ARMUnitreeSDKConnector(ActionConnector[ArmInput]):
+class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
+    """
+    Connector that interacts with the G1 Arm Action Client to perform arm actions.
+    """
 
     def __init__(self, config: ActionConfig):
+        """
+        Initialize the ARMUnitreeSDKConnector.
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
         try:
@@ -21,6 +32,11 @@ class ARMUnitreeSDKConnector(ActionConnector[ArmInput]):
     async def connect(self, output_interface: ArmInput) -> None:
         """
         Connects to the G1 Arm Action Client and executes the specified action.
+
+        Parameters
+        ----------
+        output_interface : ArmInput
+            The output interface containing the arm action command.
         """
         logging.info(f"AI command.action: {output_interface.action}")
 
