@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+import signal
+import sys
 from typing import List, Optional, Union
 
 import json5
@@ -10,6 +12,7 @@ from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
+from providers.conversation_history_provider import ConversationHistoryProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.single_mode.config import RuntimeConfig, load_config
@@ -72,6 +75,10 @@ class CortexRuntime:
         self.background_orchestrator = BackgroundOrchestrator(config)
         self.sleep_ticker_provider = SleepTickerProvider()
         self.io_provider = IOProvider()
+        self.conversation_history = ConversationHistoryProvider(
+            enable_auto_save=True, auto_save_interval=10
+        )
+        self._register_shutdown_handlers()
         self.config_provider = ConfigProvider()
 
         self.last_modified: float = 0.0
@@ -88,8 +95,29 @@ class CortexRuntime:
             self.config_path = self._create_runtime_config_file()
             self.last_modified = self._get_file_mtime()
             logging.info(
-                f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
+                f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {self.check_interval}s)"
             )
+
+    def _register_shutdown_handlers(self) -> None:
+        """
+        Register signal handlers to save conversation history on shutdown.
+
+        This ensures that conversation history is saved when the process
+        receives SIGINT (Ctrl+C) or SIGTERM (kill) signals.
+
+        Returns
+        -------
+        None
+        """
+
+        def shutdown_handler(signum, frame):
+            logging.info("Shutdown signal received, saving conversation history...")
+            self.conversation_history.force_save()
+            logging.info("Conversation history saved successfully")
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, shutdown_handler)
+        signal.signal(signal.SIGTERM, shutdown_handler)
 
     def _get_runtime_config_path(self) -> str:
         """
@@ -496,12 +524,21 @@ class CortexRuntime:
 
             # combine those inputs into a suitable prompt
             prompt = self.fuser.fuse(self.config.agent_inputs, finished_promises)
+
+            # Record the prompt for conversation history
+            self.conversation_history.record_prompt(tick=tick_num, prompt=prompt)
             if prompt is None:
                 logging.debug("No prompt to fuse")
                 return
 
             # if there is a prompt, send to the AIs
             output = await self.config.cortex_llm.ask(prompt)
+
+            # Record the output for conversation history
+            if output is not None:
+                self.conversation_history.record_output(
+                    tick=tick_num, output=output.raw
+                )
             if output is None:
                 logging.debug("No output from LLM")
                 return
