@@ -387,7 +387,7 @@ class ModeCortexRuntime:
         None
         """
 
-        def shutdown_handler(signum, frame):
+        def shutdown_handler(_signum, frame):
             logging.info("Shutdown signal received, saving conversation history...")
             self.conversation_history.force_save()
             logging.info("Conversation history saved successfully")
@@ -546,7 +546,7 @@ class ModeCortexRuntime:
         prompt = self.fuser.fuse(self.current_config.agent_inputs, finished_promises)
 
         # Record the prompt for conversation history WITH MODE
-        current_mode = self.mode_manager.get_current_mode_name()
+        current_mode = self.mode_manager.current_mode_name
         self.conversation_history.record_prompt(
             tick=tick_num, prompt=prompt, mode=current_mode
         )

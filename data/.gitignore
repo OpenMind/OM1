@@ -1,0 +1,11 @@
+# Ignore all JSON files (conversation history)
+*.json
+
+# Ignore corrupted backups
+*.corrupted.*
+
+# Ignore temporary files
+*.tmp
+
+# But keep the directory structure
+!.gitignore

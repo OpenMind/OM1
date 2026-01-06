@@ -110,7 +110,7 @@ class CortexRuntime:
         None
         """
 
-        def shutdown_handler(signum, frame):
+        def shutdown_handler(_signum, frame):
             logging.info("Shutdown signal received, saving conversation history...")
             self.conversation_history.force_save()
             logging.info("Conversation history saved successfully")

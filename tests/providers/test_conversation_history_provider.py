@@ -30,33 +30,33 @@ def temp_file():
 def provider(temp_file):
     """Create a fresh provider instance for each test."""
     # Reset singleton
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
     provider = ConversationHistoryProvider(
         filepath=temp_file, enable_auto_save=False, auto_save_interval=5
     )
     yield provider
     provider.clear(delete_file=True)
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
 
 
 def test_provider_initialization(temp_file):
     """Test that provider initializes correctly."""
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
     provider = ConversationHistoryProvider(filepath=temp_file)
     assert provider._filepath == temp_file
     assert provider._enable_auto_save is True
     assert provider._auto_save_interval == 10
     assert len(provider.get_history()) == 0
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
 
 
 def test_singleton_behavior(temp_file):
     """Test that provider follows singleton pattern."""
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
     provider1 = ConversationHistoryProvider(filepath=temp_file)
     provider2 = ConversationHistoryProvider()
     assert provider1 is provider2
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
 
 
 def test_record_prompt(provider):
@@ -138,7 +138,7 @@ def test_load_from_disk(provider, temp_file):
 
 def test_auto_save(temp_file):
     """Test that auto-save triggers after threshold."""
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
     provider = ConversationHistoryProvider(
         filepath=temp_file, enable_auto_save=True, auto_save_interval=3
     )
@@ -157,7 +157,7 @@ def test_auto_save(temp_file):
         data = json.load(f)
     assert len(data["entries"]) == 3
 
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
 
 
 def test_corrupted_file_handling(provider, temp_file):
@@ -320,18 +320,18 @@ def test_version_mismatch_warning(provider, temp_file, caplog):
 def test_persistence_across_restarts(temp_file):
     """Test that data persists across provider restarts."""
     # First session
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
     provider1 = ConversationHistoryProvider(filepath=temp_file, enable_auto_save=True)
     provider1.record_prompt(tick=1, prompt="Session 1")
     provider1.force_save()
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
 
     # Second session (simulated restart)
     provider2 = ConversationHistoryProvider(filepath=temp_file, enable_auto_save=True)
     entry = provider2.get_entry(1)
     assert entry is not None
     assert entry.prompt == "Session 1"
-    ConversationHistoryProvider.reset()
+    ConversationHistoryProvider.reset()  # type: ignore[attr-defined]
 
 
 def test_output_without_prompt(provider):
