@@ -42,7 +42,7 @@ class BackgroundOrchestrator:
         self._submitted_backgrounds = set()
         self._stop_event = threading.Event()
 
-    def start(self):
+    def start(self) -> asyncio.Future:
         """
         Start background tasks in separate threads.
 
