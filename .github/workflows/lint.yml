@@ -1,58 +1,3 @@
-name: Run Lint
-
-on:
-  push:
-    branches:
-      - 'main'
-  pull_request:
-    branches:
-      - '**'
-
-jobs:
-  lint-and-test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y portaudio19-dev python3-pyaudio cmake
-
-      - name: Cache CycloneDDS build
-        uses: actions/cache@v4
-        with:
-          path: /tmp/cyclonedds/cyclonedds/install
-          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/lint.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-cyclonedds-0.10.x-
-
-      - name: Install cycloneDDS
-        run: |
-          if [ ! -d "/tmp/cyclonedds/cyclonedds/install" ]; then
-            echo "Building CycloneDDS from source..."
-            mkdir -p /tmp/cyclonedds
-            cd /tmp/cyclonedds
-            git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
-            cd cyclonedds && mkdir build install && cd build
-            cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON
-            cmake --build . --target install
-          else
-            echo "Using cached CycloneDDS installation"
-          fi
-          echo "CYCLONEDDS_HOME=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
-          echo "/tmp/cyclonedds/cyclonedds/install/lib" >> $GITHUB_PATH
-          echo "CMAKE_PREFIX_PATH=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
-
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
@@ -71,25 +16,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-
 
-      - name: Run ruff
-        run: uv run ruff check .
-
-      - name: Run black
-        run: uv run black --check .
-
-      - name: Run isort
-        run: uv run isort --check-only .
-
-      - name: Run pyright
-        run: uv run pyright --project ./pyrightconfig.json
-
-      - name: Run vulture
-        run: uv run vulture src/
-
       - name: Install pre-commit
-        run: pip install pre-commit
+        run: uv run pip install pre-commit
 
       - name: Run pre-commit hooks
-        id: pre-commit
-        run: |
-          pre-commit run --all-files --show-diff-on-failure
+        run: pre-commit run --all-files --show-diff-on-failure
