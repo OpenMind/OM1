@@ -86,6 +86,9 @@ class UbtechVLMProvider:
         logging.info("Ubtech VLM provider started")
 
     def stop(self):
+        """
+        Stop the Ubtech VLM provider.
+        """
         self.running = False
         self.video_stream.stop()
         self.ws_client.stop()

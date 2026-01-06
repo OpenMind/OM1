@@ -72,7 +72,7 @@ class DualLLM(LLM[R]):
     Dual LLM that races local and cloud LLMs with three selection rules:
     1. Both in time → pick one with function calls, or evaluate quality if both have
     2. One in time → use it
-    3. Neither in time → use first to complete
+    3. Neither in time → use first to complete.
 
     Config example:
         "cortex_llm": {

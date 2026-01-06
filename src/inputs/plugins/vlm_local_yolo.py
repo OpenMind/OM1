@@ -43,7 +43,22 @@ RESOLUTIONS = [
 ]
 
 
-def set_best_resolution(cap, resolutions):
+def set_best_resolution(cap: cv2.VideoCapture, resolutions: List[tuple]) -> tuple:
+    """
+    Attempts to set the camera to the best available resolution from the provided list.
+
+    Parameters
+    ----------
+    cap : cv2.VideoCapture
+        The OpenCV VideoCapture object.
+    resolutions : List[tuple]
+        List of (width, height) tuples to try.
+
+    Returns
+    -------
+    tuple
+        The (width, height) of the successfully set resolution.
+    """
     for width, height in resolutions:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -82,7 +97,9 @@ def check_webcam(index_to_check):
 
 
 class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
-    """ """
+    """
+    VLM Input Handler using Local YOLO Model.
+    """
 
     def __init__(self, config: VLM_Local_YOLOConfig):
         """
@@ -257,10 +274,10 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
         creates a new file with a timestamp.
 
-        Parameters:
+        Parameters
+        ----------
         - data: Dictionary to write
         """
-
         if not isinstance(json_line, str):
             raise ValueError("Provided json_line must be a json string.")
 
@@ -290,7 +307,6 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         Message
             Timestamped message containing description
         """
-
         detections = raw_input
 
         if detections:
