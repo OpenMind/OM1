@@ -1,26 +1,24 @@
 {
-  "version": "v1.0.1",
-  "hertz": 1,
-  "name": "spot_background",
-  "api_key": "openmind_free",
-  "URID": "om1_qwertyui",
-  "system_prompt_base": "You are a smart, curious, and friendly dog.",
-  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
-  "system_prompt_examples": "",
-  "agent_inputs": [
-  ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Spot",
-      "history_length": 0
-    }
+  version: "v1.0.1",
+  hertz: 1,
+  name: "spot_background",
+  api_key: "openmind_free",
+  URID: "om1_qwertyui",
+  system_prompt_base: "You are a smart, curious, and friendly dog.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "",
+  agent_inputs: [],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
-  ],
-  "backgrounds": [
+  agent_actions: [],
+  backgrounds: [
     {
-        "type": "RFmapper",
-    }
-  ]
+      type: "RFmapper",
+    },
+  ],
 }
