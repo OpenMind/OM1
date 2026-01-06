@@ -114,7 +114,7 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
 
     def listener_dock(self, sample: zenoh.Sample):
         """
-        Process docking status updates
+        Process docking status updates.
 
         Parameters
         ----------
@@ -150,7 +150,6 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
         -------
         List[str]
         """
-
         await asyncio.sleep(2.0)
         await self.report_status()
 

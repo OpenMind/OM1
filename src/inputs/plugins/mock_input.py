@@ -36,7 +36,7 @@ class MockSensorConfig(SensorConfig):
 
 class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
     """
-    This input can mock the behavior of any other input.
+    Mock Input Functionality.
     """
 
     def __init__(self, config: MockSensorConfig):
