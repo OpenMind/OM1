@@ -23,19 +23,18 @@ class GeminiLLM(LLM[R]):
     Parameters
     ----------
     config : LLMConfig
-        Configuration object containing API settings. If not provided, defaults
-        will be used.
+        Configuration object containing API settings.
     available_actions : list[AgentAction], optional
         List of available actions for function call generation. If provided.
     """
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
-        Initialize the DeepSeek LLM instance.
+        Initialize the Gemini LLM instance.
         """
         super().__init__(config, available_actions)
 
@@ -54,9 +53,11 @@ class GeminiLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(self, prompt: str, messages: T.List[T.Dict[str, str]]) -> R | None:
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
-        Execute LLM query and parse response
+        Execute LLM query and parse response.
 
         Parameters
         ----------

@@ -24,18 +24,18 @@ class SampleInterface(Interface[SampleInput, SampleOutput]):
 
 
 # Test implementation of ActionConnector
-class SampleConnector(ActionConnector[SampleOutput]):
+class SampleConnector(ActionConnector[ActionConfig, SampleOutput]):
     def __init__(self, config: ActionConfig):
         super().__init__(config)
         self.last_output: Optional[SampleOutput] = None
 
-    async def connect(self, input_protocol: SampleOutput) -> None:
-        self.last_output = input_protocol
+    async def connect(self, output_interface: SampleOutput) -> None:
+        self.last_output = output_interface
 
 
 @pytest.fixture
 def action_config():
-    return ActionConfig(param1="test_value", param2=123)
+    return ActionConfig()
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ def agent_action(test_connector):
 
 @pytest.mark.asyncio
 async def test_connector_connect():
-    config = ActionConfig(param1="test_value")
+    config = ActionConfig()
     connector = SampleConnector(config)
     test_output = SampleOutput(result="test_result")
 
@@ -76,14 +76,10 @@ async def test_full_action_flow(agent_action):
 
 
 def test_action_config():
-    config = ActionConfig(param1="value1", param2=123, param3=True)
+    config = ActionConfig()
 
-    assert hasattr(config, "param1")
-    assert config.param1 == "value1"  # type: ignore
-    assert hasattr(config, "param2")
-    assert config.param2 == 123  # type: ignore
-    assert hasattr(config, "param3")
-    assert config.param3 is True  # type: ignore
+    assert config is not None
+    assert isinstance(config, ActionConfig)
 
 
 def test_agent_action_structure(agent_action):

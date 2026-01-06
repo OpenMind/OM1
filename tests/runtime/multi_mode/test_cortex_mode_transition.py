@@ -163,11 +163,11 @@ def mock_mode_manager():
 
         input_lower = input_text.lower()
         if "emergency" in input_lower or "urgent" in input_lower:
-            return "emergency"
+            return ("emergency", "input_triggered")
         elif "advanced" in input_lower:
-            return "advanced"
+            return ("advanced", "input_triggered")
         elif "default" in input_lower or "normal" in input_lower:
-            return "default"
+            return ("default", "input_triggered")
         return None
 
     manager.process_tick = AsyncMock(side_effect=mock_process_tick)
@@ -464,6 +464,7 @@ async def test_handle_mode_transitions_processes_pending_transition(
     async def limited_handle_transitions():
         await runtime._mode_transition_event.wait()
 
+        success = False
         if runtime._pending_mode_transition:
             target_mode = runtime._pending_mode_transition
             runtime._pending_mode_transition = None
@@ -499,6 +500,7 @@ async def test_handle_mode_transitions_handles_failed_transition(
     async def limited_handle_transitions():
         await runtime._mode_transition_event.wait()
 
+        success = False
         if runtime._pending_mode_transition:
             target_mode = runtime._pending_mode_transition
             runtime._pending_mode_transition = None
@@ -512,6 +514,7 @@ async def test_handle_mode_transitions_handles_failed_transition(
 
     success = await limited_handle_transitions()
 
+    assert success is False
     assert success is False
     mocks["mode_manager"]._execute_transition.assert_called_once_with(
         "invalid_mode", "input_triggered"

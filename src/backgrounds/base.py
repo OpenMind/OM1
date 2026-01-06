@@ -1,32 +1,27 @@
 import time
-from dataclasses import dataclass
+import typing as T
+
+from pydantic import BaseModel, ConfigDict
+
+ConfigType = T.TypeVar("ConfigType", bound="BackgroundConfig")
 
 
-@dataclass
-class BackgroundConfig:
+class BackgroundConfig(BaseModel):
     """
-    Configuration class for Background implementations.
-
-    Parameters
-    ----------
-    **kwargs : dict
-        Additional configuration parameters
+    Base configuration class for Background implementations.
     """
 
-    def __init__(self, **kwargs):
-        # Store any config parameters
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    model_config = ConfigDict(extra="allow")
 
 
-class Background:
+class Background(T.Generic[ConfigType]):
     """
-    Base class for background components
+    Base class for background components.
     """
 
-    def __init__(self, config: BackgroundConfig):
+    def __init__(self, config: ConfigType):
         """
-        Initialize background with configuration
+        Initialize background with configuration.
 
         Parameters
         ----------

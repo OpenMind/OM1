@@ -2,40 +2,44 @@ import asyncio
 import logging
 import threading
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
 import websockets
+from pydantic import Field
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
+class MockSensorConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for Mock Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    input_name : str
+        Name of the input.
+    host : str
+        Host address for the WebSocket server.
+    port : int
+        Port number for the WebSocket server.
     """
 
-    timestamp: float
-    message: str
+    input_name: str = Field(default="Mock Input", description="Name of the input")
+    host: str = Field(
+        default="localhost", description="Host address for the WebSocket server"
+    )
+    port: int = Field(default=8765, description="Port number for the WebSocket server")
 
 
-class MockInput(FuserInput[str]):
+class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
     """
-    This input can mock the behavior of any other input.
+    Mock Input Functionality.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: MockSensorConfig):
         """
         Initialize ASRInput instance.
         """
@@ -45,15 +49,15 @@ class MockInput(FuserInput[str]):
         self.messages: List[Message] = []
 
         # Set IO Provider
-        self.descriptor_for_LLM = getattr(self.config, "input_name", "Mock Input")
+        self.descriptor_for_LLM = self.config.input_name
         self.io_provider = IOProvider()
 
         # Buffer for storing messages
         self.message_buffer: Queue[str] = Queue()
 
         # WebSocket configuration
-        self.host = getattr(self.config, "host", "localhost")
-        self.port = getattr(self.config, "port", 8765)
+        self.host = self.config.host
+        self.port = self.config.port
         self.server = None
         self.connected_clients = set()
         self.loop = None
@@ -154,7 +158,7 @@ class MockInput(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -163,14 +167,17 @@ class MockInput(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

@@ -1,12 +1,11 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 import requests
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
@@ -17,24 +16,7 @@ from providers.io_provider import IOProvider
 # interact with HOLESKY and decode the data, generating an ASCII string.
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class GovernanceEthereum(FuserInput[float]):
+class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
     """
     Ethereum ERC-7777 reader that tracks governance rules.
 
@@ -47,6 +29,9 @@ class GovernanceEthereum(FuserInput[float]):
     """
 
     def load_rules_from_blockchain(self):
+        """
+        Load governance rules from the Ethereum blockchain.
+        """
         logging.info("Loading rules from Ethereum blockchain")
 
         # Construct JSON-RPC request
@@ -121,7 +106,7 @@ class GovernanceEthereum(FuserInput[float]):
             logging.error(f"Decoding error: {e}")
             return None
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize GovernanceEthereum instance.
         """
@@ -133,7 +118,7 @@ class GovernanceEthereum(FuserInput[float]):
         self.POLL_INTERVAL = 5  # seconds
         self.rpc_url = "https://holesky.gateway.tenderly.co"  # Ethereum RPC URL
 
-        # The smart contract address of ther ERC-7777 Governance Smart Contract
+        # The smart contract address of the ERC-7777 Governance Smart Contract
         self.contract_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
 
         # getRuleSet() Function selector (first 4 bytes of Keccak hash).
@@ -151,7 +136,12 @@ class GovernanceEthereum(FuserInput[float]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for Ethereum Governance Law Changes
+        Poll for Ethereum Governance Law Changes.
+
+        Returns
+        -------
+        Optional[str]
+            Latest governance rules as a string, or None on error
         """
         await asyncio.sleep(self.POLL_INTERVAL)
 
@@ -162,21 +152,33 @@ class GovernanceEthereum(FuserInput[float]):
         except Exception as e:
             logging.error(f"Error fetching blockchain data: {e}")
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert self.universal_rule to a human-readable Message.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped status or transaction notification
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Process governance rule message buffer.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
         """
         pending_message = await self._raw_to_text(raw_input)
 

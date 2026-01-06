@@ -1,36 +1,44 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
 from openai.types.chat import ChatCompletion
+from pydantic import Field
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_gemini_provider import VLMGeminiProvider
 
 
-@dataclass
-class Message:
+class VLMGeminiConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for VLM Gemini Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    api_key : Optional[str]
+        API Key.
+    base_url : str
+        Base URL for the Gemini service.
+    stream_base_url : Optional[str]
+        Stream Base URL.
+    camera_index : int
+        Index of the camera device.
     """
 
-    timestamp: float
-    message: str
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    base_url: str = Field(
+        default="https://api.openmind.org/api/core/gemini",
+        description="Base URL for the Gemini service",
+    )
+    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
+    camera_index: int = Field(default=0, description="Index of the camera device")
 
 
-class VLMGemini(FuserInput[str]):
+class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
     """
     Vision Language Model input handler.
 
@@ -42,7 +50,7 @@ class VLMGemini(FuserInput[str]):
     and provides formatted output of the latest processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMGeminiConfig):
         """
         Initialize VLM input handler.
 
@@ -61,20 +69,17 @@ class VLMGemini(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         if api_key is None or api_key == "":
             raise ValueError("config file missing api_key")
 
-        base_url = getattr(
-            self.config, "base_url", "https://api.openmind.org/api/core/gemini"
+        base_url = self.config.base_url
+        stream_base_url = (
+            self.config.stream_base_url
+            or f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}"
         )
-        stream_base_url = getattr(
-            self.config,
-            "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}",
-        )
-        camera_index = getattr(self.config, "camera_index", 0)
+        camera_index = self.config.camera_index
 
         self.vlm: VLMGeminiProvider = VLMGeminiProvider(
             base_url=base_url,
@@ -125,7 +130,7 @@ class VLMGemini(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -134,14 +139,17 @@ class VLMGemini(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

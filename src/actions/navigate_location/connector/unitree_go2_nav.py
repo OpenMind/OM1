@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector
 from actions.navigate_location.interface import NavigateLocationInput
 from providers.io_provider import IOProvider
@@ -9,27 +11,55 @@ from providers.unitree_go2_navigation_provider import UnitreeGo2NavigationProvid
 from zenoh_msgs import Header, Point, Pose, PoseStamped, Quaternion, Time
 
 
-class UnitreeGo2NavConnector(ActionConnector[NavigateLocationInput]):
+class UnitreeGo2NavConfig(ActionConfig):
+    """
+    Configuration for Unitree Go2 Navigation connector.
+
+    Parameters
+    ----------
+    base_url : str
+        The base URL for the locations API.
+    timeout : int
+        Timeout for the HTTP requests in seconds.
+    refresh_interval : int
+        Interval to refresh the locations list in seconds.
+    """
+
+    base_url: str = Field(
+        default="http://localhost:5000/maps/locations/list",
+        description="The base URL for the locations API.",
+    )
+    timeout: int = Field(
+        default=5,
+        description="Timeout for the HTTP requests in seconds.",
+    )
+    refresh_interval: int = Field(
+        default=30,
+        description="Interval to refresh the locations list in seconds.",
+    )
+
+
+class UnitreeGo2NavConnector(
+    ActionConnector[UnitreeGo2NavConfig, NavigateLocationInput]
+):
     """
     Navigation/location connector for Unitree Go2 robots.
     """
 
-    def __init__(self, config: ActionConfig):
+    def __init__(self, config: UnitreeGo2NavConfig):
         """
         Initialize the UnitreeGo2NavConnector.
 
         Parameters
         ----------
-        config : ActionConfig
+        config : UnitreeGo2NavConfig
             Configuration for the action connector.
         """
         super().__init__(config)
 
-        base_url = getattr(
-            self.config, "base_url", "http://localhost:5000/maps/locations/list"
-        )
-        timeout = getattr(self.config, "timeout", 5)
-        refresh_interval = getattr(self.config, "refresh_interval", 30)
+        base_url = self.config.base_url
+        timeout = self.config.timeout
+        refresh_interval = self.config.refresh_interval
 
         self.location_provider = UnitreeGo2LocationsProvider(
             base_url, timeout, refresh_interval
@@ -40,16 +70,16 @@ class UnitreeGo2NavConnector(ActionConnector[NavigateLocationInput]):
             "[NavGo2Connector] Using UnitreeGo2 providers for locations and navigation."
         )
 
-    async def connect(self, input_protocol: NavigateLocationInput) -> None:
+    async def connect(self, output_interface: NavigateLocationInput) -> None:
         """
         Connect the input protocol to the navigate location action for Go2.
 
         Parameters
         ----------
-        input_protocol : NavigateLocationInput
+        output_interface : NavigateLocationInput
             The input protocol containing the action details.
         """
-        label = input_protocol.action.lower().strip()
+        label = output_interface.action.lower().strip()
         for prefix in [
             "go to the ",
             "go to ",
