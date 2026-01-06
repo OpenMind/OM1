@@ -33,6 +33,15 @@ class ActionOrchestrator:
     _completed_actions: T.Dict[str, asyncio.Event]
 
     def __init__(self, config: RuntimeConfig):
+        """
+        Initialize the ActionOrchestrator with runtime configuration.
+
+        Parameters
+        ----------
+        config : RuntimeConfig
+            Runtime configuration containing agent actions, execution mode,
+            and dependency information.
+        """
         self._config = config
         self.promise_queue = []
         self._connector_workers = (
@@ -40,6 +49,7 @@ class ActionOrchestrator:
         )
         self._connector_executor = ThreadPoolExecutor(
             max_workers=self._connector_workers,
+            thread_name_prefix="action-orchestrator-connector-",
         )
         self._submitted_connectors = set()
         self._stop_event = threading.Event()
@@ -47,9 +57,18 @@ class ActionOrchestrator:
         self._action_dependencies = config.action_dependencies or {}
         self._completed_actions = {}
 
-    def start(self):
+    def start(self) -> asyncio.Future:
         """
         Start actions and connectors in separate threads.
+
+        Submits each agent action's connector to the thread pool executor
+        for concurrent execution. Skips connectors that have already been
+        submitted to prevent duplicates.
+
+        Returns
+        -------
+        asyncio.Future
+            A future object for compatibility with async interfaces.
         """
         for agent_action in self._config.agent_actions:
             if agent_action.llm_label in self._submitted_connectors:
@@ -65,6 +84,14 @@ class ActionOrchestrator:
     def _run_connector_loop(self, action: AgentAction):
         """
         Thread-based connector loop.
+
+        Continuously calls the connector's tick() method in a loop until
+        the stop event is set. Handles exceptions gracefully with error logging.
+
+        Parameters
+        ----------
+        action : AgentAction
+            The agent action whose connector should be run in the loop.
         """
         while not self._stop_event.is_set():
             try:
