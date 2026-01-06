@@ -5,6 +5,10 @@ from actions.base import Interface
 
 @dataclass
 class EmergencyAlertInput:
+    """
+    Input interface for the EmergencyAlert action.
+    """
+
     action: str
 
 

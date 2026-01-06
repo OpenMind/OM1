@@ -19,7 +19,7 @@ class MoveUnitreeSDKConfig(ActionConfig):
     """
     Configuration for MoveUnitreeSDK connector.
 
-    Parameters:
+    Parameters
     ----------
     unitree_ethernet : str
         Ethernet channel for Unitree Go2 odometry.
@@ -159,8 +159,8 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
         """
         Move the robot with specified velocities.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         vx : float
             Linear velocity in the x direction (m/s).
         vy : float
@@ -421,13 +421,13 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
         """
         Normalize angle to [-180, 180] range.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         angle : float
             Angle in degrees to normalize.
 
-        Returns:
-        --------
+        Returns
+        -------
         float
             Normalized angle in degrees within the range [-180, 180].
         """
@@ -441,15 +441,15 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
         """
         Calculate shortest angular distance between two angles.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         current : float
             Current angle in degrees.
         target : float
             Target angle in degrees.
 
-        Returns:
-        --------
+        Returns
+        -------
         float
             Shortest angular distance in degrees, rounded to 2 decimal places.
         """
@@ -464,13 +464,13 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
         """
         Execute turn based on gap direction and lidar constraints.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         gap : float
             The angle gap in degrees to turn.
 
-        Returns:
-        --------
+        Returns
+        -------
         bool
             True if the turn was executed successfully, False if blocked by a barrier.
         """

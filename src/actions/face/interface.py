@@ -5,6 +5,10 @@ from actions.base import Interface
 
 
 class FaceAction(str, Enum):
+    """
+    Enumeration of possible facial expressions.
+    """
+
     HAPPY = "happy"
     CONFUSED = "confused"
     CURIOUS = "curious"
@@ -15,6 +19,10 @@ class FaceAction(str, Enum):
 
 @dataclass
 class FaceInput:
+    """
+    Input interface for the Face action.
+    """
+
     action: FaceAction
 
 

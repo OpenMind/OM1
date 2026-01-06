@@ -12,7 +12,7 @@ from providers.io_provider import IOProvider
 
 class SerialReader(FuserInput[SensorConfig, Optional[str]]):
     """
-    Reads data from serial port, typically from an Arduino
+    Reads data from serial port, typically from an Arduino.
 
     Maintains a buffer of messages.
     """
@@ -86,7 +86,7 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
-        Process raw string to higer level text description.
+        Process raw string to higher level text description.
 
         Parameters
         ----------
