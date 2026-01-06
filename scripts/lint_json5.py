@@ -1,10 +1,18 @@
+"""
+JSON5 linting script.
+
+This script validates all `.json5` files in the repository to ensure they
+are syntactically correct. It is intended to be used both locally and in CI.
+"""
+
 import sys
 from pathlib import Path
 
 import json5
 
 
-def main():
+def main() -> int:
+    """Validate all JSON5 files in the repository."""
     root = Path(".")
     json5_files = list(root.rglob("*.json5"))
 
@@ -18,10 +26,10 @@ def main():
         try:
             with file.open("r", encoding="utf-8") as f:
                 json5.load(f)
-        except Exception as e:
+        except Exception as exc:  # noqa: BLE001
             failed = True
             print(f"[ERROR] Invalid JSON5: {file}")
-            print(f"        {e}")
+            print(f"        {exc}")
 
     if failed:
         print("\nJSON5 linting failed.")
