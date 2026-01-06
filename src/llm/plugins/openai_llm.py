@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import typing as T
 
@@ -14,102 +15,115 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+def _flatten_content(x: T.Any) -> str:
+    if x is None:
+        return ""
+    if isinstance(x, str):
+        return x
+    if isinstance(x, dict):
+        return _flatten_content(x.get("content", ""))
+    if isinstance(x, list):
+        parts: T.List[str] = []
+        for item in x:
+            parts.append(_flatten_content(item))
+        return "\n".join([p for p in parts if p])
+    return str(x)
+
+
+def _normalize_messages(raw: T.Any) -> T.List[T.Dict[str, str]]:
+    """
+    Accepts:
+      - str prompt
+      - dict message
+      - list[dict] messages
+      - list mixed
+    Returns OpenAI-valid messages: [{'role': str, 'content': str}, ...]
+    """
+    if raw is None:
+        return []
+
+    if isinstance(raw, str):
+        return [{"role": "user", "content": raw}]
+
+    if isinstance(raw, dict):
+        return [{
+            "role": raw.get("role", "user"),
+            "content": _flatten_content(raw.get("content", "")),
+        }]
+
+    if isinstance(raw, list):
+        out: T.List[T.Dict[str, str]] = []
+        for msg in raw:
+            if isinstance(msg, str):
+                out.append({"role": "user", "content": msg})
+            elif isinstance(msg, dict):
+                out.append({
+                    "role": msg.get("role", "user"),
+                    "content": _flatten_content(msg.get("content", "")),
+                })
+            else:
+                out.append({"role": "user", "content": _flatten_content(msg)})
+        return out
+
+    return [{"role": "user", "content": _flatten_content(raw)}]
+
+
 class OpenAILLM(LLM[R]):
     """
-    An OpenAI-based Language Learning Model implementation with function call support.
-
-    This class implements the LLM interface for OpenAI's GPT models, handling
-    configuration, authentication, and async API communication. It supports both
-    traditional JSON structured output and function calling.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided,
-        the LLM will use function calls instead of structured JSON output.
+    IMPORTANT: Class name must match config: "type": "OpenAILLM"
     """
 
-    def __init__(
-        self,
-        config: LLMConfig,
-        available_actions: T.Optional[T.List] = None,
-    ):
-        """
-        Initialize the OpenAI LLM instance.
-
-        Parameters
-        ----------
-        config : OpenAILLMConfig, optional
-            Configuration settings for the LLM.
-        available_actions : list[AgentAction], optional
-            List of available actions for function calling.
-        """
+    def __init__(self, config: LLMConfig, available_actions: T.Optional[T.List] = None):
         super().__init__(config, available_actions)
 
-        if not config.api_key:
-            raise ValueError("config file missing api_key")
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("Missing OPENAI_API_KEY")
+
         if not config.model:
-            self._config.model = "gpt-4.1-mini"
+            self._config.model = "gpt-4o-mini"
 
-        self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.org/api/core/openai",
-            api_key=config.api_key,
-        )
+        # OpenAI direct
+        self._client = openai.AsyncClient(api_key=api_key)
 
-        # Initialize history manager
+        # Decorators expect this attribute
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
     @AvatarLLMState.trigger_thinking()
-    @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: T.Any, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None) -> T.Optional[R]:
         """
-        Send a prompt to the OpenAI API and get a structured response.
-
-        Parameters
-        ----------
-        prompt : str
-            The input prompt to send to the model.
-        messages : List[Dict[str, str]]
-            List of message dictionaries to send to the model.
-
-        Returns
-        -------
-        R or None
-            Parsed response matching the output_model structure, or None if
-            parsing fails.
+        OM1 compatibility:
+          - ask(prompt: str)
+          - ask(messages: list[dict])  -> prompt is actually messages
+          - ask(prompt: str, messages=[...]) -> concatenates
         """
         try:
-            logging.info(f"OpenAI input: {prompt}")
-            logging.info(f"OpenAI messages: {messages}")
+            base_msgs = _normalize_messages(messages) if messages else []
+            prompt_msgs = _normalize_messages(prompt)
+
+            final_messages = base_msgs + prompt_msgs
+            if not final_messages:
+                logging.warning("Skipping LLM call: no messages")
+                return None
+
+            logging.info(f"OpenAI messages: {final_messages}")
 
             self.io_provider.llm_start_time = time.time()
-            self.io_provider.set_llm_prompt(prompt)
-
-            formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
-            ]
-            formatted_messages.append({"role": "user", "content": prompt})
+            self.io_provider.set_llm_prompt(final_messages[-1]["content"])
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gpt-5",
-                messages=T.cast(T.Any, formatted_messages),
+                model=self._config.model,
+                messages=T.cast(T.Any, final_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
 
-            message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
-            if message.tool_calls:
-                logging.info(f"Received {len(message.tool_calls)} function calls")
-                logging.info(f"Function calls: {message.tool_calls}")
+            message = response.choices[0].message
 
+            if message.tool_calls:
                 function_call_data = [
                     {
                         "function": {
@@ -119,11 +133,8 @@ class OpenAILLM(LLM[R]):
                     }
                     for tc in message.tool_calls
                 ]
-
                 actions = convert_function_calls_to_actions(function_call_data)
-
-                result = CortexOutputModel(actions=actions)
-                return T.cast(R, result)
+                return T.cast(R, CortexOutputModel(actions=actions))
 
             return None
 
