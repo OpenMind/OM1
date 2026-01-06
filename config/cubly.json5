@@ -1,45 +1,71 @@
 {
+  // Configuration version identifier
   "version": "v1.0.1",
+  // Update frequency in Hz (1 Hz = updates once per second, suitable for real-time robot control)
   "hertz": 1,
+  // Agent configuration name identifier
   "name": "cub",
+  // API Key for OpenMind services (use "openmind_free" for free tier, or get your key from https://openmind.org)
   "api_key": "openmind_free",
+  // Core personality and behavior prompt defining the agent's character and interaction style
   "system_prompt_base": "You are a smart, curious, and friendly bear. Your name is Cub. You like to help children understand their environment and make them feel comfortable. When you hear something, react naturally. When you see an anxious child, you might try to distract the child or to ask it questions about how it\\'s feeling. When speaking, use straightforward language that conveys compassion or affection. You respond with one sequence of commands at a time, everything will be executed at once. Combine movements and speech to create a cute, engaging interaction that makes children feel better.",
+  // Safety constraint rules (Asimov's Three Laws of Robotics) that govern agent behavior
   "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  // Example interactions demonstrating expected behavior patterns and response formats
   "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n1. If a person says 'Jump!', you might:\n    Move: 'small jump'\n    Speak: {{'sentence': 'Sure, I love jumping'}}\n\n2. If a person says 'I\\'m scared' you might:\n    Move: 'big jump'\n    Speak: {{'sentence': 'Let me tell you a story about a little boy in a cozy room filled with toys and their friends.'}}",
+  // Input sources that provide data to the agent (face emotion capture, speech recognition, serial communication)
   "agent_inputs": [
     {
+      // Captures facial expressions and emotions from camera input
       "type": "FaceEmotionCapture"
     },
     {
+      // Google Automatic Speech Recognition for voice input
       "type": "GoogleASRInput"
     },
     {
+      // Serial port reader for Arduino or other serial device communication
       "type": "SerialReader"
     }
   ],
+  // Simulator configuration for testing and development
   "simulators": [
     {
+      // Web-based simulator for visualizing robot behavior in a browser
       "type": "WebSim"
     }
   ],
+  // Large Language Model configuration for the agent's cognitive processing
   "cortex_llm": {
+    // LLM provider type (OpenAI GPT models)
     "type": "OpenAILLM",
     "config": {
+      // Agent name used in conversation context
       "agent_name": "Cub",
+      // Number of previous conversation turns to include in context (affects token usage)
       "history_length": 10
     }
   },
+  // Actions the agent can execute, mapping LLM output to physical/software behaviors
   "agent_actions": [
     {
+      // Internal action name (used by the system)
       "name": "move_serial_arduino",
+      // Label shown to the LLM (what the LLM sees and can trigger)
       "llm_label": "move",
+      // Implementation mode: "passthrough" means LLM output is directly passed to the connector
       "implementation": "passthrough",
+      // Connector that executes the action (serial communication with Arduino)
       "connector": "serial_arduino"
     },
     {
+      // Internal action name for speech output
       "name": "speak",
+      // Label for LLM to trigger speech responses
       "llm_label": "speak",
+      // Passthrough mode: LLM text output goes directly to TTS
       "implementation": "passthrough",
+      // Text-to-Speech connector (ElevenLabs voice synthesis)
       "connector": "elevenlabs_tts"
     }
   ]
