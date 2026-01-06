@@ -57,7 +57,7 @@ class GeminiLLM(LLM[R]):
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
     ) -> T.Optional[R]:
         """
-        Execute LLM query and parse response
+        Execute LLM query and parse response.
 
         Parameters
         ----------

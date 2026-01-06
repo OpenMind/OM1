@@ -18,6 +18,8 @@ from simulators.base import Simulator, SimulatorConfig
 
 @dataclass
 class SimulatorState:
+    """Dataclass representing the state of the simulator."""
+
     inputs: dict
     current_action: str = "idle"
     last_speech: str = ""
@@ -25,6 +27,9 @@ class SimulatorState:
     system_latency: Optional[dict] = None
 
     def to_dict(self):
+        """
+        Convert the SimulatorState to a dictionary.
+        """
         return asdict(self)
 
 
@@ -493,7 +498,7 @@ class WebSim(Simulator):
             logging.error(f"Error starting WebSim server thread: {e}")
 
     def _run_server(self):
-        """Run the FastAPI server"""
+        """Run the FastAPI server."""
         config = uvicorn.Config(
             app=self.app,
             host="0.0.0.0",  # Still bind to all interfaces
@@ -527,7 +532,7 @@ class WebSim(Simulator):
         server.run()
 
     async def broadcast_state(self):
-        """Broadcast current state to all connected clients"""
+        """Broadcast current state to all connected clients."""
         if not self.active_connections:
             return
 
@@ -552,7 +557,7 @@ class WebSim(Simulator):
             logging.error(f"Error in broadcast_state: {e}")
 
     def get_earliest_time(self, inputs: Dict[str, Input]) -> float:
-        """Get earliest timestamp from inputs"""
+        """Get earliest timestamp from inputs."""
         earliest_time = float("inf")
         for input_type, input_info in inputs.items():
             logging.debug(f"GET {input_info}")
@@ -566,7 +571,7 @@ class WebSim(Simulator):
         return earliest_time if earliest_time != float("inf") else 0.0
 
     def tick(self) -> None:
-        """Update simulator state"""
+        """Update simulator state."""
         if self._initialized:
             try:
                 # Get or create event loop
@@ -588,7 +593,7 @@ class WebSim(Simulator):
             time.sleep(0.5)
 
     def sim(self, actions: List[Action]) -> None:
-        """Handle simulation updates from commands"""
+        """Handle simulation updates from commands."""
         if not self._initialized:
             logging.warning("WebSim not initialized, skipping sim update")
             return
@@ -670,7 +675,7 @@ class WebSim(Simulator):
             logging.error(f"Error in sim update: {e}")
 
     async def cleanup(self):
-        """Clean up resources"""
+        """Clean up resources."""
         logging.info("Cleaning up WebSim...")
         self._initialized = False
 
