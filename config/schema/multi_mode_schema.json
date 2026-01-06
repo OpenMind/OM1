@@ -78,7 +78,7 @@
                         "display_name": {"type": "string", "description": "Human-readable name for the mode."},
                         "description": {"type": "string", "description": "Description of the mode's purpose and behavior."},
                         "system_prompt_base": {"type": "string", "description": "The base system prompt used for the LLM in this mode."},
-                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs."},
+                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs.", "exclusiveMinimum": 0},
                         "timeout_seconds": {"type": "number"},
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
