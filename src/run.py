@@ -1,7 +1,8 @@
+from pathlib import Path
+import os
 import asyncio
 import logging
 import multiprocessing as mp
-import os
 import shutil
 from typing import Optional, Tuple
 
@@ -9,26 +10,29 @@ import dotenv
 import json5
 import typer
 
+from config_manager import (
+    ConfigHotReloader,
+    ConfigWatcher,
+    resolve_hot_reload_spec,
+)
+
 from runtime.logging import setup_logging
-from runtime.multi_mode.config import load_mode_config
-from runtime.multi_mode.cortex import ModeCortexRuntime
 from runtime.single_mode.config import load_config
 from runtime.single_mode.cortex import CortexRuntime
+
+# Multi-mode is OPTIONAL: avoid import-time crash if zenoh is missing
+try:
+    from runtime.multi_mode.config import load_mode_config
+    from runtime.multi_mode.cortex import ModeCortexRuntime
+
+    MULTI_MODE_AVAILABLE = True
+except Exception:
+    MULTI_MODE_AVAILABLE = False
 
 app = typer.Typer()
 
 
 def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
-    """
-    Set up the configuration file.
-
-    Parameters
-    ----------
-    config_name : str, optional
-        The name of the configuration file (without extension) located in the config directory.
-        If not provided, uses .runtime.json5 from memory folder.
-    """
-    # If no config_name is provided, use the default .runtime.json5 from memory
     if config_name is None:
         runtime_config_path = os.path.join(
             os.path.dirname(__file__), "../config/memory", ".runtime.json5"
@@ -37,9 +41,6 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
         if not os.path.exists(runtime_config_path):
             logging.error(
                 f"Default runtime configuration file not found: {runtime_config_path}"
-            )
-            logging.error(
-                "Please provide a config_name or ensure .runtime.json5 exists in config/memory/"
             )
             raise typer.Exit(1)
 
@@ -50,9 +51,6 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
 
         shutil.copy2(runtime_config_path, config_path)
         logging.info("Using default runtime configuration from memory folder")
-        logging.info(
-            f"Copied config/memory/.runtime.json5 to config/{config_name}.json5 for system compatibility"
-        )
     else:
         config_path = os.path.join(
             os.path.dirname(__file__), "../config", config_name + ".json5"
@@ -65,43 +63,35 @@ def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
 def start(
     config_name: Optional[str] = typer.Argument(
         None,
-        help="The name of the configuration file (without extension) located in the config directory. If not provided, uses .runtime.json5 from memory folder.",
+        help="Config name (without .json5) from config/ directory.",
     ),
     hot_reload: bool = typer.Option(
-        True, help="Enable hot-reload of configuration files."
+        True,
+        help="Enable hot-reload (polling + selective watchdog reload).",
     ),
     check_interval: int = typer.Option(
         60,
-        help="Interval in seconds between config file checks when hot_reload is enabled.",
+        help="Polling interval in seconds for legacy hot-reload.",
     ),
-    log_level: str = typer.Option("INFO", help="The logging level to use."),
-    log_to_file: bool = typer.Option(False, help="Whether to log output to a file."),
+    log_level: str = typer.Option("INFO", help="Logging level."),
+    log_to_file: bool = typer.Option(False, help="Log to file."),
 ) -> None:
-    """
-    Start the OM1 agent with a specific configuration.
-
-    Parameters
-    ----------
-    config_name : str, optional
-        The name of the configuration file (without extension) located in the config directory.
-        If not provided, uses .runtime.json5 from memory folder as default.
-    hot_reload : bool, optional
-        Enable hot-reload of configuration files (default is True).
-    check_interval : int, optional
-        Interval in seconds between config file checks when hot_reload is enabled (default is 60).
-    log_level : str, optional
-        The logging level to use (default is "INFO").
-    log_to_file : bool, optional
-        Whether to log output to a file (default is False).
-    """
     config_name, config_path = setup_config_file(config_name)
     setup_logging(config_name, log_level, log_to_file)
 
+    watcher: Optional[ConfigWatcher] = None
+
     try:
+        # Load raw JSON5 (needed for hot-reload spec)
         with open(config_path, "r") as f:
             raw_config = json5.load(f)
 
-        if "modes" in raw_config and "default_mode" in raw_config:
+        # Create runtime
+        if (
+            MULTI_MODE_AVAILABLE
+            and "modes" in raw_config
+            and "default_mode" in raw_config
+        ):
             mode_config = load_mode_config(config_name)
             runtime = ModeCortexRuntime(
                 mode_config,
@@ -109,9 +99,7 @@ def start(
                 hot_reload=hot_reload,
                 check_interval=check_interval,
             )
-            logging.info(f"Starting OM1 with mode-aware configuration: {config_name}")
-            logging.info(f"Available modes: {list(mode_config.modes.keys())}")
-            logging.info(f"Default mode: {mode_config.default_mode}")
+            logging.info(f"Starting OM1 (multi-mode): {config_name}")
         else:
             config = load_config(config_name)
             runtime = CortexRuntime(
@@ -120,11 +108,41 @@ def start(
                 hot_reload=hot_reload,
                 check_interval=check_interval,
             )
-            logging.info(f"Starting OM1 with standard configuration: {config_name}")
+            logging.info(f"Starting OM1 (single-mode): {config_name}")
 
-        if hot_reload:
-            logging.info(
-                f"Hot-reload enabled (check interval: {check_interval} seconds)"
+        # ------------------------------------------------------------
+        # 🔥 Selective hot-reload via watchdog (NEW FEATURE)
+        # ------------------------------------------------------------
+        try:
+            spec = resolve_hot_reload_spec(raw_config)
+
+            if hot_reload:
+                spec = spec.__class__(enabled=True, fields=spec.fields)
+
+            if spec.enabled and spec.fields:
+                debounce_ms = int(os.getenv("HOT_RELOAD_DEBOUNCE_MS", "300"))
+
+                reloader = ConfigHotReloader(
+                    config_path=Path(config_path),
+                    runtime=runtime,
+                    spec=spec,
+                )
+                reloader.initialize()
+
+                watcher = ConfigWatcher(
+                    config_path=Path(config_path),
+                    reloader=reloader,
+                    debounce_ms=debounce_ms,
+                )
+                watcher.start()
+
+                logging.info(
+                    f"Selective hot-reload enabled for fields: {list(spec.fields)}"
+                )
+
+        except Exception:
+            logging.exception(
+                "Failed to initialize selective hot-reload (continuing without it)"
             )
 
         asyncio.run(runtime.run())
@@ -133,13 +151,14 @@ def start(
         logging.error(f"Configuration file not found: {config_path}")
         raise typer.Exit(1)
     except Exception as e:
-        logging.error(f"Error loading configuration: {e}")
+        logging.exception(f"Error starting OM1: {e}")
         raise typer.Exit(1)
+    finally:
+        if watcher:
+            watcher.stop()
 
 
 if __name__ == "__main__":
-
-    # Fix for Linux multiprocessing
     if mp.get_start_method(allow_none=True) != "spawn":
         mp.set_start_method("spawn")
 
