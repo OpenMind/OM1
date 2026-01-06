@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import random
 import time
 from typing import List, Optional
 
@@ -67,7 +66,7 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
         await asyncio.sleep(self.POLL_INTERVAL)
 
         try:
-            # Get latest block data (handle Mock/test objects safely)
+            # Get latest block data
             try:
                 block_number = int(self.web3.eth.block_number)
             except Exception:
@@ -79,16 +78,13 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
 
             self.eth_info = {
                 "block_number": int(block_number),
-                "address": str(
-                    self.ACCOUNT_ADDRESS
-                ),  # that's a string prefixed with `0x`
+                "address": str(self.ACCOUNT_ADDRESS),
                 "balance": self.balance_eth,
             }
             logging.debug(
                 f"Block: {self.eth_info['block_number']}, Account Balance: {self.eth_info['balance']:.3f} ETH"
             )
 
-            # Use fetched balance directly (no random test mutations)
             self.ETH_balance = self.balance_eth
             self.balance_change = self.ETH_balance - self.ETH_balance_previous
             self.ETH_balance_previous = self.ETH_balance
