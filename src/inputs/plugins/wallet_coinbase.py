@@ -27,7 +27,7 @@ class WalletCoinbaseConfig(SensorConfig):
 
 class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
     """
-    Queries current balance of the configured asset and reports a balance increase
+    Queries current balance of the configured asset and reports a balance increase.
     """
 
     def __init__(self, config: WalletCoinbaseConfig):

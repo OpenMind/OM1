@@ -19,7 +19,7 @@ class MoveZenohConfig(ActionConfig):
     """
     Configuration for Zenoh connector.
 
-    Parameters:
+    Parameters
     ----------
     URID : Optional[str]
         URID for Zenoh topics.
@@ -117,7 +117,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
 
     def move(self, vx: float, vyaw: float) -> None:
         """
-        generate movement commands
+        Generate movement commands.
 
         Parameters
         ----------
@@ -222,15 +222,15 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         """
         Calculate shortest angular distance between two angles.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         current : float
             Current angle in degrees.
         target : float
             Target angle in degrees.
 
-        Returns:
-        --------
+        Returns
+        -------
         float
             Shortest angular distance in degrees, rounded to 2 decimal places.
         """
@@ -250,7 +250,9 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
             self.pending_movements.get()
 
     def tick(self) -> None:
-
+        """
+        Periodic tick to process movement commands.
+        """
         time.sleep(0.1)
 
         logging.debug("Move tick")
@@ -418,13 +420,13 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         """
         Execute turn based on gap direction and lidar constraints.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         gap : float
             The angle gap in degrees to turn.
 
-        Returns:
-        --------
+        Returns
+        -------
         bool
             True if the turn was executed successfully, False if blocked by a barrier.
         """
