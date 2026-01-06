@@ -10,7 +10,7 @@
     {
       "type": "GoogleASRInput",
       "config": {
-        "enable_tts_interrupt": true
+        "enable_tts_interrupt": false
       }
     }
   ],
@@ -28,7 +28,7 @@
       "implementation": "passthrough",
       "connector": "elevenlabs_tts",
       "config": {
-        "enable_tts_interrupt": true
+        "enable_tts_interrupt": false
       }
     },
     {
