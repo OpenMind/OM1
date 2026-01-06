@@ -18,6 +18,9 @@ class AvatarLLMState:
     _lock = None
 
     def __new__(cls):
+        """
+        Implement singleton pattern for AvatarLLMState.
+        """
         if cls._instance is None:
             if cls._lock is None:
                 cls._lock = threading.Lock()
