@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+import signal
+import sys
 import time
 from typing import List, Optional, Union
 
@@ -9,6 +11,7 @@ from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
+from providers.conversation_history_provider import ConversationHistoryProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.multi_mode.config import (
@@ -66,6 +69,13 @@ class ModeCortexRuntime:
         self.mode_config_name = mode_config_name
         self.mode_manager = ModeManager(mode_config)
         self.io_provider = IOProvider()
+
+        # Initialize conversation history provider
+        self.conversation_history = ConversationHistoryProvider(
+            enable_auto_save=True, auto_save_interval=10
+        )
+        self._register_shutdown_handlers()
+
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
 
@@ -365,6 +375,27 @@ class ModeCortexRuntime:
 
         logging.debug("Tasks cleaned up successfully")
 
+    def _register_shutdown_handlers(self) -> None:
+        """
+        Register signal handlers to save conversation history on shutdown.
+
+        This ensures that conversation history is saved when the process
+        receives SIGINT (Ctrl+C) or SIGTERM (kill) signals.
+
+        Returns
+        -------
+        None
+        """
+
+        def shutdown_handler(signum, frame):
+            logging.info("Shutdown signal received, saving conversation history...")
+            self.conversation_history.force_save()
+            logging.info("Conversation history saved successfully")
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, shutdown_handler)
+        signal.signal(signal.SIGTERM, shutdown_handler)
+
     async def run(self) -> None:
         """
         Start the mode-aware runtime's main execution loop.
@@ -513,6 +544,13 @@ class ModeCortexRuntime:
         finished_promises, _ = await self.action_orchestrator.flush_promises()
 
         prompt = self.fuser.fuse(self.current_config.agent_inputs, finished_promises)
+
+        # Record the prompt for conversation history WITH MODE
+        current_mode = self.mode_manager.get_current_mode_name()
+        self.conversation_history.record_prompt(
+            tick=tick_num, prompt=prompt, mode=current_mode
+        )
+
         if prompt is None:
             logging.debug("No prompt to fuse")
             return
@@ -534,6 +572,11 @@ class ModeCortexRuntime:
             return
 
         output = await self.current_config.cortex_llm.ask(prompt)
+
+        # Record the output for conversation history
+        if output is not None:
+            self.conversation_history.record_output(tick=tick_num, output=output.raw)
+
         if output is None:
             logging.debug("No output from LLM")
             return
