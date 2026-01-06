@@ -1,11 +1,6 @@
-import argparse
-from enum import IntEnum
-
-import serial
-
 """
 
-A parser for TBS crsf data. 
+A parser for TBS crsf data.
 
 Based on Bryan Mayland's CRSF "Python Parser"
 https://github.com/crsf-wg/crsf/wiki/Python-Parser
@@ -15,10 +10,10 @@ https://github.com/tbs-fpv/tbs-crsf-spec
 
 Known issues:
 
-Occasionally, one of the RC_Channels has a value of >2000, which is noise. 
-This is a problem, since it tells the receiver that one of the switches was 
-activated, even if they were not. I'm rejecting all RC data with values >2000. 
-A typical range for a valid RC signal is 174 to 1800 - this is true for both 
+Occasionally, one of the RC_Channels has a value of >2000, which is noise.
+This is a problem, since it tells the receiver that one of the switches was
+activated, even if they were not. I'm rejecting all RC data with values >2000.
+A typical range for a valid RC signal is 174 to 1800 - this is true for both
 sticks and switches.
 
 Run like this:
@@ -26,6 +21,11 @@ Run like this:
 uv run parse_crsf_radio.py
 
 """
+
+import argparse
+from enum import IntEnum
+
+import serial
 
 
 class PacketsTypes(IntEnum):

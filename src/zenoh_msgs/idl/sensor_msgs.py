@@ -11,6 +11,8 @@ from .std_msgs import Header, String
 
 @dataclass
 class RegionOfInterest(IdlStruct, typename="RegionOfInterest"):
+    """RegionOfInterest message."""
+
     x_offset: uint32
     y_offset: uint32
     height: uint32
@@ -20,6 +22,8 @@ class RegionOfInterest(IdlStruct, typename="RegionOfInterest"):
 
 @dataclass
 class CameraInfo(IdlStruct, typename="CameraInfo"):
+    """CameraInfo message."""
+
     header: Header
     height: uint32
     width: uint32
@@ -35,6 +39,8 @@ class CameraInfo(IdlStruct, typename="CameraInfo"):
 
 @dataclass
 class Image(IdlStruct, typename="Image"):
+    """Image message."""
+
     header: Header
     height: uint32
     width: uint32
@@ -46,6 +52,8 @@ class Image(IdlStruct, typename="Image"):
 
 @dataclass
 class IMU(IdlStruct, typename="IMU"):
+    """IMU message."""
+
     header: Header
     orientation: Quaternion
     orientation_covariance: array[float64, 9]
@@ -57,6 +65,8 @@ class IMU(IdlStruct, typename="IMU"):
 
 @dataclass
 class Detection(IdlStruct, typename="Detection"):
+    """Detection message."""
+
     header: Header
     orientation: Quaternion
     orientation_covariance: array[float64, 9]
@@ -68,9 +78,13 @@ class Detection(IdlStruct, typename="Detection"):
 
 @dataclass
 class HazardDetection(IdlStruct, typename="HazardDetection"):
+    """HazardDetection message."""
+
     header: Header
 
     class TYPE(Enum):
+        """Type enum for HazardDetection."""
+
         BACKUP_LIMIT = 0
         BUMP = 1  # The robot has bumped against an obstacle
         CLIFF = 2  # The robot detected a cliff
@@ -83,14 +97,19 @@ class HazardDetection(IdlStruct, typename="HazardDetection"):
 
 @dataclass
 class HazardDetectionVector(IdlStruct, typename="HazardDetectionVector"):
+    """HazardDetectionVector message."""
+
     header: Header
     detections: sequence[HazardDetection]
 
 
 @dataclass
 class NavSatStatus(IdlStruct, typename="NavSatStatus"):
+    """NavSatStatus message."""
 
     class STATUS(Enum):
+        """Status enum for NavSatStatus."""
+
         NO_FIX = -1  # unable to fix position
         FIX = 0  # unaugmented fix
         SBAS_FIX = 1  # with satellite-based augmentation
@@ -99,6 +118,8 @@ class NavSatStatus(IdlStruct, typename="NavSatStatus"):
     status: int8
 
     class SERVICE(Enum):
+        """Service enum for NavSatStatus."""
+
         GPS = 1
         GLONASS = 2
         COMPASS = 4  # includes BeiDou
@@ -109,6 +130,8 @@ class NavSatStatus(IdlStruct, typename="NavSatStatus"):
 
 @dataclass
 class NavSatFix(IdlStruct, typename="NavSatFix"):
+    """NavSatFix message."""
+
     header: Header
     status: NavSatStatus
     latitude: float64
@@ -117,6 +140,8 @@ class NavSatFix(IdlStruct, typename="NavSatFix"):
     position_covariance: array[float64, 9]
 
     class POSITION_COVARIANCE_TYPE(Enum):
+        """Position covariance type enum for NavSatFix."""
+
         UNKNOWN = 0
         APPROXIMATED = 1
         DIAGONAL_KNOWN = 2
@@ -127,10 +152,14 @@ class NavSatFix(IdlStruct, typename="NavSatFix"):
 
 @dataclass
 class PointField(IdlStruct, typename="PointField"):
+    """PointField message."""
+
     name: str
     offset: uint32
 
     class DATA_TYPE(Enum):
+        """Data type enum for PointField."""
+
         INT8 = 1
         UINT8 = 2
         INT16 = 3
@@ -146,6 +175,8 @@ class PointField(IdlStruct, typename="PointField"):
 
 @dataclass
 class PointCloud(IdlStruct, typename="PointCloud"):
+    """PointCloud message."""
+
     header: Header
     points: sequence[Point32]
     channels: sequence[PointField]
@@ -153,6 +184,8 @@ class PointCloud(IdlStruct, typename="PointCloud"):
 
 @dataclass
 class PointCloud2(IdlStruct, typename="PointCloud2"):
+    """PointCloud2 message."""
+
     header: Header
     height: uint32
     width: uint32
@@ -166,6 +199,8 @@ class PointCloud2(IdlStruct, typename="PointCloud2"):
 
 @dataclass
 class BatteryState(IdlStruct, typename="BatteryState"):
+    """Battery state message."""
+
     header: Header
     voltage: float32  # Voltage in Volts (Mandatory)
     temperature: float32
@@ -194,6 +229,8 @@ class BatteryState(IdlStruct, typename="BatteryState"):
 
 @dataclass
 class LaserScan(IdlStruct, typename="LaserScan"):
+    """Laser scan message."""
+
     header: Header
     angle_min: float32
     angle_max: float32
@@ -208,6 +245,8 @@ class LaserScan(IdlStruct, typename="LaserScan"):
 
 @dataclass
 class DockStatus(IdlStruct, typename="DockStatus"):
+    """Dock status message."""
+
     header: Header
     docker_visible: bool
     is_docked: bool
@@ -215,5 +254,9 @@ class DockStatus(IdlStruct, typename="DockStatus"):
 
 @dataclass
 class Paths(IdlStruct, typename="Paths"):
+    """Paths message."""
+
     header: Header
     paths: List[uint32]
+    blocked_by_obstacle_idx: List[uint32]
+    blocked_by_hazard_idx: List[uint32]

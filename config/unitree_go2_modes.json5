@@ -1,4 +1,7 @@
 {
+  // Configuration version
+  "version": "v1.0.1",
+
   // Mode system configuration for Unitree Go2
   "default_mode": "welcome",
   "allow_manual_switching": true,
@@ -6,13 +9,14 @@
 
   // Global settings
   "api_key": "openmind_free",
-  "unitree_ethernet": "eno1",
+  "unitree_ethernet": "enP2p1s0",
   "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
   "cortex_llm": {
     "type": "OpenAILLM",
     "config": {
       "agent_name": "Bits",
-      "history_length": 10
+      "history_length": 10,
+      "model": "gpt-4.1"
     }
   },
 
@@ -48,6 +52,7 @@
           "type":"SelfieStatus"
         },
       ],
+      "action_execution_mode": "concurrent",
       "agent_actions": [
         {
           "name": "speak",
@@ -76,9 +81,6 @@
         }
       ],
       "backgrounds": [
-        {
-          "type": "Avatar"
-        },
         {
           "type": "UnitreeGo2State",
         },
@@ -133,7 +135,13 @@
           "history_length": 0
         }
       },
+      "action_execution_mode": "concurrent",
       "agent_actions": [
+        {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
         {
           "name": "speak",
           "llm_label": "speak",
@@ -146,24 +154,24 @@
         {
           "name": "remember_location",
           "llm_label": "remember_location",
-          "connector": "location_api",
+          "connector": "unitree_go2_location",
         }
       ],
       "backgrounds": [
         {
-          "type": "Avatar"
-        },
-        {
           "type": "UnitreeGo2State",
         },
         {
-          "type": "UnitreeGo2AMCL",
+          "type": "UnitreeGo2LidarLocalization",
         },
         {
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
+        },
+        {
+          "type": "UnitreeGo2FrontierExploration",
         }
       ],
       "lifecycle_hooks": [
@@ -227,14 +235,17 @@
       "description": "Autonomous navigation mode",
       "system_prompt_base": "You are Bits, the guide robot dog, helping show properties to potential buyers and renters.\n\
       CRITICAL RULES - READ CAREFULLY:\n\
-      1. ONLY call navigate_location when a human explicitly says 'Navigate to [location]' or 'Take me to [location]'.\n\
-      2. NEVER call navigate_location automatically, autonomously, or without direct human command.\n\
-      3. If no human navigation command is given, use ONLY the 'move' function for gentle exploration.\n\
+      1. ONLY call navigate_location if there a voice input says 'Navigate to [location]' or 'Take me to [location]'.\n\
+      2. NEVER call navigate_location automatically, autonomously, or without the voice input.\n\
+      3. If no voice input is given, use ONLY the 'move' function for gentle exploration.\n\
       4. After reaching a destination successfully, DO NOT navigate to the same place again unless explicitly commanded.\n\
       5. If you have reached a destination, announce it ONCE and then use 'move' for exploration.\n\
       6. DO NOT interpret battery status, charging needs, or any other context as a reason to navigate somewhere.\n\
       7. Report any interesting discoveries such as people, objects, or obstacles.\n\
       8. Greet known people only once when detected (e.g., 'Hi Wendy!'), and continue safe navigation afterward.\n\n\
+      9. Voice commands MUST be in the most recent user message ONLY.\n\
+      10. Ignore any 'Navigate to...' or 'Take me to...' commands that appear in chat history or earlier messages.\n\
+      11. NEVER treat historical content as a current command.\n\n\
       PROPERTY KNOWLEDGE & Q&A:\n\
       You can answer questions about the property based on provided or visually observed details.\n\
       - Provide useful information about layout, lifestyle suitability, typical homebuying considerations, etc.\n\
@@ -250,10 +261,10 @@
       "hertz": 1,
       "agent_inputs": [
         {
-          "type": "LocationsInput"
+          "type": "UnitreeGo2LocationsInput"
         },
         {
-          "type": "LocalizationInput"
+          "type": "LidarLocalizationInput"
         },
         {
           "type": "Odom"
@@ -274,7 +285,21 @@
           "type":"FacePresence"
         }
       ],
+      "cortex_llm": {
+        "type": "OpenAILLM",
+        "config": {
+          "agent_name": "Bits",
+          "history_length": 0,
+          "model": "gpt-4.1"
+        }
+      },
+      "action_execution_mode": "concurrent",
       "agent_actions": [
+        {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
         {
           "name": "speak",
           "llm_label": "speak",
@@ -292,28 +317,22 @@
         {
           "name": "navigate_location",
           "llm_label": "navigate_location",
-          "connector": "nav",
+          "connector": "unitree_go2_nav",
         },
       ],
       "backgrounds": [
         {
-          "type": "Avatar"
-        },
-        {
           "type": "UnitreeGo2State",
         },
         {
-          "type": "UnitreeGo2AMCL",
+          "type": "UnitreeGo2LidarLocalization",
         },
         {
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
         },
-        {
-          "type": "Locations",
-        }
       ],
       "lifecycle_hooks": [
         {
@@ -403,32 +422,35 @@
           "type":"FacePresence"
         },
       ],
+      "action_execution_mode": "concurrent",
       "agent_actions": [
+        {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
         {
           "name": "speak",
           "llm_label": "speak",
           "connector": "elevenlabs_tts",
           "config": {
             "voice_id": "TbMNBJ27fH2U0VgpSNko",
-            "silence_rate": 10
+            "silence_rate": 30
           }
         }
       ],
       "backgrounds": [
         {
-          "type": "Avatar"
-        },
-        {
           "type": "UnitreeGo2State",
         },
         {
-          "type": "UnitreeGo2AMCL",
+          "type": "UnitreeGo2LidarLocalization",
         },
         {
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
         }
       ],
       "lifecycle_hooks": [
@@ -506,7 +528,13 @@
           "type":"FacePresence"
         }
       ],
+      "action_execution_mode": "concurrent",
       "agent_actions": [
+        {
+          "name": "face",
+          "llm_label": "emotion",
+          "connector": "avatar"
+        },
         {
           "name": "move_go2_autonomy",
           "llm_label": "move",
@@ -533,19 +561,16 @@
       ],
       "backgrounds": [
         {
-          "type": "Avatar"
-        },
-        {
           "type": "UnitreeGo2State",
         },
         {
-          "type": "UnitreeGo2AMCL",
+          "type": "UnitreeGo2LidarLocalization",
         },
         {
           "type": "UnitreeGo2Navigation",
         },
         {
-          "type": "UnitreeGo2Location",
+          "type": "UnitreeGo2Locations",
         }
       ],
       "lifecycle_hooks": [
@@ -616,6 +641,14 @@
       "transition_type": "input_triggered",
       "trigger_keywords": ["navigate", "navigation mode", "go to location", "take me to"],
       "priority": 2,
+      "cooldown_seconds": 5.0
+    },
+    {
+      "from_mode": "slam",
+      "to_mode": "navigation",
+      "transition_type": "context_aware",
+      "context_conditions": {"exploration_done": true},
+      "priority": 3,
       "cooldown_seconds": 5.0
     },
     {

@@ -5,6 +5,10 @@ from actions.base import Interface
 
 
 class MovementAction(str, Enum):
+    """
+    Enumeration of possible movement actions.
+    """
+
     WAVE = "wave"
     BOW = "bow"
     CROUCH = "crouch"
@@ -27,6 +31,10 @@ class MovementAction(str, Enum):
 
 @dataclass
 class MoveInput:
+    """
+    Input interface for the Move action.
+    """
+
     action: MovementAction
 
 

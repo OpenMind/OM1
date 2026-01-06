@@ -26,16 +26,16 @@ Ensure you have the following installed on your machine:
 - `uv` >= 0.6.2 as the Python package manager and virtual environment
 - `portaudio` for audio input and output
 - `ffmpeg` for video processing
-- [Openmind API key](https://portal.openmind.org/)
+- Get your OpenMind API key [here](https://portal.openmind.org/)
 
 #### UV (A Rust and Python package manager)
 
 ```bash
 # Mac
-brew install uv 
+brew install uv
 
 # Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh 
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 #### PortAudio Library
@@ -51,7 +51,7 @@ sudo apt-get update
 sudo apt-get install portaudio19-dev
 ```
 
-Note: `python-all-dev` may also be needed. 
+Note: `python-all-dev` may also be needed.
 
 #### ffmpeg
 
@@ -64,7 +64,7 @@ brew install ffmpeg
 # Linux
 sudo apt-get update
 sudo apt-get install ffmpeg
-``` 
+```
 
 ## Installation and Setup
 
@@ -73,7 +73,7 @@ sudo apt-get install ffmpeg
 Run the following commands to clone the repository and set up the environment:
 
 ```bash clone repo
-git clone https://github.com/openmind/OM1.git
+git clone https://github.com/OpenMind/OM1.git
 cd OM1
 git submodule update --init
 uv venv
@@ -81,7 +81,7 @@ uv venv
 
 2. Set the configuration variables
 
-Locate the `config` folder and add your OpenMind API key to `/config/spot.json` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.org/.  
+Locate the `config` folder and add your OpenMind API key to `/config/spot.json` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.org/.
 
 ```bash
 # /config/spot.json5
@@ -90,9 +90,9 @@ Locate the `config` folder and add your OpenMind API key to `/config/spot.json` 
 ...
 ```
 
-Note: Using the placeholder key **openmind-free** will generate errors.
-
 Or, create a `.env` file in the project directory and add the following:
+
+Note: Using the placeholder key **openmind_free** will generate errors.
 
 ```bash
 OM_API_KEY=om1_live_...
@@ -106,9 +106,37 @@ Run the following command to start the Spot Agent:
 uv run src/run.py spot
 ```
 
-On initial execution, this command will resolve and install project dependencies. Please allow a few minutes for this process to finish, before the system becomes active.
+### Initial Setup
 
-Note: This is just an example agent configuration.
+During the first execution, the system will automatically resolve and install all project dependencies. This process may take several minutes to complete before the agent becomes operational.
+
+### Runtime Configuration
+
+Upon successful initialization, a `.runtime.json5` file will be generated in the `config/memory` directory. This file serves as a snapshot of the agent configuration used in the current session.
+
+### Subsequent Executions
+
+After the initial run, you can start the agent using the simplified command:
+
+```bash
+uv run src/run.py
+```
+
+![Reference](../assets/hot_reload.png)
+
+The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
+
+### Switching Agent Configurations
+
+To run a different agent (for example, the conversation agent), specify the configuration name explicitly:
+
+```bash
+uv run src/run.py conversation
+```
+
+**Note**: Agent configuration names are only required when switching between different agents. Once an agent has been run, it becomes the default for subsequent executions.
+
+Spot is just an example agent configuration.
 
 If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in `spot.json5`.
 
@@ -125,7 +153,7 @@ TTS configuration (check in agent_actions)
       name: "speak",
       llm_label: "speak",
       connector: "elevenlabs_tts",
-      config: 
+      config:
       {
         voice_id: "i4CzbCVWoqvD0P1QJCUL",
         "silence_rate": 20,
@@ -146,7 +174,7 @@ The log data provide insight into how the `spot` agent makes sense of its enviro
   - The LLM(s) decide on a set of actions (dancing and speaking).
   - The simulated robot expresses emotions via a front-facing display.
   - Logs latency and processing times to monitor system performance.
-  
+
 ```bash
 Object Detector INPUT
 // START
@@ -169,7 +197,7 @@ command: emotion
     Effect: Performs a given facial expression.
     Arguments: Allowed values: 'cry', 'smile', 'frown', 'think', 'joy'
 
-What will you do? Command: 
+What will you do? Command:
 
 INFO:httpx:HTTP Request: POST https://api.openmind.org/api/core/openai/chat/completions "HTTP/1.1 200 OK"
 INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), Command(type='speak', value="Hi there! I see you and I'm excited!"), Command(type='emotion', value='joy')]

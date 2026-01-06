@@ -8,6 +8,7 @@ from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
+from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.multi_mode.config import (
@@ -31,6 +32,7 @@ class ModeCortexRuntime:
     mode_manager: ModeManager
     io_provider: IOProvider
     sleep_ticker_provider: SleepTickerProvider
+    config_provider: ConfigProvider
 
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
@@ -65,6 +67,7 @@ class ModeCortexRuntime:
         self.mode_manager = ModeManager(mode_config)
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
+        self.config_provider = ConfigProvider()
 
         # Hot-reload configuration
         self.hot_reload = hot_reload
@@ -94,6 +97,7 @@ class ModeCortexRuntime:
         self.action_task: Optional[asyncio.Future] = None
         self.background_task: Optional[asyncio.Future] = None
         self.cortex_loop_task: Optional[asyncio.Task] = None
+        self.mode_transition_task: Optional[asyncio.Task] = None
 
         # Setup transition callback
         self.mode_manager.add_transition_callback(self._on_mode_transition)
@@ -103,6 +107,11 @@ class ModeCortexRuntime:
 
         # Flag to track if a reload is in progress
         self._is_reloading = False
+
+        # Event for handling mode transitions
+        self._mode_transition_event = asyncio.Event()
+        self._pending_mode_transition: Optional[str] = None
+        self._pending_transition_reason: Optional[str] = None
 
     async def _initialize_mode(self, mode_name: str):
         """
@@ -128,10 +137,50 @@ class ModeCortexRuntime:
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
+    async def _handle_mode_transitions(self):
+        """
+        Handle mode transitions asynchronously, separate from the cortex loop.
+
+        This prevents the cortex loop from cancelling itself during transitions.
+        """
+        while True:
+            try:
+                await self._mode_transition_event.wait()
+
+                if self._pending_mode_transition:
+                    target_mode = self._pending_mode_transition
+                    transition_reason = (
+                        self._pending_transition_reason or "input_triggered"
+                    )
+                    self._pending_mode_transition = None
+                    self._pending_transition_reason = None
+
+                    logging.info(
+                        f"Processing mode transition to: {target_mode} (reason: {transition_reason})"
+                    )
+
+                    success = await self.mode_manager._execute_transition(
+                        target_mode, transition_reason
+                    )
+                    if success:
+                        logging.info(
+                            f"Mode transition completed successfully: {target_mode}"
+                        )
+                    else:
+                        logging.error(f"Mode transition failed: {target_mode}")
+
+                self._mode_transition_event.clear()
+
+            except asyncio.CancelledError:
+                logging.debug("Mode transition handler cancelled")
+                break
+            except Exception as e:
+                logging.error(f"Error in mode transition handler: {e}")
+                await asyncio.sleep(1.0)
+
     async def _on_mode_transition(self, from_mode: str, to_mode: str):
         """
-        Handle mode transitions by gracefully stopping current components
-        and starting new ones for the target mode.
+        Handle mode transitions by gracefully stopping current components and starting new ones for the target mode.
 
         Parameters
         ----------
@@ -268,8 +317,14 @@ class ModeCortexRuntime:
         if self.background_orchestrator:
             self.background_task = self.background_orchestrator.start()
 
-        # Start main cortex
+        # Start cortex task
         self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
+
+        # Start mode transition task
+        if not self.mode_transition_task or self.mode_transition_task.done():
+            self.mode_transition_task = asyncio.create_task(
+                self._handle_mode_transitions()
+            )
 
         logging.debug("Orchestrators started successfully")
 
@@ -283,6 +338,8 @@ class ModeCortexRuntime:
             tasks_to_cancel.append(self.config_watcher_task)
         if self.cortex_loop_task and not self.cortex_loop_task.done():
             tasks_to_cancel.append(self.cortex_loop_task)
+        if self.mode_transition_task and not self.mode_transition_task.done():
+            tasks_to_cancel.append(self.mode_transition_task)
         if self.input_listener_task and not self.input_listener_task.done():
             tasks_to_cancel.append(self.input_listener_task)
         if self.simulator_task and not self.simulator_task.done():
@@ -302,6 +359,9 @@ class ModeCortexRuntime:
                 await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
             except Exception as e:
                 logging.warning(f"Error during final cleanup: {e}")
+
+        # Stop ConfigProvider
+        self.config_provider.stop()
 
         logging.debug("Tasks cleaned up successfully")
 
@@ -349,6 +409,11 @@ class ModeCortexRuntime:
                     awaitables: List[Union[asyncio.Task, asyncio.Future]] = []
                     if self.cortex_loop_task and not self.cortex_loop_task.done():
                         awaitables.append(self.cortex_loop_task)
+                    if (
+                        self.mode_transition_task
+                        and not self.mode_transition_task.done()
+                    ):
+                        awaitables.append(self.mode_transition_task)
                     if self.config_watcher_task and not self.config_watcher_task.done():
                         awaitables.append(self.config_watcher_task)
                     if self.input_listener_task and not self.input_listener_task.done():
@@ -404,6 +469,9 @@ class ModeCortexRuntime:
         """
         Execute the main cortex processing loop with mode awareness.
         """
+        current_mode = self.mode_manager.current_mode_name
+        logging.info(f"Starting cortex loop for mode: {current_mode}")
+
         try:
             while True:
                 if not self.sleep_ticker_provider.skip_sleep and self.current_config:
@@ -417,10 +485,14 @@ class ModeCortexRuntime:
                 await self._tick()
                 self.sleep_ticker_provider.skip_sleep = False
         except asyncio.CancelledError:
-            logging.info("Cortex loop cancelled, exiting gracefully")
+            logging.info(
+                f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully"
+            )
             raise
         except Exception as e:
-            logging.error(f"Unexpected error in cortex loop: {e}")
+            logging.error(
+                f"Unexpected error in cortex loop for mode '{current_mode}': {e}"
+            )
             raise
 
     async def _tick(self) -> None:
@@ -435,6 +507,9 @@ class ModeCortexRuntime:
             logging.debug("Skipping tick during config reload")
             return
 
+        tick_num = self.io_provider.increment_tick()
+        logging.debug(f"Processing tick #{tick_num}")
+
         finished_promises, _ = await self.action_orchestrator.flush_promises()
 
         prompt = self.fuser.fuse(self.current_config.agent_inputs, finished_promises)
@@ -444,14 +519,27 @@ class ModeCortexRuntime:
 
         with self.io_provider.mode_transition_input():
             last_input = self.io_provider.get_mode_transition_input()
-        new_mode = await self.mode_manager.process_tick(last_input)
-        if new_mode:
-            logging.info(f"Mode switched to: {new_mode}")
+
+        transition_result = await self.mode_manager.process_tick(last_input)
+        if transition_result:
+            new_mode, transition_reason = transition_result
+
+            # Schedule the transition asynchronously
+            self._pending_mode_transition = new_mode
+            self._pending_transition_reason = transition_reason
+            self._mode_transition_event.set()
+            logging.info(
+                f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
+            )
             return
 
         output = await self.current_config.cortex_llm.ask(prompt)
         if output is None:
             logging.debug("No output from LLM")
+            return
+
+        if self._is_reloading:
+            logging.debug("Skipping tick during config reload")
             return
 
         if self.simulator_orchestrator:
@@ -560,13 +648,11 @@ class ModeCortexRuntime:
             logging.info("Loading configuration from the new runtime file")
             new_mode_config = load_mode_config(
                 self.mode_config_name,
-                mode_soure_path=self.mode_manager._get_runtime_config_path(),
+                mode_source_path=self.mode_manager._get_runtime_config_path(),
             )
 
             self.mode_config = new_mode_config
             self.mode_manager.config = new_mode_config
-
-            self.mode_manager.update_runtime_config()
 
             if current_mode not in new_mode_config.modes:
                 logging.warning(

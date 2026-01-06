@@ -4,7 +4,10 @@ from actions.base import ActionConfig, ActionConnector
 from actions.move_go2_autonomy.interface import MoveInput
 
 
-class IDELEConnector(ActionConnector[MoveInput]):
+class IDELEConnector(ActionConnector[ActionConfig, MoveInput]):
+    """
+    IDLE connector for Go2 that performs no action.
+    """
 
     def __init__(self, config: ActionConfig):
         """

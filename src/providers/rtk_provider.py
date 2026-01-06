@@ -26,9 +26,8 @@ class RtkProvider:
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration
+        Robot and sensor configuration.
         """
-
         logging.info("Booting RTK Provider")
 
         baudrate = 115200
@@ -77,7 +76,14 @@ class RtkProvider:
         return dt.timestamp()
 
     def get_latest_gngga_message(self, nmea_data):
+        """
+        Extract the latest GNGGA message from a block of NMEA data.
 
+        Parameters
+        ----------
+        nmea_data : str
+            The block of NMEA data as a string.
+        """
         pattern = re.compile(
             r"(\$GNGGA,(?P<time>\d{6}(?:\.\d+)?),[^*]*\*[0-9A-Fa-f]{2})", re.MULTILINE
         )
@@ -104,7 +110,14 @@ class RtkProvider:
             return most_recent[1]
 
     def magRTKProcessor(self, msg):
+        """
+        Process incoming RTK NMEA messages.
 
+        Parameters
+        ----------
+        msg : NMEA message object
+            The NMEA message to process.
+        """
         try:
             logging.debug(f"RTK:{msg}")
 

@@ -3,16 +3,33 @@ import json
 import logging
 import os
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
 import cv2
+from pydantic import Field
 from ultralytics import YOLO
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.odom_provider import OdomProvider
+
+
+class VLM_Local_YOLOConfig(SensorConfig):
+    """
+    Configuration for Local YOLO VLM Sensor.
+
+    Parameters
+    ----------
+    camera_index : int
+        Index of the camera device.
+    log_file : bool
+        Whether to enable file logging.
+    """
+
+    camera_index: int = Field(default=0, description="Index of the camera device")
+    log_file: bool = Field(default=False, description="Whether to enable file logging")
+
 
 # Common resolutions to test (width, height), ordered high to low
 RESOLUTIONS = [
@@ -26,24 +43,22 @@ RESOLUTIONS = [
 ]
 
 
-@dataclass
-class Message:
+def set_best_resolution(cap: cv2.VideoCapture, resolutions: List[tuple]) -> tuple:
     """
-    Container for timestamped messages.
+    Attempts to set the camera to the best available resolution from the provided list.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    cap : cv2.VideoCapture
+        The OpenCV VideoCapture object.
+    resolutions : List[tuple]
+        List of (width, height) tuples to try.
+
+    Returns
+    -------
+    tuple
+        The (width, height) of the successfully set resolution.
     """
-
-    timestamp: float
-    message: str
-
-
-def set_best_resolution(cap, resolutions):
     for width, height in resolutions:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -81,16 +96,18 @@ def check_webcam(index_to_check):
     return width, height
 
 
-class VLM_Local_YOLO(FuserInput[str]):
-    """ """
+class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
+    """
+    VLM Input Handler using Local YOLO Model.
+    """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLM_Local_YOLOConfig):
         """
         Initialize VLM input handler with empty message buffer.
         """
         super().__init__(config)
 
-        self.camera_index = getattr(self.config, "camera_index", 0)
+        self.camera_index = self.config.camera_index
 
         # Track IO
         self.io_provider = IOProvider()
@@ -105,8 +122,8 @@ class VLM_Local_YOLO(FuserInput[str]):
         self.model = YOLO("yolov8n_aug.pt")
 
         self.write_to_local_file = False
-        if getattr(self.config, "log_file", None):
-            self.write_to_local_file = getattr(self.config, "log_file", False)
+        if self.config.log_file:
+            self.write_to_local_file = self.config.log_file
 
         self.filename_current = None
         self.max_file_size_bytes = 1024 * 1024
@@ -146,21 +163,29 @@ class VLM_Local_YOLO(FuserInput[str]):
         self.odom_yaw_m180_p180 = 0.0
 
     def update_filename(self):
+        """
+        Create a new filename with the current timestamp.
+        """
         unix_ts = round(time.time(), 6)
         logging.info(f"YOLO time: {unix_ts}")
         unix_ts = str(unix_ts).replace(".", "_")
         filename = f"dump/yolo_{unix_ts}Z.jsonl"
         return filename
 
-    def get_top_detection(self, detections):
+    def get_top_detection(self, detections: List[dict]) -> tuple:
         """
         Returns the class label and bbox of the detection with the highest confidence.
 
-        Parameters:
-            detections (list): List of detection dictionaries, each with 'class', 'confidence', 'bbox'.
+        Parameters
+        ----------
+        detections : List[dict]
+            List of detection dictionaries with 'class', 'confidence', and 'bbox' keys.
 
-        Returns:
-            tuple: (label, bbox) of the top detection, or (None, None) if list is empty.
+        Returns
+        -------
+        tuple
+            (class label, bbox) of the top detection or (None, None) if no detections
+            are available.
         """
         if not detections:
             return None, None
@@ -249,10 +274,10 @@ class VLM_Local_YOLO(FuserInput[str]):
         Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
         creates a new file with a timestamp.
 
-        Parameters:
+        Parameters
+        ----------
         - data: Dictionary to write
         """
-
         if not isinstance(json_line, str):
             raise ValueError("Provided json_line must be a json string.")
 
@@ -282,7 +307,6 @@ class VLM_Local_YOLO(FuserInput[str]):
         Message
             Timestamped message containing description
         """
-
         detections = raw_input
 
         if detections:
@@ -310,7 +334,7 @@ class VLM_Local_YOLO(FuserInput[str]):
             if sentence is not None:
                 return Message(timestamp=time.time(), message=sentence)
 
-    async def raw_to_text(self, raw_input: List):
+    async def raw_to_text(self, raw_input: Optional[List]):
         """
         Convert list of detections to text and update message buffer.
 

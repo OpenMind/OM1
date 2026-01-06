@@ -1,5 +1,6 @@
 {
   // Test case metadata
+  "version": "v1.0.1",
   "name": "open_ai_indoor_test",
   "description": "Test OpenAI VLM in an indoor scene",
   "hertz": 1,

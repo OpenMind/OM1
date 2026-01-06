@@ -17,10 +17,10 @@ class PresenceSnapshot:
     ----------
     ts : float
         Server timestamp in UNIX epoch seconds (falls back to local time if missing).
-    names_now : list[str]
-        Known identities currently present (deduplicated).
-    unknown_now : int
-        Count of unknown faces currently present.
+    names : list[str]
+        Known identities present (deduplicated).
+    unknown_faces : int
+        Count of unknown faces present.
     raw : dict
         Full response body from `/who` for advanced consumers.
 
@@ -32,7 +32,7 @@ class PresenceSnapshot:
 
     ts: float
     names: List[str]
-    unknown: int
+    unknown_faces: int
     raw: Dict
 
     def to_text(self) -> str:
@@ -60,7 +60,7 @@ class PresenceSnapshot:
                 clean.append(n)
 
         k = len(clean)
-        u = int(self.unknown or 0)
+        u = int(self.unknown_faces or 0)
 
         def join_names(ns: List[str]) -> str:
             if not ns:
@@ -78,9 +78,7 @@ class PresenceSnapshot:
         if k > 0:
             parts.append(f"{k} known ({join_names(clean)})")
         if u > 0:
-            parts.append(
-                f"{u if u == 1 else 'multiple'} unknown face" + ("s" if u != 1 else "")
-            )
+            parts.append(f"{u} unknown face" + ("s" if u != 1 else ""))
 
         return "In Camera View: " + " and ".join(parts) + "."
 
@@ -101,10 +99,13 @@ class FacePresenceProvider:
         self,
         *,
         base_url: str = "http://127.0.0.1:6793",
-        recent_sec: float = 2.0,
+        recent_sec: float = 3.0,
         fps: float = 5.0,
         timeout_s: float = 2.0,
         prefer_recent: bool = True,
+        unknown_frac_threshold: float = 0.15,
+        unknown_min_count: int = 6,
+        min_obs_window: int = 24,
     ) -> None:
         """
         Configure the provider (first construction establishes the singleton).
@@ -114,27 +115,28 @@ class FacePresenceProvider:
         base_url : str
             Base HTTP URL of the face stream API (e.g., "http://127.0.0.1:6793").
             The provider will call POST `{base_url}/who`.
-        recent_sec : float, default 2.0
+        recent_sec : float, default 3.0
             Lookback window passed to `/who` (seconds of presence history).
         fps : float, default 5.0
             Polling rate in events per second (e.g., 5.0 → every 0.2s).
         timeout_s : float, default 2.0
             HTTP request timeout in seconds.
         """
-
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
         self.period = 1.0 / max(1e-6, float(fps))
         self.timeout_s = float(timeout_s)
         self.prefer_recent = bool(prefer_recent)
+        self.unknown_frac_threshold = float(unknown_frac_threshold)
+        self.unknown_min_count = int(unknown_min_count)
+        self.min_obs_window = int(min_obs_window)
 
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._callbacks: List = []
         self._cb_lock = threading.Lock()
         self._session = requests.Session()
-
-        self._unknown_faces = 0
+        self._unknown_faces: int = 0
 
     def set_recent_sec(self, sec: float) -> None:
         """Dynamically change the lookback window used for `/who`."""
@@ -169,7 +171,7 @@ class FacePresenceProvider:
                 pass
 
     def start(self) -> None:
-        """Start the background polling thread"""
+        """Start the background polling thread."""
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
@@ -179,7 +181,7 @@ class FacePresenceProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to strop"""
+        """Request the background thread to strop."""
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)
@@ -230,20 +232,58 @@ class FacePresenceProvider:
     def _fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
         """
         POST `/who` with a lookback window (default: self.recent_sec) and build a
-        turn-friendly snapshot from `recent_counts` (or `now` as fallback).
+        turn-friendly snapshot using **frames-based** suppression for unknowns.
+
+        Suppression rule:
+          If (frames_recent >= min_obs_window) AND
+             (frames_with_unknown / frames_recent < unknown_frac_threshold),
+          then suppress unknowns (report 0). Otherwise, report the **peak**
+          number of unknown faces observed in any single frame within the window.
+
+        Parameters
+        ----------
+        recent_sec : Optional[float]
+            Lookback window in seconds (overrides self.recent_sec if given).
+
+        Returns
+        -------
+        PresenceSnapshot
+            The canonical presence snapshot.
         """
         sec = float(self.recent_sec if recent_sec is None else recent_sec)
         url = f"{self.base_url}/who"
         r = self._session.post(url, json={"recent_sec": sec}, timeout=self.timeout_s)
         r.raise_for_status()
-        data = r.json() or {}
+        data: Dict = r.json() or {}
 
         if self.prefer_recent:
-            rc: Dict[str, int] = data.get("recent_counts", {}) or {}
-            names = [
-                k for k, c in rc.items() if k and k != "unknown" and int(c or 0) > 0
-            ]
-            unknown = int(data.get("unknown_recent", 0) or 0)
+
+            name_frames: Dict[str, int] = data.get("recent_name_frames", {}) or {}
+            names = [k for k in name_frames.keys() if k and k != "unknown"]
+
+            # Frames-based unknown suppression
+            frames_recent = int(data.get("frames_recent", 0) or 0)
+            frames_with_unknown = int(data.get("frames_with_unknown", 0) or 0)
+            unknown_peak = int(data.get("unknown_recent", 0) or 0)
+
+            if frames_recent > 0:
+                unknown_frac = frames_with_unknown / float(frames_recent)
+                if (
+                    frames_recent >= self.min_obs_window
+                    and unknown_frac < self.unknown_frac_threshold
+                ):
+                    unknown_faces = 0  # suppress brief/rare unknowns
+                else:
+                    unknown_faces = unknown_peak  # report the maximum unknown seen in any single frame
+            else:
+                now = data.get("now", []) or []
+                seen, names_fallback = set(), []
+                for n in now:
+                    if n and n != "unknown" and n not in seen:
+                        seen.add(n)
+                        names_fallback.append(n)
+                names = names_fallback
+                unknown_faces = int(data.get("unknown_now", 0) or 0)
         else:
             now = data.get("now", []) or []
             seen, names = set(), []
@@ -251,14 +291,17 @@ class FacePresenceProvider:
                 if n and n != "unknown" and n not in seen:
                     seen.add(n)
                     names.append(n)
-            unknown = int(data.get("unknown_now", 0) or 0)
-
-        self._unknown_faces = unknown
+            unknown_faces = int(data.get("unknown_now", 0) or 0)
 
         ts = float(data.get("server_ts", time.time()))
-        return PresenceSnapshot(ts=ts, names=names, unknown=unknown, raw=data)
+
+        self._unknown_faces = int(unknown_faces)
+
+        return PresenceSnapshot(
+            ts=ts, names=names, unknown_faces=unknown_faces, raw=data
+        )
 
     @property
-    def unknown_faces(self):
-        """Return the most recent count of unknown faces detected."""
+    def unknown_faces(self) -> int:
+        """Most recent (suppressed) count of unknown faces detected in the lookback window."""
         return self._unknown_faces

@@ -1,20 +1,40 @@
 repos:
--   repo: https://github.com/astral-sh/ruff-pre-commit
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-docstring-first
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.3
     hooks:
-    -   id: ruff
+      - id: ruff
         args: [--fix]
--   repo: https://github.com/psf/black
+
+  - repo: https://github.com/psf/black
     rev: 25.1.0
     hooks:
-    -   id: black
--   repo: https://github.com/pycqa/isort
+      - id: black
+
+  - repo: https://github.com/pycqa/isort
     rev: 6.0.0
     hooks:
-    -   id: isort
-- repo: https://github.com/Yelp/detect-secrets
-  rev: v1.5.0
-  hooks:
-    - id: detect-secrets
-      args: [--exclude-secrets, 'openmind_free']
-      files: ^config/.*$
+      - id: isort
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--exclude-secrets, 'openmind_free']
+        files: ^config/.*$
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.28.3
+    hooks:
+      - id: typos
+        exclude: ^(src/unitree|src/ubtech)/

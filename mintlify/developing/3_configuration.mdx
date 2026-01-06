@@ -9,6 +9,7 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 ```python
 {
+  "version": "v1.0.1",
   "hertz": 0.5,
   "name": "agent_name",
   "api_key": "openmind_free",
@@ -66,13 +67,39 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 ## Common Configuration Elements
 
-* **hertz** Defines the base tick rate of the agent. This rate can be adjusted to allow the agent to respond quickly to changing environments, but comes at the expense of reducing the time available for LLLms to finish generating tokens. Note: time critical tasks such as collision avoidance should be handled through low level control loops operating in parallel to the LLM-based logic, using event-triggered callbacks through real-time middleware. 
+* **hertz** Defines the base tick rate of the agent. This rate can be adjusted to allow the agent to respond quickly to changing environments, but comes at the expense of reducing the time available for LLMs to finish generating tokens. Note: time critical tasks such as collision avoidance should be handled through low level control loops operating in parallel to the LLM-based logic, using event-triggered callbacks through real-time middleware.
 * **name** A unique identifier for the agent.
 * **api_key** The API key for the agent. You can get your API key from the [OpenMind Portal](https://portal.openmind.org/).
-* **URID** The Universal Robot ID for the robot. Used to join a decentralized machine-to-machine coordination and communication system (FABRIC). 
+* **URID** The Universal Robot ID for the robot. Used to join a decentralized machine-to-machine coordination and communication system (FABRIC).
 * **system_prompt_base** Defines the agent's personality and behavior.
 * **system_governance** The agent's laws and constitution.
 * **system_prompt_examples** The agent's example inputs/actions.
+
+## version
+
+The version field specifies the runtime configuration version. It is required for both single-mode and multi-mode configs.
+
+This field ensures that configuration files remain compatible as the runtime evolves. When the version in a config doesn’t match what the runtime expects, developers receive clear logs and errors instead of silent failures or unpredictable behavior.
+
+### Runtime support
+
+The runtime/version.py module handles:
+
+  - retrieving the current runtime version
+  - checking compatibility between config and runtime
+  - producing detailed logs and helpful error messages when mismatches occur
+
+### Available versions
+
+  - `v1.0.0`
+
+    Initial stable configuration version.
+
+  - `v1.0.1` (latest)
+
+    Adds support for context-aware mode for full autonomy.
+
+Note: Always use the latest supported version in your configuration files unless you have a specific reason to pin an older version.
 
 ## Agent Inputs (`agent_inputs`)
 
@@ -108,7 +135,7 @@ You can implement your own inputs by following the [Input Plugin Guide](4_inputs
 
 ## Cortex LLM (`cortex_llm`)
 
-The `cortex_llm` field allow you to configure the Large Language Model (LLM) used by the agent. In a typical deployment, data will flow to at least three different LLMs, hosted in the cloud, that work together to provide actions to your robot.
+The `cortex_llm` field allows you to configure the Large Language Model (LLM) used by the agent. In a typical deployment, data will flow to at least three different LLMs, hosted in the cloud, that work together to provide actions to your robot.
 
 ### Robot Control by a Single LLM
 
@@ -177,3 +204,5 @@ Defines the agent's available capabilities, including action names, their implem
 ```
 
 You can customize the actions following the [Action Plugin Guide](6_actions)
+
+To introduce multimode config, refer [introduce new mode](https://docs.openmind.org/developer_cookbook/new_mode)

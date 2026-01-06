@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.plugins.riva_asr import RivaASRInput
+from inputs.plugins.riva_asr import RivaASRInput, RivaASRSensorConfig
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def mock_sleep_ticker():
 
 @pytest.fixture
 def asr_input(mock_asr_provider, mock_sleep_ticker):
-    return RivaASRInput()
+    return RivaASRInput(config=RivaASRSensorConfig())
 
 
 def test_init(asr_input, mock_asr_provider):
@@ -69,7 +69,8 @@ async def test_poll_empty_queue(asr_input):
 @pytest.mark.asyncio
 async def test_raw_to_text_conversion(asr_input):
     result = await asr_input._raw_to_text("test input")
-    assert result == "test input"
+    assert result.message == "test input"
+    assert isinstance(result.timestamp, float)
 
 
 @pytest.mark.asyncio
