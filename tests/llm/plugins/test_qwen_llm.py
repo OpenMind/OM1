@@ -1,12 +1,3 @@
-"""Unit tests for QwenLLM plugin.
-
-Tests cover:
-- Tool call parsing from Qwen-style XML blocks
-- LLM initialization and configuration
-- API request handling and response parsing
-- Error handling scenarios
-"""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -19,11 +10,6 @@ from llm.plugins.qwen_llm import QwenLLM, _parse_qwen_tool_calls
 
 class DummyOutputModel(BaseModel):
     test_field: str
-
-
-# =============================================================================
-# Tests for _parse_qwen_tool_calls helper function
-# =============================================================================
 
 
 class TestParseQwenToolCalls:
@@ -131,11 +117,6 @@ class TestParseQwenToolCalls:
         assert len(ids) == len(set(ids)), "Tool call IDs should be unique"
 
 
-# =============================================================================
-# Fixtures
-# =============================================================================
-
-
 @pytest.fixture
 def config():
     """Fixture providing a basic LLM configuration."""
@@ -226,11 +207,6 @@ def llm(config):
     return QwenLLM(config, available_actions=None)
 
 
-# =============================================================================
-# Tests for QwenLLM class
-# =============================================================================
-
-
 class TestQwenLLMInit:
     """Tests for QwenLLM initialization."""
 
@@ -243,6 +219,7 @@ class TestQwenLLMInit:
         """Test default model is set when not provided."""
         config = LLMConfig()
         llm = QwenLLM(config, available_actions=None)
+        assert llm._config.model is not None
         assert "Qwen" in llm._config.model
 
     def test_init_extra_body_config(self, llm):
