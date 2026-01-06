@@ -1,46 +1,29 @@
 #!/usr/bin/env python3
-import sys
-import os
+"""JSON5 linter for OpenMind configuration files."""
 import json5
+import sys
 from pathlib import Path
-
-def lint_file(filepath):
+def lint_file(filepath: str) -> bool:
+    """Validate JSON5 file syntax and structure."""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-        data = json5.loads(content)
+            json5.loads(f.read())
         print(f"✅ {filepath}")
         return True
-    except json5.JSON5DecodeError as e:
-        print(f"❌ {filepath}:{e.lineno}:{e.colno}")
-        print(f"   Error: {e.msg}")
-        print(f"   Near: {e.value!r}")
+    except json5.JSON5DecoderException as e:
+        print(f"❌ {filepath}: {e}")
         return False
     except Exception as e:
-        print(f"❌ {filepath}: {str(e)}")
+        print(f"⚠️ {filepath}: {e}")
         return False
-
-def main():
+def main() -> None:
+    """Lint all JSON5 files in current directory and subdirectories."""
     root = Path.cwd()
     json5_files = list(root.glob("**/*.json5"))
-    
     if not json5_files:
         print("No JSON5 files found.")
-        sys.exit(0)
-    
-    print(f"Found {len(json5_files)} JSON5 files to lint")
-    
-    failed = 0
-    for file_path in json5_files:
-        if not lint_file(file_path):
-            failed += 1
-    
-    if failed > 0:
-        print(f"\n❌ {failed} JSON5 files failed linting")
-        sys.exit(1)
-    else:
-        print(f"\n✅ All {len(json5_files)} JSON5 files are valid!")
-        sys.exit(0)
-
+        return
+    errors = sum(1 for f in json5_files if not lint_file(str(f)))
+    sys.exit(1 if errors else 0)
 if __name__ == "__main__":
     main()
