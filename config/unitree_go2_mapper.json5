@@ -1,62 +1,62 @@
 {
-  "version": "v1.0.1",
-  "hertz": 1,
-  "name": "bits_mapper",
-  "api_key": "openmind_free",
-  "URID": "om1_qwertyui",
-  "unitree_ethernet": "en0",
-  "system_prompt_base": "You are a smart, curious, and friendly dog.",
-  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
-  "system_prompt_examples": "",
-  "agent_inputs": [
+  version: "v1.0.1",
+  hertz: 1,
+  name: "bits_mapper",
+  api_key: "openmind_free",
+  URID: "om1_qwertyui",
+  unitree_ethernet: "en0",
+  system_prompt_base: "You are a smart, curious, and friendly dog.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "",
+  agent_inputs: [
     //{
     //  "type": "VLMVila"
     //},
     {
-      "type": "VLM_Local_YOLO",
-      "config": {
-        "camera_index": 0,
-        "log_file": true
-      }
+      type: "VLM_Local_YOLO",
+      config: {
+        camera_index: 0,
+        log_file: true,
+      },
     },
     {
-      "type": "UnitreeGo2Battery"
+      type: "UnitreeGo2Battery",
     },
     {
-      "type": "GoogleASRInput"
+      type: "GoogleASRInput",
     },
     {
-      "type": "Gps",
+      type: "Gps",
     },
     {
-      "type": "Rtk",
+      type: "Rtk",
     },
     {
-      "type": "Odom",
+      type: "Odom",
     },
     {
-      "type": "RPLidar",
-    }
+      type: "RPLidar",
+    },
   ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Spot",
-      "history_length": 0
-    }
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
+  agent_actions: [
     {
-      "name": "move_game_controller",
-      "llm_label": "external movement controller",
-      "connector": "go2_game_controller",
-      "exclude_from_prompt": true,
+      name: "move_game_controller",
+      llm_label: "external movement controller",
+      connector: "go2_game_controller",
+      exclude_from_prompt: true,
       config: {
         speed_x: 0.9,
         speed_yaw: 0.6,
         lateral_correction: 0.0,
-        yaw_correction: 0
-      }
+        yaw_correction: 0,
+      },
     },
     //{
     //  "name": "move_go2_autonomy",
@@ -72,25 +72,25 @@
     //  }
     //}
   ],
-  "backgrounds": [
+  backgrounds: [
     {
       type: "Gps",
       config: {
         serial_port: "/dev/cu.usbmodem101",
-      }
+      },
     },
     {
       type: "Rtk",
       config: {
         serial_port: "/dev/cu.usbmodem21201",
-      }
+      },
     },
     {
       type: "Odom",
-        config: {
-          use_zenoh: false,
-          URID: "", // only needed for Zenoh
-        }
+      config: {
+        use_zenoh: false,
+        URID: "", // only needed for Zenoh
+      },
     },
     {
       type: "RPLidar",
@@ -98,17 +98,17 @@
         serial_port: "/dev/cu.usbserial-0001",
         half_width_robot: 0.21,
         relevant_distance_max: 1.1,
-        relevant_distance_min: 0.20,
+        relevant_distance_min: 0.2,
         sensor_mounting_angle: 172.0,
         angles_blanked: [],
         log_file: true,
-      }
+      },
     },
     {
       type: "RFmapper",
     },
     {
       type: "UnitreeGo2State",
-    }
-  ]
+    },
+  ],
 }
