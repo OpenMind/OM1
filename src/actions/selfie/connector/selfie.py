@@ -16,7 +16,7 @@ class SelfieConfig(ActionConfig):
     """
     Configuration for Selfie connector.
 
-    Parameters:
+    Parameters
     ----------
     face_http_base_url : str
         Base URL for the face HTTP service.
@@ -54,12 +54,12 @@ class SelfieConfig(ActionConfig):
 
 class SelfieConnector(ActionConnector[SelfieConfig, SelfieInput]):
     """
-    Enroll a selfie through the face HTTP service :
+    Enroll a selfie through the face HTTP service.
     """
 
     def __init__(self, config: SelfieConfig):
         """
-        Initialize the connector
+        Initialize the connector.
 
         Parameters
         ----------
