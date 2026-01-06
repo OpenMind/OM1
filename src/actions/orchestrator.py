@@ -49,6 +49,7 @@ class ActionOrchestrator:
         )
         self._connector_executor = ThreadPoolExecutor(
             max_workers=self._connector_workers,
+            thread_name_prefix="action-orchestrator-connector-",
         )
         self._submitted_connectors = set()
         self._stop_event = threading.Event()
@@ -56,7 +57,7 @@ class ActionOrchestrator:
         self._action_dependencies = config.action_dependencies or {}
         self._completed_actions = {}
 
-    def start(self):
+    def start(self) -> asyncio.Future:
         """
         Start actions and connectors in separate threads.
 
