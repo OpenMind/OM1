@@ -297,7 +297,6 @@ def add_meta(
     dict
         The updated runtime configuration.
     """
-
     # logging.info(f"config before {config}")
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key

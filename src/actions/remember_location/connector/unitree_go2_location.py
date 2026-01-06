@@ -14,7 +14,7 @@ class UnitreeGo2RememberLocationConfig(ActionConfig):
     """
     Configuration for Unitree Go2 Remember Location connector.
 
-    Parameters:
+    Parameters
     ----------
     base_url : str
         The base URL for the remember location API.

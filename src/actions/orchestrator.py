@@ -49,7 +49,7 @@ class ActionOrchestrator:
 
     def start(self):
         """
-        Start actions and connectors in separate threads
+        Start actions and connectors in separate threads.
         """
         for agent_action in self._config.agent_actions:
             if agent_action.llm_label in self._submitted_connectors:
@@ -64,7 +64,7 @@ class ActionOrchestrator:
 
     def _run_connector_loop(self, action: AgentAction):
         """
-        Thread-based connector loop
+        Thread-based connector loop.
         """
         while not self._stop_event.is_set():
             try:

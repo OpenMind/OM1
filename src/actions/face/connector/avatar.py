@@ -1,5 +1,4 @@
 import logging
-import time
 
 from actions.base import ActionConfig, ActionConnector
 from actions.face.interface import FaceInput
@@ -7,11 +6,15 @@ from providers.avatar_provider import AvatarProvider
 
 
 class FaceAvatarConnector(ActionConnector[ActionConfig, FaceInput]):
+    """
+    Connector to link Face action with AvatarProvider.
+    """
+
     def __init__(self, config: ActionConfig):
         """
         Initialize the FaceAvatarConnector with AvatarProvider.
 
-        Parameters:
+        Parameters
         ----------
         config : ActionConfig
             Configuration parameters for the connector.
@@ -25,7 +28,7 @@ class FaceAvatarConnector(ActionConnector[ActionConfig, FaceInput]):
         """
         Send face command via AvatarProvider.
 
-        Parameters:
+        Parameters
         ----------
         output_interface : FaceInput
         """
@@ -52,6 +55,3 @@ class FaceAvatarConnector(ActionConnector[ActionConfig, FaceInput]):
         """
         self.avatar_provider.stop()
         logging.info("AvatarProvider stopped")
-
-    def tick(self) -> None:
-        time.sleep(60)
