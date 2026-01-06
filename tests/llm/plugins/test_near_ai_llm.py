@@ -1,12 +1,3 @@
-"""Unit tests for NearAI LLM plugin.
-
-Tests cover:
-- LLM initialization and configuration
-- API request handling and response parsing
-- Tool call processing
-- Error handling scenarios
-"""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -19,11 +10,6 @@ from llm.plugins.near_ai_llm import NearAILLM
 
 class DummyOutputModel(BaseModel):
     test_field: str
-
-
-# =============================================================================
-# Fixtures
-# =============================================================================
 
 
 @pytest.fixture
@@ -127,11 +113,6 @@ def llm(config):
     return NearAILLM(config, available_actions=None)
 
 
-# =============================================================================
-# Tests for NearAILLM initialization
-# =============================================================================
-
-
 class TestNearAILLMInit:
     """Tests for NearAILLM initialization."""
 
@@ -151,6 +132,7 @@ class TestNearAILLMInit:
         """Test default model is set when not provided."""
         config = LLMConfig(api_key="test_key")
         llm = NearAILLM(config, available_actions=None)
+        assert llm._config.model is not None
         assert "qwen" in llm._config.model.lower()
 
     def test_init_requires_api_key(self):
@@ -179,11 +161,6 @@ class TestNearAILLMInit:
             mock_gen.return_value = [{"name": "test_action"}]
             llm = NearAILLM(config, available_actions=[mock_action])
             assert len(llm.function_schemas) > 0
-
-
-# =============================================================================
-# Tests for NearAILLM.ask() method
-# =============================================================================
 
 
 class TestNearAILLMAsk:
