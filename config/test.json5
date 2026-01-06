@@ -1,36 +1,36 @@
 {
-  "version": "v1.0.1",
-  "hertz": 1,
-  "name": "bits_mapper",
-  "api_key": "openmind_free",
-  "URID": "om1_qwertyui",
-  "unitree_ethernet": "en0",
-  "system_prompt_base": "You are a smart, curious, and friendly dog.",
-  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
-  "system_prompt_examples": "",
-  "agent_inputs": [
+  version: "v1.0.1",
+  hertz: 1,
+  name: "bits_mapper",
+  api_key: "openmind_free",
+  URID: "om1_qwertyui",
+  unitree_ethernet: "en0",
+  system_prompt_base: "You are a smart, curious, and friendly dog.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "",
+  agent_inputs: [
     //{
     //  "type": "VLMVila"
     //},
     {
-      "type": "VLM_Local_YOLO",
-      "config": {
-        "camera_index": 0,
-        "log_file": true
-      }
+      type: "VLM_Local_YOLO",
+      config: {
+        camera_index: 0,
+        log_file: true,
+      },
     },
     {
-      "type": "Rtk",
+      type: "Rtk",
     },
   ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Spot",
-      "history_length": 0
-    }
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
+  agent_actions: [
     //{
     //  "name": "move_game_controller",
     //  "llm_label": "external movement controller",
@@ -57,15 +57,15 @@
     //  }
     //}
   ],
-  "backgrounds": [
+  backgrounds: [
     {
       type: "Rtk",
       config: {
         serial_port: "/dev/cu.usbmodem101",
-      }
+      },
     },
     {
       type: "RFmapper",
-    }
-  ]
+    },
+  ],
 }

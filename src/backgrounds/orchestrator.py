@@ -10,7 +10,11 @@ from runtime.multi_mode.config import RuntimeConfig
 
 class BackgroundOrchestrator:
     """
-    Manages the background tasks for the application.
+    Manages and coordinates background tasks for the application.
+
+    Handles concurrent execution of multiple background tasks in separate
+    threads, ensuring they run independently without blocking the main event loop.
+    Supports graceful shutdown and error handling for individual background tasks.
     """
 
     _config: RuntimeConfig
@@ -38,9 +42,18 @@ class BackgroundOrchestrator:
         self._submitted_backgrounds = set()
         self._stop_event = threading.Event()
 
-    def start(self):
+    def start(self) -> asyncio.Future:
         """
         Start background tasks in separate threads.
+
+        Submits each background task to the thread pool executor for concurrent
+        execution. Skips backgrounds that have already been submitted to prevent
+        duplicates.
+
+        Returns
+        -------
+        asyncio.Future
+            A future object for compatibility with async interfaces.
         """
         for background in self._config.backgrounds:
             if background.name in self._submitted_backgrounds:
@@ -72,6 +85,10 @@ class BackgroundOrchestrator:
     def stop(self):
         """
         Stop the background executor and wait for all tasks to complete.
+
+        Sets the stop event to signal all background loops to terminate,
+        then shuts down the thread pool executor and waits for all running
+        tasks to finish gracefully.
         """
         self._stop_event.set()
         self._background_executor.shutdown(wait=True)

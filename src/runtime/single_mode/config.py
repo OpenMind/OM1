@@ -133,8 +133,13 @@ def load_config(
         else config_source_path
     )
 
-    with open(config_path, "r+") as f:
-        raw_config = json5.load(f)
+    with open(config_path, "r") as f:
+        try:
+            raw_config = json5.load(f)
+        except Exception as e:
+            raise ValueError(
+                f"Failed to parse configuration file '{config_path}': {e}"
+            ) from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
