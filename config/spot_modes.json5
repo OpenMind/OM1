@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.1",
+  version: "v1.0.1",
   default_mode: "welcome",
   allow_manual_switching: true,
   mode_memory_enabled: true,
@@ -29,8 +29,8 @@
           },
         },
         {
-        "type": "GoogleASRInput"
-        }
+          type: "GoogleASRInput",
+        },
       ],
       agent_actions: [
         {
@@ -53,7 +53,7 @@
       hertz: 1,
       agent_inputs: [
         {
-        "type": "GoogleASRInput"
+          type: "GoogleASRInput",
         },
         {
           type: "VLM_COCO_Local",
@@ -82,7 +82,14 @@
       from_mode: "welcome",
       to_mode: "conversation",
       transition_type: "input_triggered",
-      trigger_keywords: ["talk", "chat", "conversation", "tell me", "ask you", "discuss"],
+      trigger_keywords: [
+        "talk",
+        "chat",
+        "conversation",
+        "tell me",
+        "ask you",
+        "discuss",
+      ],
       priority: 2,
       cooldown_seconds: 3.0,
     },
@@ -92,7 +99,13 @@
       from_mode: "*",
       to_mode: "welcome",
       transition_type: "input_triggered",
-      trigger_keywords: ["reset", "start over", "welcome mode", "restart", "initialize"],
+      trigger_keywords: [
+        "reset",
+        "start over",
+        "welcome mode",
+        "restart",
+        "initialize",
+      ],
       priority: 5,
       cooldown_seconds: 10.0,
     },
