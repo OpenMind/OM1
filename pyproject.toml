@@ -25,7 +25,7 @@ dependencies = [
     "typer>=0.15.1",
     "opencv-python",
     "deepface>=0.0.81",
-    "tensorflow>=2.15.0",
+    "tensorflow-cpu>=2.15.0",
     "tf_keras>=2.15.0",
     "web3",
     "numpy",
