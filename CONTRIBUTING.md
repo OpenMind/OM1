@@ -65,7 +65,11 @@ Before contributing, please take a moment to read through the following guidelin
 
 7. **Local Testing**
 
-    Install pre-commit and execute `pre-commit install`. This ensures that pre-commit checks run before each commit. Alternatively, you can manually trigger all checks by running pre-commit run --all-files.
+    Install pre-commit and execute `pre-commit install`. This ensures that pre-commit checks run before each commit. Alternatively, you can manually trigger all checks by running
+
+    ```bash
+    pre-commit run --all-files
+    ```
 
     After you have updated the core documentation, make sure to run:
     ```bash
