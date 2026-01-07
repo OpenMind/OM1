@@ -17,6 +17,16 @@
 * **Web-Based Debugging Display**: Monitor the system in action with WebSim (available at http://localhost:8000/) for easy visual debugging.
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 
+### Windows Installation Tips (Community Contribution)
+
+On Windows, you may encounter issues with certain dependencies like `tensorflow-io-gcs-filesystem` (no official wheel available).
+
+Workaround:
+- Use `uv sync --no-deps` to skip problematic packages, or
+- Run `uv pip install . --no-deps` after creating the virtual environment.
+
+Many community members successfully run `spot` and `conversation` agents this way for testing.
+
 ## Architecture Overview
 ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/dd91457d-010f-43d8-960e-d1165834aa58)
 
