@@ -61,10 +61,29 @@ class RPLidarConfig(BackgroundConfig):
 
 class RPLidar(Background[RPLidarConfig]):
     """
-    Reads RPLidar data from RPLidar provider.
+    Background task for reading laser scan data from RPLidar device.
+
+    This background task initializes and manages an RPLidarProvider instance
+    that connects to an RPLidar laser scanner via serial port or Zenoh.
+    The provider processes laser scan data to detect obstacles, perform
+    localization, and assist with navigation.
+
+    The RPLidar device provides 360-degree laser scanning capabilities,
+    which are essential for SLAM (Simultaneous Localization and Mapping),
+    obstacle avoidance, and path planning in robotic applications.
     """
 
     def __init__(self, config: RPLidarConfig):
+        """
+        Initialize RPLidar background task with configuration.
+
+        Parameters
+        ----------
+        config : RPLidarConfig
+            Configuration object containing RPLidar-specific parameters such as
+            serial port, Zenoh settings, robot dimensions, distance thresholds,
+            sensor mounting angle, and logging preferences.
+        """
         super().__init__(config)
 
         lidar_config = {
