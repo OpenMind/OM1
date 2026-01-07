@@ -65,6 +65,19 @@ brew install ffmpeg
 sudo apt-get update
 sudo apt-get install ffmpeg
 ```
+## CLI
+
+OM1 provides a command-line interface (CLI). The main entry point is `src/run.py` which provides the following commands:
+
+- `start`: Start an agent with a specified config
+
+```bash
+python src/run.py start [config_name] [--log-level] [--log-to-file]
+```
+
+- `config_name`: Name of the config file (without `.json5` extension) in the `/config` directory.
+- `--log-level`: Optional log level (default: `INFO`). Use `DEBUG` for detailed logs.
+- `--log-to-file`: Optional flag to log to `logs/{config_name}.log` (default: `False`).
 
 ## Installation and Setup
 
@@ -218,3 +231,32 @@ If you configure a custom agent, replace `<agent_name>` with your agent and run 
 ```bash
 uv run src/run.py <agent_name>
 ```
+
+### Linting and Testing
+
+To check/format/lint your code, run:
+```bash
+uv run ruff check . --fix && uv run black . && uv run isort .
+```
+
+To automatically run these checks before committing, install [pre-commit](https://pre-commit.com/) and execute `pre-commit install`. This ensures that pre-commit checks run before each commit. Additionally, you can manually trigger all checks by running `pre-commit run --all-files`.
+
+### Updating the Docs
+
+After you have updated the core documentation, make sure to run:
+
+```bash
+chmod +x scripts/mintlify.sh # first time only
+./scripts/mintlify.sh
+```
+
+to also update secondary documentation systems like mintlify.
+
+### Unit Testing
+
+To unit test the system, run:
+```bash
+uv run pytest --log-cli-level=DEBUG -s
+```
+
+Use type `hints` and `docstrings` for better code maintainability.
