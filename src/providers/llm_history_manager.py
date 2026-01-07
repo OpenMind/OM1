@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import functools
 import logging
 from dataclasses import dataclass
@@ -8,6 +9,7 @@ import openai
 
 from llm import LLMConfig
 
+from .history_storage import load_history, save_history
 from .io_provider import IOProvider
 
 R = TypeVar("R")
@@ -83,9 +85,20 @@ class LLMHistoryManager:
         self._summary_task: Optional[asyncio.Task] = None
 
         # history buffer
-        self.history: List[ChatMessage] = []
+        loaded_messages = load_history()
+        if loaded_messages:
+            self.history: List[ChatMessage] = [
+                ChatMessage(role=msg["role"], content=msg["content"])
+                for msg in loaded_messages
+            ]
+            logging.info(f"Restored {len(self.history)} messages from previous session")
+        else:
+            self.history: List[ChatMessage] = []
 
         # io provider
+        # Register cleanup handler for graceful shutdown
+        atexit.register(self.persist_history)
+
         self.io_provider = IOProvider()
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
@@ -265,6 +278,18 @@ class LLMHistoryManager:
         """
         return [{"role": msg.role, "content": msg.content} for msg in self.history]
 
+    def persist_history(self) -> bool:
+        """
+        Save current conversation history to disk.
+
+        Returns
+        -------
+        bool
+            True if save was successful, False otherwise
+        """
+        messages_dict = self.get_messages()
+        return save_history(messages_dict)
+
     @staticmethod
     def update_history() -> (
         Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]
@@ -345,6 +370,9 @@ class LLMHistoryManager:
                         await self.history_manager.start_summary_task(
                             self.history_manager.history
                         )
+
+                if self.history_manager.frame_index % 5 == 0:
+                    self.history_manager.persist_history()
 
                 self.history_manager.frame_index += 1
 
