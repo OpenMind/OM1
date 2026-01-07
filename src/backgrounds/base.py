@@ -16,12 +16,12 @@ class BackgroundConfig(BaseModel):
 
 class Background(T.Generic[ConfigType]):
     """
-    Base class for background components
+    Base class for background components.
     """
 
     def __init__(self, config: ConfigType):
         """
-        Initialize background with configuration
+        Initialize background with configuration.
 
         Parameters
         ----------

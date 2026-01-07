@@ -16,7 +16,7 @@ class MoveZenohRemoteConfig(ActionConfig):
     """
     Configuration for Zenoh remote connector.
 
-    Parameters:
+    Parameters
     ----------
     api_key : Optional[str]
         OM API key.
