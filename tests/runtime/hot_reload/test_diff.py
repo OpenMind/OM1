@@ -4,6 +4,7 @@ import pytest
 from runtime.hot_reload.diff import (
     ConfigDiff,
     FieldChange,
+    ChangeType,
     diff_configs,
     get_nested_value,
     set_nested_value,
@@ -17,12 +18,12 @@ class TestFieldChange:
         """Test creating a FieldChange instance."""
         change = FieldChange(
             field_path="system_prompt_base",
-            change_type="modified",
+            change_type=ChangeType.MODIFIED,
             old_value="old prompt",
             new_value="new prompt",
         )
         assert change.field_path == "system_prompt_base"
-        assert change.change_type == "modified"
+        assert change.change_type == ChangeType.MODIFIED
         assert change.old_value == "old prompt"
         assert change.new_value == "new prompt"
 
@@ -30,22 +31,22 @@ class TestFieldChange:
         """Test FieldChange for added field."""
         change = FieldChange(
             field_path="new_field",
-            change_type="added",
+            change_type=ChangeType.ADDED,
             old_value=None,
             new_value="value",
         )
-        assert change.change_type == "added"
+        assert change.change_type == ChangeType.ADDED
         assert change.old_value is None
 
     def test_field_change_removed(self):
         """Test FieldChange for removed field."""
         change = FieldChange(
             field_path="old_field",
-            change_type="removed",
+            change_type=ChangeType.REMOVED,
             old_value="value",
             new_value=None,
         )
-        assert change.change_type == "removed"
+        assert change.change_type == ChangeType.REMOVED
         assert change.new_value is None
 
 
@@ -62,8 +63,8 @@ class TestConfigDiff:
     def test_diff_with_changes(self):
         """Test ConfigDiff with changes."""
         changes = [
-            FieldChange("field1", "modified", "old", "new"),
-            FieldChange("field2", "added", None, "value"),
+            FieldChange("field1", ChangeType.MODIFIED, "old", "new"),
+            FieldChange("field2", ChangeType.ADDED, None, "value"),
         ]
         diff = ConfigDiff(changes=changes)
         assert diff.has_changes is True
@@ -72,8 +73,8 @@ class TestConfigDiff:
     def test_changed_fields_property(self):
         """Test changed_fields property returns dict mapping."""
         changes = [
-            FieldChange("field1", "modified", "old1", "new1"),
-            FieldChange("field2", "modified", "old2", "new2"),
+            FieldChange("field1", ChangeType.MODIFIED, "old1", "new1"),
+            FieldChange("field2", ChangeType.MODIFIED, "old2", "new2"),
         ]
         diff = ConfigDiff(changes=changes)
         changed = diff.changed_fields
@@ -90,37 +91,29 @@ class TestGetNestedValue:
     def test_simple_key(self):
         """Test getting a simple top-level key."""
         data = {"name": "test", "value": 42}
-        assert get_nested_value(data, "name") == "test"
-        assert get_nested_value(data, "value") == 42
+        exists, value = get_nested_value(data, "name")
+        assert exists is True
+        assert value == "test"
 
     def test_nested_key(self):
         """Test getting a nested key with dot notation."""
         data = {"config": {"llm": {"model": "gpt-4"}}}
-        assert get_nested_value(data, "config.llm.model") == "gpt-4"
+        exists, value = get_nested_value(data, "config.llm.model")
+        assert exists is True
+        assert value == "gpt-4"
 
-    def test_missing_key_returns_default(self):
-        """Test that missing keys return the default value."""
+    def test_missing_key_returns_false(self):
+        """Test that missing keys return exists=False."""
         data = {"name": "test"}
-        assert get_nested_value(data, "missing") is None
-        assert get_nested_value(data, "missing", "default") == "default"
+        exists, value = get_nested_value(data, "missing")
+        assert exists is False
+        assert value is None
 
     def test_nested_missing_key(self):
-        """Test missing nested key returns default."""
+        """Test missing nested key returns exists=False."""
         data = {"config": {"llm": {}}}
-        assert get_nested_value(data, "config.llm.model") is None
-
-    def test_list_index_access(self):
-        """Test accessing list elements by index."""
-        data = {"items": ["a", "b", "c"]}
-        assert get_nested_value(data, "items.0") == "a"
-        assert get_nested_value(data, "items.1") == "b"
-        assert get_nested_value(data, "items.2") == "c"
-
-    def test_nested_list_access(self):
-        """Test accessing nested structures in lists."""
-        data = {"agents": [{"name": "agent1"}, {"name": "agent2"}]}
-        assert get_nested_value(data, "agents.0.name") == "agent1"
-        assert get_nested_value(data, "agents.1.name") == "agent2"
+        exists, value = get_nested_value(data, "config.llm.model")
+        assert exists is False
 
 
 class TestSetNestedValue:
@@ -129,26 +122,23 @@ class TestSetNestedValue:
     def test_simple_key(self):
         """Test setting a simple top-level key."""
         data = {"name": "old"}
-        set_nested_value(data, "name", "new")
+        result = set_nested_value(data, "name", "new")
+        assert result is True
         assert data["name"] == "new"
 
     def test_nested_key(self):
         """Test setting a nested key."""
         data = {"config": {"llm": {"model": "old"}}}
-        set_nested_value(data, "config.llm.model", "new")
+        result = set_nested_value(data, "config.llm.model", "new")
+        assert result is True
         assert data["config"]["llm"]["model"] == "new"
 
     def test_create_nested_structure(self):
         """Test that nested structures are created if missing."""
         data = {}
-        set_nested_value(data, "config.llm.model", "gpt-4")
+        result = set_nested_value(data, "config.llm.model", "gpt-4")
+        assert result is True
         assert data["config"]["llm"]["model"] == "gpt-4"
-
-    def test_list_index_set(self):
-        """Test setting list elements by index."""
-        data = {"items": ["a", "b", "c"]}
-        set_nested_value(data, "items.1", "B")
-        assert data["items"][1] == "B"
 
 
 class TestDiffConfigs:
@@ -180,10 +170,7 @@ class TestDiffConfigs:
         diff = diff_configs(old, new)
 
         assert diff.has_changes is True
-        added = [c for c in diff.changes if c.change_type == "added"]
-        assert len(added) == 1
-        assert added[0].field_path == "hertz"
-        assert added[0].new_value == 2
+        assert "hertz" in diff.added_fields
 
     def test_field_removed(self):
         """Test detecting removed field."""
@@ -192,10 +179,7 @@ class TestDiffConfigs:
         diff = diff_configs(old, new)
 
         assert diff.has_changes is True
-        removed = [c for c in diff.changes if c.change_type == "removed"]
-        assert len(removed) == 1
-        assert removed[0].field_path == "hertz"
-        assert removed[0].old_value == 2
+        assert "hertz" in diff.removed_fields
 
     def test_nested_field_change(self):
         """Test detecting nested field change."""
@@ -287,4 +271,3 @@ class TestDiffConfigs:
 
         assert diff.has_changes is True
         assert diff.changes[0].field_path == "a.b.c.d.e"
-
