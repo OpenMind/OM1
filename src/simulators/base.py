@@ -20,12 +20,12 @@ class SimulatorConfig(BaseModel):
 
 class Simulator:
     """
-    Base class for simulation components
+    Base class for simulation components.
     """
 
     def __init__(self, config: SimulatorConfig):
         """
-        Initialize simulator with configuration
+        Initialize simulator with configuration.
 
         Parameters
         ----------
@@ -37,13 +37,13 @@ class Simulator:
 
     def sim(self, actions: List[Action]) -> None:
         """
-        Simulate the environment with the given actions
+        Simulate the environment with the given actions.
         """
         pass
 
     def tick(self) -> None:
         """
-        Run the simulator for one tick
+        Run the simulator for one tick.
 
         Note: This method should not block the event loop.
         """
