@@ -18,15 +18,6 @@ from watchdog.observers import Observer
 class ConfigFileHandler(FileSystemEventHandler):
     """
     Handle file system events for configuration files.
-
-    Parameters
-    ----------
-    callback : Callable
-        Async callback function to invoke on file changes
-    target_path : Path
-        Path to the configuration file to monitor
-    debounce_seconds : float
-        Minimum time between triggers for the same file
     """
 
     def __init__(
@@ -44,33 +35,25 @@ class ConfigFileHandler(FileSystemEventHandler):
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         """
-        Set the event loop for async callbacks.
-
-        Parameters
-        ----------
-        loop : asyncio.AbstractEventLoop
-            Event loop to use for scheduling callbacks
+        Set the asyncio event loop used to schedule callbacks
+        from the filesystem watcher thread.
         """
         self._loop = loop
 
     def on_modified(self, event):
         """
-        Handle file modification events.
+        Handle filesystem modification events.
 
-        Parameters
-        ----------
-        event : FileSystemEvent
-            File system event that triggered this handler
+        Triggers the registered callback when the watched configuration
+        file is modified.
         """
         if event.is_directory:
             return
 
-        # Only react to our target file
         event_path = Path(event.src_path).resolve()
         if event_path != self.target_path:
             return
 
-        # Debounce: ignore rapid successive modifications
         now = time.time()
         if now - self._last_modified < self.debounce_seconds:
             logging.debug(
@@ -82,9 +65,11 @@ class ConfigFileHandler(FileSystemEventHandler):
         self._last_modified = now
         logging.info(f"Config file modified: {event_path}")
 
-        # Schedule callback in event loop
         if self._loop and self._loop.is_running():
-            asyncio.run_coroutine_threadsafe(self.callback(event_path), self._loop)
+            asyncio.run_coroutine_threadsafe(
+                self.callback(event_path),
+                self._loop,
+            )
         else:
             logging.warning("Event loop not available, cannot trigger callback")
 
@@ -93,77 +78,73 @@ class ConfigFileWatcher:
     """
     Watch configuration files for changes using watchdog.
 
-    This watcher monitors configuration files and triggers async callbacks
-    when changes are detected, with built-in debouncing to avoid multiple
-    triggers from single save operations.
-
-    Parameters
-    ----------
-    config_path : Path
-        Path to the configuration file to watch
-    callback : Callable
-        Async callback function(path) to invoke on changes
-    debounce_seconds : float, optional
-        Minimum time between triggers (default: 0.5)
+    Supports both legacy and new APIs:
+    - legacy: callback(path)
+    - new: on_change_callback(...)
     """
 
     def __init__(
         self,
         config_path: Path,
-        callback: Callable[[Path], Awaitable[None]],
+        callback: Callable[[Path], Awaitable[None]] | None = None,
         debounce_seconds: float = 0.5,
+        *,
+        on_change_callback: Callable[..., Awaitable[None]] | None = None,
     ):
+        if on_change_callback is None:
+            on_change_callback = callback
+
         self.config_path = Path(config_path).resolve()
-        self.callback = callback
+        self._on_change_callback = on_change_callback
         self.debounce_seconds = debounce_seconds
 
         self._observer: Optional[Observer] = None
         self._handler: Optional[ConfigFileHandler] = None
         self._watching = False
 
-        # Verify file exists
         if not self.config_path.exists():
             logging.warning(f"Config file does not exist yet: {self.config_path}")
 
-    def start(self, event_loop: asyncio.AbstractEventLoop):
+    async def _handle_file_change(self, path: Path) -> None:
+        if self._on_change_callback is None:
+            return
+        await self._on_change_callback(path)
+
+    def start(self, event_loop: asyncio.AbstractEventLoop | None = None):
         """
         Start watching the configuration file.
 
-        Parameters
-        ----------
-        event_loop : asyncio.AbstractEventLoop
-            Event loop to use for async callbacks
+        event_loop is optional for backward compatibility.
         """
         if self._watching:
             logging.warning("File watcher already started")
             return
 
-        # Create handler
+        if event_loop is None:
+            event_loop = asyncio.get_event_loop()
+
         self._handler = ConfigFileHandler(
-            callback=self.callback,
+            callback=self._handle_file_change,
             target_path=self.config_path,
             debounce_seconds=self.debounce_seconds,
         )
         self._handler.set_event_loop(event_loop)
 
-        # Create observer
         self._observer = Observer()
-
-        # Watch the directory containing the config file
         watch_dir = self.config_path.parent
         self._observer.schedule(self._handler, str(watch_dir), recursive=False)
-
-        # Start observer
         self._observer.start()
-        self._watching = True
 
+        self._watching = True
         logging.info(
             f"Started watching config file: {self.config_path} "
             f"(debounce: {self.debounce_seconds}s)"
         )
 
     def stop(self):
-        """Stop watching the configuration file."""
+        """
+        Stop watching the configuration file and release resources.
+        """
         if not self._watching:
             return
 
@@ -179,11 +160,6 @@ class ConfigFileWatcher:
 
     def is_watching(self) -> bool:
         """
-        Check if watcher is currently active.
-
-        Returns
-        -------
-        bool
-            True if watcher is active
+        Return whether the configuration watcher is currently active.
         """
         return self._watching
