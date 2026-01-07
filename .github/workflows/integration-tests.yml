@@ -34,30 +34,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y portaudio19-dev python3-pyaudio cmake
 
-      - name: Cache CycloneDDS build
-        uses: actions/cache@v4
-        with:
-          path: /tmp/cyclonedds/cyclonedds/install
-          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/integration-test.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-cyclonedds-0.10.x-
-
-      - name: Install cycloneDDS
-        run: |
-          if [ ! -d "/tmp/cyclonedds/cyclonedds/install" ]; then
-            echo "Building CycloneDDS from source..."
-            mkdir -p /tmp/cyclonedds
-            cd /tmp/cyclonedds
-            git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
-            cd cyclonedds && mkdir build install && cd build
-            cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON
-            cmake --build . --target install
-          else
-            echo "Using cached CycloneDDS installation"
-          fi
-          echo "CYCLONEDDS_HOME=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
-          echo "/tmp/cyclonedds/cyclonedds/install/lib" >> $GITHUB_PATH
-          echo "CMAKE_PREFIX_PATH=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
+      - name: Setup CycloneDDS
+        uses: ./.github/actions/setup-cyclonedds
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -97,6 +75,7 @@ jobs:
 
       - name: Notify Slack on failure
         if: failure() && github.event_name == 'schedule'
+        continue-on-error: true
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data "{
@@ -110,6 +89,7 @@ jobs:
 
       - name: Notify Slack on success
         if: success() && github.event_name == 'schedule'
+        continue-on-error: true
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data "{
