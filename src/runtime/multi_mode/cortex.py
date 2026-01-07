@@ -575,7 +575,9 @@ class ModeCortexRuntime:
 
         # Record the output for conversation history
         if output is not None:
-            self.conversation_history.record_output(tick=tick_num, output=output.raw)
+            self.conversation_history.record_output(
+                tick=tick_num, output=output.model_dump_json()
+            )
 
         if output is None:
             logging.debug("No output from LLM")
