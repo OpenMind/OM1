@@ -53,7 +53,7 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
 
     def __init__(self, config: FacePresenceConfig):
         """
-        Initialize the face presence input
+        Initialize the face presence input.
         """
         super().__init__(config)
 
@@ -174,7 +174,6 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
             are no messages.
 
         """
-
         if len(self.messages) == 0:
             return None
 

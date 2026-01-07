@@ -34,8 +34,8 @@ def simple_paths_processor(
         """
         Callback for receiving paths messages.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         msg: zenoh.Sample
             The message containing paths data.
         """
@@ -60,7 +60,7 @@ def simple_paths_processor(
     try:
         session = open_zenoh_session()
         session.declare_subscriber("om/paths", paths_callback)
-        logging.info("Zenoh is open for SimplePathProvider")
+        logging.info("Zenoh is open for SimplePathsProvider")
     except Exception as e:
         logging.error(f"Failed to open Zenoh session: {e}")
 
@@ -78,6 +78,10 @@ def simple_paths_processor(
 
 @singleton
 class SimplePathsProvider:
+    """
+    Singleton class to provide simple path processing using Zenoh.
+    """
+
     def __init__(self):
         self.session = None
         self.paths = None

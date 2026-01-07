@@ -8,6 +8,8 @@ from .std_msgs import Header
 
 @dataclass
 class GeoPoint(IdlStruct, typename="GeoPoint"):
+    """GeoPoint message."""
+
     latitude: float64
     longitude: float64
     altitude: float64
@@ -15,5 +17,7 @@ class GeoPoint(IdlStruct, typename="GeoPoint"):
 
 @dataclass
 class GeoPointStamped(IdlStruct, typename="GeoPointStamped"):
+    """GeoPointStamped message."""
+
     header: Header
     position: GeoPoint

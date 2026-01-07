@@ -14,6 +14,10 @@ from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
 class RobotState(Enum):
+    """
+    Enumeration of possible robot states.
+    """
+
     STANDING = "standing"
     SITTING = "sitting"
 
@@ -22,7 +26,7 @@ class MoveGo2RemoteConfig(ActionConfig):
     """
     Configuration for MoveGo2Remote connector.
 
-    Parameters:
+    Parameters
     ----------
     api_key : Optional[str]
         OM API key.

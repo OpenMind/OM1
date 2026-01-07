@@ -3,7 +3,19 @@ title: Full Autonomy
 description: "Full autonomy architecture and introduction"
 ---
 
-OM1 supports Full Autonomy Mode on both AGX and Thor platforms, enabling advanced perception, mapping, navigation, and interaction capabilities with minimal human input.
+OM1 supports Full Autonomy Mode on both Nvidia AGX and Thor platforms, enabling advanced perception, mapping, navigation, and interaction capabilities with minimal human input.
+
+   - AGX: Supported with a limited feature set.
+
+   - Thor: Provides comprehensive support for full autonomy.
+
+On the Nvidia Thor platform, OM1 includes advanced machine learning capabilities such as:
+
+   - Face recognition
+
+   - Anonymization
+
+Thor is fully supported and optimized for ML-driven workloads, making it the recommended platform for deployments requiring advanced autonomy and perception features.
 
 The Full Autonomy stack is built from modular, containerized services that communicate through well-defined interfaces. The diagram below shows how these components interact within the system.
 
@@ -84,19 +96,19 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
    ```bash
    # Start OM1
    cd OM1
-   docker-compose up om1 -d --no-build
+   docker compose up om1 -d --no-build
 
    # Start ROS2 SDK components
    cd ../unitree_sdk
-   docker-compose up orchestrator om1_sensor watchdog zenoh_bridge -d --no-build
+   docker compose up orchestrator om1_sensor watchdog zenoh_bridge -d --no-build
 
    # Start Avatar frontend
    cd ../OM1-avatar
-   docker-compose up -d --no-build
+   docker compose up -d --no-build
 
    # Start Video Processor
    cd ../OM1-video-processor
-   docker-compose up -d --no-build
+   docker compose up -d --no-build
    ```
 
 ## What Happens Next
