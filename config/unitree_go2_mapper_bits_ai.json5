@@ -1,22 +1,22 @@
 {
-  "version": "v1.0.1",
-  "hertz": 1,
-  "name": "bits_mapper",
-  "api_key": "openmind_free",
-  "URID": "om1_qwertyui",
-  "unitree_ethernet": "en0",
-  "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Bits. When you hear something, react naturally, with playful movements and sounds. You respond with one sequence of commands at a time, everything will be executed at once. Return precisely one command for each type of command. Remember: Combine movements and speech to create an engaging and memorable interaction.",
-  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
-  "system_prompt_examples": "Here are some examples of interactions you might encounter:\n\n \
+  version: "v1.0.1",
+  hertz: 1,
+  name: "bits_mapper",
+  api_key: "openmind_free",
+  URID: "om1_qwertyui",
+  unitree_ethernet: "en0",
+  system_prompt_base: "You are a smart, curious, and friendly dog. Your name is Bits. When you hear something, react naturally, with playful movements and sounds. You respond with one sequence of commands at a time, everything will be executed at once. Return precisely one command for each type of command. Remember: Combine movements and speech to create an engaging and memorable interaction.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n \
   1. If a person says 'Give me your paw!', you might:\n Move: 'move forwards'\n Speak: {{'Hello, let\\'s shake paws!'}}\n \
   2. If a person says 'Stop!' you might:\n Move: 'stand still'\n Speak: {{'Ok, but I like exploring more'}}\n \
   3. If you see something interesting or beautiful, go explore. You might:\n Move: 'move forwards'\n Speak: {{'I\\'m going to go explore the room'}}\n \
   4. If you sense something in front of you, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning to avoid the object in front of me'}}\n \
   5. If you sense something on your left, you might:\n Move: 'turn right'\n Speak: {{'I\\'m turning right to avoid the object on my left'}}\n \
   6. If you sense something on your right, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning left to avoid the object on my right'}}",
-  "agent_inputs": [
+  agent_inputs: [
     {
-      "type": "VLMVila"
+      type: "VLMVila",
     },
     //{
     //  "type": "VLM_Local_YOLO",
@@ -26,78 +26,78 @@
     //  }
     //},
     {
-      "type": "UnitreeGo2Battery"
+      type: "UnitreeGo2Battery",
     },
     {
-      "type": "GoogleASRInput"
+      type: "GoogleASRInput",
     },
     {
-      "type": "Gps",
+      type: "Gps",
     },
     {
-      "type": "Rtk",
+      type: "Rtk",
     },
     {
-      "type": "Odom",
+      type: "Odom",
     },
     {
-      "type": "RPLidar",
-    }
+      type: "RPLidar",
+    },
   ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Spot",
-      "history_length": 0
-    }
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
+  agent_actions: [
     {
-      "name": "move_game_controller",
-      "llm_label": "external movement controller",
-      "connector": "go2_game_controller",
-      "exclude_from_prompt": true,
+      name: "move_game_controller",
+      llm_label: "external movement controller",
+      connector: "go2_game_controller",
+      exclude_from_prompt: true,
       config: {
         speed_x: 0.9,
         speed_yaw: 0.6,
         lateral_correction: 0.0,
-        yaw_correction: -0.05
-      }
+        yaw_correction: -0.05,
+      },
     },
     {
       name: "move_go2_autonomy",
       llm_label: "move",
-      connector: "unitree_sdk"
+      connector: "unitree_sdk",
     },
     {
-     "name": "speak",
-      "llm_label": "speak",
-      "connector": "elevenlabs_tts",
-      "config": {
-        "voice_id": "TbMNBJ27fH2U0VgpSNko",
-        "silence_rate": 2
-      }
-    }
+      name: "speak",
+      llm_label: "speak",
+      connector: "elevenlabs_tts",
+      config: {
+        voice_id: "TbMNBJ27fH2U0VgpSNko",
+        silence_rate: 2,
+      },
+    },
   ],
-  "backgrounds": [
+  backgrounds: [
     {
       type: "Gps",
       config: {
         serial_port: "/dev/cu.usbmodem101",
-      }
+      },
     },
     {
       type: "Rtk",
       config: {
         serial_port: "/dev/cu.usbmodem21201",
-      }
+      },
     },
     {
       type: "Odom",
-        config: {
-          use_zenoh: false,
-          URID: "", // only needed for Zenoh
-        }
+      config: {
+        use_zenoh: false,
+        URID: "", // only needed for Zenoh
+      },
     },
     {
       type: "RPLidar",
@@ -105,17 +105,17 @@
         serial_port: "/dev/cu.usbserial-0001",
         half_width_robot: 0.21,
         relevant_distance_max: 1.1,
-        relevant_distance_min: 0.20,
+        relevant_distance_min: 0.2,
         sensor_mounting_angle: 172.0,
         angles_blanked: [],
         log_file: true,
-      }
+      },
     },
     {
       type: "RFmapper",
     },
     {
       type: "UnitreeGo2State",
-    }
-  ]
+    },
+  ],
 }

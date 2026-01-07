@@ -12,7 +12,7 @@ class EmotionUnitreeConfig(ActionConfig):
     """
     Configuration for Emotion Unitree connector.
 
-    Parameters:
+    Parameters
     ----------
     unitree_ethernet : Optional[str]
         The Ethernet adapter name for Unitree connection.

@@ -12,7 +12,8 @@ class RememberLocationInput:
     The 'action' field contains the location name to save (e.g. "kitchen", "office", "living room").
     The 'description' field is optional additional information about the location.
 
-    Examples:
+    Examples
+    --------
     - User says: "Remember this location as kitchen" → action = "kitchen"
     - User says: "Save this spot as my office" → action = "office"
     - User says: "Remember this place as the charging station" → action = "charging station"
