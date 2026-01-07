@@ -43,6 +43,7 @@ class LLMHistoryManager:
         client: Union[openai.AsyncClient, openai.OpenAI],
         system_prompt: str = "You are a helpful assistant that summarizes a succession of events and interactions accurately and concisely. You are watching a robot named **** interact with people and the world. Your goal is to help **** remember what the robot felt, saw, and heard, and how the robot responded to those inputs.",
         summary_command: str = "\nConsidering the new information, write an updated summary of the situation for ****. Emphasize information that **** needs to know to respond to people and situations in the best possible and most compelling way.",
+        load_existing_history: bool = True,
     ):
         """
         Initialize the LLMHistoryManager.
@@ -61,6 +62,9 @@ class LLMHistoryManager:
             Command template appended to messages when requesting summaries.
             Defaults to a command asking for an updated situation summary.
             The string "****" will be replaced with the agent name.
+        load_existing_history : bool, optional
+            Whether to load existing conversation history from disk on initialization.
+            Set to False in testing to avoid test pollution. (default: True)
         """
         self.client = client
 
@@ -84,22 +88,35 @@ class LLMHistoryManager:
         # task executor
         self._summary_task: Optional[asyncio.Task] = None
 
-        # history buffer
-        loaded_messages = load_history()
-        if loaded_messages:
-            self.history: List[ChatMessage] = [
-                ChatMessage(role=msg["role"], content=msg["content"])
-                for msg in loaded_messages
-            ]
-            logging.info(f"Restored {len(self.history)} messages from previous session")
+        # history buffer - load from disk if enabled
+        if load_existing_history:
+            loaded_messages = load_history()
+            if loaded_messages:
+                self.history: List[ChatMessage] = [
+                    ChatMessage(role=msg["role"], content=msg["content"])
+                    for msg in loaded_messages
+                ]
+                logging.info(
+                    f"Restored {len(self.history)} messages from previous session"
+                )
+            else:
+                self.history: List[ChatMessage] = []
         else:
             self.history: List[ChatMessage] = []
 
-        # io provider
         # Register cleanup handler for graceful shutdown
         atexit.register(self.persist_history)
 
+        # io provider
         self.io_provider = IOProvider()
+
+    def reset(self):
+        """Reset history and frame index for testing purposes."""
+        self.history = []
+        self.frame_index = 0
+        if self._summary_task and not self._summary_task.done():
+            self._summary_task.cancel()
+        self._summary_task = None
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """

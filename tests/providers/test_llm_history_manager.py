@@ -34,7 +34,10 @@ def openai_client():
 
 @pytest.fixture
 def history_manager(llm_config, openai_client):
-    return LLMHistoryManager(llm_config, openai_client)
+    manager = LLMHistoryManager(llm_config, openai_client, load_existing_history=False)
+    manager.reset()  # Ensure clean state
+    yield manager
+    manager.reset()  # Cleanup after test
 
 
 @pytest.mark.asyncio
@@ -143,7 +146,8 @@ async def test_update_history_only_current_tick_inputs():
     config.agent_name = "TestBot"
 
     client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
+    history_manager = LLMHistoryManager(config, client, load_existing_history=False)
+    history_manager.reset()  # Ensure clean state
 
     # Setup mock class that uses the decorator
     class MockLLMProvider:
@@ -206,7 +210,8 @@ async def test_update_history_no_inputs_for_current_tick():
     config.agent_name = "TestBot"
 
     client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
+    history_manager = LLMHistoryManager(config, client, load_existing_history=False)
+    history_manager.reset()  # Ensure clean state
 
     # Setup mock class that uses the decorator
     class MockLLMProvider:
@@ -254,7 +259,8 @@ async def test_update_history_multiple_ticks():
     config.agent_name = "MultiTickBot"
 
     client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
+    history_manager = LLMHistoryManager(config, client, load_existing_history=False)
+    history_manager.reset()  # Ensure clean state
 
     class MockLLMProvider:
         def __init__(self):
@@ -316,7 +322,8 @@ async def test_update_history_tick_boundary():
     config.agent_name = "BoundaryBot"
 
     client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
+    history_manager = LLMHistoryManager(config, client, load_existing_history=False)
+    history_manager.reset()  # Ensure clean state
 
     class MockLLMProvider:
         def __init__(self):
