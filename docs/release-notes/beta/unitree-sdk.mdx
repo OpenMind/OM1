@@ -68,6 +68,10 @@ Beta release for the Docker image openmindagi/unitree_sdk, which provides the fu
   - Map storage and loading
 - Allows interaction via REST APIs.
 
+### Zenoh Bridge
+
+zenoh_bridge acts as a bridge between OM1 and OM1_sensor to publish and subscribe to/from ROS2 topics.
+
 ## Docker image
 
 The unitree_sdk is provided as a Docker image for easy setup.
@@ -76,9 +80,10 @@ git clone https://github.com/OpenMind/unitree-sdk.git
 ```
 ```bash
 cd unitree_sdk
-docker-compose up orchestrator -d --no-build
-docker-compose up om1_sensor -d --no-build
-docker-compose up watchdog -d --no-build
+docker compose up orchestrator -d --no-build
+docker compose up om1_sensor -d --no-build
+docker compose up watchdog -d --no-build
+docker compose up zenoh_bridge -d --no-build
 ```
 
 The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/unitree_sdk/v1.0.0-beta.3).
