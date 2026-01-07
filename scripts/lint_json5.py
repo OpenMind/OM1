@@ -20,13 +20,19 @@ for file in json5_files:
     try:
         with file.open("r", encoding="utf-8") as f:
             json5.load(f)
-        print(f"✔ Valid JSON5: {file}")
+        print(f"□^|^t Valid JSON5: {file}")
     except Exception as e:
         FAILED = True
-        print(f"✖ Invalid JSON5: {file}")
+        print(f"□^|^v Invalid JSON5: {file}")
         print(f"  Error: {e}")
 
 if FAILED:
     sys.exit(1)
 
 print("All JSON5 config files are valid.")
+
+
+
+
+
+
