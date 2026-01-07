@@ -1,3 +1,6 @@
+<p align="right">
+   <strong>English</strong> | <a href=".README.zh-CN.md">中文</a>
+</p>
 ![OM_Banner_X2 (1)](https://github.com/user-attachments/assets/853153b7-351a-433d-9e1a-d257b781f93c)
 
 <p align="center">
