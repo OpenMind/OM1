@@ -311,19 +311,25 @@ def _resolve_config_path(config_name: str) -> str:
     FileNotFoundError
         If configuration file cannot be found
     """
-    if os.path.exists(config_name):
+    config_name = config_name.strip()
+    if not config_name:
+        raise FileNotFoundError(
+            "Configuration name is empty. Provide a file name or path."
+        )
+
+    if os.path.isfile(config_name):
         return os.path.abspath(config_name)
 
-    if os.path.exists(config_name + ".json5"):
+    if os.path.isfile(config_name + ".json5"):
         return os.path.abspath(config_name + ".json5")
 
     config_dir = os.path.join(os.path.dirname(__file__), "../config")
     config_path = os.path.join(config_dir, config_name)
 
-    if os.path.exists(config_path):
+    if os.path.isfile(config_path):
         return os.path.abspath(config_path)
 
-    if os.path.exists(config_path + ".json5"):
+    if os.path.isfile(config_path + ".json5"):
         return os.path.abspath(config_path + ".json5")
 
     raise FileNotFoundError(
