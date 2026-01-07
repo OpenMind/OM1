@@ -27,7 +27,7 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
     """
     Configuration for ElevenLabs TTS connector.
 
-    Parameters:
+    Parameters
     ----------
     elevenlabs_api_key : Optional[str]
         ElevenLabs API key.

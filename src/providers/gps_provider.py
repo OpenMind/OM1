@@ -28,9 +28,8 @@ class GpsProvider:
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration
+        Robot and sensor configuration.
         """
-
         logging.info(f"GPS_Provider booting GPS Provider at serial: {serial_port}")
 
         baudrate = 115200
@@ -65,18 +64,34 @@ class GpsProvider:
         self._thread: Optional[threading.Thread] = None
         self.start()
 
-    def string_to_unix_timestamp(self, time_str):
+    def string_to_unix_timestamp(self, time_str: str) -> float:
         """
         Convert a time string in the format 'YYYY:MM:DD:HH:MM:SS:ms'
         to a Unix timestamp (UTC).
+
+        Parameters
+        ----------
+        time_str : str
+            The input time string.
+
+        Returns
+        -------
+        float
+            The corresponding Unix timestamp.
         """
         dt = datetime.strptime(time_str, "%Y:%m:%d:%H:%M:%S:%f")
         dt = dt.replace(tzinfo=timezone.utc)
         return dt.timestamp()
 
-    def magGPSProcessor(self, data):
-        # Used whenever there is a connected
-        # nav Arduino on serial
+    def magGPSProcessor(self, data: str):
+        """
+        Process incoming MAG/GPS/BLE data from serial input.
+
+        Parameters
+        ----------
+        data : str
+            The input data string from serial.
+        """
         try:
             if data.startswith("HDG:"):
                 parts = data.split(":")
@@ -162,7 +177,20 @@ class GpsProvider:
             "ble_scan": self.ble_scan,
         }
 
-    def compass_heading_to_direction(self, degrees):
+    def compass_heading_to_direction(self, degrees: float) -> str:
+        """
+        Convert compass heading in degrees to cardinal direction.
+
+        Parameters
+        ----------
+        degrees : float
+            Compass heading in degrees.
+
+        Returns
+        -------
+        str
+            Cardinal direction as a string.
+        """
         directions = [
             "North",
             "North East",
@@ -176,8 +204,20 @@ class GpsProvider:
         index = int((degrees + 22.5) % 360 / 45)
         return directions[index]
 
-    def parse_ble_triang_string(self, input_string):
+    def parse_ble_triang_string(self, input_string: str) -> List[RFDataRaw]:
+        """
+        Parse BLE triangulation data from a string.
 
+        Parameters
+        ----------
+        input_string : str
+            The input string containing BLE triangulation data.
+
+        Returns
+        -------
+        List[RFDataRaw]
+            A list of RFDataRaw objects parsed from the input string.
+        """
         if not input_string.startswith("BLE:"):
             return []
 
@@ -235,7 +275,12 @@ class GpsProvider:
 
     @property
     def data(self) -> Optional[dict]:
-        # """
-        # Get the current robot gps data
-        # """
+        """
+        Get the latest GPS data.
+
+        Returns
+        -------
+        Optional[dict]
+            The current GPS data dictionary or None if no data is available.
+        """
         return self._gps

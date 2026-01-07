@@ -15,7 +15,7 @@ class UnitreeG1NavConfig(ActionConfig):
     """
     Configuration for Unitree G1 Navigation connector.
 
-    Parameters:
+    Parameters
     ----------
     base_url : str
         The base URL for the locations API.

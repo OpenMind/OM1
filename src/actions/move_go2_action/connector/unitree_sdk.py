@@ -17,7 +17,7 @@ class ActionUnitreeSDKConfig(ActionConfig):
     """
     Configuration for ActionUnitreeSDK connector.
 
-    Parameters:
+    Parameters
     ----------
     unitree_ethernet : Optional[str]
         Ethernet channel for Unitree Go2 odometry.

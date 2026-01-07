@@ -27,6 +27,7 @@ class NearAILLM(LLM[R]):
         Configuration object containing API settings.
     available_actions : list[AgentAction], optional
         List of available actions for function call generation. If provided,
+        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
@@ -36,6 +37,13 @@ class NearAILLM(LLM[R]):
     ):
         """
         Initialize the NearAI LLM instance.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
