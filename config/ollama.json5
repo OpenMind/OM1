@@ -1,0 +1,73 @@
+{
+  // Ollama LLM Configuration Example
+  // Use local Ollama for privacy-focused, cost-free, offline-capable inference
+  //
+  // Prerequisites:
+  //   1. Install Ollama: https://ollama.ai
+  //   2. Start Ollama: ollama serve
+  //   3. Pull a model: ollama pull llama3.2
+  //   4. Run a model: ollama run llama3.2
+  //
+  // Recommended models:
+  //   - llama3.2 (default, good balance)
+  //   - mistral (fast, efficient)
+  //   - phi3 (Microsoft's small model)
+  //   - llava (multimodal - supports images)
+  //   - codellama (code-focused)
+
+  version: "v1.0.1",
+  hertz: 0.5,
+  name: "ollama",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a smart, curious, and friendly AI assistant. Your name is IRIS. When you hear something, react naturally with helpful responses. When speaking, use clear and concise language. You respond with one sequence of commands at a time.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If a person asks a question, respond helpfully:\n    Speak: {{'sentence': 'Let me help you with that.'}}\n\n2. If asked to perform an action:\n    Speak: {{'sentence': 'I'll do that right away.'}}\n    Move: 'appropriate_action'",
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+      config: {
+        enable_tts_interrupt: true,
+      },
+    },
+  ],
+  simulators: [
+    {
+      type: "WebSim",
+      config: {
+        host: "0.0.0.0",
+        port: 8000,
+        tick_rate: 100,
+        auto_reconnect: true,
+        debug_mode: false,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OllamaLLM",
+    config: {
+      agent_name: "IRIS",
+      model: "llama3.2",
+      base_url: "http://localhost:11434",
+      temperature: 0.7,
+      num_ctx: 4096,
+      timeout: 120,
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+      config: {
+        enable_tts_interrupt: true,
+      },
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "avatar",
+    },
+  ],
+}
