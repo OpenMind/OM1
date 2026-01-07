@@ -1,4 +1,4 @@
-# Deprecated: Use NearAI or Open AI LLM plugins instead.
+# Deprecated: Use NearAI or OpenAI LLM plugins instead.
 
 # import logging
 # import time

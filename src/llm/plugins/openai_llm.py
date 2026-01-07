@@ -16,7 +16,7 @@ R = T.TypeVar("R", bound=BaseModel)
 
 class OpenAILLM(LLM[R]):
     """
-    An OpenAI-based Language Learning Model implementation with function call support.
+    An OpenAI-based Large Language Model implementation with function call support.
 
     This class implements the LLM interface for OpenAI's GPT models, handling
     configuration, authentication, and async API communication. It supports both

@@ -45,7 +45,7 @@ class OllamaLLMConfig(LLMConfig):
 
 class OllamaLLM(LLM[R]):
     """
-    Ollama-based Language Learning Model implementation.
+    Ollama-based Large Language Model implementation.
 
     This class implements the LLM interface for local Ollama models,
     providing privacy-focused, cost-free, offline-capable inference.

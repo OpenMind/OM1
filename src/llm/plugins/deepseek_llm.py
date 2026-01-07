@@ -16,7 +16,7 @@ R = T.TypeVar("R", bound=BaseModel)
 
 class DeepSeekLLM(LLM[R]):
     """
-    An DeepSeek-based Language Learning Model implementation.
+    A DeepSeek-based Large Language Model implementation.
 
     This class implements the LLM interface for DeepSeek's conversation models, handling
     configuration, authentication, and async API communication.
@@ -122,7 +122,7 @@ class DeepSeekLLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
+                logging.info(f"DeepSeek LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None
