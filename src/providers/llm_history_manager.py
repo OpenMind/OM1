@@ -42,6 +42,24 @@ class LLMHistoryManager:
         system_prompt: str = "You are a helpful assistant that summarizes a succession of events and interactions accurately and concisely. You are watching a robot named **** interact with people and the world. Your goal is to help **** remember what the robot felt, saw, and heard, and how the robot responded to those inputs.",
         summary_command: str = "\nConsidering the new information, write an updated summary of the situation for ****. Emphasize information that **** needs to know to respond to people and situations in the best possible and most compelling way.",
     ):
+        """
+        Initialize the LLMHistoryManager.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration object containing LLM settings and parameters.
+        client : Union[openai.AsyncClient, openai.OpenAI]
+            OpenAI client instance for making API calls (async or sync).
+        system_prompt : str, optional
+            System prompt template for summarization. Defaults to a prompt
+            that describes the assistant's role in summarizing robot interactions.
+            The string "****" will be replaced with the agent name.
+        summary_command : str, optional
+            Command template appended to messages when requesting summaries.
+            Defaults to a command asking for an updated situation summary.
+            The string "****" will be replaced with the agent name.
+        """
         self.client = client
 
         # configuration
@@ -73,7 +91,24 @@ class LLMHistoryManager:
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
         Summarize a list of messages using the OpenAI API.
-        Returns a new message containing the summary.
+
+        Parameters
+        ----------
+        messages : List[ChatMessage]
+            List of chat messages to summarize.
+
+        Returns
+        -------
+        ChatMessage
+            A new message containing the summary with role "assistant" or
+            "system" (in case of errors).
+
+        Raises
+        ------
+        asyncio.TimeoutError
+            If the API request times out.
+        openai.APIError
+            If there's an error with the OpenAI API.
         """
         # Set timeout for API call
         timeout = 10.0  # seconds
@@ -150,7 +185,19 @@ class LLMHistoryManager:
 
     async def start_summary_task(self, messages: List[ChatMessage]):
         """
-        Start a new task to summarize the messages.
+        Start a new asynchronous task to summarize the messages.
+
+        Parameters
+        ----------
+        messages : List[ChatMessage]
+            List of chat messages to summarize. This list will be modified
+            in-place when the summary task completes successfully.
+
+        Notes
+        -----
+        If a previous summary task is still running, this method will return
+        early without starting a new task. The summary result will be added
+        to the messages list via a callback when the task completes.
         """
         if not messages:
             logging.warning("No messages to summarize in start_summary_task")
@@ -209,6 +256,12 @@ class LLMHistoryManager:
     def get_messages(self) -> List[dict]:
         """
         Get messages in format required by OpenAI API.
+
+        Returns
+        -------
+        List[dict]
+            List of message dictionaries with "role" and "content" keys,
+            formatted for OpenAI API consumption.
         """
         return [{"role": msg.role, "content": msg.content} for msg in self.history]
 
