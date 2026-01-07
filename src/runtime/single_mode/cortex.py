@@ -15,6 +15,7 @@ from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.orchestrator import SimulatorOrchestrator
 
+from src.config_manager import ConfigManager
 
 class CortexRuntime:
     """
@@ -88,8 +89,37 @@ class CortexRuntime:
             self.config_path = self._create_runtime_config_file()
             self.last_modified = self._get_file_mtime()
             logging.info(
-                f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
+                f"Hot-reload enabled for runtime config: {self.config_path} "
+                f"(check interval: {check_interval}s)"
             )
+
+            self._config_manager = ConfigManager(
+                path=self.config_path,
+                on_patch=self.reload_from_patch,
+            )
+            self._config_manager.start()
+
+    def reload_from_patch(self, patch: dict) -> None:
+        """
+        Reload runtime based on changed config fields.
+        """
+        if not patch:
+            return
+
+        safe_fields = {
+            "system_prompt_base",
+            "system_prompt_examples",
+        }
+
+        if not set(patch.keys()).issubset(safe_fields):
+            asyncio.create_task(self._reload_config())
+            return
+
+        if "system_prompt_base" in patch:
+            self.config.system_prompt_base = patch["system_prompt_base"]
+
+        if "system_prompt_examples" in patch:
+            self.config.system_prompt_examples = patch["system_prompt_examples"]
 
     def _get_runtime_config_path(self) -> str:
         """
