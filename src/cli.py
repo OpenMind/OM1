@@ -10,8 +10,6 @@ import json5
 import typer
 from jsonschema import ValidationError, validate
 
-from runtime.multi_mode.config import load_mode_config
-
 app = typer.Typer()
 
 
@@ -36,6 +34,8 @@ def modes(config_name: str) -> None:
         If the configuration file is not found or fails to load.
     """
     try:
+        from runtime.multi_mode.config import load_mode_config
+
         mode_config = load_mode_config(config_name)
 
         print("-" * 32)
