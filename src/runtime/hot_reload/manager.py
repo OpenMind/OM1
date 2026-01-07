@@ -16,13 +16,11 @@ from typing import Any, Callable, Dict, List, Optional, Set
 
 import json5
 
-from runtime.hot_reload.diff import ConfigDiff, FieldChange, diff_configs
+from runtime.hot_reload.diff import ConfigDiff, diff_configs
 from runtime.hot_reload.strategies import (
     ReloadStrategy,
     categorize_changes,
     get_field_strategy,
-    get_hot_reloadable_changes,
-    requires_restart,
     validate_field,
 )
 from runtime.hot_reload.watcher import ConfigFileWatcher
@@ -48,6 +46,7 @@ class ReloadResult:
     rollback_performed : bool
         Whether a rollback was performed due to errors.
     """
+
     success: bool = True
     hot_reloaded_fields: Set[str] = field(default_factory=set)
     requires_restart: bool = False
@@ -70,6 +69,7 @@ class ChangeHistoryEntry:
     result : ReloadResult
         The result of the reload operation.
     """
+
     timestamp: float
     diff: ConfigDiff
     result: ReloadResult
@@ -154,7 +154,9 @@ class HotReloadManager:
             logging.error(f"Failed to load config: {e}")
             return None
 
-    async def start(self, event_loop: Optional[asyncio.AbstractEventLoop] = None) -> bool:
+    async def start(
+        self, event_loop: Optional[asyncio.AbstractEventLoop] = None
+    ) -> bool:
         """
         Start the hot-reload manager.
 
@@ -186,14 +188,8 @@ class HotReloadManager:
             self._original_config = copy.deepcopy(self._current_config)
 
             # Create and start watcher
-            self._watcher = ConfigFileWatcher(
-                self.config_path,
-                self.debounce_seconds
-            )
-            self._watcher.set_async_callback(
-                self._on_config_changed,
-                self._event_loop
-            )
+            self._watcher = ConfigFileWatcher(self.config_path, self.debounce_seconds)
+            self._watcher.set_async_callback(self._on_config_changed, self._event_loop)
 
             if not self._watcher.start():
                 logging.error("Failed to start config file watcher")
@@ -234,9 +230,7 @@ class HotReloadManager:
 
             if result.success:
                 if result.hot_reloaded_fields:
-                    logging.info(
-                        f"Hot-reloaded fields: {result.hot_reloaded_fields}"
-                    )
+                    logging.info(f"Hot-reloaded fields: {result.hot_reloaded_fields}")
                 if result.requires_restart:
                     logging.warning(
                         f"Restart required for fields: {result.restart_fields}"
@@ -312,9 +306,7 @@ class HotReloadManager:
                     # Update current config
                     self._set_config_value(field_name, new_val)
                 else:
-                    result.errors.append(
-                        f"Failed to hot-reload field '{field_name}'"
-                    )
+                    result.errors.append(f"Failed to hot-reload field '{field_name}'")
 
             # Track restart-required changes
             restart_changes = categorized[ReloadStrategy.RESTART_REQUIRED]
@@ -338,10 +330,7 @@ class HotReloadManager:
         return result
 
     async def _apply_hot_reload(
-        self,
-        field_name: str,
-        old_value: Any,
-        new_value: Any
+        self, field_name: str, old_value: Any, new_value: Any
     ) -> bool:
         """
         Apply a hot-reload change for a single field.
@@ -389,16 +378,12 @@ class HotReloadManager:
 
     def _add_history_entry(self, diff: ConfigDiff, result: ReloadResult) -> None:
         """Add an entry to the change history."""
-        entry = ChangeHistoryEntry(
-            timestamp=time.time(),
-            diff=diff,
-            result=result
-        )
+        entry = ChangeHistoryEntry(timestamp=time.time(), diff=diff, result=result)
         self._change_history.append(entry)
 
         # Trim history if needed
         if len(self._change_history) > self.max_history:
-            self._change_history = self._change_history[-self.max_history:]
+            self._change_history = self._change_history[-self.max_history :]
 
     def get_current_config(self) -> Optional[Dict[str, Any]]:
         """

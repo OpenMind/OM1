@@ -7,12 +7,13 @@ and identify which fields have changed, been added, or been removed.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class ChangeType(Enum):
     """Type of change detected in a configuration field."""
+
     MODIFIED = "modified"
     ADDED = "added"
     REMOVED = "removed"
@@ -34,12 +35,14 @@ class FieldChange:
     new_value : Any
         The new value (None for removed fields).
     """
+
     field_path: str
     change_type: ChangeType
     old_value: Any = None
     new_value: Any = None
 
     def __repr__(self) -> str:
+        """Return string representation of the field change."""
         if self.change_type == ChangeType.ADDED:
             return f"FieldChange(ADDED '{self.field_path}': {self.new_value})"
         elif self.change_type == ChangeType.REMOVED:
@@ -68,6 +71,7 @@ class ConfigDiff:
     modified_fields : Set[str]
         Set of field paths that were modified.
     """
+
     changes: List[FieldChange] = field(default_factory=list)
 
     @property
@@ -78,33 +82,25 @@ class ConfigDiff:
     @property
     def changed_fields(self) -> Dict[str, Tuple[Any, Any]]:
         """Get dictionary of all changes as (old_value, new_value) tuples."""
-        return {
-            c.field_path: (c.old_value, c.new_value)
-            for c in self.changes
-        }
+        return {c.field_path: (c.old_value, c.new_value) for c in self.changes}
 
     @property
     def added_fields(self) -> Set[str]:
         """Get set of added field paths."""
-        return {
-            c.field_path for c in self.changes
-            if c.change_type == ChangeType.ADDED
-        }
+        return {c.field_path for c in self.changes if c.change_type == ChangeType.ADDED}
 
     @property
     def removed_fields(self) -> Set[str]:
         """Get set of removed field paths."""
         return {
-            c.field_path for c in self.changes
-            if c.change_type == ChangeType.REMOVED
+            c.field_path for c in self.changes if c.change_type == ChangeType.REMOVED
         }
 
     @property
     def modified_fields(self) -> Set[str]:
         """Get set of modified field paths."""
         return {
-            c.field_path for c in self.changes
-            if c.change_type == ChangeType.MODIFIED
+            c.field_path for c in self.changes if c.change_type == ChangeType.MODIFIED
         }
 
     def get_root_fields(self) -> Set[str]:
@@ -133,11 +129,13 @@ class ConfigDiff:
             List of changes for that field and its nested fields.
         """
         return [
-            c for c in self.changes
+            c
+            for c in self.changes
             if c.field_path == field_name or c.field_path.startswith(f"{field_name}.")
         ]
 
     def __repr__(self) -> str:
+        """Return string representation of the config diff."""
         if not self.has_changes:
             return "ConfigDiff(no changes)"
         return f"ConfigDiff({len(self.changes)} changes: {list(self.changed_fields.keys())})"
@@ -154,24 +152,18 @@ def _compare_values(old_val: Any, new_val: Any) -> bool:
 
     Handles special cases like comparing dicts and lists.
     """
-    if type(old_val) != type(new_val):
+    if type(old_val) is not type(new_val):
         return False
 
     if isinstance(old_val, dict):
         if set(old_val.keys()) != set(new_val.keys()):
             return False
-        return all(
-            _compare_values(old_val[k], new_val[k])
-            for k in old_val.keys()
-        )
+        return all(_compare_values(old_val[k], new_val[k]) for k in old_val.keys())
 
     if isinstance(old_val, list):
         if len(old_val) != len(new_val):
             return False
-        return all(
-            _compare_values(o, n)
-            for o, n in zip(old_val, new_val)
-        )
+        return all(_compare_values(o, n) for o, n in zip(old_val, new_val))
 
     return old_val == new_val
 
@@ -181,7 +173,7 @@ def _diff_recursive(
     new_config: Dict[str, Any],
     path_prefix: str = "",
     changes: Optional[List[FieldChange]] = None,
-    max_depth: int = 10
+    max_depth: int = 10,
 ) -> List[FieldChange]:
     """
     Recursively compare two configuration dictionaries.
@@ -217,22 +209,26 @@ def _diff_recursive(
     # Find removed fields
     for key in old_keys - new_keys:
         field_path = f"{path_prefix}{key}" if path_prefix else key
-        changes.append(FieldChange(
-            field_path=field_path,
-            change_type=ChangeType.REMOVED,
-            old_value=old_config[key],
-            new_value=None
-        ))
+        changes.append(
+            FieldChange(
+                field_path=field_path,
+                change_type=ChangeType.REMOVED,
+                old_value=old_config[key],
+                new_value=None,
+            )
+        )
 
     # Find added fields
     for key in new_keys - old_keys:
         field_path = f"{path_prefix}{key}" if path_prefix else key
-        changes.append(FieldChange(
-            field_path=field_path,
-            change_type=ChangeType.ADDED,
-            old_value=None,
-            new_value=new_config[key]
-        ))
+        changes.append(
+            FieldChange(
+                field_path=field_path,
+                change_type=ChangeType.ADDED,
+                old_value=None,
+                new_value=new_config[key],
+            )
+        )
 
     # Find modified fields
     for key in old_keys & new_keys:
@@ -242,29 +238,22 @@ def _diff_recursive(
 
         # Both are dicts - recurse
         if isinstance(old_val, dict) and isinstance(new_val, dict):
-            _diff_recursive(
-                old_val,
-                new_val,
-                f"{field_path}.",
-                changes,
-                max_depth - 1
-            )
+            _diff_recursive(old_val, new_val, f"{field_path}.", changes, max_depth - 1)
         # Values are different
         elif not _compare_values(old_val, new_val):
-            changes.append(FieldChange(
-                field_path=field_path,
-                change_type=ChangeType.MODIFIED,
-                old_value=old_val,
-                new_value=new_val
-            ))
+            changes.append(
+                FieldChange(
+                    field_path=field_path,
+                    change_type=ChangeType.MODIFIED,
+                    old_value=old_val,
+                    new_value=new_val,
+                )
+            )
 
     return changes
 
 
-def diff_configs(
-    old_config: Dict[str, Any],
-    new_config: Dict[str, Any]
-) -> ConfigDiff:
+def diff_configs(old_config: Dict[str, Any], new_config: Dict[str, Any]) -> ConfigDiff:
     """
     Compare two configuration dictionaries and return the differences.
 
@@ -360,10 +349,7 @@ def set_nested_value(config: Dict[str, Any], path: str, value: Any) -> bool:
     return True
 
 
-def apply_changes(
-    config: Dict[str, Any],
-    changes: List[FieldChange]
-) -> Dict[str, Any]:
+def apply_changes(config: Dict[str, Any], changes: List[FieldChange]) -> Dict[str, Any]:
     """
     Apply a list of changes to a configuration.
 
@@ -380,6 +366,7 @@ def apply_changes(
         New configuration with changes applied.
     """
     import copy
+
     result = copy.deepcopy(config)
 
     for change in changes:

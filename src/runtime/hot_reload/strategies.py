@@ -7,7 +7,7 @@ without restarting the system, and which require a full restart.
 
 import logging
 from enum import Enum
-from typing import Dict, Set, Callable, Any, Optional
+from typing import Any, Callable, Dict, Optional, Set
 
 
 class ReloadStrategy(Enum):
@@ -25,6 +25,7 @@ class ReloadStrategy(Enum):
 
     IGNORE: Field changes should be ignored (internal/computed fields).
     """
+
     HOT_RELOAD = "hot_reload"
     VALIDATE_FIRST = "validate_first"
     RESTART_REQUIRED = "restart_required"
@@ -99,7 +100,9 @@ def get_field_strategy(field_name: str) -> ReloadStrategy:
         return ReloadStrategy.HOT_RELOAD
 
     # Default to restart required for unknown fields (safe default)
-    logging.warning(f"Unknown config field '{field_name}', defaulting to RESTART_REQUIRED")
+    logging.warning(
+        f"Unknown config field '{field_name}', defaulting to RESTART_REQUIRED"
+    )
     return ReloadStrategy.RESTART_REQUIRED
 
 
@@ -123,9 +126,11 @@ def register_validator(field_name: str) -> Callable[[FieldValidator], FieldValid
     Callable
         Decorator function.
     """
+
     def decorator(func: FieldValidator) -> FieldValidator:
         _FIELD_VALIDATORS[field_name] = func
         return func
+
     return decorator
 
 
@@ -191,7 +196,7 @@ def validate_hertz(old_value: Any, new_value: Any) -> bool:
 
 
 def categorize_changes(
-    changed_fields: Dict[str, tuple]
+    changed_fields: Dict[str, tuple],
 ) -> Dict[ReloadStrategy, Dict[str, tuple]]:
     """
     Categorize changed fields by their reload strategy.
@@ -240,9 +245,7 @@ def requires_restart(changed_fields: Dict[str, tuple]) -> bool:
     return False
 
 
-def get_hot_reloadable_changes(
-    changed_fields: Dict[str, tuple]
-) -> Dict[str, tuple]:
+def get_hot_reloadable_changes(changed_fields: Dict[str, tuple]) -> Dict[str, tuple]:
     """
     Filter changes to only include hot-reloadable fields.
 

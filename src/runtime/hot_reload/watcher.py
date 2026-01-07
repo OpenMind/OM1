@@ -10,11 +10,10 @@ import logging
 import os
 import threading
 import time
-from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import json5
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent
+from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 
@@ -30,7 +29,7 @@ class ConfigFileHandler(FileSystemEventHandler):
         self,
         config_path: str,
         callback: Callable[[str], None],
-        debounce_seconds: float = 0.5
+        debounce_seconds: float = 0.5,
     ):
         """
         Initialize the file handler.
@@ -93,11 +92,7 @@ class ConfigFileWatcher:
     thread, and all shared state is protected by locks.
     """
 
-    def __init__(
-        self,
-        config_path: str,
-        debounce_seconds: float = 0.5
-    ):
+    def __init__(self, config_path: str, debounce_seconds: float = 0.5):
         """
         Initialize the configuration file watcher.
 
@@ -138,8 +133,7 @@ class ConfigFileWatcher:
             try:
                 # Schedule the async callback on the event loop
                 asyncio.run_coroutine_threadsafe(
-                    self._async_callback(file_path),
-                    self._event_loop
+                    self._async_callback(file_path), self._event_loop
                 )
             except Exception as e:
                 logging.error(f"Error scheduling async callback: {e}")
@@ -162,9 +156,7 @@ class ConfigFileWatcher:
             self._callback = callback
 
     def set_async_callback(
-        self,
-        callback: Callable[[str], Any],
-        event_loop: asyncio.AbstractEventLoop
+        self, callback: Callable[[str], Any], event_loop: asyncio.AbstractEventLoop
     ) -> None:
         """
         Set an asynchronous callback for file changes.
@@ -204,17 +196,11 @@ class ConfigFileWatcher:
 
                 # Create handler and observer
                 self._handler = ConfigFileHandler(
-                    self.config_path,
-                    self._sync_callback_wrapper,
-                    self.debounce_seconds
+                    self.config_path, self._sync_callback_wrapper, self.debounce_seconds
                 )
 
                 self._observer = Observer()
-                self._observer.schedule(
-                    self._handler,
-                    self.config_dir,
-                    recursive=False
-                )
+                self._observer.schedule(self._handler, self.config_dir, recursive=False)
                 self._observer.start()
 
                 self._is_running = True
