@@ -90,7 +90,7 @@ async def test_raw_to_text_conversion_negative_change(wallet_eth):
     result = await wallet_eth._raw_to_text(raw_input)
 
     assert isinstance(result, Message)
-    assert "sent 1.000 ETH" in result.message.lower()
+    assert "sent 1.000 ETH" in result.message
 
 
 @pytest.mark.asyncio

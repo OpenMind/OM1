@@ -89,9 +89,11 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
             )
 
             # Use fetched balance directly (no random test mutations)
+            # Keep the old balance as previous, compute change, then update current
+            old_balance = self.ETH_balance
+            self.balance_change = self.balance_eth - old_balance
+            self.ETH_balance_previous = old_balance
             self.ETH_balance = self.balance_eth
-            self.balance_change = self.ETH_balance - self.ETH_balance_previous
-            self.ETH_balance_previous = self.ETH_balance
 
         except Exception as e:
             logging.error(f"Error fetching blockchain data: {e}")
