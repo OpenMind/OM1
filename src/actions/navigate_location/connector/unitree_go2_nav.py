@@ -15,7 +15,7 @@ class UnitreeGo2NavConfig(ActionConfig):
     """
     Configuration for Unitree Go2 Navigation connector.
 
-    Parameters:
+    Parameters
     ----------
     base_url : str
         The base URL for the locations API.
