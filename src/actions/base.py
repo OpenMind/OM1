@@ -15,7 +15,7 @@ class MoveCommand:
     """
     Move command interface.
 
-    Parameters:
+    Parameters
     ----------
     dx : float
         Distance to move in the x direction.
@@ -52,7 +52,7 @@ class Interface(T.Generic[IT, OT]):
     """
     An interface for a action.
 
-    Parameters:
+    Parameters
     ----------
     input : IT
         The input type for the interface.
@@ -102,7 +102,7 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
 @dataclass
 class AgentAction:
     """
-    Base class for agent actions
+    Base class for agent actions.
 
     Parameters
     ----------
