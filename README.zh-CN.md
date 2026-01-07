@@ -17,7 +17,7 @@
 * **模块化架构**：采用 Python 设计，以实现简洁性和无缝集成。
 * **数据输入**：轻松处理新数据和传感器。
 * **通过插件支持硬件**：通过插件支持新的硬件，用于 API 端点和特定机器人硬件连接到 `ROS2`、`Zenoh` 和 `CycloneDDS`。（推荐所有新开发使用 `Zenoh`）。
-* **基于 Web 的调试界面**：通过 WebSim（访问 http://localhost:8000/）实时监控系统运行状态，便于可视化调试。
+* **基于 Web 的调试界面**：通过 WebSim 实时监控系统运行状态，便于可视化调试（访问 http://localhost:8000/） 。
 * **预配置的端点**：支持文本转语音、来自 OpenAI、xAI、DeepSeek、Anthropic、Meta、Gemini、NearAI 的多种大语言模型（LLM），以及多种视觉语言模型（VLM），并为每种服务提供了预配置端点。
 
 ## 架构概览
@@ -25,8 +25,7 @@
 
 ## 快速开始
 
-下面通过运行 Spot 代理 来快速体验 OM1。  
-Spot 使用你的摄像头捕获并标注物体，这些文本描述会被发送给 LLM，LLM 返回 `movement`、`speech` 和 `face` 等动作指令。这些指令会在 WebSim 中展示，并附带基础的时间信息和调试信息。
+下面通过运行 Spot 代理 来快速体验 OM1。Spot 使用你的摄像头捕获并标注物体，这些文本描述会被发送给 LLM，LLM 返回 `movement`、`speech` 和 `face` 等动作指令。这些指令会在 WebSim 中展示，并附带基础的时间信息和调试信息。
 
 ### 包管理与虚拟环境（VENV）
 
@@ -69,6 +68,7 @@ uv run src/run.py spot
 ```
 启动 OM1 后，Spot Agent 将与你进行交互并执行（模拟）动作。  
 如需了解如何将 OM1 连接到你的机器人硬件，请参考 [入门指南](https://docs.openmind.org/developing/1_get-started)。
+注意：这只是一个示例代理配置。如果您想与代理交互并了解其工作原理，请确保在 spot.json5 中配置了 ASR 和 TTS。
 
 ## 接下来做什么？
 
