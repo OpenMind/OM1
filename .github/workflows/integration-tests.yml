@@ -5,8 +5,8 @@ env:
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour UTC
-  workflow_dispatch:     # Allow manual trigger via GitHub UI
+    - cron: '0 * * * *'
+  workflow_dispatch:
   push:
     branches:
       - 'main'
