@@ -13,6 +13,12 @@ from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
+from runtime.hot_reload.diff import diff_configs
+from runtime.hot_reload.strategies import (
+    ReloadStrategy,
+    get_field_strategy,
+    validate_field,
+)
 from runtime.multi_mode.config import (
     LifecycleHookType,
     ModeSystemConfig,
@@ -20,12 +26,6 @@ from runtime.multi_mode.config import (
     load_mode_config,
 )
 from runtime.multi_mode.manager import ModeManager
-from runtime.hot_reload.diff import diff_configs
-from runtime.hot_reload.strategies import (
-    ReloadStrategy,
-    get_field_strategy,
-    validate_field,
-)
 from simulators.orchestrator import SimulatorOrchestrator
 
 
@@ -130,14 +130,22 @@ class ModeCortexRuntime:
                 await self._mode_transition_event.wait()
                 if self._pending_mode_transition:
                     target_mode = self._pending_mode_transition
-                    transition_reason = self._pending_transition_reason or "input_triggered"
+                    transition_reason = (
+                        self._pending_transition_reason or "input_triggered"
+                    )
                     self._pending_mode_transition = None
                     self._pending_transition_reason = None
 
-                    logging.info(f"Processing mode transition to: {target_mode} (reason: {transition_reason})")
-                    success = await self.mode_manager._execute_transition(target_mode, transition_reason)
+                    logging.info(
+                        f"Processing mode transition to: {target_mode} (reason: {transition_reason})"
+                    )
+                    success = await self.mode_manager._execute_transition(
+                        target_mode, transition_reason
+                    )
                     if success:
-                        logging.info(f"Mode transition completed successfully: {target_mode}")
+                        logging.info(
+                            f"Mode transition completed successfully: {target_mode}"
+                        )
                     else:
                         logging.error(f"Mode transition failed: {target_mode}")
 
@@ -221,7 +229,9 @@ class ModeCortexRuntime:
         self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
 
         if not self.mode_transition_task or self.mode_transition_task.done():
-            self.mode_transition_task = asyncio.create_task(self._handle_mode_transitions())
+            self.mode_transition_task = asyncio.create_task(
+                self._handle_mode_transitions()
+            )
 
         logging.debug("Orchestrators started successfully")
 
@@ -275,7 +285,9 @@ class ModeCortexRuntime:
                 await self._initialize_mode(self.mode_manager.current_mode_name)
                 self._mode_initialized = True
 
-                initial_mode_config = self.mode_config.modes[self.mode_manager.current_mode_name]
+                initial_mode_config = self.mode_config.modes[
+                    self.mode_manager.current_mode_name
+                ]
                 await initial_mode_config.execute_lifecycle_hooks(
                     LifecycleHookType.ON_STARTUP, startup_context
                 )
@@ -283,14 +295,19 @@ class ModeCortexRuntime:
             await self._start_orchestrators()
 
             if self.hot_reload and self.config_path:
-                self.config_watcher_task = asyncio.create_task(self._check_config_changes())
+                self.config_watcher_task = asyncio.create_task(
+                    self._check_config_changes()
+                )
 
             while True:
                 try:
                     awaitables: List[Union[asyncio.Task, asyncio.Future]] = []
                     if self.cortex_loop_task and not self.cortex_loop_task.done():
                         awaitables.append(self.cortex_loop_task)
-                    if self.mode_transition_task and not self.mode_transition_task.done():
+                    if (
+                        self.mode_transition_task
+                        and not self.mode_transition_task.done()
+                    ):
                         awaitables.append(self.mode_transition_task)
                     if self.config_watcher_task and not self.config_watcher_task.done():
                         awaitables.append(self.config_watcher_task)
@@ -306,7 +323,9 @@ class ModeCortexRuntime:
                     await asyncio.gather(*awaitables)
 
                 except asyncio.CancelledError:
-                    logging.debug("Tasks cancelled during mode transition, continuing...")
+                    logging.debug(
+                        "Tasks cancelled during mode transition, continuing..."
+                    )
                     await asyncio.sleep(0.1)
 
                 except Exception as e:
@@ -323,7 +342,9 @@ class ModeCortexRuntime:
                 "timestamp": asyncio.get_event_loop().time(),
             }
 
-            current_config = self.mode_config.modes.get(self.mode_manager.current_mode_name)
+            current_config = self.mode_config.modes.get(
+                self.mode_manager.current_mode_name
+            )
             if current_config:
                 await current_config.execute_lifecycle_hooks(
                     LifecycleHookType.ON_SHUTDOWN, shutdown_context
@@ -341,15 +362,21 @@ class ModeCortexRuntime:
         try:
             while True:
                 if not self.sleep_ticker_provider.skip_sleep and self.current_config:
-                    await self.sleep_ticker_provider.sleep(1 / self.current_config.hertz)
+                    await self.sleep_ticker_provider.sleep(
+                        1 / self.current_config.hertz
+                    )
                 await asyncio.sleep(0)
                 await self._tick()
                 self.sleep_ticker_provider.skip_sleep = False
         except asyncio.CancelledError:
-            logging.info(f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully")
+            logging.info(
+                f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully"
+            )
             raise
         except Exception as e:
-            logging.error(f"Unexpected error in cortex loop for mode '{current_mode}': {e}")
+            logging.error(
+                f"Unexpected error in cortex loop for mode '{current_mode}': {e}"
+            )
             raise
 
     async def _tick(self) -> None:
@@ -379,7 +406,9 @@ class ModeCortexRuntime:
             self._pending_mode_transition = new_mode
             self._pending_transition_reason = transition_reason
             self._mode_transition_event.set()
-            logging.info(f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})")
+            logging.info(
+                f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
+            )
             return
 
         output = await self.current_config.cortex_llm.ask(prompt)
@@ -427,7 +456,9 @@ class ModeCortexRuntime:
                 current_mtime = self._get_file_mtime()
 
                 if self.last_modified and current_mtime > self.last_modified:
-                    logging.info(f"Config file changed, analyzing changes: {self.config_path}")
+                    logging.info(
+                        f"Config file changed, analyzing changes: {self.config_path}"
+                    )
 
                     new_raw_config = self._load_raw_config()
                     if new_raw_config is None:
@@ -472,7 +503,9 @@ class ModeCortexRuntime:
             elif strategy in (ReloadStrategy.HOT_RELOAD, ReloadStrategy.VALIDATE_FIRST):
                 if strategy == ReloadStrategy.VALIDATE_FIRST:
                     if not validate_field(field_path, old_val, new_val):
-                        logging.error(f"  Validation failed for '{field_path}', skipping")
+                        logging.error(
+                            f"  Validation failed for '{field_path}', skipping"
+                        )
                         continue
                 hot_reload_fields.add(field_path)
                 logging.info(f"  Field '{field_path}' can be hot-reloaded")
@@ -498,7 +531,11 @@ class ModeCortexRuntime:
                     setattr(self.current_config, field, new_value)
                     logging.info(f"Hot-reloaded '{field}': {old_value} -> {new_value}")
 
-                    if field in ("system_prompt_base", "system_governance", "system_prompt_examples"):
+                    if field in (
+                        "system_prompt_base",
+                        "system_governance",
+                        "system_prompt_examples",
+                    ):
                         self.fuser = Fuser(self.current_config)
                         logging.debug(f"Fuser updated due to '{field}' change")
 
@@ -542,7 +579,9 @@ class ModeCortexRuntime:
             await self._initialize_mode(current_mode)
             await self._start_orchestrators()
 
-            logging.info(f"Mode configuration reloaded successfully, active mode: {current_mode}")
+            logging.info(
+                f"Mode configuration reloaded successfully, active mode: {current_mode}"
+            )
 
         except Exception as e:
             logging.error(f"Failed to reload mode configuration: {e}")

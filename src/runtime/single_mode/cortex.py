@@ -12,18 +12,31 @@ from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
-from runtime.single_mode.config import RuntimeConfig, load_config
 from runtime.hot_reload.diff import diff_configs
 from runtime.hot_reload.strategies import (
     ReloadStrategy,
     get_field_strategy,
-    requires_restart,
     validate_field,
 )
+from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.orchestrator import SimulatorOrchestrator
 
 
 class CortexRuntime:
+    """
+    The main entry point for the OM1 agent runtime environment.
+
+    The CortexRuntime orchestrates communication between memory, fuser,
+    actions, and manages inputs/outputs. It controls the agent's execution
+    cycle and coordinates all major subsystems.
+
+    Parameters
+    ----------
+    config : RuntimeConfig
+        Configuration object containing all runtime settings including
+        agent inputs, cortex LLM settings, and execution parameters.
+    """
+
     config: RuntimeConfig
     fuser: Fuser
     action_orchestrator: ActionOrchestrator
@@ -40,6 +53,20 @@ class CortexRuntime:
         hot_reload: bool = True,
         check_interval: float = 60,
     ):
+        """
+        Initialize the CortexRuntime with provided configuration.
+
+        Parameters
+        ----------
+        config : RuntimeConfig
+            Configuration object for the runtime.
+        config_name : str
+            Name of the configuration file for hot-reload functionality.
+        hot_reload : bool
+            Whether to enable hot-reload functionality. (default: True)
+        check_interval : float
+            Interval in seconds between config file checks for hot-reload. (default: 60.0)
+        """
         self.config = config
         self.config_name = config_name
         self.hot_reload = hot_reload
@@ -112,6 +139,16 @@ class CortexRuntime:
         return None
 
     async def run(self) -> None:
+        """
+        Start the runtime's main execution loop.
+
+        This method initializes input listeners and begins the cortex
+        processing loop, running them concurrently.
+
+        Returns
+        -------
+        None
+        """
         try:
             if self.hot_reload:
                 self.config_watcher_task = asyncio.create_task(
@@ -171,7 +208,9 @@ class CortexRuntime:
 
                 current_mtime = self._get_file_mtime()
                 if self.last_modified and current_mtime > self.last_modified:
-                    logging.info(f"Config file changed, analyzing changes: {self.config_path}")
+                    logging.info(
+                        f"Config file changed, analyzing changes: {self.config_path}"
+                    )
                     new_raw_config = self._load_raw_config()
                     if new_raw_config is None:
                         logging.error("Failed to load new configuration")
@@ -212,7 +251,9 @@ class CortexRuntime:
             elif strategy in (ReloadStrategy.HOT_RELOAD, ReloadStrategy.VALIDATE_FIRST):
                 if strategy == ReloadStrategy.VALIDATE_FIRST:
                     if not validate_field(field_path, old_val, new_val):
-                        logging.error(f"  Validation failed for '{field_path}', skipping")
+                        logging.error(
+                            f"  Validation failed for '{field_path}', skipping"
+                        )
                         continue
                 hot_reload_fields.add(field_path)
                 logging.info(f"  Field '{field_path}' can be hot-reloaded")
@@ -238,7 +279,11 @@ class CortexRuntime:
                     setattr(self.config, field, new_value)
                     logging.info(f"Hot-reloaded '{field}': {old_value} -> {new_value}")
 
-                    if field in ("system_prompt_base", "system_governance", "system_prompt_examples"):
+                    if field in (
+                        "system_prompt_base",
+                        "system_governance",
+                        "system_prompt_examples",
+                    ):
                         self.fuser = Fuser(self.config)
                         logging.debug(f"Fuser updated due to '{field}' change")
 

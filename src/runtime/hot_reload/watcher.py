@@ -199,9 +199,10 @@ class ConfigFileWatcher:
                     self.config_path, self._sync_callback_wrapper, self.debounce_seconds
                 )
 
-                self._observer = Observer()
-                self._observer.schedule(self._handler, self.config_dir, recursive=False)
-                self._observer.start()
+                observer = Observer()
+                observer.schedule(self._handler, self.config_dir, recursive=False)
+                observer.start()
+                self._observer = observer
 
                 self._is_running = True
                 logging.info(f"Started watching config file: {self.config_path}")
