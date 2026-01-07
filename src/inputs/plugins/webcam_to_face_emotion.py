@@ -1,7 +1,7 @@
 """
 Code example is from:
 https://github.com/manish-9245/Facial-Emotion-Recognition-using-OpenCV-and-Deepface
-Thank you @manish-9245
+Thank you @manish-9245.
 """
 
 import asyncio

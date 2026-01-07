@@ -91,6 +91,19 @@ class MessageHookHandler(LifecycleHookHandler):
     """
 
     async def execute(self, context: Dict[str, Any]) -> bool:
+        """
+        Execute the lifecycle message.
+
+        Parameters
+        ----------
+        context : Dict[str, Any]
+            Context information for the hook execution
+
+        Returns
+        -------
+        bool
+            True if execution was successful, False otherwise
+        """
         message = self.config.get("message", "")
         if message:
             try:
@@ -116,6 +129,19 @@ class CommandHookHandler(LifecycleHookHandler):
     """
 
     async def execute(self, context: Dict[str, Any]) -> bool:
+        """
+        Execute the lifecycle command.
+
+        Parameters
+        ----------
+        context : Dict[str, Any]
+            Context information for the hook execution
+
+        Returns
+        -------
+        bool
+            True if execution was successful, False otherwise
+        """
         command = self.config.get("command", "")
         if not command:
             logging.warning("No command specified for command hook")
@@ -153,6 +179,19 @@ class FunctionHookHandler(LifecycleHookHandler):
     """
 
     async def execute(self, context: Dict[str, Any]) -> bool:
+        """
+        Execute the lifecycle function.
+
+        Parameters
+        ----------
+        context : Dict[str, Any]
+            Context information for the hook execution
+
+        Returns
+        -------
+        bool
+            True if execution was successful, False otherwise
+        """
         module_name = self.config.get("module_name")
         function_name = self.config.get("function")
 
@@ -266,6 +305,19 @@ class ActionHookHandler(LifecycleHookHandler):
         self.action = None
 
     async def execute(self, context: Dict[str, Any]) -> bool:
+        """
+        Execute the lifecycle action.
+
+        Parameters
+        ----------
+        context : Dict[str, Any]
+            Context information for the hook execution
+
+        Returns
+        -------
+        bool
+            True if execution was successful, False otherwise
+        """
         if not self.action:
             action_type = self.config.get("action_type")
             if not action_type:
