@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 from typing import List, Optional, Union
 
 import json5
@@ -13,7 +14,9 @@ from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.single_mode.config import RuntimeConfig, load_config
+from runtime.single_mode.hot_reload import HotReloadManager
 from simulators.orchestrator import SimulatorOrchestrator
+from utils.config_watcher import ConfigFileWatcher
 
 
 class CortexRuntime:
@@ -45,7 +48,7 @@ class CortexRuntime:
         config: RuntimeConfig,
         config_name: str,
         hot_reload: bool = True,
-        check_interval: float = 60,
+        check_interval: float = 60,  # Keep for backward compat, but won't be used
     ):
         """
         Initialize the CortexRuntime with provided configuration.
@@ -59,12 +62,12 @@ class CortexRuntime:
         hot_reload : bool
             Whether to enable hot-reload functionality. (default: True)
         check_interval : float
-            Interval in seconds between config file checks for hot-reload. (default: 60.0)
+            DEPRECATED: Kept for backward compatibility. Watchdog is now used instead of polling.
         """
         self.config = config
         self.config_name = config_name
         self.hot_reload = hot_reload
-        self.check_interval = check_interval
+        self.check_interval = check_interval  # Keep for backward compat
 
         self.fuser = Fuser(config)
         self.action_orchestrator = ActionOrchestrator(config)
@@ -73,6 +76,10 @@ class CortexRuntime:
         self.sleep_ticker_provider = SleepTickerProvider()
         self.io_provider = IOProvider()
         self.config_provider = ConfigProvider()
+
+        # Hot-reload components
+        self.hot_reload_manager = HotReloadManager()
+        self.config_watcher: Optional[ConfigFileWatcher] = None
 
         self.last_modified: float = 0.0
         self.config_watcher_task: Optional[asyncio.Task] = None
@@ -88,7 +95,7 @@ class CortexRuntime:
             self.config_path = self._create_runtime_config_file()
             self.last_modified = self._get_file_mtime()
             logging.info(
-                f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
+                f"Hot-reload enabled with watchdog-based monitoring: {self.config_path}"
             )
 
     def _get_runtime_config_path(self) -> str:
@@ -158,9 +165,15 @@ class CortexRuntime:
         """
         try:
             if self.hot_reload:
-                self.config_watcher_task = asyncio.create_task(
-                    self._check_config_changes()
+                # Start watchdog-based config watcher
+                self.config_watcher = ConfigFileWatcher(
+                    config_path=Path(self.config_path),
+                    on_change_callback=self._handle_config_change,
                 )
+                self.config_watcher_task = asyncio.create_task(
+                    self.config_watcher.start()
+                )
+                logging.info("Watchdog-based config monitoring started")
 
             await self._start_orchestrators()
 
@@ -218,46 +231,100 @@ class CortexRuntime:
         except OSError:
             return 0.0
 
-    async def _check_config_changes(self) -> None:
+    async def _handle_config_change(self) -> None:
         """
-        Periodically check for config file changes and reload if needed.
-        """
-        while True:
-            try:
-                await asyncio.sleep(self.check_interval)
-
-                if not self.config_path or not os.path.exists(self.config_path):
-                    continue
-
-                current_mtime = self._get_file_mtime()
-
-                if self.last_modified and current_mtime > self.last_modified:
-                    logging.info(f"Config file changed, reloading: {self.config_path}")
-                    await self._reload_config()
-                    self.last_modified = current_mtime
-
-            except asyncio.CancelledError:
-                logging.debug("Config watcher cancelled")
-                break
-            except Exception as e:
-                logging.error(f"Error checking config changes: {e}")
-                await asyncio.sleep(5)
-
-    async def _reload_config(self) -> None:
-        """
-        Reload the configuration and restart all components.
+        Handle config file changes detected by watchdog.
+        This replaces the old polling-based _check_config_changes method.
         """
         try:
-            logging.info(f"Reloading configuration: {self.config_name}")
+            logging.info(f"Config file changed, analyzing changes: {self.config_path}")
+
+            # Load new config
+            new_config = load_config(
+                self.config_name, config_source_path=self.config_path
+            )
+
+            # Determine what changed
+            changes = self.hot_reload_manager.detect_changes(self.config, new_config)
+
+            if not changes:
+                logging.info("No significant changes detected, skipping reload")
+                return
+
+            logging.info(f"Detected changes: {', '.join(changes)}")
+
+            # Determine reload strategy
+            if self.hot_reload_manager.requires_full_restart(changes):
+                logging.warning(
+                    f"Changes require full restart: {changes}. Performing full reload..."
+                )
+                await self._reload_config(new_config)
+            else:
+                logging.info(f"Performing selective hot-reload for: {changes}")
+                await self._selective_reload(new_config, changes)
+
+        except Exception as e:
+            logging.error(f"Error handling config change: {e}")
+
+    async def _selective_reload(
+        self, new_config: RuntimeConfig, changes: List[str]
+    ) -> None:
+        """
+        Perform selective hot-reload of specific components without full restart.
+
+        Parameters
+        ----------
+        new_config : RuntimeConfig
+            New configuration to apply
+        changes : List[str]
+            List of changed fields
+        """
+        try:
+            logging.info("Starting selective hot-reload...")
+            self._is_reloading = True
+
+            # Apply selective updates
+            success = await self.hot_reload_manager.apply_selective_reload(
+                self, new_config, changes
+            )
+
+            if success:
+                # Update config reference
+                self.config = new_config
+                logging.info("Selective hot-reload completed successfully")
+            else:
+                logging.warning("Selective reload failed, falling back to full reload")
+                await self._reload_config(new_config)
+
+        except Exception as e:
+            logging.error(f"Error during selective reload: {e}")
+            logging.info("Falling back to full reload")
+            await self._reload_config(new_config)
+        finally:
+            self._is_reloading = False
+
+    async def _reload_config(self, new_config: Optional[RuntimeConfig] = None) -> None:
+        """
+        Reload the configuration and restart all components (full restart).
+
+        Parameters
+        ----------
+        new_config : Optional[RuntimeConfig]
+            Pre-loaded configuration. If None, will load from file.
+        """
+        try:
+            logging.info(f"Performing full configuration reload: {self.config_name}")
             self._is_reloading = True
 
             if not self.config_name:
                 logging.error("No config name available for reload")
                 return
 
-            new_config = load_config(
-                self.config_name, config_source_path=self.config_path
-            )
+            # Load config if not provided
+            if new_config is None:
+                new_config = load_config(
+                    self.config_name, config_source_path=self.config_path
+                )
 
             await self._stop_current_orchestrators()
 
@@ -272,7 +339,7 @@ class CortexRuntime:
 
             self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
 
-            logging.info("Configuration reloaded successfully")
+            logging.info("Full configuration reload completed successfully")
 
         except Exception as e:
             logging.error(f"Failed to reload configuration: {e}")
@@ -388,6 +455,14 @@ class CortexRuntime:
         Cleanup all running tasks gracefully.
         """
         tasks_to_cancel = []
+
+        # Stop config watcher first
+        if self.config_watcher:
+            try:
+                await self.config_watcher.stop()
+                logging.debug("Config watcher stopped")
+            except Exception as e:
+                logging.warning(f"Error stopping config watcher: {e}")
 
         if self.config_watcher_task and not self.config_watcher_task.done():
             tasks_to_cancel.append(self.config_watcher_task)
