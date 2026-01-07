@@ -1,11 +1,24 @@
 ## Overview
 [Provide a brief overview of the changes in this pull request.]
+(If applicable, linked issue: [ ])
+
+## Type of change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Documentation improvement
+- [ ] Bounty issue submission
+- [ ] Other:
 
 ## Changes
 [Detail the changes you have made in this pull request. Include any new features, bug fixes, or improvements.]
 
-## Testing
-[Describe the testing you have done to verify your changes. Include any relevant details about the test environment and the results of your tests.]
+## Checklist
+
+- [ ] Code complies with style guidelines
+- [ ] Self-review completed
+- [ ] Documentation updated (if applicable)
+- [ ] Local testing completed
+- [ ] Tests added/updated (if applicable)
 
 ## Impact
 [Explain the impact of your changes. Include any potential risks or side effects that reviewers should be aware of.]

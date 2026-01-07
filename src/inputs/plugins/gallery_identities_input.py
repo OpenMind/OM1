@@ -47,7 +47,7 @@ class GalleryIdentities(FuserInput[GalleryIdentitiesConfig, Optional[str]]):
     """
 
     def __init__(self, config: GalleryIdentitiesConfig):
-        """Initialize the GalleryIdentities input adapter
+        """Initialize the GalleryIdentities input adapter.
 
         Subscribes to `GalleryIdentitiesProvider` and adapts its messages into
         a compact INPUT block for the LLM (“Gallery Identities …”). Uses a small
