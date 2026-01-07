@@ -89,7 +89,7 @@ class ZenohPublisherProvider:
 
     def _run(self):
         """
-        Internal loop that processes and publishes pending messages.
+        Process and publish pending messages in an internal loop.
         """
         while self.running:
             try:
