@@ -232,6 +232,8 @@ class CortexRuntime:
                 current_mtime = self._get_file_mtime()
 
                 if self.last_modified and current_mtime > self.last_modified:
+                    if self._is_reloading:
+                        continue
                     logging.info(f"Config file changed, reloading: {self.config_path}")
                     await self._reload_config()
                     self.last_modified = current_mtime
