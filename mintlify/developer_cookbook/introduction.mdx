@@ -19,14 +19,10 @@ Then dive into any recipe that interests you!
 
 ## Development workflow
 
-### Linting and Testing
+### Linting and Testing (Mandatory)
 
-To check/format/lint your code, run:
-```bash
-uv run ruff check . --fix && uv run black . && uv run isort .
-```
+To check/format/lint your code before committing, install [pre-commit](https://pre-commit.com/) and execute `pre-commit install`. This ensures that pre-commit checks run before each commit.
 
-To automatically run these checks before committing, install [pre-commit](https://pre-commit.com/) and execute `pre-commit install`. This ensures that pre-commit checks run before each commit.
 Additionally, you can manually trigger all checks by running
 
 ```bash
