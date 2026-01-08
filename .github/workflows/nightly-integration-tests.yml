@@ -1,12 +1,12 @@
-name: Run Integration Tests
+name: Run Nightly Integration Tests
 
 env:
   OM1_API_KEY: ${{ secrets.OM1_API_KEY }}
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour UTC
-  workflow_dispatch:     # Allow manual trigger via GitHub UI
+    - cron: '0 * * * *'
+  workflow_dispatch:
   push:
     branches:
       - 'main'
@@ -15,7 +15,7 @@ on:
       - '**'
 
 jobs:
-  integration-test:
+  nightly-integration-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -88,12 +88,39 @@ jobs:
       - name: Extract test summary
         id: summary
         run: |
-          TOTAL=$(grep -oP 'tests="\K[0-9]+' test-reports/results.xml)
-          FAILURES=$(grep -oP 'failures="\K[0-9]+' test-reports/results.xml)
-          ERRORS=$(grep -oP 'errors="\K[0-9]+' test-reports/results.xml)
-          echo "total=$TOTAL" >> $GITHUB_OUTPUT
-          echo "failures=$FAILURES" >> $GITHUB_OUTPUT
-          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          python - << 'EOF'
+          import os
+          import xml.etree.ElementTree as ET
+
+          xml_file = 'test-reports/results.xml'
+          tree = ET.parse(xml_file)
+          root = tree.getroot()
+
+          def get_val(node, attr):
+              return int(node.get(attr, 0))
+
+          tests = 0
+          failures = 0
+          errors = 0
+
+          if root.tag == 'testsuites':
+              if root.get('tests'):
+                  tests = get_val(root, 'tests')
+                  failures = get_val(root, 'failures')
+                  errors = get_val(root, 'errors')
+              else:
+                  for suite in root.findall('testsuite'):
+                      tests += get_val(suite, 'tests')
+                      failures += get_val(suite, 'failures')
+                      errors += get_val(suite, 'errors')
+          else:
+              tests = get_val(root, 'tests')
+              failures = get_val(root, 'failures')
+              errors = get_val(root, 'errors')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"total={tests}\nfailures={failures}\nerrors={errors}\n")
+          EOF
 
       - name: Notify Slack on failure
         if: failure() && github.event_name == 'schedule'
