@@ -13,21 +13,6 @@
         enable_tts_interrupt: false,
       },
     },
-    {
-      type: "StatusReporter"
-    },
-  ],
-  simulators: [
-    {
-      type: "WebSim",
-      config: {
-        host: "0.0.0.0",
-        port: 8000,
-        tick_rate: 100,
-        auto_reconnect: true,
-        debug_mode: false
-      }
-    }
   ],
   cortex_llm: {
     type: "OpenAILLM",

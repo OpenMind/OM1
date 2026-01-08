@@ -12,7 +12,7 @@ from providers.io_provider import IOProvider
 
 class SerialReader(FuserInput[SensorConfig, Optional[str]]):
     """
-    Reads data from serial port, typically from an Arduino
+    Reads data from serial port, typically from an Arduino.
 
     Maintains a buffer of messages.
     """
