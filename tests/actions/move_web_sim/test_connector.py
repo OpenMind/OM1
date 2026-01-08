@@ -1,8 +1,11 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
-from actions.base import ActionConfig
-from actions.move_web_sim.connector.websocket import MoveWebSimConnector, MoveWebSimConfig
+import pytest
+
+from actions.move_web_sim.connector.websocket import (
+    MoveWebSimConfig,
+    MoveWebSimConnector,
+)
 from actions.move_web_sim.interface import MoveInput, MovementAction
 
 

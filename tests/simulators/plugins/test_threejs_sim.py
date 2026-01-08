@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 
 from simulators.base import SimulatorConfig
 from simulators.plugins.ThreeJSSim import ThreeJSSim

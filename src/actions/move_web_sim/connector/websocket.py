@@ -12,6 +12,8 @@ from actions.move_web_sim.interface import MoveInput
 
 
 class MoveWebSimConfig(ActionConfig):
+    """Configuration for WebSim connector."""
+
     simulator_url: str = Field(
         default="http://localhost:8001",
         description="Base URL for the three.js simulator HTTP API.",
@@ -19,6 +21,8 @@ class MoveWebSimConfig(ActionConfig):
 
 
 class MoveWebSimConnector(ActionConnector[MoveWebSimConfig, MoveInput]):
+    """HTTP connector for the Move WebSim action."""
+
     def __init__(self, config: MoveWebSimConfig):
         super().__init__(config)
 
@@ -61,6 +65,7 @@ class MoveWebSimConnector(ActionConnector[MoveWebSimConfig, MoveInput]):
         self._send_command(command)
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """Connect to the output interface and process the AI movement command."""
         logging.info(f"AI command.connect: {output_interface.action}")
 
         if self.pending_movements.qsize() > 0:
@@ -152,6 +157,7 @@ class MoveWebSimConnector(ActionConnector[MoveWebSimConfig, MoveInput]):
         return round(gap, 2)
 
     def clean_abort(self) -> None:
+        """Cleanly abort current movement and reset state."""
         self.movement_attempts = 0
         self.robot_state["moving"] = False
         if not self.pending_movements.empty():
@@ -159,6 +165,7 @@ class MoveWebSimConnector(ActionConnector[MoveWebSimConfig, MoveInput]):
         self._send_command_sync({"type": "stop"})
 
     def tick(self) -> None:
+        """Process the AI motion tick."""
         time.sleep(0.1)
 
         target: list[MoveCommand] = list(self.pending_movements.queue)

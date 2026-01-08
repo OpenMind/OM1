@@ -4,17 +4,20 @@ import math
 import os
 import threading
 import time
-from typing import Dict, List, Set
+from typing import List, Set
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+
 from llm.output_model import Action
 from simulators.base import Simulator, SimulatorConfig
 
 
 class ThreeJSSim(Simulator):
+    """Three.js browser-based robot simulator."""
+
     def __init__(self, config: SimulatorConfig):
         super().__init__(config)
         self.messages: List[str] = []
@@ -126,7 +129,7 @@ class ThreeJSSim(Simulator):
             logging.error(f"Error starting ThreeJSSim server thread: {e}")
 
     def _run_server(self):
-        """Run the FastAPI server"""
+        """Run the FastAPI server."""
         port = self.config.port or 8001
         host = self.config.host or "0.0.0.0"
         config = uvicorn.Config(
@@ -140,7 +143,7 @@ class ThreeJSSim(Simulator):
         server.run()
 
     async def _get_simulator_html(self) -> HTMLResponse:
-        """Generate the HTML for the three.js simulator"""
+        """Generate the HTML for the three.js simulator."""
         html_content = """
 <!DOCTYPE html>
 <html lang="en">
@@ -626,7 +629,7 @@ class ThreeJSSim(Simulator):
         return HTMLResponse(content=html_content)
 
     async def broadcast_state(self):
-        """Broadcast current robot state to all connected clients"""
+        """Broadcast current robot state to all connected clients."""
         if not self.active_connections:
             return
 
@@ -642,7 +645,7 @@ class ThreeJSSim(Simulator):
             self.active_connections.discard(connection)
 
     def _normalize_angle(self, angle: float) -> float:
-        """Normalize angle to [-180, 180] range"""
+        """Normalize angle to [-180, 180] range."""
         while angle < -180:
             angle += 360.0
         while angle > 180:
@@ -650,7 +653,7 @@ class ThreeJSSim(Simulator):
         return angle
 
     def tick(self) -> None:
-        """Update simulator state"""
+        """Update simulator state."""
         if self._initialized:
             try:
                 loop = asyncio.get_event_loop()
@@ -664,7 +667,7 @@ class ThreeJSSim(Simulator):
                 logging.error(f"Error in tick: {e}")
 
     def sim(self, actions: List[Action]) -> None:
-        """Handle simulation updates from commands"""
+        """Handle simulation updates from commands."""
         if not self._initialized:
             logging.warning("ThreeJSSim not initialized, skipping sim update")
             return
@@ -687,7 +690,7 @@ class ThreeJSSim(Simulator):
             logging.error(f"Error in sim update: {e}")
 
     async def cleanup(self):
-        """Clean up resources"""
+        """Clean up resources."""
         logging.info("Cleaning up ThreeJSSim...")
         self._initialized = False
 
