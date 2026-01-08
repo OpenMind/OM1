@@ -6,10 +6,10 @@ from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from pydantic import Field
+from ubtech.ubtechapi import YanAPI
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move_ub.interface import MoveInput
-from ubtech.ubtechapi import YanAPI
 
 
 @dataclass

@@ -1,0 +1,85 @@
+{
+  version: "v1.0.1",
+  hertz: 1,
+  name: "smart_assistant_wallet",
+  api_key: "openmind_free",
+
+  // System prompt for smart assistant + wallet + order integration
+  system_prompt_base: "You are a helpful AI assistant that can process orders with automatic crypto payment. When a user asks to order something (food, products), use the order action - it will automatically calculate the price and process payment via the connected crypto wallet. For direct crypto transfers, use the wallet_payment action. Respond naturally and provide confirmations.",
+
+  // Governance rules for safe operation
+  system_governance: "Here are the rules:\n1. For orders: The system automatically calculates price and processes payment.\n2. For direct payments: Verify the recipient address is valid.\n3. Always report order status and transaction details clearly.\n4. Never process orders without user confirmation.",
+
+  // Examples for the LLM
+  system_prompt_examples: "Here are examples of interactions:\n\n1. If user says 'Order 2 pizzas':\n    order: 'order 2 pizzas'\n    speak: {{'sentence': 'Ordering 2 pizzas and processing payment'}}\n\n2. If user says 'Order a coffee':\n    order: 'order coffee'\n    speak: {{'sentence': 'One coffee coming right up, processing payment'}}\n\n3. After a successful order with payment:\n    speak: {{'sentence': 'Order confirmed and paid! Order ID: ORD-XXXX, Transaction: 0x...'}}\n    Face: 'smile'\n\n4. If user says 'Pay 0.001 ETH to 0x742d35Cc...' (direct transfer):\n    wallet_payment: 'pay 0.001 ETH to 0x742d35Cc...'\n    speak: {{'sentence': 'Processing direct payment of 0.001 ETH'}}",
+
+  // Agent inputs
+  agent_inputs: [
+    {
+      type: "SmartAssistantInput",
+      config: {
+        host: "0.0.0.0",
+        port: 8080,
+        webhook_path: "/webhook",
+      },
+    },
+    {
+      type: "WalletCoinbase",
+      config: {
+        asset_id: "eth",
+      },
+    },
+  ],
+
+  // LLM configuration
+  // For OpenAI API, change to OpenAILLM
+  cortex_llm: {
+    type: "OllamaLLM",
+    config: {
+      model: "llama3.2",
+      base_url: "http://localhost:11434",
+      agent_name: "Assistant",
+      history_length: 10,
+    },
+  },
+
+  // Agent actions
+  agent_actions: [
+    {
+      name: "order",
+      llm_label: "order",
+      connector: "mock",
+      config: {
+        currency: "USD",
+        auto_confirm: true,
+        // Enable automatic payment after order
+        payment_enabled: true,
+        // Payment asset: "eth" or "usdc"
+        payment_asset: "eth",
+        // Merchant wallet address (receives payment)
+        // Replace with your merchant's wallet address
+        merchant_address: "0x742d35Cc6634C0532925a3b844Bc9e7595f6D1E2",
+        // Use real-time crypto price from CoinGecko API
+        use_dynamic_price: true,
+        // Fallback price if API fails (ETH default: 3000, USDC: 1)
+        fallback_price_usd: 3000.0,
+        network: "base-sepolia",
+      },
+    },
+    {
+      name: "wallet_payment",
+      llm_label: "wallet_payment",
+      connector: "coinbase",
+      config: {
+        asset_id: "eth",
+        network: "base-sepolia",
+      },
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+    },
+  ],
+}
