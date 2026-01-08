@@ -1,0 +1,274 @@
+---
+title: Data Analytics Module
+description: "Data Integration and Analytics for OM1"
+---
+
+## Overview
+
+The Data Analytics module provides comprehensive data preprocessing, real-time analytics, ML-based anomaly detection, and performance metrics for sensor data streams in OM1. This module helps monitor data flow, detect inefficiencies, and apply data-driven improvements to OM1's learning and response systems.
+
+## Features
+
+- **Real-time Data Preprocessing**: Clean and normalize sensor data streams
+- **ML-based Anomaly Detection**: Detect unusual patterns using Isolation Forest
+- **Performance Metrics**: Track data quality, processing latency, and statistics
+- **REST API**: Access metrics and readings via HTTP endpoints
+- **Sensor Integration**: Support for temperature, humidity, and air quality sensors
+
+## Components
+
+### 1. Environmental Sensors Input Plugin
+
+The `EnvironmentalSensors` input plugin monitors environmental sensor data including temperature, humidity, and air quality. It can work with real sensors via Zenoh or provide mock data for testing.
+
+**Location**: `src/inputs/plugins/environmental_sensors.py`
+
+**Configuration**:
+```json5
+{
+  "type": "EnvironmentalSensors",
+  "config": {
+    "use_zenoh": false,
+    "update_interval": 1.0,
+    "temperature_topic": "sensors/temperature",  // Optional
+    "humidity_topic": "sensors/humidity",        // Optional
+    "air_quality_topic": "sensors/air_quality"  // Optional
+  }
+}
+```
+
+**Parameters**:
+- `use_zenoh` (bool): Whether to use Zenoh for sensor data (default: false)
+- `update_interval` (float): Interval in seconds between sensor readings (default: 1.0)
+- `temperature_topic` (str, optional): Zenoh topic for temperature sensor data
+- `humidity_topic` (str, optional): Zenoh topic for humidity sensor data
+- `air_quality_topic` (str, optional): Zenoh topic for air quality sensor data
+
+### 2. Data Analytics Provider
+
+The `DataAnalyticsProvider` handles data preprocessing, anomaly detection, and metrics calculation.
+
+**Location**: `src/providers/data_analytics_provider.py`
+
+**Key Features**:
+- **Preprocessing**: Outlier removal using IQR method, missing value handling
+- **Anomaly Detection**: ML-based detection using Isolation Forest
+- **Metrics**: Data quality scores, averages, min/max values, processing latency
+
+**Usage**:
+```python
+from providers.data_analytics_provider import DataAnalyticsProvider, SensorReading
+
+# Initialize provider
+provider = DataAnalyticsProvider(
+    window_size=100,
+    contamination=0.1,
+    enable_ml=True
+)
+
+# Add a reading
+reading = SensorReading(
+    timestamp=time.time(),
+    temperature=25.5,
+    humidity=60.0,
+    air_quality=100.0
+)
+processed, is_anomaly = provider.add_reading(reading)
+
+# Get metrics
+metrics = provider.get_metrics()
+```
+
+### 3. Data Analytics Background Process
+
+The `DataAnalytics` background process runs continuously to monitor sensor streams and provide analytics.
+
+**Location**: `src/backgrounds/plugins/data_analytics.py`
+
+**Configuration**:
+```json5
+{
+  "type": "DataAnalytics",
+  "config": {
+    "enable_ml": true,
+    "window_size": 100,
+    "contamination": 0.1,
+    "enable_api": true,
+    "api_port": 8080,
+    "metrics_output_file": "metrics.json",
+    "metrics_update_interval": 5.0
+  }
+}
+```
+
+**Parameters**:
+- `enable_ml` (bool): Enable ML-based anomaly detection (default: true)
+- `window_size` (int): Size of sliding window for analysis (default: 100)
+- `contamination` (float): Expected proportion of anomalies (default: 0.1)
+- `enable_api` (bool): Enable REST API endpoint (default: true)
+- `api_port` (int): Port for API endpoint (default: 8080)
+- `metrics_output_file` (str, optional): File path to write metrics JSON
+- `metrics_update_interval` (float): Interval for metrics updates in seconds (default: 5.0)
+
+## API Endpoints
+
+When the API is enabled, the following endpoints are available:
+
+### GET /metrics
+Get current analytics metrics.
+
+**Response**:
+```json
+{
+  "total_readings": 1000,
+  "anomalies_detected": 5,
+  "avg_temperature": 25.5,
+  "avg_humidity": 60.0,
+  "avg_air_quality": 100.0,
+  "min_temperature": 20.0,
+  "max_temperature": 30.0,
+  "data_quality_score": 0.95,
+  "processing_latency_ms": 2.5
+}
+```
+
+### GET /readings?count=10
+Get recent sensor readings.
+
+**Query Parameters**:
+- `count` (int): Number of recent readings to return (default: 10)
+
+**Response**:
+```json
+[
+  {
+    "timestamp": 1234567890.0,
+    "temperature": 25.5,
+    "humidity": 60.0,
+    "air_quality": 100.0
+  },
+  ...
+]
+```
+
+### GET /anomalies?count=10
+Get recent anomalies.
+
+**Query Parameters**:
+- `count` (int): Number of recent anomalies to return (default: 10)
+
+### POST /reset
+Reset all metrics and clear buffers.
+
+**Response**:
+```json
+{
+  "status": "reset"
+}
+```
+
+## Example Configuration
+
+See `config/data_analytics_example.json5` for a complete example configuration.
+
+## Usage Example
+
+1. **Add Environmental Sensors Input**:
+```json5
+{
+  "agent_inputs": [
+    {
+      "type": "EnvironmentalSensors",
+      "config": {
+        "use_zenoh": false,
+        "update_interval": 1.0
+      }
+    }
+  ]
+}
+```
+
+2. **Add Data Analytics Background**:
+```json5
+{
+  "backgrounds": [
+    {
+      "type": "DataAnalytics",
+      "config": {
+        "enable_ml": true,
+        "enable_api": true,
+        "api_port": 8080
+      }
+    }
+  ]
+}
+```
+
+3. **Run OM1**:
+```bash
+uv run src/run.py data_analytics_example
+```
+
+4. **Access Metrics**:
+```bash
+curl http://localhost:8080/metrics
+```
+
+## ML Model Details
+
+The anomaly detection uses **Isolation Forest**, an unsupervised learning algorithm that:
+- Works well with high-dimensional data
+- Doesn't require labeled training data
+- Identifies anomalies as data points that are "easy to isolate"
+
+The model is trained periodically on the sliding window of recent sensor readings and automatically retrains when new data is available.
+
+## Data Quality Metrics
+
+The module calculates a **data quality score** (0-1) based on:
+- **Completeness**: Proportion of non-null sensor values
+- **Consistency**: Low variance in recent readings indicates stable sensors
+
+Higher scores indicate better data quality.
+
+## Troubleshooting
+
+### API Server Not Starting
+- Ensure FastAPI and uvicorn are installed: `pip install fastapi uvicorn`
+- Check if the port is already in use
+- Review logs for error messages
+
+### Anomaly Detection Not Working
+- Ensure `enable_ml` is set to `true`
+- Wait for at least 20 readings before anomalies can be detected
+- Check that sensor values are not all NaN
+
+### No Sensor Data
+- If using Zenoh, verify topics are correct and data is being published
+- If using mock data, ensure `use_zenoh` is set to `false`
+- Check sensor input plugin logs for connection errors
+
+## Testing
+
+Run tests for the data analytics module:
+
+```bash
+# Test provider
+pytest tests/providers/test_data_analytics_provider.py
+
+# Test input plugin
+pytest tests/inputs/test_environmental_sensors.py
+
+# Test background process
+pytest tests/backgrounds/test_data_analytics.py
+```
+
+## Future Enhancements
+
+Potential improvements:
+- Support for additional sensor types
+- Real-time visualization dashboard
+- Historical data storage and analysis
+- Custom ML models for specific use cases
+- Integration with external analytics platforms
+

@@ -1,0 +1,64 @@
+{
+  "version": "v1.0.1",
+  "hertz": 1,
+  "name": "data_analytics_demo",
+  "api_key": "openmind_free",
+  "system_prompt_base": "You are a data analytics assistant monitoring environmental sensors. You analyze temperature, humidity, and air quality data to provide insights and detect anomalies.",
+  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  "agent_inputs": [
+    {
+      "type": "EnvironmentalSensors",
+      "config": {
+        "use_zenoh": false,
+        "update_interval": 1.0
+        // To use real sensors via Zenoh, set:
+        // "use_zenoh": true,
+        // "temperature_topic": "sensors/temperature",
+        // "humidity_topic": "sensors/humidity",
+        // "air_quality_topic": "sensors/air_quality"
+      }
+    }
+  ],
+  "backgrounds": [
+    {
+      "type": "DataAnalytics",
+      "config": {
+        "enable_ml": true,
+        "window_size": 100,
+        "contamination": 0.1,
+        "enable_api": true,
+        "api_port": 8080,
+        "metrics_output_file": "metrics.json",
+        "metrics_update_interval": 5.0
+      }
+    }
+  ],
+  "simulators": [
+    {
+      "type": "WebSim",
+      "config": {
+        "host": "0.0.0.0",
+        "port": 8000,
+        "tick_rate": 100,
+        "auto_reconnect": true,
+        "debug_mode": false
+      }
+    }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "DataAnalytics",
+      "history_length": 3
+    }
+  },
+  "agent_actions": [
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "implementation": "passthrough",
+      "connector": "ros2"
+    }
+  ]
+}
+
