@@ -15,7 +15,7 @@ on:
       - '**'
 
 jobs:
-  integration-test:
+  nightly-integration-tests:
     runs-on: ubuntu-latest
 
     steps:
