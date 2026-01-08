@@ -83,6 +83,14 @@ class OpenAILLM(LLM[R]):
             parsing fails.
         """
         try:
+            # 如果 prompt 與 messages 都為空，短路跳過 API 呼叫以避免無意義的請求
+            if (not prompt or not str(prompt).strip()) and (
+                not messages
+                or all(not str(m.get("content", "")).strip() for m in messages)
+            ):
+                logging.info("OpenAI input empty; skipping API call")
+                return None
+
             logging.info(f"OpenAI input: {prompt}")
             logging.info(f"OpenAI messages: {messages}")
 
