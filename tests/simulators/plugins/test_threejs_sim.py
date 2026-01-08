@@ -29,7 +29,7 @@ def test_threejs_sim_init_default(mock_sleep, mock_thread):
 def test_threejs_sim_robot_state(mock_sleep, mock_thread):
     config = SimulatorConfig()
     simulator = ThreeJSSim(config)
-    
+
     assert "x" in simulator.robot_state
     assert "y" in simulator.robot_state
     assert "z" in simulator.robot_state
@@ -43,7 +43,7 @@ def test_threejs_sim_robot_state(mock_sleep, mock_thread):
 def test_threejs_sim_normalize_angle(mock_sleep, mock_thread):
     config = SimulatorConfig()
     simulator = ThreeJSSim(config)
-    
+
     assert simulator._normalize_angle(0) == 0
     assert simulator._normalize_angle(90) == 90
     assert simulator._normalize_angle(180) == 180
@@ -58,10 +58,10 @@ def test_threejs_sim_normalize_angle(mock_sleep, mock_thread):
 def test_threejs_sim_tick(mock_sleep, mock_thread):
     config = SimulatorConfig()
     simulator = ThreeJSSim(config)
-    
+
     initial_x = simulator.robot_state["x"]
     simulator.tick()
-    
+
     assert simulator.robot_state["x"] == initial_x
 
 
@@ -70,10 +70,11 @@ def test_threejs_sim_tick(mock_sleep, mock_thread):
 def test_threejs_sim_api_command(mock_sleep, mock_thread):
     config = SimulatorConfig()
     simulator = ThreeJSSim(config)
-    
+
     from fastapi.testclient import TestClient
+
     client = TestClient(simulator.app)
-    
+
     response = client.post("/api/command", json={"action": "move forwards"})
     assert response.status_code == 200
     assert "robot_state" in response.json()
@@ -84,7 +85,7 @@ def test_threejs_sim_api_command(mock_sleep, mock_thread):
 def test_threejs_sim_broadcast_state(mock_sleep, mock_thread):
     config = SimulatorConfig()
     simulator = ThreeJSSim(config)
-    
-    import asyncio
-    asyncio.run(simulator.broadcast_state())
 
+    import asyncio
+
+    asyncio.run(simulator.broadcast_state())

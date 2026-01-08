@@ -28,4 +28,3 @@ class Move(Interface[MoveInput, MoveInput]):
 
     input: MoveInput
     output: MoveInput
-

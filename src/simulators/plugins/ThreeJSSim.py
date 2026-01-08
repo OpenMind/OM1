@@ -42,6 +42,7 @@ class ThreeJSSim(Simulator):
 
         self.app = FastAPI()
         self.app.mount("/static", StaticFiles(directory=self.static_dir), name="static")
+
         @self.app.get("/")
         async def get_index():
             return await self._get_simulator_html()
@@ -51,35 +52,45 @@ class ThreeJSSim(Simulator):
             try:
                 with self._lock:
                     action_type = command.get("type") or command.get("action", "")
-                    
+
                     if action_type == "turn_left" or action_type == "turn left":
                         target_yaw = command.get("target_yaw")
                         if target_yaw is not None:
                             self.robot_state["yaw"] = target_yaw
                         else:
-                            self.robot_state["yaw"] = self._normalize_angle(self.robot_state["yaw"] - 90)
+                            self.robot_state["yaw"] = self._normalize_angle(
+                                self.robot_state["yaw"] - 90
+                            )
                         self.robot_state["current_action"] = "turn left"
                     elif action_type == "turn_right" or action_type == "turn right":
                         target_yaw = command.get("target_yaw")
                         if target_yaw is not None:
                             self.robot_state["yaw"] = target_yaw
                         else:
-                            self.robot_state["yaw"] = self._normalize_angle(self.robot_state["yaw"] + 90)
+                            self.robot_state["yaw"] = self._normalize_angle(
+                                self.robot_state["yaw"] + 90
+                            )
                         self.robot_state["current_action"] = "turn right"
-                    elif action_type == "move_forward" or action_type == "move forwards":
+                    elif (
+                        action_type == "move_forward" or action_type == "move forwards"
+                    ):
                         self.robot_state["current_action"] = "move forwards"
                         self.robot_state["moving"] = True
                         yaw_rad = math.radians(self.robot_state["yaw"])
                         self.robot_state["x"] -= math.sin(yaw_rad) * 0.5
                         self.robot_state["z"] -= math.cos(yaw_rad) * 0.5
-                        logging.info(f"Robot moving forwards to ({self.robot_state['x']:.2f}, {self.robot_state['z']:.2f})")
+                        logging.info(
+                            f"Robot moving forwards to ({self.robot_state['x']:.2f}, {self.robot_state['z']:.2f})"
+                        )
                     elif action_type == "move_back" or action_type == "move back":
                         self.robot_state["current_action"] = "move back"
                         self.robot_state["moving"] = True
                         yaw_rad = math.radians(self.robot_state["yaw"])
                         self.robot_state["x"] += math.sin(yaw_rad) * 0.5
                         self.robot_state["z"] += math.cos(yaw_rad) * 0.5
-                        logging.info(f"Robot moving back to ({self.robot_state['x']:.2f}, {self.robot_state['z']:.2f})")
+                        logging.info(
+                            f"Robot moving back to ({self.robot_state['x']:.2f}, {self.robot_state['z']:.2f})"
+                        )
                     elif action_type == "stop" or action_type == "stand still":
                         self.robot_state["current_action"] = "stand still"
                         self.robot_state["moving"] = False
@@ -87,7 +98,7 @@ class ThreeJSSim(Simulator):
                         self.robot_state["moving"] = True
                     elif action_type == "rotate":
                         self.robot_state["moving"] = True
-                
+
                 # Broadcast updated state
                 await self.broadcast_state()
                 return {"status": "ok", "robot_state": self.robot_state}
@@ -111,6 +122,7 @@ class ThreeJSSim(Simulator):
                 logging.error(f"WebSocket error: {e}")
             finally:
                 self.active_connections.discard(websocket)
+
         try:
             logging.info("Starting ThreeJSSim server thread...")
             self.server_thread = threading.Thread(target=self._run_server, daemon=True)
@@ -679,9 +691,13 @@ class ThreeJSSim(Simulator):
                         self.robot_state["current_action"] = action.value
                         logging.info(f"ThreeJSSim received move action: {action.value}")
                     elif action.type == "speak":
-                        logging.info(f"ThreeJSSim received speak action: {action.value}")
+                        logging.info(
+                            f"ThreeJSSim received speak action: {action.value}"
+                        )
                     elif action.type == "emotion":
-                        logging.info(f"ThreeJSSim received emotion action: {action.value}")
+                        logging.info(
+                            f"ThreeJSSim received emotion action: {action.value}"
+                        )
 
                 # Broadcast updated state
                 asyncio.create_task(self.broadcast_state())
@@ -700,4 +716,3 @@ class ThreeJSSim(Simulator):
             except Exception as e:
                 logging.error(f"Error closing connection: {e}")
         self.active_connections.clear()
-

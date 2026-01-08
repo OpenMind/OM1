@@ -43,7 +43,9 @@ class MoveWebSimConnector(ActionConnector[MoveWebSimConfig, MoveInput]):
             "moving": False,
         }
 
-        logging.info(f"WebSim connector initialized, simulator URL: {self.simulator_url}")
+        logging.info(
+            f"WebSim connector initialized, simulator URL: {self.simulator_url}"
+        )
 
     def _send_command(self, command: dict):
         try:
@@ -238,4 +240,3 @@ class MoveWebSimConnector(ActionConnector[MoveWebSimConfig, MoveInput]):
                 self.clean_abort()
         else:
             self.robot_state["moving"] = False
-
