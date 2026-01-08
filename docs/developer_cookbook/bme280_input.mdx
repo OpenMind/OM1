@@ -1,0 +1,64 @@
+---
+title: BME280 Input Plugin
+description: Environmental sensor input plugin using BME280
+---
+
+## Overview
+
+The **BME280 Input Plugin** provides environmental data — temperature, humidity,
+and pressure — to OM1 agents.
+
+This plugin follows the standard **FuserInput** architecture and supports
+**automatic plugin discovery**.
+
+---
+
+## Features
+
+- Temperature (°C)
+- Relative humidity (%)
+- Atmospheric pressure (hPa)
+- Configurable sampling rate
+- CI-safe mock mode (no hardware dependency)
+
+---
+
+## Configuration
+
+Example configuration:
+
+inputs:
+- type: BME280Input
+  config:
+    i2c_address: 0x76
+    sampling_rate_hz: 1.0
+
+### Parameters
+
+**i2c_address** (int, optional)
+I2C address of the BME280 sensor. Default: `0x76`
+
+**sampling_rate_hz** (float, optional)
+Polling frequency in Hertz. Default: `1.0`
+
+---
+
+## Output Format
+
+The plugin emits structured environmental data which is formatted and injected
+into the LLM context using the standard input buffer format.
+
+Example output:
+
+INPUT: Environmental sensor data from BME280
+// START
+{'temperature_c': 25.0, 'humidity_percent': 40.0, 'pressure_hpa': 1013.25}
+// END
+
+---
+
+## Notes
+
+- This plugin uses **mock data by default** to ensure CI compatibility.
+- Hardware integration can be enabled by extending the polling logic
+  with a real provider implementation.
