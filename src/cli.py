@@ -180,7 +180,8 @@ def validate_config(
     - API key configuration (warning only)
     - Component existence (with --check-components flag)
 
-    Examples:
+    Examples
+    --------
         uv run src/cli.py validate-config test
         uv run src/cli.py validate-config config/my_robot.json5
         uv run src/cli.py validate-config test --verbose
