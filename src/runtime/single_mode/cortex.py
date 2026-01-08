@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import List, Optional, Union
+from typing import List, Optional, Set, Union
 
 import json5
 
@@ -14,6 +14,13 @@ from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.orchestrator import SimulatorOrchestrator
+
+# Fields that can be hot-reloaded without restarting the system
+HOT_RELOADABLE_FIELDS: Set[str] = {
+    "system_prompt_base",
+    "system_governance",
+    "system_prompt_examples",
+}
 
 
 class CortexRuntime:
@@ -75,6 +82,7 @@ class CortexRuntime:
         self.config_provider = ConfigProvider()
 
         self.last_modified: float = 0.0
+        self.original_config_path: Optional[str] = None
         self.config_watcher_task: Optional[asyncio.Task] = None
         self.input_listener_task: Optional[asyncio.Task] = None
         self.simulator_task: Optional[Union[asyncio.Task, asyncio.Future]] = None
@@ -86,9 +94,15 @@ class CortexRuntime:
 
         if self.hot_reload:
             self.config_path = self._create_runtime_config_file()
-            self.last_modified = self._get_file_mtime()
+            # Store path to original config file for watching
+            self.original_config_path = os.path.join(
+                os.path.dirname(__file__),
+                "../../../config",
+                self.config_name + ".json5",
+            )
+            self.last_modified = self._get_original_file_mtime()
             logging.info(
-                f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
+                f"Hot-reload enabled for config: {self.original_config_path} (check interval: {check_interval}s)"
             )
 
     def _get_runtime_config_path(self) -> str:
@@ -206,7 +220,7 @@ class CortexRuntime:
 
     def _get_file_mtime(self) -> float:
         """
-        Get the modification time of the config file.
+        Get the modification time of the runtime config file.
 
         Returns
         -------
@@ -218,22 +232,46 @@ class CortexRuntime:
         except OSError:
             return 0.0
 
+    def _get_original_file_mtime(self) -> float:
+        """
+        Get the modification time of the original config file.
+
+        Returns
+        -------
+        float
+            Last modification time as a timestamp.
+        """
+        if not self.original_config_path:
+            return 0.0
+        try:
+            return os.path.getmtime(self.original_config_path)
+        except OSError:
+            return 0.0
+
     async def _check_config_changes(self) -> None:
         """
         Periodically check for config file changes and reload if needed.
+
+        This method watches the original config file and determines whether
+        to perform a selective hot-reload (for hot-reloadable fields) or
+        a full reload (for other changes).
         """
         while True:
             try:
                 await asyncio.sleep(self.check_interval)
 
-                if not self.config_path or not os.path.exists(self.config_path):
+                if not self.original_config_path or not os.path.exists(
+                    self.original_config_path
+                ):
                     continue
 
-                current_mtime = self._get_file_mtime()
+                current_mtime = self._get_original_file_mtime()
 
                 if self.last_modified and current_mtime > self.last_modified:
-                    logging.info(f"Config file changed, reloading: {self.config_path}")
-                    await self._reload_config()
+                    logging.info(
+                        f"Config file changed, checking for hot-reloadable changes: {self.original_config_path}"
+                    )
+                    await self._handle_config_change()
                     self.last_modified = current_mtime
 
             except asyncio.CancelledError:
@@ -243,9 +281,180 @@ class CortexRuntime:
                 logging.error(f"Error checking config changes: {e}")
                 await asyncio.sleep(5)
 
+    def _get_changed_fields(self, old_config: dict, new_config: dict) -> Set[str]:
+        """
+        Determine which fields have changed between two config dictionaries.
+
+        Parameters
+        ----------
+        old_config : dict
+            The previous configuration dictionary.
+        new_config : dict
+            The new configuration dictionary.
+
+        Returns
+        -------
+        Set[str]
+            Set of field names that have changed.
+        """
+        changed_fields: Set[str] = set()
+
+        # Check all fields in both configs
+        all_fields = set(old_config.keys()) | set(new_config.keys())
+
+        for field in all_fields:
+            old_value = old_config.get(field)
+            new_value = new_config.get(field)
+
+            if old_value != new_value:
+                changed_fields.add(field)
+
+        return changed_fields
+
+    async def _handle_config_change(self) -> None:
+        """
+        Handle config file changes by determining if selective or full reload is needed.
+
+        If only hot-reloadable fields changed, performs a selective reload.
+        Otherwise, performs a full system reload.
+        """
+        try:
+            if not self.original_config_path or not os.path.exists(
+                self.original_config_path
+            ):
+                logging.warning("Original config file not found, skipping reload")
+                return
+
+            # Load the new config file
+            with open(self.original_config_path, "r") as f:
+                new_raw_config = json5.load(f)
+
+            # Get current config as dict (only the fields we can compare)
+            current_config_dict = {
+                "system_prompt_base": self.config.system_prompt_base,
+                "system_governance": self.config.system_governance,
+                "system_prompt_examples": self.config.system_prompt_examples,
+            }
+
+            # Extract only hot-reloadable fields from new config
+            new_hot_reloadable = {
+                field: new_raw_config.get(field, "")
+                for field in HOT_RELOADABLE_FIELDS
+                if field in new_raw_config
+            }
+
+            # Check what changed
+            changed_fields = self._get_changed_fields(
+                current_config_dict, new_hot_reloadable
+            )
+
+            # Check if any non-hot-reloadable fields changed
+            # We need to compare all fields to determine if full reload is needed
+            all_current_fields = {
+                "system_prompt_base": self.config.system_prompt_base,
+                "system_governance": self.config.system_governance,
+                "system_prompt_examples": self.config.system_prompt_examples,
+                "hertz": self.config.hertz,
+                "name": self.config.name,
+                "version": self.config.version,
+            }
+
+            all_new_fields = {
+                k: new_raw_config.get(k)
+                for k in all_current_fields.keys()
+                if k in new_raw_config
+            }
+
+            all_changed = self._get_changed_fields(all_current_fields, all_new_fields)
+            non_hot_reloadable_changed = all_changed - HOT_RELOADABLE_FIELDS
+
+            if non_hot_reloadable_changed:
+                # Non-hot-reloadable fields changed, need full reload
+                logging.info(
+                    f"Non-hot-reloadable fields changed: {non_hot_reloadable_changed}. "
+                    "Performing full system reload."
+                )
+                await self._reload_config()
+            elif changed_fields:
+                # Only hot-reloadable fields changed, can do selective reload
+                logging.info(
+                    f"Hot-reloadable fields changed: {changed_fields}. "
+                    "Performing selective hot-reload."
+                )
+                await self._selective_reload_config(new_raw_config)
+            else:
+                logging.debug("No relevant config changes detected")
+
+        except Exception as e:
+            logging.error(f"Error handling config change: {e}")
+            logging.error("Continuing with previous configuration")
+
+    async def _selective_reload_config(self, new_raw_config: dict) -> None:
+        """
+        Perform a selective hot-reload of only hot-reloadable config fields.
+
+        This method updates only the specified fields (e.g., system_prompt_base)
+        without restarting the system or recreating components.
+
+        Parameters
+        ----------
+        new_raw_config : dict
+            The new raw configuration dictionary from the config file.
+        """
+        try:
+            logging.info("Performing selective hot-reload of config fields")
+            self._is_reloading = True
+
+            # Update only hot-reloadable fields
+            updated_fields = []
+            if "system_prompt_base" in new_raw_config:
+                old_value = self.config.system_prompt_base
+                self.config.system_prompt_base = new_raw_config["system_prompt_base"]
+                updated_fields.append("system_prompt_base")
+                logging.info(
+                    f"Updated system_prompt_base (length: {len(self.config.system_prompt_base)} chars)"
+                )
+
+            if "system_governance" in new_raw_config:
+                old_value = self.config.system_governance
+                self.config.system_governance = new_raw_config["system_governance"]
+                updated_fields.append("system_governance")
+                logging.info(
+                    f"Updated system_governance (length: {len(self.config.system_governance)} chars)"
+                )
+
+            if "system_prompt_examples" in new_raw_config:
+                old_value = self.config.system_prompt_examples
+                self.config.system_prompt_examples = new_raw_config[
+                    "system_prompt_examples"
+                ]
+                updated_fields.append("system_prompt_examples")
+                logging.info(
+                    f"Updated system_prompt_examples (length: {len(self.config.system_prompt_examples)} chars)"
+                )
+
+            # Update the runtime config file
+            self._create_runtime_config_file()
+
+            if updated_fields:
+                logging.info(
+                    f"Selective hot-reload completed successfully. Updated fields: {updated_fields}"
+                )
+            else:
+                logging.warning("No hot-reloadable fields were updated")
+
+        except Exception as e:
+            logging.error(f"Failed to perform selective hot-reload: {e}")
+            logging.error("Continuing with previous configuration")
+        finally:
+            self._is_reloading = False
+
     async def _reload_config(self) -> None:
         """
         Reload the configuration and restart all components.
+
+        This performs a full system reload, stopping and recreating all
+        orchestrators. Use this when non-hot-reloadable fields change.
         """
         try:
             logging.info(f"Reloading configuration: {self.config_name}")
@@ -256,7 +465,7 @@ class CortexRuntime:
                 return
 
             new_config = load_config(
-                self.config_name, config_source_path=self.config_path
+                self.config_name, config_source_path=self.original_config_path
             )
 
             await self._stop_current_orchestrators()

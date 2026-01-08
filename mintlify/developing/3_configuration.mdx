@@ -75,6 +75,71 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 * **system_governance** The agent's laws and constitution.
 * **system_prompt_examples** The agent's example inputs/actions.
 
+## Hot-Reload Configuration
+
+OM1 supports selective hot-reload of configuration files, allowing you to update certain fields without restarting the entire system. This is particularly useful for iterating on system prompts and governance rules during development.
+
+### Hot-Reloadable Fields
+
+The following fields can be updated at runtime without requiring a system restart:
+
+* **system_prompt_base** - The agent's base personality and behavior prompt
+* **system_governance** - The agent's laws and constitution
+* **system_prompt_examples** - Example interactions and responses
+
+### How It Works
+
+When hot-reload is enabled (which is the default), the system periodically checks the original configuration file for changes. If only hot-reloadable fields have changed, the system performs a selective update:
+
+1. The changed fields are read from the configuration file
+2. The runtime configuration is updated in-place
+3. The system continues running without interruption
+4. The next LLM request will use the updated prompts
+
+If non-hot-reloadable fields (such as `hertz`, `agent_inputs`, `cortex_llm`, etc.) are changed, the system performs a full reload, which stops and restarts all components.
+
+### Enabling/Disabling Hot-Reload
+
+Hot-reload is enabled by default. You can control it when starting the runtime:
+
+```bash
+# Enable hot-reload (default)
+python -m src.run config_name --hot-reload
+
+# Disable hot-reload
+python -m src.run config_name --no-hot-reload
+```
+
+### Configuration Check Interval
+
+By default, the system checks for configuration changes every 60 seconds. You can adjust this interval:
+
+```python
+# In your runtime initialization code
+runtime = CortexRuntime(
+    config=config,
+    config_name="my_config",
+    hot_reload=True,
+    check_interval=30.0  # Check every 30 seconds
+)
+```
+
+### Best Practices
+
+1. **Development**: Use hot-reload to quickly iterate on prompts and governance rules without restarting
+2. **Production**: Consider disabling hot-reload in production for stability, or use it carefully with proper change management
+3. **File Watching**: The system watches the original configuration file (not the runtime copy), so edit your source config files directly
+4. **Mode-Aware Systems**: In multi-mode configurations, hot-reload updates both global fields (system_governance, system_prompt_examples) and mode-specific fields (system_prompt_base) for the currently active mode
+
+### Example Workflow
+
+1. Start your agent with a configuration file
+2. Edit the `system_prompt_base` field in your config file
+3. Save the file
+4. Within the check interval (default 60 seconds), the system detects the change
+5. The system updates the prompt without restarting
+6. The next LLM request uses the new prompt
+
 ## version
 
 The version field specifies the runtime configuration version. It is required for both single-mode and multi-mode configs.

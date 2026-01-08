@@ -690,3 +690,295 @@ class TestCortexRuntimeHotReload:
 
                 mock_config_watcher.cancel.assert_called_once()
                 mock_gather.assert_called_once()
+
+
+class TestCortexRuntimeSelectiveHotReload:
+    """Test cases for selective hot-reload functionality in CortexRuntime."""
+
+    @pytest.fixture
+    def temp_config_file(self):
+        """Create a temporary config file for testing selective hot reload."""
+        import tempfile
+        import json5
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json5", delete=False
+        ) as f:
+            config = {
+                "version": "v1.0.1",
+                "hertz": 1.0,
+                "name": "test_config",
+                "api_key": "test_key",
+                "system_prompt_base": "Original system prompt",
+                "system_governance": "Original governance",
+                "system_prompt_examples": "Original examples",
+                "agent_inputs": [],
+                "cortex_llm": {"type": "MockLLM", "config": {}},
+                "simulators": [],
+                "agent_actions": [],
+                "backgrounds": [],
+            }
+            json5.dump(config, f, indent=2)
+            temp_path = f.name
+
+        yield temp_path
+
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+    @pytest.mark.asyncio
+    async def test_selective_reload_system_prompt_base(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """Test selective reload of system_prompt_base field."""
+        import json5
+
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.original_config_path = temp_config_file
+            runtime.last_modified = os.path.getmtime(temp_config_file)
+
+            # Set initial values
+            runtime.config.system_prompt_base = "Original system prompt"
+            runtime.config.system_governance = "Original governance"
+            runtime.config.system_prompt_examples = "Original examples"
+
+            # Update config file with new system_prompt_base
+            with open(temp_config_file, "r") as f:
+                config = json5.load(f)
+            config["system_prompt_base"] = "Updated system prompt"
+            with open(temp_config_file, "w") as f:
+                json5.dump(config, f, indent=2)
+
+            # Trigger file change detection
+            await runtime._handle_config_change()
+
+            # Verify system_prompt_base was updated
+            assert runtime.config.system_prompt_base == "Updated system prompt"
+            # Verify other fields unchanged
+            assert runtime.config.system_governance == "Original governance"
+            assert runtime.config.system_prompt_examples == "Original examples"
+
+    @pytest.mark.asyncio
+    async def test_selective_reload_system_governance(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """Test selective reload of system_governance field."""
+        import json5
+
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.original_config_path = temp_config_file
+            runtime.last_modified = os.path.getmtime(temp_config_file)
+
+            # Set initial values
+            runtime.config.system_prompt_base = "Original system prompt"
+            runtime.config.system_governance = "Original governance"
+            runtime.config.system_prompt_examples = "Original examples"
+
+            # Update config file with new system_governance
+            with open(temp_config_file, "r") as f:
+                config = json5.load(f)
+            config["system_governance"] = "Updated governance"
+            with open(temp_config_file, "w") as f:
+                json5.dump(config, f, indent=2)
+
+            # Trigger file change detection
+            await runtime._handle_config_change()
+
+            # Verify system_governance was updated
+            assert runtime.config.system_governance == "Updated governance"
+            # Verify other fields unchanged
+            assert runtime.config.system_prompt_base == "Original system prompt"
+            assert runtime.config.system_prompt_examples == "Original examples"
+
+    @pytest.mark.asyncio
+    async def test_selective_reload_multiple_fields(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """Test selective reload of multiple hot-reloadable fields."""
+        import json5
+
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.original_config_path = temp_config_file
+            runtime.last_modified = os.path.getmtime(temp_config_file)
+
+            # Set initial values
+            runtime.config.system_prompt_base = "Original system prompt"
+            runtime.config.system_governance = "Original governance"
+            runtime.config.system_prompt_examples = "Original examples"
+
+            # Update config file with multiple hot-reloadable fields
+            with open(temp_config_file, "r") as f:
+                config = json5.load(f)
+            config["system_prompt_base"] = "Updated system prompt"
+            config["system_governance"] = "Updated governance"
+            config["system_prompt_examples"] = "Updated examples"
+            with open(temp_config_file, "w") as f:
+                json5.dump(config, f, indent=2)
+
+            # Trigger file change detection
+            await runtime._handle_config_change()
+
+            # Verify all fields were updated
+            assert runtime.config.system_prompt_base == "Updated system prompt"
+            assert runtime.config.system_governance == "Updated governance"
+            assert runtime.config.system_prompt_examples == "Updated examples"
+
+    @pytest.mark.asyncio
+    async def test_full_reload_on_non_hot_reloadable_change(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """Test that non-hot-reloadable field changes trigger full reload."""
+        import json5
+
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.original_config_path = temp_config_file
+            runtime.last_modified = os.path.getmtime(temp_config_file)
+
+            runtime._reload_config = AsyncMock()
+
+            # Update config file with non-hot-reloadable field (hertz)
+            with open(temp_config_file, "r") as f:
+                config = json5.load(f)
+            config["hertz"] = 2.0  # Changed from 1.0
+            with open(temp_config_file, "w") as f:
+                json5.dump(config, f, indent=2)
+
+            # Trigger file change detection
+            await runtime._handle_config_change()
+
+            # Verify full reload was called
+            runtime._reload_config.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_changed_fields(self, mock_config, mock_dependencies):
+        """Test the _get_changed_fields helper method."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+
+            old_config = {"field1": "value1", "field2": "value2", "field3": "value3"}
+            new_config = {"field1": "value1", "field2": "new_value2", "field4": "value4"}
+
+            changed = runtime._get_changed_fields(old_config, new_config)
+
+            # field1 unchanged, field2 changed, field3 removed, field4 added
+            assert "field1" not in changed
+            assert "field2" in changed
+            assert "field3" in changed
+            assert "field4" in changed
