@@ -1,4 +1,4 @@
-name: Run Integration Tests
+name: Run Nightly Integration Tests
 
 env:
   OM1_API_KEY: ${{ secrets.OM1_API_KEY }}
@@ -15,7 +15,7 @@ on:
       - '**'
 
 jobs:
-  integration-test:
+  nightly-integration-test:
     runs-on: ubuntu-latest
 
     steps:
