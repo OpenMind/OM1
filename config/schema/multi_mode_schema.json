@@ -204,7 +204,7 @@
                         "items": {"type": "string"}
                     },
                     "priority": {"type": "integer"},
-                    "cooldown_seconds": {"type": "number"},
+                    "cooldown_seconds": {"type": "number", "minimum": 0},
                     "context_conditions": {
                         "type": "object",
                         "description": "Conditions that must be met in the user context for this transition to trigger. Values can be strings, numbers, booleans, arrays, or objects with operators like 'min', 'max', 'contains', 'one_of', 'not'",
