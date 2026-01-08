@@ -1,0 +1,65 @@
+{
+  version: "v1.0.1",
+  hertz: 1,
+  name: "spot_mock", 
+  api_key: "${OPENMIND_API_KEY}", 
+  system_prompt_base: "You are Spot, a virtual assistant running in a mock environment. Respond to commands received via WebSocket.",
+  agent_inputs: [
+    {
+      type: "GovernanceEthereum",
+    },
+    {
+      type: "VLM_COCO_Local",
+      config: {
+        camera_index: 0,
+      },
+    },
+    {
+      type: "MockInput",
+      config: {
+        input_name: "User Command",
+        host: "0.0.0.0",
+        port: 8765
+      }
+    }
+  ],
+  simulators: [
+    {
+      type: "WebSim",
+      config: {
+        host: "0.0.0.0",
+        port: 8000,
+        tick_rate: 100,
+        auto_reconnect: true,
+        debug_mode: true, // 开启调试模式
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 3,
+    },
+  },
+  agent_actions: [
+    {
+      name: "move",
+      llm_label: "move",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+  ],
+}
