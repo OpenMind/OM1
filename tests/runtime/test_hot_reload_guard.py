@@ -7,8 +7,8 @@ class _StopLoop(Exception):
 
 @pytest.mark.asyncio
 async def test_skip_reentrant_reload_when_already_reloading(monkeypatch, tmp_path):
-    from runtime.single_mode.cortex import CortexRuntime
     import runtime.single_mode.cortex as cortex_mod
+    from runtime.single_mode.cortex import CortexRuntime
 
     cortex = CortexRuntime.__new__(CortexRuntime)
 
