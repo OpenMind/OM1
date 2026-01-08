@@ -52,7 +52,9 @@ class GoogleASRSensorConfig(SensorConfig):
     microphone_name : Optional[str]
         Microphone Name.
     language : str
-        Language for speech recognition.
+        Language for speech recognition. Use "auto" for automatic detection.
+    alternative_languages : Optional[List[str]]
+        Alternative languages for multi-language detection.
     remote_input : bool
         Whether to use remote input.
     """
@@ -69,7 +71,12 @@ class GoogleASRSensorConfig(SensorConfig):
     )
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
     language: str = Field(
-        default="english", description="Language for speech recognition"
+        default="english",
+        description="Language for speech recognition. Use 'auto' for automatic detection",
+    )
+    alternative_languages: Optional[List[str]] = Field(
+        default=None,
+        description="Alternative languages for multi-language detection",
     )
     remote_input: bool = Field(default=False, description="Whether to use remote input")
     enable_tts_interrupt: bool = Field(
@@ -119,15 +126,47 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         microphone_name = self.config.microphone_name
 
         language = self.config.language.strip().lower()
+        alternative_languages = self.config.alternative_languages
 
-        if language not in LANGUAGE_CODE_MAP:
-            logging.error(
-                f"Language {language} not supported. Current supported languages are : {list(LANGUAGE_CODE_MAP.keys())}. Defaulting to English"
+        # Handle automatic language detection
+        if language == "auto":
+            # Use English as primary with common alternatives
+            language_code = "en-US"
+            if alternative_languages is None:
+                alternative_language_codes = ["cmn-Hans-CN", "ja-JP", "es-ES", "fr-FR"]
+            else:
+                alternative_language_codes = self._get_alternative_language_codes(
+                    alternative_languages
+                )
+            logging.info(
+                "Auto language detection enabled. Primary: %s, Alternatives: %s",
+                language_code,
+                alternative_language_codes,
             )
-            language = "english"
+        elif language not in LANGUAGE_CODE_MAP:
+            logging.error(
+                "Language %s not supported. Supported languages: %s. Defaulting to English",
+                language,
+                list(LANGUAGE_CODE_MAP.keys()),
+            )
+            language_code = "en-US"
+            alternative_language_codes = self._get_alternative_language_codes(
+                alternative_languages
+            )
+        else:
+            language_code = LANGUAGE_CODE_MAP[language]
+            alternative_language_codes = self._get_alternative_language_codes(
+                alternative_languages
+            )
 
-        language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
-        logging.info(f"Using language code {language_code} for Google ASR")
+        if alternative_language_codes:
+            logging.info(
+                "Using language code %s with alternatives %s for Google ASR",
+                language_code,
+                alternative_language_codes,
+            )
+        else:
+            logging.info("Using language code %s for Google ASR", language_code)
 
         remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
@@ -140,6 +179,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             device_id=microphone_device_id,
             microphone_name=microphone_name,
             language_code=language_code,
+            alternative_language_codes=alternative_language_codes,
             remote_input=remote_input,
             enable_tts_interrupt=enable_tts_interrupt,
         )
@@ -165,6 +205,36 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             logging.warning(f"Could not initialize Zenoh for ASR broadcast: {e}")
             self.session = None
             self.asr_publisher = None
+
+    def _get_alternative_language_codes(
+        self, languages: Optional[List[str]]
+    ) -> List[str]:
+        """
+        Convert language names to language codes for alternative languages.
+
+        Parameters
+        ----------
+        languages : Optional[List[str]]
+            List of language names (e.g., ["chinese", "japanese"])
+
+        Returns
+        -------
+        List[str]
+            List of language codes (e.g., ["cmn-Hans-CN", "ja-JP"])
+        """
+        if not languages:
+            return []
+
+        codes = []
+        for lang in languages:
+            lang_lower = lang.strip().lower()
+            if lang_lower in LANGUAGE_CODE_MAP:
+                codes.append(LANGUAGE_CODE_MAP[lang_lower])
+            else:
+                logging.warning(
+                    "Alternative language '%s' not supported, skipping", lang
+                )
+        return codes
 
     def _handle_asr_message(self, raw_message: str):
         """
