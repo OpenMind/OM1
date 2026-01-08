@@ -188,8 +188,8 @@ class RtkProvider:
                         data = data.decode("utf-8", errors="ignore")
                         latest_GNGGA = self.get_latest_gngga_message(data)
                         if latest_GNGGA:
-                            parsed_nema = NMEAReader.parse(latest_GNGGA)
-                            self.magRTKProcessor(parsed_nema)
+                            parsed_nmea = NMEAReader.parse(latest_GNGGA)
+                            self.magRTKProcessor(parsed_nmea)
                     bytes_waiting = self.serial_connection.in_waiting
 
             time.sleep(0.1)
