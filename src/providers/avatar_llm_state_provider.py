@@ -97,8 +97,8 @@ class AvatarLLMState:
         if self.avatar_provider and self.avatar_provider.running:
             try:
                 self.avatar_provider.send_avatar_command("Happy")
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug("Failed to send 'Happy' command to avatar: %s", e)
 
     def _has_face_action_in_result(self, result: Any) -> bool:
         """

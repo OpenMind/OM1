@@ -1,5 +1,6 @@
 # src/providers/gallery_identities_provider.py
 
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -159,8 +160,8 @@ class GalleryIdentitiesProvider:
             try:
                 snap = self._fetch_snapshot()
                 self._emit(snap.to_text())
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug("Failed to fetch/emit identities snapshot: %s", e)
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -180,8 +181,8 @@ class GalleryIdentitiesProvider:
         for cb in callbacks:
             try:
                 cb(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug("Callback failed in GalleryIdentitiesProvider: %s", e)
 
     def _fetch_snapshot(self) -> IdentitiesSnapshot:
         """
