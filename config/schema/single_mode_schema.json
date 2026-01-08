@@ -58,7 +58,11 @@
                     "type": "object",
                     "properties": {
                         "agent_name": {"type": "string"},
-                        "history_length": {"type": "integer"}
+                        "history_length": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Number of conversation history entries to maintain. Must be at least 1."
+                        }
                     }
                 }
             }

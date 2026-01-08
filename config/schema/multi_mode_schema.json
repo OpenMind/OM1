@@ -28,7 +28,11 @@
                     "description": "Specific configuration parameters for the chosen LLM.",
                     "properties": {
                         "agent_name": {"type": "string"},
-                        "history_length": {"type": "integer"}
+                        "history_length": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Number of conversation history entries to maintain. Must be at least 1."
+                        }
                     }
                 }
             }
@@ -93,7 +97,11 @@
                                     "description": "Specific configuration parameters for the chosen LLM.",
                                     "properties": {
                                         "agent_name": {"type": "string"},
-                                        "history_length": {"type": "integer"}
+                                        "history_length": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "description": "Number of conversation history entries to maintain. Must be at least 1."
+                                        }
                                     }
                                 }
                             }
