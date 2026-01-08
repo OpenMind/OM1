@@ -146,16 +146,30 @@ class LLMHistoryManager:
 
             logging.info(f"Information to summarize:\n{summary_prompt}")
 
-            response = await asyncio.wait_for(
-                self.client.chat.completions.create(  # type: ignore
-                    model=self.config.model or "gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": self.system_prompt},
-                        {"role": "user", "content": summary_prompt},
-                    ],
-                ),
-                timeout=timeout,
-            )
+            api_kwargs = {
+                "model": self.config.model or "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": summary_prompt},
+                ],
+            }
+
+            if isinstance(self.client, openai.AsyncClient):
+                response = await asyncio.wait_for(
+                    self.client.chat.completions.create(**api_kwargs),
+                    timeout=timeout,
+                )
+            else:
+                loop = asyncio.get_running_loop()
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            self.client.chat.completions.create, **api_kwargs
+                        ),
+                    ),
+                    timeout=timeout,
+                )
 
             if not response or not response.choices:
                 logging.error("Invalid API response format")
@@ -209,6 +223,7 @@ class LLMHistoryManager:
                 return
 
             messages_copy = messages.copy()
+            num_summarized = len(messages_copy)
             self._summary_task = asyncio.create_task(
                 self.summarize_messages(messages_copy)
             )
@@ -221,8 +236,8 @@ class LLMHistoryManager:
 
                     summary_message = task.result()
                     if summary_message.role == "assistant":
-                        messages.clear()
-                        messages.append(summary_message)
+                        del messages[:num_summarized]
+                        messages.insert(0, summary_message)
                         logging.info("Successfully summarized the state")
                     elif (
                         summary_message.role == "system"
