@@ -1,0 +1,200 @@
+---
+title: Browser-Based Three.js Simulator
+description: "Run OM1 in a browser without ROS or hardware"
+---
+
+# Browser-Based Three.js Simulator
+
+OM1 now includes a browser-based three.js simulator that allows you to run and test OM1 without installing ROS or having physical hardware. The simulator provides a 3D playground environment where robots can move, rotate, and interact.
+
+## Features
+
+- **Web-Based**: Runs entirely in your browser - no ROS installation required
+- **3D Visualization**: Beautiful three.js rendering with lighting, shadows, and a playground environment
+- **OM1 Integration**: Accepts all standard OM1 commands (move, rotate, lift, stop)
+- **Real-time Updates**: WebSocket connection for live robot state updates
+- **Modular Design**: Easy to extend with new robot templates and environments
+
+## Quick Start
+
+### 1. Install Dependencies
+
+Make sure you have the required Python packages:
+
+```bash
+pip install requests fastapi uvicorn
+```
+
+### 2. Configure OM1
+
+Use the provided `web_sim.json5` configuration file:
+
+```bash
+python -m src.run web_sim
+```
+
+Or create your own configuration file with the ThreeJSSim simulator:
+
+```json5
+{
+  "simulators": [
+    {
+      "type": "ThreeJSSim",
+      "config": {
+        "name": "Three.js Simulator",
+        "host": "0.0.0.0",
+        "port": 8001
+      }
+    }
+  ],
+  "agent_actions": [
+    {
+      "name": "move_web_sim",
+      "llm_label": "move",
+      "connector": "websocket",
+      "config": {
+        "simulator_url": "http://localhost:8001"
+      }
+    }
+  ]
+}
+```
+
+### 3. Open the Simulator
+
+Once OM1 starts, you'll see a message like:
+
+```
+ThreeJSSim server started successfully - Open http://localhost:8001 in your browser
+```
+
+Open that URL in your web browser to see the 3D simulator.
+
+## Simulator Interface
+
+The simulator provides:
+
+- **3D Playground**: A green ground plane with walls and obstacles
+- **Robot Model**: A simple 3D robot that responds to OM1 commands
+- **Camera Controls**: Use mouse to orbit around the scene
+- **Info Panel**: Shows robot status, position, rotation, and current action
+- **Real-time Updates**: Robot state updates via WebSocket
+
+## Supported Commands
+
+The simulator accepts the following movement commands:
+
+- `turn left` - Rotate the robot 90 degrees counterclockwise
+- `turn right` - Rotate the robot 90 degrees clockwise
+- `move forwards` - Move forward 0.5 meters
+- `move back` - Move backward 0.5 meters
+- `stand still` - Stop all movement
+
+## Architecture
+
+### Components
+
+1. **ThreeJSSim** (`src/simulators/plugins/ThreeJSSim.py`): 
+   - FastAPI server that serves the three.js web application
+   - WebSocket server for real-time state updates
+   - HTTP API endpoint for receiving commands
+
+2. **MoveWebSimConnector** (`src/actions/move_web_sim/connector/websocket.py`):
+   - Action connector that translates OM1 commands to simulator commands
+   - Sends HTTP requests to the simulator API
+   - Manages robot state and movement queue
+
+3. **Three.js Web Application**:
+   - Embedded HTML/JavaScript in the simulator
+   - Renders 3D scene with robot and environment
+   - Connects to WebSocket for state updates
+
+### Communication Flow
+
+```
+OM1 Runtime → Action Orchestrator → MoveWebSimConnector → HTTP API → ThreeJSSim → WebSocket → Browser
+```
+
+## Customization
+
+### Changing the Robot Model
+
+Edit the robot creation code in `ThreeJSSim._get_simulator_html()`. The current implementation uses simple geometric shapes, but you can:
+
+- Import 3D models (GLTF/GLB)
+- Add more detailed meshes
+- Customize colors and materials
+
+### Modifying the Environment
+
+Update the playground creation code to:
+
+- Add more obstacles
+- Change the ground texture
+- Adjust lighting
+- Add interactive elements
+
+### Adding New Robot Templates
+
+1. Create a new robot model in the HTML
+2. Update the state management to handle robot-specific properties
+3. Add configuration options in `SimulatorConfig`
+
+## Troubleshooting
+
+### Simulator Not Starting
+
+- Check that port 8001 is not already in use
+- Verify FastAPI and uvicorn are installed
+- Check logs for error messages
+
+### Robot Not Moving
+
+- Ensure the `move_web_sim` action is configured in your config file
+- Check that the `simulator_url` matches the simulator port
+- Verify WebSocket connection in browser console
+
+### Browser Compatibility
+
+The simulator uses ES6 modules and modern JavaScript features. Supported browsers:
+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+## Limitations
+
+- Current implementation uses a simple box robot model
+- Physics simulation is basic (no collision detection)
+- Limited to 2D movement (no jumping/flying)
+- Single robot per simulator instance
+
+## Future Enhancements
+
+Potential improvements:
+
+- Multiple robot support
+- Advanced physics with collision detection
+- Import custom 3D models
+- Sensor visualization (LIDAR, cameras)
+- Multi-player support
+- Record and replay functionality
+
+## Example Usage
+
+Start OM1 with the web simulator:
+
+```bash
+python -m src.run web_sim
+```
+
+Then interact with the robot via conversation input or other configured inputs. The robot will respond to natural language commands like:
+
+- "Move forward"
+- "Turn left"
+- "Stop moving"
+- "Go to the corner"
+
+The simulator will visualize all movements in real-time.
+

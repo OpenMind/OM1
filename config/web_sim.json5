@@ -1,0 +1,54 @@
+{
+  "version": "v1.0.1",
+  "hertz": 10,
+  "name": "web_sim",
+  "api_key": "openmind_free",
+  "system_prompt_base": "You are a smart, curious, and friendly robot in a simulated environment. You can move around, explore, and interact with your surroundings. When you receive commands, execute them naturally. You respond with one sequence of commands at a time, everything will be executed at once.",
+  "system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  "agent_inputs": [
+    {
+      "type": "MockInput",
+      "config": {
+        "input_name": "Web Simulator Input",
+        "port": 8765
+      }
+    }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "WebSim Robot",
+      "history_length": 10
+    }
+  },
+  "agent_actions": [
+    {
+      "name": "move_web_sim",
+      "llm_label": "move",
+      "connector": "websocket",
+      "config": {
+        "simulator_url": "http://localhost:8001"
+      }
+    },
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "connector": "elevenlabs_tts",
+      "config": {
+        "voice_id": "TbMNBJ27fH2U0VgpSNko",
+        "silence_rate": 0
+      }
+    }
+  ],
+  "simulators": [
+    {
+      "type": "ThreeJSSim",
+      "config": {
+        "name": "Three.js Simulator",
+        "host": "0.0.0.0",
+        "port": 8001
+      }
+    }
+  ]
+}
+

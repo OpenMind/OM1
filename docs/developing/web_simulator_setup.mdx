@@ -1,0 +1,250 @@
+---
+title: Web Simulator Setup
+description: "Setting up and using the browser-based three.js simulator"
+---
+
+# Web Simulator Setup Guide
+
+This guide will help you set up and use the browser-based three.js simulator for OM1.
+
+## Prerequisites
+
+- Python 3.8+
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- OM1 installed and configured
+
+## Installation
+
+The web simulator is included with OM1. No additional installation is required beyond the standard OM1 dependencies.
+
+### Required Python Packages
+
+The simulator uses the following packages (should be in your OM1 environment):
+
+- `fastapi` - Web framework
+- `uvicorn` - ASGI server
+- `requests` - HTTP client for action connector
+
+If these are not installed, add them to your environment:
+
+```bash
+pip install fastapi uvicorn requests
+```
+
+## Quick Start
+
+### 1. Use the Pre-configured Setup
+
+The easiest way to get started is using the provided `web_sim.json5` configuration:
+
+```bash
+python -m src.run web_sim
+```
+
+This will:
+- Start the OM1 runtime
+- Launch the three.js simulator server on port 8001
+- Configure the `move_web_sim` action connector
+
+### 2. Open the Simulator
+
+Once started, you'll see a message:
+
+```
+ThreeJSSim server started successfully - Open http://localhost:8001 in your browser
+```
+
+Open that URL in your browser to see the 3D simulator.
+
+### 3. Interact with the Robot
+
+The simulator accepts commands through OM1's normal input channels. For example, if you have `ConversationInput` configured, you can:
+
+- Type commands in the conversation interface
+- Use voice input (if configured)
+- Send commands via API
+
+Example commands:
+- "Move forward"
+- "Turn left"
+- "Turn right"
+- "Move back"
+- "Stop"
+
+## Configuration
+
+### Basic Configuration
+
+Add the simulator to your config file:
+
+```json5
+{
+  "simulators": [
+    {
+      "type": "ThreeJSSim",
+      "config": {
+        "name": "Three.js Simulator",
+        "host": "0.0.0.0",
+        "port": 8001
+      }
+    }
+  ]
+}
+```
+
+### Action Configuration
+
+Add the web simulator action connector:
+
+```json5
+{
+  "agent_actions": [
+    {
+      "name": "move_web_sim",
+      "llm_label": "move",
+      "connector": "websocket",
+      "config": {
+        "simulator_url": "http://localhost:8001"
+      }
+    }
+  ]
+}
+```
+
+### Port Configuration
+
+To use a different port, update both the simulator and action config:
+
+```json5
+{
+  "simulators": [
+    {
+      "type": "ThreeJSSim",
+      "config": {
+        "port": 9000  // Change simulator port
+      }
+    }
+  ],
+  "agent_actions": [
+    {
+      "name": "move_web_sim",
+      "llm_label": "move",
+      "connector": "websocket",
+      "config": {
+        "simulator_url": "http://localhost:9000"  // Match the port
+      }
+    }
+  ]
+}
+```
+
+## Simulator Features
+
+### 3D Environment
+
+- **Ground Plane**: Green textured ground with grid
+- **Walls**: Boundary walls around the playground
+- **Lighting**: Ambient and directional lighting with shadows
+- **Camera Controls**: Mouse controls to orbit around the scene
+
+### Robot Model
+
+The default robot includes:
+- Body (blue box)
+- Head (orange box)
+- Four wheels (black cylinders)
+
+### Info Panel
+
+Shows real-time information:
+- Connection status
+- Robot position (X, Y coordinates)
+- Robot rotation (yaw angle)
+- Current action being executed
+
+## Troubleshooting
+
+### Port Already in Use
+
+If port 8001 is already in use:
+
+1. Change the port in your config file
+2. Update the `simulator_url` in the action config to match
+3. Restart OM1
+
+### Simulator Not Loading
+
+- Check browser console for errors
+- Verify the server started successfully (check logs)
+- Ensure you're using a modern browser
+- Try a different port
+
+### Robot Not Responding
+
+- Verify the `move_web_sim` action is in your config
+- Check that `simulator_url` matches the simulator port
+- Look for errors in OM1 logs
+- Ensure WebSocket connection is established (check browser console)
+
+### Commands Not Working
+
+- Verify your input source is configured (e.g., `ConversationInput`)
+- Check that the LLM is responding with move commands
+- Look at OM1 logs for action execution messages
+- Ensure the action connector is receiving commands
+
+## Advanced Usage
+
+### Custom Robot Models
+
+To customize the robot appearance, edit the robot creation code in `ThreeJSSim._get_simulator_html()`. You can:
+
+- Change colors and materials
+- Add more detailed geometry
+- Import 3D models (GLTF/GLB format)
+- Add animations
+
+### Environment Customization
+
+Modify the playground by editing the environment creation code:
+
+- Add more obstacles
+- Change ground texture
+- Adjust lighting
+- Add interactive elements
+
+### Multiple Simulators
+
+You can run multiple simulator instances on different ports:
+
+```json5
+{
+  "simulators": [
+    {
+      "type": "ThreeJSSim",
+      "config": { "port": 8001 }
+    },
+    {
+      "type": "ThreeJSSim",
+      "config": { "port": 8002 }
+    }
+  ]
+}
+```
+
+## Integration with Other Systems
+
+The simulator can be integrated with:
+
+- **Gazebo**: Run both simulators simultaneously
+- **Real Hardware**: Switch between simulator and real robot
+- **Testing**: Use for automated testing of OM1 behaviors
+- **Development**: Rapid prototyping without hardware
+
+## Next Steps
+
+- Explore the [Web Simulator Example](../examples/web_simulator.mdx)
+- Learn about [Actions](../developing/6_actions.mdx)
+- Check out [Configuration](../developing/3_configuration.mdx)
+- See [Architecture](../developing/2_architecture.mdx)
+
