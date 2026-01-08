@@ -1,3 +1,31 @@
+# OM1 + Smart Assistant + Wallet Payments
+
+This project demonstrates a complete OM1 workflow where a user request is handled
+by a smart assistant and paid for using a crypto wallet.
+
+## Overview
+
+Workflow:
+1. User requests an item (e.g. "Order Coffee")
+2. OM1 communicates with a smart assistant
+3. Payment is executed via a crypto wallet
+4. Confirmation is returned to the user
+
+This demo uses a **mock smart assistant** to keep the setup lightweight while
+preserving a real integration architecture compatible with Home Assistant.
+
+## Architecture
+
+- OM1 Runtime (WSL Ubuntu)
+- Smart Assistant (Mock, Home Assistant-compatible)
+- Wallet Integration (Coinbase-style mock)
+- Workflow Orchestrator
+
+## Running the Demo
+
+```bash
+python3 demo_smart_assistant_wallet.py
+
 ![OM_Banner_X2 (1)](https://github.com/user-attachments/assets/853153b7-351a-433d-9e1a-d257b781f93c)
 
 <p align="center">
