@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock
 
+import openai
 import pytest
 
 from providers.llm_history_manager import ChatMessage, LLMHistoryManager
@@ -24,11 +25,18 @@ def llm_config():
 
 @pytest.fixture
 def openai_client():
-    client = AsyncMock()
-    response = AsyncMock()
-    response.choices = [AsyncMock()]
+    client = MagicMock(spec=openai.AsyncClient)
+
+    response = MagicMock()
+    response.choices = [MagicMock()]
     response.choices[0].message.content = "This is a test summary"
-    client.chat.completions.create.return_value = response
+
+    chat_mock = MagicMock()
+    completions_mock = MagicMock()
+    completions_mock.create = AsyncMock(return_value=response)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
+
     return client
 
 
