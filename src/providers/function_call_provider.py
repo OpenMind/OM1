@@ -11,6 +11,7 @@ class LLMFunction:
     def __init__(self, description: str, name: T.Optional[str] = None):
         """
         Initialize the LLM function decorator.
+
         Parameters
         ----------
         description : str
@@ -21,10 +22,23 @@ class LLMFunction:
         self.description = description
         self.name = name
 
-    def __call__(self, func):
-        func._llm_function = True
-        func._llm_description = self.description
-        func._llm_name = self.name or func.__name__
+    def __call__(self, func: T.Callable) -> T.Callable:
+        """
+        Decorate the method to mark it as an LLM function.
+
+        Parameters
+        ----------
+        func : callable
+            The method to decorate.
+
+        Returns
+        -------
+        callable
+            The decorated method with LLM function metadata.
+        """
+        func._llm_function = True  # type: ignore
+        func._llm_description = self.description  # type: ignore
+        func._llm_name = self.name or func.__name__  # type: ignore
         return func
 
 
@@ -37,10 +51,12 @@ class FunctionGenerator:
     def python_type_to_json_schema(python_type: T.Type) -> T.Dict:
         """
         Convert Python type hints to JSON schema format.
+
         Parameters
         ----------
         python_type : T.Type
             The Python type to convert.
+
         Returns
         -------
         T.Dict
@@ -70,10 +86,12 @@ class FunctionGenerator:
     def extract_function_schema(method: T.Callable) -> T.Dict:
         """
         Extract OpenAI function schema from a method.
+
         Parameters
         ----------
         method : callable
             The method to extract the schema from.
+
         Returns
         -------
         T.Dict
@@ -128,10 +146,12 @@ class FunctionGenerator:
     def generate_functions_from_class(cls_instance: T.Type) -> T.Dict:
         """
         Generate all function schemas from a class with decorated methods.
+
         Parameters
         ----------
         cls_instance : type
             The class to extract function schemas from.
+
         Returns
         -------
         T.Dict

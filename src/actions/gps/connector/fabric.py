@@ -12,7 +12,7 @@ class GPSFabricConfig(ActionConfig):
     """
     Configuration for GPS Fabric connector.
 
-    Parameters:
+    Parameters
     ----------
     fabric_endpoint : str
         The endpoint URL for the Fabric network.

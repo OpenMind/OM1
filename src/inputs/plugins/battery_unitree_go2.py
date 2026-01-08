@@ -18,10 +18,18 @@ except ImportError:
     )
 
     class ChannelSubscriber:
+        """
+        Placeholder for ChannelSubscriber when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
     class LowState_:
+        """
+        Placeholder for LowState_ when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
@@ -139,7 +147,6 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         List[float]
             list of floats
         """
-
         await asyncio.sleep(2.0)
         await self.report_status()
 
@@ -167,7 +174,6 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         Optional[Message]
             Timestamped message containing description
         """
-
         battery_percentage = raw_input[0]
         logging.debug(f"Battery percentage: {battery_percentage}")
 
