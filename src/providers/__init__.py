@@ -5,6 +5,7 @@ from .teleops_status_provider import (
     TeleopsStatus,
     TeleopsStatusProvider,
 )
+from .vlm_glm_provider import VLMGLMProvider
 
 __all__ = [
     "IOProvider",
@@ -12,4 +13,5 @@ __all__ = [
     "CommandStatus",
     "BatteryStatus",
     "TeleopsStatus",
+    "VLMGLMProvider",
 ]

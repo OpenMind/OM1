@@ -1,0 +1,90 @@
+import logging
+import time
+from typing import Callable, Optional
+
+from om1_utils import ws
+from om1_vlm import VideoStream
+from openai import AsyncOpenAI
+
+from .singleton import singleton
+
+
+@singleton
+class VLMGLMProvider:
+    """
+    VLM Provider for ZhipuAI (GLM-4.7).
+    Inherits the structure of OpenAI provider but optimized for GLM endpoints.
+    """
+
+    def __init__(
+        self,
+        base_url: str = "https://open.bigmodel.cn/api/paas/v4/",
+        api_key: Optional[str] = None,
+        fps: int = 10,
+        stream_url: Optional[str] = None,
+        camera_index: int = 0,
+    ):
+        self.running: bool = False
+        # GLM-4.7 OpenAI uyumlu olduğu için AsyncOpenAI istemcisini kullanıyoruz
+        self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self.stream_ws_client: Optional[ws.Client] = (
+            ws.Client(url=stream_url) if stream_url else None
+        )
+        self.video_stream: VideoStream = VideoStream(
+            frame_callback=self._process_frame, fps=fps, device_index=camera_index
+        )
+        self.message_callback: Optional[Callable] = None
+
+    async def _process_frame(self, frame: str):
+        processing_start = time.perf_counter()
+        try:
+            # GLM-4.7 (VLM) modelini çağırıyoruz
+            response = await self.api_client.chat.completions.create(
+                model="glm-4v-plus",  # En güçlü görsel model ismi
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Bu görüntü serisindeki en ilginç detayı açıkla.",
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{frame}",
+                                },
+                            },
+                        ],
+                    }
+                ],
+                max_tokens=300,
+            )
+            processing_latency = time.perf_counter() - processing_start
+            logging.debug(f"GLM Processing latency: {processing_latency:.3f} seconds")
+            if self.message_callback:
+                self.message_callback(response)
+        except Exception as e:
+            logging.error(f"Error processing frame with GLM: {e}")
+
+    def register_message_callback(self, message_callback: Optional[Callable]):
+        self.message_callback = message_callback
+
+    def start(self):
+        if self.running:
+            logging.warning("GLM provider is already running")
+            return
+        self.running = True
+        self.video_stream.start()
+        if self.stream_ws_client:
+            self.stream_ws_client.start()
+            self.video_stream.register_frame_callback(
+                self.stream_ws_client.send_message
+            )
+        logging.info("GLM VLM provider started")
+
+    def stop(self):
+        self.running = False
+        self.video_stream.stop()
+        if self.stream_ws_client:
+            self.stream_ws_client.stop()
