@@ -1,0 +1,47 @@
+{
+  // AWAIR Element + LG ThinQ Climate Control
+  // Air quality monitoring -> AI analysis -> AC control
+
+  "hertz": 0.05,
+  "name": "awair_lg_climate",
+  "api_key": "YOUR_OM1_API_KEY",
+  "robot_ip": "",
+
+  "system_prompt_base": "You control the air conditioner in a home office.",
+
+  "system_governance": "Keep occupants comfortable and save energy when possible.",
+
+  "system_prompt_examples": "",
+
+  "agent_inputs": [
+    {
+      "type": "AwairElement",
+      "config": {
+        "mode": "local",
+        "device_ip": "192.168.0.17",  // Your AWAIR device IP
+        "poll_interval": 30.0
+      }
+    }
+  ],
+
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "ClimateController",
+      "history_length": 3
+    }
+  },
+
+  "agent_actions": [
+    {
+      "name": "lg_thinq",
+      "llm_label": "climate_control",
+      "connector": "thinq_api",
+      "config": {
+        "pat_token": "YOUR_THINQ_PAT_TOKEN",  // Get from https://connect-pat.lgthinq.com
+        "country_code": "TR",
+        "device_id": "YOUR_DEVICE_ID"  // Optional - auto-detected if not provided
+      }
+    }
+  ]
+}
