@@ -2,6 +2,7 @@ import sys
 
 import cv2
 import numpy as np
+
 from unitree.unitree_sdk2py.core.channel import ChannelFactoryInitialize
 from unitree.unitree_sdk2py.go2.video.video_client import VideoClient
 
