@@ -1,10 +1,67 @@
 ## Contributing to OM1
 
-We welcome contributions from the community!  OM1 is an open-source project, and we appreciate your help in making it better.  Whether you're fixing bugs, adding features, improving documentation, or suggesting new ideas, your contributions are valuable.
+We welcome contributions from the community! OM1 is an open-source project, and we appreciate your help in making it better. Whether you're fixing bugs, adding features, improving documentation, or suggesting new ideas, your contributions are valuable.
 
 Before contributing, please take a moment to read through the following guidelines. This helps streamline the process and ensures everyone is on the same page.
 
 **PRs must clearly state the problem being solved. Changes without a clear problem statement may be closed without review.**
+
+---
+
+## Quick Start for First-Time Contributors
+
+New to OM1? Follow these steps to make your first contribution:
+
+```bash
+# 1. Fork the repo on GitHub, then clone your fork
+git clone https://github.com/<your-username>/OM1.git
+cd OM1
+
+# 2. Set up the development environment
+git submodule update --init
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# 3. Install dependencies (MacOS)
+brew install portaudio ffmpeg
+
+# 4. Create a branch for your changes
+git checkout -b fix/your-fix-name
+
+# 5. Make your changes, then run tests
+pre-commit run --all-files
+uv run pytest
+
+# 6. Commit and push
+git add .
+git commit -m "fix: Description of your fix"
+git push origin fix/your-fix-name
+
+# 7. Open a Pull Request on GitHub
+```
+
+### Contribution Checklist
+
+Before submitting your PR, ensure:
+
+- [ ] Code follows [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide
+- [ ] All tests pass (`uv run pytest`)
+- [ ] Pre-commit checks pass (`pre-commit run --all-files`)
+- [ ] Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) format
+- [ ] PR description clearly explains the problem and solution
+- [ ] Related issue is linked (e.g., "Fixes #123")
+
+---
+
+## Bounty Program
+
+Want to earn rewards for your contributions? Check out our [Bounty Program](https://github.com/OpenMind/OM1/wiki/Bounty-Program)!
+
+- Browse [bounty-labeled issues](https://github.com/OpenMind/OM1/issues?q=is%3Aopen+label%3Abounty)
+- Request credits via the [Google Form](https://forms.gle/8uktz7uZK76pVgAJ9)
+- Join [Telegram](https://t.me/openminddev) or [Discord](https://discord.gg/openmind) for support
+
+---
 
 **Ways to Contribute:**
 
@@ -122,5 +179,48 @@ If you have any questions or need help with the contribution process, feel free 
 *   Open an issue on GitHub.
 *   Ask questions in the comments of relevant issues or pull requests.
 *   Join our [developer telegram group](https://t.me/openminddev).
+
+---
+
+## Troubleshooting Common Issues
+
+### Pre-commit fails
+```bash
+# Update pre-commit hooks
+pre-commit clean
+pre-commit install
+pre-commit run --all-files
+```
+
+### Tests fail with import errors
+```bash
+# Ensure you're in the virtual environment
+source .venv/bin/activate
+uv sync
+```
+
+### Camera/Audio not working on MacOS
+```bash
+# Grant permissions in System Preferences > Privacy & Security
+# Then restart your terminal
+```
+
+### Blockchain rules 503 error
+This is a known intermittent issue. The agent will continue to work without blockchain rules.
+
+---
+
+## Useful Links
+
+| Resource | Link |
+|----------|------|
+| Documentation | [docs.openmind.org](https://docs.openmind.org/) |
+| API Reference | [Developer Cookbook](https://docs.openmind.org/developer_cookbook/introduction) |
+| Issue Tracker | [GitHub Issues](https://github.com/OpenMind/OM1/issues) |
+| Bounty Program | [Wiki](https://github.com/OpenMind/OM1/wiki/Bounty-Program) |
+| Discord | [discord.gg/openmind](https://discord.gg/openmind) |
+| Telegram | [t.me/openminddev](https://t.me/openminddev) |
+
+---
 
 Thank you for contributing to OM1!

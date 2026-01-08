@@ -174,9 +174,42 @@ docker compose up -d
 
 More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).
 
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Camera not detected | Grant camera permissions in System Preferences (MacOS) |
+| Audio not working | Install portaudio: `brew install portaudio` (MacOS) |
+| Blockchain 503 error | Known intermittent issue, agent continues without rules |
+| `uv` not found | Install: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+
+For more help, see [Troubleshooting Guide](./CONTRIBUTING.md#troubleshooting-common-issues) or join our [Discord](https://discord.gg/openmind).
+
 ## Contributing
 
-Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before making a pull request.
+We welcome contributions! Here's how to get started:
+
+```bash
+# Fork, clone, and set up
+git clone https://github.com/<your-username>/OM1.git && cd OM1
+git submodule update --init && uv venv
+
+# Create a branch, make changes, and submit PR
+git checkout -b fix/your-fix
+# ... make changes ...
+git push origin fix/your-fix
+```
+
+See the [Contributing Guide](./CONTRIBUTING.md) for detailed instructions.
+
+### Quick Links
+
+| Resource | Description |
+|----------|-------------|
+| [Contributing Guide](./CONTRIBUTING.md) | Full contribution workflow |
+| [Bounty Program](https://github.com/OpenMind/OM1/wiki/Bounty-Program) | Earn rewards for contributions |
+| [Open Issues](https://github.com/OpenMind/OM1/issues) | Find something to work on |
+| [Developer Cookbook](https://docs.openmind.org/developer_cookbook/introduction) | Build plugins and extensions |
 
 ## License
 
