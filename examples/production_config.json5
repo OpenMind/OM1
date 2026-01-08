@@ -1,0 +1,88 @@
+{
+  // Production OM1 Configuration
+  // Optimized for production deployments with monitoring and reliability
+
+  "hertz": 0.1,
+  "name": "production_robot",
+  "api_key": "openmind_free",
+  "URID": "your_urid_here",
+
+  // Vision input for object detection
+  "agent_inputs": [
+    {
+      "type": "VLM_COCO_Local",
+      "config": {
+        "camera_index": 0
+      }
+    }
+  ],
+
+  // Web simulator on port 8001 (avoid port 8000 conflict)
+  "simulators": [
+    {
+      "type": "WebSim",
+      "config": {
+        "host": "0.0.0.0",
+        "port": 8001,
+        "tick_rate": 100,
+        "auto_reconnect": true,
+        "debug_mode": false
+      }
+    }
+  ],
+
+  // Production backgrounds for monitoring and reliability
+  "backgrounds": [
+    {
+      "type": "TeleopsConnection",
+      "config": {
+        "api_key": "om1_live_your_api_key_here"
+      }
+    },
+    {
+      "type": "HealthCheck",
+      "config": {
+        "check_interval": 60,
+        "enable_logging": true,
+        "alert_threshold_cpu": 90.0,
+        "alert_threshold_memory": 90.0
+      }
+    },
+    {
+      "type": "AutoRestart",
+      "config": {
+        "check_interval": 30,
+        "crash_threshold": 300,
+        "max_restarts": 3,
+        "restart_window": 3600
+      }
+    },
+    {
+      "type": "APILimiter",
+      "config": {
+        "max_requests_per_minute": 60,
+        "max_cost_per_hour": 1.0,
+        "cost_per_request": 0.001
+      }
+    }
+  ],
+
+  // LLM configuration
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "ProductionBot",
+      "history_length": 3
+    }
+  },
+
+  // Actions
+  "agent_actions": [
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "implementation": "passthrough",
+      "connector": "elevenlabs_tts"
+    }
+  ]
+}
