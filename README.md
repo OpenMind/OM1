@@ -94,7 +94,7 @@ OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or web
 
 OM1 is developed on:
 
-* Nvidia Thor (running JetPak 7.0) - full support
+* Nvidia Thor (running JetPack 7.0) - full support
 * Jetson AGX Orin 64GB (running Ubuntu 22.04 and JetPack 6.1) - limited support
 * Mac Studio with Apple M2 Ultra with 48 GB unified memory (running MacOS Sequoia)
 * Mac Mini with Apple M4 Pro with 48 GB unified memory (running MacOS Sequoia)
