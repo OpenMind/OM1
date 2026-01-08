@@ -45,7 +45,7 @@ https://github.com/PaulStoffregen/MotionCal/issues/11#issuecomment-2412937251
 bool CALIBRATION = false;
 ```
 
-Once you have established your 15 (3+9+3) calibration coefficients (see https://github.com/PaulStoffregen/MotionCal), determine the device string of your sensor (provided in the initial serial debug output), and add your calibration coefficients following the example given in `gap_mag.ino`:
+Once you have established your 15 (3+9+3) calibration coefficients (see https://github.com/PaulStoffregen/MotionCal), determine the device string of your sensor (provided in the initial serial debug output), and add your calibration coefficients following the example given in `gps_mag.ino`:
 
 ```c
 if (strcmp(DeviceID, "38e4bfd6") == 0) {
@@ -102,7 +102,7 @@ uv run src/run.py test_gps
 
 ### RTCM / RTK Precision GPS
 
-An RTK GPS system can provide centimeter accuracy localization. In a typical setup, an RTK-compatible GPS receiver (such as the [u-blox ZED-F9P/simpleRTK2B](https://www.ardusimple.com/product/simplertk2b/) accepts `RTCM` messages over XBee or the internet, and uses those data to correct (and greatly improve) its location estimate. The `simpleRTK2B` has two usb ports, one labeled `power + GPS` and the other `power + XBee`. The first port provides a full set of NEMA and UBX messages, including GPGGA, GNRMC, GNGLL, and UBX(NAV-PVT). The `power + XBee` port provides direct access to received RTK correction messages, such as `1005` and `1074`. In standard usage, a rover would use the NEMA messages to track its location whilst monitoring the status, mode, and quality fields.
+An RTK GPS system can provide centimeter accuracy localization. In a typical setup, an RTK-compatible GPS receiver (such as the [u-blox ZED-F9P/simpleRTK2B](https://www.ardusimple.com/product/simplertk2b/) accepts `RTCM` messages over XBee or the internet, and uses those data to correct (and greatly improve) its location estimate. The `simpleRTK2B` has two usb ports, one labeled `power + GPS` and the other `power + XBee`. The first port provides a full set of NMEA and UBX messages, including GPGGA, GNRMC, GNGLL, and UBX(NAV-PVT). The `power + XBee` port provides direct access to received RTK correction messages, such as `1005` and `1074`. In standard usage, a rover would use the NMEA messages to track its location whilst monitoring the status, mode, and quality fields.
 
 ```bash
 <NMEA(GNGGA, time=23:56:12, lat=12.4003072367, NS=N, lon=-2.1187726617, EW=W, quality=5, numSV=12, HDOP=0.74, alt=26.189, altUnit=M, sep=-30.024, sepUnit=M, diffAge=3.0, diffStation=0)>
@@ -114,7 +114,7 @@ This GNGGA message shows a high quality RTK fix (quality=5):
 * 4 fixed RTK
 * 5 float RTK
 
-This GNRC message shows a valid status(`A`) using RTK mode with fixed integers (`posMode=R`)
+This GNRMC message shows a valid status(`A`) using RTK mode with fixed integers (`posMode=R`)
 
 ```bash
 <NMEA(GNRMC, time=23:35:31.400000, status=A, lat=12.40030754, NS=N, lon=-2.1187695133, EW=W, spd=0.036, cog=, date=2025-06-01, mv=, mvEW=, posMode=R)>
