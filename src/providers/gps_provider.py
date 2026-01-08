@@ -273,7 +273,6 @@ class GpsProvider:
             logging.info("Stopping GPS provider")
             self._thread.join(timeout=5)
 
-        # Close the serial connection to prevent resource leak
         if self.serial_connection and self.serial_connection.is_open:
             try:
                 self.serial_connection.close()
