@@ -59,7 +59,11 @@
                     },
                     "priority": {"type": "integer"},
                     "async_execution": {"type": "boolean"},
-                    "timeout_seconds": {"type": "number"},
+                    "timeout_seconds": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "description": "Timeout duration in seconds. Must be positive."
+                    },
                     "on_failure": {
                         "type": "string",
                         "enum": ["log", "ignore", "abort"]
@@ -79,7 +83,11 @@
                         "description": {"type": "string", "description": "Description of the mode's purpose and behavior."},
                         "system_prompt_base": {"type": "string", "description": "The base system prompt used for the LLM in this mode."},
                         "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs.", "exclusiveMinimum": 0},
-                        "timeout_seconds": {"type": "number"},
+                        "timeout_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Timeout duration in seconds. Must be positive."
+                        },
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
                         "cortex_llm": {
@@ -123,7 +131,11 @@
                                     },
                                     "priority": {"type": "integer"},
                                     "async_execution": {"type": "boolean"},
-                                    "timeout_seconds": {"type": "number"},
+                                    "timeout_seconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0,
+                                        "description": "Timeout duration in seconds. Must be positive."
+                                    },
                                     "on_failure": {
                                         "type": "string",
                                         "enum": ["log", "ignore", "abort"]
