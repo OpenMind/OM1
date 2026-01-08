@@ -76,6 +76,12 @@ class GoogleASRSensorConfig(SensorConfig):
         default=False,
         description="Enable TTS interrupt (does not mute mic during TTS playback)",
     )
+    allow_headless: bool = Field(
+        default=False,
+        description="Allow running without audio devices (headless mode). "
+        "When enabled, the input will gracefully degrade instead of failing "
+        "in environments without audio hardware (servers, VMs, containers).",
+    )
 
 
 class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
@@ -102,7 +108,10 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         # Buffer for storing messages
         self.message_buffer: Queue[str] = Queue()
 
-        # Initialize ASR provider
+        # Track headless mode state
+        self.headless_mode: bool = False
+        self.asr: Optional[ASRProvider] = None
+
         # Initialize ASR provider
         api_key = self.config.api_key
         rate = self.config.rate
@@ -117,6 +126,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         )
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
+        allow_headless = self.config.allow_headless
 
         language = self.config.language.strip().lower()
 
@@ -132,7 +142,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
-        self.asr: ASRProvider = ASRProvider(
+        self.asr = ASRProvider(
             rate=rate,
             chunk=chunk,
             ws_url=base_url,
@@ -142,9 +152,17 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             language_code=language_code,
             remote_input=remote_input,
             enable_tts_interrupt=enable_tts_interrupt,
+            allow_headless=allow_headless,
         )
+        self.headless_mode = self.asr.headless_mode
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
+
+        if self.headless_mode:
+            logging.warning(
+                "GoogleASRInput running in HEADLESS MODE - voice input disabled. "
+                "The agent will not receive voice commands."
+            )
 
         # Initialize sleep ticker provider
         self.global_sleep_ticker_provider = SleepTickerProvider()
