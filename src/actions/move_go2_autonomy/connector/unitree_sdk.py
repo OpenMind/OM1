@@ -123,8 +123,8 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
         movement_map = {
             "turn left": self._process_turn_left,
             "turn right": self._process_turn_right,
-            "move forwards": self._process_move_forward,
-            "move back": self._process_move_back,
+            "move forward": self._process_move_forward,
+            "move backward": self._process_move_back,
             "stand still": lambda: logging.info("AI movement command: stand still"),
         }
 
@@ -315,7 +315,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
                         self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
                         logging.debug(
-                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
+                            f"Phase 2 - OVERSHOOT: move the other way. Remaining: {gap}m"
                         )
                         self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
                 else:
