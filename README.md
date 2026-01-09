@@ -7,6 +7,7 @@
 <a href="https://discord.gg/openmind">Discord</a>
 </p>
 ## Table of Contents
+
 - [Capabilities of OM1](#capabilities-of-om1)
 - [Architecture Overview](#architecture-overview)
 - [Getting Started](#getting-started)
