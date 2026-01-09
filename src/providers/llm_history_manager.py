@@ -1,6 +1,9 @@
 import asyncio
 import functools
+import json
 import logging
+import os
+import re
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
@@ -87,6 +90,75 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+        self._load_history_from_disk()
+
+    def _history_file_path(self) -> str:
+        base = os.path.normpath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "config", "memory")
+        )
+        os.makedirs(base, mode=0o755, exist_ok=True)
+
+        agent = (self.agent_name or "agent").strip()
+        agent = re.sub(r"[^a-zA-Z0-9_.-]+", "_", agent)
+        model = (self.config.model or "model").strip()
+        model = re.sub(r"[^a-zA-Z0-9_.-]+", "_", model)
+
+        return os.path.join(base, f".{agent}.{model}.history.json")
+
+    def _save_history_to_disk(self) -> None:
+        try:
+            if getattr(self.config, "history_length", 0) == 0:
+                return
+
+            path = self._history_file_path()
+            data = {
+                "version": 1,
+                "agent_name": self.agent_name,
+                "model": self.config.model,
+                "frame_index": self.frame_index,
+                "history": [
+                    {"role": m.role, "content": m.content}
+                    for m in (self.history[-500:] if self.history else [])
+                ],
+            }
+
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+            os.replace(tmp, path)
+        except Exception as e:
+            logging.debug(f"History save skipped: {type(e).__name__}: {e}")
+
+    def _load_history_from_disk(self) -> None:
+        try:
+            path = self._history_file_path()
+            if not os.path.exists(path):
+                return
+
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            raw = data.get("history", [])
+            if not isinstance(raw, list):
+                return
+
+            restored = []
+            for item in raw:
+                if not isinstance(item, dict):
+                    continue
+                role = item.get("role")
+                content = item.get("content")
+                if not isinstance(role, str) or not isinstance(content, str):
+                    continue
+                restored.append(ChatMessage(role=role, content=content))
+
+            self.history = restored
+            fi = data.get("frame_index")
+            if isinstance(fi, int) and fi >= 0:
+                self.frame_index = fi
+        except Exception as e:
+            logging.debug(f"History load skipped: {type(e).__name__}: {e}")
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -250,6 +322,7 @@ class LLMHistoryManager:
                         messages.pop(0) if messages else None
                     else:
                         logging.warning(f"Unexpected summary result: {summary_message}")
+                        self._save_history_to_disk()
                 except asyncio.CancelledError:
                     logging.warning("Summary task callback cancelled")
                 except Exception as e:
@@ -325,6 +398,7 @@ class LLMHistoryManager:
                 logging.debug(f"Inputs: {inputs}")
                 self.history_manager.history.append(inputs)
 
+                self.history_manager._save_history_to_disk()
                 messages = self.history_manager.get_messages()
                 logging.debug(f"messages:\n{messages}")
                 # this advances the frame index
@@ -352,6 +426,7 @@ class LLMHistoryManager:
                         ChatMessage(role="assistant", content=action_message)
                     )
 
+                    self.history_manager._save_history_to_disk()
                     if (
                         self.history_manager.config.history_length > 0
                         and len(self.history_manager.history)
