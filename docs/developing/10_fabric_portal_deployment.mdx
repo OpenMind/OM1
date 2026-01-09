@@ -1,0 +1,181 @@
+---
+title: Deploying on OpenMind Fabric Portal
+description: "Learn how to deploy and run OM1 agents on the OpenMind Fabric Portal."
+---
+
+## Overview
+
+The OpenMind Fabric Portal allows you to deploy OM1 agents as nodes in a decentralized network. This guide walks you through the process of setting up and running an OM1 agent on the Fabric Portal.
+
+## Prerequisites
+
+Before deploying to the Fabric Portal, ensure you have:
+
+- Completed the [Installation Guide](./1_get-started.mdx)
+- An OpenMind account (same account used for testnet participation)
+- At least 5 USDC to purchase credits
+
+## Step 1: Get Your API Key
+
+1. Visit the [OpenMind Fabric Portal](https://portal.openmind.network/)
+2. Log in with your OpenMind account
+3. Click on **"Purchase Credits"** in the top-right menu
+4. Add at least **5 USDC** to your balance
+5. Click on **"Create API Key"** to generate your key
+6. **Important**: Copy and save your API key immediately - you won't be able to view it again after closing the window
+
+## Step 2: Configure Your API Key
+
+You can configure your API key in two ways:
+
+### Option A: Using `.env` File (Recommended)
+
+```bash
+cp env.example .env
+```
+
+Then edit `.env` and add your API key:
+
+```bash
+OM_API_KEY=your_api_key_here
+URID=
+```
+
+### Option B: In Configuration File
+
+Alternatively, you can add your API key directly in your agent configuration file (e.g., `config/spot.json5`) by replacing the `openmind_free` placeholder with your API key.
+
+## Step 3: Configure for Fabric Portal Deployment
+
+When deploying on the Fabric Portal as a BPS (Blockchain Protocol Service) node, you typically don't need audio input. Modify your agent configuration to remove audio inputs:
+
+**Example: `config/conversation.json5`**
+
+Change:
+```json
+"agent_inputs": [
+  {
+    "type": "GoogleASRInput",
+    "config": {
+      "enable_tts_interrupt": false
+    }
+  }
+]
+```
+
+To:
+```json
+"agent_inputs": []
+```
+
+## Step 4: Run Your Agent
+
+You can run your OM1 agent directly or in a screen session for persistent operation.
+
+### Option A: Direct Run
+
+```bash
+source .venv/bin/activate
+uv run src/run.py conversation
+```
+
+### Option B: Screen Session (Recommended for Production)
+
+Run your agent inside a screen session so it stays active even if you close your terminal:
+
+```bash
+# Create a new screen session
+screen -S om1-agent
+
+# Inside the screen session
+source .venv/bin/activate
+uv run src/run.py conversation
+```
+
+To detach from the screen session: Press `Ctrl + A` then `D`
+
+To reattach to the screen session:
+```bash
+screen -r om1-agent
+```
+
+## Managing Your Agent
+
+### Checking Agent Status
+
+To verify your agent is running:
+
+```bash
+ps aux | grep run.py
+```
+
+### Restarting After Crash or Reboot
+
+If your server or node restarts:
+
+```bash
+cd OM1
+screen -dmS om1-agent bash -c "source .venv/bin/activate && uv run src/run.py conversation; exec bash"
+```
+
+### Stopping the Agent
+
+To stop your agent:
+
+```bash
+screen -S om1-agent -X quit
+```
+
+Or if running directly, press `Ctrl + C`
+
+## Troubleshooting
+
+### "401 Insufficient Balance" Error
+
+**Problem**: Your agent cannot start due to insufficient credits.
+
+**Solution**:
+1. Visit the [Fabric Portal](https://portal.openmind.network/)
+2. Top up your balance with additional USDC
+3. Restart your agent
+
+### Connection Issues
+
+**Problem**: Agent fails to connect to the Fabric network.
+
+**Solution**:
+- Check your internet connection
+- Verify your API key is correct
+- Ensure your account has sufficient credits
+- Check the [OpenMind status page](https://status.openmind.org/) for network issues
+
+### Performance Issues
+
+**Problem**: Agent is slow or unresponsive.
+
+**Solution**:
+- Check system resources (CPU, memory)
+- Review logs for errors: `screen -r om1-agent`
+- Ensure you're running on recommended hardware (see [System Requirements](./1_get-started.mdx#system-requirements))
+
+## Best Practices
+
+1. **Always use screen sessions** for production deployments to ensure persistence
+2. **Monitor your credit balance** regularly to avoid service interruption
+3. **Keep your API key secure** - never commit it to version control
+4. **Use monitoring tools** to track agent uptime and performance
+5. **Test locally** before deploying to production
+6. **Keep OM1 updated** to benefit from the latest features and bug fixes
+
+## Next Steps
+
+- Explore [configuration options](./3_configuration.mdx) to customize your agent
+- Learn about [inputs and actions](./4_inputs.mdx) to extend functionality
+- Join the [developer community](https://t.me/openminddev) for support
+
+## Additional Resources
+
+- [OpenMind Fabric Portal](https://portal.openmind.network/)
+- [Main Documentation](https://docs.openmind.org/)
+- [GitHub Repository](https://github.com/OpenMind/OM1)
+- [Developer Telegram Group](https://t.me/openminddev)
