@@ -50,6 +50,32 @@ For Linux
 sudo apt-get update
 sudo apt-get install portaudio19-dev python-dev ffmpeg
 ```
+### For Windows
+
+We **strongly recommend** using **WSL2 (Windows Subsystem for Linux)** for the best compatibility and performance.  
+Running OM1 natively on Windows can be challenging due to dependency issues (e.g., portaudio compilation, path handling with uv, ffmpeg).
+
+**Setup steps:**
+
+**First**, install WSL2 (if not already installed):  
+Open **PowerShell as Administrator** and run:
+
+```bash
+wsl --install
+```
+   This command will enable WSL, download the latest kernel, and install Ubuntu by default.Important: Restart your computer after the command finishes.
+For more details, see the official guide: https://learn.microsoft.com/en-us/windows/wsl/install(Requires Windows 10 version 2004+ (Build 19041+) or Windows 11.)
+
+   After restarting, open the newly installed Ubuntu terminal(just search "Ubuntu" in the Start menu).
+Next, update packages and install the required dependencies(same commands as on Linux):
+
+```bash
+sudo apt-get update
+sudo apt-get install portaudio19-dev python3-dev ffmpeg
+```
+Important note:
+All following OM1 commands (uv venv, uv run src/run.py spot, etc.) must be executed inside this WSL Ubuntu terminal.
+This approach provides a near-native Linux experience with excellent performance and helps you avoid most Windows-specific issues.
 
 ### Obtain an OpenMind API Key
 
