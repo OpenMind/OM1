@@ -24,7 +24,7 @@
 ## Getting Started
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
-
+Note for beginners: If you receive a 404 Not Found error when using gpt-4, try changing the model to gpt-4.1-mini in your configuration file. This is the latest supported version.
 ### Package Management and VENV
 
 You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
