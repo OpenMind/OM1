@@ -25,6 +25,7 @@ class ContextProvider:
         self.context_update_topic = "om/mode/context"
         self.session: Optional[zenoh.Session] = None
         self.publisher = None
+        self.conversation_history: list[Dict[str, Any]] = []
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
@@ -86,3 +87,34 @@ class ContextProvider:
             finally:
                 self.session = None
                 self.publisher = None
+    def add_message(self, role: str, content: str):
+        """
+        Add a message to the in-memory conversation history.
+
+        Parameters
+        ----------
+        role : str
+            The role of the speaker (e.g. "user", "assistant", "system")
+        content : str
+            The message content
+        """
+        message = {
+            "role": role,
+            "content": content
+        }
+        self.conversation_history.append(message)
+        logging.debug(f"Added message to conversation history: {message}")
+
+    def get_conversation_history(self):
+        """
+        Retrieve the full in-memory conversation history.
+        """
+        return list(self.conversation_history)
+
+    def clear_conversation_history(self):
+        """
+        Clear the in-memory conversation history.
+        """
+        self.conversation_history.clear()
+        logging.info("Conversation history cleared")
+
