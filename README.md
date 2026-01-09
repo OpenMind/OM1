@@ -22,6 +22,9 @@
 
 
 ## Getting Started
+### Platform-Specific Guides
+
+- [Apple Silicon Performance & Optimization Guide](docs/apple-silicon-optimization.md)
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
 
