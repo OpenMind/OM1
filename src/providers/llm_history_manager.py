@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import functools
 import logging
 from dataclasses import dataclass
@@ -8,6 +9,7 @@ import openai
 
 from llm import LLMConfig
 
+from .history_persistence import load_history, save_history
 from .io_provider import IOProvider
 
 R = TypeVar("R")
@@ -87,6 +89,62 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # persistence settings
+        self._history_file = getattr(config, "history_file", None)
+        self._auto_save_interval = getattr(config, "history_auto_save_interval", 5)
+        self._message_count_since_save = 0
+
+        # load existing history from disk
+        if self._history_file:
+            self._load_history_from_disk()
+            atexit.register(self._save_history_to_disk)
+
+    def _load_history_from_disk(self) -> None:
+        """Load conversation history from disk on startup."""
+        if not self._history_file:
+            return
+
+        try:
+            loaded = load_history(self._history_file)
+            if loaded:
+                self.history = [
+                    ChatMessage(role=msg["role"], content=msg["content"])
+                    for msg in loaded
+                ]
+                self.frame_index = len(self.history) // 2
+                logging.info(
+                    f"Loaded {len(self.history)} messages from {self._history_file}"
+                )
+        except Exception as e:
+            logging.error(f"Failed to load history from disk: {e}")
+
+    def _save_history_to_disk(self) -> bool:
+        """Save conversation history to disk."""
+        if not self._history_file:
+            return False
+
+        try:
+            history_dicts = [
+                {"role": msg.role, "content": msg.content} for msg in self.history
+            ]
+            result = save_history(history_dicts, self._history_file)
+            if result:
+                self._message_count_since_save = 0
+                logging.debug(f"Saved {len(self.history)} messages to disk")
+            return result
+        except Exception as e:
+            logging.error(f"Failed to save history to disk: {e}")
+            return False
+
+    def _maybe_auto_save(self) -> None:
+        """Auto-save history if interval reached."""
+        if not self._history_file or self._auto_save_interval <= 0:
+            return
+
+        self._message_count_since_save += 1
+        if self._message_count_since_save >= self._auto_save_interval:
+            self._save_history_to_disk()
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -351,6 +409,9 @@ class LLMHistoryManager:
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)
                     )
+
+                    # auto-save history to disk if interval reached
+                    self.history_manager._maybe_auto_save()
 
                     if (
                         self.history_manager.config.history_length > 0

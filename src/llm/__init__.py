@@ -51,6 +51,13 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+    history_file: T.Optional[str] = Field(
+        default="data/conversation_history.json",
+        description="Path to save/load conversation history",
+    )
+    history_auto_save_interval: T.Optional[int] = Field(
+        default=5, description="Auto-save history every N messages (0 to disable)"
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
