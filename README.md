@@ -124,17 +124,19 @@ We're excited to introduce **full autonomy** for Unitree Go2 and G1. Full autono
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 
-## Intro to BrainPack?
+## Intro to BrainPack
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
 We'll shortly be releasing the **BOM** and details on **DIY** for it.
 Stay tuned!
 
-Clone the following repos -
-- https://github.com/OpenMind/OM1.git
-- https://github.com/OpenMind/unitree-sdk.git
-- https://github.com/OpenMind/OM1-avatar.git
-- https://github.com/OpenMind/OM1-video-processor.git
+Clone the following repos:
 
+```bash
+git clone https://github.com/OpenMind/OM1.git
+git clone https://github.com/OpenMind/unitree-sdk.git
+git clone https://github.com/OpenMind/OM1-avatar.git
+git clone https://github.com/OpenMind/OM1-video-processor.git
+```
 ## Starting the system
 To start all services, run the following commands:
 - For OM1
