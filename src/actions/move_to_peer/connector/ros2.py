@@ -49,7 +49,7 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
 
     async def connect(self, output_interface: MoveToPeerInput) -> None:
         """
-        Execute the *navigate‑to‑peer* behaviour once.
+        Execute the *navigate‑to‑peer* behavior once.
 
         Parameters
         ----------
