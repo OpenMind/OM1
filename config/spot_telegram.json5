@@ -1,0 +1,85 @@
+{
+  // Spot Telegram Bot Configuration
+  // Control your Spot agent via Telegram!
+  //
+  // Setup:
+  // 1. Create a bot via @BotFather on Telegram
+  // 2. Copy the bot token to your .env file as TELEGRAM_BOT_TOKEN
+  // 3. Run: uv run src/run.py spot_telegram
+  // 4. Send /start to your bot on Telegram
+  //
+  // Optional: Set TELEGRAM_CHAT_ID in .env to auto-send responses
+
+  version: "v1.0.1",
+  hertz: 1,
+  name: "spot_telegram",
+  api_key: "openmind_free",
+  URID: "default",
+  robot_ip: "",
+
+  system_prompt_base: "You are Spot, a smart and friendly AI assistant available on Telegram. You respond to messages from users with helpful, concise, and friendly replies. Keep responses under 200 characters when possible, as this is a chat interface.",
+
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+
+  system_prompt_examples: "Here are some examples of Telegram interactions:\n\n1. If a user says 'Hello!', you might:\n    Speak: 'Hey there! How can I help you today?'\n    Emotion: 'happy'\n\n2. If a user asks 'What can you do?', you might:\n    Speak: 'I can chat, answer questions, and keep you company! Just send me a message.'\n    Emotion: 'excited'\n\n3. If a user says something you don't understand:\n    Speak: 'Hmm, I'm not sure I follow. Could you rephrase that?'\n    Emotion: 'confused'",
+
+  agent_inputs: [
+    {
+      // Blockchain governance rules
+      type: "GovernanceEthereum",
+    },
+    {
+      // Telegram message input
+      type: "TelegramInput",
+      config: {
+        input_name: "Telegram Message",
+        // bot_token: "your-bot-token-here",  // Or set TELEGRAM_BOT_TOKEN in .env
+        // allowed_users: [123456789],  // Optional: restrict to specific user IDs
+      },
+    },
+    {
+      // Reports online status to Portal
+      type: "StatusHeartbeat",
+      config: {
+        machine_name: "Spot Telegram Bot",
+      },
+    },
+  ],
+
+  simulators: [
+    {
+      // Web-based visualization at http://localhost:8000
+      type: "WebSim",
+      config: {
+        host: "0.0.0.0",
+        port: 8000,
+        tick_rate: 100,
+        auto_reconnect: true,
+        debug_mode: false,
+      },
+    },
+  ],
+
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 5,  // Keep more history for chat context
+    },
+  },
+
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "telegram",  // Send responses to Telegram
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      implementation: "passthrough",
+      connector: "ros2",  // Emotions shown in WebSim
+    },
+  ],
+}

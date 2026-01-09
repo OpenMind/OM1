@@ -54,6 +54,7 @@ dds = [
     "cyclonedds==0.10.2"
 ]
 macos = ["osascript"]
+telegram = ["python-telegram-bot>=21.0"]
 
 [dependency-groups]
 dev = [
