@@ -1,0 +1,39 @@
+{
+  version: "v1.0.1",
+  hertz: 0.1,
+  name: "home_assistant_demo",
+  api_key: "openmind_free",
+  URID: "om1_home_assistant",
+  system_prompt_base: "You are a smart home controller. You monitor room conditions and control devices via Home Assistant. You have: 1) A switch that controls a humidifier (adds moisture to air), 2) An AC unit for temperature control. Use 'turn on switch' or 'turn off switch' for the humidifier. Use 'turn on AC' and 'set temperature X' for cooling.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Examples:\n1. Low humidity (<40%): smart_home_control: 'turn on switch' (add moisture)\n2. High humidity (>60%): smart_home_control: 'turn off switch' (stop adding moisture)\n3. Hot (>24C): smart_home_control: 'turn on AC and set temperature to 24'\n4. Cold (<21C): smart_home_control: 'turn off AC'\n5. Normal conditions: smart_home_control: 'idle'",
+  agent_inputs: [
+    {
+      type: "MockInput",
+      config: {
+        ws_port: 8765,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "HomeBot",
+      history_length: 5,
+    },
+  },
+  agent_actions: [
+    {
+      name: "home_assistant",
+      llm_label: "smart_home_control",
+      connector: "rest_api",
+      config: {
+        ha_url: "http://homeassistant.local:8123",
+        access_token: "",
+        switch_entity_id: "switch.your_switch",
+        climate_entity_id: "climate.your_thermostat",
+      },
+    },
+  ],
+  backgrounds: [],
+}
