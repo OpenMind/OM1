@@ -137,7 +137,7 @@ def start(
         raise typer.Exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == "___main___":
 
     # Fix for Linux multiprocessing
     if mp.get_start_method(allow_none=True) != "spawn":
