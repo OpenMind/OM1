@@ -62,6 +62,14 @@ Run
 uv run src/run.py spot
 ```
 
+> **⚠️ Note for macOS Users**
+>
+> If you are running macOS (especially Sequoia or newer), you must verify that your terminal application (e.g., Terminal, iTerm2, or VS Code) has permission to access the camera.
+>
+> If the agent fails to detect video input:
+> 1. Go to **System Settings** > **Privacy & Security** > **Camera**.
+> 2. Ensure the toggle is enabled for your terminal application or Python environment.
+
 After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
 
 Note: This is just an example agent configuration.
