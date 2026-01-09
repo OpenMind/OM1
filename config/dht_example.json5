@@ -1,0 +1,13 @@
+// config/dht_example.json5
+// 示例配置：添加 DHT 传感器输入
+{
+  "inputs": {
+    "dht_sensor": {
+      "type": "dht",  // 插件类型
+      "enabled": true,
+      "pin": "D4",  // GPIO 引脚，根据硬件调整
+      "use_pulseio": false  // 可选
+    }
+  },
+  // 其他配置如 LLM、actions 等保持原样
+}
