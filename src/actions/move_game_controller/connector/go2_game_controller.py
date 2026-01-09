@@ -66,7 +66,9 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
     """
     Game controller for Unitree Go2 robots.
 
-    NOTE: This connector has been deprecated. OM1 Orchestrator docker automatically supports game controller.
+    NOTE:
+    This connector is deprecated.
+    Game controller support is now handled automatically by the OM1 Orchestrator Docker setup.
     """
 
     def __init__(self, config: Go2GameControllerConfig):
