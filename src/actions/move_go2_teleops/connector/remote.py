@@ -42,7 +42,9 @@ class MoveGo2RemoteConnector(ActionConnector[MoveGo2RemoteConfig, MoveInput]):
     """
     Remote connector for the Move Go2 teleops action.
 
-    NOTE: This connector has been deprecated. OM1 Orchestrator docker automatically supports remote teleops
+    NOTE:
+    This connector is deprecated.
+    Remote teleoperation is now handled automatically by the OM1 Orchestrator Docker setup.
     """
 
     def __init__(self, config: MoveGo2RemoteConfig):
