@@ -335,7 +335,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
                 for task in done:
                     result = task.result()
-                    if result["time"] <= self.TIMEOUT_THRESHOLD:
+                    if result["time"] <= self.TIMEOUT_THRESHOLD and result["result"] is not None:
                         in_time[result["source"]] = result
 
             # Both in time → select best
