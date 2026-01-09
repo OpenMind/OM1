@@ -1,14 +1,18 @@
 """
 Simple JSON persistence for conversation history.
 
-Provides atomic save/load operations for chat history.
+Provides thread-safe atomic save/load operations for chat history.
 """
 
 import json
 import logging
 import os
 import tempfile
+import threading
 from typing import Dict, List
+
+# Module-level lock for thread-safe file operations
+_file_lock = threading.Lock()
 
 
 def save_history(
@@ -19,6 +23,7 @@ def save_history(
     Save conversation history to a JSON file atomically.
 
     Uses temp file + rename strategy to prevent corruption.
+    Thread-safe via module-level lock.
 
     Parameters
     ----------
@@ -32,36 +37,37 @@ def save_history(
     bool
         True if save was successful, False otherwise.
     """
-    try:
-        # Ensure directory exists
-        directory = os.path.dirname(filepath)
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory, exist_ok=True)
-
-        # Write to temp file first (atomic write)
-        fd, temp_path = tempfile.mkstemp(
-            suffix=".json",
-            prefix="history_",
-            dir=directory if directory else None,
-        )
+    with _file_lock:
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(history, f, ensure_ascii=False, indent=2)
+            # Ensure directory exists
+            directory = os.path.dirname(filepath)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory, exist_ok=True)
 
-            # Atomic rename
-            os.replace(temp_path, filepath)
-            logging.debug(f"Conversation history saved to {filepath}")
-            return True
+            # Write to temp file first (atomic write)
+            fd, temp_path = tempfile.mkstemp(
+                suffix=".json",
+                prefix="history_",
+                dir=directory if directory else None,
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(history, f, ensure_ascii=False, indent=2)
 
-        except Exception:
-            # Clean up temp file on error
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-            raise
+                # Atomic rename
+                os.replace(temp_path, filepath)
+                logging.debug(f"Conversation history saved to {filepath}")
+                return True
 
-    except Exception as e:
-        logging.error(f"Failed to save conversation history: {e}")
-        return False
+            except Exception:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
+
+        except Exception as e:
+            logging.error(f"Failed to save conversation history: {e}")
+            return False
 
 
 def load_history(
@@ -69,6 +75,8 @@ def load_history(
 ) -> List[Dict[str, str]]:
     """
     Load conversation history from a JSON file.
+
+    Thread-safe via module-level lock.
 
     Parameters
     ----------
@@ -81,41 +89,44 @@ def load_history(
         List of message dictionaries, or empty list if file doesn't exist
         or is corrupted.
     """
-    if not os.path.exists(filepath):
-        logging.debug(f"No history file found at {filepath}, starting fresh")
-        return []
-
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        # Validate structure
-        if not isinstance(data, list):
-            logging.warning(f"Invalid history format in {filepath}, starting fresh")
+    with _file_lock:
+        if not os.path.exists(filepath):
+            logging.debug(f"No history file found at {filepath}, starting fresh")
             return []
 
-        # Validate each message has required fields
-        valid_history = []
-        for msg in data:
-            if isinstance(msg, dict) and "role" in msg and "content" in msg:
-                valid_history.append({"role": msg["role"], "content": msg["content"]})
-            else:
-                logging.warning(f"Skipping invalid message: {msg}")
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        logging.info(f"Loaded {len(valid_history)} messages from {filepath}")
-        return valid_history
+            # Validate structure
+            if not isinstance(data, list):
+                logging.warning(f"Invalid history format in {filepath}, starting fresh")
+                return []
 
-    except json.JSONDecodeError as e:
-        logging.warning(f"Corrupted history file {filepath}: {e}, starting fresh")
-        return []
-    except Exception as e:
-        logging.error(f"Failed to load conversation history: {e}")
-        return []
+            # Validate each message has required fields
+            valid_history = []
+            for msg in data:
+                if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                    valid_history.append({"role": msg["role"], "content": msg["content"]})
+                else:
+                    logging.warning(f"Skipping invalid message: {msg}")
+
+            logging.info(f"Loaded {len(valid_history)} messages from {filepath}")
+            return valid_history
+
+        except json.JSONDecodeError as e:
+            logging.warning(f"Corrupted history file {filepath}: {e}, starting fresh")
+            return []
+        except Exception as e:
+            logging.error(f"Failed to load conversation history: {e}")
+            return []
 
 
 def clear_history(filepath: str = "data/conversation_history.json") -> bool:
     """
     Delete the conversation history file.
+
+    Thread-safe via module-level lock.
 
     Parameters
     ----------
@@ -127,11 +138,12 @@ def clear_history(filepath: str = "data/conversation_history.json") -> bool:
     bool
         True if file was deleted or didn't exist, False on error.
     """
-    try:
-        if os.path.exists(filepath):
-            os.unlink(filepath)
-            logging.info(f"Conversation history cleared: {filepath}")
-        return True
-    except Exception as e:
-        logging.error(f"Failed to clear conversation history: {e}")
-        return False
+    with _file_lock:
+        try:
+            if os.path.exists(filepath):
+                os.unlink(filepath)
+                logging.info(f"Conversation history cleared: {filepath}")
+            return True
+        except Exception as e:
+            logging.error(f"Failed to clear conversation history: {e}")
+            return False
