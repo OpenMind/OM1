@@ -181,3 +181,51 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 ## License
 
 This project is licensed under the terms of the MIT License, which is a permissive free software license that allows users to freely use, modify, and distribute the software. The MIT License is a widely used and well-established license that is known for its simplicity and flexibility. By using the MIT License, this project aims to encourage collaboration, modification, and distribution of the software.
+Tabii ki, GitHub'da profesyonel bir döküman (Markdown) gibi görünmesi için metni başlıklar ve kod blokları şeklinde düzenledim. Bu metni doğrudan GitHub'daki dosya düzenleme ekranına veya PR açıklamasına yapıştırabilirsin.
+
+GitHub Guide: Easy OM1 Setup and Run for Mac M1/M2 Users
+Overview
+This guide provides a streamlined setup process and troubleshooting steps for users running the OM1 node on Apple Silicon (M1/M2) Macs. It addresses common environment-related hurdles and provides a stable path to get the node running efficiently.
+
+🛠 Mac M1/M2 Troubleshooting & Efficient Startup Guide
+1. Prerequisite: Fixing the Build Backend Error
+If you encounter an error related to py-sr25519-bindings or a maturin failed message, it indicates that the Rust compiler is missing from your environment.
+
+Solution: Install Rust and Cargo via the terminal:
+
+Bash
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+2. Finding the Correct Entry Point
+On some macOS installations, the standard uv run om1 command may fail with a spawn error. Use the following explicit pathing to ensure the runtime starts correctly.
+
+The "Always Works" Start Command:
+
+Bash
+
+cd ~/OM1 && PYTHONPATH=src uv run python src/runtime/single_mode/cortex.py --config config/spot.json5
+3. Creating a Shortcut (Alias)
+To avoid typing long commands every time you want to start your node, you can create a simple shortcut.
+
+Run this command once:
+
+Bash
+
+echo "alias start_node='cd ~/OM1 && PYTHONPATH=src uv run python src/runtime/single_mode/cortex.py --config config/spot.json5'" >> ~/.zshrc
+source ~/.zshrc
+Now, you can simply type start_node in your terminal to launch the system.
+
+4. How to Safely Stop the Node
+To prevent unnecessary API credit consumption and save costs, always stop the node when it's not in use:
+
+Press Control + C in the terminal window where the node is running.
+
+Verify that the prompt returns to your standard command line (e.g., user@machine %).
+
+Technical Analysis of Observed Issues
+Context Injection & Token Bloat
+Current logs indicate that a massive "Personality & History" block is injected into every OpenAI API request. This increases input token counts, leading to higher latency and costs.
+
+Redundant Command Transmission
+Identified that identical commands (e.g., emotion: happy) are sometimes fired multiple times per second, creating unnecessary overhead in the Zenoh/Avatar loop.
