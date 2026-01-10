@@ -1,6 +1,8 @@
 import asyncio
 import functools
+import json
 import logging
+import os
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
@@ -39,6 +41,7 @@ class LLMHistoryManager:
         # configuration
         self.config = config
         self.agent_name = self.config.agent_name
+        self.config_name = self.config.config_name
         self.system_prompt = (
             system_prompt.replace("****", self.agent_name)
             if self.agent_name
@@ -61,6 +64,73 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # Load history from disk if available
+        self.load_history()
+
+    def _get_history_path(self) -> Optional[str]:
+        """
+        Get the path to the history file for this configuration.
+
+        Returns
+        -------
+        Optional[str]
+            Path to the history JSONL file, or None if no config_name is set.
+        """
+        if not self.config_name:
+            return None
+        memory_folder = os.path.join(
+            os.path.dirname(__file__), "../../config/memory"
+        )
+        return os.path.join(memory_folder, f"history_{self.config_name}.jsonl")
+
+    def save_history(self) -> None:
+        """
+        Save the current conversation history to disk.
+
+        Writes each message as a JSON line in the history file.
+        """
+        path = self._get_history_path()
+        if not path:
+            return
+
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                for msg in self.history:
+                    f.write(
+                        json.dumps({"role": msg.role, "content": msg.content}) + "\n"
+                    )
+            logging.debug(f"Saved {len(self.history)} messages to {path}")
+        except Exception as e:
+            logging.error(f"Error saving history to {path}: {e}")
+
+    def load_history(self) -> None:
+        """
+        Load conversation history from disk if it exists.
+
+        Restores messages from the JSONL history file.
+        """
+        path = self._get_history_path()
+        if not path or not os.path.exists(path):
+            return
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    data = json.loads(line)
+                    self.history.append(
+                        ChatMessage(role=data["role"], content=data["content"])
+                    )
+            if self.history:
+                logging.info(
+                    f"Loaded {len(self.history)} messages from history: {path}"
+                )
+        except Exception as e:
+            logging.error(f"Error loading history from {path}: {e}")
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -266,6 +336,9 @@ class LLMHistoryManager:
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)
                     )
+
+                    # Save history to disk after each update
+                    self.history_manager.save_history()
 
                     if (
                         self.history_manager.config.history_length > 0

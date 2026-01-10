@@ -51,6 +51,9 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+    config_name: T.Optional[str] = Field(
+        default=None, description="Name of the config file for history persistence"
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
