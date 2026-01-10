@@ -62,14 +62,28 @@ class FunctionGenerator:
         T.Dict
             JSON schema representation of the Python type.
         """
-        if get_origin(python_type) is T.Union:
-            args = get_args(python_type)
+        origin = get_origin(python_type)
+        args = get_args(python_type)
+
+        if origin is T.Union:
             if len(args) == 2 and type(None) in args:
                 non_none_type = args[0] if args[1] is type(None) else args[1]
                 schema = FunctionGenerator.python_type_to_json_schema(non_none_type)
                 return schema
             else:
                 return {"type": "string"}
+        
+        # Handle List/list generics
+        if origin is list or origin is T.List:
+            item_type = args[0] if args else str
+            return {
+                "type": "array",
+                "items": FunctionGenerator.python_type_to_json_schema(item_type)
+            }
+            
+        # Handle Dict/dict generics
+        if origin is dict or origin is T.Dict:
+            return {"type": "object"}
 
         type_mapping = {
             str: {"type": "string"},
@@ -113,19 +127,21 @@ class FunctionGenerator:
 
             docstring = inspect.getdoc(method)
             if docstring and param_name in docstring:
+                # Basic description extraction - could be improved
                 param_schema["description"] = f"Parameter {param_name}"
-
-            properties[param_name] = param_schema
 
             if param.default == inspect.Parameter.empty:
                 required.append(param_name)
             else:
+                # In strict mode, all parameters must be required.
+                # Use description to indicate optionality.
                 required.append(param_name)
-                if isinstance(param_type, str) and param.default == "":
-                    param_schema["description"] = (
-                        param_schema.get("description", f"Parameter {param_name}")
-                        + " (optional - can be empty string)"
-                    )
+                
+                desc = param_schema.get("description", f"Parameter {param_name}")
+                if "(optional)" not in desc and "(optional" not in desc:
+                     param_schema["description"] = f"{desc} (optional, default: {param.default})"
+
+            properties[param_name] = param_schema
 
         return {
             "type": "function",
