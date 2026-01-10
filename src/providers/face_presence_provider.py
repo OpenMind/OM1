@@ -181,7 +181,7 @@ class FacePresenceProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to strop."""
+        """Request the background thread to stop."""
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)

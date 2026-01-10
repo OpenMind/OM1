@@ -258,8 +258,8 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
-            Extracted user voice input for evaluation.
+        prompt : str
+            The prompt text for evaluation context.
 
         Returns
         -------
