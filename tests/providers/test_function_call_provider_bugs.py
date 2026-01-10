@@ -1,7 +1,7 @@
 """
 Unit tests for Function Call Provider to identify potential bugs and edge cases.
 """
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 
 from providers.function_call_provider import FunctionGenerator, LLMFunction
 
@@ -51,8 +51,62 @@ class TestFunctionGeneratorBugs:
         assert "optional" in props["opt_param"].get("description", "")
         assert "default: default" in props["opt_param"].get("description", "")
 
-    def test_union_types_edge_cases(self):
-        """Test Union types scenarios."""
-        # Union[str, int] -> currently returns {"type": "string"} based on defaults?
-        schema = FunctionGenerator.python_type_to_json_schema(Union[str, int])
-        assert schema == {"type": "string"} # This behavior seems too generic/wrong
+    def test_nested_generic_types(self):
+        """Test nested generic types like List[List[int]]."""
+        # List[List[int]]
+        schema = FunctionGenerator.python_type_to_json_schema(List[List[int]])
+        expected = {
+            "type": "array", 
+            "items": {
+                "type": "array", 
+                "items": {"type": "integer"}
+            }
+        }
+        assert schema == expected
+
+    def test_typed_dict_handling(self):
+        """Test Dict[str, int] conversion."""
+        # Current implementation maps all Dicts to generic object, which is acceptable but could be improved.
+        # Checking consistent behavior.
+        schema = FunctionGenerator.python_type_to_json_schema(Dict[str, int])
+        assert schema == {"type": "object"}
+
+    def test_all_primitive_types_in_list(self):
+        """Test List of all primitive types."""
+        types = [str, int, float, bool]
+        json_types = ["string", "integer", "number", "boolean"]
+        
+        for py_type, json_type in zip(types, json_types):
+            schema = FunctionGenerator.python_type_to_json_schema(List[py_type])
+            assert schema == {"type": "array", "items": {"type": json_type}}
+
+    def test_mixed_method_signature(self):
+        """Test a method with mixed required and optional parameters of various types."""
+        class TestClass:
+            @LLMFunction("complex function")
+            def complex_method(
+                self, 
+                ids: List[int],
+                config: Dict[str, Any],
+                name: str = "robot",
+                velocity: float = 1.5
+            ):
+                pass
+                
+        schema = FunctionGenerator.extract_function_schema(TestClass.complex_method)
+        params = schema["function"]["parameters"]
+        props = params["properties"]
+        
+        # Check List[int]
+        assert props["ids"]["type"] == "array"
+        assert props["ids"]["items"]["type"] == "integer"
+        
+        # Check Dict
+        assert props["config"]["type"] == "object"
+        
+        # Check Optionals descriptions
+        assert "default: robot" in props["name"]["description"]
+        assert "default: 1.5" in props["velocity"]["description"]
+        
+        # Check all are required (Strict mode)
+        assert set(params["required"]) == {"ids", "config", "name", "velocity"}
