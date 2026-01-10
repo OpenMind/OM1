@@ -54,6 +54,9 @@ def mock_mode_manager():
     manager.current_mode_name = "default"
     manager.add_transition_callback = Mock()
     manager.process_tick = AsyncMock(return_value=None)
+    # Mock the state attribute for ModeManager
+    manager.state = Mock()
+    manager.state.current_mode = "default"  # Default current mode for mocking
     return manager
 
 
@@ -85,6 +88,9 @@ def cortex_runtime(mock_system_config):
         mock_manager._get_runtime_config_path = Mock(
             return_value="/fake/path/test_config.json5"
         )
+        # Mock the state attribute for the manager instance
+        mock_manager.state = Mock()
+        mock_manager.state.current_mode = "default"
         mock_manager_class.return_value = mock_manager
 
         mock_io_provider = Mock()
@@ -121,6 +127,9 @@ class TestModeCortexRuntime:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for initialisation test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(mock_system_config, "test_config")
@@ -218,21 +227,58 @@ class TestModeCortexRuntime:
 
     @pytest.mark.asyncio
     async def test_on_mode_transition_exception(self, cortex_runtime):
-        """Test mode transition with exception handling."""
+        """Test mode transition with exception handling does not raise, and triggers fallback."""
         runtime, mocks = cortex_runtime
 
         mock_from_mode = Mock()
         mock_to_mode = Mock()
+        mock_default_mode = Mock()  # Mock for safe mode fallback
         runtime.mode_config.modes = {
             "from_mode": mock_from_mode,
             "to_mode": mock_to_mode,
+            "default": mock_default_mode,  # Add default mode
         }
+        runtime.mode_config.default_mode = "default"  # Set default mode name
 
-        with patch.object(
-            runtime, "_stop_current_orchestrators", side_effect=Exception("Test error")
-        ):
-            with pytest.raises(Exception, match="Test error"):
+        # Mock ModeManager's state.current_mode to simulate previous mode
+        runtime.mode_manager.state.current_mode = "from_mode"
+
+        # Mock _perform_rollback_or_safe_mode to verify it's called and to control its outcome
+        with patch.object(runtime, "_perform_rollback_or_safe_mode") as mock_fallback:
+            # Mock it to return True (success) for simplicity in this test
+            mock_fallback.return_value = True
+
+            # Patch _stop_current_orchestrators to raise an exception during the main transition
+            with patch.object(
+                runtime,
+                "_stop_current_orchestrators",
+                side_effect=Exception("Test error"),
+            ):
+                # Now, calling _on_mode_transition should NOT raise an exception anymore
+                # due to the fallback mechanism. It should handle the error internally.
+                # The fallback mechanism should catch the error and call _perform_rollback_or_safe_mode.
                 await runtime._on_mode_transition("from_mode", "to_mode")
+
+                # Assertions:
+                # 1. _perform_rollback_or_safe_mode must have been called because the main transition failed
+                mock_fallback.assert_called_once()
+
+                # 2. The argument passed to _perform_rollback_or_safe_mode should be the safe mode ("default")
+                # because the previous mode ("from_mode") was the one failing to transition *from*,
+                # so it tries the default mode.
+                # Actually, looking at the code:
+                # if self._previous_mode_for_fallback and self._previous_mode_for_fallback != to_mode:
+                #     ... _perform_rollback_or_safe_mode(self._previous_mode_for_fallback) ...
+                # So, it tries to go BACK to "from_mode" first.
+                # Adjust the assertion accordingly.
+                # self._previous_mode_for_fallback was set to "from_mode" before the transition attempt.
+                # So the first fallback attempt is to "from_mode".
+                mock_fallback.assert_called_once_with(
+                    "from_mode"
+                )  # It tries to go back to previous mode first
+
+                # 3. The exception from the main transition part should not propagate out.
+                # (This is implicitly tested by the fact that await did not raise an exception here)
 
     @pytest.mark.asyncio
     async def test_stop_current_orchestrators(self, cortex_runtime):
@@ -365,6 +411,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for hot reload test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -388,6 +437,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for hot reload test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -409,6 +461,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for hot reload test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -431,6 +486,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for hot reload test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -456,6 +514,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for hot reload test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -491,6 +552,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for hot reload test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -523,6 +587,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for hot reload test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -645,6 +712,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for reload failure test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
@@ -673,6 +743,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for run test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "test_mode"
             mock_manager_class.return_value = mock_manager
 
             mock_system_config.execute_global_lifecycle_hooks = AsyncMock(
@@ -727,6 +800,9 @@ class TestModeCortexRuntimeHotReload:
             mock_manager._get_runtime_config_path = Mock(
                 return_value="/fake/path/test_config.json5"
             )
+            # Mock state for cleanup test too
+            mock_manager.state = Mock()
+            mock_manager.state.current_mode = "default"
             mock_manager_class.return_value = mock_manager
 
             runtime = ModeCortexRuntime(
