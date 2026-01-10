@@ -51,10 +51,10 @@ class GoogleASRSensorConfig(SensorConfig):
         Microphone Device ID.
     microphone_name : Optional[str]
         Microphone Name.
-    language : str
-        Language for speech recognition. Use "auto" for automatic detection.
-    alternative_languages : Optional[List[str]]
-        Alternative languages for multi-language detection.
+    language : Union[str, List[str]]
+        Language for speech recognition. Can be a single language string
+        (e.g., 'english', 'chinese'), a list of languages for multi-language
+        detection (e.g., ['english', 'chinese']), or 'auto' for automatic detection.
     remote_input : bool
         Whether to use remote input.
     """
