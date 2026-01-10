@@ -1,8 +1,6 @@
 import importlib.util
 from typing import Optional
 
-import pytest
-
 # Load function_call_provider module directly without triggering providers/__init__.py
 spec = importlib.util.spec_from_file_location(
     "function_call_provider", "src/providers/function_call_provider.py"

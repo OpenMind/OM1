@@ -3,8 +3,6 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import pytest
-
 # Load singleton module directly without triggering providers/__init__.py
 spec = importlib.util.spec_from_file_location(
     "singleton", "src/providers/singleton.py"
