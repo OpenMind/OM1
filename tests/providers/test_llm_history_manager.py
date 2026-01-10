@@ -1,11 +1,27 @@
 import asyncio
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import openai
 import pytest
 
 from providers.llm_history_manager import ChatMessage, LLMHistoryManager
+
+
+@pytest.fixture(autouse=True)
+def mock_history_persistence(request):
+    """Patch history persistence methods to prevent file I/O during tests.
+    
+    Tests marked with @pytest.mark.real_persistence will not be patched.
+    """
+    if "real_persistence" in [m.name for m in request.node.iter_markers()]:
+        yield
+        return
+    
+    with patch.object(LLMHistoryManager, "_load_history", return_value=None):
+        with patch.object(LLMHistoryManager, "_save_history", return_value=None):
+            yield
 
 
 @dataclass
@@ -358,3 +374,134 @@ async def test_update_history_tick_boundary():
     inputs_msg = history_manager.history[0]
     assert "Updated reading" in inputs_msg.content
     assert "Initial reading" not in inputs_msg.content
+
+
+# ============================================================
+# Tests for conversation history persistence (Issue #985)
+# ============================================================
+
+
+@pytest.fixture
+def temp_history_file(tmp_path):
+    """Create a temporary history file path for testing."""
+    return tmp_path / "test_history.json"
+
+
+@pytest.mark.real_persistence
+def test_save_history_creates_file(temp_history_file):
+    """Test that _save_history creates a JSON file with correct structure."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+
+    # Create manager without auto-loading
+    with patch.object(LLMHistoryManager, "_load_history"):
+        with patch.object(LLMHistoryManager, "_get_history_file_path", return_value=temp_history_file):
+            manager = LLMHistoryManager(config, client)
+
+    # Add some history
+    manager.history = [
+        ChatMessage(role="user", content="Hello"),
+        ChatMessage(role="assistant", content="Hi there!"),
+    ]
+    manager.frame_index = 5
+
+    # Manually set the path and save
+    manager._history_file_path = temp_history_file
+    manager._save_history()
+
+    # Verify file was created
+    assert temp_history_file.exists()
+
+    # Verify content
+    import json
+    with open(temp_history_file) as f:
+        data = json.load(f)
+
+    assert data["agent_name"] == "TestBot"
+    assert data["frame_index"] == 5
+    assert len(data["history"]) == 2
+    assert data["history"][0]["role"] == "user"
+    assert data["history"][0]["content"] == "Hello"
+
+
+@pytest.mark.real_persistence
+def test_load_history_restores_state(temp_history_file):
+    """Test that _load_history correctly restores history from disk."""
+    import json
+
+    # Create a history file
+    history_data = {
+        "agent_name": "TestBot",
+        "frame_index": 10,
+        "history": [
+            {"role": "user", "content": "Saved message 1"},
+            {"role": "assistant", "content": "Saved message 2"},
+        ],
+    }
+    with open(temp_history_file, "w") as f:
+        json.dump(history_data, f)
+
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+
+    # Create manager with mocked path
+    with patch.object(LLMHistoryManager, "_get_history_file_path", return_value=temp_history_file):
+        with patch.object(LLMHistoryManager, "_save_history"):
+            manager = LLMHistoryManager(config, client)
+
+    # Verify history was loaded
+    assert len(manager.history) == 2
+    assert manager.history[0].role == "user"
+    assert manager.history[0].content == "Saved message 1"
+    assert manager.frame_index == 10
+
+
+@pytest.mark.real_persistence
+def test_load_history_no_file():
+    """Test that _load_history handles missing file gracefully."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+
+    # Create manager with non-existent file path
+    with patch.object(LLMHistoryManager, "_get_history_file_path", return_value=Path("/nonexistent/path.json")):
+        with patch.object(LLMHistoryManager, "_save_history"):
+            manager = LLMHistoryManager(config, client)
+
+    # Should have empty history
+    assert len(manager.history) == 0
+    assert manager.frame_index == 0
+
+
+@pytest.mark.real_persistence
+def test_get_history_file_path():
+    """Test that history file path is constructed correctly."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "spot"
+
+    client = AsyncMock()
+
+    with patch.object(LLMHistoryManager, "_load_history"):
+        with patch.object(LLMHistoryManager, "_save_history"):
+            manager = LLMHistoryManager(config, client)
+
+    path = manager._get_history_file_path()
+
+    assert path.parent.name == ".om1"
+    assert "conversation_history" in path.name
+    assert "spot" in path.name
+    assert path.suffix == ".json"
+

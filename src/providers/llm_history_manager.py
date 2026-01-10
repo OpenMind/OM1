@@ -1,7 +1,9 @@
 import asyncio
 import functools
+import json
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 import openai
@@ -87,6 +89,75 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # history file path for persistence
+        self._history_file_path = self._get_history_file_path()
+
+        # load existing history from disk if available
+        self._load_history()
+
+    def _get_history_file_path(self) -> Path:
+        """
+        Get the path for the history file.
+
+        Returns
+        -------
+        Path
+            Path to the history file, defaults to ~/.om1/conversation_history_{agent_name}.json
+        """
+        om1_dir = Path.home() / ".om1"
+        om1_dir.mkdir(parents=True, exist_ok=True)
+        agent_suffix = f"_{self.agent_name}" if self.agent_name else ""
+        return om1_dir / f"conversation_history{agent_suffix}.json"
+
+    def _save_history(self) -> None:
+        """
+        Save the current conversation history to disk.
+
+        Writes the history buffer and frame index to a JSON file.
+        Errors are logged but don't interrupt the main flow.
+        """
+        try:
+            data = {
+                "agent_name": self.agent_name,
+                "frame_index": self.frame_index,
+                "history": [asdict(msg) for msg in self.history],
+            }
+            with open(self._history_file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            logging.debug(f"Saved conversation history to {self._history_file_path}")
+        except Exception as e:
+            logging.error(f"Failed to save conversation history: {e}")
+
+    def _load_history(self) -> None:
+        """
+        Load conversation history from disk if it exists.
+
+        Restores the history buffer and frame index from a JSON file.
+        Errors are logged but don't interrupt the main flow.
+        """
+        try:
+            if not self._history_file_path.exists():
+                logging.debug("No existing history file found, starting fresh")
+                return
+
+            with open(self._history_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Restore history
+            self.history = [
+                ChatMessage(role=msg["role"], content=msg["content"])
+                for msg in data.get("history", [])
+            ]
+            self.frame_index = data.get("frame_index", 0)
+
+            logging.info(
+                f"Loaded {len(self.history)} messages from {self._history_file_path}"
+            )
+        except Exception as e:
+            logging.error(f"Failed to load conversation history: {e}")
+            self.history = []
+            self.frame_index = 0
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -362,6 +433,9 @@ class LLMHistoryManager:
                         )
 
                 self.history_manager.frame_index += 1
+
+                # Persist history to disk after each update
+                self.history_manager._save_history()
 
                 return response
 
