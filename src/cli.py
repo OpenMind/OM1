@@ -403,7 +403,6 @@ def _validate_components(
         else:
             errors.append(error_msg)
         if verbose:
-
             traceback.print_exc()
 
     if warnings:

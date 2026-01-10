@@ -119,13 +119,12 @@ class FunctionGenerator:
 
             if param.default == inspect.Parameter.empty:
                 required.append(param_name)
-            else:
-                required.append(param_name)
-                if isinstance(param_type, str) and param.default == "":
-                    param_schema["description"] = (
-                        param_schema.get("description", f"Parameter {param_name}")
-                        + " (optional - can be empty string)"
-                    )
+            elif isinstance(param_type, str) and param.default == "":
+                # Empty string default means optional but can be empty
+                param_schema["description"] = (
+                    param_schema.get("description", f"Parameter {param_name}")
+                    + " (optional - can be empty string)"
+                )
 
         return {
             "type": "function",

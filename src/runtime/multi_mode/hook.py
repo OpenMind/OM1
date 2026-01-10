@@ -442,19 +442,24 @@ async def execute_lifecycle_hooks(
 
     all_successful = True
 
+    # Default timeout for hooks without explicit timeout (30 seconds)
+    DEFAULT_HOOK_TIMEOUT = 30.0
+
     for hook in relevant_hooks:
         try:
             handler = create_hook_handler(hook)
             if handler:
+                timeout = hook.timeout_seconds if hook.timeout_seconds else DEFAULT_HOOK_TIMEOUT
+                
                 if hook.async_execution:
-                    if hook.timeout_seconds:
-                        success = await asyncio.wait_for(
-                            handler.execute(context), timeout=hook.timeout_seconds
-                        )
-                    else:
-                        success = await handler.execute(context)
+                    success = await asyncio.wait_for(
+                        handler.execute(context), timeout=timeout
+                    )
                 else:
-                    success = await handler.execute(context)
+                    # For sync hooks, wrap in async with timeout
+                    success = await asyncio.wait_for(
+                        asyncio.to_thread(handler.execute, context), timeout=timeout
+                    )
 
                 if not success:
                     all_successful = False
@@ -472,8 +477,9 @@ async def execute_lifecycle_hooks(
                 all_successful = False
 
         except asyncio.TimeoutError:
+            timeout_used = hook.timeout_seconds if hook.timeout_seconds else DEFAULT_HOOK_TIMEOUT
             logging.error(
-                f"Lifecycle hook timed out after {hook.timeout_seconds} seconds"
+                f"Lifecycle hook timed out after {timeout_used} seconds"
             )
             all_successful = False
             if hook.on_failure == "abort":

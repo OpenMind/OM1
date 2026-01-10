@@ -2,6 +2,7 @@ import base64
 import glob
 import logging
 import os
+import subprocess
 import time
 from typing import Callable, List, Optional, Tuple
 
@@ -206,7 +207,22 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
 
             cmd = f"v4l2-ctl --device={device} --list-formats"
             try:
-                formats = os.popen(cmd).read()
+                result = subprocess.run(
+                    cmd.split(),
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+                formats = result.stdout
+                if result.returncode != 0:
+                    logger.warning(
+                        f"Command '{cmd}' returned non-zero exit code: {result.returncode}"
+                    )
+                    continue
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Command '{cmd}' timed out after 5 seconds")
+                continue
             except Exception as e:
                 logger.exception("Failed to run command '%s': %s", cmd, e)
                 continue
