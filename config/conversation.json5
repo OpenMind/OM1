@@ -41,10 +41,10 @@
     {
       type: "AgentTeleopsStatusBackground",
       config: {
-        machine_name: "conversation_agent",  // Custom machine name
-        battery_level: 85.0,  // Battery level percentage (0-100)
-        voltage: 12.6,        // Voltage (volts)
-        temperature: 28.5,    // Temperature (Celsius)
+        machine_name: "conversation_agent", // Custom machine name
+        battery_level: 85.0, // Battery level percentage (0-100)
+        voltage: 12.6, // Voltage (volts)
+        temperature: 28.5, // Temperature (Celsius)
       },
     },
   ],
