@@ -2,6 +2,12 @@ import logging
 
 import zenoh
 
+from zenoh_msgs.exceptions import (
+    ZenohConnectionError,
+    ZenohConfigurationError,
+    ZenohSessionError,
+)
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -38,16 +44,21 @@ def open_zenoh_session() -> zenoh.Session:
 
     Raises
     ------
-    Exception
-        If unable to open a Zenoh session.
+    ZenohConnectionError
+        If unable to establish a Zenoh connection after all attempts.
+    ZenohConfigurationError
+        If Zenoh configuration is invalid.
     """
     local_config = create_zenoh_config(network_discovery=False)
     try:
         session = zenoh.open(local_config)
         logging.info("Zenoh client opened without network discovery")
         return session
-    except Exception as e:
+    except zenoh.ZenohError as e:
         logging.warning(f"Local connection failed: {e}")
+        logging.info("Falling back to network discovery...")
+    except Exception as e:
+        logging.warning(f"Unexpected error during local connection: {e}")
         logging.info("Falling back to network discovery...")
 
     config = create_zenoh_config()
@@ -55,9 +66,14 @@ def open_zenoh_session() -> zenoh.Session:
         session = zenoh.open(config)
         logging.info("Zenoh client opened with network discovery")
         return session
+    except zenoh.ZenohError as e:
+        error_msg = f"Failed to open Zenoh session: {e}"
+        logging.error(error_msg)
+        raise ZenohConnectionError(error_msg) from e
     except Exception as e:
-        logging.error(f"Error opening Zenoh client: {e}")
-        raise Exception("Failed to open Zenoh session") from e
+        error_msg = f"Unexpected error opening Zenoh session: {e}"
+        logging.error(error_msg)
+        raise ZenohConnectionError(error_msg) from e
 
 
 if __name__ == "__main__":

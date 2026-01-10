@@ -113,6 +113,11 @@ class ModeCortexRuntime:
         self._pending_mode_transition: Optional[str] = None
         self._pending_transition_reason: Optional[str] = None
 
+        # Track previous mode for fallback recovery
+        self._previous_mode: Optional[str] = None
+        self._transition_failure_count: int = 0
+        self._max_transition_failures: int = 3
+
     async def _initialize_mode(self, mode_name: str):
         """
         Initialize the runtime with a specific mode.
@@ -181,6 +186,9 @@ class ModeCortexRuntime:
     async def _on_mode_transition(self, from_mode: str, to_mode: str):
         """
         Handle mode transitions by gracefully stopping current components and starting new ones for the target mode.
+        
+        Implements fallback/recovery mechanism: if transition fails, attempts to restore
+        the previous mode. If that also fails, logs error and keeps system in a safe state.
 
         Parameters
         ----------
@@ -190,6 +198,9 @@ class ModeCortexRuntime:
             The name of the mode being transitioned to
         """
         logging.info(f"Handling mode transition: {from_mode} -> {to_mode}")
+
+        transition_error: Optional[Exception] = None
+        original_from_mode = from_mode
 
         try:
             # Set reloading flag
@@ -204,14 +215,99 @@ class ModeCortexRuntime:
             # Start new orchestrators
             await self._start_orchestrators()
 
+            # Success - reset failure counter and update previous mode
+            self._transition_failure_count = 0
+            self._previous_mode = from_mode
             logging.info(f"Successfully transitioned to mode: {to_mode}")
 
         except Exception as e:
-            logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
+            transition_error = e
+            self._transition_failure_count += 1
+            logging.error(
+                f"Error during mode transition {from_mode} -> {to_mode}: {e}",
+                exc_info=True,
+            )
+
+            # Attempt fallback to previous mode if available
+            if self._previous_mode and self._previous_mode != to_mode:
+                logging.warning(
+                    f"Attempting fallback recovery to previous mode: {self._previous_mode}"
+                )
+                try:
+                    await self._attempt_fallback_recovery(
+                        failed_from_mode=from_mode,
+                        failed_to_mode=to_mode,
+                        fallback_mode=self._previous_mode,
+                    )
+                    return  # Successfully recovered
+                except Exception as fallback_error:
+                    logging.error(
+                        f"Fallback recovery to {self._previous_mode} also failed: {fallback_error}",
+                        exc_info=True,
+                    )
+
+            # If we've exceeded max failures, log critical error but don't crash
+            if self._transition_failure_count >= self._max_transition_failures:
+                logging.critical(
+                    f"Mode transition has failed {self._transition_failure_count} times. "
+                    f"System will remain in current state. Last error: {transition_error}"
+                )
+                # Don't raise - keep system running in current state
+                return
+
+            # Re-raise if we haven't exceeded max failures
             raise
+
         finally:
             self._is_reloading = False
+
+    async def _attempt_fallback_recovery(
+        self, failed_from_mode: str, failed_to_mode: str, fallback_mode: str
+    ) -> None:
+        """
+        Attempt to recover from a failed mode transition by restoring a previous working mode.
+
+        Parameters
+        ----------
+        failed_from_mode : str
+            The mode we were transitioning from when failure occurred
+        failed_to_mode : str
+            The mode we were trying to transition to when failure occurred
+        fallback_mode : str
+            The mode to fall back to (typically the previous working mode)
+
+        Raises
+        ------
+        Exception
+            If fallback recovery also fails
+        """
+        logging.info(
+            f"Attempting fallback recovery: {failed_to_mode} -> {fallback_mode}"
+        )
+
+        try:
+            # Ensure we're in a clean state
+            await self._stop_current_orchestrators()
+
+            # Initialize fallback mode
+            await self._initialize_mode(fallback_mode)
+
+            # Start orchestrators for fallback mode
+            await self._start_orchestrators()
+
+            # Update mode manager to reflect fallback
+            self.mode_manager.current_mode = fallback_mode
+
+            logging.info(
+                f"Successfully recovered to fallback mode: {fallback_mode}. "
+                f"Original transition {failed_from_mode} -> {failed_to_mode} was unsuccessful."
+            )
+
+        except Exception as e:
+            logging.error(
+                f"Fallback recovery to {fallback_mode} failed: {e}", exc_info=True
+            )
+            raise
 
     async def _stop_current_orchestrators(self) -> None:
         """

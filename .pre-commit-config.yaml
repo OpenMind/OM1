@@ -38,3 +38,13 @@ repos:
     hooks:
       - id: typos
         exclude: ^(src/unitree|src/ubtech)/
+
+  - repo: local
+    hooks:
+      - id: lint-json5
+        name: Lint JSON5 files
+        entry: uv run python scripts/lint_json5.py
+        language: system
+        types: [text]
+        files: \.json5$
+        pass_filenames: false

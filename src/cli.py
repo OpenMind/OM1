@@ -268,7 +268,6 @@ def validate_config(
             print("Error: Unexpected validation error")
             print(f"   {e}")
             if verbose:
-
                 traceback.print_exc()
         raise typer.Exit(1)
 
@@ -287,7 +286,6 @@ def validate_config(
             print("Error: Unexpected validation error")
             print(f"   {e}")
             if verbose:
-
                 traceback.print_exc()
         raise typer.Exit(1)
 
