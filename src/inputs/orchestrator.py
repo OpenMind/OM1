@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import Sequence
 
 from inputs.base import Sensor
@@ -30,11 +31,20 @@ class InputOrchestrator:
         Start listening to all input sources concurrently.
 
         Creates and manages async tasks for each input source.
+        If one input fails, other inputs continue operating.
         """
         input_tasks = [
-            asyncio.create_task(self._listen_to_input(input)) for input in self.inputs
+            asyncio.create_task(
+                self._listen_to_input(input), name=f"input_{type(input).__name__}"
+            )
+            for input in self.inputs
         ]
-        await asyncio.gather(*input_tasks)
+        results = await asyncio.gather(*input_tasks, return_exceptions=True)
+
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                input_name = type(self.inputs[i]).__name__
+                logging.error(f"Input {input_name} failed with error: {result}")
 
     async def _listen_to_input(self, input: Sensor) -> None:
         """
@@ -45,5 +55,15 @@ class InputOrchestrator:
         input : Sensor
             Input source to listen to
         """
-        async for event in input.listen():
-            await input.raw_to_text(event)
+        input_name = type(input).__name__
+        try:
+            async for event in input.listen():
+                try:
+                    await input.raw_to_text(event)
+                except Exception as e:
+                    logging.error(
+                        f"Error processing event in {input_name}: {e}", exc_info=True
+                    )
+        except Exception as e:
+            logging.error(f"Input {input_name} listener failed: {e}", exc_info=True)
+            raise
