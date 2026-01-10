@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from queue import Empty, Queue
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from uuid import uuid4
 
 from pydantic import Field
@@ -70,13 +70,11 @@ class GoogleASRSensorConfig(SensorConfig):
         default=None, description="Microphone Device ID"
     )
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
-    language: str = Field(
+    language: Union[str, List[str]] = Field(
         default="english",
-        description="Language for speech recognition. Use 'auto' for automatic detection",
-    )
-    alternative_languages: Optional[List[str]] = Field(
-        default=None,
-        description="Alternative languages for multi-language detection",
+        description="Language for speech recognition. Can be a single language string "
+        "(e.g., 'english', 'chinese'), a list of languages (e.g., ['english', 'chinese']), "
+        "or 'auto' for automatic detection with default alternatives.",
     )
     remote_input: bool = Field(default=False, description="Whether to use remote input")
     enable_tts_interrupt: bool = Field(
@@ -125,39 +123,58 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
 
-        language = self.config.language.strip().lower()
-        alternative_languages = self.config.alternative_languages
+        # Handle language configuration (can be string or list)
+        language_config = self.config.language
+        language_code: str
+        alternative_language_codes: List[str] = []
 
-        # Handle automatic language detection
-        if language == "auto":
-            # Use English as primary with common alternatives
-            language_code = "en-US"
-            if alternative_languages is None:
-                alternative_language_codes = ["cmn-Hans-CN", "ja-JP", "es-ES", "fr-FR"]
+        if isinstance(language_config, list):
+            # List of languages: first is primary, rest are alternatives
+            if len(language_config) == 0:
+                logging.warning("Empty language list provided, defaulting to English")
+                language_code = "en-US"
             else:
-                alternative_language_codes = self._get_alternative_language_codes(
-                    alternative_languages
-                )
-            logging.info(
-                "Auto language detection enabled. Primary: %s, Alternatives: %s",
-                language_code,
-                alternative_language_codes,
-            )
-        elif language not in LANGUAGE_CODE_MAP:
-            logging.error(
-                "Language %s not supported. Supported languages: %s. Defaulting to English",
-                language,
-                list(LANGUAGE_CODE_MAP.keys()),
-            )
-            language_code = "en-US"
-            alternative_language_codes = self._get_alternative_language_codes(
-                alternative_languages
-            )
+                primary_lang = language_config[0].strip().lower()
+                if primary_lang in LANGUAGE_CODE_MAP:
+                    language_code = LANGUAGE_CODE_MAP[primary_lang]
+                else:
+                    logging.warning(
+                        "Primary language '%s' not supported, defaulting to English",
+                        primary_lang,
+                    )
+                    language_code = "en-US"
+
+                # Process alternative languages
+                for lang in language_config[1:]:
+                    lang_lower = lang.strip().lower()
+                    if lang_lower in LANGUAGE_CODE_MAP:
+                        alternative_language_codes.append(LANGUAGE_CODE_MAP[lang_lower])
+                    else:
+                        logging.warning(
+                            "Alternative language '%s' not supported, skipping", lang
+                        )
         else:
-            language_code = LANGUAGE_CODE_MAP[language]
-            alternative_language_codes = self._get_alternative_language_codes(
-                alternative_languages
-            )
+            # Single string language
+            language = language_config.strip().lower()
+
+            if language == "auto":
+                # Automatic detection with default alternatives
+                language_code = "en-US"
+                alternative_language_codes = ["cmn-Hans-CN", "ja-JP", "es-ES", "fr-FR"]
+                logging.info(
+                    "Auto language detection enabled. Primary: %s, Alternatives: %s",
+                    language_code,
+                    alternative_language_codes,
+                )
+            elif language not in LANGUAGE_CODE_MAP:
+                logging.error(
+                    "Language '%s' not supported. Supported languages: %s. Defaulting to English",
+                    language,
+                    list(LANGUAGE_CODE_MAP.keys()),
+                )
+                language_code = "en-US"
+            else:
+                language_code = LANGUAGE_CODE_MAP[language]
 
         if alternative_language_codes:
             logging.info(
@@ -205,36 +222,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             logging.warning(f"Could not initialize Zenoh for ASR broadcast: {e}")
             self.session = None
             self.asr_publisher = None
-
-    def _get_alternative_language_codes(
-        self, languages: Optional[List[str]]
-    ) -> List[str]:
-        """
-        Convert language names to language codes for alternative languages.
-
-        Parameters
-        ----------
-        languages : Optional[List[str]]
-            List of language names (e.g., ["chinese", "japanese"])
-
-        Returns
-        -------
-        List[str]
-            List of language codes (e.g., ["cmn-Hans-CN", "ja-JP"])
-        """
-        if not languages:
-            return []
-
-        codes = []
-        for lang in languages:
-            lang_lower = lang.strip().lower()
-            if lang_lower in LANGUAGE_CODE_MAP:
-                codes.append(LANGUAGE_CODE_MAP[lang_lower])
-            else:
-                logging.warning(
-                    "Alternative language '%s' not supported, skipping", lang
-                )
-        return codes
 
     def _handle_asr_message(self, raw_message: str):
         """

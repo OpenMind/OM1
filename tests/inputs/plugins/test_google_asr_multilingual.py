@@ -163,3 +163,141 @@ def test_language_map_has_no_duplicates():
     """Test that no two languages map to the same code."""
     codes = list(LANGUAGE_CODE_MAP.values())
     assert len(codes) == len(set(codes))
+
+
+# Tests for automatic language detection
+
+
+def test_init_with_auto_language_detection(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation, caplog
+):
+    """Test ASR initialization with 'auto' language detection."""
+    config = GoogleASRSensorConfig(api_key="test_key", language="auto")
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    # Auto mode uses English as primary
+    assert call_args[1]["language_code"] == "en-US"
+    # Auto mode includes default alternatives
+    assert call_args[1]["alternative_language_codes"] == [
+        "cmn-Hans-CN",
+        "ja-JP",
+        "es-ES",
+        "fr-FR",
+    ]
+    assert "Auto language detection enabled" in caplog.text
+
+
+def test_init_with_auto_case_insensitive(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that 'AUTO' works case-insensitively."""
+    config = GoogleASRSensorConfig(api_key="test_key", language="AUTO")
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["language_code"] == "en-US"
+    assert len(call_args[1]["alternative_language_codes"]) > 0
+
+
+# Tests for language list configuration
+
+
+def test_init_with_language_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test ASR initialization with a list of languages."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key", language=["chinese", "english", "japanese"]
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    # First language is primary
+    assert call_args[1]["language_code"] == "cmn-Hans-CN"
+    # Rest are alternatives
+    assert call_args[1]["alternative_language_codes"] == ["en-US", "ja-JP"]
+
+
+def test_init_with_single_language_in_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test ASR initialization with a single language in list format."""
+    config = GoogleASRSensorConfig(api_key="test_key", language=["korean"])
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["language_code"] == "ko-KR"
+    assert call_args[1]["alternative_language_codes"] == []
+
+
+def test_init_with_empty_language_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation, caplog
+):
+    """Test ASR initialization with empty language list defaults to English."""
+    config = GoogleASRSensorConfig(api_key="test_key", language=[])
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["language_code"] == "en-US"
+    assert "Empty language list" in caplog.text
+
+
+def test_init_with_unsupported_primary_in_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation, caplog
+):
+    """Test that unsupported primary language in list defaults to English."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key", language=["klingon", "chinese"]
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["language_code"] == "en-US"
+    assert call_args[1]["alternative_language_codes"] == ["cmn-Hans-CN"]
+    assert "not supported" in caplog.text
+
+
+def test_init_with_unsupported_alternative_in_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation, caplog
+):
+    """Test that unsupported alternative languages are skipped."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key", language=["english", "klingon", "chinese"]
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["language_code"] == "en-US"
+    # klingon should be skipped
+    assert call_args[1]["alternative_language_codes"] == ["cmn-Hans-CN"]
+    assert "not supported" in caplog.text
+
+
+def test_init_with_language_list_case_insensitive(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that language list handles case-insensitivity."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key", language=["CHINESE", "English", "JAPANESE"]
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["language_code"] == "cmn-Hans-CN"
+    assert call_args[1]["alternative_language_codes"] == ["en-US", "ja-JP"]
+
+
+def test_init_with_language_list_whitespace(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that language list handles whitespace in entries."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key", language=["  chinese  ", " english "]
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["language_code"] == "cmn-Hans-CN"
+    assert call_args[1]["alternative_language_codes"] == ["en-US"]
+
