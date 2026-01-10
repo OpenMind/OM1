@@ -51,8 +51,7 @@ def _parse_qwen_tool_calls(text: str) -> list:
                         },
                     }
                 )
-        except (json.JSONDecodeError, TypeError) as e:
-            logging.debug("Failed to parse Qwen tool call block %d: %s", i, e)
+        except Exception:
             continue
     return tool_calls
 
