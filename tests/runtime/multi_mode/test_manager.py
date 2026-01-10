@@ -254,17 +254,20 @@ class TestModeManager:
 
         await mode_manager._notify_transition_callbacks("from", "to")
 
+    @pytest.mark.asyncio
     async def test_check_time_based_transitions_no_timeout(self, mode_manager):
         """Test time-based transitions when current mode has no timeout."""
         result = await mode_manager.check_time_based_transitions()
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_check_time_based_transitions_within_timeout(self, mode_manager):
         """Test time-based transitions within timeout period."""
         mode_manager.config.modes["default"].timeout_seconds = 3600.0
         result = await mode_manager.check_time_based_transitions()
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_check_time_based_transitions_exceeded_timeout(self, mode_manager):
         """Test time-based transitions when timeout is exceeded."""
         mode_manager.state.current_mode = "advanced"
