@@ -1,7 +1,11 @@
 import asyncio
 import functools
+import json
 import logging
-from dataclasses import dataclass
+import os
+import tempfile
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 import openai
@@ -87,6 +91,149 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # persistence settings
+        self._persist_history = getattr(config, "persist_history", False)
+        self._history_storage_path = self._get_history_storage_path()
+
+        # load existing history from disk if persistence is enabled
+        if self._persist_history:
+            self._load_history()
+
+    def _get_history_storage_path(self) -> Path:
+        """
+        Get the path for the history storage file.
+
+        Returns
+        -------
+        Path
+            Path to the history JSON file. Uses custom path from config if provided,
+            otherwise defaults to ~/.om1/history/{agent_name}.json
+        """
+        custom_path = getattr(self.config, "history_storage_path", None)
+        if custom_path:
+            path = Path(custom_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            return path
+
+        base_dir = Path.home() / ".om1" / "history"
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        safe_agent_name = "".join(
+            c if c.isalnum() or c in "-_" else "_" for c in (self.agent_name or "agent")
+        )
+        return base_dir / f"{safe_agent_name}.json"
+
+    def _save_history(self) -> None:
+        """
+        Save the current conversation history to disk atomically.
+
+        Uses atomic write (temp file + rename) to prevent corruption on crash.
+        Errors are logged but don't interrupt the main flow.
+        """
+        if not self._persist_history:
+            return
+
+        try:
+            data = {
+                "version": 1,
+                "agent_name": self.agent_name,
+                "frame_index": self.frame_index,
+                "history": [asdict(msg) for msg in self.history],
+            }
+
+            # Atomic write: write to temp file, then rename
+            dir_path = self._history_storage_path.parent
+            fd, temp_path = tempfile.mkstemp(
+                suffix=".tmp", prefix="history_", dir=str(dir_path)
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+
+                # Atomic rename (POSIX) / replace (Windows)
+                os.replace(temp_path, self._history_storage_path)
+                logging.debug(f"Saved conversation history to {self._history_storage_path}")
+            except Exception:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
+
+        except Exception as e:
+            logging.error(f"Failed to save conversation history: {e}")
+
+    def _load_history(self) -> None:
+        """
+        Load conversation history from disk if it exists.
+
+        Restores the history buffer and frame index from a JSON file.
+        Handles corrupted files gracefully by starting fresh.
+        """
+        try:
+            if not self._history_storage_path.exists():
+                logging.debug(
+                    f"No existing history file at {self._history_storage_path}, starting fresh"
+                )
+                return
+
+            with open(self._history_storage_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Validate data structure
+            if not isinstance(data, dict):
+                logging.warning("Invalid history file format, starting fresh")
+                return
+
+            # Check version for future compatibility
+            version = data.get("version", 1)
+            if version > 1:
+                logging.warning(
+                    f"History file version {version} is newer than supported, "
+                    "some data may be lost"
+                )
+
+            # Restore history
+            history_data = data.get("history", [])
+            self.history = [
+                ChatMessage(role=msg.get("role", "user"), content=msg.get("content", ""))
+                for msg in history_data
+                if isinstance(msg, dict)
+            ]
+            self.frame_index = data.get("frame_index", 0)
+
+            logging.info(
+                f"Loaded {len(self.history)} messages from {self._history_storage_path}"
+            )
+
+        except json.JSONDecodeError as e:
+            logging.error(f"Corrupted history file, starting fresh: {e}")
+            self.history = []
+            self.frame_index = 0
+        except Exception as e:
+            logging.error(f"Failed to load conversation history: {e}")
+            self.history = []
+            self.frame_index = 0
+
+    def clear_history(self, delete_file: bool = False) -> None:
+        """
+        Clear the in-memory history and optionally delete the persisted file.
+
+        Parameters
+        ----------
+        delete_file : bool, optional
+            If True, also deletes the history file from disk. Defaults to False.
+        """
+        self.history = []
+        self.frame_index = 0
+
+        if delete_file and self._persist_history:
+            try:
+                if self._history_storage_path.exists():
+                    os.unlink(self._history_storage_path)
+                    logging.info(f"Deleted history file {self._history_storage_path}")
+            except Exception as e:
+                logging.error(f"Failed to delete history file: {e}")
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -379,6 +526,9 @@ class LLMHistoryManager:
                         self.history_manager.history.pop()
 
                 self.history_manager.frame_index += 1
+
+                # Persist history to disk after each update
+                self.history_manager._save_history()
 
                 return response
 

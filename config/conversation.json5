@@ -19,6 +19,7 @@
     config: {
       agent_name: "Spot",
       history_length: 10,
+      persist_history: true,
     },
   },
   agent_actions: [

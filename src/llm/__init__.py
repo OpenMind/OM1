@@ -51,6 +51,14 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+    persist_history: T.Optional[bool] = Field(
+        default=False,
+        description="Whether to persist conversation history to disk for crash recovery",
+    )
+    history_storage_path: T.Optional[str] = Field(
+        default=None,
+        description="Custom path for history storage. Defaults to ~/.om1/history/",
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
