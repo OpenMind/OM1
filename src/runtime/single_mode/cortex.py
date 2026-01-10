@@ -83,6 +83,7 @@ class CortexRuntime:
         self.cortex_loop_task: Optional[asyncio.Task] = None
 
         self._is_reloading = False
+        self._reload_lock = asyncio.Lock()  # Lock to prevent concurrent reloads
 
         if self.hot_reload:
             self.config_path = self._create_runtime_config_file()
@@ -246,39 +247,43 @@ class CortexRuntime:
     async def _reload_config(self) -> None:
         """
         Reload the configuration and restart all components.
+        Uses a lock to prevent concurrent reloads and ensure data consistency.
         """
-        try:
-            logging.info(f"Reloading configuration: {self.config_name}")
-            self._is_reloading = True
+        # Use lock to prevent concurrent reloads
+        async with self._reload_lock:
+            try:
+                logging.info(f"Reloading configuration: {self.config_name}")
+                self._is_reloading = True
 
-            if not self.config_name:
-                logging.error("No config name available for reload")
-                return
+                if not self.config_name:
+                    logging.error("No config name available for reload")
+                    return
 
-            new_config = load_config(
-                self.config_name, config_source_path=self.config_path
-            )
+                new_config = load_config(
+                    self.config_name, config_source_path=self.config_path
+                )
 
-            await self._stop_current_orchestrators()
+                await self._stop_current_orchestrators()
 
-            self.config = new_config
+                # Atomically update all configuration-dependent components
+                self.config = new_config
 
-            self.fuser = Fuser(new_config)
-            self.action_orchestrator = ActionOrchestrator(new_config)
-            self.simulator_orchestrator = SimulatorOrchestrator(new_config)
-            self.background_orchestrator = BackgroundOrchestrator(new_config)
+                self.fuser = Fuser(new_config)
+                self.action_orchestrator = ActionOrchestrator(new_config)
+                self.simulator_orchestrator = SimulatorOrchestrator(new_config)
+                self.background_orchestrator = BackgroundOrchestrator(new_config)
 
-            await self._start_orchestrators()
+                await self._start_orchestrators()
 
-            self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
+                self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
 
-            logging.info("Configuration reloaded successfully")
+                logging.info("Configuration reloaded successfully")
 
-        except Exception as e:
-            logging.error(f"Failed to reload configuration: {e}")
-            logging.error("Continuing with previous configuration")
-        finally:
-            self._is_reloading = False
+            except Exception as e:
+                logging.error(f"Failed to reload configuration: {e}")
+                logging.error("Continuing with previous configuration")
+            finally:
+                self._is_reloading = False
 
     async def _stop_current_orchestrators(self) -> None:
         """
@@ -482,34 +487,49 @@ class CortexRuntime:
         -------
         None
         """
-        try:
-            if self._is_reloading:
-                logging.debug("Skipping tick during config reload")
-                return
+        # Use lock to ensure we don't process during reload
+        async with self._reload_lock:
+            try:
+                if self._is_reloading:
+                    logging.debug("Skipping tick during config reload")
+                    return
 
-            # Increment the tick counter at the start of each cycle
-            tick_num = self.io_provider.increment_tick()
-            logging.debug(f"Processing tick #{tick_num}")
+                # Increment the tick counter at the start of each cycle
+                tick_num = self.io_provider.increment_tick()
+                logging.debug(f"Processing tick #{tick_num}")
 
-            # collect all the latest inputs
-            finished_promises, _ = await self.action_orchestrator.flush_promises()
+                # collect all the latest inputs
+                finished_promises, _ = await self.action_orchestrator.flush_promises()
 
-            # combine those inputs into a suitable prompt
-            prompt = self.fuser.fuse(self.config.agent_inputs, finished_promises)
-            if prompt is None:
-                logging.debug("No prompt to fuse")
-                return
+                # combine those inputs into a suitable prompt
+                prompt = self.fuser.fuse(self.config.agent_inputs, finished_promises)
+                if prompt is None:
+                    logging.debug("No prompt to fuse")
+                    return
 
-            # if there is a prompt, send to the AIs
-            output = await self.config.cortex_llm.ask(prompt)
-            if output is None:
-                logging.debug("No output from LLM")
-                return
+                # if there is a prompt, send to the AIs
+                output = await self.config.cortex_llm.ask(prompt)
+                if output is None:
+                    logging.debug("No output from LLM")
+                    return
 
-            # Trigger the simulators
-            await self.simulator_orchestrator.promise(output.actions)
+                # Trigger the simulators
+                await self.simulator_orchestrator.promise(output.actions)
 
-            # Trigger the actions
-            await self.action_orchestrator.promise(output.actions)
-        except Exception as error:
-            logging.error(f"Error in cortex tick: {error}")
+                # Trigger the actions
+                await self.action_orchestrator.promise(output.actions)
+            except asyncio.CancelledError:
+                # Re-raise cancellation to allow proper cleanup
+                raise
+            except (ConnectionError, TimeoutError) as e:
+                logging.error(f"Network error in cortex tick: {e}")
+                # Network errors are often transient, continue processing
+            except ValueError as e:
+                logging.error(f"Configuration error in cortex tick: {e}")
+                # Configuration errors may require stopping the system
+                # For now, log and continue, but this could be enhanced
+            except Exception as error:
+                logging.error(
+                    f"Unexpected error in cortex tick: {error}",
+                    exc_info=True  # Include full stack trace
+                )

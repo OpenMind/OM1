@@ -191,6 +191,15 @@ class ModeCortexRuntime:
         """
         logging.info(f"Handling mode transition: {from_mode} -> {to_mode}")
 
+        # Store the previous mode state for potential rollback
+        previous_mode = from_mode
+        previous_config = self.current_config
+        previous_fuser = self.fuser
+        previous_action_orchestrator = self.action_orchestrator
+        previous_simulator_orchestrator = self.simulator_orchestrator
+        previous_background_orchestrator = self.background_orchestrator
+        previous_input_orchestrator = self.input_orchestrator
+
         try:
             # Set reloading flag
             self._is_reloading = True
@@ -208,7 +217,39 @@ class ModeCortexRuntime:
 
         except Exception as e:
             logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
+            
+            # Attempt to recover by reverting to the previous mode
+            if previous_mode and previous_mode in self.mode_config.modes:
+                try:
+                    logging.warning(f"Attempting to revert to previous mode: {previous_mode}")
+                    
+                    # Restore previous state
+                    self.current_config = previous_config
+                    self.fuser = previous_fuser
+                    self.action_orchestrator = previous_action_orchestrator
+                    self.simulator_orchestrator = previous_simulator_orchestrator
+                    self.background_orchestrator = previous_background_orchestrator
+                    self.input_orchestrator = previous_input_orchestrator
+                    
+                    # Re-initialize the previous mode
+                    await self._initialize_mode(previous_mode)
+                    
+                    # Restart orchestrators
+                    await self._start_orchestrators()
+                    
+                    logging.info(f"Successfully reverted to mode: {previous_mode}")
+                    
+                except Exception as revert_error:
+                    logging.critical(
+                        f"Failed to revert to previous mode {previous_mode}: {revert_error}. "
+                        "System may be in an inconsistent state."
+                    )
+                    # System is in a bad state, but we'll still raise the original error
+            else:
+                logging.warning(
+                    f"Cannot revert: previous mode '{previous_mode}' not available or invalid"
+                )
+            
             raise
         finally:
             self._is_reloading = False
@@ -243,40 +284,42 @@ class ModeCortexRuntime:
             logging.debug("Cancelling background task")
             tasks_to_cancel["background"] = self.background_task
 
-        # Cancel all tasks
+        # Cancel all tasks atomically to avoid race conditions
         for name, task in tasks_to_cancel.items():
-            task.cancel()
-            logging.debug(f"Cancelled task: {name}")
+            if not task.done():  # Double-check before cancelling
+                task.cancel()
+                logging.debug(f"Cancelled task: {name}")
 
         # Wait for cancellations to complete with timeout
         if tasks_to_cancel:
             try:
-                done, pending = await asyncio.wait(
-                    tasks_to_cancel.values(),
-                    timeout=1.0,
-                    return_when=asyncio.ALL_COMPLETED,
+                # Use gather with return_exceptions to handle all cancellation results
+                results = await asyncio.gather(
+                    *tasks_to_cancel.values(),
+                    return_exceptions=True,
                 )
-                if pending:
-                    pending_names = [
-                        name
-                        for name, task in tasks_to_cancel.items()
-                        if task in pending
-                    ]
-                    completed_names = [
-                        name for name, task in tasks_to_cancel.items() if task in done
-                    ]
-
-                    logging.warning(
-                        f"Abandoning {len(pending)} unresponsive tasks: {pending_names}"
-                    )
-                    logging.info(
-                        f"Successfully cancelled {len(done)} tasks: {completed_names}"
-                    )
-                    logging.info(
-                        "Continuing with reload without waiting for unresponsive tasks"
-                    )
+                
+                # Check results and log any issues
+                cancelled_count = 0
+                error_count = 0
+                for name, result in zip(tasks_to_cancel.keys(), results):
+                    if isinstance(result, asyncio.CancelledError):
+                        cancelled_count += 1
+                    elif isinstance(result, Exception):
+                        error_count += 1
+                        logging.warning(f"Task {name} raised exception during cancellation: {result}")
+                
+                if cancelled_count == len(tasks_to_cancel):
+                    logging.info(f"All {cancelled_count} tasks cancelled successfully!")
                 else:
-                    logging.info(f"All {len(done)} tasks cancelled successfully!")
+                    logging.warning(
+                        f"Cancelled {cancelled_count}/{len(tasks_to_cancel)} tasks. "
+                        f"Errors: {error_count}"
+                    )
+                    
+            except Exception as e:
+                logging.error(f"Error waiting for task cancellation: {e}")
+                # Continue anyway - tasks are already cancelled
                     for name, task in tasks_to_cancel.items():
                         try:
                             task.result()
@@ -507,45 +550,60 @@ class ModeCortexRuntime:
             logging.debug("Skipping tick during config reload")
             return
 
-        tick_num = self.io_provider.increment_tick()
-        logging.debug(f"Processing tick #{tick_num}")
+        try:
+            tick_num = self.io_provider.increment_tick()
+            logging.debug(f"Processing tick #{tick_num}")
 
-        finished_promises, _ = await self.action_orchestrator.flush_promises()
+            finished_promises, _ = await self.action_orchestrator.flush_promises()
 
-        prompt = self.fuser.fuse(self.current_config.agent_inputs, finished_promises)
-        if prompt is None:
-            logging.debug("No prompt to fuse")
-            return
+            prompt = self.fuser.fuse(self.current_config.agent_inputs, finished_promises)
+            if prompt is None:
+                logging.debug("No prompt to fuse")
+                return
 
-        with self.io_provider.mode_transition_input():
-            last_input = self.io_provider.get_mode_transition_input()
+            with self.io_provider.mode_transition_input():
+                last_input = self.io_provider.get_mode_transition_input()
 
-        transition_result = await self.mode_manager.process_tick(last_input)
-        if transition_result:
-            new_mode, transition_reason = transition_result
+            transition_result = await self.mode_manager.process_tick(last_input)
+            if transition_result:
+                new_mode, transition_reason = transition_result
 
-            # Schedule the transition asynchronously
-            self._pending_mode_transition = new_mode
-            self._pending_transition_reason = transition_reason
-            self._mode_transition_event.set()
-            logging.info(
-                f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
+                # Schedule the transition asynchronously
+                self._pending_mode_transition = new_mode
+                self._pending_transition_reason = transition_reason
+                self._mode_transition_event.set()
+                logging.info(
+                    f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
+                )
+                return
+
+            output = await self.current_config.cortex_llm.ask(prompt)
+            if output is None:
+                logging.debug("No output from LLM")
+                return
+
+            if self._is_reloading:
+                logging.debug("Skipping tick during config reload")
+                return
+
+            if self.simulator_orchestrator:
+                await self.simulator_orchestrator.promise(output.actions)
+
+            await self.action_orchestrator.promise(output.actions)
+        except asyncio.CancelledError:
+            # Re-raise cancellation to allow proper cleanup
+            raise
+        except (ConnectionError, TimeoutError) as e:
+            logging.error(f"Network error in mode-aware cortex tick: {e}")
+            # Network errors are often transient, continue processing
+        except ValueError as e:
+            logging.error(f"Configuration error in mode-aware cortex tick: {e}")
+            # Configuration errors may require stopping the system
+        except Exception as error:
+            logging.error(
+                f"Unexpected error in mode-aware cortex tick: {error}",
+                exc_info=True  # Include full stack trace
             )
-            return
-
-        output = await self.current_config.cortex_llm.ask(prompt)
-        if output is None:
-            logging.debug("No output from LLM")
-            return
-
-        if self._is_reloading:
-            logging.debug("Skipping tick during config reload")
-            return
-
-        if self.simulator_orchestrator:
-            await self.simulator_orchestrator.promise(output.actions)
-
-        await self.action_orchestrator.promise(output.actions)
 
     def get_mode_info(self) -> dict:
         """
