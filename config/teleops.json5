@@ -1,0 +1,22 @@
+{
+  "name": "teleops",
+  "version": "v1.0.1",
+  "description": "Teleoperation mode with status reporting",
+  "cortex_llm": {
+    "plugin": {
+      "name": "OpenAILLM",
+      "type": "OpenAILLM",
+      "model": "gpt-4o",
+      "api_key": "${OM_API_KEY}"
+    }
+  },
+  "inputs": [],
+  "outputs": [],
+  "backgrounds": [
+    {
+      "name": "StatusReporter",
+      "type": "AgentTeleopsStatusBackground",
+      "enabled": true
+    }
+  ]
+}
