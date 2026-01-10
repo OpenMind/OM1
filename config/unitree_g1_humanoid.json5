@@ -1,5 +1,5 @@
 {
-  "version": "v1.0.1",
+  version: "v1.0.1",
   hertz: 10,
   name: "iris",
   unitree_ethernet: "enP2p1s0",
@@ -12,10 +12,10 @@
       type: "GoogleASRRTSPInput",
     },
     {
-      type: "UnitreeG1LocationsInput"
+      type: "UnitreeG1LocationsInput",
     },
     {
-      type: "Odom"
+      type: "Odom",
     },
     {
       type: "UnitreeG1Basic",
@@ -38,7 +38,7 @@
       connector: "elevenlabs_tts",
       config: {
         voice_id: "TbMNBJ27fH2U0VgpSNko",
-        "silence_rate": 20,
+        silence_rate: 20,
       },
     },
     {
@@ -49,32 +49,32 @@
     {
       name: "remember_location",
       llm_label: "remember_location",
-      "connector": "unitree_g1_location",
+      connector: "unitree_g1_location",
     },
     {
       name: "navigate_location",
       llm_label: "navigate_location",
-      "connector": "unitree_g1_nav",
+      connector: "unitree_g1_nav",
     },
     {
       name: "arm_g1",
       llm_label: "arm_movement",
       connector: "unitree_sdk",
-    }
+    },
   ],
-  "backgrounds": [
+  backgrounds: [
     {
       type: "ElevenLabsTTS",
       config: {
         voice_id: "TbMNBJ27fH2U0VgpSNko",
         silence_rate: 6,
-    }},
+      },
+    },
     {
       type: "UnitreeG1Navigation",
     },
     {
       type: "UnitreeG1Locations",
-    }
-
-    ]
+    },
+  ],
 }

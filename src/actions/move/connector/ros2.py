@@ -8,6 +8,9 @@ from capabilities import CapabilityDescriptor, ComponentType, Constraint
 
 
 class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
+    """
+    Connector to link Move action with Unitree SDK via ROS2.
+    """
 
     def __init__(self, config: ActionConfig):
         super().__init__(config)
@@ -75,7 +78,3 @@ class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
             # raise ValueError(f"Unknown move type: {output_interface.action}")
 
         logging.info(f"SendThisToROS2: {new_msg}")
-
-    def tick(self) -> None:
-        time.sleep(0.1)
-        # logging.info("MoveUnitreeSDKConnector Tick")

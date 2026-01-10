@@ -29,6 +29,9 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
     """
 
     def load_rules_from_blockchain(self):
+        """
+        Load governance rules from the Ethereum blockchain.
+        """
         logging.info("Loading rules from Ethereum blockchain")
 
         # Construct JSON-RPC request
@@ -133,7 +136,7 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for Ethereum Governance Law Changes
+        Poll for Ethereum Governance Law Changes.
 
         Returns
         -------

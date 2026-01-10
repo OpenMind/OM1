@@ -15,7 +15,7 @@
         "allow_manual_switching": {"type": "boolean", "description": "Whether the user can manually switch modes."},
         "mode_memory_enabled": {"type": "boolean", "description": "Whether to persist mode state across sessions."},
         "api_key": {"type": "string", "description": "API key for the OM1 system."},
-        "uritree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
+        "unitree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
         "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
         "cortex_llm": {
             "type": "object",
@@ -78,7 +78,7 @@
                         "display_name": {"type": "string", "description": "Human-readable name for the mode."},
                         "description": {"type": "string", "description": "Description of the mode's purpose and behavior."},
                         "system_prompt_base": {"type": "string", "description": "The base system prompt used for the LLM in this mode."},
-                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs."},
+                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs.", "exclusiveMinimum": 0},
                         "timeout_seconds": {"type": "number"},
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
