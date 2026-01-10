@@ -12,11 +12,63 @@ from providers.io_provider import IOProvider
 
 class Gps(FuserInput[SensorConfig, Optional[dict]]):
     """
-    Reads GPS and Magnetometer data from GPS provider.
+    Input plugin for processing GPS and magnetometer sensor data.
+
+    This input plugin continuously polls a GpsProvider instance for location
+    and orientation data from a connected GPS device. The plugin converts raw
+    GPS coordinates and magnetometer readings into natural language messages
+    that can be processed by the agent's language model for location-aware
+    decision making.
+
+    The GPS input operates asynchronously, polling the GPS provider every 0.5
+    seconds for new position data. When valid GPS data is available (quality
+    indicator > 0), the plugin generates formatted location messages including
+    latitude, longitude, altitude, and cardinal directions. These messages are
+    buffered and made available to the agent's input pipeline for contextual
+    awareness during autonomous operations.
+
+    The plugin maintains an internal message buffer and integrates with the
+    IOProvider to track all GPS inputs for logging and analysis purposes.
+
+    Typical use cases include:
+    - Providing location context to the agent for navigation decisions
+    - Enabling location-aware task planning and execution
+    - Supporting geofencing and boundary awareness
+    - Facilitating waypoint navigation and path following
+    - Integrating GPS data into the agent's decision-making process
+
+    The GPS input converts technical coordinate data into human-readable
+    descriptions (e.g., "Your rough GPS location is 37.7749 North, 122.4194
+    West at 10m altitude") that the language model can understand and reason
+    about when making navigation or location-based decisions.
+
+    Notes
+    -----
+    The GPS device must provide valid position fixes (quality > 0) for location
+    messages to be generated. Poor GPS signal or indoor operation may result in
+    no location updates being available to the agent.
     """
 
     def __init__(self, config: SensorConfig):
+        """
+        Initialize GPS input plugin with configuration.
 
+        Sets up the GPS provider connection, initializes the message buffer,
+        and configures the input descriptor for the language model.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration object for the sensor input. Uses the base SensorConfig
+            as GPS input does not require additional configuration parameters beyond
+            the standard sensor settings.
+
+        Notes
+        -----
+        The GPS provider is initialized with default settings and will attempt to
+        connect to the configured GPS hardware. The descriptor "GPS Location" is
+        used to label this input source in the agent's context.
+        """
         super().__init__(config)
 
         self.gps = GpsProvider()
@@ -28,13 +80,21 @@ class Gps(FuserInput[SensorConfig, Optional[dict]]):
         """
         Poll for new messages from the GPS Provider.
 
-        Checks the message buffer for new messages with a brief delay
-        to prevent excessive CPU usage.
+        Checks the GPS provider for updated position data with a brief delay
+        to prevent excessive CPU usage. This method is called continuously by
+        the input polling loop.
 
         Returns
         -------
         Optional[dict]
-            The next message from the buffer if available, None otherwise
+            Dictionary containing GPS data with keys 'gps_lat', 'gps_lon',
+            'gps_alt', and 'gps_qua' (quality indicator), or None if no data
+            is available.
+
+        Notes
+        -----
+        The 0.5 second sleep interval balances responsiveness with system
+        resource usage, as GPS positions typically update at 1Hz or slower.
         """
         await asyncio.sleep(0.5)
 
@@ -45,20 +105,30 @@ class Gps(FuserInput[SensorConfig, Optional[dict]]):
 
     async def _raw_to_text(self, raw_input: Optional[dict]) -> Optional[Message]:
         """
-        Process raw input to generate a timestamped message.
+        Process raw GPS data to generate a natural language message.
 
-        Creates a Message object from the raw input, adding
-        the current timestamp.
+        Converts raw GPS coordinates (latitude, longitude, altitude) into a
+        human-readable location description with cardinal directions. Only
+        generates messages when GPS quality indicator is positive.
 
         Parameters
         ----------
         raw_input : Optional[dict]
-            Raw input to be processed
+            Raw GPS data dictionary containing 'gps_lat', 'gps_lon', 'gps_alt',
+            and 'gps_qua' keys, or None if no data is available.
 
         Returns
         -------
-        Message
-            A timestamped message containing the processed input
+        Optional[Message]
+            A timestamped message containing the formatted location description,
+            or None if the input is invalid or GPS quality is insufficient.
+
+        Notes
+        -----
+        The method converts latitude/longitude to absolute values with cardinal
+        directions (North/South, East/West) to create more natural language
+        descriptions. Negative latitudes indicate South, negative longitudes
+        indicate West.
         """
         logging.debug(f"gps: {raw_input}")
 
@@ -92,12 +162,20 @@ class Gps(FuserInput[SensorConfig, Optional[dict]]):
 
     async def raw_to_text(self, raw_input: Optional[dict]):
         """
-        Update message buffer.
+        Update message buffer with processed GPS data.
+
+        Processes raw GPS input and appends the resulting message to the
+        internal buffer if valid data is available.
 
         Parameters
         ----------
         raw_input : Optional[dict]
-            Raw input to be processed
+            Raw GPS data to be processed.
+
+        Notes
+        -----
+        This method is called by the input processing pipeline and handles
+        buffering of messages for later retrieval by the agent.
         """
         pending_message = await self._raw_to_text(raw_input)
 
@@ -108,13 +186,21 @@ class Gps(FuserInput[SensorConfig, Optional[dict]]):
         """
         Format and clear the latest buffer contents.
 
-        Formats the most recent message with timestamp and class name,
-        adds it to the IO provider, then clears the buffer.
+        Retrieves the most recent GPS location message from the buffer,
+        formats it with the input descriptor for the language model, logs
+        it to the IO provider, and clears the buffer.
 
         Returns
         -------
         Optional[str]
-            Formatted string of buffer contents or None if buffer is empty
+            Formatted string containing the latest location message with
+            INPUT markers and descriptor, or None if the buffer is empty.
+
+        Notes
+        -----
+        The formatted output includes START/END markers to clearly delineate
+        the GPS input in the agent's context. After formatting, the message
+        is logged to the IO provider for tracking and the buffer is cleared.
         """
         if len(self.messages) == 0:
             return None
