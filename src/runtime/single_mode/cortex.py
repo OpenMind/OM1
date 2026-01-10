@@ -11,6 +11,7 @@ from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
+from providers.prometheus_monitor import PrometheusMonitor
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.orchestrator import SimulatorOrchestrator
@@ -39,6 +40,7 @@ class CortexRuntime:
     sleep_ticker_provider: SleepTickerProvider
     io_provider: IOProvider
     config_provider: ConfigProvider
+    prometheus_monitor: PrometheusMonitor
 
     def __init__(
         self,
@@ -46,6 +48,7 @@ class CortexRuntime:
         config_name: str,
         hot_reload: bool = True,
         check_interval: float = 60,
+        prometheus_port: int = 9090,
     ):
         """
         Initialize the CortexRuntime with provided configuration.
@@ -60,11 +63,14 @@ class CortexRuntime:
             Whether to enable hot-reload functionality. (default: True)
         check_interval : float
             Interval in seconds between config file checks for hot-reload. (default: 60.0)
+        prometheus_port : int
+            Port for Prometheus metrics endpoint. (default: 9090)
         """
         self.config = config
         self.config_name = config_name
         self.hot_reload = hot_reload
         self.check_interval = check_interval
+        self.prometheus_port = prometheus_port
 
         self.fuser = Fuser(config)
         self.action_orchestrator = ActionOrchestrator(config)
@@ -73,6 +79,7 @@ class CortexRuntime:
         self.sleep_ticker_provider = SleepTickerProvider()
         self.io_provider = IOProvider()
         self.config_provider = ConfigProvider()
+        self.prometheus_monitor = PrometheusMonitor()
 
         self.last_modified: float = 0.0
         self.config_watcher_task: Optional[asyncio.Task] = None
@@ -157,6 +164,12 @@ class CortexRuntime:
         None
         """
         try:
+            # Start Prometheus metrics server
+            self.prometheus_monitor.start(port=self.prometheus_port)
+            logging.info(
+                f"Prometheus metrics available at :{self.prometheus_port}/metrics"
+            )
+
             if self.hot_reload:
                 self.config_watcher_task = asyncio.create_task(
                     self._check_config_changes()
@@ -415,6 +428,9 @@ class CortexRuntime:
 
         # Stop ConfigProvider
         self.config_provider.stop()
+
+        # Stop Prometheus monitor
+        self.prometheus_monitor.stop()
 
         logging.debug("Tasks cleaned up successfully")
 

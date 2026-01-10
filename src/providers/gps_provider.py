@@ -9,6 +9,7 @@ import serial
 
 from providers.fabric_map_provider import RFDataRaw
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -71,6 +72,15 @@ class GpsProvider:
 
         self.running = False
         self._thread: Optional[threading.Thread] = None
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "GpsProvider",
+            metadata={"type": "gps", "serial_port": serial_port},
+            recovery_callback=self._recover,
+        )
+
         self.start()
 
     def string_to_unix_timestamp(self, time_str: str) -> float:
@@ -267,10 +277,15 @@ class GpsProvider:
         """
         while self.running:
             if self.serial_connection:
-                # Read a line, decode, and remove whitespace
-                data = self.serial_connection.readline().decode("utf-8").strip()
-                logging.debug(f"Serial GPS/MAG: {data}")
-                self.magGPSProcessor(data)
+                try:
+                    # Read a line, decode, and remove whitespace
+                    data = self.serial_connection.readline().decode("utf-8").strip()
+                    logging.debug(f"Serial GPS/MAG: {data}")
+                    self.magGPSProcessor(data)
+                    self._monitor.heartbeat("GpsProvider")
+                except Exception as e:
+                    logging.error(f"Error reading GPS data: {e}")
+                    self._monitor.report_error("GpsProvider", str(e))
             time.sleep(0.1)
 
     def stop(self):
@@ -300,3 +315,22 @@ class GpsProvider:
             The current GPS data dictionary or None if no data is available.
         """
         return self._gps
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the GPS provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("GpsProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("GpsProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"GpsProvider: Recovery failed: {e}")
+            return False

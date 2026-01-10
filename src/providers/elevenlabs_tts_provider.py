@@ -3,6 +3,7 @@ from typing import Callable, Optional, Union
 
 from om1_speech import AudioOutputStream
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -73,6 +74,14 @@ class ElevenLabsTTSProvider:
         self._voice_id = voice_id
         self._model_id = model_id
         self._output_format = output_format
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "ElevenLabsTTSProvider",
+            metadata={"type": "tts", "voice_id": voice_id or ""},
+            recovery_callback=self._recover,
+        )
 
     def configure(
         self,
@@ -190,6 +199,7 @@ class ElevenLabsTTSProvider:
         if isinstance(message, str):
             message = self.create_pending_message(message)
         self._audio_stream.add_request(message)
+        self._monitor.heartbeat("ElevenLabsTTSProvider")
 
     def get_pending_message_count(self) -> int:
         """
@@ -223,3 +233,22 @@ class ElevenLabsTTSProvider:
 
         self.running = False
         self._audio_stream.stop()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the TTS provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("ElevenLabsTTSProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("ElevenLabsTTSProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"ElevenLabsTTSProvider: Recovery failed: {e}")
+            return False

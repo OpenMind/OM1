@@ -5,6 +5,8 @@ import zenoh
 
 from zenoh_msgs import open_zenoh_session
 
+from .prometheus_monitor import PrometheusMonitor
+
 
 class ZenohListenerProvider:
     """
@@ -24,16 +26,23 @@ class ZenohListenerProvider:
             The topic on which to subscribe messages (default is "speech").
         """
         self.session: Optional[zenoh.Session] = None
+        self.sub_topic = topic
+        self.running: bool = False
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "ZenohListenerProvider",
+            metadata={"type": "zenoh_listener", "topic": topic},
+            recovery_callback=self._recover,
+        )
 
         try:
             self.session = open_zenoh_session()
             logging.info("Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
-
-        self.sub_topic = topic
-
-        self.running: bool = False
+            self._monitor.report_error("ZenohListenerProvider", str(e))
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
@@ -62,6 +71,7 @@ class ZenohListenerProvider:
 
         self.running = True
         logging.info("Zenoh Listener Provider started")
+        self._monitor.heartbeat("ZenohListenerProvider")
 
     def stop(self):
         """
@@ -77,3 +87,22 @@ class ZenohListenerProvider:
 
         if self.session is not None:
             self.session.close()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Zenoh listener provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("ZenohListenerProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("ZenohListenerProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"ZenohListenerProvider: Recovery failed: {e}")
+            return False

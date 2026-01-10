@@ -5,6 +5,7 @@ import zenoh
 
 from zenoh_msgs import open_zenoh_session, sensor_msgs
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -24,6 +25,14 @@ class D435Provider:
         self.running: bool = False
         self.session = None
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "D435Provider",
+            metadata={"type": "depth_camera", "source": "zenoh"},
+            recovery_callback=self._recover,
+        )
+
         try:
             self.session = open_zenoh_session()
             self.session.declare_subscriber(
@@ -33,6 +42,7 @@ class D435Provider:
             logging.info("Zenoh is open for D435Provider")
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
+            self._monitor.report_error("D435Provider", str(e))
 
         self.start()
 
@@ -81,8 +91,10 @@ class D435Provider:
                     {"x": x, "y": y, "z": z, "angle": angle, "distance": distance}
                 )
             self.obstacle = obstacles
+            self._monitor.heartbeat("D435Provider")
         except Exception as e:
             logging.error(f"Error processing obstacle info: {e}")
+            self._monitor.report_error("D435Provider", str(e))
 
     def start(self):
         """
@@ -108,3 +120,22 @@ class D435Provider:
             self.session.close()
 
         logging.info("D435Provider stopped and Zenoh session closed")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the D435 provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("D435Provider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("D435Provider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"D435Provider: Recovery failed: {e}")
+            return False

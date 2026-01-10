@@ -6,6 +6,7 @@ from om1_utils import ws
 from om1_vlm import VideoStream
 from openai import AsyncOpenAI
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -53,6 +54,14 @@ class VLMOpenAIProvider:
         )
         self.message_callback: Optional[Callable] = None
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "VLMOpenAIProvider",
+            metadata={"type": "vlm", "model": "gpt-4o-mini"},
+            recovery_callback=self._recover,
+        )
+
     async def _process_frame(self, frame: str):
         """
         Process a video frame using the LLM API.
@@ -91,8 +100,10 @@ class VLMOpenAIProvider:
             logging.debug(f"OpenAI LLM VLM Response: {response}")
             if self.message_callback:
                 self.message_callback(response)
+            self._monitor.heartbeat("VLMOpenAIProvider")
         except Exception as e:
             logging.error(f"Error processing frame: {e}")
+            self._monitor.report_error("VLMOpenAIProvider", str(e))
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
@@ -137,3 +148,22 @@ class VLMOpenAIProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.stop()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the VLM provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("VLMOpenAIProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("VLMOpenAIProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"VLMOpenAIProvider: Recovery failed: {e}")
+            return False

@@ -10,6 +10,8 @@ from zenoh import ZBytes
 
 from zenoh_msgs import open_zenoh_session
 
+from .prometheus_monitor import PrometheusMonitor
+
 
 class ZenohPublisherProvider:
     """
@@ -29,21 +31,29 @@ class ZenohPublisherProvider:
             The topic on which to publish messages (default is "speech").
         """
         self.session: Optional[zenoh.Session] = None
+        self.pub_topic = topic
+
+        # Pending message queue and threading constructs
+        self._pending_messages: Queue = Queue()
+        self._lock = threading.Lock()
+        self.running: bool = False
+        self._thread: Optional[threading.Thread] = None
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "ZenohPublisherProvider",
+            metadata={"type": "zenoh_publisher", "topic": topic},
+            recovery_callback=self._recover,
+        )
 
         try:
             self.session = open_zenoh_session()
             logging.info("Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
+            self._monitor.report_error("ZenohPublisherProvider", str(e))
             self.session = None
-
-        self.pub_topic = topic
-
-        # Pending message queue and threading constructs
-        self._pending_messages = Queue()
-        self._lock = threading.Lock()
-        self.running: bool = False
-        self._thread: Optional[threading.Thread] = None
 
     def add_pending_message(self, text: str):
         """
@@ -74,6 +84,7 @@ class ZenohPublisherProvider:
         logging.info(f"Publishing message: {msg} ")
         payload = ZBytes(json.dumps(msg))
         self.session.put(self.pub_topic, payload)
+        self._monitor.heartbeat("ZenohPublisherProvider")
 
     def start(self):
         """
@@ -100,6 +111,7 @@ class ZenohPublisherProvider:
                 continue
             except Exception as e:
                 logging.exception("Exception in publisher thread: %s", e)
+                self._monitor.report_error("ZenohPublisherProvider", str(e))
 
     def stop(self):
         """
@@ -111,3 +123,22 @@ class ZenohPublisherProvider:
         if self.session is not None:
             self.session.close()
         logging.info("Zenoh Publisher Provider stopped")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Zenoh publisher provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("ZenohPublisherProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("ZenohPublisherProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"ZenohPublisherProvider: Recovery failed: {e}")
+            return False
