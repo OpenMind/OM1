@@ -1,0 +1,95 @@
+{
+  version: "v1.0.1",
+  hertz: 1,  // 1 Hz for real-time response
+  name: "smart_assistant_payment",
+  api_key: "openmind_free",
+  URID: "om1_smart_payment",
+  system_prompt_base: "You are a smart assistant that can place orders and process payments. When user says 'send X usdc' or 'send X eth' WITHOUT an address, use the default destination. Always execute payment commands immediately with coinbase_payment action.",
+  system_governance: "First Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nPayment Rule: Execute payment commands ONLY when user explicitly says send/pay with an amount in the CURRENT input. Default destination will be used if not specified.\nINCOMPLETE COMMAND RULE: If user says pay/send but MISSING amount or token (e.g. 'pay my bank', 'send to john'), you MUST respond explaining what's missing.\nUNKNOWN RECIPIENT RULE: Known contacts are defined in config. If user mentions unknown name, do NOT send to default.\nIMPORTANT: Do NOT repeat previous commands. Do NOT take action if current input is empty or incomplete. Only act on complete, new payment requests.",
+  system_prompt_examples: "Examples:\n1. 'send 0.1 usdc to john': coinbase_payment: 'send 0.1 usdc to john'\n2. 'pay my internet bill with 5 usdc': coinbase_payment: 'pay internet 5 usdc'\n3. 'pay coffee 2 usdc': coinbase_payment: 'pay coffee 2 usdc'\n4. 'check balance': coinbase_payment: 'balance'\n5. 'pay rent 10 usdc and send 5 usdc to john': coinbase_payment: 'pay rent 10 usdc and send 5 usdc to john'\n6. 'send zero point one usdc': coinbase_payment: 'send 0.1 usdc'",
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+      config: {
+        language: "english",
+        microphone_device_id: 1,
+      },
+    },
+    {
+      type: "MockInput",
+      config: {
+        ws_port: 8765,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "PayBot",
+      history_length: 5,
+    },
+  },
+  agent_actions: [
+    {
+      name: "home_assistant",
+      llm_label: "smart_home_control",
+      connector: "rest_api",
+      config: {
+        ha_url: "http://homeassistant.local:8123",
+        access_token: "YOUR_HOME_ASSISTANT_TOKEN",
+        switch_entity_id: "switch.your_switch",
+        script_entity_id: "script.place_order",
+      },
+    },
+    {
+      name: "coinbase_payment",
+      llm_label: "coinbase_payment",
+      connector: "cdp_api",
+      config: {
+        // CDP v2 credentials - get from https://portal.cdp.coinbase.com
+        api_key_id: "YOUR_CDP_API_KEY_ID",
+        api_key_secret: "YOUR_CDP_API_KEY_SECRET",
+        wallet_secret: "YOUR_CDP_WALLET_SECRET",
+        account_address: "0xYOUR_WALLET_ADDRESS",
+        default_asset: "usdc",
+        chain: "base",
+        testnet: true,  // false for mainnet
+        destination_address: "0xDEFAULT_DESTINATION_ADDRESS",
+        // Named contacts - say "send to john" or "pay coffee shop"
+        contacts: {
+          "john": "0xJOHN_WALLET_ADDRESS",
+          "coffee": "0xCOFFEE_SHOP_ADDRESS",
+          "electricity": "0xELECTRICITY_PROVIDER_ADDRESS",
+          "internet": "0xINTERNET_PROVIDER_ADDRESS",
+          "rent": "0xLANDLORD_ADDRESS",
+        },
+        // Optional: Home Assistant integration for payment dashboard
+        ha_url: "http://homeassistant.local:8123",
+        ha_token: "YOUR_HOME_ASSISTANT_TOKEN",
+        // Safety limits
+        max_amounts: {
+          "usdc": 50.0,    // Max 50 USDC per payment
+          "eth": 0.01,     // Max 0.01 ETH per payment
+        },
+        payment_cooldown: 30.0,  // Seconds before same payment can repeat
+
+        // Security options (uncomment to enable)
+        // blocked_addresses: ["0xSCAMMER_ADDRESS"],
+        // whitelist_only: true,  // Only allow payments to contacts
+        // allowed_hours: { start: 8, end: 23 },  // Time restrictions
+
+        // Retry & Gas options (uncomment to enable)
+        // retry_on_failure: true,
+        // max_retries: 3,
+        // gas_settings: { max_priority_fee: 1.5, max_fee: 50 },  // in gwei
+
+        // Custom tokens (add tokens not in default list)
+        // token_contracts: {
+        //   "dai": "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
+        //   "weth": "0x4200000000000000000000000000000000000006",
+        // },
+      },
+    },
+  ],
+  backgrounds: [],
+}
