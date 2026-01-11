@@ -6,6 +6,7 @@ allowing specific configuration fields to be updated without full system restart
 """
 
 import logging
+import threading
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set
@@ -49,6 +50,7 @@ class HotReloadManager:
 
     def __init__(self):
         """Initialize the hot-reload manager."""
+        self._lock = threading.Lock()
         self._field_configs: Dict[str, FieldConfig] = {}
         self._change_history: List[ConfigChange] = []
         self._max_history = 50
@@ -178,15 +180,16 @@ class HotReloadManager:
         description : str, optional
             Human-readable description of the field
         """
-        self._field_configs[field_path] = FieldConfig(
-            name=field_path,
-            strategy=strategy,
-            validator=validator,
-            description=description,
-        )
-        logging.debug(
-            f"Registered field '{field_path}' with strategy: {strategy.value}"
-        )
+        with self._lock:
+            self._field_configs[field_path] = FieldConfig(
+                name=field_path,
+                strategy=strategy,
+                validator=validator,
+                description=description,
+            )
+            logging.debug(
+                f"Registered field '{field_path}' with strategy: {strategy.value}"
+            )
 
     def detect_changes(
         self, old_config: Dict[str, Any], new_config: Dict[str, Any]
@@ -206,23 +209,24 @@ class HotReloadManager:
         List[ConfigChange]
             List of detected changes
         """
-        changes = []
+        with self._lock:
+            changes = []
 
-        for field_path, field_config in self._field_configs.items():
-            old_value = self._get_nested_value(old_config, field_path)
-            new_value = self._get_nested_value(new_config, field_path)
+            for field_path, field_config in self._field_configs.items():
+                old_value = self._get_nested_value(old_config, field_path)
+                new_value = self._get_nested_value(new_config, field_path)
 
-            if old_value != new_value:
-                changes.append(
-                    ConfigChange(
-                        field_path=field_path,
-                        old_value=old_value,
-                        new_value=new_value,
-                        strategy=field_config.strategy,
+                if old_value != new_value:
+                    changes.append(
+                        ConfigChange(
+                            field_path=field_path,
+                            old_value=old_value,
+                            new_value=new_value,
+                            strategy=field_config.strategy,
+                        )
                     )
-                )
 
-        return changes
+            return changes
 
     def validate_changes(self, changes: List[ConfigChange]) -> Dict[str, bool]:
         """
@@ -238,34 +242,35 @@ class HotReloadManager:
         Dict[str, bool]
             Map of field_path -> validation result
         """
-        results = {}
+        with self._lock:
+            results = {}
 
-        for change in changes:
-            field_config = self._field_configs.get(change.field_path)
+            for change in changes:
+                field_config = self._field_configs.get(change.field_path)
 
-            if not field_config:
-                results[change.field_path] = False
-                logging.warning(f"Unknown field: {change.field_path}")
-                continue
-
-            if field_config.validator:
-                try:
-                    is_valid = field_config.validator(change.new_value)
-                    results[change.field_path] = is_valid
-
-                    if not is_valid:
-                        logging.error(
-                            f"Validation failed for '{change.field_path}': "
-                            f"{change.new_value}"
-                        )
-                except Exception as e:
-                    logging.error(f"Validator error for '{change.field_path}': {e}")
+                if not field_config:
                     results[change.field_path] = False
-            else:
-                # No validator = assume valid
-                results[change.field_path] = True
+                    logging.warning(f"Unknown field: {change.field_path}")
+                    continue
 
-        return results
+                if field_config.validator:
+                    try:
+                        is_valid = field_config.validator(change.new_value)
+                        results[change.field_path] = is_valid
+
+                        if not is_valid:
+                            logging.error(
+                                f"Validation failed for '{change.field_path}': "
+                                f"{change.new_value}"
+                            )
+                    except Exception as e:
+                        logging.error(f"Validator error for '{change.field_path}': {e}")
+                        results[change.field_path] = False
+                else:
+                    # No validator = assume valid
+                    results[change.field_path] = True
+
+            return results
 
     def categorize_changes(
         self, changes: List[ConfigChange]
@@ -283,16 +288,17 @@ class HotReloadManager:
         Dict[ReloadStrategy, List[ConfigChange]]
             Changes grouped by strategy
         """
-        categorized = {
-            ReloadStrategy.HOT_RELOAD: [],
-            ReloadStrategy.VALIDATE_FIRST: [],
-            ReloadStrategy.RESTART_REQUIRED: [],
-        }
+        with self._lock:
+            categorized = {
+                ReloadStrategy.HOT_RELOAD: [],
+                ReloadStrategy.VALIDATE_FIRST: [],
+                ReloadStrategy.RESTART_REQUIRED: [],
+            }
 
-        for change in changes:
-            categorized[change.strategy].append(change)
+            for change in changes:
+                categorized[change.strategy].append(change)
 
-        return categorized
+            return categorized
 
     def get_hot_reloadable_fields(self) -> Set[str]:
         """
@@ -303,12 +309,13 @@ class HotReloadManager:
         Set[str]
             Field paths that can be hot-reloaded
         """
-        return {
-            name
-            for name, config in self._field_configs.items()
-            if config.strategy
-            in [ReloadStrategy.HOT_RELOAD, ReloadStrategy.VALIDATE_FIRST]
-        }
+        with self._lock:
+            return {
+                name
+                for name, config in self._field_configs.items()
+                if config.strategy
+                in [ReloadStrategy.HOT_RELOAD, ReloadStrategy.VALIDATE_FIRST]
+            }
 
     def get_restart_required_fields(self) -> Set[str]:
         """
@@ -319,11 +326,12 @@ class HotReloadManager:
         Set[str]
             Field paths that require system restart
         """
-        return {
-            name
-            for name, config in self._field_configs.items()
-            if config.strategy == ReloadStrategy.RESTART_REQUIRED
-        }
+        with self._lock:
+            return {
+                name
+                for name, config in self._field_configs.items()
+                if config.strategy == ReloadStrategy.RESTART_REQUIRED
+            }
 
     def track_change(self, change: ConfigChange):
         """
@@ -334,11 +342,12 @@ class HotReloadManager:
         change : ConfigChange
             Change to track
         """
-        self._change_history.append(change)
+        with self._lock:
+            self._change_history.append(change)
 
-        # Keep history limited
-        if len(self._change_history) > self._max_history:
-            self._change_history = self._change_history[-self._max_history :]
+            # Keep history limited
+            if len(self._change_history) > self._max_history:
+                self._change_history = self._change_history[-self._max_history :]
 
     def get_change_history(self, limit: int = 10) -> List[ConfigChange]:
         """
@@ -354,7 +363,8 @@ class HotReloadManager:
         List[ConfigChange]
             Recent configuration changes
         """
-        return self._change_history[-limit:]
+        with self._lock:
+            return self._change_history[-limit:]
 
     def _get_nested_value(self, config: Dict[str, Any], path: str) -> Any:
         """
@@ -385,25 +395,26 @@ class HotReloadManager:
 
         return value
 
-    def _set_nested_value(self, config: Dict[str, Any], path: str, value: Any):
-        """
-        Set a value in nested dictionary using dot notation.
-
-        Parameters
-        ----------
-        config : dict
-            Configuration dictionary to modify
-        path : str
-            Dot-separated path
-        value : Any
-            Value to set
-        """
-        keys = path.split(".")
-        current = config
-
-        for key in keys[:-1]:
-            if key not in current:
-                current[key] = {}
-            current = current[key]
-
-        current[keys[-1]] = value
+    # Reserved for future dynamic config updates
+    # def _set_nested_value(self, config: Dict[str, Any], path: str, value: Any):
+    #     """
+    #     Set a value in nested dictionary using dot notation.
+    #
+    #     Parameters
+    #     ----------
+    #     config : dict
+    #         Configuration dictionary to modify
+    #     path : str
+    #         Dot-separated path
+    #     value : Any
+    #         Value to set
+    #     """
+    #     keys = path.split(".")
+    #     current = config
+    #
+    #     for key in keys[:-1]:
+    #         if key not in current:
+    #             current[key] = {}
+    #         current = current[key]
+    #
+    #     current[keys[-1]] = value

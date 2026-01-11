@@ -54,6 +54,11 @@ class ConfigFileHandler(FileSystemEventHandler):
         if event_path != self.target_path:
             return
 
+        # Check if file still exists
+        if not self.target_path.exists():
+            logging.warning(f"Config file deleted: {self.target_path}")
+            return
+
         now = time.time()
         if now - self._last_modified < self.debounce_seconds:
             logging.debug(
@@ -108,7 +113,10 @@ class ConfigFileWatcher:
     async def _handle_file_change(self, path: Path) -> None:
         if self._on_change_callback is None:
             return
-        await self._on_change_callback(path)
+        try:
+            await self._on_change_callback(path)
+        except Exception as e:
+            logging.error(f"Hot-reload callback failed: {e}")
 
     def start(self, event_loop: asyncio.AbstractEventLoop | None = None):
         """
