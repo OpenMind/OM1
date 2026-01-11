@@ -8,7 +8,6 @@ import psutil
 
 from ..base import Sensor, SensorConfig
 
-
 # Setup logger for the plugin
 logger = logging.getLogger(__name__)
 
