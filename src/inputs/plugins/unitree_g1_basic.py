@@ -17,6 +17,49 @@ except ImportError:
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
     )
 
+    # --- Fix: Define a placeholder dds_ module ---
+    # Create a fake 'dds_' module containing placeholder classes.
+    import types  # Import types to create a fake module
+
+    # Create an instance of a fake module
+    _dummy_module = types.ModuleType("unitree_hg_msg_dds_placeholder")
+
+    # Define placeholder classes for use in type hints
+    class PlaceholderBmsState_:
+        """Placeholder class for dds_.BmsState_ when Unitree SDK is not installed."""
+
+        def __init__(self):
+            # Initialize placeholder if needed for runtime checks
+            pass
+
+        # Add placeholder attributes if type checker is strict or runtime access is needed
+        # For example:
+        # bmsvoltage = [0] * 3
+        # current = 0
+        # soc = 0
+        # temperature = [0] * 12
+
+    class PlaceholderLowState_:
+        """Placeholder class for dds_.LowState_ when Unitree SDK is not installed."""
+
+        def __init__(self):
+            # Initialize placeholder if needed for runtime checks
+            pass
+
+        # Add placeholder attributes if type checker is strict or runtime access is needed
+        # For example:
+        # tick = 0
+        # motor_state = [None] * 35
+
+    # Assign the placeholder classes to the fake module
+    _dummy_module.BmsState_ = PlaceholderBmsState_
+    _dummy_module.LowState_ = PlaceholderLowState_
+
+    # Assign the fake module to the name 'dds_'
+    dds_ = _dummy_module
+    # ----------------------------------------------
+
+    # Also define the individual classes for ChannelSubscriber
     class BmsState_:
         """
         Placeholder for BmsState_ when Unitree SDK is not installed.
