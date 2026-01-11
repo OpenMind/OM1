@@ -1,0 +1,656 @@
+---
+title: CLI Reference
+description: "Complete guide to the OM1 command-line interface for managing agents."
+---
+
+## Overview
+
+OM1 provides a powerful command-line interface (CLI) for managing AI agents. The CLI handles everything from initial setup to running, monitoring, and stopping agents.
+
+## Installation
+
+### Prerequisites
+
+Ensure you have the following installed:
+
+- Python >= 3.10
+- uv >= 0.6.2 (Python package manager)
+- portaudio (for audio)
+- ffmpeg (for video)
+
+```bash
+# Install uv (if not installed)
+# Mac
+brew install uv
+
+# Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Clone and Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/OpenMind/OM1.git
+cd OM1
+
+# Install dependencies (minimal ~500MB)
+uv sync
+
+# Or install with extras for specific features
+uv sync --extra vision      # Vision/face detection
+uv sync --extra twitter     # Twitter integration
+uv sync --extra robotics    # Robot hardware support
+uv sync --extra full        # Everything
+```
+
+### Running the CLI
+
+There are two ways to use the CLI:
+
+**Option 1: Using uv run (recommended)**
+```bash
+uv run om1 --help
+uv run om1 list
+uv run om1 run ollama
+```
+
+**Option 2: Activate virtual environment**
+```bash
+# Activate venv (one time per terminal session)
+source .venv/bin/activate
+
+# Now use om1 directly
+om1 --help
+om1 list
+om1 run ollama
+
+# Deactivate when done
+deactivate
+```
+
+**Option 3: Create an alias**
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+alias om1="uv run om1"
+
+# Reload shell
+source ~/.zshrc
+
+# Now use directly
+om1 list
+```
+
+## Quick Start
+
+```bash
+# 1. Setup (interactive wizard)
+om1 setup
+
+# 2. Check system readiness
+om1 doctor
+
+# 3. List available configurations
+om1 list
+
+# 4. Run an agent
+om1 run ollama
+
+# 5. Check running agents (in another terminal)
+om1 status
+
+# 6. Stop the agent
+om1 stop ollama
+```
+
+## Commands Reference
+
+### Agent Lifecycle Commands
+
+#### `om1 run`
+
+Start an OM1 agent with specified configuration.
+
+```bash
+om1 run <config_name> [OPTIONS]
+```
+
+**Arguments:**
+- `config_name`: Configuration file name (without .json5 extension)
+
+**Options:**
+- `--hot-reload/--no-hot-reload`: Enable/disable hot-reload (default: enabled)
+- `--check-interval`: Seconds between config checks (default: 60)
+- `--log-level, -l`: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
+- `--log-to-file`: Save logs to ~/.om1/logs/
+
+**Examples:**
+```bash
+# Start with default settings
+om1 run ollama
+
+# Start with debug logging
+om1 run ollama --log-level DEBUG
+
+# Start without hot-reload
+om1 run conversation --no-hot-reload
+
+# Start with file logging
+om1 run twitter --log-to-file
+```
+
+#### `om1 stop`
+
+Stop running OM1 agents gracefully.
+
+```bash
+om1 stop [config_name] [OPTIONS]
+```
+
+**Arguments:**
+- `config_name`: Specific agent to stop (optional)
+
+**Options:**
+- `--all, -a`: Stop all running agents
+- `--force, -f`: Force kill (SIGKILL instead of SIGTERM)
+- `--timeout`: Seconds to wait for graceful shutdown (default: 5)
+
+**Examples:**
+```bash
+# Stop specific agent
+om1 stop ollama
+
+# Stop all agents
+om1 stop --all
+
+# Force kill if not responding
+om1 stop ollama --force
+
+# Wait longer for graceful shutdown
+om1 stop twitter --timeout 10
+```
+
+#### `om1 status`
+
+Show status of running OM1 agents.
+
+```bash
+om1 status [OPTIONS]
+```
+
+**Options:**
+- `--watch, -w`: Continuously refresh status (coming soon)
+
+**Output:**
+```
+OM1 Running Agents
+==================
+PID     Config      Mode        Uptime      Hot Reload  Status
+-----   ------      ----        ------      ----------  ------
+12345   ollama      default     2h 15m      On          Running
+12346   twitter     idle        45m         Off         Running
+
+Total: 2 agents running
+```
+
+#### `om1 restart`
+
+Restart a running OM1 agent.
+
+```bash
+om1 restart <config_name> [OPTIONS]
+```
+
+**Options:**
+- `--hot-reload-only`: Trigger config reload without full restart
+- `--force, -f`: Force kill before restart
+
+**Examples:**
+```bash
+# Full restart
+om1 restart ollama
+
+# Just reload configuration
+om1 restart ollama --hot-reload-only
+```
+
+### Configuration Commands
+
+#### `om1 list`
+
+List all available configuration files.
+
+```bash
+om1 list
+```
+
+**Output:**
+```
+Mode-Aware Configurations
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+┃ Name              ┃ Display Name      ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+│ spot_modes        │ spot_modes        │
+│ unitree_go2_modes │ unitree_go2_modes │
+└───────────────────┴───────────────────┘
+
+Standard Configurations
+┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃ Name                   ┃ Display Name   ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ ollama                 │ ollama         │
+│ conversation           │ conversation   │
+│ open_ai                │ open_ai_vlm    │
+│ ...                    │ ...            │
+└────────────────────────┴────────────────┘
+```
+
+#### `om1 info`
+
+Show detailed information about a configuration.
+
+```bash
+om1 info <config_name>
+```
+
+**Example:**
+```bash
+om1 info ollama
+```
+
+#### `om1 validate`
+
+Validate OM1 configuration files.
+
+```bash
+om1 validate [config_name] [OPTIONS]
+```
+
+**Options:**
+- `--all, -a`: Validate all configuration files
+- `--verbose, -v`: Show detailed validation information
+- `--check-components / --no-check-components`: Verify component existence (default: on)
+- `--skip-inputs`: Skip input validation
+- `--allow-missing`: Allow missing components (warn only)
+- `--strict`: Fail on warnings too
+
+**Examples:**
+```bash
+# Validate specific config
+om1 validate ollama
+
+# Validate all configs
+om1 validate --all
+
+# Validate with verbose output
+om1 validate spot --verbose
+
+# Skip component checking (faster)
+om1 validate spot --no-check-components
+
+# Allow missing components
+om1 validate spot --allow-missing
+```
+
+#### `om1 modes`
+
+Show detailed information about modes in a mode-aware configuration.
+
+```bash
+om1 modes <config_name>
+```
+
+**Output includes:**
+- Available modes with frequency, timeout, inputs/actions count
+- Mode descriptions and lifecycle hooks
+- Transition rules with keywords, priority, and cooldown
+
+**Examples:**
+```bash
+# Show modes for spot_modes config
+om1 modes spot_modes
+
+# Show modes for unitree config
+om1 modes unitree_go2_modes
+```
+
+#### `om1 init`
+
+Create a new OM1 configuration file.
+
+```bash
+om1 init <config_name> [OPTIONS]
+```
+
+**Options:**
+- `--template, -t`: Template to use (minimal, standard, full)
+
+### System Commands
+
+#### `om1 setup`
+
+Interactive setup wizard for first-time users.
+
+```bash
+om1 setup [OPTIONS]
+```
+
+**Options:**
+- `--config, -c`: Setup for specific config
+- `--minimal`: Minimal setup for Ollama only
+- `--full`: Full setup with all features
+- `--skip-deps`: Skip dependency installation
+
+**Examples:**
+```bash
+# Interactive wizard
+om1 setup
+
+# Quick setup for local LLM
+om1 setup --minimal
+
+# Setup for specific config
+om1 setup --config twitter
+
+# Full installation
+om1 setup --full
+```
+
+#### `om1 doctor`
+
+Check system requirements and diagnose issues.
+
+```bash
+om1 doctor [OPTIONS]
+```
+
+**Options:**
+- `--config, -c`: Check requirements for specific config
+- `--verbose, -v`: Show detailed information
+
+**Output:**
+```
+OM1 System Health Check
+=======================
+  [OK] Python Version: 3.10.12
+  [OK] uv Package Manager: 0.5.14
+  [OK] Virtual Environment: Active
+  [OK] Environment File: .env exists
+  [WARN] Ollama: Not running
+       Fix: Start Ollama with: ollama serve
+
+Results: 4 passed, 1 warnings
+```
+
+**Examples:**
+```bash
+# General health check
+om1 doctor
+
+# Check for specific config
+om1 doctor --config twitter
+
+# Detailed output
+om1 doctor --verbose
+```
+
+#### `om1 env`
+
+Manage OM1 environment variables.
+
+```bash
+om1 env <action> [key] [value]
+```
+
+**Actions:**
+- `list`: Show all OM1 environment variables
+- `get <key>`: Get specific variable value
+- `set <key> <value>`: Set variable in .env file
+- `generate`: Create .env.example template
+- `validate`: Check all required variables are set
+
+**Examples:**
+```bash
+# List all variables
+om1 env list
+
+# Get specific value
+om1 env get OPENAI_API_KEY
+
+# Set a value
+om1 env set OPENAI_API_KEY sk-xxx
+
+# Generate template
+om1 env generate
+
+# Validate configuration
+om1 env validate
+```
+
+### Development Commands
+
+#### `om1 test`
+
+Run tests using pytest.
+
+```bash
+om1 test [OPTIONS]
+```
+
+**Options:**
+- `--path, -p`: Specific test path
+- `--coverage, -c`: Run with coverage
+- `--verbose, -v`: Verbose output
+- `--keyword, -k`: Filter by keyword
+
+**Examples:**
+```bash
+# Run all tests
+om1 test
+
+# Run specific tests
+om1 test --path tests/cli/
+
+# Run with coverage
+om1 test --coverage
+```
+
+#### `om1 lint`
+
+Run code quality checks using ruff and optionally pyright.
+
+```bash
+om1 lint [OPTIONS]
+```
+
+**Options:**
+- `--path, -p`: Path to lint
+- `--fix`: Auto-fix issues
+- `--type-check`: Include pyright type checking
+
+**Examples:**
+```bash
+# Run lint
+om1 lint
+
+# Auto-fix issues
+om1 lint --fix
+
+# Include type checking
+om1 lint --type-check
+```
+
+## Dependency Groups
+
+OM1 uses optional dependency groups to minimize install size:
+
+| Group | Description | Install Command |
+|-------|-------------|-----------------|
+| (core) | Basic functionality (~500MB) | `uv sync` |
+| vision | OpenCV, TensorFlow, PyTorch, DeepFace | `uv sync --extra vision` |
+| yolo | YOLO object detection | `uv sync --extra yolo` |
+| twitter | Twitter/X integration | `uv sync --extra twitter` |
+| vehicles | DIMO/Tesla integration | `uv sync --extra vehicles` |
+| blockchain | Web3, Coinbase CDP | `uv sync --extra blockchain` |
+| sensors | GPS, Bluetooth, HID, Serial | `uv sync --extra sensors` |
+| robotics | vision + yolo + sensors | `uv sync --extra robotics` |
+| full | All optional dependencies | `uv sync --extra full` |
+
+### Config to Dependency Mapping
+
+| Config | Required Extras |
+|--------|-----------------|
+| ollama | (none) |
+| conversation | (none) |
+| open_ai, gemini, grok | vision |
+| twitter | twitter |
+| tesla | vehicles |
+| yolo | yolo |
+| spot, unitree_*, turtlebot | robotics |
+
+## Process Management
+
+### State Directory
+
+OM1 stores runtime state in `~/.om1/`:
+
+```
+~/.om1/
+├── pids/           # PID files for running agents
+│   ├── ollama.pid
+│   └── twitter.pid
+├── state/          # Runtime state JSON files
+│   ├── ollama.json
+│   └── twitter.json
+└── logs/           # Log files (when --log-to-file used)
+    ├── ollama.log
+    └── twitter.log
+```
+
+### State File Format
+
+```json
+{
+  "pid": 12345,
+  "config": "ollama",
+  "started_at": "2024-01-10T20:30:00",
+  "mode": "default",
+  "hot_reload_enabled": true,
+  "last_tick": "2024-01-10T22:45:30",
+  "is_multi_mode": false
+}
+```
+
+### Graceful Shutdown
+
+When stopping an agent:
+
+1. `om1 stop` sends SIGTERM signal
+2. Agent cleans up resources and saves state
+3. PID and state files are removed
+4. If timeout exceeded, use `--force` for SIGKILL
+
+## Environment Configuration
+
+### Required Variables
+
+Create a `.env` file in the project root:
+
+```bash
+# Copy template
+cp .env.example .env
+
+# Edit with your keys
+nano .env
+```
+
+### Common Variables
+
+```bash
+# OpenMind API (required for most configs)
+OM_API_KEY=om1_live_...
+
+# LLM Providers (choose based on config)
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=...
+DEEPSEEK_API_KEY=...
+XAI_API_KEY=...
+
+# Speech Services
+ELEVENLABS_API_KEY=...
+GOOGLE_SPEECH_API_KEY=...
+
+# Integrations
+TWITTER_API_KEY=...
+DIMO_CLIENT_ID=...
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Agent won't start:**
+```bash
+# Check system requirements
+om1 doctor --config <config_name>
+
+# Check if already running
+om1 status
+```
+
+**Missing dependencies:**
+```bash
+# Check what's needed
+om1 doctor --config <config_name> --verbose
+
+# Install required extras
+uv sync --extra <extra_name>
+```
+
+**Ollama not running:**
+```bash
+# Start Ollama
+ollama serve
+
+# Verify
+om1 doctor --config ollama
+```
+
+**Environment variables not set:**
+```bash
+# Check current state
+om1 env validate
+
+# List what's configured
+om1 env list
+
+# Set missing values
+om1 env set KEY value
+```
+
+**Agent not responding to stop:**
+```bash
+# Force kill
+om1 stop <config_name> --force
+
+# Or kill all
+om1 stop --all --force
+```
+
+### Debug Mode
+
+For detailed logging:
+
+```bash
+om1 run ollama --log-level DEBUG --log-to-file
+```
+
+Logs are saved to `~/.om1/logs/<config_name>.log`
+
+## Version
+
+Check CLI version:
+
+```bash
+om1 --version
+```

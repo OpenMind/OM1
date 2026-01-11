@@ -160,17 +160,24 @@ def load_config(
             logging.warning(
                 "Could not find robot ip address. Please find your robot IP address and add it to the configuration file or .env file."
             )
+    # LLM types that don't require OpenMind API key (local/self-hosted)
+    local_llm_types = {"OllamaLLM"}
+    llm_type = raw_config.get("cortex_llm", {}).get("type", "")
+    requires_api_key = llm_type not in local_llm_types
+
     g_api_key = raw_config.get("api_key", None)
     if g_api_key is None or g_api_key == "" or g_api_key == "openmind_free":
-        logging.warning(
-            "No API key found in the configuration file. Checking for backup OM_API_KEY in your .env file."
-        )
+        if requires_api_key:
+            logging.warning(
+                "No API key found in the configuration file. Checking for backup OM_API_KEY in your .env file."
+            )
         backup_key = os.environ.get("OM_API_KEY")
         g_api_key = backup_key
         if backup_key:
             raw_config["api_key"] = backup_key
-            logging.info("Success - Found OM_API_KEY in your .env file.")
-        else:
+            if requires_api_key:
+                logging.info("Success - Found OM_API_KEY in your .env file.")
+        elif requires_api_key:
             logging.warning(
                 "Could not find any API keys. Please get a free key at portal.openmind.org."
             )
