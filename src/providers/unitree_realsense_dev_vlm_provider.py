@@ -1,7 +1,7 @@
 import base64
 import glob
 import logging
-import os
+import subprocess
 import time
 from typing import Callable, List, Optional, Tuple
 
@@ -204,11 +204,30 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
             if device in skip_devices:
                 continue
 
-            cmd = f"v4l2-ctl --device={device} --list-formats"
             try:
-                formats = os.popen(cmd).read()
-            except Exception as e:
-                logger.exception("Failed to run command '%s': %s", cmd, e)
+                # Use subprocess instead of os.popen for timeout safety and better error handling
+                result = subprocess.run(
+                    ["v4l2-ctl", "--device=" + device, "--list-formats"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+                if result.returncode != 0:
+                    logger.warning(
+                        "v4l2-ctl failed for %s (exit code %d): %s",
+                        device,
+                        result.returncode,
+                        result.stderr.strip(),
+                    )
+                    continue
+                formats = result.stdout
+            except (
+                subprocess.TimeoutExpired,
+                subprocess.SubprocessError,
+                OSError,
+            ) as e:
+                logger.exception("Failed to run v4l2-ctl for %s: %s", device, e)
                 continue
 
             try:
