@@ -20,4 +20,4 @@ def event_loop():
 def mock_history_path(tmp_path, monkeypatch):
     """Redirect conversation history file to a temporary directory during tests."""
     test_history_file = tmp_path / "conversation_history.json"
-    monkeypatch.setattr("providers.history_storage.HISTORY_FILE", test_history_file)
+    monkeypatch.setattr("src.providers.history_storage.HISTORY_FILE", test_history_file)
