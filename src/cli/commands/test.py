@@ -76,6 +76,12 @@ def test(
         "--lf",
         help="Run only last failed tests.",
     ),
+    lint: bool = typer.Option(
+        False,
+        "--lint",
+        "-l",
+        help="Run lint check before tests.",
+    ),
 ) -> None:
     """
     Run tests using pytest.
@@ -89,11 +95,23 @@ def test(
         om1 test --integration       # Run integration tests
         om1 test --all               # Run all tests
         om1 test --coverage          # Run with coverage
+        om1 test --lint              # Run lint before tests
         om1 test tests/cli/          # Run specific directory
         om1 test -k "test_run"       # Run tests matching keyword
         om1 test -m slow             # Run tests with 'slow' marker
     """
     project_root = get_src_dir().parent
+
+    # Run lint first if requested
+    if lint:
+        console.print("[cyan]Running lint check...[/cyan]\n")
+        lint_cmd = [sys.executable, "-m", "ruff", "check", str(project_root / "src")]
+        lint_result = subprocess.run(lint_cmd, cwd=str(project_root))
+        if lint_result.returncode != 0:
+            print_error("Lint check failed. Fix errors before running tests.")
+            raise typer.Exit(lint_result.returncode)
+        print_success("Lint check passed!")
+        console.print()
 
     cmd: List[str] = [sys.executable, "-m", "pytest"]
 
