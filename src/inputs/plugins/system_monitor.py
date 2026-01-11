@@ -5,6 +5,7 @@ import time
 import typing as T
 
 import psutil
+
 from ..base import Sensor, SensorConfig
 
 
