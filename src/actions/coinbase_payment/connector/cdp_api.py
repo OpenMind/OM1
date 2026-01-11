@@ -207,6 +207,19 @@ class CoinbasePaymentConfig(ActionConfig):
         default=None,
         description="Home Assistant access token",
     )
+    # Notification mode: "ha_event" (default), "webhook", "none"
+    notification_mode: str = Field(
+        default="ha_event",
+        description="Notification mode: ha_event (default, modular), webhook, none",
+    )
+    webhook_url: Optional[str] = Field(
+        default=None,
+        description="Webhook URL for notifications (used when notification_mode=webhook)",
+    )
+    ha_event_prefix: str = Field(
+        default="om1",
+        description="Event prefix for HA events (e.g., om1_payment_completed)",
+    )
     contacts: Optional[dict[str, str]] = Field(
         default=None,
         description="Named contacts mapping (name -> address)",
@@ -354,6 +367,9 @@ class CoinbasePaymentConnector(ActionConnector[CoinbasePaymentConfig, CoinbasePa
         self.destination_address = config.destination_address
         self.ha_url = config.ha_url
         self.ha_token = config.ha_token
+        self.notification_mode = config.notification_mode
+        self.webhook_url = config.webhook_url
+        self.ha_event_prefix = config.ha_event_prefix
         self.contacts = config.contacts or {}
         self.max_amounts = config.max_amounts or {"usdc": 100.0, "eth": 0.1}  # defaults
         self.payment_cooldown = config.payment_cooldown
@@ -659,80 +675,86 @@ class CoinbasePaymentConnector(ActionConnector[CoinbasePaymentConfig, CoinbasePa
             self._session = aiohttp.ClientSession()
         return self._session
 
+    async def _notify(self, event_type: str, data: dict) -> None:
+        """
+        Send notification based on notification_mode config.
+
+        Modes:
+        - ha_event: Fire HA event (default, modular - works with any HA setup)
+        - webhook: POST to webhook_url
+        - none: Do nothing
+        """
+        if self.notification_mode == "none":
+            return
+
+        if self.notification_mode == "webhook":
+            if not self.webhook_url:
+                return
+            try:
+                session = await self._get_session()
+                async with session.post(
+                    self.webhook_url,
+                    json={"event_type": event_type, "data": data},
+                    timeout=5,
+                ) as resp:
+                    if resp.status == 200:
+                        logging.debug(f"Webhook notified: {event_type}")
+            except Exception:
+                pass
+            return
+
+        # ha_event mode (default) - requires ha_url and ha_token
+        if not self.ha_url or not self.ha_token:
+            return
+
+        headers = {
+            "Authorization": f"Bearer {self.ha_token}",
+            "Content-Type": "application/json",
+        }
+
+        # Fire HA event - modular, works with any HA automation
+        event_name = f"{self.ha_event_prefix}_{event_type}"
+        url = f"{self.ha_url}/api/events/{event_name}"
+        try:
+            session = await self._get_session()
+            async with session.post(
+                url, headers=headers, json=data, timeout=5
+            ) as resp:
+                if resp.status == 200:
+                    logging.debug(f"HA event fired: {event_name}")
+        except Exception:
+            pass
+
     async def _update_ha_status(
         self, status: str, amount: float = 0, tx_hash: str = ""
     ) -> None:
-        """Update HA with payment status."""
-        if not self.ha_url or not self.ha_token:
-            return
-
-        headers = {
-            "Authorization": f"Bearer {self.ha_token}",
-            "Content-Type": "application/json",
-        }
-
-        service_url = f"{self.ha_url}/api/services/om1/update_payment"
-        payload = {"status": status}
+        """Update with payment status (wrapper for backward compatibility)."""
+        data = {"status": status}
         if amount > 0:
-            payload["amount"] = amount
+            data["amount"] = amount
         if tx_hash:
-            payload["tx_hash"] = tx_hash
+            data["tx_hash"] = tx_hash
 
-        try:
-            session = await self._get_session()
-            async with session.post(
-                service_url, headers=headers, json=payload, timeout=5
-            ) as resp:
-                if resp.status == 200:
-                    logging.debug(f"OM1 integration updated: {status}")
-        except Exception:
-            pass
+        # Determine event type from status prefix
+        status_upper = status.upper()
+        if status_upper.startswith("SUCCESS") or status_upper.startswith("COMPLETE"):
+            event_type = "payment_completed"
+        elif status_upper.startswith("FAILED") or status_upper.startswith("ERROR") or status_upper.startswith("BLOCKED"):
+            event_type = "payment_failed"
+        elif status_upper.startswith("PENDING") or status_upper.startswith("WALLET") or status_upper.startswith("BROADCAST") or status_upper.startswith("CONFIRMING"):
+            event_type = "payment_pending"
+        else:
+            event_type = "payment_completed"  # Default
+
+        await self._notify(event_type, data)
 
     async def _update_ha_balance(self, balance: str, asset: str) -> None:
-        """Update HA with wallet balance."""
-        if not self.ha_url or not self.ha_token:
-            return
-
-        headers = {
-            "Authorization": f"Bearer {self.ha_token}",
-            "Content-Type": "application/json",
-        }
-
-        service_url = f"{self.ha_url}/api/services/om1/update_balance"
-        payload = {"balance": balance, "asset": asset}
-
-        try:
-            session = await self._get_session()
-            async with session.post(
-                service_url, headers=headers, json=payload, timeout=5
-            ) as resp:
-                if resp.status == 200:
-                    logging.debug(f"OM1 balance updated: {balance} {asset}")
-        except Exception:
-            pass
+        """Update with wallet balance (wrapper for backward compatibility)."""
+        await self._notify("balance_updated", {"balance": balance, "asset": asset})
 
     async def _update_ha_order(self, command: str) -> None:
-        """Update HA with voice command for AI Command Log."""
-        if not self.ha_url or not self.ha_token:
-            return
-
-        headers = {
-            "Authorization": f"Bearer {self.ha_token}",
-            "Content-Type": "application/json",
-        }
-
-        service_url = f"{self.ha_url}/api/services/om1/update_order"
-        payload = {"status": command}
-
-        try:
-            session = await self._get_session()
-            async with session.post(
-                service_url, headers=headers, json=payload, timeout=5
-            ) as resp:
-                if resp.status == 200:
-                    logging.debug(f"OM1 order updated: {command}")
-        except Exception:
-            pass
+        """Update with voice command (wrapper for backward compatibility)."""
+        await self._notify("order_received", {"command": command, "status": command})
 
     async def _get_balance(self) -> None:
         """Get wallet balance using CDP v2."""

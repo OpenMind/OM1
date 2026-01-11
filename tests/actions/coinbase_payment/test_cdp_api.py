@@ -279,3 +279,126 @@ class TestCoinbasePaymentConnector:
         with pytest.raises(ValueError) as exc_info:
             CoinbasePaymentConnector(config)
         assert "Unsupported chain" in str(exc_info.value)
+
+
+class TestNotificationSystem:
+    """Tests for notification/event system."""
+
+    @pytest.fixture
+    def mock_config_ha_event(self):
+        """Config with ha_event notification mode."""
+        return CoinbasePaymentConfig(
+            api_key_id="test_key_id",
+            api_key_secret="test_secret",
+            wallet_secret="test_wallet",
+            account_address="0x1234567890123456789012345678901234567890",
+            chain="base",
+            testnet=True,
+            ha_url="http://192.168.0.15:8123",
+            ha_token="test_token",
+            notification_mode="ha_event",
+            ha_event_prefix="om1",
+        )
+
+    @pytest.fixture
+    def mock_config_webhook(self):
+        """Config with webhook notification mode."""
+        return CoinbasePaymentConfig(
+            api_key_id="test_key_id",
+            api_key_secret="test_secret",
+            wallet_secret="test_wallet",
+            account_address="0x1234567890123456789012345678901234567890",
+            chain="base",
+            testnet=True,
+            notification_mode="webhook",
+            webhook_url="http://localhost:9999/webhook",
+        )
+
+    @pytest.fixture
+    def mock_config_none(self):
+        """Config with no notifications."""
+        return CoinbasePaymentConfig(
+            api_key_id="test_key_id",
+            api_key_secret="test_secret",
+            wallet_secret="test_wallet",
+            account_address="0x1234567890123456789012345678901234567890",
+            chain="base",
+            testnet=True,
+            notification_mode="none",
+        )
+
+    @pytest.fixture
+    def mock_config_custom_prefix(self):
+        """Config with custom HA event prefix."""
+        return CoinbasePaymentConfig(
+            api_key_id="test_key_id",
+            api_key_secret="test_secret",
+            wallet_secret="test_wallet",
+            account_address="0x1234567890123456789012345678901234567890",
+            chain="base",
+            testnet=True,
+            ha_url="http://192.168.0.15:8123",
+            ha_token="test_token",
+            notification_mode="ha_event",
+            ha_event_prefix="myrobot",
+        )
+
+    @patch("actions.coinbase_payment.connector.cdp_api.CDP_AVAILABLE", True)
+    @patch("actions.coinbase_payment.connector.cdp_api.IOProvider")
+    def test_notification_mode_ha_event(self, mock_io, mock_config_ha_event):
+        """Test ha_event notification mode is configured correctly."""
+        connector = CoinbasePaymentConnector(mock_config_ha_event)
+        assert connector.notification_mode == "ha_event"
+        assert connector.ha_url == "http://192.168.0.15:8123"
+        assert connector.ha_token == "test_token"
+        assert connector.ha_event_prefix == "om1"
+
+    @patch("actions.coinbase_payment.connector.cdp_api.CDP_AVAILABLE", True)
+    @patch("actions.coinbase_payment.connector.cdp_api.IOProvider")
+    def test_notification_mode_webhook(self, mock_io, mock_config_webhook):
+        """Test webhook notification mode is configured correctly."""
+        connector = CoinbasePaymentConnector(mock_config_webhook)
+        assert connector.notification_mode == "webhook"
+        assert connector.webhook_url == "http://localhost:9999/webhook"
+
+    @patch("actions.coinbase_payment.connector.cdp_api.CDP_AVAILABLE", True)
+    @patch("actions.coinbase_payment.connector.cdp_api.IOProvider")
+    def test_notification_mode_none(self, mock_io, mock_config_none):
+        """Test none notification mode disables notifications."""
+        connector = CoinbasePaymentConnector(mock_config_none)
+        assert connector.notification_mode == "none"
+
+    @patch("actions.coinbase_payment.connector.cdp_api.CDP_AVAILABLE", True)
+    @patch("actions.coinbase_payment.connector.cdp_api.IOProvider")
+    def test_custom_ha_event_prefix(self, mock_io, mock_config_custom_prefix):
+        """Test custom HA event prefix is applied."""
+        connector = CoinbasePaymentConnector(mock_config_custom_prefix)
+        assert connector.ha_event_prefix == "myrobot"
+
+    @patch("actions.coinbase_payment.connector.cdp_api.CDP_AVAILABLE", True)
+    @patch("actions.coinbase_payment.connector.cdp_api.IOProvider")
+    def test_default_notification_mode(self, mock_io):
+        """Test default notification mode is ha_event."""
+        config = CoinbasePaymentConfig(
+            api_key_id="test",
+            api_key_secret="test",
+            wallet_secret="test",
+            chain="base",
+            testnet=True,
+        )
+        connector = CoinbasePaymentConnector(config)
+        assert connector.notification_mode == "ha_event"
+
+    @patch("actions.coinbase_payment.connector.cdp_api.CDP_AVAILABLE", True)
+    @patch("actions.coinbase_payment.connector.cdp_api.IOProvider")
+    def test_default_ha_event_prefix(self, mock_io):
+        """Test default HA event prefix is om1."""
+        config = CoinbasePaymentConfig(
+            api_key_id="test",
+            api_key_secret="test",
+            wallet_secret="test",
+            chain="base",
+            testnet=True,
+        )
+        connector = CoinbasePaymentConnector(config)
+        assert connector.ha_event_prefix == "om1"
