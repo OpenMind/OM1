@@ -40,48 +40,6 @@ The system should:
 - Provide a default device option
 
 Example:
-# Microphone Audio Input Plugin – Specification & Usage Guide
-
-This document defines the expected behavior, configuration, and user experience
-for a Microphone Audio Input Plugin in OpenMind.
-
-The goal of this plugin is to allow users to provide voice commands and real-time
-audio input to agents using a local microphone device.
-
----
-
-## 1. Problem Statement
-
-Currently, there is no clear standard or documentation explaining how microphone
-input should be handled in OpenMind. Users face confusion about:
-- Which microphone device is used
-- How to select a device
-- How permissions are handled
-- What audio format is required
-
-This document proposes a clear structure for a Microphone Audio Input Plugin.
-
----
-
-## 2. Expected Behavior
-
-The plugin should:
-- Detect available microphone devices
-- Allow selecting a specific input device
-- Capture real-time audio from the microphone
-- Stream audio to the agent for processing
-- Handle permission requests gracefully
-
----
-
-## 3. Microphone Device Selection
-
-The system should:
-- List all available input devices
-- Allow selection by device name or ID
-- Provide a default device option
-
-Example:
 The system should:
 - List all available input devices
 - Allow selection by device name or ID
@@ -135,4 +93,22 @@ This specification:
 - Reduces confusion for users
 - Helps maintain consistency across platforms
 - Acts as a reference for future development
+
+## 9. Minimal Example
+
+Below is a hypothetical usage snippet:
+
+audio_input:
+  type: "microphone"
+  device_id: "default"
+  sample_rate: 16000
+  channels: 1
+
+Pseudocode:
+agent.receive_audio(input_device="default")
+
+## 10. References
+
+- https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/enumerateDevices
+
 
