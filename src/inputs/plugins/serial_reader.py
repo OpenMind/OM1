@@ -4,6 +4,7 @@ import time
 from typing import Optional
 
 import serial
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -35,10 +36,22 @@ class SerialReaderConfig(SensorConfig):
         Defaults to "Heart Rate and Grip Strength".
     """
 
-    port: str = DEFAULT_SERIAL_PORT
-    baudrate: int = DEFAULT_BAUDRATE
-    timeout: float = DEFAULT_TIMEOUT
-    descriptor: str = "Heart Rate and Grip Strength"
+    port: str = Field(
+        default=DEFAULT_SERIAL_PORT,
+        description="Serial port path (e.g., /dev/ttyUSB0, COM3)",
+    )
+    baudrate: int = Field(
+        default=DEFAULT_BAUDRATE,
+        description="Communication speed in bits per second",
+    )
+    timeout: float = Field(
+        default=DEFAULT_TIMEOUT,
+        description="Read timeout in seconds",
+    )
+    descriptor: str = Field(
+        default="Heart Rate and Grip Strength",
+        description="Human-readable description for LLM context",
+    )
 
 
 class SerialReader(FuserInput[SerialReaderConfig, Optional[str]]):
