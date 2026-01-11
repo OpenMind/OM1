@@ -177,7 +177,15 @@ def _env_get(key: str) -> None:
     """Get value of specific environment variable."""
     value = os.environ.get(key, "")
     if value:
-        console.print(f"{key}={value}")
+        # Mask sensitive values (API keys, secrets, tokens)
+        if "KEY" in key or "SECRET" in key or "TOKEN" in key:
+            if len(value) > 8:
+                display_value = value[:4] + "..." + value[-4:]
+            else:
+                display_value = "***"
+        else:
+            display_value = value
+        console.print(f"{key}={display_value}")
     else:
         print_info(f"{key} is not set")
 

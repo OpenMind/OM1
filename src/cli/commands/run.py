@@ -108,7 +108,7 @@ def run(
     if is_agent_running(config_name):
         print_warning(f"Agent '{config_name}' is already running")
         print_info(
-            "Use 'om1 stop {config_name}' to stop it first, or 'om1 status' to check"
+            f"Use 'om1 stop {config_name}' to stop it first, or 'om1 status' to check"
         )
         raise typer.Exit(1)
 
