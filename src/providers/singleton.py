@@ -1,8 +1,15 @@
 import threading
-from typing import Any
+from typing import Any, Protocol, TypeVar, cast
+
+T = TypeVar("T")
 
 
-def singleton(cls):
+class SingletonWrapper(Protocol[T]):
+    def __call__(self, *args: Any, **kwargs: Any) -> T: ...
+    def reset(self) -> None: ...
+
+
+def singleton(cls: type[T]) -> SingletonWrapper[T]:
     """
     A thread-safe singleton decorator that ensures only one instance of a class exists.
 
@@ -18,10 +25,10 @@ def singleton(cls):
         function: A getter function that returns the singleton instance.
     """
     if not hasattr(cls, "_singleton_instance"):
-        cls._singleton_instance = None
+        setattr(cls, "_singleton_instance", None)
     lock = threading.Lock()
 
-    def get_instance(*args, **kwargs) -> Any:
+    def get_instance(*args: Any, **kwargs: Any) -> T:
         """
         Returns the singleton instance of the decorated class.
 
@@ -37,11 +44,11 @@ def singleton(cls):
             Any: The singleton instance of the decorated class.
         """
         with lock:
-            if cls._singleton_instance is None:
-                cls._singleton_instance = cls(*args, **kwargs)
-            return cls._singleton_instance
+            if getattr(cls, "_singleton_instance") is None:
+                setattr(cls, "_singleton_instance", cls(*args, **kwargs))
+            return getattr(cls, "_singleton_instance")
 
-    def reset_instance():
+    def reset_instance() -> None:
         """
         Resets the singleton instance of the decorated class.
 
@@ -49,9 +56,8 @@ def singleton(cls):
         to be created on the next call to get_instance.
         """
         with lock:
-            cls._singleton_instance = None
+            setattr(cls, "_singleton_instance", None)
 
-    get_instance._singleton_class = cls  # type: ignore
     get_instance.reset = reset_instance  # type: ignore
 
-    return get_instance
+    return cast(SingletonWrapper[T], get_instance)
