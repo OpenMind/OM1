@@ -19,11 +19,11 @@ class AgentTeleopsStatusConfig(BackgroundConfig):
         OM API key for authentication.
     machine_name : str, default="agent_teleops_status_reporter"
         Machine name for teleops status reporting.
-    battery_level : float, default=100.0
+    battery_level : float, default=0.0
         Battery level percentage (0-100).
-    voltage : float, default=12.0
+    voltage : float, default=0.0
         Battery voltage in volts.
-    temperature : float, default=25.0
+    temperature : float, default=0.0
         Battery temperature in Celsius.
     """
 
@@ -33,15 +33,15 @@ class AgentTeleopsStatusConfig(BackgroundConfig):
         description="Machine name for teleops status",
     )
     battery_level: float = Field(
-        default=100.0,
+        default=0.0,
         description="Battery level percentage (0-100)",
     )
     voltage: float = Field(
-        default=12.0,
+        default=0.0,
         description="Battery voltage in volts",
     )
     temperature: float = Field(
-        default=25.0,
+        default=0.0,
         description="Battery temperature in Celsius",
     )
 
