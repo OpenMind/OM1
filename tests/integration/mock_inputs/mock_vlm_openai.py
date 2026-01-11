@@ -5,8 +5,7 @@ import time
 
 import cv2
 
-from inputs.base import SensorConfig
-from inputs.plugins.vlm_openai import VLMOpenAI
+from inputs.plugins.vlm_openai import VLMOpenAI, VLMOpenAIConfig
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_next_opencv_image,
 )
@@ -20,13 +19,13 @@ class MockVLM_OpenAI(VLMOpenAI):
     the mock image provider, while maintaining all the real object detection logic.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMOpenAIConfig = VLMOpenAIConfig()):
         """
         Initialize with the real VLM implementation but without opening camera.
 
         Parameters
         ----------
-        config : SensorConfig, optional
+        config : VLMOpenAIConfig, optional
             Configuration for the sensor
         """
         # Initialize using the real VLM_OpenAI implementation
@@ -80,7 +79,7 @@ class MockVLM_OpenAI(VLMOpenAI):
 
             # Convert image to base64 string
             _, buffer = cv2.imencode(".jpg", image)
-            base64_image = base64.b64encode(buffer).decode("utf-8")
+            base64_image = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
             # Process the image using the VLM provider's frame callback
             if hasattr(self.vlm, "_process_frame"):

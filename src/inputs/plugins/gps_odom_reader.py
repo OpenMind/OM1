@@ -1,60 +1,56 @@
-#!/usr/bin/env python3
-"""
-Light-weight odometry reader (Unitree DDS).
-"""
-
-from __future__ import annotations
-
 import asyncio
 import logging
 import math
 import time
-from dataclasses import dataclass
 from typing import Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-
-# ── Cyclone DDS ────────────────────────────────────────────────────────────
 from providers.odom_provider import OdomProvider
 
-# ─── constants ─────────────────────────────────────────────────────────────
 R_EARTH = 6_371_000.0  # mean Earth radius (m)
 
 
-# ── buffer helper ─────────────────────────────────────────────────────────
-@dataclass
-class Message:
+class GPSOdomReaderConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for GPS Odom Reader Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    text : str
-        Content of the message
+    origin_lat : Optional[float]
+        Origin Latitude.
+    origin_lon : Optional[float]
+        Origin Longitude.
+    origin_yaw_deg : Optional[float]
+        Origin Yaw Degrees.
+    unitree_ethernet : Optional[str]
+        Unitree Ethernet Interface.
     """
 
-    timestamp: float
-    text: str
+    origin_lat: Optional[float] = Field(default=None, description="Origin Latitude")
+    origin_lon: Optional[float] = Field(default=None, description="Origin Longitude")
+    origin_yaw_deg: Optional[float] = Field(
+        default=None, description="Origin Yaw Degrees"
+    )
+    unitree_ethernet: Optional[str] = Field(
+        default=None, description="Unitree Ethernet Interface"
+    )
 
 
-# ── main reader class ──────────────────────────────────────────────────────
-class GPSOdomReader(FuserInput[str]):
+class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
     """
     Maintains global pose (lat, lon, yaw) from Unitree Sport-mode state.
     """
 
-    # ── init ─────────────────────────────────────────────────────────────
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: GPSOdomReaderConfig):
         super().__init__(config)
 
-        # --- origin (deg) ------------------------------------------------
-        self.lat0: float | None = getattr(config, "origin_lat", None)
-        self.lon0: float | None = getattr(config, "origin_lon", None)
-        yaw0_deg = getattr(config, "origin_yaw_deg", None)
+        self.lat0 = self.config.origin_lat
+        self.lon0 = self.config.origin_lon
+        yaw0_deg = self.config.origin_yaw_deg
         if self.lat0 is None or self.lon0 is None or yaw0_deg is None:
             logging.error(
                 "GPSOdomReader: origin_lat, origin_lon, and origin_yaw_deg must be set in the config."
@@ -62,21 +58,18 @@ class GPSOdomReader(FuserInput[str]):
             raise ValueError("Missing origin coordinates or yaw in config.")
         self._yaw_offset = math.radians(yaw0_deg) if yaw0_deg is not None else 0.0
 
-        # --- current pose -----------------------------------------------
         self.pose_x = 0.0  # metres East  of origin
         self.pose_y = 0.0  # metres North of origin
         self.pose_yaw = 0.0  # rad
 
-        # --- I/O + buffer ------------------------------------------------
         self.io_provider = IOProvider()
         self.buf: list[Message] = []
         self.descriptor_for_LLM = "Latitude, Longitude, and Yaw"
 
-        unitree_ethernet: str | None = getattr(config, "unitree_ethernet", None)
+        unitree_ethernet = self.config.unitree_ethernet
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Mapper Odom Provider: {self.odom}")
 
-    # ── helpers ──────────────────────────────────────────────────────────
     @staticmethod
     def _wrap_angle(a: float) -> float:
         return (a + math.pi) % (2 * math.pi) - math.pi
@@ -87,7 +80,6 @@ class GPSOdomReader(FuserInput[str]):
         λ = λ0 + x / (R_EARTH * math.cos(φ0))
         return map(math.degrees, (φ, λ))
 
-    # ── pose update step ────────────────────────────────────────────────
     async def _update_pose(self):
         o = self.odom
         logging.debug(f"Odom data: {o}")
@@ -102,16 +94,20 @@ class GPSOdomReader(FuserInput[str]):
         self.io_provider.add_dynamic_variable("longitude", lon)
         self.io_provider.add_dynamic_variable("yaw_deg", math.degrees(self.pose_yaw))
 
-    # ── polling loop (FuserInput interface) ─────────────────────────────
     async def _poll(self) -> Optional[str]:
+        """
+        Poll for updated odometry and compute global pose.
+
+        Returns
+        -------
+        Optional[str]
+            Always returns None.
+        """
         await asyncio.sleep(0.5)
         await self._update_pose()
         return None
 
-    # ---------------------------------------------------------------------
-    # ChatGPT-bridge helpers — minimal but functional
-    # ---------------------------------------------------------------------
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Allow external callers (e.g. GUI, CLI) to push arbitrary text into
         the same IO/logging path that serial parsing used to feed.
@@ -130,12 +126,15 @@ class GPSOdomReader(FuserInput[str]):
         """
         if not self.buf:
             return None
-        m = self.buf[-1]
+
+        message = self.buf[-1]
         self.buf.clear()
-        self.io_provider.add_input(self.__class__.__name__, m.text, m.timestamp)
+        self.io_provider.add_input(
+            self.__class__.__name__, message.message, message.timestamp
+        )
         return f"""
 {self.descriptor_for_LLM} INPUT
 // START
-{m.text}
+{message.message}
 // END
 """

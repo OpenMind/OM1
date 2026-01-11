@@ -1,29 +1,42 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Queue
 from typing import List, Optional
 
-# `requests` is **optional** while we mock — keep import guarded
-try:
-    import requests  # type: ignore
-except ImportError:  # unit‑test env without requests installed
-    requests = None  # pylint: disable=invalid-name
+import requests
+from pydantic import Field
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-# ────────────────────────────────────────────────────────────────────────────────
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+class FabricClosestPeerConfig(SensorConfig):
+    """
+    Configuration for Fabric Closest Peer Sensor.
+
+    Parameters
+    ----------
+    fabric_endpoint : str
+        Fabric endpoint URL.
+    mock_mode : bool
+        Whether to enable mock mode.
+    mock_lat : Optional[float]
+        Mock latitude.
+    mock_lon : Optional[float]
+        Mock longitude.
+    """
+
+    fabric_endpoint: str = Field(
+        default="http://localhost:8545", description="Fabric Endpoint"
+    )
+    mock_mode: bool = Field(default=True, description="Mock Mode")
+    mock_lat: Optional[float] = Field(default=None, description="Mock Latitude")
+    mock_lon: Optional[float] = Field(default=None, description="Mock Longitude")
 
 
-class FabricClosestPeer(FuserInput[str]):
+class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
     """Share our GPS position with the Fabric network and fetch the closest peer.
 
     **Mock‑friendly:** set `mock_mode=True` in the plugin config (or environment)
@@ -31,7 +44,7 @@ class FabricClosestPeer(FuserInput[str]):
     calling the REST endpoint.  Useful for local testing before the chain is up.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: FabricClosestPeerConfig):
         super().__init__(config)
 
         self.descriptor_for_LLM = "Closest Peer from Fabric"
@@ -39,22 +52,23 @@ class FabricClosestPeer(FuserInput[str]):
         self.messages: List[str] = []
         self.msg_q: Queue[str] = Queue()
 
-        # endpoint / mock toggle -------------------------------------------------
-        self.fabric_endpoint = getattr(
-            config, "fabric_endpoint", "http://localhost:8545"
-        )
-        self.mock_mode: bool = bool(
-            getattr(config, "mock_mode", True)
-        )  # default ON for now
+        self.fabric_endpoint = self.config.fabric_endpoint
+        self.mock_mode = self.config.mock_mode
 
-    # ────────────────────────────────────────────────────────────────────────
     async def _poll(self) -> Optional[str]:
+        """
+        Poll Fabric for the closest peer based on our current GPS position.
+
+        Returns
+        -------
+        Optional[str]
+            Human-readable message with closest peer coordinates, or None on error
+        """
         await asyncio.sleep(0.5)
 
-        # --------------------------------------------------------------------
         if self.mock_mode:
-            peer_lat = getattr(self.config, "mock_lat")
-            peer_lon = getattr(self.config, "mock_lon")
+            peer_lat = self.config.mock_lat
+            peer_lon = self.config.mock_lon
             logging.info(
                 f"FabricClosestPeer (mock): fabricated peer {peer_lat:.6f},{peer_lon:.6f}"
             )
@@ -98,7 +112,6 @@ class FabricClosestPeer(FuserInput[str]):
                 )
                 return None
 
-        # store & enqueue ------------------------------------------------------
         self.io.add_dynamic_variable("closest_peer_lat", peer_lat)
         self.io.add_dynamic_variable("closest_peer_lon", peer_lon)
 
@@ -106,13 +119,35 @@ class FabricClosestPeer(FuserInput[str]):
         self.msg_q.put(human_msg)
         return human_msg
 
-    # ────────────────────────────────────────────────────────────────────────
     async def raw_to_text(self, raw_input: Optional[str]):
+        """
+        Process raw input to generate a timestamped message.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
+        Returns
+        -------
+        Optional[Message]
+            A timestamped message containing the processed input
+        """
         if raw_input is None:
             return
         self.messages.append(raw_input)
 
     def formatted_latest_buffer(self) -> Optional[str]:
+        """
+        Format and clear the latest buffer contents.
+
+        Returns
+        -------
+        Optional[str]
+            Formatted string containing the latest message and metadata,
+            or None if the buffer is empty
+
+        """
         if not self.msg_q.qsize():
             return None
         msg = self.msg_q.get()

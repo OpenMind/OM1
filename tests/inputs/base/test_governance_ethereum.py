@@ -3,13 +3,14 @@ from unittest.mock import patch
 
 import pytest
 
+from inputs.base import SensorConfig
 from inputs.plugins.ethereum_governance import GovernanceEthereum
 
 
 @pytest.fixture
 def governance():
     """Fixture to initialize GovernanceEthereum."""
-    return GovernanceEthereum()
+    return GovernanceEthereum(config=SensorConfig())
 
 
 @pytest.fixture
