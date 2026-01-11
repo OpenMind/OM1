@@ -1,7 +1,9 @@
 import asyncio
+import json
+import os
 import functools
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 import openai
@@ -84,6 +86,9 @@ class LLMHistoryManager:
 
         # history buffer
         self.history: List[ChatMessage] = []
+
+        # Load persisted history on startup
+        self._load_history()
 
         # io provider
         self.io_provider = IOProvider()
@@ -268,6 +273,29 @@ class LLMHistoryManager:
             messages.pop(0) if messages else None
             messages.pop(0) if messages else None
 
+
+# === Feature: Save Conversation History ===
+    def _save_history(self):
+        try:
+            with open("conversation_history.json", "w", encoding="utf-8") as f:
+                # Convert ChatMessage objects to dicts for JSON serialization
+                data = [asdict(msg) for msg in self.history]
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"[Memory] Failed to save history: {e}")
+
+    # === Feature: Load Conversation History ===
+    def _load_history(self):
+        if os.path.exists("conversation_history.json"):
+            try:
+                with open("conversation_history.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    # Convert dicts back to ChatMessage objects
+                    self.history = [ChatMessage(**msg) for msg in data]
+                print(f"\n[Memory] Successfully loaded {len(self.history)} chat messages!")
+            except Exception as e:
+                print(f"[Memory] Failed to load history: {e}")
+
     def get_messages(self) -> List[dict]:
         """
         Get messages in format required by OpenAI API.
@@ -324,6 +352,9 @@ class LLMHistoryManager:
 
                 logging.debug(f"Inputs: {inputs}")
                 self.history_manager.history.append(inputs)
+                
+                # Persist history after update
+                self.history_manager._save_history()
 
                 messages = self.history_manager.get_messages()
                 logging.debug(f"messages:\n{messages}")
@@ -349,8 +380,11 @@ class LLMHistoryManager:
                     action_message = action_message.replace("****", self.agent_name)
 
                     self.history_manager.history.append(
-                        ChatMessage(role="assistant", content=action_message)
+                    ChatMessage(role="assistant", content=action_message)
                     )
+                    
+                    # Persist history after update
+                    self.history_manager._save_history()
 
                     if (
                         self.history_manager.config.history_length > 0
