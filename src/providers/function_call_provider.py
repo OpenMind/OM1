@@ -65,6 +65,7 @@ class FunctionGenerator:
         origin = get_origin(python_type)
         args = get_args(python_type)
 
+        # Handle Optional types
         if origin is T.Union:
             if len(args) == 2 and type(None) in args:
                 non_none_type = args[0] if args[1] is type(None) else args[1]
@@ -72,15 +73,15 @@ class FunctionGenerator:
                 return schema
             else:
                 return {"type": "string"}
-        
+
         # Handle List/list generics
         if origin is list or origin is T.List:
             item_type = args[0] if args else str
             return {
                 "type": "array",
-                "items": FunctionGenerator.python_type_to_json_schema(item_type)
+                "items": FunctionGenerator.python_type_to_json_schema(item_type),
             }
-            
+
         # Handle Dict/dict generics
         if origin is dict or origin is T.Dict:
             return {"type": "object"}
@@ -127,19 +128,16 @@ class FunctionGenerator:
 
             docstring = inspect.getdoc(method)
             if docstring and param_name in docstring:
-                # Basic description extraction - could be improved
                 param_schema["description"] = f"Parameter {param_name}"
 
-            if param.default == inspect.Parameter.empty:
-                required.append(param_name)
-            else:
-                # In strict mode, all parameters must be required.
-                # Use description to indicate optionality.
-                required.append(param_name)
-                
+            required.append(param_name)
+
+            if param.default != inspect.Parameter.empty:
                 desc = param_schema.get("description", f"Parameter {param_name}")
                 if "(optional)" not in desc and "(optional" not in desc:
-                     param_schema["description"] = f"{desc} (optional, default: {param.default})"
+                    param_schema["description"] = (
+                        f"{desc} (optional, default: {param.default})"
+                    )
 
             properties[param_name] = param_schema
 
