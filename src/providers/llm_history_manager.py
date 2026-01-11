@@ -84,6 +84,7 @@ class LLMHistoryManager:
 
         # history buffer
         self.history: List[ChatMessage] = []
+        self._history_lock = asyncio.Lock()
 
         # io provider
         self.io_provider = IOProvider()
@@ -124,10 +125,7 @@ class LLMHistoryManager:
 
             if len(messages) == 4:
                 # the normal case - previous summary and new data
-                # the previous summary
                 summary_prompt += f"{messages[0].content}\n"
-                # actions - already part of the summary - no need to add
-                # summary_prompt += f"{messages[1].content}\n"
                 summary_prompt += "\nNow, the following new information has arrived. "
                 summary_prompt += f"{messages[2].content}\n"
                 summary_prompt += f"{messages[3].content}\n"
@@ -136,8 +134,6 @@ class LLMHistoryManager:
                     summary_prompt += f"{msg.content}\n"
 
             summary_prompt += self.summary_command
-
-            # insert actual robot name
             summary_prompt = (
                 summary_prompt.replace("****", self.agent_name)
                 if self.agent_name
@@ -200,18 +196,6 @@ class LLMHistoryManager:
     async def start_summary_task(self, messages: List[ChatMessage]):
         """
         Start a new asynchronous task to summarize the messages.
-
-        Parameters
-        ----------
-        messages : List[ChatMessage]
-            List of chat messages to summarize. This list will be modified
-            in-place when the summary task completes successfully.
-
-        Notes
-        -----
-        If a previous summary task is still running, this method will return
-        early without starting a new task. The summary result will be added
-        to the messages list via a callback when the task completes.
         """
         if not messages:
             logging.warning("No messages to summarize in start_summary_task")
@@ -222,8 +206,10 @@ class LLMHistoryManager:
                 logging.info("Previous summary task still running")
                 return
 
-            messages_copy = messages.copy()
-            num_summarized = len(messages_copy)
+            async with self._history_lock:
+                messages_copy = self.history.copy()
+                num_summarized = len(messages_copy)
+
             self._summary_task = asyncio.create_task(
                 self.summarize_messages(messages_copy)
             )
@@ -236,9 +222,16 @@ class LLMHistoryManager:
 
                     summary_message = task.result()
                     if summary_message.role == "assistant":
-                        del messages[:num_summarized]
-                        messages.insert(0, summary_message)
-                        logging.info("Successfully summarized the state")
+
+                        async def update_history():
+                            async with self._history_lock:
+                                del self.history[:num_summarized]
+                                self.history.insert(0, summary_message)
+                            logging.info("Successfully summarized the state")
+
+                        asyncio.run_coroutine_threadsafe(
+                            update_history(), asyncio.get_event_loop()
+                        )
                     elif (
                         summary_message.role == "system"
                         and "Error" in summary_message.content
@@ -246,39 +239,34 @@ class LLMHistoryManager:
                         logging.error(
                             f"Summarization failed: {summary_message.content}"
                         )
-                        messages.pop(0) if messages else None
-                        messages.pop(0) if messages else None
                     else:
                         logging.warning(f"Unexpected summary result: {summary_message}")
-                except asyncio.CancelledError:
-                    logging.warning("Summary task callback cancelled")
                 except Exception as e:
                     logging.error(
                         f"Error in summary task callback: {type(e).__name__}: {e}"
                     )
-                    messages.pop(0) if messages else None
-                    messages.pop(0) if messages else None
 
             self._summary_task.add_done_callback(callback)
 
-        except asyncio.CancelledError:
-            logging.warning("Summary task creation cancelled")
         except Exception as e:
             logging.error(f"Error starting summary task: {type(e).__name__}: {e}")
-            messages.pop(0) if messages else None
-            messages.pop(0) if messages else None
 
-    def get_messages(self) -> List[dict]:
+    async def get_messages(self) -> List[dict]:
         """
         Get messages in format required by OpenAI API.
-
-        Returns
-        -------
-        List[dict]
-            List of message dictionaries with "role" and "content" keys,
-            formatted for OpenAI API consumption.
         """
-        return [{"role": msg.role, "content": msg.content} for msg in self.history]
+        async with self._history_lock:
+            return [{"role": msg.role, "content": msg.content} for msg in self.history]
+
+    async def add_message(self, message: ChatMessage):
+        """Safely append a message to history."""
+        async with self._history_lock:
+            self.history.append(message)
+
+    async def clear_history(self):
+        """Safely clear the history."""
+        async with self._history_lock:
+            self.history.clear()
 
     @staticmethod
     def update_history() -> (
@@ -286,11 +274,6 @@ class LLMHistoryManager:
     ):
         """
         Decorator to manage LLM history around an async function.
-
-        Returns
-        -------
-        Callable
-            Decorator function.
         """
 
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
@@ -305,7 +288,6 @@ class LLMHistoryManager:
                     return response
 
                 self.agent_name = self._config.agent_name
-
                 cycle = self.history_manager.frame_index
                 logging.debug(f"LLM Tasking cycle debug tracker: {cycle}")
 
@@ -314,25 +296,23 @@ class LLMHistoryManager:
                 for input_type, input_info in self.io_provider.inputs.items():
                     if input_info.tick == current_tick:
                         logging.debug(f"LLM: {input_type} (tick #{input_info.tick})")
-                        logging.debug(f"LLM: {input_info}")
                         formatted_inputs += f"{input_type}. {input_info.input} | "
 
                 formatted_inputs = formatted_inputs.replace("..", ".")
                 formatted_inputs = formatted_inputs.replace("  ", " ")
 
                 inputs = ChatMessage(role="user", content=formatted_inputs)
-
                 logging.debug(f"Inputs: {inputs}")
-                self.history_manager.history.append(inputs)
 
-                messages = self.history_manager.get_messages()
+                await self.history_manager.add_message(inputs)
+
+                messages = await self.history_manager.get_messages()
                 logging.debug(f"messages:\n{messages}")
-                # this advances the frame index
+
                 response = await func(self, prompt, messages, *args, **kwargs)
                 logging.debug(f"Response to parse:\n{response}")
 
                 if response is not None:
-
                     action_message = (
                         "Given that information, **** took these actions: "
                         + (
@@ -345,24 +325,25 @@ class LLMHistoryManager:
                             )
                         )
                     )
-
                     action_message = action_message.replace("****", self.agent_name)
 
-                    self.history_manager.history.append(
+                    await self.history_manager.add_message(
                         ChatMessage(role="assistant", content=action_message)
                     )
 
-                    if (
-                        self.history_manager.config.history_length > 0
-                        and len(self.history_manager.history)
-                        > self.history_manager.config.history_length
-                    ):
-                        await self.history_manager.start_summary_task(
-                            self.history_manager.history
+                    async with self.history_manager._history_lock:
+                        should_summarize = (
+                            self.history_manager.config.history_length > 0
+                            and len(self.history_manager.history)
+                            > self.history_manager.config.history_length
                         )
 
-                self.history_manager.frame_index += 1
+                    if should_summarize:
+                        async with self.history_manager._history_lock:
+                            hist_copy = self.history_manager.history.copy()
+                        await self.history_manager.start_summary_task(hist_copy)
 
+                self.history_manager.frame_index += 1
                 return response
 
             return wrapper
