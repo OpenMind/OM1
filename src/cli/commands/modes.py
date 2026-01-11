@@ -91,9 +91,9 @@ def modes(
                 "timeout_seconds": mode.timeout_seconds,
                 "inputs_count": len(mode._raw_inputs),
                 "actions_count": len(mode._raw_actions),
-                "lifecycle_hooks_count": len(mode.lifecycle_hooks)
-                if mode.lifecycle_hooks
-                else 0,
+                "lifecycle_hooks_count": (
+                    len(mode.lifecycle_hooks) if mode.lifecycle_hooks else 0
+                ),
             }
 
         for rule in mode_config.transition_rules:
@@ -129,15 +129,19 @@ def modes(
     info_table.add_row("Default Mode", f"[yellow]{mode_config.default_mode}[/yellow]")
     info_table.add_row(
         "Manual Switching",
-        "[green]Enabled[/green]"
-        if mode_config.allow_manual_switching
-        else "[red]Disabled[/red]",
+        (
+            "[green]Enabled[/green]"
+            if mode_config.allow_manual_switching
+            else "[red]Disabled[/red]"
+        ),
     )
     info_table.add_row(
         "Mode Memory",
-        "[green]Enabled[/green]"
-        if mode_config.mode_memory_enabled
-        else "[red]Disabled[/red]",
+        (
+            "[green]Enabled[/green]"
+            if mode_config.mode_memory_enabled
+            else "[red]Disabled[/red]"
+        ),
     )
     if mode_config.global_lifecycle_hooks:
         info_table.add_row(
