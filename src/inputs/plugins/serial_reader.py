@@ -9,8 +9,39 @@ from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
+# Default serial port configuration
+DEFAULT_SERIAL_PORT = "/dev/ttyUSB0"
+DEFAULT_BAUDRATE = 9600
+DEFAULT_TIMEOUT = 1
 
-class SerialReader(FuserInput[SensorConfig, Optional[str]]):
+
+class SerialReaderConfig(SensorConfig):
+    """
+    Configuration for SerialReader input.
+
+    Parameters
+    ----------
+    port : str
+        Serial port path (e.g., "/dev/ttyUSB0" on Linux, "/dev/cu.usbmodem1101"
+        on macOS, "COM3" on Windows). Defaults to "/dev/ttyUSB0".
+    baudrate : int
+        Communication speed in bits per second. Common values: 9600, 19200,
+        38400, 57600, 115200. Defaults to 9600.
+    timeout : float
+        Read timeout in seconds. Set to None for blocking reads.
+        Defaults to 1.0 second.
+    descriptor : str
+        Human-readable description for LLM context.
+        Defaults to "Heart Rate and Grip Strength".
+    """
+
+    port: str = DEFAULT_SERIAL_PORT
+    baudrate: int = DEFAULT_BAUDRATE
+    timeout: float = DEFAULT_TIMEOUT
+    descriptor: str = "Heart Rate and Grip Strength"
+
+
+class SerialReader(FuserInput[SerialReaderConfig, Optional[str]]):
     """
     Serial port input reader for Arduino and other serial devices.
 
@@ -44,7 +75,7 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
 
     #
 
-    def __init__(self, config: SensorConfig):
+    def __init__(self, config: SerialReaderConfig):
         """
         Initialize the serial reader with configuration.
 
@@ -53,11 +84,12 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
 
         Parameters
         ----------
-        config : SensorConfig
-            Configuration object containing sensor settings. The serial port
-            connection parameters (port, baudrate, timeout) are currently
-            hardcoded in the implementation but should be configurable via
-            the config object in future versions.
+        config : SerialReaderConfig
+            Configuration object containing serial port settings:
+            - port: Serial port path (e.g., "/dev/ttyUSB0", "COM3")
+            - baudrate: Communication speed (default: 9600)
+            - timeout: Read timeout in seconds (default: 1.0)
+            - descriptor: Human-readable description for LLM context
 
         Notes
         -----
@@ -66,34 +98,22 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
         logged but the initialization continues. The `ser` attribute will be None
         in case of connection failure, and subsequent polling operations will
         return None until a successful connection is established.
-
-        The default serial port is set to "/dev/cu.usbmodem1101" (macOS) with
-        a baudrate of 9600. Users should modify these values to match their
-        specific hardware configuration.
         """
         super().__init__(config)
-
-        # Configure the serial port
-        port = "/dev/cu.usbmodem1101"  # Replace with your serial port
-        baudrate = 9600
-        timeout = 1  # Optional: set a timeout for reading
 
         self.ser = None
 
         try:
-            # Open the serial port
-            self.ser = serial.Serial(port, baudrate, timeout=timeout)
-            logging.info(f"Connected to {port} at {baudrate} baud")
+            self.ser = serial.Serial(
+                config.port, config.baudrate, timeout=config.timeout
+            )
+            logging.info(f"Connected to {config.port} at {config.baudrate} baud")
         except serial.SerialException as e:
-            logging.error(f"Error: {e}")
+            logging.error(f"Serial connection error: {e}")
 
-        # Track IO
         self.io_provider = IOProvider()
-
-        # Messages buffer
         self.messages: list[Message] = []
-
-        self.descriptor_for_LLM = "Heart Rate and Grip Strength"
+        self.descriptor_for_LLM = config.descriptor
 
     async def _poll(self) -> Optional[str]:
         """
