@@ -166,7 +166,6 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
         sentence = None
 
         if filtered_detections and len(filtered_detections) > 0:
-
             pred_boxes = torch.stack(
                 [detection.bbox for detection in filtered_detections]
             )

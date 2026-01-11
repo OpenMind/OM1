@@ -284,7 +284,6 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
             logging.info(f"Should have non-zero avoidance yaw: {self.emergency}")
 
         if self.emergency:
-
             # target = self.emergency
             target = [MoveCommand(dx=0.0, yaw=self.emergency)]
             logging.info(f"Emergency target: {target}")
@@ -332,7 +331,6 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         target: List[MoveCommand] = list(self.pending_movements.queue)
 
         if len(target) > 0:
-
             current_target = target[0]
 
             logging.debug(
@@ -389,7 +387,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
                     (self.odom.x - s_x) ** 2 + (self.odom.y - s_y) ** 2
                 )
                 remaining = abs(goal_dx - distance_traveled)
-                logging.info(f"remaining advance GAP: {round(remaining,2)}")
+                logging.info(f"remaining advance GAP: {round(remaining, 2)}")
 
                 fb = 0
                 if pp is not None and 4 in pp:

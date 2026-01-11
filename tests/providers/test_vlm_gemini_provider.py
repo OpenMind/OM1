@@ -42,7 +42,12 @@ def mock_dependencies():
             return_value=mock_video_stream_instance,
         ) as mock_video_stream_class,
     ):
-        yield mock_client_class, mock_video_stream_class, mock_client_instance, mock_video_stream_instance
+        yield (
+            mock_client_class,
+            mock_video_stream_class,
+            mock_client_instance,
+            mock_video_stream_instance,
+        )
 
 
 def test_initialization(base_url, api_key, fps, mock_dependencies):

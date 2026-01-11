@@ -427,7 +427,6 @@ class RPLidarProvider:
         raw = []
 
         for angle, distance in data:
-
             d_m = distance
 
             # first, correctly orient the sensor zero to the robot zero

@@ -18,7 +18,6 @@ from .singleton import singleton
 class AvatarProvider:
     """
     Singleton provider for Avatar communication via Zenoh.
-
     """
 
     def __init__(self):
@@ -66,7 +65,12 @@ class AvatarProvider:
             The Zenoh sample containing the serialized AvatarFaceRequest message.
         """
         try:
-            request = AvatarFaceRequest.deserialize(sample.payload.to_bytes())
+            payload_bytes = sample.payload.to_bytes()
+            if len(payload_bytes) == 0:
+                logging.warning("Received empty avatar request payload")
+                return
+
+            request = AvatarFaceRequest.deserialize(payload_bytes)
 
             if request.code == AvatarFaceRequest.Code.STATUS.value:
                 logging.debug("Received avatar health check request")
@@ -81,6 +85,7 @@ class AvatarProvider:
                 if self.avatar_healthcheck_publisher:
                     self.avatar_healthcheck_publisher.put(response.serialize())
                     logging.debug("Sent avatar active response")
+
         except Exception as e:
             logging.error(f"Error handling avatar request: {e}")
 
@@ -133,7 +138,36 @@ class AvatarProvider:
 
         self.running = False
 
-        if self.session:
-            self.session.close()
+        # Close publisher
+        if self.avatar_publisher:
+            try:
+                self.avatar_publisher.undeclare()
+            except Exception as e:
+                logging.warning(f"Failed to undeclare avatar publisher: {e}")
+            self.avatar_publisher = None
 
-        logging.info("AvatarProvider stopped and Zenoh session closed")
+        # Close subscriber
+        if self.avatar_subscriber:
+            try:
+                self.avatar_subscriber.close()  # ✅ Benar: subscriber pakai close()
+            except Exception as e:
+                logging.warning(f"Failed to close avatar subscriber: {e}")
+            self.avatar_subscriber = None
+
+        # Close healthcheck publisher
+        if self.avatar_healthcheck_publisher:
+            try:
+                self.avatar_healthcheck_publisher.undeclare()
+            except Exception as e:
+                logging.warning(f"Failed to undeclare healthcheck publisher: {e}")
+            self.avatar_healthcheck_publisher = None
+
+        # Close session last
+        if self.session:
+            try:
+                self.session.close()
+            except Exception as e:
+                logging.warning(f"Failed to close Zenoh session: {e}")
+            self.session = None
+
+        logging.info("AvatarProvider stopped and all Zenoh resources cleaned up")

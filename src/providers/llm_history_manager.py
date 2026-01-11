@@ -332,7 +332,6 @@ class LLMHistoryManager:
                 logging.debug(f"Response to parse:\n{response}")
 
                 if response is not None:
-
                     action_message = (
                         "Given that information, **** took these actions: "
                         + (

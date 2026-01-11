@@ -4,7 +4,6 @@ from providers.function_call_provider import FunctionGenerator, LLMFunction
 
 
 class TestFunctionGeneratorBugs:
-
     def test_complex_type_conversion(self):
         """
         Test how python_type_to_json_schema handles complex types like List[int] or Dict[str, Any].

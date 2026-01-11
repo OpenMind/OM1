@@ -179,7 +179,6 @@ class RtkProvider:
         Main loop for the RTK provider.
         """
         while self.running:
-
             if self.serial_connection:
                 bytes_waiting = self.serial_connection.in_waiting
                 while bytes_waiting > 0:

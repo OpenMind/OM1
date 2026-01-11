@@ -95,7 +95,6 @@ class RemoteMoveController:
         self.update_movement()
 
     def on_release(self, key):
-
         try:
             k = key.char
         except Exception:

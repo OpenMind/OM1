@@ -67,7 +67,6 @@ def setup_logging(
     handlers: list[logging.Handler] = [console_handler]
 
     if log_to_file:
-
         os.makedirs("logs", exist_ok=True)
 
         file_handler = logging.FileHandler(

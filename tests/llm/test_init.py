@@ -59,7 +59,6 @@ def test_llm_config():
 
 
 def test_load_llm_mock_implementation():
-
     with (
         patch("llm.find_module_with_class") as mock_find_module,
         patch("llm.importlib.import_module") as mock_import,
@@ -88,7 +87,6 @@ def test_load_llm_not_found():
 
 
 def test_load_llm_invalid_type():
-
     with (
         patch("llm.find_module_with_class") as mock_find_module,
         patch("llm.importlib.import_module") as mock_import,

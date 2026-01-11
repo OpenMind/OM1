@@ -13,7 +13,6 @@ class MockSimulator(Simulator):
 
 
 def test_load_simulator_success():
-
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
         patch("simulators.importlib.import_module") as mock_import,
@@ -42,7 +41,6 @@ def test_load_simulator_not_found():
 
 
 def test_load_simulator_multiple_plugins():
-
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
         patch("simulators.importlib.import_module") as mock_import,
@@ -61,7 +59,6 @@ def test_load_simulator_multiple_plugins():
 
 
 def test_load_simulator_invalid_type():
-
     with (
         patch("simulators.find_module_with_class") as mock_find_module,
         patch("simulators.importlib.import_module") as mock_import,

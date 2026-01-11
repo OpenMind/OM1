@@ -11,20 +11,24 @@ repos:
       - id: check-docstring-first
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.3
+    rev: v0.14.7
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
+        types_or: [python, pyi]
+      # - id: ruff-format
 
   - repo: https://github.com/psf/black
     rev: 25.1.0
     hooks:
       - id: black
+        types_or: [python, pyi]
 
   - repo: https://github.com/pycqa/isort
     rev: 6.0.0
     hooks:
       - id: isort
+        types_or: [python, pyi]
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0

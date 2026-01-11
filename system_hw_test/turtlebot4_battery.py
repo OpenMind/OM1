@@ -19,7 +19,6 @@ def listener(sample):
 
 
 if __name__ == "__main__":
-
     URID = args.URID
     print(f"Using Zenoh to connect to robot using {URID}")
     print("[INFO] Opening zenoh session...")

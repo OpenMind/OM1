@@ -648,7 +648,7 @@ def _build_llm_evaluation_prompts(
             )
     if has_keywords:
         comparison_sections.append(
-            f'- Should detect keywords: {formatted_expected["keywords"]}'
+            f"- Should detect keywords: {formatted_expected['keywords']}"
         )
     if has_emotion:
         emotion_list = formatted_expected["emotion"]
@@ -667,7 +667,7 @@ def _build_llm_evaluation_prompts(
         actual_sections.append(f'- Movement command: "{formatted_actual["movement"]}"')
     if has_keywords:
         actual_sections.append(
-            f'- Keywords successfully detected: {formatted_actual["keywords_found"]}'
+            f"- Keywords successfully detected: {formatted_actual['keywords_found']}"
         )
     if has_emotion:
         actual_sections.append(f'- Actual emotion: "{formatted_actual["emotion"]}"')

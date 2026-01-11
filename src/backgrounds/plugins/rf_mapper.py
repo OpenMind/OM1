@@ -182,7 +182,6 @@ class RFmapper(Background[RFmapperConfig]):
                         f"Updated BLE mfgval: {self.seen_devices[addr].mfgval}"
                     )
             else:
-
                 # this is a new device
                 self.seen_devices[addr] = RFData(
                     unix_ts=time.time(),
@@ -255,7 +254,6 @@ class RFmapper(Background[RFmapperConfig]):
         """
         try:
             while self.running:
-
                 logging.info(f"Sending to fabric: payload {self.payload_idx}")
 
                 # add scan results if they are new

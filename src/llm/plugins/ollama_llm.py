@@ -84,7 +84,8 @@ class OllamaLLM(LLM[R]):
 
         # Initialize history manager
         self.history_manager = LLMHistoryManager(
-            self._config, self._client  # type: ignore
+            self._config,
+            self._client,  # type: ignore
         )
 
         logging.info(f"OllamaLLM initialized with model: {config.model}")

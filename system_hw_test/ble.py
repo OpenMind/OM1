@@ -34,9 +34,9 @@ async def main():
                     print("\t\tCharacteristics:")
                     for c in service.characteristics:
                         print()
-                        print(f"\t\t\tUUID: {c.uuid}"),
+                        (print(f"\t\t\tUUID: {c.uuid}"),)
                         print(f"\t\t\tDescription: {c.uuid}")
-                        print(f"\t\t\tHandle: {c.uuid}"),
+                        (print(f"\t\t\tHandle: {c.uuid}"),)
                         print(f"\t\t\tProperties: {c.uuid}")
 
                         print("\t\tDescriptors:")

@@ -151,9 +151,7 @@ class RPDriver(object):
                 timeout=self.timeout,
             )
         except serial.SerialException as err:
-            raise RPLidarException(
-                "Failed to connect to the sensor " "due to: %s" % err
-            )
+            raise RPLidarException("Failed to connect to the sensor due to: %s" % err)
 
     def disconnect(self):
         """Disconnects from the serial port"""
@@ -278,7 +276,7 @@ class RPDriver(object):
             The related error code that caused a warning/error.
         """
         if self._serial.inWaiting() > 0:
-            return "Data in buffer. " "Run clean_input() to empty the buffer."
+            return "Data in buffer. Run clean_input() to empty the buffer."
         self.logger.info("Asking for health")
         self._send_cmd(GET_HEALTH_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
@@ -325,17 +323,17 @@ class RPDriver(object):
         self.logger.debug("Health status: %s [%d]", status, error_code)
         if status == _HEALTH_STATUSES[2]:
             self.logger.warning(
-                "Trying to reset sensor due to error. " "Error code: %d", error_code
+                "Trying to reset sensor due to error. Error code: %d", error_code
             )
             self.reset()
             status, error_code = self.get_health()
             if status == _HEALTH_STATUSES[2]:
                 raise RPLidarException(
-                    "RPLidar hardware failure. " "Error code: %d" % error_code
+                    "RPLidar hardware failure. Error code: %d" % error_code
                 )
         elif status == _HEALTH_STATUSES[1]:
             self.logger.warning(
-                "Warning sensor status detected! " "Error code: %d", error_code
+                "Warning sensor status detected! Error code: %d", error_code
             )
 
         cmd = _SCAN_TYPE[scan_type]["byte"]
@@ -397,8 +395,7 @@ class RPDriver(object):
                 data_in_buf = self._serial.inWaiting()
                 if data_in_buf > max_buf_meas:
                     self.logger.warning(
-                        "Too many bytes in the input buffer: %d/%d. "
-                        "Cleaning buffer...",
+                        "Too many bytes in the input buffer: %d/%d. Cleaning buffer...",
                         data_in_buf,
                         max_buf_meas,
                     )
@@ -436,7 +433,7 @@ class RPDriver(object):
 
                 self.express_trame += 1
                 self.logger.debug(
-                    "process scan of frame %d with angle : " "%f and angle new : %f",
+                    "process scan of frame %d with angle : %f and angle new : %f",
                     self.express_trame,
                     self.express_old_data.start_angle,
                     self.express_data.start_angle,

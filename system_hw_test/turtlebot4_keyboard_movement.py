@@ -44,7 +44,6 @@ class Twist(IdlStruct, typename="Twist"):
 
 
 class MoveController:
-
     def __init__(self, URID: str = ""):
         self.session = None
         self.cmd_vel = f"{URID}/c3/cmd_vel"
@@ -173,7 +172,6 @@ def control_loop(move_controller):
 
 if __name__ == "__main__":
     try:
-
         URID = args.URID
         print(f"Using Zenoh to connect to robot using {URID}")
         print("[INFO] Opening zenoh session...")

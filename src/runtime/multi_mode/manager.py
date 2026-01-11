@@ -291,7 +291,6 @@ class ModeManager:
             if (
                 rule.from_mode == self.state.current_mode or rule.from_mode == "*"
             ) and rule.transition_type == TransitionType.CONTEXT_AWARE:
-
                 if self._can_transition(rule) and self._evaluate_context_conditions(
                     rule
                 ):
@@ -334,7 +333,6 @@ class ModeManager:
             if (
                 rule.from_mode == self.state.current_mode or rule.from_mode == "*"
             ) and rule.transition_type == TransitionType.INPUT_TRIGGERED:
-
                 # Check if any trigger keywords are present
                 for keyword in rule.trigger_keywords:
                     if keyword.lower() in input_lower:
@@ -538,7 +536,6 @@ class ModeManager:
         from_mode = self.state.current_mode
 
         try:
-
             if from_mode == target_mode:
                 logging.debug(
                     f"Already in target mode '{target_mode}', skipping transition"
@@ -865,7 +862,6 @@ class ModeManager:
                 and last_active_mode in self.config.modes
                 and last_active_mode != self.config.default_mode
             ):
-
                 logging.info(f"Restoring last active mode: {last_active_mode}")
                 self.state.current_mode = last_active_mode
                 self.state.previous_mode = state_data.get("previous_mode")
