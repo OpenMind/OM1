@@ -1,12 +1,3 @@
-"""
-Unit tests for the UbTtsProvider in providers/ub_tts_provider.py.
-
-Tests cover:
-- Initialization
-- speak() method success and failure cases
-- get_tts_status() method success and failure cases
-"""
-
 from unittest.mock import MagicMock, patch
 
 from providers.ub_tts_provider import UbTtsProvider
@@ -37,7 +28,9 @@ class TestUbTtsProviderSpeak:
         mock_response.json.return_value = {"code": 0}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("providers.ub_tts_provider.requests.put", return_value=mock_response) as mock_put:
+        with patch(
+            "providers.ub_tts_provider.requests.put", return_value=mock_response
+        ) as mock_put:
             result = provider.speak("Hello world")
 
             assert result is True
@@ -54,7 +47,9 @@ class TestUbTtsProviderSpeak:
         mock_response.json.return_value = {"code": 0}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("providers.ub_tts_provider.requests.put", return_value=mock_response) as mock_put:
+        with patch(
+            "providers.ub_tts_provider.requests.put", return_value=mock_response
+        ) as mock_put:
             result = provider.speak("Hello", interrupt=False, timestamp=12345)
 
             assert result is True
@@ -70,7 +65,9 @@ class TestUbTtsProviderSpeak:
         mock_response.json.return_value = {"code": 1, "error": "TTS busy"}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("providers.ub_tts_provider.requests.put", return_value=mock_response):
+        with patch(
+            "providers.ub_tts_provider.requests.put", return_value=mock_response
+        ):
             result = provider.speak("Hello")
             assert result is False
 
@@ -111,7 +108,9 @@ class TestUbTtsProviderGetStatus:
         mock_response = MagicMock()
         mock_response.json.return_value = {"code": 0, "status": "run"}
 
-        with patch("providers.ub_tts_provider.requests.get", return_value=mock_response) as mock_get:
+        with patch(
+            "providers.ub_tts_provider.requests.get", return_value=mock_response
+        ) as mock_get:
             result = provider.get_tts_status(12345)
 
             assert result == "run"
@@ -127,7 +126,9 @@ class TestUbTtsProviderGetStatus:
         mock_response = MagicMock()
         mock_response.json.return_value = {"code": 0, "status": "idle"}
 
-        with patch("providers.ub_tts_provider.requests.get", return_value=mock_response):
+        with patch(
+            "providers.ub_tts_provider.requests.get", return_value=mock_response
+        ):
             result = provider.get_tts_status(0)
             assert result == "idle"
 
@@ -138,7 +139,9 @@ class TestUbTtsProviderGetStatus:
         mock_response = MagicMock()
         mock_response.json.return_value = {"code": 1}
 
-        with patch("providers.ub_tts_provider.requests.get", return_value=mock_response):
+        with patch(
+            "providers.ub_tts_provider.requests.get", return_value=mock_response
+        ):
             result = provider.get_tts_status(12345)
             assert result == "error"
 
@@ -162,6 +165,8 @@ class TestUbTtsProviderGetStatus:
         mock_response = MagicMock()
         mock_response.json.return_value = {"code": 0}  # No status field
 
-        with patch("providers.ub_tts_provider.requests.get", return_value=mock_response):
+        with patch(
+            "providers.ub_tts_provider.requests.get", return_value=mock_response
+        ):
             result = provider.get_tts_status(12345)
             assert result == "error"
