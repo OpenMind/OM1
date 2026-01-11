@@ -5,8 +5,6 @@ import time
 import typing as T
 
 import psutil
-
-# Relative import to access the base Sensor class from parent directory
 from ..base import Sensor, SensorConfig
 
 
