@@ -73,21 +73,21 @@ _HEALTH_STATUSES = {
 
 
 class RPLidarException(Exception):
-    """Basic exception class for RPLidar"""
+    """Basic exception class for RPLidar."""
 
 
 def _b2i(byte):
-    """Converts byte to integer (for Python 2 compatibility)"""
+    """Converts byte to integer (for Python 2 compatibility)."""
     return byte if int(sys.version[0]) == 3 else ord(byte)
 
 
 def _showhex(signal):
-    """Converts string bytes to hex representation (useful for debugging)"""
+    """Converts string bytes to hex representation (useful for debugging)."""
     return [format(_b2i(b), "#02x") for b in signal]
 
 
 def _process_scan(raw):
-    """Processes input raw data and returns measurement data"""
+    """Processes input raw data and returns measurement data."""
     new_scan = bool(_b2i(raw[0]) & 0b1)
     inversed_new_scan = bool((_b2i(raw[0]) >> 1) & 0b1)
     quality = _b2i(raw[0]) >> 2
@@ -117,7 +117,7 @@ def _process_express_scan(data, new_angle, trame):
 
 
 class RPDriver(object):
-    """Class for communicating with RPLidar rangefinder scanners"""
+    """Class for communicating with RPLidar rangefinder scanners."""
 
     def __init__(self, port, baudrate=115200, timeout=1, logger=None):
         """Initialize RPLidar object for communicating with the sensor.
@@ -149,7 +149,8 @@ class RPDriver(object):
 
     def connect(self):
         """Connects to the serial port with the name `self.port`. If it was
-        connected to another serial port disconnects from it first."""
+        connected to another serial port disconnects from it first.
+        """
         if self._serial is not None:
             self.disconnect()
         try:
@@ -167,7 +168,7 @@ class RPDriver(object):
             )
 
     def disconnect(self):
-        """Disconnects from the serial port"""
+        """Disconnects from the serial port."""
         if self._serial is None:
             return
         self._serial.close()
@@ -178,10 +179,19 @@ class RPDriver(object):
 
     @property
     def motor_speed(self):
+        """Get current motor speed (PWM value)."""
         return self._motor_speed
 
     @motor_speed.setter
-    def motor_speed(self, pwm):
+    def motor_speed(self, pwm: int):
+        """
+        Set motor speed (PWM value).
+
+        Parameters
+        ----------
+        pwm : int
+            PWM value to set the motor speed to.
+        """
         if not (0 <= pwm <= MAX_MOTOR_PWM):
             raise ValueError(
                 f"PWM value must be between 0 and {MAX_MOTOR_PWM}, got {pwm}"
@@ -191,7 +201,7 @@ class RPDriver(object):
             self._set_pwm(self._motor_speed)
 
     def start_motor(self):
-        """Starts sensor motor"""
+        """Starts sensor motor."""
         self.logger.info("Starting motor")
         # For A1
         self._serial.setDTR(False)
@@ -201,7 +211,7 @@ class RPDriver(object):
         self.motor_running = True
 
     def stop_motor(self):
-        """Stops sensor motor"""
+        """Stops sensor motor."""
         self.logger.info("Stopping motor")
         # For A2
         self._set_pwm(0)
@@ -211,7 +221,7 @@ class RPDriver(object):
         self.motor_running = False
 
     def _send_payload_cmd(self, cmd, payload):
-        """Sends `cmd` command with `payload` to the sensor"""
+        """Sends `cmd` command with `payload` to the sensor."""
         size = struct.pack("B", len(payload))
         req = SYNC_BYTE + cmd + size + payload
         checksum = 0
@@ -222,13 +232,13 @@ class RPDriver(object):
         self.logger.debug("Command sent: %s" % _showhex(req))
 
     def _send_cmd(self, cmd):
-        """Sends `cmd` command to the sensor"""
+        """Sends `cmd` command to the sensor."""
         req = SYNC_BYTE + cmd
         self._serial.write(req)
         self.logger.debug("Command sent: %s" % _showhex(req))
 
     def _read_descriptor(self):
-        """Reads descriptor packet"""
+        """Reads descriptor packet."""
         descriptor = self._serial.read(DESCRIPTOR_LEN)
         self.logger.debug("Received descriptor: %s", _showhex(descriptor))
         if len(descriptor) != DESCRIPTOR_LEN:
@@ -239,7 +249,7 @@ class RPDriver(object):
         return _b2i(descriptor[2]), is_single, _b2i(descriptor[-1])
 
     def _read_response(self, dsize):
-        """Reads response packet with length of `dsize` bytes"""
+        """Reads response packet with length of `dsize` bytes."""
         self.logger.debug("Trying to read response: %d bytes", dsize)
         while self._serial.inWaiting() < dsize:
             time.sleep(0.001)
@@ -248,7 +258,7 @@ class RPDriver(object):
         return data
 
     def get_info(self):
-        """Get device information
+        """Get device information.
 
         Returns
         -------
@@ -312,7 +322,7 @@ class RPDriver(object):
         return status, error_code
 
     def clean_input(self):
-        """Clean input buffer by reading all available data"""
+        """Clean input buffer by reading all available data."""
         if self.scanning[0]:
             return "Cleaning not allowed during active scanning!"
         self._serial.flushInput()
@@ -321,7 +331,8 @@ class RPDriver(object):
 
     def stop(self):
         """Stops scanning process, disables laser diode and the measurement
-        system, moves sensor to the idle state."""
+        system, moves sensor to the idle state.
+        """
         self.logger.info("Stop scanning")
         self._send_cmd(STOP_BYTE)
         time.sleep(0.1)
@@ -329,7 +340,7 @@ class RPDriver(object):
         self.clean_input()
 
     def start(self, scan_type="normal"):
-        """Start the scanning process
+        """Start the scanning process.
 
         Parameters
         ----------
@@ -377,7 +388,8 @@ class RPDriver(object):
 
     def reset(self):
         """Resets sensor core, reverting it to a similar state as it has
-        just been powered up."""
+        just been powered up.
+        """
         self.logger.info("Resetting the RPLidar")
         self._send_cmd(RESET_BYTE)
         time.sleep(2)
@@ -550,12 +562,24 @@ class RPDriver(object):
 class ExpressPacket(
     namedtuple("express_packet", "distance angle new_scan start_angle")
 ):
+    """
+    Class representing an express scan packet from RPLidar.
+    """
+
     sync1 = 0xA
     sync2 = 0x5
     sign = {0: 1, 1: -1}
 
     @classmethod
     def from_string(cls, data):
+        """
+        Create ExpressPacket from raw data string.
+
+        Parameters
+        ----------
+        data : bytes
+            Raw data bytes to parse.
+        """
         packet = bytearray(data)
 
         if (packet[0] >> 4) != cls.sync1 or (packet[1] >> 4) != cls.sync2:

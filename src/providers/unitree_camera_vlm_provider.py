@@ -58,7 +58,7 @@ class UnitreeCameraVideoStream(VideoStream):
             jpeg_quality=jpeg_quality,
         )
 
-        self.video_client = VideoClient()
+        self.video_client = VideoClient()  # type: ignore
         self.video_client.Init()
 
     def on_video(self):

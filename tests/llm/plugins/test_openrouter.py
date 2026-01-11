@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
@@ -45,6 +45,41 @@ def mock_response_with_tool_calls():
         )
     ]
     return response
+
+
+@pytest.fixture(autouse=True)
+def mock_avatar_components():
+    """Mock all avatar and IO components to prevent Zenoh session creation"""
+
+    def mock_decorator(func=None):
+        def decorator(f):
+            return f
+
+        if func is not None:
+            return decorator(func)
+        return decorator
+
+    with (
+        patch(
+            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
+        ),
+        patch("llm.plugins.deepseek_llm.AvatarLLMState") as mock_avatar_state,
+        patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
+        patch(
+            "providers.avatar_llm_state_provider.AvatarProvider"
+        ) as mock_avatar_llm_state_provider,
+    ):
+        mock_avatar_state._instance = None
+        mock_avatar_state._lock = None
+
+        mock_provider_instance = MagicMock()
+        mock_provider_instance.running = False
+        mock_provider_instance.session = None
+        mock_provider_instance.stop = MagicMock()
+        mock_avatar_provider.return_value = mock_provider_instance
+        mock_avatar_llm_state_provider.return_value = mock_provider_instance
+
+        yield
 
 
 @pytest.fixture

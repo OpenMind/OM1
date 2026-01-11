@@ -2,8 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.base import SensorConfig
-from inputs.plugins.vlm_openai import Message, VLMOpenAI
+from inputs.plugins.vlm_openai import Message, VLMOpenAI, VLMOpenAIConfig
 
 
 @pytest.fixture
@@ -16,12 +15,12 @@ def mock_vlm_provider():
 
 @pytest.fixture
 def vlm_input(mock_vlm_provider):
-    return VLMOpenAI(config=SensorConfig(api_key="test_api_key"))
+    return VLMOpenAI(config=VLMOpenAIConfig(api_key="test_api_key"))
 
 
 def test_missing_api_key():
     with pytest.raises(ValueError):
-        VLMOpenAI(config=SensorConfig(api_key=""))
+        VLMOpenAI(config=VLMOpenAIConfig(api_key=""))
 
 
 def test_handle_vlm_message(vlm_input):
