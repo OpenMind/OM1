@@ -3,6 +3,8 @@ import functools
 import logging
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
+import json
+import os
 
 import openai
 
@@ -87,6 +89,9 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        if self.config.history_file_path:
+            self.load_history(self.config.history_file_path)
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -239,6 +244,8 @@ class LLMHistoryManager:
                         del messages[:num_summarized]
                         messages.insert(0, summary_message)
                         logging.info("Successfully summarized the state")
+                        if self.config.history_file_path:
+                            self.save_history(self.config.history_file_path)
                     elif (
                         summary_message.role == "system"
                         and "Error" in summary_message.content
@@ -279,6 +286,54 @@ class LLMHistoryManager:
             formatted for OpenAI API consumption.
         """
         return [{"role": msg.role, "content": msg.content} for msg in self.history]
+
+    def save_history(self, file_path: str) -> None:
+        """
+        Save the interaction history to a file.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the file where history should be saved.
+        """
+        try:
+            data = self.get_messages()
+            with open(file_path, "w") as f:
+                json.dump(data, f, indent=2)
+            logging.info(f"History saved to {file_path}")
+        except Exception as e:
+            logging.error(f"Failed to save history to {file_path}: {e}")
+
+    def load_history(self, file_path: str) -> None:
+        """
+        Load interaction history from a file if it exists.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the file from which history should be loaded.
+        """
+        if not os.path.exists(file_path):
+            logging.info(f"No history file found at {file_path}")
+            return
+
+        try:
+            with open(file_path, "r") as f:
+                data = json.load(f)
+            
+            if isinstance(data, list):
+                self.history = [
+                    ChatMessage(role=msg.get("role", "user"), content=msg.get("content", ""))
+                    for msg in data
+                    if isinstance(msg, dict)
+                ]
+                # Update frame index based on history length roughly or keep as is?
+                # Probably safer to not mess with frame_index unless stored.
+                logging.info(f"Loaded {len(self.history)} messages from {file_path}")
+            else:
+                logging.warning(f"History file {file_path} has invalid format")
+        except Exception as e:
+            logging.error(f"Failed to load history from {file_path}: {e}")
 
     @staticmethod
     def update_history() -> (
@@ -324,6 +379,8 @@ class LLMHistoryManager:
 
                 logging.debug(f"Inputs: {inputs}")
                 self.history_manager.history.append(inputs)
+                if self.history_manager.config.history_file_path:
+                    self.history_manager.save_history(self.history_manager.config.history_file_path)
 
                 messages = self.history_manager.get_messages()
                 logging.debug(f"messages:\n{messages}")
@@ -351,6 +408,10 @@ class LLMHistoryManager:
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)
                     )
+                    if self.history_manager.config.history_file_path:
+                        self.history_manager.save_history(
+                            self.history_manager.config.history_file_path
+                        )
 
                     if (
                         self.history_manager.config.history_length > 0
