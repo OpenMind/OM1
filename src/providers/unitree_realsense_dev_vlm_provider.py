@@ -203,8 +203,9 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
         for device in video_devices:
             if device in skip_devices:
                 continue
+
+            cmd = f"v4l2-ctl --device={device} --list-formats"
             try:
-                cmd = f"v4l2-ctl --device={device} --list-formats"
                 formats = os.popen(cmd).read()
             except Exception as e:
                 logger.exception("Failed to run command '%s': %s", cmd, e)

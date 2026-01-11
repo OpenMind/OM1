@@ -38,7 +38,14 @@ class IdentitiesSnapshot:
     raw: Dict
 
     def to_text(self) -> str:
+        """
+        Produce a concise one-line summary of the identities snapshot.
 
+        Returns
+        -------
+        str
+            Formatted string like "total=3 ids=[Alice, Bob, Charlie]".
+        """
         seen = set()
         ordered = []
         for n in self.names or []:
@@ -92,7 +99,7 @@ class GalleryIdentitiesProvider:
 
     def register_message_callback(self, fn: Callable[[str], None]) -> None:
         """
-        Subscribe a consumer to receive each emitted galleryidentities line.
+        Subscribe a consumer to receive each emitted gallery identities line.
 
         Parameters
         ----------
@@ -119,7 +126,7 @@ class GalleryIdentitiesProvider:
                 pass
 
     def start(self) -> None:
-        """Start the background polling thread"""
+        """Start the background polling thread."""
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
@@ -129,7 +136,7 @@ class GalleryIdentitiesProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to strop"""
+        """Request the background thread to stop."""
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)

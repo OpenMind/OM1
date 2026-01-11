@@ -3,21 +3,14 @@
 import asyncio
 import time
 from collections import deque
-from dataclasses import dataclass
 from typing import Deque, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
-
-
-class SelfieStatus(FuserInput[str]):
+class SelfieStatus(FuserInput[SensorConfig, Optional[str]]):
     """
     Surfaces 'SelfieStatus' lines written by the connector as a single INPUT block
     when a NEW timestamp arrives. One-shot per status.
@@ -30,7 +23,7 @@ class SelfieStatus(FuserInput[str]):
       failed reason=bad_id
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         super().__init__(config)
         self.io_provider = IOProvider()
         self.messages: Deque[Message] = deque(maxlen=50)
@@ -38,7 +31,14 @@ class SelfieStatus(FuserInput[str]):
         self.descriptor_for_LLM = "SelfieStatus"
 
     async def _poll(self) -> Optional[str]:
+        """
+        Poll for new SelfieStatus messages from the IOProvider.
 
+        Returns
+        -------
+        Optional[str]
+            The next SelfieStatus message if a new timestamp is detected, None otherwise
+        """
         await asyncio.sleep(0.1)
         rec = self.io_provider.inputs.get("SelfieStatus")
         if not rec:
@@ -51,15 +51,50 @@ class SelfieStatus(FuserInput[str]):
         self._last_ts_seen = ts
         return rec.input
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
+        """
+        Process raw input to generate a timestamped message.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
+        Returns
+        -------
+        Optional[Message]
+            A timestamped message containing the processed input
+        """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
+        """
+        Convert raw input to text and update message buffer.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input to be processed, or None if no input is available
+        """
         if raw_input is None:
             return
-        self.messages.append(await self._raw_to_text(raw_input))
+
+        message = await self._raw_to_text(raw_input)
+        if message is not None:
+            self.messages.append(message)
 
     def formatted_latest_buffer(self) -> Optional[str]:
+        """
+        Format and clear the latest buffer contents.
+
+        Returns
+        -------
+        Optional[str]
+            Formatted string of buffer contents or None if buffer is empty
+        """
         if not self.messages:
             return None
         latest = self.messages[-1]

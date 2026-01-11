@@ -36,24 +36,85 @@ class ElevenLabsTTSProvider:
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
         output_format: Optional[str] = "mp3_44100_128",
+        enable_tts_interrupt: bool = False,
     ):
         """
         Initialize the TTS provider with given URL.
         """
         self.api_key = api_key
         self.elevenlabs_api_key = elevenlabs_api_key
+        self._enable_tts_interrupt = enable_tts_interrupt
 
         # Initialize TTS provider
         self.running: bool = False
         self._audio_stream: AudioOutputStream = AudioOutputStream(
             url=url,
             headers={"x-api-key": api_key} if api_key else None,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
 
         # Set Eleven Labs TTS parameters
         self._voice_id = voice_id
         self._model_id = model_id
         self._output_format = output_format
+
+    def configure(
+        self,
+        url: str = "https://api.openmind.org/api/core/elevenlabs/tts",
+        api_key: Optional[str] = None,
+        elevenlabs_api_key: Optional[str] = None,
+        voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
+        model_id: Optional[str] = "eleven_flash_v2_5",
+        output_format: Optional[str] = "mp3_44100_128",
+        enable_tts_interrupt: bool = False,
+    ):
+        """
+        Configure the TTS provider with given parameters.
+
+        Parameters
+        ----------
+        url : str
+            The URL endpoint for the TTS service.
+        api_key : str
+            The API key for the TTS service.
+        voice_id : str, optional
+            The name of the voice for Eleven Labs TTS service.
+        model_id : str, optional
+            The name of the model for Eleven Labs TTS service.
+        output_format : str, optional
+            The output format for the audio stream.
+        enable_tts_interrupt : bool
+            If True, enables TTS interrupt when ASR detects speech.
+        """
+        restart_needed = (
+            url != self._audio_stream._url
+            or api_key != self.api_key
+            or elevenlabs_api_key != self.elevenlabs_api_key
+            or voice_id != self._voice_id
+            or model_id != self._model_id
+            or output_format != self._output_format
+            or enable_tts_interrupt != self._enable_tts_interrupt
+        )
+
+        if not restart_needed:
+            return
+
+        if self.running:
+            self.stop()
+
+        self.api_key = api_key
+        self.elevenlabs_api_key = elevenlabs_api_key
+        self._voice_id = voice_id
+        self._model_id = model_id
+        self._output_format = output_format
+        self._enable_tts_interrupt = enable_tts_interrupt
+
+        self._audio_stream: AudioOutputStream = AudioOutputStream(
+            url=url,
+            headers={"x-api-key": api_key} if api_key else None,
+            enable_tts_interrupt=enable_tts_interrupt,
+        )
+        self._audio_stream.start()
 
     def register_tts_state_callback(self, tts_state_callback: Optional[Callable]):
         """

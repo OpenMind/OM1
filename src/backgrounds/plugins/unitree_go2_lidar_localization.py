@@ -6,12 +6,12 @@ from providers.unitree_go2_lidar_localization_provider import (
 )
 
 
-class UnitreeGo2LidarLocalization(Background):
+class UnitreeGo2LidarLocalization(Background[BackgroundConfig]):
     """
     Reads lidar localization data from UnitreeGo2LidarLocalizationProvider.
     """
 
-    def __init__(self, config: BackgroundConfig = BackgroundConfig()):
+    def __init__(self, config: BackgroundConfig):
         super().__init__(config)
 
         self.unitree_go2_lidar_localization_provider = (

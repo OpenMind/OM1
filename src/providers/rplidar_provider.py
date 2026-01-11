@@ -185,9 +185,8 @@ class RPLidarProvider:
         log_file: bool = False,
     ):
         """
-        Robot and sensor configuration
+        Robot and sensor configuration.
         """
-
         logging.info("Booting RPLidar")
 
         self.serial_port = serial_port
@@ -288,6 +287,9 @@ class RPLidarProvider:
         self.d435_provider = D435Provider()
 
     def update_filename(self):
+        """
+        Update the filename for logging RPLidar data.
+        """
         unix_ts = time.time()
         logging.info(f"RPSCAN time: {unix_ts}")
         unix_ts = str(unix_ts).replace(".", "_")
@@ -299,10 +301,11 @@ class RPLidarProvider:
         Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
         creates a new file with a timestamp.
 
-        Parameters:
-        - data: Dictionary to write
+        Parameters
+        ----------
+        json_line : str
+            The JSON string to write to the file.
         """
-
         if not isinstance(json_line, str):
             raise ValueError("Provided json_line must be a json string.")
 
@@ -399,7 +402,7 @@ class RPLidarProvider:
                 )
                 self.angles_final = np.flip(self.angles)
 
-            # angles now run from 360.0 to 0 degress
+            # angles now run from 360.0 to 0 degrees
             if self.angles_final is not None:
                 data = list(zip(self.angles_final, scan.ranges))
             else:
