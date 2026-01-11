@@ -686,12 +686,14 @@ class UnitreeGo2RPLidarProvider:
         dx = x2 - x1
         dy = y2 - y1
 
-        # If the line segment has zero length, return distance to point
-        if dx == 0 and dy == 0:
+        # If the line segment has zero or near-zero length, return distance to point
+        # Using denominator check to avoid floating-point division by near-zero
+        denominator = dx * dx + dy * dy
+        if denominator < 1e-10:
             return math.sqrt((px - x1) ** 2 + (py - y1) ** 2)
 
         # Calculate the parameter t that represents the projection of the point onto the line
-        t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
+        t = ((px - x1) * dx + (py - y1) * dy) / denominator
 
         # Clamp t to [0, 1] to stay within the line segment
         t = max(0, min(1, t))
