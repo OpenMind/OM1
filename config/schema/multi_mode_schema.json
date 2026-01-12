@@ -214,7 +214,23 @@
                                 {"type": "number"},
                                 {"type": "boolean"},
                                 {"type": "array"},
-                                {"type": "object"}
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "min": {"type": "number"},
+                                        "max": {"type": "number"},
+                                        "contains": {"type": ["string", "number", "boolean"]},
+                                        "one_of": {"type": "array"},
+                                        "not": {}
+                                    },
+                                    "anyOf": [
+                                        {"required": ["min"]},
+                                        {"required": ["max"]},
+                                        {"required": ["contains"]},
+                                        {"required": ["one_of"]},
+                                        {"required": ["not"]}
+                                    ]
+                                }
                             ]
                         }
                     }
