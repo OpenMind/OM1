@@ -251,7 +251,11 @@ class RPDriver(object):
     def _read_response(self, dsize):
         """Reads response packet with length of `dsize` bytes."""
         self.logger.debug("Trying to read response: %d bytes", dsize)
+        start_time = time.time()
+        timeout = 2.0
         while self._serial.inWaiting() < dsize:
+            if time.time() - start_time > timeout:
+                raise RPLidarException(f"Timeout waiting for {dsize} bytes from RPLIDAR")
             time.sleep(0.001)
         data = self._serial.read(dsize)
         self.logger.debug("Received data: %s", _showhex(data))
