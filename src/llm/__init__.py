@@ -274,7 +274,7 @@ def load_llm(
             raise ValueError(f"'{class_name}' is not a valid LLM subclass")
 
         config_class = None
-        for _, obj in module.__dict__.items():
+        for obj in module.__dict__.values():
             if (
                 isinstance(obj, type)
                 and issubclass(obj, LLMConfig)

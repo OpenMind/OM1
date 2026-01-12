@@ -81,7 +81,7 @@ def load_input(input_config: T.Dict[str, T.Any]) -> Sensor:
             raise ValueError(f"'{class_name}' is not a valid input subclass")
 
         config_class = None
-        for _, obj in module.__dict__.items():
+        for obj in module.__dict__.values():
             if (
                 isinstance(obj, type)
                 and issubclass(obj, SensorConfig)
