@@ -13,16 +13,74 @@ from .singleton import singleton
 class UbtechASRProvider:
     """
     Singleton class to handle ASR (Automatic Speech Recognition) for Ubtech robots.
+    
+    This provider manages real-time speech recognition for Ubtech robotic platforms,
+    handling voice input processing, language configuration, and background thread
+    management. It supports pause/resume functionality for controlling when the ASR
+    system actively listens for speech input.
+    
+    The provider communicates with the robot's ASR service via HTTP REST API,
+    polling for recognized utterances and delivering them through registered
+    callback functions. It implements automatic session management, retry logic,
+    and error handling to ensure robust operation.
+    
+    Attributes
+    ----------
+    robot_ip : str
+        IP address of the Ubtech robot.
+    language : str
+        Language code for ASR (e.g., "en", "zh").
+    basic_url : str
+        Base URL for the robot's API endpoints.
+    headers : dict
+        HTTP headers for API requests.
+    session : requests.Session
+        HTTP session object for connection pooling.
+    running : bool
+        Flag indicating if the ASR provider is currently running.
+    paused : bool
+        Flag indicating if the ASR provider is paused.
+    just_resumed : bool
+        Flag indicating if the provider was just resumed (used for delay logic).
+    _thread : Optional[threading.Thread]
+        Background thread for ASR processing.
+    _message_callback : Optional[Callable]
+        Callback function to process recognized ASR messages.
     """
 
     _instance = None
 
     @staticmethod
     def get_instance():
-        """Returns the singleton instance of the provider."""
+        """
+        Returns the singleton instance of the provider.
+        
+        Returns
+        -------
+        Optional[UbtechASRProvider]
+            The singleton instance if it has been initialized, None otherwise.
+        """
         return UbtechASRProvider._instance
 
     def __init__(self, robot_ip: str, language_code: str = "en"):
+        """
+        Initialize the UbtechASRProvider.
+        
+        Parameters
+        ----------
+        robot_ip : str
+            IP address of the Ubtech robot (e.g., "192.168.1.100").
+            This is used to construct the API endpoint URLs.
+        language_code : str, optional
+            Language code for ASR recognition. Defaults to "en" (English).
+            Common values include "en" for English, "zh" for Chinese, etc.
+        
+        Notes
+        -----
+        This method automatically sets the singleton instance and configures
+        the robot's language setting via HTTP API. The provider starts in a
+        stopped state and must be explicitly started using the `start()` method.
+        """
         UbtechASRProvider._instance = self
 
         self.robot_ip = robot_ip
@@ -54,6 +112,13 @@ class UbtechASRProvider:
     def start(self):
         """
         Start the ASR provider and its background thread.
+        
+        Notes
+        -----
+        This method launches a daemon thread that continuously polls the robot's
+        ASR service for recognized speech. If the provider is already running,
+        this method returns without taking any action. The background thread will
+        call registered message callbacks when speech is recognized.
         """
         if self.running:
             return
@@ -67,6 +132,13 @@ class UbtechASRProvider:
     def stop(self):
         """
         Stop the ASR provider and its background thread.
+        
+        Notes
+        -----
+        This method stops any active ASR sessions, sets the running flag to False,
+        and waits for the background thread to terminate (with a 3-second timeout).
+        If the provider is not currently running, this method returns without
+        taking any action.
         """
         if not self.running:
             return
@@ -83,6 +155,13 @@ class UbtechASRProvider:
     def pause(self):
         """
         Pause the ASR provider to stop listening for new utterances.
+        
+        Notes
+        -----
+        When paused, the provider will skip ASR polling in the background thread
+        and wait in a sleep loop. This is useful for preventing the provider from
+        listening during TTS output or other system operations. The provider can
+        be resumed using the `resume()` method.
         """
         logging.debug("Pausing UbtechASRProvider")
         self.paused = True
@@ -90,12 +169,36 @@ class UbtechASRProvider:
     def resume(self):
         """
         Resume the ASR provider after being paused.
+        
+        Notes
+        -----
+        When resumed, the provider sets a flag that triggers a 1-second delay
+        before resuming ASR polling. This delay helps ensure the system has
+        finished processing previous operations (like TTS output) before
+        starting to listen again.
         """
         logging.debug("Resuming UbtechASRProvider")
         self.paused = False
         self.just_resumed = True  # Set flag on resume
 
     def _run(self):
+        """
+        Main background thread loop for ASR processing.
+        
+        This method runs in a separate daemon thread and continuously polls
+        the robot's ASR service for recognized speech. It handles pause/resume
+        logic, error recovery, and automatic pausing after each utterance
+        attempt to prevent rapid polling loops.
+        
+        Notes
+        -----
+        The loop implements several key behaviors:
+        - Checks for resume delay (1 second after resume)
+        - Skips polling when paused
+        - Automatically pauses after each utterance attempt
+        - Enforces a 2-second quiet period after successful recognition
+        - Handles request exceptions gracefully
+        """
         while self.running:
             if self.just_resumed:  # Check if just resumed
                 logging.debug(
@@ -168,6 +271,27 @@ class UbtechASRProvider:
                     time.sleep(0.5)  # Shorter sleep if no speech or error
 
     def _get_single_utterance(self) -> Optional[str]:
+        """
+        Attempt to get a single recognized utterance from the robot's ASR service.
+        
+        This method starts an ASR session, polls for recognition results,
+        and processes the response to extract recognized text. It includes
+        pre-emptive session cleanup and timeout handling.
+        
+        Returns
+        -------
+        Optional[str]
+            The recognized text in lowercase, or None if no speech was detected,
+            recognition failed, or a timeout occurred.
+        
+        Notes
+        -----
+        The method implements a polling loop that checks for "idle" status
+        with matching timestamp. It processes the response data structure
+        to extract word segments and concatenate them into a single text string.
+        The method automatically stops the ASR session in a finally block to
+        ensure cleanup even if errors occur.
+        """
         ts = int(time.time())
         logging.debug(
             f"UbtechASRProvider: _get_single_utterance called, timestamp: {ts}"
@@ -238,6 +362,21 @@ class UbtechASRProvider:
             self._stop_voice_iat()
 
     def _set_robot_language(self, lang_code: str):
+        """
+        Set the robot's system language configuration.
+        
+        Parameters
+        ----------
+        lang_code : str
+            Language code to set on the robot (e.g., "en", "zh").
+        
+        Notes
+        -----
+        This method sends an HTTP PUT request to the robot's system/language
+        endpoint. If the request fails, an error is logged but the provider
+        continues operation. This is called during initialization to configure
+        the robot's language setting.
+        """
         try:
             logging.info(f"Setting robot language to: {lang_code}")
             self.session.put(
@@ -249,6 +388,27 @@ class UbtechASRProvider:
             logging.error(f"UbtechASRProvider: Failed to set robot language: {e}")
 
     def _start_voice_iat(self, ts: int) -> bool:
+        """
+        Start a voice IAT (Intelligent Audio Transcription) session on the robot.
+        
+        Parameters
+        ----------
+        ts : int
+            Timestamp for the ASR session, used to match responses.
+        
+        Returns
+        -------
+        bool
+            True if the session was successfully started (response code == 0),
+            False otherwise.
+        
+        Notes
+        -----
+        This method sends an HTTP PUT request to the robot's voice/iat endpoint
+        with the current language setting and timestamp. The timestamp is used
+        to match responses in the polling loop. If the request fails or returns
+        a non-zero code, False is returned.
+        """
         if not self.robot_ip:
             logging.error("Robot IP not set, cannot start ASR session.")
             return False
@@ -272,6 +432,21 @@ class UbtechASRProvider:
             return False
 
     def _stop_voice_iat(self):
+        """
+        Stop the current voice IAT session on the robot.
+        
+        This method attempts to stop any active ASR session by sending an HTTP
+        DELETE request to the robot's voice/iat endpoint. It implements retry
+        logic for server errors (5xx status codes) to handle transient failures.
+        
+        Notes
+        -----
+        The method will retry up to 3 times for 5xx server errors, with a 0.5-second
+        delay between attempts. For client errors (4xx) or other request exceptions,
+        it logs the error and returns immediately. This method is called both
+        pre-emptively (before starting a new session) and in cleanup (after
+        attempting to get an utterance).
+        """
         max_retries = 3
         retry_delay = 0.5  # seconds
         for attempt in range(max_retries):
@@ -313,6 +488,30 @@ class UbtechASRProvider:
         return  # Give up
 
     def _get_voice_iat(self) -> Dict:
+        """
+        Get the current status and results from the voice IAT session.
+        
+        This method polls the robot's ASR service to check the status of the
+        current recognition session and retrieve any recognized text data.
+        
+        Returns
+        -------
+        Dict
+            A dictionary containing the ASR response with the following structure:
+            - "code": int - Response code (0 for success, -1 for errors)
+            - "status": str - Session status ("idle", "running", "error", etc.)
+            - "data": dict or None - Recognition data containing text segments
+            - "timestamp": int - Timestamp matching the session start
+            - "message": str - Error message (if code != 0)
+        
+        Notes
+        -----
+        The method implements retry logic for server errors (5xx status codes)
+        and handles JSON parsing for embedded data strings. If the response
+        contains a JSON-encoded string in the "data" field, it is automatically
+        parsed. The method returns an error structure if all retries are exhausted
+        or if non-retryable errors occur.
+        """
         max_retries = 3
         retry_delay = 0.5  # seconds
         for attempt in range(max_retries):
