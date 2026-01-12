@@ -272,7 +272,6 @@ class RPDriver(object):
         if self._serial.inWaiting() > 0:
             self.clean_input()
             time.sleep(0.5)
-            # return "Buffer is full! Run clean_input() to empty the buffer."
         self._send_cmd(GET_INFO_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
         if dsize != INFO_LEN:
@@ -310,7 +309,6 @@ class RPDriver(object):
         if self._serial.inWaiting() > 0:
             self.clean_input()
             time.sleep(0.5)
-            # return "Data in buffer. " "Run clean_input() to empty the buffer."
         self.logger.info("Asking for health")
         self._send_cmd(GET_HEALTH_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
@@ -328,7 +326,7 @@ class RPDriver(object):
     def clean_input(self):
         """Clean input buffer by reading all available data."""
         if self.scanning[0]:
-            return "Cleaning not allowed during active scanning!"
+            raise RPLidarException("Cleaning not allowed during active scanning!")
         self._serial.flushInput()
         self.express_trame = 32
         self.express_data = False
@@ -352,7 +350,7 @@ class RPDriver(object):
             Scan mode: normal, force, or express.
         """
         if self.scanning[0]:
-            return "Scan already running!"
+            raise RPLidarException("Scan already running!")
 
         # Check sensor health before starting
         status, error_code = self.get_health()
