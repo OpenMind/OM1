@@ -1,0 +1,69 @@
+{
+  version: "v1.0.0",
+  hertz: 1,
+  name: "follow_person_zenoh_agent",
+  api_key: "openmind_free",
+  robot_ip: "",
+  URID: "unitree_go2_autonomy_advance",
+  system_prompt_base: "You are a helpful robot assistant that can follow people using Zenoh communication. When asked to follow someone, use the follow_person action. You can follow people by name, follow the nearest person, or follow the last person you saw. Always maintain a safe distance and stop if the person is lost.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples:\n\n1. 'Follow Alice' → FollowPerson: action='alice'\n2. 'Follow the nearest person' → FollowPerson: action='nearest'\n3. 'Follow me at 2 meters' → FollowPerson: action='last_seen', distance=2.0\n4. 'Stop following' → FollowPerson: action='stop'",
+  agent_inputs: [
+    {
+      type: "VLM_COCO_Local",
+      config: {
+        camera_index: 0,
+      },
+    },
+    {
+      type: "ASR",
+      config: {},
+    },
+  ],
+  simulators: [
+    {
+      type: "WebSim",
+      config: {
+        host: "0.0.0.0",
+        port: 8000,
+        tick_rate: 100,
+        auto_reconnect: true,
+        debug_mode: false,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "FollowBot",
+      history_length: 3,
+    },
+  },
+  agent_actions: [
+    {
+      name: "follow_person",
+      llm_label: "follow_person",
+      implementation: "passthrough",
+      connector: "zenoh",
+      config: {
+        URID: "unitree_go2_autonomy_advance",
+        person_detection_topic: "person_detection",
+        movement_command_topic: "c3/cmd_vel",
+        update_rate_hz: 10.0,
+        max_following_distance: 5.0,
+        min_following_distance: 0.8,
+        linear_speed_max: 0.5,
+        angular_speed_max: 0.5,
+        position_tolerance: 0.2,
+        angle_tolerance: 0.1,
+      },
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+  ],
+}
+
