@@ -1,8 +1,8 @@
+import ast
 import json
 import logging
 import multiprocessing as mp
 import os
-import re
 import traceback
 
 import dotenv
@@ -582,6 +582,39 @@ def _validate_mode_components(
     return errors, warnings
 
 
+def _check_class_in_dir(directory: str, class_name: str) -> bool:
+    """
+    Check if a class exists in any .py file in the given directory using AST.
+
+    Parameters
+    ----------
+    directory : str
+        Directory to search in
+    class_name : str
+        Name of the class to find
+
+    Returns
+    -------
+    bool
+        True if class exists, False otherwise
+    """
+    if not os.path.exists(directory):
+        return False
+
+    for filename in os.listdir(directory):
+        if filename.endswith(".py") and filename != "__init__.py":
+            filepath = os.path.join(directory, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tree = ast.parse(f.read())
+                    for node in tree.body:
+                        if isinstance(node, ast.ClassDef) and node.name == class_name:
+                            return True
+            except Exception:
+                continue
+    return False
+
+
 def _check_input_exists(input_type: str) -> bool:
     """
     Check if input type exists by searching for class definition in plugin files.
@@ -599,24 +632,7 @@ def _check_input_exists(input_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "inputs", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(input_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, input_type)
 
 
 def _check_llm_exists(llm_type: str) -> bool:
@@ -636,24 +652,7 @@ def _check_llm_exists(llm_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "llm", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(llm_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, llm_type)
 
 
 def _check_simulator_exists(sim_type: str) -> bool:
@@ -673,24 +672,7 @@ def _check_simulator_exists(sim_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "simulators", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(sim_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, sim_type)
 
 
 def _check_action_exists(action_name: str) -> bool:
@@ -729,24 +711,7 @@ def _check_background_exists(bg_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "backgrounds", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(bg_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, bg_type)
 
 
 def _check_api_key(raw_config: dict, verbose: bool):

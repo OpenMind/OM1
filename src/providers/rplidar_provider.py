@@ -119,8 +119,8 @@ def rplidar_processor(
             if lidar:
                 try:
                     lidar.reset()
-                except Exception:
-                    pass
+                except Exception as reset_err:
+                    logging.warning(f"Failed to reset RPLidar after error: {reset_err}")
             time.sleep(0.5)
 
 
