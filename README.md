@@ -174,9 +174,9 @@ docker compose up -d
 - For OM1-system-setup
 ```bash
 cd OM1-system-setup
-    docker compose up -d ota_agent
-    docker compose up -d ota_updater
-    docker compose up -d om1_monitor
+docker compose up -d ota_agent
+docker compose up -d ota_updater
+docker compose up -d om1_monitor
 ```
 
 ## Detailed Documentation
