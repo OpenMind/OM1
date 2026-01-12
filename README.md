@@ -17,6 +17,19 @@
 
 ## Getting Started - Hello World
 
+## API Key Setup and Usage
+
+OM1 requires an OpenMind API key to access OpenMind services.
+
+### How to Get Your API Key
+1. Log in to the OpenMind portal.
+2. Go to the dashboard and create an API key.
+3. Copy and store it securely.
+
+### Set Your API Key
+```bash
+export OM_API_KEY="YOUR_API_KEY"
+
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to `OpenAI 4o`, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
 
 ### Package Management and VENV
