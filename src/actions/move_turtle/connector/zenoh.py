@@ -126,13 +126,13 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         vyaw : float
             Angular velocity around the z axis.
         """
-        logging.debug("move: {} - {}".format(vx, vyaw))
+        logging.debug(f"move: {vx} - {vyaw}")
 
         if self.session is None:
             logging.info("No open Zenoh session, returning")
             return
 
-        logging.debug("Pub twist: {} - {}".format(vx, vyaw))
+        logging.debug(f"Pub twist: {vx} - {vyaw}")
         t = geometry_msgs.Twist(
             linear=geometry_msgs.Vector3(x=float(vx), y=0.0, z=0.0),
             angular=geometry_msgs.Vector3(x=0.0, y=0.0, z=float(vyaw)),
