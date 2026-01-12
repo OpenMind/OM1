@@ -207,7 +207,7 @@ class FacePresenceProvider:
                 text = snap.to_text()
                 self._emit(text)
             except Exception as e:
-                logging.debug("Failed to fetch/emit presence snapshot: %s", e)
+                logging.warning(f"Failed to fetch/emit face presence snapshot: {e}")
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -228,7 +228,7 @@ class FacePresenceProvider:
             try:
                 cb(text)
             except Exception as e:
-                logging.debug("Callback failed in FacePresenceProvider: %s", e)
+                logging.warning(f"Face presence callback failed: {e}")
 
     def _fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
         """

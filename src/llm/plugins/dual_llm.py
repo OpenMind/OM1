@@ -244,7 +244,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             result = content.strip().upper()
             return "local" if "A" in result else "cloud"
         except Exception as e:
-            logging.debug("LLM evaluation failed, defaulting to local: %s", e)
+            logging.warning(f"LLM quality evaluation failed, defaulting to local: {e}")
             return "local"
 
     async def _select_best(
@@ -259,8 +259,8 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
-            Extracted user voice input for evaluation.
+        prompt : str
+            The prompt text for evaluation context.
 
         Returns
         -------
@@ -336,7 +336,10 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
                 for task in done:
                     result = task.result()
-                    if result["time"] <= self.TIMEOUT_THRESHOLD:
+                    if (
+                        result["time"] <= self.TIMEOUT_THRESHOLD
+                        and result["result"] is not None
+                    ):
                         in_time[result["source"]] = result
 
             # Both in time → select best

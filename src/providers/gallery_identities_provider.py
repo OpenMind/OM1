@@ -161,7 +161,9 @@ class GalleryIdentitiesProvider:
                 snap = self._fetch_snapshot()
                 self._emit(snap.to_text())
             except Exception as e:
-                logging.debug("Failed to fetch/emit identities snapshot: %s", e)
+                logging.warning(
+                    f"Failed to fetch/emit gallery identities snapshot: {e}"
+                )
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -182,7 +184,7 @@ class GalleryIdentitiesProvider:
             try:
                 cb(text)
             except Exception as e:
-                logging.debug("Callback failed in GalleryIdentitiesProvider: %s", e)
+                logging.warning(f"Gallery identities callback failed: {e}")
 
     def _fetch_snapshot(self) -> IdentitiesSnapshot:
         """
@@ -217,7 +219,8 @@ class GalleryIdentitiesProvider:
                     n = str(item.get("id", "")).strip()
                     if n:
                         names.append(n)
-        except Exception:
+        except Exception as e:
+            logging.warning(f"Failed to parse gallery identities: {e}")
             names = []
 
         # Use local time; server may not return one
