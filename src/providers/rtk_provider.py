@@ -1,4 +1,4 @@
-import datetime as datetime
+import datetime
 import logging
 import re
 import threading
