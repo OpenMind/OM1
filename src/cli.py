@@ -748,7 +748,7 @@ def _print_config_summary(raw_config: dict, is_multi_mode: bool):
     raw_config : dict
         Raw configuration dictionary
     is_multi_mode : bool
-        Whether this is is a multi multi-mode configuration
+        Whether this is a multi-mode configuration
     """
     print()
     print("Configuration Summary:")

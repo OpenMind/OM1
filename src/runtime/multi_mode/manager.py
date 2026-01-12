@@ -660,7 +660,7 @@ class ModeManager:
             "transition_history": self.state.transition_history[-5:],
             "timeout_seconds": current_config.timeout_seconds,
             "time_remaining": (
-                current_config.timeout_seconds - mode_duration
+                max(0, current_config.timeout_seconds - mode_duration)
                 if current_config.timeout_seconds
                 else None
             ),

@@ -111,7 +111,7 @@ def rplidar_processor(
                     try:
                         data_queue.get_nowait()
                         data_queue.put_nowait(scan_data)
-                    except Empty:
+                    except (Empty, Full):
                         pass
 
         except Exception as e:

@@ -581,13 +581,13 @@ class ExpressPacket(
         packet = bytearray(data)
 
         if (packet[0] >> 4) != cls.sync1 or (packet[1] >> 4) != cls.sync2:
-            raise ValueError("trying to parse corrupted data ({})".format(packet))
+            raise ValueError(f"trying to parse corrupted data ({packet})")
 
         checksum = 0
         for b in packet[2:]:
             checksum ^= b
         if checksum != (packet[0] & 0b00001111) + ((packet[1] & 0b00001111) << 4):
-            raise ValueError("Invalid checksum ({})".format(packet))
+            raise ValueError(f"Invalid checksum ({packet})")
 
         new_scan = packet[3] >> 7
         start_angle = (packet[2] + ((packet[3] & 0b01111111) << 8)) / 64
