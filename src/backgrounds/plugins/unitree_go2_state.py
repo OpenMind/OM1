@@ -49,17 +49,6 @@ class UnitreeGo2State(Background[UnitreeGo2StateConfig]):
               communication. This is required and must be specified in the
               configuration. If not provided, initialization will fail with
               a ValueError.
-
-        Notes
-        -----
-        The provider is automatically initialized during background task setup.
-        If the unitree_ethernet channel is not configured, an error will be logged
-        and a ValueError will be raised to prevent invalid state monitoring.
-
-        Raises
-        ------
-        ValueError
-            If unitree_ethernet is not specified in the configuration.
         """
         super().__init__(config)
 
