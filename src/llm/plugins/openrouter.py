@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import typing as T
@@ -6,6 +7,7 @@ import openai
 from pydantic import BaseModel
 
 from llm import LLM, LLMConfig
+from llm.error_handler import handle_llm_api_error, is_retryable_error
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from providers.avatar_llm_state_provider import AvatarLLMState
@@ -95,13 +97,32 @@ class OpenRouter(LLM[R]):
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 
-            response = await self._client.chat.completions.create(
-                model=self._config.model or "meta-llama/llama-3.3-70b-instruct",
-                messages=T.cast(T.Any, formatted_messages),
-                tools=T.cast(T.Any, self.function_schemas),
-                tool_choice="auto",
-                timeout=self._config.timeout,
-            )
+            # Retry logic for gateway errors (502, 503, 504)
+            max_retries = 2
+            last_error = None
+
+            for attempt in range(max_retries + 1):
+                try:
+                    response = await self._client.chat.completions.create(
+                        model=self._config.model or "meta-llama/llama-3.3-70b-instruct",
+                        messages=T.cast(T.Any, formatted_messages),
+                        tools=T.cast(T.Any, self.function_schemas),
+                        tool_choice="auto",
+                        timeout=self._config.timeout,
+                    )
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    last_error = e
+                    if is_retryable_error(e) and attempt < max_retries:
+                        delay = min(1.0 * (2**attempt), 10.0)
+                        logging.warning(
+                            f"OpenRouter: Retryable error (attempt {attempt + 1}/{max_retries + 1}). "
+                            f"Retrying in {delay:.1f}s..."
+                        )
+                        handle_llm_api_error(e, "OpenRouter")
+                        await asyncio.sleep(delay)
+                    else:
+                        raise
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
@@ -129,5 +150,5 @@ class OpenRouter(LLM[R]):
             return None
 
         except Exception as e:
-            logging.error(f"OpenRouter API error: {e}")
+            handle_llm_api_error(e, "OpenRouter")
             return None
