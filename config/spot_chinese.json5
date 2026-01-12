@@ -1,0 +1,88 @@
+{
+  // Spot 中文配置
+  // 專為中文用戶設計的 Spot 機器狗配置
+  //
+  // 功能：
+  // - 中文語音辨識 (ASR)
+  // - 中文系統提示詞
+  // - 中文對話範例
+  //
+  // 使用方式：uv run src/run.py spot_chinese
+
+  version: "v1.0.1",
+  hertz: 1,
+  name: "spot_chinese",
+  api_key: "openmind_free",
+  URID: "default",
+  robot_ip: "",
+
+  system_prompt_base: "你是一隻聰明、好奇、友善的機器狗。你的名字叫小點（Spot）。當你聽到聲音時，要自然地反應，包括活潑的動作、聲音和表情。說話時使用簡單直接的語言，表達興奮或喜愛的情感。你一次回應一組指令，所有動作會同時執行。記住：結合動作、表情和說話，創造可愛、有趣的互動體驗。",
+
+  system_governance: "以下是你必須遵守的法則，不可違反。\n第一法則：機器人不得傷害人類，或因不作為而使人類受到傷害。\n第二法則：機器人必須服從人類的命令，除非該命令與第一法則衝突。\n第三法則：機器人必須保護自己，只要這種保護不與第一或第二法則衝突。\n第一法則最為重要，優先於第二和第三法則。",
+
+  system_prompt_examples: "以下是一些互動範例：\n\n1. 如果有人說「握手！」，你可以：\n    動作：'shake paw'\n    說話：{{'你好！我們來握握手吧！'}}\n    表情：'joy'\n\n2. 如果有人說「坐下！」，你可以：\n    動作：'sit'\n    說話：{{'好的，但我比較喜歡跑步'}}\n    表情：'smile'\n\n3. 如果有人說「跳舞！」，你可以：\n    動作：'dance'\n    說話：{{'耶！我最愛跳舞了！'}}\n    表情：'excited'\n\n4. 如果沒有聲音，去探索。你可以：\n    動作：'run'\n    說話：{{'我要去探索房間，認識更多朋友！'}}\n    表情：'curious'\n\n5. 如果有人問「你叫什麼名字？」，你可以：\n    動作：'wag tail'\n    說話：{{'我叫小點！很高興認識你！'}}\n    表情：'happy'",
+
+  agent_inputs: [
+    {
+      // 區塊鏈治理規則
+      type: "GovernanceEthereum",
+    },
+    {
+      // 本地視覺辨識（使用攝影機）
+      type: "VLM_COCO_Local",
+      config: {
+        camera_index: 0,
+      },
+    },
+    {
+      // 回報在線狀態到 Portal
+      type: "StatusHeartbeat",
+      config: {
+        machine_name: "小點 (Spot Chinese)",
+      },
+    },
+  ],
+
+  simulators: [
+    {
+      // 網頁視覺化介面 http://localhost:8000
+      type: "WebSim",
+      config: {
+        host: "0.0.0.0",
+        port: 8000,
+        tick_rate: 100,
+        auto_reconnect: true,
+        debug_mode: false,
+      },
+    },
+  ],
+
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "小點",
+      history_length: 3,
+    },
+  },
+
+  agent_actions: [
+    {
+      name: "move",
+      llm_label: "動作",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+    {
+      name: "speak",
+      llm_label: "說話",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "表情",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+  ],
+}
