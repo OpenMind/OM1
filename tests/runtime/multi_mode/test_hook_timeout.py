@@ -3,7 +3,7 @@
 import asyncio
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from runtime.multi_mode.hook import (
     LifecycleHook,
@@ -24,6 +24,7 @@ class TestHookTimeoutHandling:
                 handler_type="message",
                 handler_config={"message": "test"},
                 timeout_seconds=None,  # No explicit timeout
+                async_execution=True,  # Explicitly set async_execution
             )
         ]
 
@@ -32,7 +33,6 @@ class TestHookTimeoutHandling:
             return True
 
         mock_handler = AsyncMock()
-        mock_handler.async_execution = True
         mock_handler.execute.side_effect = slow_execution
 
         with patch(
@@ -58,6 +58,7 @@ class TestHookTimeoutHandling:
                 handler_type="message",
                 handler_config={"message": "test"},
                 timeout_seconds=0.1,  # Explicit timeout
+                async_execution=True,
             )
         ]
 
@@ -66,7 +67,6 @@ class TestHookTimeoutHandling:
             return True
 
         mock_handler = AsyncMock()
-        mock_handler.async_execution = True
         mock_handler.execute.side_effect = slow_execution
 
         with patch(
@@ -98,9 +98,8 @@ class TestHookTimeoutHandling:
             time.sleep(1)  # Longer than timeout
             return True
 
-        mock_handler = AsyncMock()
-        mock_handler.async_execution = False
-        mock_handler.execute.side_effect = slow_sync_execution
+        mock_handler = MagicMock()
+        mock_handler.execute = slow_sync_execution
 
         with patch(
             "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
@@ -122,6 +121,7 @@ class TestHookTimeoutHandling:
                 handler_type="message",
                 handler_config={"message": "test"},
                 timeout_seconds=5.0,
+                async_execution=True,
             )
         ]
 
@@ -130,7 +130,6 @@ class TestHookTimeoutHandling:
             return True
 
         mock_handler = AsyncMock()
-        mock_handler.async_execution = True
         mock_handler.execute.side_effect = fast_execution
 
         with patch(

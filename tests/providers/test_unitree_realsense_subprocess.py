@@ -58,7 +58,7 @@ class TestSubprocessUsage:
 
         # Mock timeout exception
         mock_subprocess_run.side_effect = subprocess.TimeoutExpired(
-            cmd="v4l2-ctl", timeout=5
+            cmd=["v4l2-ctl", "--device=/dev/video0", "--list-formats"], timeout=5
         )
         mock_glob.return_value = ["/dev/video0"]
 

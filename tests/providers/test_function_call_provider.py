@@ -1,6 +1,5 @@
 """Tests for FunctionGenerator in function_call_provider."""
 
-import inspect
 from typing import Optional
 
 import pytest
