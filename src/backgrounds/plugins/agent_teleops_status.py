@@ -19,12 +19,30 @@ class AgentTeleopsStatusConfig(BackgroundConfig):
         OM API key for authentication.
     machine_name : str, default="agent_teleops_status_reporter"
         Machine name for teleops status reporting.
+    battery_level : float, default=0.0
+        Battery level percentage (0-100).
+    voltage : float, default=0.0
+        Battery voltage in volts.
+    temperature : float, default=0.0
+        Battery temperature in Celsius.
     """
 
     api_key: Optional[str] = Field(default=None, description="OM API key")
     machine_name: str = Field(
         default="agent_teleops_status_reporter",
         description="Machine name for teleops status",
+    )
+    battery_level: float = Field(
+        default=0.0,
+        description="Battery level percentage (0-100)",
+    )
+    voltage: float = Field(
+        default=0.0,
+        description="Battery voltage in volts",
+    )
+    temperature: float = Field(
+        default=0.0,
+        description="Battery temperature in Celsius",
     )
 
 
@@ -66,11 +84,19 @@ class AgentTeleopsStatusBackground(Background[AgentTeleopsStatusConfig]):
         """
         Run the teleops status background process.
         """
+        current_time = str(time.time())
         self.teleops_status_provider.share_status(
             TeleopsStatus.from_dict(
                 {
                     "machine_name": self.config.machine_name,
-                    "update_time": str(time.time()),
+                    "update_time": current_time,
+                    "battery_status": {
+                        "battery_level": self.config.battery_level,
+                        "voltage": self.config.voltage,
+                        "temperature": self.config.temperature,
+                        "timestamp": current_time,
+                        "charging_status": False,
+                    },
                 }
             )
         )
