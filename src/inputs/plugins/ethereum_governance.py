@@ -51,7 +51,10 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
         try:
             response = requests.post(
-                self.rpc_url, json=payload, headers={"Content-Type": "application/json"}
+                self.rpc_url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=10,
             )
             logging.debug(f"Blockchain response status: {response.status_code}")
 
