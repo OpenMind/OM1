@@ -6,6 +6,7 @@ import openai
 from pydantic import BaseModel
 
 from llm import LLM, LLMConfig
+from llm.error_handler import handle_llm_api_error
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from providers.avatar_llm_state_provider import AvatarLLMState
@@ -127,5 +128,5 @@ class DeepSeekLLM(LLM[R]):
 
             return None
         except Exception as e:
-            logging.error(f"DeepSeek API error: {e}")
+            handle_llm_api_error(e, "DeepSeek")
             return None
