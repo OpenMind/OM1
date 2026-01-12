@@ -1,6 +1,10 @@
 import logging
 import threading
 import time
+from typing import Optional
+
+import zenoh
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move_game_controller.interface import IDLEInput
@@ -18,18 +22,60 @@ except ImportError:
     hid = None
 
 
-class Go2GameControllerConnector(ActionConnector[IDLEInput]):
+class Go2GameControllerConfig(ActionConfig):
     """
-    Game controller connector
+    Configuration for Go2GameController connector.
+
+    Parameters
+    ----------
+    speed_x : float
+        Movement speed in the x direction (m/s).
+    speed_yaw : float
+        Rotation speed around the yaw axis (rad/s).
+    yaw_correction : float
+        Yaw correction factor.
+    lateral_correction : float
+        Lateral correction factor.
+    unitree_ethernet : Optional[str]
+        Ethernet channel for Unitree Go2 odometry.
     """
 
-    def __init__(self, config: ActionConfig):
+    speed_x: float = Field(
+        default=0.9,
+        description="Movement speed in the x direction (m/s).",
+    )
+    speed_yaw: float = Field(
+        default=0.6,
+        description="Rotation speed around the yaw axis (rad/s).",
+    )
+    yaw_correction: float = Field(
+        default=0.0,
+        description="Yaw correction factor.",
+    )
+    lateral_correction: float = Field(
+        default=0.0,
+        description="Lateral correction factor.",
+    )
+    unitree_ethernet: Optional[str] = Field(
+        default=None,
+        description="Ethernet channel for Unitree Go2 odometry.",
+    )
+
+
+class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEInput]):
+    """
+    Game controller for Unitree Go2 robots.
+
+    NOTE: This connector has been deprecated. OM1 Orchestrator docker automatically supports game controller.
+    """
+
+    def __init__(self, config: Go2GameControllerConfig):
         """
         Initialize the game controller connector.
 
         Parameters
         ----------
-        config : ActionConfig
+        config : Go2GameControllerConfig
             The configuration for the action connector.
         """
         super().__init__(config)
@@ -37,10 +83,10 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         self.config = config
 
         # Movement speed m/s and rad/s
-        self.move_speed = getattr(config, "speed_x", 0.9)
-        self.turn_speed = getattr(config, "speed_yaw", 0.6)
-        self.yaw_correction = getattr(config, "yaw_correction", 0.0)
-        self.lateral_correction = getattr(config, "lateral_correction", 0.0)
+        self.move_speed = self.config.speed_x
+        self.turn_speed = self.config.speed_yaw
+        self.yaw_correction = self.config.yaw_correction
+        self.lateral_correction = self.config.lateral_correction
 
         self.topic = "robot/status/audio"
         self.session = None
@@ -87,20 +133,27 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
 
         self.RTLT_moving = False
 
-        unitree_ethernet = getattr(config, "unitree_ethernet", "")
+        unitree_ethernet = self.config.unitree_ethernet
         self.odom = OdomProvider(channel=unitree_ethernet)
         self.unitree_state_provider = UnitreeGo2StateProvider()
 
         self.thread_lock = threading.Lock()
 
-    def zenoh_audio_message(self, data):
+    def zenoh_audio_message(self, data: zenoh.Sample) -> None:
+        """
+        Callback function to handle incoming Zenoh audio messages.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The Zenoh sample received, which should have a 'payload' attribute.
+        """
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     def _init_controller(self) -> None:
         """
         Initialize or reinitialize the game controller.
         """
-
         self.sony_dualsense = False
         self.xbox = False
         self.sony_edge = False
@@ -151,6 +204,14 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
                         continue
 
     def _execute_command_thread(self, command: str) -> None:
+        """
+        Execute a Unitree command in a separate thread.
+
+        Parameters
+        ----------
+        command : str
+            The command to execute.
+        """
         try:
             if (
                 command == "StandUp"
@@ -208,7 +269,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
 
     async def connect(self, output_interface: IDLEInput) -> None:
         """
-        Connect to actions from LLM
+        Connect to actions from LLM.
 
         Parameters
         ----------
@@ -287,7 +348,7 @@ class Go2GameControllerConnector(ActionConnector[IDLEInput]):
         # special case for no data if the D-pad or LT and RT is kept pressed
         if data is None or len(data) == 0:
             if self.rt_previous > 0 or self.lt_previous > 0:
-                # we always excute the left turn first
+                # we always execute the left turn first
                 if self.lt_previous > 0:
                     logging.info(
                         "Left Trigger is kept pressed - Counter-clockwise rotation"

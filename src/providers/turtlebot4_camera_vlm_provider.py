@@ -22,7 +22,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
     This class extends the VideoStream class to handle TurtleBot camera-specific
     video streaming and processing.
 
-    NOTE - this uses the defaul preview image size of 250x250.
+    NOTE - this uses the default preview image size of 250x250.
     If you want to stream high resolution data, you will need to change
     configurations inside the TurtleBot4.
 

@@ -22,10 +22,10 @@
                 ]
             },
             {
-                "tab": "Guides",
+                "tab": "Get started",
                 "groups": [
                     {
-                        "group": "Getting Started",
+                        "group": "Quick start",
                         "pages": [
                             "developing/0_introduction",
                             "developing/1_get-started",
@@ -35,6 +35,55 @@
                             "developing/9_troubleshooting_guide"
                         ]
                     },
+                    {
+                        "group": "Robot Integration",
+                        "pages": [
+                            "robotics/unitree_g1_humanoid",
+                            "robotics/unitree_go2_quadruped",
+                            "robotics/turtlebot4_zenoh",
+                            "robotics/ubtech_yanshee"
+                        ]
+                    },
+                    {
+                        "group": "Tutorials",
+                        "pages": [
+                            "examples/overview",
+                            "examples/conversation",
+                            "examples/gazebo"
+                        ]
+                    },
+                    {
+                        "group": "Full Autonomy",
+                        "pages": [
+                            "full_autonomy_guidelines/brainpack_introduction",
+                            "full_autonomy_guidelines/architecture_overview",
+                            "full_autonomy_guidelines/om1_system_setup",
+                            "full_autonomy_guidelines/pre_config",
+                            "robotics/nvidia_thor",
+                            {
+                                "group": "Full Autonomy Components",
+                                "pages": [
+                                    "full_autonomy_guidelines/om1_avatar",
+                                    "full_autonomy_guidelines/om",
+                                    "full_autonomy_guidelines/unitree_sdk",
+                                    "full_autonomy_guidelines/om1_video_processor"
+                                ]
+
+                            }
+                        ]
+                    },
+                    {
+                        "group": "Governance/Payments",
+                        "pages": [
+                            "robotics/asimov_governance",
+                            "robotics/coinbase-x402"
+                        ]
+                    }
+                ]
+            },
+            {
+                "tab": "Developer Cookbook",
+                "groups": [
                     {
                         "group": "Input Plugins",
                         "pages": [
@@ -69,45 +118,23 @@
                         ]
                     },
                     {
-                        "group": "Robot Integration",
+                        "group": "Modes and Lifecycle",
                         "pages": [
-                            "robotics/unitree_g1_humanoid",
-                            "robotics/unitree_go2_quadruped",
-                            "robotics/turtlebot4_zenoh",
-                            "robotics/ubtech_yanshee"
+                            "full_autonomy_guidelines/modes",
+                            "full_autonomy_guidelines/mode_selection",
+                            "full_autonomy_guidelines/lifecycle",
+                            "full_autonomy_guidelines/transition_rules"
                         ]
-                    },
-                    {
-                        "group": "Tutorials",
-                        "pages": [
-                            "examples/overview",
-                            "examples/conversation",
-                            "examples/gazebo"
-                        ]
-                    },
-                    {
-                        "group": "Full Autonomy",
-                        "pages": [
-                            "full_autonomy_guidelines/backpack_introduction",
-                            "full_autonomy_guidelines/architecture_overview",
-                            "full_autonomy_guidelines/pre_config",
-                            {
-                                "group": "Full Autonomy Components",
-                                "pages": [
-                                    "full_autonomy_guidelines/om1_avatar",
-                                    "full_autonomy_guidelines/om",
-                                    "full_autonomy_guidelines/ros2_sdk",
-                                    "full_autonomy_guidelines/om1_video_processor"
-                                ]
 
-                            }
-                        ]
                     },
                     {
-                        "group": "Governance/Payments",
+                        "group": "Recipes",
                         "pages": [
-                            "robotics/asimov_governance",
-                            "robotics/coinbase-x402"
+
+                            "developer_cookbook/introduction",
+                            "developer_cookbook/config",
+                            "developer_cookbook/input",
+                            "developer_cookbook/new_mode"
                         ]
                     }
                 ]
@@ -140,15 +167,27 @@
                     {
                         "group": "Upgrades and Announcements",
                         "pages": [
-                            "release-notes/major-updates/beta_release"
+                            "release-notes/major-updates/beta_release",
+                            "release-notes/major-updates/production_ready_release"
                         ]
                     },
-                                        {
+                    {
                         "group": "Beta Release",
                         "pages": [
                             "release-notes/beta/om",
                             "release-notes/beta/om1-avatar",
-                            "release-notes/beta/ros2-sdk"
+                            "release-notes/beta/unitree-sdk",
+                            "release-notes/beta/video-processor"
+                        ]
+                    },
+                                        {
+                        "group": "Production Ready Release",
+                        "pages": [
+                            "release-notes/v1.0.0/om1-system-setup",
+                            "release-notes/v1.0.0/om",
+                            "release-notes/v1.0.0/om1-avatar",
+                            "release-notes/v1.0.0/unitree-sdk",
+                            "release-notes/v1.0.0/video-processor"
                         ]
                     }
                  ]

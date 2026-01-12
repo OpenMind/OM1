@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.plugins.vlm_vila import Message, VLMVila
+from inputs.plugins.vlm_vila import Message, VLMVila, VLMVilaConfig
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def mock_vlm_provider():
 
 @pytest.fixture
 def vlm_input(mock_vlm_provider):
-    return VLMVila()
+    return VLMVila(config=VLMVilaConfig())
 
 
 def test_init(vlm_input, mock_vlm_provider):

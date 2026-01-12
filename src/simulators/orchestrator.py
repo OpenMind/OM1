@@ -12,6 +12,7 @@ from simulators.base import Simulator
 class SimulatorOrchestrator:
     """
     Manages data flow to one or more simulators.
+
     Note: It is important that the simulators do not block the event loop.
     """
 
@@ -36,7 +37,7 @@ class SimulatorOrchestrator:
 
     def start(self):
         """
-        Start simulators in separate threads
+        Start simulators in separate threads.
         """
         for simulator in self._config.simulators:
             if simulator.name in self._submitted_simulators:
@@ -51,7 +52,7 @@ class SimulatorOrchestrator:
 
     def _run_simulator_loop(self, simulator: Simulator):
         """
-        Thread-based simulator loop
+        Thread-based simulator loop.
 
         Parameters
         ----------
@@ -66,8 +67,7 @@ class SimulatorOrchestrator:
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
-        Flushes the promise queue and returns the completed promises
-        and the pending promises.
+        Flushes the promise queue and returns the completed promises and the pending promises.
 
         Returns
         -------
@@ -84,7 +84,7 @@ class SimulatorOrchestrator:
 
     async def promise(self, actions: T.List[Action]) -> None:
         """
-        Send actions to all simulators
+        Send actions to all simulators.
 
         Parameters
         ----------
@@ -101,7 +101,7 @@ class SimulatorOrchestrator:
         self, simulator: Simulator, actions: T.List[Action]
     ) -> T.Any:
         """
-        Send actions to a single simulator
+        Send actions to a single simulator.
 
         Parameters
         ----------

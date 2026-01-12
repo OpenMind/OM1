@@ -23,7 +23,7 @@ services:
       - ALSA_CARD=0
     volumes:
       - ./config:/app/OM1/config
-      - ./cyclonedx:/cyclonedx
+      - ./cyclonedds:/cyclonedds
       - /dev/snd:/dev/snd:rw
       - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw
       - ~/.config/pulse/cookie:/root/.config/pulse/cookie:ro

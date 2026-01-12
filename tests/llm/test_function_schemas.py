@@ -23,18 +23,18 @@ class SampleInterface(Interface[SampleInput, SampleOutput]):
     output: SampleOutput
 
 
-class SampleConnector(ActionConnector[SampleOutput]):
+class SampleConnector(ActionConnector[ActionConfig, SampleOutput]):
     def __init__(self, config: ActionConfig):
         super().__init__(config)
         self.last_output: Optional[SampleOutput] = None
 
-    async def connect(self, input_protocol: SampleOutput) -> None:
-        self.last_output = input_protocol
+    async def connect(self, output_interface: SampleOutput) -> None:
+        self.last_output = output_interface
 
 
 @pytest.fixture
 def action_config():
-    return ActionConfig(param1="test_value", param2=123)
+    return ActionConfig()
 
 
 @pytest.fixture
