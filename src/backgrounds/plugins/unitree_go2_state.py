@@ -44,11 +44,7 @@ class UnitreeGo2State(Background[UnitreeGo2StateConfig]):
         Parameters
         ----------
         config : UnitreeGo2StateConfig
-            Configuration object containing:
-            - unitree_ethernet: The Ethernet channel identifier for Unitree Go2
-              communication. This is required and must be specified in the
-              configuration. If not provided, initialization will fail with
-              a ValueError.
+            Configuration for the Unitree Go2 State background task.
         """
         super().__init__(config)
 
