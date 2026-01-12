@@ -39,10 +39,66 @@ class UbtechASRSensorConfig(SensorConfig):
 
 class UbtechASRInput(FuserInput[UbtechASRSensorConfig, Optional[str]]):
     """
-    Ubtech Robot ASR input handler that uses the UbtechASRProvider.
+    Ubtech Robot ASR (Automatic Speech Recognition) input handler.
+
+    Processes voice input from Ubtech robots using UbtechASRProvider for
+    real-time speech recognition. Integrates with IOProvider for message
+    handling and SleepTickerProvider for sleep management.
+
+    Supports multiple languages (English, Chinese, Korean) and implements
+    intelligent ASR pause/resume cooldown mechanism to prevent excessive
+    processing during active speech recognition.
+
+    Essential for voice-controlled robotics applications, real-time voice
+    commands, and conversational AI systems with Ubtech robot platforms.
+
+    Attributes
+    ----------
+    messages : List[str]
+        Buffer for storing processed voice messages
+    descriptor_for_LLM : str
+        Description label for LLM context ("Voice")
+    io_provider : IOProvider
+        IO provider for managing input messages
+    message_buffer : Queue[str]
+        Thread-safe queue for ASR messages from provider
+    global_sleep_ticker_provider : SleepTickerProvider
+        Provider for managing sleep ticker behavior
+    last_asr_resume_trigger_time : float
+        Timestamp of last ASR resume trigger (for cooldown management)
+    asr_resume_cooldown : float
+        Cooldown period in seconds before ASR can be resumed again (default: 10.0s)
+    robot_ip : str
+        IP address of the Ubtech robot
+    language : str
+        Language setting for speech recognition (normalized to lowercase)
+    language_code : str
+        Language code mapped from language name (en, zh, ko)
+    asr : UbtechASRProvider
+        ASR provider instance for speech recognition
     """
 
     def __init__(self, config: UbtechASRSensorConfig):
+        """
+        Initialize Ubtech ASR input handler.
+
+        Parameters
+        ----------
+        config : UbtechASRSensorConfig
+            Configuration object containing:
+            - robot_ip: IP address of the Ubtech robot (default: "")
+            - language: Language for speech recognition (default: "english")
+
+        Notes
+        -----
+        Automatically initializes and starts the UbtechASRProvider with the
+        specified robot IP and language code. Registers message callback for
+        handling ASR results. Language is normalized to lowercase and mapped
+        to language codes (english->en, chinese->zh, korean->ko).
+
+        The ASR provider is started immediately upon initialization and will
+        begin listening for voice input from the specified robot.
+        """
         super().__init__(config)
         self.messages: List[str] = []
         self.descriptor_for_LLM = "Voice"
