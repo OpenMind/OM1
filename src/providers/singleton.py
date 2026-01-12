@@ -1,15 +1,8 @@
 import threading
-from typing import Any, Protocol, TypeVar, cast
-
-T = TypeVar("T")
+from typing import Any
 
 
-class SingletonWrapper(Protocol[T]):
-    def __call__(self, *args: Any, **kwargs: Any) -> T: ...
-    def reset(self) -> None: ...
-
-
-def singleton(cls: type[T]) -> SingletonWrapper[T]:
+def singleton(cls):
     """
     A thread-safe singleton decorator that ensures only one instance of a class exists.
 
@@ -25,10 +18,10 @@ def singleton(cls: type[T]) -> SingletonWrapper[T]:
         function: A getter function that returns the singleton instance.
     """
     if not hasattr(cls, "_singleton_instance"):
-        setattr(cls, "_singleton_instance", None)
+        cls._singleton_instance = None
     lock = threading.Lock()
 
-    def get_instance(*args: Any, **kwargs: Any) -> T:
+    def get_instance(*args, **kwargs) -> Any:
         """
         Returns the singleton instance of the decorated class.
 
@@ -44,11 +37,11 @@ def singleton(cls: type[T]) -> SingletonWrapper[T]:
             Any: The singleton instance of the decorated class.
         """
         with lock:
-            if getattr(cls, "_singleton_instance") is None:
-                setattr(cls, "_singleton_instance", cls(*args, **kwargs))
-            return getattr(cls, "_singleton_instance")
+            if cls._singleton_instance is None:
+                cls._singleton_instance = cls(*args, **kwargs)
+            return cls._singleton_instance
 
-    def reset_instance() -> None:
+    def reset_instance():
         """
         Resets the singleton instance of the decorated class.
 
@@ -56,8 +49,9 @@ def singleton(cls: type[T]) -> SingletonWrapper[T]:
         to be created on the next call to get_instance.
         """
         with lock:
-            setattr(cls, "_singleton_instance", None)
+            cls._singleton_instance = None
 
+    get_instance._singleton_class = cls  # type: ignore
     get_instance.reset = reset_instance  # type: ignore
 
-    return cast(SingletonWrapper[T], get_instance)
+    return get_instance
