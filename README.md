@@ -45,6 +45,8 @@ For MacOS
 brew install portaudio ffmpeg
 ```
 
+> **Note for macOS users**: Before running OM1, grant camera and microphone permissions to your terminal app (Terminal, iTerm2, VS Code, etc.) in **System Settings → Privacy & Security → Camera** (and **Microphone** if using ASR). Without this, the Spot agent won't be able to access your webcam or microphone.
+
 For Linux
 ```bash
 sudo apt-get update
