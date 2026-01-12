@@ -89,10 +89,9 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
         # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
 
-        if self.unitree_go2_state.state_code == 1002:
-            if self.sport_client:
-                logging.info("Robot is in jointLock state - issuing BalanceStand()")
-                self.sport_client.BalanceStand()
+        if self.unitree_go2_state.state_code == 1002 and self.sport_client:
+            logging.info("Robot is in jointLock state - issuing BalanceStand()")
+            self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
             logging.info(
@@ -101,13 +100,12 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
             return
 
         # fallback to the odom provider
-        if not self.unitree_go2_state.state_code:
-            if self.odom.position["moving"]:
-                # for example due to a teleops or game controller command
-                logging.info(
-                    "Disregard new AI movement command - robot is already moving"
-                )
-                return
+        if not self.unitree_go2_state.state_code and self.odom.position["moving"]:
+            # for example due to a teleops or game controller command
+            logging.info(
+                "Disregard new AI movement command - robot is already moving"
+            )
+            return
 
         if self.pending_movements.qsize() > 0:
             logging.info("Movement in progress: disregarding new AI command")
@@ -394,7 +392,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
                 yaw=target_yaw,
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
-                turn_complete=True if path_angle == 0 else False,
+                turn_complete=path_angle == 0,
             )
         )
 
