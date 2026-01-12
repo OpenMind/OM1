@@ -45,6 +45,13 @@ For MacOS
 brew install portaudio ffmpeg
 ```
 
+For MacOS (Apple Silicon) - If you encounter build errors with `py-sr25519-bindings` or `maturin`:
+```bash
+# Install Rust compiler
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+```
+
 For Linux
 ```bash
 sudo apt-get update
