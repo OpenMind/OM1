@@ -41,11 +41,13 @@ uv venv
 ### Install Dependencies
 
 #### macOS
+
 ```bash
 brew install portaudio ffmpeg
 ```
 
 #### Linux
+
 ```bash
 sudo apt-get update
 sudo apt-get install portaudio19-dev python-dev ffmpeg
@@ -112,6 +114,17 @@ Customize system_prompt in the file to change agent behavior, e.g., "You are a h
 
 ### Launching OM1
 
+Run
+
+```bash
+uv run src/run.py spot
+```
+
+After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
+
+Note: This is just an example agent configuration.
+If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
+
 ### Troubleshooting
 
 - **PortAudio/FFmpeg Error**: Ensure dependencies are installed. On Mac/Linux, run `brew list portaudio` or `apt list --installed | grep portaudio`. On Windows, verify with `choco list --local-only`. Restart terminal.
@@ -122,16 +135,6 @@ Customize system_prompt in the file to change agent behavior, e.g., "You are a h
 - **Windows Path Issues**: Use forward slashes in config paths or raw strings: `r"C:\path\to\file"`.
 
 If issues persist, join [Discord](https://discord.gg/VUjpg4ef5n) or open an issue with logs.
-
-Run
-```bash
-uv run src/run.py spot
-```
-
-After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
-
-Note: This is just an example agent configuration.
-If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
 
 ## What's Next?
 
@@ -165,9 +168,9 @@ OM1 is developed on:
 * Mac Studio with Apple M2 Ultra with 48 GB unified memory (running MacOS Sequoia)
 * Mac Mini with Apple M4 Pro with 48 GB unified memory (running MacOS Sequoia)
 * Generic Linux machines (running Ubuntu 22.04)
+* Windows 10/11 (with Python 3.10+, WSL recommended for ROS2)
 
-OM1 _should_ run on other platforms and microcontrollers such as the Raspberry Pi 5 16GB. Windows 10/11 is supported (with Python 3.10+, WSL recommended for ROS2).
-
+OM1 _should_ run on other platforms and microcontrollers such as the Raspberry Pi 5 16GB.
 
 ## Full Autonomy Guidance
 
@@ -179,6 +182,7 @@ We're excited to introduce **full autonomy** for Unitree Go2 and G1. Full autono
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 
 ## Intro to BrainPack?
+
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
 We'll shortly be releasing the **BOM** and details on **DIY** for it.
 Stay tuned!
@@ -190,6 +194,7 @@ Clone the following repos -
 - https://github.com/OpenMind/OM1-video-processor.git
 
 ## Starting the system
+
 To start all services, run the following commands:
 - For OM1
 
@@ -198,6 +203,8 @@ Setup the API key
 For Bash: vim ~/.bashrc or ~/.bash_profile.
 
 For Zsh: vim ~/.zshrc.
+
+For PowerShell (Windows): `$env:OM_API_KEY="your_api_key"` or add to system environment variables.
 
 Add
 
@@ -245,6 +252,7 @@ More detailed documentation can be accessed at [docs.openmind.org](https://docs.
 Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before making a pull request.
 
 ## License
+
 ## 中文文档 (Chinese Documentation)
 
 欢迎贡献中文翻译！查看 [README_zh.md](README_zh.md) 获取初步翻译（后续可扩展）。
