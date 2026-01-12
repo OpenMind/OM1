@@ -15,20 +15,74 @@ from .singleton import singleton
 @singleton
 class GpsProvider:
     """
-    GPS Provider.
+    GPS Provider for managing GPS, magnetometer, and BLE data from serial connection.
 
-    This class implements a singleton pattern to manage:
-        * GPS data from serial
+    This class implements a singleton pattern to manage GPS data acquisition from a serial
+    port connection (typically connected to an Arduino-based GPS module). It handles:
+        * GPS position data (latitude, longitude, altitude)
+        * Satellite information and fix quality
+        * Magnetometer heading data
+        * BLE (Bluetooth Low Energy) scan data for triangulation
+        * Real-time data processing in a background thread
 
-    Parameters
+    The provider automatically starts a background thread upon initialization to continuously
+    read and process incoming serial data. GPS data is updated in real-time and can be accessed
+    through the `data` property.
+
+    Attributes
     ----------
-    serial_port: str = ""
-        The Serial port the Arduino is connected to
+    lat : float
+        Current latitude in decimal degrees.
+    lon : float
+        Current longitude in decimal degrees.
+    alt : float
+        Current altitude in meters.
+    sat : int
+        Number of satellites currently locked.
+    qua : int
+        GPS fix quality indicator.
+    gps_unix_ts : float
+        Unix timestamp of the latest GPS reading.
+    yaw_mag_0_360 : float
+        Magnetometer heading in degrees (0-360).
+    yaw_mag_cardinal : str
+        Cardinal direction derived from magnetometer heading.
+    ble_scan : List[RFDataRaw]
+        List of BLE devices detected in the latest scan.
     """
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration.
+        Initialize the GPS Provider with serial port connection.
+
+        Parameters
+        ----------
+        serial_port : str, optional
+            The serial port path where the GPS module is connected. Examples:
+            - Linux: "/dev/ttyUSB0", "/dev/ttyACM0"
+            - Windows: "COM3", "COM4"
+            - macOS: "/dev/cu.usbserial-*"
+            If empty string is provided, the provider will initialize but won't be able
+            to connect to a serial device.
+
+        Notes
+        -----
+        The provider uses the following default serial settings:
+            - Baudrate: 115200
+            - Timeout: 1 second
+
+        Upon initialization, the provider:
+            1. Attempts to establish a serial connection to the specified port
+            2. Resets the input buffer to clear any stale data
+            3. Initializes all GPS data attributes to default values
+            4. Automatically starts a background processing thread via `start()`
+
+        If the serial connection fails (e.g., port doesn't exist or is already in use),
+        an error is logged but the provider continues to run. The `data` property will
+        return None until a successful connection is established and GPS data is received.
+
+        The background thread runs as a daemon thread, so it will automatically terminate
+        when the main program exits.
         """
         logging.info(f"GPS_Provider booting GPS Provider at serial: {serial_port}")
 
