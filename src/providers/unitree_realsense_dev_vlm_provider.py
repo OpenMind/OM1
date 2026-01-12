@@ -205,26 +205,18 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
             if device in skip_devices:
                 continue
 
-            cmd = f"v4l2-ctl --device={device} --list-formats"
             try:
                 result = subprocess.run(
-                    cmd.split(),
+                    ["v4l2-ctl", f"--device={device}", "--list-formats"],
                     capture_output=True,
                     text=True,
-                    timeout=5,
-                    check=False,
+                    shell=False,
                 )
                 formats = result.stdout
-                if result.returncode != 0:
-                    logger.warning(
-                        f"Command '{cmd}' returned non-zero exit code: {result.returncode}"
-                    )
-                    continue
-            except subprocess.TimeoutExpired:
-                logger.warning(f"Command '{cmd}' timed out after 5 seconds")
-                continue
             except Exception as e:
-                logger.exception("Failed to run command '%s': %s", cmd, e)
+                logger.exception(
+                    "Failed to run v4l2-ctl for device '%s': %s", device, e
+                )
                 continue
 
             try:
