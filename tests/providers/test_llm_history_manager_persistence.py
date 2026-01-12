@@ -1,11 +1,13 @@
-import pytest
-import os
 import json
+import os
 import tempfile
-import asyncio
-from unittest.mock import MagicMock, patch, mock_open
-from src.providers.llm_history_manager import LLMHistoryManager, ChatMessage
+from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
+from providers.llm_history_manager import ChatMessage, LLMHistoryManager
+
 from llm import LLMConfig
+
 
 class TestLLMHistoryManagerPersistence:
     @pytest.fixture
@@ -173,7 +175,7 @@ class TestLLMHistoryManagerPersistence:
         
         # Manually verify that save_history logic is skipped
         # We can mock save_history to ensure it's not called
-        with patch.object(history_manager, 'save_history') as mock_save:
+        with patch.object(history_manager, 'save_history') as _mock_save:
             # Trigger update (simulated)
             # Since logic is in decorator or callback, testing the condition directly
             # in the decorator logic is hard without mocking the whole chain.
