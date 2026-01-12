@@ -46,7 +46,15 @@ class RFmapperConfig(BackgroundConfig):
 
 class RFmapper(Background[RFmapperConfig]):
     """
-    Assemble location and BLE data.
+    Background task for collecting and mapping RF signal data with location information.
+
+    This background task initializes and manages an RF mapping system that combines
+    Bluetooth Low Energy (BLE) scanning with location data from GPS, RTK, and odometry
+    providers. The mapper continuously scans for BLE devices, records their signal
+    strength (RSSI), and correlates this information with the robot's position to
+    create RF signal maps.
+
+    The collected data is submitted to the Fabric mapping service for further processing.
     """
 
     def __init__(self, config: RFmapperConfig):
