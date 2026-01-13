@@ -190,3 +190,13 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 ## License
 
 This project is licensed under the terms of the MIT License, which is a permissive free software license that allows users to freely use, modify, and distribute the software. The MIT License is a widely used and well-established license that is known for its simplicity and flexibility. By using the MIT License, this project aims to encourage collaboration, modification, and distribution of the software.
+
+## Troubleshooting (Cloud / Headless VMs)
+
+- **Missing API key**: ensure `.env` contains `OM_API_KEY=...` and that it is loaded into the environment.
+- **No audio input device**: on cloud/headless VMs you may see ALSA/PortAudio warnings (e.g. `No Default Input Device Available`, `Unknown PCM`). This is expected if no microphone is attached.
+- **Quick checks**:
+  - Verify `.env`: `test -f .env && grep -n '^OM_API_KEY=' .env`
+  - List audio devices: `arecord -l || true` and `aplay -l || true`
+- **Low-cost run (recommended for headless)**:
+  - `uv run python src/run.py conversation.lowcost --no-hot-reload --log-level WARNING`
