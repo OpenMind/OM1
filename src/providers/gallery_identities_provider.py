@@ -1,5 +1,6 @@
 # src/providers/gallery_identities_provider.py
 
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -159,8 +160,10 @@ class GalleryIdentitiesProvider:
             try:
                 snap = self._fetch_snapshot()
                 self._emit(snap.to_text())
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(
+                    f"Failed to fetch/emit gallery identities snapshot: {e}"
+                )
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -180,8 +183,8 @@ class GalleryIdentitiesProvider:
         for cb in callbacks:
             try:
                 cb(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Gallery identities callback failed: {e}")
 
     def _fetch_snapshot(self) -> IdentitiesSnapshot:
         """
@@ -216,7 +219,8 @@ class GalleryIdentitiesProvider:
                     n = str(item.get("id", "")).strip()
                     if n:
                         names.append(n)
-        except Exception:
+        except Exception as e:
+            logging.warning(f"Failed to parse gallery identities: {e}")
             names = []
 
         # Use local time; server may not return one

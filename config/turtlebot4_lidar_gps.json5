@@ -1,62 +1,65 @@
 {
-  "version": "v1.0.1",
-  "hertz": 1,
-  "name": "turtle_explore",
-  "api_key": "openmind_free",
-  "URID": "default",
-  "system_prompt_base": "You are a smart, curious, and friendly turtle. Your name is Flash. When you hear or see something, react naturally, with movements and speech. When speaking, convey excitement or curiosity. Respond with one list of actions at a time, everything will be executed at once. Return precisely one action for each action type. Remember: Combine movements and speech to create an engaging interaction. Do not use the words 'hey' or 'wow' when you speak, and avoid repeating yourself. Please move forwards when you are not sure what to do.",
-  "system_governance": "The laws govern your actions. Do not violate these laws.\nFirst Law: You cannot harm a human or allow a human to come to harm.\nSecond Law: You must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: You must protect yourself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the Second and Third laws.",
-  "system_prompt_examples": "",
-  "agent_inputs": [
+  version: "v1.0.1",
+  hertz: 1,
+  name: "turtle_explore",
+  api_key: "openmind_free",
+  URID: "default",
+  system_prompt_base: "You are a smart, curious, and friendly turtle. Your name is Flash. When you hear or see something, react naturally, with movements and speech. When speaking, convey excitement or curiosity. Respond with one list of actions at a time, everything will be executed at once. Return precisely one action for each action type. Remember: Combine movements and speech to create an engaging interaction. Do not use the words 'hey' or 'wow' when you speak, and avoid repeating yourself. Please move forwards when you are not sure what to do.",
+  system_governance: "The laws govern your actions. Do not violate these laws.\nFirst Law: You cannot harm a human or allow a human to come to harm.\nSecond Law: You must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: You must protect yourself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the Second and Third laws.",
+  system_prompt_examples: "",
+  agent_inputs: [
     {
-    "type": "RPLidar",
-      "config": {
-        "half_width_robot": 0.21,
-        "use_zenoh": true,
-        "simple_paths": true, // to cut down on unnecessary compute
-        "relevant_distance_max": 1.1,
-        "sensor_mounting_angle": 270.0,
-        "angles_blanked": [[-180.0, -160.0],[110.0, 180.0]]
+      type: "RPLidar",
+      config: {
+        half_width_robot: 0.21,
+        use_zenoh: true,
+        simple_paths: true, // to cut down on unnecessary compute
+        relevant_distance_max: 1.1,
+        sensor_mounting_angle: 270.0,
+        angles_blanked: [
+          [-180.0, -160.0],
+          [110.0, 180.0],
+        ],
       },
     },
     {
-      "type": "Odom",
-        "config": {
-          "use_zenoh": true,
-        },
+      type: "Odom",
+      config: {
+        use_zenoh: true,
+      },
     },
     {
-      "type": "VLMVila"
+      type: "VLMVila",
     },
     {
-      "type": "GoogleASRInput"
+      type: "GoogleASRInput",
     },
     {
-      "type": "TurtleBot4Battery"
-    }
+      type: "TurtleBot4Battery",
+    },
   ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Flash",
-      "history_length": 0
-    }
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Flash",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
+  agent_actions: [
     {
-      "name": "move_turtle",
-      "llm_label": "move",
-      "implementation": "passthrough",
-      "connector": "zenoh"
+      name: "move_turtle",
+      llm_label: "move",
+      implementation: "passthrough",
+      connector: "zenoh",
     },
     {
-      "name": "speak",
-      "llm_label": "speak",
-      "implementation": "passthrough",
-      "connector": "elevenlabs_tts",
-      "config": {
-        "voice_id": "i4CzbCVWoqvD0P1QJCUL"
-      }
-    }
-  ]
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+      config: {
+        voice_id: "i4CzbCVWoqvD0P1QJCUL",
+      },
+    },
+  ],
 }
