@@ -1,7 +1,8 @@
 import asyncio
+import logging
 import time
 from collections import deque
-from queue import Empty, Queue
+from queue import Empty, Full, Queue
 from typing import Deque, Optional
 
 from pydantic import Field
@@ -90,15 +91,17 @@ class GalleryIdentities(FuserInput[GalleryIdentitiesConfig, Optional[str]]):
         """
         try:
             self.message_buffer.put_nowait(text_line)
-        except Exception:
+        except Full:
             try:
                 _ = self.message_buffer.get_nowait()
             except Empty:
                 pass
             try:
                 self.message_buffer.put_nowait(text_line)
-            except Exception:
-                pass
+            except Full:
+                logging.warning(
+                    "GalleryIdentities: Failed to enqueue message after retry, queue full"
+                )
 
     async def _poll(self) -> Optional[str]:
         """

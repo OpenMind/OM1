@@ -1,6 +1,8 @@
+import logging
 import time
 from collections import deque
-from unittest.mock import Mock, patch
+from queue import Full, Queue
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -47,8 +49,6 @@ def test_initialization_creates_providers_and_buffers(mock_io_provider):
     assert instance.messages.maxlen == 300
 
     assert hasattr(instance, "message_buffer")
-    from queue import Queue
-
     assert isinstance(instance.message_buffer, Queue)
     assert instance.message_buffer.maxsize == 64
 
@@ -192,3 +192,57 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     mock_io_provider.add_input.assert_called_once_with(
         "GalleryIdentities", "total=1 ids=[eve]", 1234.0
     )
+
+
+class TestGalleryIdentitiesMessageHandlerLogging:
+    """Tests for _handle_gallery_message method logging behavior."""
+
+    def test_logs_warning_when_retry_put_fails(self, caplog):
+        """Test that a warning is logged when queue retry put fails."""
+        with (
+            patch(
+                "inputs.plugins.gallery_identities_input.GalleryIdentitiesProvider"
+            ) as mock_provider_class,
+            patch("inputs.plugins.gallery_identities_input.IOProvider"),
+        ):
+            mock_provider = MagicMock()
+            mock_provider_class.return_value = mock_provider
+
+            config = GalleryIdentitiesConfig()
+            input_handler = GalleryIdentities(config)
+
+            mock_queue = MagicMock(spec=Queue)
+            mock_queue.put_nowait.side_effect = Full()
+            mock_queue.get_nowait.return_value = "old_message"
+            input_handler.message_buffer = mock_queue
+
+            with caplog.at_level(logging.WARNING):
+                input_handler._handle_gallery_message("test_message")
+
+            assert any(
+                "Failed to enqueue" in record.message for record in caplog.records
+            ), "Expected warning log when retry put fails"
+
+    def test_normal_put_succeeds_without_warning(self, caplog):
+        """Test that no warning is logged when queue put succeeds."""
+        with (
+            patch(
+                "inputs.plugins.gallery_identities_input.GalleryIdentitiesProvider"
+            ) as mock_provider_class,
+            patch("inputs.plugins.gallery_identities_input.IOProvider"),
+        ):
+            mock_provider = MagicMock()
+            mock_provider_class.return_value = mock_provider
+
+            config = GalleryIdentitiesConfig()
+            input_handler = GalleryIdentities(config)
+
+            mock_queue = MagicMock(spec=Queue)
+            mock_queue.put_nowait.return_value = None
+            input_handler.message_buffer = mock_queue
+
+            with caplog.at_level(logging.WARNING):
+                input_handler._handle_gallery_message("test_message")
+
+            warning_logs = [r for r in caplog.records if r.levelno >= logging.WARNING]
+            assert len(warning_logs) == 0, "No warning expected for successful put"
