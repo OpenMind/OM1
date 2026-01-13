@@ -69,7 +69,7 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-asyncio_mode = "auto"
+asyncio_mode = "strict"
 addopts = "-m \"not integration\""
 norecursedirs = ["src/unitree", "system_hw_test", "src/ubtech"]
 markers = [
@@ -95,11 +95,18 @@ src = ["src"]
 exclude = ["src/unitree", "src/ubtech"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
-ignore = ["E203", "E501"]
+select = ["E", "F", "I", "D"]
+ignore = ["E203", "E501", "D100", "D104", "D200", "D205", "D401", "D404"]
 fixable = ["ALL"]
 unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+"system_hw_test/**" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.vulture]
 exclude = ["src/unitree/", "src/ubtech/", "system_hw_test/"]

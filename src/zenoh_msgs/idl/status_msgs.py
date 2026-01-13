@@ -9,13 +9,19 @@ from .std_msgs import Header, String
 
 @dataclass
 class AudioStatus(IdlStruct, typename="AudioStatus"):
+    """Audio status message."""
+
     class STATUS_MIC(Enum):
+        """Mic status code enum for AudioStatus."""
+
         DISABLED = 0
         READY = 1
         ACTIVE = 2
         UNKNOWN = 3
 
     class STATUS_SPEAKER(Enum):
+        """Speaker status code enum for AudioStatus."""
+
         DISABLED = 0
         READY = 1
         ACTIVE = 2
@@ -29,7 +35,11 @@ class AudioStatus(IdlStruct, typename="AudioStatus"):
 
 @dataclass
 class CameraStatus(IdlStruct, typename="CameraStatus"):
+    """Camera status message."""
+
     class STATUS(Enum):
+        """Code enum for CameraStatus."""
+
         DISABLED = 0
         ENABLED = 1
 
@@ -39,7 +49,11 @@ class CameraStatus(IdlStruct, typename="CameraStatus"):
 
 @dataclass
 class AIStatusRequest(IdlStruct, typename="AIStatusRequest"):
+    """AI status request message."""
+
     class Code(Enum):
+        """Code enum for AIStatusRequest."""
+
         DISABLED = 0
         ENABLED = 1
         STATUS = 2
@@ -51,7 +65,11 @@ class AIStatusRequest(IdlStruct, typename="AIStatusRequest"):
 
 @dataclass
 class AIStatusResponse(IdlStruct, typename="AIStatusResponse"):
+    """AI status response message."""
+
     class Code(Enum):
+        """Code enum for AIStatusResponse."""
+
         DISABLED = 0
         ENABLED = 1
         UNKNOWN = 2
@@ -64,7 +82,11 @@ class AIStatusResponse(IdlStruct, typename="AIStatusResponse"):
 
 @dataclass
 class ModeStatusRequest(IdlStruct, typename="ModeStatusRequest"):
+    """Mode status request message."""
+
     class Code(Enum):
+        """Code enum for ModeStatusRequest."""
+
         SWITCH_MODE = 0
         STATUS = 1
 
@@ -76,7 +98,11 @@ class ModeStatusRequest(IdlStruct, typename="ModeStatusRequest"):
 
 @dataclass
 class ModeStatusResponse(IdlStruct, typename="ModeStatusResponse"):
+    """Mode status response message."""
+
     class Code(Enum):
+        """Code enum for ModeStatusResponse."""
+
         SUCCESS = 0
         FAILURE = 1
         UNKNOWN = 2
@@ -90,7 +116,11 @@ class ModeStatusResponse(IdlStruct, typename="ModeStatusResponse"):
 
 @dataclass
 class TTSStatusRequest(IdlStruct, typename="TTSStatusRequest"):
+    """TTS status request message."""
+
     class Code(Enum):
+        """Code enum for TTSStatusRequest."""
+
         DISABLED = 0
         ENABLED = 1
         STATUS = 2
@@ -102,7 +132,11 @@ class TTSStatusRequest(IdlStruct, typename="TTSStatusRequest"):
 
 @dataclass
 class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
+    """TTS status response message."""
+
     class Code(Enum):
+        """Code enum for TTSStatusResponse."""
+
         DISABLED = 0
         ENABLED = 1
         UNKNOWN = 2
@@ -115,13 +149,19 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
 
 @dataclass
 class ASRText(IdlStruct, typename="ASRText"):
+    """ASR text message."""
+
     header: Header
     text: str
 
 
 @dataclass
 class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
+    """Avatar face request message."""
+
     class Code(Enum):
+        """Code enum for AvatarFaceRequest."""
+
         SWITCH_FACE = 0
         STATUS = 1
 
@@ -133,7 +173,11 @@ class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
 
 @dataclass
 class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
+    """Avatar face response message."""
+
     class Code(Enum):
+        """Code enum for AvatarFaceResponse."""
+
         ACTIVE = 0
         INACTIVE = 1
         UNKNOWN = 2
@@ -146,6 +190,8 @@ class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
 
 @dataclass
 class ConfigRequest(IdlStruct, typename="ConfigRequest"):
+    """Request message for configuration requests."""
+
     header: Header
     request_id: String
     config: String = String("")  # ignored for GET_CONFIG
@@ -153,6 +199,8 @@ class ConfigRequest(IdlStruct, typename="ConfigRequest"):
 
 @dataclass
 class ConfigResponse(IdlStruct, typename="ConfigResponse"):
+    """Response message for configuration requests."""
+
     header: Header
     request_id: String
     config: String

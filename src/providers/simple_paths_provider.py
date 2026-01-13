@@ -34,8 +34,8 @@ def simple_paths_processor(
         """
         Callback for receiving paths messages.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         msg: zenoh.Sample
             The message containing paths data.
         """
@@ -78,6 +78,10 @@ def simple_paths_processor(
 
 @singleton
 class SimplePathsProvider:
+    """
+    Singleton class to provide simple path processing using Zenoh.
+    """
+
     def __init__(self):
         self.session = None
         self.paths = None
