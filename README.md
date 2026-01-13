@@ -44,6 +44,18 @@ For MacOS
 brew install portaudio ffmpeg
 ```
 
+
+```md
+### macOS Camera Permission (Required)
+
+On macOS, OM1 requires camera access for vision-based features.
+
+1. Open **System Settings → Privacy & Security → Camera**
+2. Enable camera access for your terminal application (Terminal / iTerm)
+3. Restart OM1 after granting permission
+
+If camera access is denied, vision modules may fail to initialize.
+
 For Linux
 ```bash
 sudo apt-get update
