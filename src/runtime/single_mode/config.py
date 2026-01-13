@@ -116,14 +116,13 @@ def load_config(
     ------
     FileNotFoundError
         If the configuration file does not exist
-    json.JSONDecodeError
-        If the configuration file contains invalid JSON
+    ValueError
+        If the configuration file contains invalid JSON5 (json5 raises ValueError on parse errors),
+        or if configuration values are invalid (e.g., negative hertz)
     KeyError
         If required configuration fields are missing
     ImportError
         If component types specified in config cannot be imported
-    ValueError
-        If configuration values are invalid (e.g., negative hertz)
     """
     config_path = (
         os.path.join(
@@ -133,13 +132,21 @@ def load_config(
         else config_source_path
     )
 
-    with open(config_path, "r") as f:
-        try:
+    try:
+        with open(config_path, "r") as f:
             raw_config = json5.load(f)
-        except Exception as e:
-            raise ValueError(
-                f"Failed to parse configuration file '{config_path}': {e}"
-            ) from e
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"Configuration file not found: '{config_path}'"
+        )
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid JSON5 syntax in configuration file '{config_path}': {e}"
+        ) from e
+    except Exception as e:
+        raise ValueError(
+            f"Failed to parse configuration file '{config_path}': {e}"
+        ) from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
