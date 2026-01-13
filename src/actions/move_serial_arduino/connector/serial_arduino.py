@@ -16,7 +16,7 @@ class MoveSerialConfig(ActionConfig):
     """
     Configuration for Serial to Arduino connector.
 
-    Parameters:
+    Parameters
     ----------
     port : str
         The serial port to connect to the Arduino (e.g., COM3 or /dev/cu.usbmodem14101). Leave empty to simulate.

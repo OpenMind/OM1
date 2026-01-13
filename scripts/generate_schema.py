@@ -300,7 +300,6 @@ class ConfigSchemaGenerator:
         Dict[str, Any]
             The hooks schema structure with enums and field types.
         """
-
         if not os.path.exists(self.schema_path):
             logging.warning(f"Schema file not found: {self.schema_path}")
             return {}
@@ -357,7 +356,6 @@ class ConfigSchemaGenerator:
         Dict[str, Any]
             Transition rules schema with types and properties.
         """
-
         if not os.path.exists(self.schema_path):
             logging.warning(f"Schema file not found: {self.schema_path}")
             return {}
@@ -623,6 +621,9 @@ class ConfigSchemaGenerator:
 
 
 def main():
+    """
+    Main entry point for schema generation script.
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(script_dir)
 

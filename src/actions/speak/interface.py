@@ -20,7 +20,7 @@ class SpeakInput:
 @dataclass
 class Speak(Interface[SpeakInput, SpeakInput]):
     """
-    This action allows you to speak.
+    This action makes the robot speak a given text.
     """
 
     input: SpeakInput

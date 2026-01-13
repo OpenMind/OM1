@@ -66,6 +66,34 @@ The Multi-Agent endpoint at `/api/core/agent` utilizes a collaborative system of
 
 The system supports on-device inference using the Qwen3-30B local LLM. This enables low-latency responses and allows certain workloads to run entirely on the device without relying on cloud connectivity.
 
+### Ollama Integration
+
+[Ollama](https://ollama.ai) provides an easy way to run open-source models locally. OM1 supports Ollama through the `OllamaLLM` plugin.
+
+**Prerequisites:**
+1. Install Ollama: https://ollama.ai
+2. Pull a model: `ollama pull llama3.2`
+3. Ensure Ollama is running: `ollama serve`
+
+**Configuration:**
+```json
+"cortex_llm": {
+  "type": "OllamaLLM",
+  "config": {
+    "model": "llama3.2",
+    "base_url": "http://localhost:11434",
+    "temperature": 0.7,
+    "num_ctx": 4096,
+    "timeout": 120
+  }
+}
+```
+
+**Run with Ollama:**
+```bash
+uv run src/run.py ollama
+```
+
 ### Dual LLM support
 
 OM1 implements a dual-LLM response mechanism that combines both local and cloud-based models to optimize response quality and latency.
@@ -188,6 +216,11 @@ NEAR_AI_SUPPORTED_MODELS = ["qwen3-30b-a3b-instruct-2507", "qwen2.5-vl-72b-instr
 
 ```python
 OPENROUTER_SUPPORTED_MODELS = ["meta-llama/llama-3.1-70b-instruct", "meta-llama/llama-3.3-70b-instruct"]
+```
+
+```python
+# Ollama supports any model from https://ollama.ai/library
+OLLAMA_SUPPORTED_MODELS = ["llama3.2", "llama3.1", "mistral", "phi3", "gemma2", "qwen2.5", "codellama", "llava"]
 ```
 
 ```python

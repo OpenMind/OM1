@@ -22,7 +22,7 @@ class UbTtsConfig(ActionConfig):
     """
     Configuration for UbTts connector.
 
-    Parameters:
+    Parameters
     ----------
     robot_ip : Optional[str]
         The IP address of the robot.

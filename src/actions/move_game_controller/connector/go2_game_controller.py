@@ -26,7 +26,7 @@ class Go2GameControllerConfig(ActionConfig):
     """
     Configuration for Go2GameController connector.
 
-    Parameters:
+    Parameters
     ----------
     speed_x : float
         Movement speed in the x direction (m/s).
@@ -154,7 +154,6 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
         """
         Initialize or reinitialize the game controller.
         """
-
         self.sony_dualsense = False
         self.xbox = False
         self.sony_edge = False
@@ -270,7 +269,7 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
 
     async def connect(self, output_interface: IDLEInput) -> None:
         """
-        Connect to actions from LLM
+        Connect to actions from LLM.
 
         Parameters
         ----------

@@ -9,6 +9,23 @@ from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 def describe_action(
     action_name: str, llm_label: str, exclude_from_prompt: bool
 ) -> Optional[str]:
+    """
+    Generate a description of the action for use in prompts.
+
+    Parameters
+    ----------
+    action_name : str
+        The name of the action.
+    llm_label : str
+        The label used by the LLM for this action.
+    exclude_from_prompt : bool
+        Whether to exclude this action from the prompt. If True, returns None.
+
+    Returns
+    -------
+    Optional[str]
+        A formatted description of the action, or None if excluded.
+    """
     if exclude_from_prompt:
         return None
 
@@ -53,6 +70,20 @@ def describe_action(
 def load_action(
     action_config: T.Dict[str, T.Union[str, T.Dict[str, str]]],
 ) -> AgentAction:
+    """
+    Load an action based on the provided configuration.
+
+    Parameters
+    ----------
+    action_config : Dict[str, Union[str, Dict[str, str]]]
+        Configuration dictionary for the action, including 'name', 'llm_label',
+        'connector', and optional 'config' and 'exclude_from_prompt' keys.
+
+    Returns
+    -------
+    AgentAction
+        An instance of AgentAction with the specified interface and connector.
+    """
     interface = None
     action = importlib.import_module(f"actions.{action_config['name']}.interface")
 
