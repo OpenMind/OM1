@@ -23,6 +23,15 @@ class MessageType(Enum):
 class ConversationMessage:
     """
     Represents a conversation message with type, content, and timestamp.
+
+    Parameters
+    ----------
+    message_type : MessageType
+        The type of the message, either USER or ROBOT.
+    content : str
+        The text content of the message.
+    timestamp : float
+        Unix timestamp when the message was created.
     """
 
     message_type: MessageType
@@ -77,6 +86,17 @@ class TeleopsConversationProvider:
         api_key: Optional[str] = None,
         base_url: str = "https://api.openmind.org/api/core/teleops/conversation",
     ):
+        """
+        Initialize the Teleops conversation provider.
+
+        Parameters
+        ----------
+        api_key : str, optional
+            API key for authenticating requests to the Teleops backend.
+            If None or empty, message storage will be disabled.
+        base_url : str, default="https://api.openmind.org/api/core/teleops/conversation"
+            Base URL for the Teleops conversation API endpoint.
+        """
         self.api_key = api_key
         self.base_url = base_url
         self.executor = ThreadPoolExecutor(max_workers=1)
