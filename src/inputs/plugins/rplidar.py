@@ -64,28 +64,6 @@ class RPLidarConfig(SensorConfig):
 class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
     """
     RPLidar input handler for processing laser range finder data.
-
-    This class manages RPLidar sensor input processing and generates text descriptions
-    of the surrounding environment based on laser scan data. It integrates with
-    RPLidarProvider to acquire real-time distance measurements and obstacle detection
-    information, which is then formatted for LLM consumption to assist in robot
-    navigation and obstacle avoidance planning.
-
-    The class maintains internal message buffers and integrates with the IO provider
-    system for input tracking and logging purposes.
-
-    Attributes
-    ----------
-    io_provider : IOProvider
-        Provider for tracking input/output operations and message logging.
-    messages : List[Message]
-        Buffer for storing processed message objects with timestamps.
-    message_buffer : Queue[str]
-        Queue for storing raw message strings before processing.
-    lidar : RPLidarProvider
-        Provider instance for interfacing with the RPLidar hardware.
-    descriptor_for_LLM : str
-        Descriptive text explaining the input type for LLM context.
     """
 
     def __init__(self, config: RPLidarConfig):
@@ -95,18 +73,7 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
         Parameters
         ----------
         config : RPLidarConfig
-            Configuration object containing sensor parameters including serial port,
-            Zenoh settings, robot dimensions, distance thresholds, sensor mounting
-            angle, robot identification, machine type, and logging preferences.
-
-        Notes
-        -----
-        The initialization process automatically:
-        - Creates IOProvider instance for input tracking
-        - Initializes message buffers for processed and raw messages
-        - Extracts lidar configuration parameters from the config object
-        - Instantiates and starts the RPLidarProvider with the extracted configuration
-        - Sets the LLM descriptor text for context description
+            Configuration for the RPLidar input handler.
         """
         super().__init__(config)
 
