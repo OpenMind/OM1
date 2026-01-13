@@ -17,20 +17,6 @@ class Rtk(FuserInput[SensorConfig, Optional[dict]]):
     Processes high-precision GPS data from RTK provider to generate location
     information with centimeter-level accuracy. Integrates with IOProvider
     for message handling and provides formatted location data for LLM processing.
-
-    RTK positioning is essential for robotics applications requiring precise
-    localization, navigation, and spatial awareness in outdoor environments.
-
-    Attributes
-    ----------
-    rtk : RtkProvider
-        RTK provider instance for accessing precision GPS data
-    io_provider : IOProvider
-        IO provider for managing input messages
-    messages : list[Message]
-        Buffer for storing processed messages
-    descriptor_for_LLM : str
-        Description label for LLM context ("Precision Location")
     """
 
     def __init__(self, config: SensorConfig):
@@ -40,13 +26,7 @@ class Rtk(FuserInput[SensorConfig, Optional[dict]]):
         Parameters
         ----------
         config : SensorConfig
-            Sensor configuration object
-
-        Notes
-        -----
-        Automatically initializes RtkProvider and IOProvider instances.
-        The RTK provider supplies high-precision GPS coordinates including
-        latitude, longitude, altitude, and quality indicators.
+            Configuration for the sensor input
         """
         super().__init__(config)
 
