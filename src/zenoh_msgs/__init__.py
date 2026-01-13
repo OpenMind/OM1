@@ -1,3 +1,34 @@
+"""Zenoh message types and session management module.
+
+This module implements a comprehensive message type system for distributed robot
+communication architectures utilizing the Zenoh middleware protocol. The module
+provides a structured taxonomy of message types that facilitate type-safe data
+exchange across heterogeneous robotic systems, encompassing temporal primitives,
+spatial representations, sensor data structures, and system status indicators.
+
+The module's architectural design follows a hierarchical namespace organization
+pattern, wherein message types are categorized into semantic domains that reflect
+their functional roles within robotic communication protocols. This organization
+methodology enables developers to leverage type annotations and static analysis
+tools to ensure protocol compliance and reduce runtime errors in distributed
+systems.
+
+The exported message type categories include:
+- std_msgs: Fundamental temporal and structural primitives (Time, Duration, Header)
+- status_msgs: System state and inter-component communication protocols
+- geographic_msgs: Geospatial coordinate representations and transformations
+- geometry_msgs: Geometric primitives and transformations (Point, Pose, Twist)
+- nav_msgs: Navigation and path planning data structures
+- sensor_msgs: Sensor fusion and perception data representations
+
+Additionally, the module provides session management utilities that abstract
+the complexity of Zenoh configuration and connection establishment, implementing
+a fallback mechanism that prioritizes local connections while maintaining
+backward compatibility with network discovery protocols.
+"""
+
+from __future__ import annotations
+
 from . import session
 from .idl import (
     IMU,
@@ -66,7 +97,7 @@ from .idl import (
 )
 from .session import create_zenoh_config, open_zenoh_session
 
-__all__ = [
+__all__: list[str] = [
     # std_msgs
     "Time",
     "Duration",
