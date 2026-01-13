@@ -46,7 +46,12 @@ class RFmapperConfig(BackgroundConfig):
 
 class RFmapper(Background[RFmapperConfig]):
     """
-    Assemble location and BLE data.
+    Background task for Radio Frequency (RF) mapping.
+
+    This background initializes GPS, RTK, and Odom providers to gather location data,
+    and a FabricDataSubmitter to send combined data. It manages an asynchronous
+    BLE scanning task in a separate thread and continuously runs a main loop to
+    collect data from these sources and submit it via the FabricDataSubmitter.
     """
 
     def __init__(self, config: RFmapperConfig):
@@ -250,8 +255,14 @@ class RFmapper(Background[RFmapperConfig]):
 
     def run(self) -> None:
         """
-        Run the background process.
-        This method will run indefinitely, simulating a long-running task.
+        Run the main background process loop.
+
+        This method continuously gathers data from GPS, Odom, and RTK providers,
+        combines it along with recent RF scan results into a FabricData object,
+        and attempts to share this data using the FabricDataSubmitter. The loop
+        sleeps for 1 second between iterations and handles potential errors during
+        data retrieval and submission. It can be interrupted by a KeyboardInterrupt,
+        which triggers the stop procedure.
         """
         try:
             while self.running:
