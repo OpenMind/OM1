@@ -46,7 +46,24 @@ class RFmapperConfig(BackgroundConfig):
 
 class RFmapper(Background[RFmapperConfig]):
     """
-    Assemble location and BLE data.
+    RF Mapper background task for collecting and aggregating location and BLE data.
+
+    This background task continuously scans for Bluetooth Low Energy (BLE) devices
+    and combines the scan results with location data from GPS, RTK, and odometry
+    providers. The aggregated data is then submitted to the Fabric mapping service
+    for real-time location tracking and RF signal mapping.
+
+    The RFmapper performs the following operations:
+    - BLE device scanning using BleakScanner
+    - Integration with GPS, RTK, and odometry providers for location data
+    - Data aggregation and payload creation
+    - Submission of aggregated data to Fabric mapping service
+
+    This is particularly useful for:
+    - Real-time RF signal mapping and visualization
+    - Location-based device tracking
+    - Environmental sensing and mapping applications
+    - Collaborative mapping projects using Fabric service
     """
 
     def __init__(self, config: RFmapperConfig):
@@ -56,7 +73,22 @@ class RFmapper(Background[RFmapperConfig]):
         Parameters
         ----------
         config : RFmapperConfig
-            Configuration object for the background.
+            Configuration object containing the following fields:
+            - name: Name identifier for the RF mapper instance (default: "RFmapper")
+            - api_key: API key for Fabric mapping service authentication (optional)
+            - URID: Unique Robot ID for identifying the robot in Fabric service (optional)
+            - unitree_ethernet: Unitree Ethernet channel configuration (optional)
+
+        Notes
+        -----
+        The RFmapper automatically initializes the following providers:
+        - GpsProvider: For GPS location data
+        - RtkProvider: For RTK (Real-Time Kinematic) precision location data
+        - OdomProvider: For odometry-based position tracking
+        - FabricDataSubmitter: For submitting aggregated data to Fabric service
+
+        A background scanning thread is automatically started upon initialization
+        to continuously perform BLE device scanning.
         """
         super().__init__(config)
 
