@@ -13,26 +13,6 @@ from providers.io_provider import IOProvider
 class Gps(FuserInput[SensorConfig, Optional[dict]]):
     """
     GPS input handler for reading GPS and magnetometer data.
-
-    This class processes GPS location data from the GpsProvider and converts
-    it into formatted text messages for the LLM. It handles GPS coordinates
-    (latitude, longitude, altitude) and quality indicators, converting them
-    into human-readable location descriptions.
-
-    The GPS input is essential for robot localization, navigation, and
-    location-aware behavior planning. It provides rough GPS coordinates
-    that can be used for outdoor navigation and spatial awareness.
-
-    Attributes
-    ----------
-    gps : GpsProvider
-        The GPS provider instance for accessing GPS data
-    io_provider : IOProvider
-        Provider for input/output operations
-    messages : list[Message]
-        Buffer for storing processed GPS messages
-    descriptor_for_LLM : str
-        Description string for the LLM ("GPS Location")
     """
 
     def __init__(self, config: SensorConfig):
@@ -42,14 +22,7 @@ class Gps(FuserInput[SensorConfig, Optional[dict]]):
         Parameters
         ----------
         config : SensorConfig
-            Configuration object for the sensor input. Contains sensor-specific
-            settings and parameters required for GPS data processing.
-
-        Notes
-        -----
-        The initialization automatically creates a GpsProvider instance and
-        an IOProvider instance. The GPS provider connects to the GPS hardware
-        or data source to retrieve location data.
+            Configuration for the GPS sensor.
         """
         super().__init__(config)
 
