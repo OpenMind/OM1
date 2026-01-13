@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .geographic_msgs import GeoPoint, GeoPointStamped
 from .geometry_msgs import (
     Accel,
@@ -51,7 +53,7 @@ from .status_msgs import (
 )
 from .std_msgs import ColorRGBA, Duration, Header, String, Time, prepare_header
 
-__all__ = [
+__all__: list[str] = [
     # std_msgs
     "Time",
     "Duration",
