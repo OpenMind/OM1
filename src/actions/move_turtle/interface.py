@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -25,9 +27,30 @@ class MoveInput:
     action : MovementAction
         The movement action to execute. Must be one of the predefined
         movement actions: TURN_LEFT, TURN_RIGHT, MOVE_FORWARDS, or STAND_STILL.
+
+    Raises
+    ------
+    ValueError
+        If action is None or not a valid MovementAction enum value.
     """
 
     action: MovementAction
+
+    def __post_init__(self) -> None:
+        """
+        Validate that action is not None and is a valid MovementAction.
+
+        Raises
+        ------
+        ValueError
+            If action is None or not a valid MovementAction enum value.
+        """
+        if self.action is None:
+            raise ValueError("action cannot be None")
+        if not isinstance(self.action, MovementAction):
+            raise ValueError(
+                f"action must be a MovementAction enum value, got {type(self.action).__name__}"
+            )
 
 
 @dataclass
