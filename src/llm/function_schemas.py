@@ -151,20 +151,9 @@ def convert_function_calls_to_actions(function_calls: list[dict]) -> list[Action
             else:
                 args = function_args
 
-            # Convert to Action format
-            # For most actions, we expect an 'action' parameter
-            action_value = args.get("action", "")
-
-            # If no 'action' parameter, try other common parameter names
-            if not action_value:
-                for param in ["text", "message", "value", "command"]:
-                    if param in args:
-                        action_value = args[param]
-                        break
-
-            # If still no value, use the first parameter value
-            if not action_value and args:
-                action_value = str(list(args.values())[0])
+            # Store all arguments as JSON in value for complex actions
+            # ActionOrchestrator will parse this and pass all fields to the interface
+            action_value = json.dumps(args)
 
             action = Action(type=function_name, value=action_value)
             actions.append(action)

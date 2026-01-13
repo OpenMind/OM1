@@ -332,9 +332,27 @@ class ActionOrchestrator:
         logging.debug(
             f"Calling action {agent_action.llm_label} with type {action.type.lower()} and argument {action.value}"
         )
-        input_interface = T.get_type_hints(agent_action.interface)["input"](
-            **{"action": action.value}
-        )
+        
+        # Try to parse action.value as JSON (for multi-field actions)
+        import json
+        try:
+            params = json.loads(action.value)
+            if isinstance(params, dict):
+                # Pass all parameters to the interface
+                input_interface = T.get_type_hints(agent_action.interface)["input"](
+                    **params
+                )
+            else:
+                # Fallback for non-dict JSON values
+                input_interface = T.get_type_hints(agent_action.interface)["input"](
+                    action=str(params)
+                )
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON, use the old behavior for backward compatibility
+            input_interface = T.get_type_hints(agent_action.interface)["input"](
+                **{"action": action.value}
+            )
+        
         await agent_action.connector.connect(input_interface)
         return input_interface
 
