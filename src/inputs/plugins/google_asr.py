@@ -80,15 +80,56 @@ class GoogleASRSensorConfig(SensorConfig):
 
 class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
     """
-    Automatic Speech Recognition (ASR) input handler.
+    Google Automatic Speech Recognition (ASR) input handler.
 
-    This class manages the input stream from an ASR service, buffering messages
-    and providing text conversion capabilities.
+    This class manages the input stream from Google ASR service, providing real-time
+    speech-to-text conversion capabilities. It handles audio streaming, message buffering,
+    and text processing for voice input in robot interaction systems.
+
+    The class integrates with multiple providers:
+    - ASRProvider: Handles WebSocket connections to Google ASR service
+    - IOProvider: Manages input/output operations
+    - TeleopsConversationProvider: Stores conversation history
+    - SleepTickerProvider: Controls sleep/wake behavior
+    - Zenoh: Publishes ASR messages to distributed systems
+
+    Typical use cases include:
+    - Voice-controlled robot navigation
+    - Real-time speech recognition for human-robot interaction
+    - Multi-language voice input processing
+    - Integration with LLM-based conversation systems
     """
 
     def __init__(self, config: GoogleASRSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize GoogleASRInput instance.
+
+        Parameters
+        ----------
+        config : GoogleASRSensorConfig
+            Configuration object containing all ASR settings. Key parameters include:
+            - api_key: Google ASR API key for authentication
+            - rate: Audio sampling rate (default: 48000 Hz)
+            - chunk: Audio chunk size for processing (default: 12144)
+            - base_url: Custom WebSocket URL for ASR service (optional)
+            - stream_base_url: Custom WebSocket URL for audio streaming (optional)
+            - microphone_device_id: Hardware microphone device identifier (optional)
+            - microphone_name: Human-readable microphone name (optional)
+            - language: Language code for speech recognition (default: "english")
+            - remote_input: Whether to use remote audio input source
+            - enable_tts_interrupt: Allow microphone to remain active during TTS playback
+
+        Notes
+        -----
+        The initialization process automatically:
+        1. Starts the ASR provider with configured settings
+        2. Registers message callback handlers for ASR responses
+        3. Initializes Zenoh session for distributed message publishing (if available)
+        4. Sets up conversation provider for message history tracking
+        5. Configures language code mapping (defaults to English if unsupported language specified)
+
+        If Zenoh initialization fails, the class continues to operate without
+        distributed messaging capabilities, logging a warning message.
         """
         super().__init__(config)
 
