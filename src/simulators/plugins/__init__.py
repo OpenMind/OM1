@@ -1,1 +1,5 @@
-# This can be empty
+"""Simulator plugins package."""
+
+from __future__ import annotations
+
+__all__: list[str] = []
