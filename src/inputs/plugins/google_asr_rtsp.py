@@ -69,15 +69,70 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
 
 class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
     """
-    Automatic Speech Recognition (ASR) input handler.
+    Google ASR RTSP input handler for processing speech recognition from RTSP audio streams.
 
-    This class manages the RTSP input stream from an ASR service, buffering messages
-    and providing text conversion capabilities.
+    This class manages automatic speech recognition (ASR) input processing from RTSP
+    audio streams using Google's ASR service. It integrates with ASRRTSPProvider to
+    receive real-time speech-to-text conversion, processes the recognized text, and
+    formats it for LLM consumption. The class supports multiple languages, TTS interrupt
+    functionality, and Zenoh-based message broadcasting for distributed systems.
+
+    The handler maintains message buffers, integrates with conversation providers for
+    teleoperation scenarios, and supports sleep ticker functionality for managing
+    system wake states.
+
+    Attributes
+    ----------
+    messages : List[str]
+        Buffer for storing processed text messages from ASR recognition.
+    io_provider : IOProvider
+        Provider for tracking input/output operations and message logging.
+    message_buffer : Queue[str]
+        Queue for storing raw ASR message strings before processing.
+    asr : ASRRTSPProvider
+        Provider instance for interfacing with Google ASR service via RTSP.
+    descriptor_for_LLM : str
+        Descriptive text explaining the input type for LLM context.
+    global_sleep_ticker_provider : SleepTickerProvider
+        Provider for managing system sleep/wake states based on input activity.
+    conversation_provider : TeleopsConversationProvider
+        Provider for managing teleoperation conversation context and message storage.
+    session : Optional[Session]
+        Zenoh session instance for distributed message broadcasting.
+    asr_publisher : Optional[Publisher]
+        Zenoh publisher for broadcasting ASR text messages on the 'om/asr/text' topic.
+    asr_topic : str
+        Zenoh topic name for ASR message broadcasting.
     """
 
     def __init__(self, config: GoogleASRRTSPSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize the Google ASR RTSP input handler.
+
+        Parameters
+        ----------
+        config : GoogleASRRTSPSensorConfig
+            Configuration object containing ASR service parameters including API key,
+            RTSP URL for audio stream, sampling rate, base URL for ASR service,
+            language preference, and TTS interrupt settings.
+
+        Notes
+        -----
+        The initialization process automatically:
+        - Creates message buffers for processed and raw messages
+        - Initializes IOProvider for input tracking
+        - Configures ASR provider with RTSP URL, sampling rate, WebSocket URL, and language code
+        - Validates and maps language configuration to appropriate language codes
+        - Starts the ASR provider and registers message callback handler
+        - Initializes sleep ticker provider for system state management
+        - Initializes teleoperation conversation provider for message storage
+        - Attempts to initialize Zenoh session and ASR publisher for distributed messaging
+        - Falls back gracefully if Zenoh initialization fails (logs warning, continues operation)
+
+        Raises
+        ------
+        logging.error
+            If an unsupported language is specified, defaults to English and logs error.
         """
         super().__init__(config)
 
@@ -145,12 +200,23 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
 
     def _handle_asr_message(self, raw_message: str):
         """
-        Process incoming ASR messages.
+        Process incoming ASR messages from the ASR provider.
+
+        Parses JSON-formatted ASR response messages, extracts recognized text,
+        and adds valid multi-word transcriptions to the message buffer for
+        further processing.
 
         Parameters
         ----------
         raw_message : str
-            Raw message received from ASR service
+            Raw JSON-formatted message string received from the ASR service.
+            Expected format: {"asr_reply": "recognized text"}
+
+        Notes
+        -----
+        Only messages containing more than one word are added to the buffer
+        to filter out single-word false positives and noise. Invalid JSON
+        messages are silently ignored.
         """
         try:
             json_message: Dict = json.loads(raw_message)
@@ -260,7 +326,17 @@ INPUT: {self.descriptor_for_LLM}
 
     def stop(self):
         """
-        Stop the ASR input.
+        Stop the ASR input handler and clean up resources.
+
+        Stops the ASR provider and closes the Zenoh session if it was
+        successfully initialized. Ensures proper resource cleanup on
+        shutdown.
+
+        Notes
+        -----
+        This method should be called when shutting down the input handler
+        to prevent resource leaks and ensure clean termination of background
+        processes and network connections.
         """
         if self.asr:
             self.asr.stop()
