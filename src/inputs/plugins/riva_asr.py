@@ -66,7 +66,18 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
 
     def __init__(self, config: RivaASRSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize RivaASRInput instance.
+
+        Parameters
+        ----------
+        config : RivaASRSensorConfig
+            Configuration object containing ASR service settings, microphone
+            configuration, and connection parameters.
+
+        Notes
+        -----
+        Automatically initializes ASR provider, message buffer, and sleep ticker.
+        Registers message callback for ASR service responses.
         """
         super().__init__(config)
 

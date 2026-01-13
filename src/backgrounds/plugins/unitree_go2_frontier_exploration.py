@@ -36,6 +36,21 @@ class UnitreeGo2FrontierExploration(Background[UnitreeGo2FrontierExplorationConf
     """
 
     def __init__(self, config: UnitreeGo2FrontierExplorationConfig):
+        """
+        Initialize UnitreeGo2FrontierExploration background task.
+
+        Parameters
+        ----------
+        config : UnitreeGo2FrontierExplorationConfig
+            Configuration object containing exploration topic and context-aware
+            text settings.
+
+        Notes
+        -----
+        Automatically parses and validates context_aware_text JSON. Falls back to
+        default exploration status if parsing fails. Starts the frontier exploration
+        provider upon initialization.
+        """
         super().__init__(config)
 
         topic = self.config.topic
