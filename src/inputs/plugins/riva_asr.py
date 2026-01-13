@@ -71,13 +71,7 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
         Parameters
         ----------
         config : RivaASRSensorConfig
-            Configuration object containing ASR service settings, microphone
-            configuration, and connection parameters.
-
-        Notes
-        -----
-        Automatically initializes ASR provider, message buffer, and sleep ticker.
-        Registers message callback for ASR service responses.
+            Configuration for the ASR input handler.
         """
         super().__init__(config)
 
