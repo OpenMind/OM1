@@ -42,14 +42,7 @@ class UnitreeGo2FrontierExploration(Background[UnitreeGo2FrontierExplorationConf
         Parameters
         ----------
         config : UnitreeGo2FrontierExplorationConfig
-            Configuration object containing exploration topic and context-aware
-            text settings.
-
-        Notes
-        -----
-        Automatically parses and validates context_aware_text JSON. Falls back to
-        default exploration status if parsing fails. Starts the frontier exploration
-        provider upon initialization.
+            Configuration object for background task settings.
         """
         super().__init__(config)
 

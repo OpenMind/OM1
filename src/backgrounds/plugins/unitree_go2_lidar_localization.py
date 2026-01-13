@@ -23,10 +23,6 @@ class UnitreeGo2LidarLocalization(Background[BackgroundConfig]):
         ----------
         config : BackgroundConfig
             Configuration object for background task settings.
-
-        Notes
-        -----
-        Automatically starts the lidar localization provider upon initialization.
         """
         super().__init__(config)
 
