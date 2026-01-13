@@ -40,7 +40,9 @@ class Fuser:
         self.config = config
         self.io_provider = IOProvider()
 
-    def fuse(self, inputs: list[Sensor], finished_promises: list[T.Any]) -> str:
+    def fuse(
+        self, inputs: list[Sensor], finished_promises: list[T.Any]
+    ) -> T.Optional[str]:
         """
         Combine all inputs into a single formatted prompt string.
 
@@ -56,8 +58,9 @@ class Fuser:
 
         Returns
         -------
-        str
-            Fused prompt string combining all inputs and context.
+        str or None
+            Fused prompt string combining all inputs and context,
+            or None if there are no meaningful inputs to process.
         """
         # Record the timestamp of the input
         self.io_provider.fuser_start_time = time.time()
@@ -69,6 +72,16 @@ class Fuser:
         system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + "\n"
 
         inputs_fused = " ".join([s for s in input_strings if s is not None])
+
+        # Skip LLM call if there are no meaningful inputs
+        # This prevents unnecessary API calls and credit consumption when:
+        # - No camera/microphone is connected
+        # - No sensor data is available
+        # - All input sources return None/empty
+        # See: https://github.com/OpenmindAGI/OM1/issues/1372
+        if not inputs_fused.strip():
+            logging.debug("No meaningful inputs available, skipping LLM call")
+            return None
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,

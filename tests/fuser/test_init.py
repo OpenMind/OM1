@@ -55,10 +55,11 @@ def test_fuser_timestamps(mock_time):
     mock_time.return_value = 1000
     config = create_mock_config()
     io_provider = IOProvider()
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]  # Need valid input to test timestamps
 
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        fuser.fuse([], [])
+        fuser.fuse(inputs, [])
         assert io_provider.fuser_start_time == 1000
         assert io_provider.fuser_end_time == 1000
 
@@ -94,3 +95,92 @@ def test_fuser_with_inputs_and_actions(mock_describe):
             io_provider.fuser_available_actions
             == "AVAILABLE ACTIONS:\naction description\n\naction description\n\n\n\nWhat will you do? Actions:"
         )
+
+
+@dataclass
+class MockEmptySensor(Sensor[SensorConfig, Any]):
+    """Mock sensor that returns None (no input available)."""
+
+    def __init__(self):
+        super().__init__(SensorConfig())
+
+    def formatted_latest_buffer(self):
+        return None
+
+
+@dataclass
+class MockEmptyStringSensor(Sensor[SensorConfig, Any]):
+    """Mock sensor that returns empty string."""
+
+    def __init__(self):
+        super().__init__(SensorConfig())
+
+    def formatted_latest_buffer(self):
+        return ""
+
+
+def test_fuser_returns_none_when_no_inputs():
+    """Test that fuser returns None when there are no input sensors.
+
+    This prevents unnecessary LLM API calls when no inputs are available.
+    See: https://github.com/OpenmindAGI/OM1/issues/1372
+    """
+    config = create_mock_config()
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse([], [])
+
+        assert result is None
+
+
+def test_fuser_returns_none_when_all_inputs_are_none():
+    """Test that fuser returns None when all sensors return None.
+
+    This prevents unnecessary LLM API calls when sensors have no data.
+    See: https://github.com/OpenmindAGI/OM1/issues/1372
+    """
+    config = create_mock_config()
+    inputs: list[Sensor[Any, Any]] = [MockEmptySensor(), MockEmptySensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+        assert result is None
+
+
+def test_fuser_returns_none_when_all_inputs_are_empty_strings():
+    """Test that fuser returns None when all sensors return empty strings.
+
+    This prevents unnecessary LLM API calls when sensors return empty data.
+    See: https://github.com/OpenmindAGI/OM1/issues/1372
+    """
+    config = create_mock_config()
+    inputs: list[Sensor[Any, Any]] = [MockEmptyStringSensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+        assert result is None
+
+
+def test_fuser_returns_prompt_when_at_least_one_input_has_data():
+    """Test that fuser returns prompt when at least one sensor has data.
+
+    Mixed inputs (some None, some with data) should still produce a prompt.
+    """
+    config = create_mock_config()
+    inputs: list[Sensor[Any, Any]] = [MockEmptySensor(), MockSensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+        assert result is not None
+        assert "test input" in result
