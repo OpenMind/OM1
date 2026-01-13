@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Union
 import requests
 
 from .io_provider import IOProvider
+from .retry_utils import retry_on_http_error
 from .singleton import singleton
 
 
@@ -72,13 +73,21 @@ class UnitreeGo2LocationsProvider:
             try:
                 self._fetch()
             except Exception:
-                logging.exception("Error fetching locations")
+                # Retry logic is handled by decorator, but log if all retries fail
+                logging.exception("Error fetching locations after retries")
 
             self._stop_event.wait(timeout=self.refresh_interval)
 
+    @retry_on_http_error(
+        max_attempts=3,
+        initial_delay=1.0,
+        status_codes=[500, 502, 503, 504],  # Retry on server errors
+    )
     def _fetch(self) -> None:
         """
         Fetch locations from the API and update cache.
+
+        Uses exponential backoff retry for transient HTTP errors.
         """
         if not self.base_url:
             return
@@ -113,6 +122,7 @@ class UnitreeGo2LocationsProvider:
 
         except Exception:
             logging.exception("Error fetching locations")
+            raise  # Re-raise to trigger retry logic
 
     def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
         """
