@@ -11,13 +11,43 @@ from providers.simple_paths_provider import SimplePathsProvider
 
 class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
     """
-    SimplePaths input handler.
+    Simple paths input handler for robot navigation and obstacle avoidance.
 
-    A class that processes simple paths inputs and generates text descriptions.
-    It maintains an internal buffer of processed messages.
+    This class processes simple path data from the SimplePathsProvider and generates
+    text descriptions about objects and walls in the robot's environment. It maintains
+    an internal buffer of processed messages and integrates with the IO provider for
+    logging and tracking purposes.
+
+    The SimplePaths input is designed to help the robot plan movements and avoid
+    obstacles by providing structured information about the surrounding environment.
+    It continuously polls the SimplePathsProvider for updated path data and converts
+    raw input into timestamped messages for downstream processing by the agent's
+    input pipeline.
+
+    Typical use cases include:
+    - Real-time obstacle detection and avoidance
+    - Path planning based on environmental awareness
+    - Integration with LLM-based navigation systems
     """
 
     def __init__(self, config: SensorConfig):
+        """
+        Initialize the SimplePaths input handler.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration object containing sensor settings and parameters.
+            The config is passed to the parent FuserInput class for initialization.
+
+        Notes
+        -----
+        The initialization process automatically:
+        - Creates an IOProvider instance for input tracking
+        - Initializes message buffers for storing processed data
+        - Starts the SimplePathsProvider in a background thread
+        - Sets up the descriptor string for LLM integration
+        """
         super().__init__(config)
 
         # Track IO
@@ -37,15 +67,17 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for new messages from the RPLidar Provider.
+        Poll for new path data from the SimplePaths Provider.
 
-        Checks the message buffer for new messages with a brief delay
-        to prevent excessive CPU usage.
+        Periodically checks the SimplePathsProvider for updated path information
+        with a brief delay to prevent excessive CPU usage. The method retrieves
+        the current lidar string representation of the environment.
 
         Returns
         -------
         Optional[str]
-            The next message from the buffer if available, None otherwise
+            The current path data string from the SimplePathsProvider if available,
+            None if no data is available or an error occurs
         """
         await asyncio.sleep(0.2)
 
