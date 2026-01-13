@@ -69,15 +69,17 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
 
 class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
     """
-    Automatic Speech Recognition (ASR) input handler.
-
-    This class manages the RTSP input stream from an ASR service, buffering messages
-    and providing text conversion capabilities.
+    Google ASR RTSP input handler for processing speech recognition from RTSP audio streams.
     """
 
     def __init__(self, config: GoogleASRRTSPSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize the Google ASR RTSP input handler.
+
+        Parameters
+        ----------
+        config : GoogleASRRTSPSensorConfig
+            Configuration for the ASR RTSP input handler.
         """
         super().__init__(config)
 
@@ -145,12 +147,12 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
 
     def _handle_asr_message(self, raw_message: str):
         """
-        Process incoming ASR messages.
+        Process incoming ASR messages from the ASR provider.
 
         Parameters
         ----------
         raw_message : str
-            Raw message received from ASR service
+            The raw ASR message received from the provider
         """
         try:
             json_message: Dict = json.loads(raw_message)
@@ -260,7 +262,7 @@ INPUT: {self.descriptor_for_LLM}
 
     def stop(self):
         """
-        Stop the ASR input.
+        Stop the ASR input handler and clean up resources.
         """
         if self.asr:
             self.asr.stop()
