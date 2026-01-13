@@ -38,30 +38,6 @@ class OdomConfig(SensorConfig):
 class Odom(FuserInput[OdomConfig, Optional[dict]]):
     """
     Odometry input processor for robot position and movement state tracking.
-
-    This class processes odometry data from various sources (Zenoh, Unitree Ethernet)
-    and converts it into text descriptions that help the LLM understand the robot's
-    current position, body pose, and movement state. It maintains an internal buffer
-    of processed messages and integrates with the IOProvider for message handling.
-
-    The odometry data is used to inform the LLM about:
-    - Current location and body pose
-    - Whether the robot is moving or stationary
-    - Whether the robot is sitting or standing
-    - Movement constraints based on current state
-
-    Attributes
-    ----------
-    io_provider : IOProvider
-        Provider for input/output operations.
-    messages : List[Message]
-        Buffer for storing processed messages.
-    message_buffer : Queue[str]
-        Buffer for storing raw messages.
-    odom : OdomProvider
-        Provider for odometry data.
-    descriptor_for_LLM : str
-        Description of the input type for the LLM.
     """
 
     def __init__(self, config: OdomConfig):
@@ -71,24 +47,7 @@ class Odom(FuserInput[OdomConfig, Optional[dict]]):
         Parameters
         ----------
         config : OdomConfig
-            Configuration object containing:
-            - use_zenoh : bool
-                Whether to use Zenoh for odometry data (typically for TurtleBot).
-            - URID : str
-                Unitree Robot ID for identifying the robot.
-            - unitree_ethernet : Optional[str]
-                Ethernet channel for Unitree odometry communication.
-
-        Notes
-        -----
-        The initialization process:
-        1. Creates an IOProvider for input/output operations.
-        2. Initializes message buffers for storing processed and raw messages.
-        3. Configures the OdomProvider based on the configuration (Zenoh or Unitree Ethernet).
-        4. Sets up the descriptor for LLM integration.
-
-        The OdomProvider automatically starts when initialized and begins collecting
-        odometry data from the configured source.
+            Configuration for the Odom sensor.
         """
         super().__init__(config)
 
