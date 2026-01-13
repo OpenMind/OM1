@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -8,12 +9,14 @@ from typing import Optional, Tuple
 import dotenv
 import json5
 import typer
+from jsonschema import ValidationError, validate
 
 from runtime.logging import setup_logging
 from runtime.multi_mode.config import load_mode_config
 from runtime.multi_mode.cortex import ModeCortexRuntime
 from runtime.single_mode.config import load_config
 from runtime.single_mode.cortex import CortexRuntime
+from runtime.version import verify_runtime_version
 
 app = typer.Typer()
 
@@ -101,7 +104,59 @@ def start(
         with open(config_path, "r") as f:
             raw_config = json5.load(f)
 
-        if "modes" in raw_config and "default_mode" in raw_config:
+        # Validate JSON5 syntax
+        if not isinstance(raw_config, dict):
+            logging.error("Configuration root must be a JSON object")
+            raise typer.Exit(1)
+
+        # Detect config type and validate schema
+        is_multi_mode = "modes" in raw_config and "default_mode" in raw_config
+
+        try:
+            schema_file = (
+                "multi_mode_schema.json" if is_multi_mode else "single_mode_schema.json"
+            )
+            schema_path = os.path.join(
+                os.path.dirname(__file__), "../config/schema", schema_file
+            )
+
+            if not os.path.exists(schema_path):
+                logging.error(
+                    f"Schema file not found: {schema_path}. Cannot validate configuration."
+                )
+                raise typer.Exit(1)
+
+            with open(schema_path, "r") as f:
+                schema = json.load(f)
+
+            validate(instance=raw_config, schema=schema)
+            logging.debug(
+                f"Schema validation passed for {'multi-mode' if is_multi_mode else 'single-mode'} configuration"
+            )
+
+        except ValidationError as e:
+            field_path = ".".join(str(p) for p in e.path) if e.path else "root"
+            logging.error(
+                f"Schema validation failed at field '{field_path}': {e.message}"
+            )
+            raise typer.Exit(1)
+        except Exception as e:
+            logging.error(f"Schema validation error: {e}")
+            raise typer.Exit(1)
+
+        # Verify runtime version compatibility
+        try:
+            config_version = raw_config.get("version") if isinstance(raw_config, dict) else None
+            verify_runtime_version(config_version, config_name=config_name or "configuration")
+            logging.debug(f"Version compatibility verified: {config_version}")
+        except ValueError as e:
+            logging.error(f"Version compatibility check failed: {e}")
+            raise typer.Exit(1)
+        except Exception as e:
+            logging.error(f"Version verification error: {e}")
+            raise typer.Exit(1)
+
+        if is_multi_mode:
             mode_config = load_mode_config(config_name)
             runtime = ModeCortexRuntime(
                 mode_config,

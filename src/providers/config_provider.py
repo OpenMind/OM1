@@ -7,9 +7,7 @@ from uuid import uuid4
 
 import json5
 import zenoh
-from jsonschema import ValidationError, validate
 
-from runtime.version import verify_runtime_version
 from zenoh_msgs import (
     ConfigRequest,
     ConfigResponse,
@@ -95,78 +93,6 @@ class ConfigProvider:
                 self._send_error_response(request_id, error_msg)
                 return
 
-            # Safe multi-mode detection
-            is_multi_mode = (
-                isinstance(new_config, dict)
-                and "modes" in new_config
-                and "default_mode" in new_config
-            )
-
-            try:
-                schema_file = (
-                    "multi_mode_schema.json"
-                    if is_multi_mode
-                    else "single_mode_schema.json"
-                )
-
-                schema_path = os.path.join(
-                    os.path.dirname(__file__),
-                    "../../config/schema",
-                    schema_file,
-                )
-
-                if not os.path.exists(schema_path):
-                    error_msg = (
-                        f"Schema file not found: {schema_path}. "
-                        "Cannot validate configuration."
-                    )
-                    logging.error(error_msg)
-                    self._send_error_response(request_id, error_msg)
-                    return
-
-                with open(schema_path, "r") as f:
-                    schema = json.load(f)
-
-                validate(instance=new_config, schema=schema)
-                logging.debug(
-                    f"Schema validation passed for {'multi-mode' if is_multi_mode else 'single-mode'} configuration"
-                )
-
-            except ValidationError as e:
-                field_path = ".".join(str(p) for p in e.path) if e.path else "root"
-                error_msg = (
-                    f"Schema validation failed at field '{field_path}': {e.message}"
-                )
-                logging.error(error_msg)
-                self._send_error_response(request_id, error_msg)
-                return
-            except Exception as e:
-                error_msg = f"Schema validation error: {e}"
-                logging.error(error_msg)
-                self._send_error_response(request_id, error_msg)
-                return
-
-            try:
-                config_version = (
-                    new_config.get("version") if isinstance(new_config, dict) else None
-                )
-
-                verify_runtime_version(
-                    config_version, config_name="runtime configuration update"
-                )
-
-                logging.debug(f"Version compatibility verified: {config_version}")
-
-            except ValueError as e:
-                error_msg = f"Version compatibility check failed: {e}"
-                logging.error(error_msg)
-                self._send_error_response(request_id, error_msg)
-                return
-            except Exception as e:
-                error_msg = f"Version verification error: {e}"
-                logging.error(error_msg)
-                self._send_error_response(request_id, error_msg)
-                return
 
             # ensure backup_path always defined
             backup_path: str | None = None
