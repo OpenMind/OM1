@@ -208,8 +208,30 @@ class ModeCortexRuntime:
 
         except Exception as e:
             logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
-            raise
+            # Fallback: attempt to restore previous mode or default mode
+            try:
+                logging.warning(f"Attempting to restore previous mode: {from_mode}")
+                # Try to reinitialize the previous mode as a fallback
+                if from_mode in self.mode_config.modes:
+                    await self._initialize_mode(from_mode)
+                    await self._start_orchestrators()
+                    self.mode_manager.state.current_mode = from_mode
+                    self.mode_manager.state.mode_start_time = time.time()
+                    logging.info(f"Successfully restored to previous mode: {from_mode}")
+                else:
+                    # If previous mode is invalid, try default mode
+                    default_mode = self.mode_config.default_mode
+                    logging.warning(f"Previous mode invalid, attempting default mode: {default_mode}")
+                    if default_mode in self.mode_config.modes:
+                        await self._initialize_mode(default_mode)
+                        await self._start_orchestrators()
+                        self.mode_manager.state.current_mode = default_mode
+                        self.mode_manager.state.mode_start_time = time.time()
+                        logging.info(f"Successfully restored to default mode: {default_mode}")
+            except Exception as fallback_error:
+                logging.error(f"Fallback recovery also failed: {fallback_error}")
+                # Re-raise the original error if fallback fails
+                raise e from fallback_error
         finally:
             self._is_reloading = False
 
@@ -279,8 +301,12 @@ class ModeCortexRuntime:
                     logging.info(f"All {len(done)} tasks cancelled successfully!")
                     for name, task in tasks_to_cancel.items():
                         try:
-                            task.result()
-                            logging.info(f"  {name}: Completed normally")
+                            # Only call result() if task is done to avoid InvalidStateError
+                            if task.done():
+                                task.result()
+                                logging.info(f"  {name}: Completed normally")
+                            else:
+                                logging.debug(f"  {name}: Task not yet done")
                         except asyncio.CancelledError:
                             logging.info(f"  {name}: Successfully cancelled")
                         except Exception as e:
@@ -538,8 +564,9 @@ class ModeCortexRuntime:
             logging.debug("No output from LLM")
             return
 
+        # Check if reloading after LLM call to avoid race conditions
         if self._is_reloading:
-            logging.debug("Skipping tick during config reload")
+            logging.debug("Skipping tick during config reload (after LLM call)")
             return
 
         if self.simulator_orchestrator:

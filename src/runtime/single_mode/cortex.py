@@ -346,8 +346,12 @@ class CortexRuntime:
                     logging.info(f"All {len(done)} tasks cancelled successfully!")
                     for name, task in tasks_to_cancel.items():
                         try:
-                            task.result()
-                            logging.info(f"  {name}: Completed normally")
+                            # Only call result() if task is done to avoid InvalidStateError
+                            if task.done():
+                                task.result()
+                                logging.info(f"  {name}: Completed normally")
+                            else:
+                                logging.debug(f"  {name}: Task not yet done")
                         except asyncio.CancelledError:
                             logging.info(f"  {name}: Successfully cancelled")
                         except Exception as e:
@@ -504,6 +508,11 @@ class CortexRuntime:
             output = await self.config.cortex_llm.ask(prompt)
             if output is None:
                 logging.debug("No output from LLM")
+                return
+
+            # Check if reloading after LLM call to avoid race conditions
+            if self._is_reloading:
+                logging.debug("Skipping tick during config reload (after LLM call)")
                 return
 
             # Trigger the simulators

@@ -234,6 +234,11 @@ class LLMHistoryManager:
                         logging.warning("Summary task was cancelled")
                         return
 
+                    # Only call result() if task is done to avoid InvalidStateError
+                    if not task.done():
+                        logging.warning("Summary task not yet done")
+                        return
+
                     summary_message = task.result()
                     if summary_message.role == "assistant":
                         del messages[:num_summarized]
