@@ -37,13 +37,18 @@ class OdomConfig(SensorConfig):
 
 class Odom(FuserInput[OdomConfig, Optional[dict]]):
     """
-    Odom input handler.
-
-    A class that processes odometry inputs and generates text descriptions.
-    It maintains an internal buffer of processed messages.
+    Odometry input processor for robot position and movement state tracking.
     """
 
     def __init__(self, config: OdomConfig):
+        """
+        Initialize the Odom input processor.
+
+        Parameters
+        ----------
+        config : OdomConfig
+            Configuration for the Odom sensor.
+        """
         super().__init__(config)
 
         # Track IO
