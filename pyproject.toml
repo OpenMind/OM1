@@ -69,7 +69,7 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-asyncio_mode = "auto"
+asyncio_mode = "strict"
 addopts = "-m \"not integration\""
 norecursedirs = ["src/unitree", "system_hw_test", "src/ubtech"]
 markers = [

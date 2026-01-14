@@ -88,6 +88,19 @@ class QwenLLM(LLM[R]):
         config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
+        """
+        Initialize the QwenLLM instance.
+
+        Sets up the async client for the local Qwen model, configures extra body parameters,
+        and initializes the history manager.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration settings for the LLM, including the model name.
+        available_actions : list, optional
+            List of available actions for function call generation.
+        """
         super().__init__(config, available_actions)
 
         if not config.model:
