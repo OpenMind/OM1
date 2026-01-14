@@ -548,7 +548,7 @@ class RPDriver(object):
         """
         scan_list = []
         iterator = self.iter_measures(scan_type, max_buf_meas)
-        for new_scan, quality, angle, distance in iterator:
+        for new_scan, _quality, angle, distance in iterator:
             if new_scan:
                 if len(scan_list) > min_len:
                     yield scan_list

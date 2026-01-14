@@ -430,7 +430,7 @@ class UnitreeGo2RPLidarProvider:
             D = array[:, 3]
 
             # all the possible conflicting points
-            for x, y, d in list(zip(X, Y, D)):
+            for x, y, _d in list(zip(X, Y, D)):
                 for apath in possible_paths:
                     path_points = self.paths[apath]
                     start_x, start_y = (
