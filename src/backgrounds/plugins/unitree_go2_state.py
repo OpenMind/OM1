@@ -28,6 +28,17 @@ class UnitreeGo2State(Background[UnitreeGo2StateConfig]):
     """
 
     def __init__(self, config: UnitreeGo2StateConfig):
+        """
+        Initialize the UnitreeGo2State background task instance.
+
+        Sets up the State provider using the specified Unitree Ethernet channel
+        from the configuration.
+
+        Parameters
+        ----------
+        config : UnitreeGo2StateConfig
+            Configuration object containing the Unitree Ethernet channel.
+        """
         super().__init__(config)
 
         unitree_ethernet = self.config.unitree_ethernet
