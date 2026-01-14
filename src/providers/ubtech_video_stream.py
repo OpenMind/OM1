@@ -56,17 +56,11 @@ class UbtechCameraVideoStream(VideoStream):
             jpeg_quality=jpeg_quality,
         )
 
-        self.robot_ip = robot_ip.strip()
+        self.robot_ip = robot_ip
         self.url = f"http://{self.robot_ip}:8000/stream.mjpg"
         self.stream_client: Optional[MJPEGClient] = None
 
-        try:
-            YanAPI.yan_api_init(self.robot_ip)
-        except Exception as e:
-            logging.error(
-                f"Failed to initialize YanAPI with robot_ip={self.robot_ip}: {e}"
-            )
-            raise
+        YanAPI.yan_api_init(self.robot_ip)
 
     def on_video(self):
         """
