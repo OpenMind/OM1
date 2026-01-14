@@ -3,6 +3,17 @@ title: Gazebo Simulator
 description: "Quadruped Simulation and Control"
 ---
 
+## Minimum System Requirements
+
+| Component | Minimum | Good/Recommended | Ideal |
+|-----------|---------|------------------|-------|
+| **CPU** | Intel i7 (10th gen) or AMD Ryzen 7<br/>8 cores minimum | Intel i9 (12th gen+) or AMD Ryzen 9<br/>12 cores | AMD Ryzen 9 7950X or Intel i9-13900K<br/>16+ cores (24+ threads) |
+| **RAM** | 16 GB<br/>(will struggle with RTAB-Map) | 32 GB | 64 GB<br/>(128 GB for multi-robot scenarios) |
+| **GPU** | NVIDIA GTX 1660 Ti<br/>6 GB VRAM | NVIDIA RTX 3070 or RTX 4060 Ti<br/>8-12 GB VRAM | NVIDIA RTX 4080/4090<br/>16+ GB VRAM with CUDA 11.8+ |
+| **Storage** | 100 GB on SSD<br/>(for RTAB-Map databases) | 250 GB on NVMe SSD<br/>(Read: 3000+ MB/s) | 500 GB+ on NVMe SSD<br/>(Read: 7000+ MB/s, PCIe 4.0) |
+| **OS** | Ubuntu 22.04 | Ubuntu 22.04 | Ubuntu 22.04 |
+| **Network** | Standard Ethernet | 1 Gbps Ethernet | 2.5+ Gbps or 10 Gbps Ethernet<br/>(for multi-robot coordination) |
+
 ## Simulation Instructions
 
 The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
