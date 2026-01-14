@@ -100,11 +100,16 @@ class FunctionGenerator:
         sig = inspect.signature(method)
         type_hints = get_type_hints(method)
 
-        properties = {}
-        required = []
+        properties: T.Dict[str, T.Dict] = {}
+        required: T.List[str] = []
 
         for param_name, param in sig.parameters.items():
             if param_name == "self":
+                continue
+            if param.kind in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD,
+            ):
                 continue
 
             param_type = type_hints.get(param_name, str)
@@ -117,15 +122,18 @@ class FunctionGenerator:
 
             properties[param_name] = param_schema
 
-            if param.default == inspect.Parameter.empty:
+            is_optional_type = (
+                get_origin(param_type) is T.Union and type(None) in get_args(param_type)
+            )
+            has_default = param.default is not inspect.Parameter.empty
+            if not has_default:
                 required.append(param_name)
+            elif param.default is None or is_optional_type:
+                # optional with default None or annotated Optional -> not required
+                pass
             else:
-                required.append(param_name)
-                if isinstance(param_type, str) and param.default == "":
-                    param_schema["description"] = (
-                        param_schema.get("description", f"Parameter {param_name}")
-                        + " (optional - can be empty string)"
-                    )
+                # default provided but not Optional -> still optional at schema level
+                pass
 
         return {
             "type": "function",
