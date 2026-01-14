@@ -5,7 +5,7 @@ from actions.speak.interface import SpeakInput
 from providers.zenoh_publisher_provider import ZenohPublisherProvider
 
 
-class SpeakZenohConnector(ActionConnector[ActionConfig, SpeakInput]):
+class SpeakZenohConnector(ActionConnector[SpeakInput]):
     """
     Connector for publishing speak messages via Zenoh.
 
@@ -14,14 +14,6 @@ class SpeakZenohConnector(ActionConnector[ActionConfig, SpeakInput]):
     """
 
     def __init__(self, config: ActionConfig):
-        """
-        Initializes the connector and its underlying Zenoh publisher.
-
-        Parameters
-        ----------
-        config : ActionConfig
-            Configuration for the connector.
-        """
         super().__init__(config)
 
         # Determine topic for speech; default to "speech" if not provided.

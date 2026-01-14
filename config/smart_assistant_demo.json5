@@ -1,0 +1,44 @@
+{
+  "hertz": 0.5,
+  "name": "OM1 Smart Assistant Demo",
+  "api_key": "mock_key",
+  "URID": "smart_assistant_demo",
+  
+  "system_prompt_base": "You are OM1 Smart Assistant - an AI assistant for crypto payments and smart home control.",
+  "system_governance": "Be helpful and safe with transactions.",
+  "system_prompt_examples": "",
+  
+  "agent_inputs": [
+    {
+      "type": "ConsoleInput"
+    }
+  ],
+  
+  "cortex_llm": {
+    "type": "MockLLM",
+    "config": {}
+  },
+  
+  "simulators": [],
+  
+  "agent_actions": [
+    {
+      "name": "process_payment",
+      "llm_label": "pay",
+      "connector": "ethereum",
+      "config": {}
+    },
+    {
+      "name": "iot_control",
+      "llm_label": "control_device",
+      "connector": "home_assistant",
+      "config": {}
+    },
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "connector": "console",
+      "config": {}
+    }
+  ]
+}

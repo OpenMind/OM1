@@ -1,9 +1,7 @@
 import logging
 import time
-from typing import Optional
 
 import zenoh
-from pydantic import Field
 
 # Import the necessary base classes and YOUR existing SpeakInput interface
 from actions.base import ActionConfig, ActionConnector
@@ -18,46 +16,22 @@ from zenoh_msgs import (
 )
 
 
-class UbTtsConfig(ActionConfig):
-    """
-    Configuration for UbTts connector.
-
-    Parameters
-    ----------
-    robot_ip : Optional[str]
-        The IP address of the robot.
-    ub_tts_base_url : str
-        The base URL for the UbTTS service.
-    """
-
-    robot_ip: Optional[str] = Field(
-        default=None,
-        description="The IP address of the robot.",
-    )
-    base_url: str = Field(
-        default=f"http://{robot_ip}:9090/v1/",
-        description="The base URL for the UbTTS service.",
-    )
-
-
-class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
+class UbTtsConnector(ActionConnector[SpeakInput]):
     """
     A "Speak" connector that uses the UbTtsProvider to perform Text-to-Speech.
     This connector is compatible with the standard SpeakInput interface.
     """
 
-    def __init__(self, config: UbTtsConfig):
+    def __init__(self, config: ActionConfig):
         """
         Initializes the connector and its underlying TTS provider.
-
-        Parameters
-        ----------
-        config : UbTtsConfig
-            Configuration for the connector.
         """
         super().__init__(config)
 
-        base_url = self.config.base_url
+        robot_ip = getattr(self.config, "robot_ip", None)
+        base_url = getattr(
+            self.config, "ub_tts_base_url", f"http://{robot_ip}:9090/v1/"
+        )
 
         # Zenoh topics
         self.tts_status_request_topic = "om/tts/request"
@@ -113,7 +87,7 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.debug(f"Received TTS Control Status message: {tts_status}")
+        logging.info(f"Received TTS Control Status message: {tts_status}")
 
         code = tts_status.code
         request_id = tts_status.request_id
@@ -135,7 +109,7 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         # Enable the TTS
         if code == 1:
             self.tts_enabled = True
-            logging.debug("TTS Enabled")
+            logging.info("TTS Enabled")
 
             ai_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),

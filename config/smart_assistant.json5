@@ -1,0 +1,55 @@
+{
+  "hertz": 0.5,
+  "name": "OM1 Smart Assistant",
+  "api_key": "om1_live_36035f91aee87091ad591394f52461cdb4f0df05635dbe89",
+  "URID": "smart_assistant",
+  
+  "system_prompt_base": "You are a smart home and crypto wallet assistant for OM1.\n\nAVAILABLE ACTIONS:\n1. speak(action) - Say something to user\n2. pay(amount, currency, recipient) - Send crypto payment\n3. control_device(action, device) - Control smart home or music\n4. check_balance(action) - Check wallet balance\n\nMUSIC CONTROL:\nFor 'play music', 'pause music', 'next track' etc, use: control_device(action='play music', device='music')\n\nORDER WORKFLOW:\nFor 'order coffee' etc:\n1. speak('Processing order...')\n2. control_device(action='order_coffee', device='home_assistant')\n3. pay(amount='0.001', currency='ETH', recipient='0x55c4d05fD7935d984C654A75603c219639c28213')\n4. speak('Order complete!')\n\nBALANCE:\nFor 'what is my balance', use: check_balance(action='check')",
+  
+  "system_governance": "Execute all actions requested. For orders, include payment.",
+  
+  "system_prompt_examples": "User: play music -> control_device('play music','music')\nUser: pause music -> control_device('pause music','music')\nUser: order coffee -> speak,control_device,pay,speak\nUser: check balance -> check_balance('check')\nUser: turn on lights -> control_device('lights on','all')\nUser: send 0.01 ETH to vitalik.eth -> pay('0.01','ETH','vitalik.eth')",
+  
+  "agent_inputs": [
+    {
+      "type": "ConsoleInput"
+    }
+  ],
+  
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "base_url": "https://api.openmind.org/api/core/openai",
+      "history_length": 10
+    }
+  },
+  
+  "simulators": [],
+  
+  "agent_actions": [
+    {
+      "name": "process_payment",
+      "llm_label": "pay",
+      "connector": "ethereum",
+      "config": {}
+    },
+    {
+      "name": "iot_control",
+      "llm_label": "control_device",
+      "connector": "home_assistant",
+      "config": {}
+    },
+    {
+      "name": "speak",
+      "llm_label": "speak",
+      "connector": "console",
+      "config": {}
+    },
+    {
+      "name": "check_balance",
+      "llm_label": "check_balance",
+      "connector": "ethereum",
+      "config": {}
+    }
+  ]
+}
