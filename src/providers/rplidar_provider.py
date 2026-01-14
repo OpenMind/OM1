@@ -185,7 +185,29 @@ class RPLidarProvider:
         log_file: bool = False,
     ):
         """
-        Robot and sensor configuration.
+        Initialize the RPLidarProvider instance.
+
+        Sets up the RPLidar device connection, data processing, and Zenoh publisher.
+
+        Parameters
+        ----------
+        serial_port : str, optional
+            The serial port path for connecting to the RPLidar device.
+            Defaults to "/dev/ttyUSB0".
+        frame_id : str, optional
+            The TF frame ID associated with the laser scan data. Defaults to "laser_frame".
+        angle_compensate : bool, optional
+            Whether to perform angle compensation on the scan data. Defaults to True.
+        half_width_robot : float, optional
+            Half the width of the robot in meters, used for obstacle detection. Defaults to 0.2.
+        min_distance : float, optional
+            Minimum distance for valid scan points in meters. Defaults to 0.15.
+        max_distance : float, optional
+            Maximum distance for valid scan points in meters. Defaults to 8.0.
+        scan_frequency : float, optional
+            Desired scan frequency in Hz. Defaults to 10.0.
+        channel : str, optional
+            The CycloneDDS channel to use for communication. Defaults to "".
         """
         logging.info("Booting RPLidar")
 
