@@ -100,6 +100,19 @@ class DualLLM(LLM[R]):
         config: DualLLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
+        """
+        Initialize the DualLLM instance.
+
+        Sets up the local and cloud LLMs based on configuration, initializes
+        the evaluation client, and prepares the history manager.
+
+        Parameters
+        ----------
+        config : DualLLMConfig
+            Configuration settings for the Dual LLM, including local and cloud LLM details.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
+        """
         super().__init__(config, available_actions)
 
         self._config: DualLLMConfig
