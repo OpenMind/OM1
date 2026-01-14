@@ -28,6 +28,16 @@ class Gps(Background[GpsConfig]):
     """
 
     def __init__(self, config: GpsConfig):
+        """
+        Initialize the Gps background task instance.
+
+        Sets up the GPS provider using the specified serial port from the configuration.
+
+        Parameters
+        ----------
+        config : GpsConfig
+            Configuration object containing the GPS serial port.
+        """
         super().__init__(config)
 
         port = self.config.serial_port
