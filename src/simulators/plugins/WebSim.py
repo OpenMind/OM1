@@ -39,6 +39,17 @@ class WebSim(Simulator):
     """
 
     def __init__(self, config: SimulatorConfig):
+        """
+        Initialize the WebSim simulator instance.
+
+        Sets up the FastAPI application, mounts static assets, initializes
+        the simulator state, and starts the web server in a separate thread.
+
+        Parameters
+        ----------
+        config : SimulatorConfig
+            Configuration settings for the simulator.
+        """
         super().__init__(config)
         self.messages: list[str] = []
         self.io_provider = IOProvider()
