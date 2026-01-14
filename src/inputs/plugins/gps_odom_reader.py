@@ -46,6 +46,17 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
     """
 
     def __init__(self, config: GPSOdomReaderConfig):
+        """
+        Initialize the GPSOdomReader input handler.
+
+        Sets up the required providers and buffers for handling GPS/odometry data.
+        Initializes variables for origin coordinates and yaw offset.
+
+        Parameters
+        ----------
+        config : GPSOdomReaderConfig
+            Configuration for the sensor input, including origin coordinates and yaw.
+        """
         super().__init__(config)
 
         self.lat0 = self.config.origin_lat
