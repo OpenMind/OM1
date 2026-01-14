@@ -140,6 +140,7 @@ class ModeCortexRuntime:
     async def _handle_mode_transitions(self):
         """
         Handle mode transitions asynchronously, separate from the cortex loop.
+
         This prevents the cortex loop from cancelling itself during transitions.
         """
         while True:
@@ -179,8 +180,7 @@ class ModeCortexRuntime:
 
     async def _on_mode_transition(self, from_mode: str, to_mode: str):
         """
-        Handle mode transitions by gracefully stopping current components
-        and starting new ones for the target mode.
+        Handle mode transitions by gracefully stopping current components and starting new ones for the target mode.
 
         Parameters
         ----------
@@ -648,7 +648,7 @@ class ModeCortexRuntime:
             logging.info("Loading configuration from the new runtime file")
             new_mode_config = load_mode_config(
                 self.mode_config_name,
-                mode_soure_path=self.mode_manager._get_runtime_config_path(),
+                mode_source_path=self.mode_manager._get_runtime_config_path(),
             )
 
             self.mode_config = new_mode_config

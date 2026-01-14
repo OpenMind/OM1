@@ -72,7 +72,7 @@ class DualLLM(LLM[R]):
     Dual LLM that races local and cloud LLMs with three selection rules:
     1. Both in time → pick one with function calls, or evaluate quality if both have
     2. One in time → use it
-    3. Neither in time → use first to complete
+    3. Neither in time → use first to complete.
 
     Config example:
         "cortex_llm": {
@@ -84,12 +84,13 @@ class DualLLM(LLM[R]):
                 "cloud_llm_config": {"model": "gpt-4.1"}
             }
         }
-        Parameters
-        ----------
-        config : LLMConfig, optional
-            Configuration settings for the LLM.
-        available_actions : list[AgentAction], optional
-            List of available actions for function calling.
+
+    Parameters
+    ----------
+    config : LLMConfig, optional
+        Configuration settings for the LLM.
+    available_actions : list[AgentAction], optional
+        List of available actions for function calling.
     """
 
     TIMEOUT_THRESHOLD = 3.2
@@ -242,7 +243,8 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                 return "local"
             result = content.strip().upper()
             return "local" if "A" in result else "cloud"
-        except Exception:
+        except Exception as e:
+            logging.warning(f"LLM quality evaluation failed, defaulting to local: {e}")
             return "local"
 
     async def _select_best(
@@ -257,8 +259,8 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
-            Extracted user voice input for evaluation.
+        prompt : str
+            The prompt text for evaluation context.
 
         Returns
         -------
@@ -334,7 +336,10 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
                 for task in done:
                     result = task.result()
-                    if result["time"] <= self.TIMEOUT_THRESHOLD:
+                    if (
+                        result["time"] <= self.TIMEOUT_THRESHOLD
+                        and result["result"] is not None
+                    ):
                         in_time[result["source"]] = result
 
             # Both in time → select best

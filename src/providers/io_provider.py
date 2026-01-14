@@ -201,7 +201,7 @@ class IOProvider:
     @fuser_available_actions.setter
     def fuser_available_actions(self, value: Optional[str]) -> None:
         """
-        set the fuser available actions.
+        Set the fuser available actions.
         """
         with self._lock:
             self._fuser_available_actions = value
@@ -283,9 +283,7 @@ class IOProvider:
             self._llm_prompt = value
 
     def clear_llm_prompt(self) -> None:
-        """C
-        lear the LLM prompt.
-        """
+        """Clear the LLM prompt."""
         with self._lock:
             self._llm_prompt = None
 

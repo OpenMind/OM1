@@ -1,8 +1,8 @@
+import ast
 import json
 import logging
 import multiprocessing as mp
 import os
-import re
 import traceback
 
 import dotenv
@@ -180,7 +180,8 @@ def validate_config(
     - API key configuration (warning only)
     - Component existence (with --check-components flag)
 
-    Examples:
+    Examples
+    --------
         uv run src/cli.py validate-config test
         uv run src/cli.py validate-config config/my_robot.json5
         uv run src/cli.py validate-config test --verbose
@@ -197,8 +198,13 @@ def validate_config(
             print("-" * 50)
 
         # Load and parse JSON5
-        with open(config_path, "r") as f:
-            raw_config = json5.load(f)
+        try:
+            with open(config_path, "r") as f:
+                raw_config = json5.load(f)
+        except ValueError as e:
+            print("Error: Invalid JSON5 syntax")
+            print(f"   {e}")
+            raise typer.Exit(1)
 
         if verbose:
             print("JSON5 syntax valid")
@@ -258,10 +264,7 @@ def validate_config(
         raise typer.Exit(1)
 
     except ValueError as e:
-        if "line" in str(e).lower() or "parse" in str(e).lower():
-            print("Error: Invalid JSON5 syntax")
-            print(f"   {e}")
-        elif "Component validation" in str(e):
+        if "Component validation" in str(e):
             pass  # Already printed by _validate_components
         else:
             print("Error: Unexpected validation error")
@@ -579,6 +582,39 @@ def _validate_mode_components(
     return errors, warnings
 
 
+def _check_class_in_dir(directory: str, class_name: str) -> bool:
+    """
+    Check if a class exists in any .py file in the given directory using AST.
+
+    Parameters
+    ----------
+    directory : str
+        Directory to search in
+    class_name : str
+        Name of the class to find
+
+    Returns
+    -------
+    bool
+        True if class exists, False otherwise
+    """
+    if not os.path.exists(directory):
+        return False
+
+    for filename in os.listdir(directory):
+        if filename.endswith(".py") and filename != "__init__.py":
+            filepath = os.path.join(directory, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tree = ast.parse(f.read())
+                    for node in tree.body:
+                        if isinstance(node, ast.ClassDef) and node.name == class_name:
+                            return True
+            except Exception:
+                continue
+    return False
+
+
 def _check_input_exists(input_type: str) -> bool:
     """
     Check if input type exists by searching for class definition in plugin files.
@@ -596,24 +632,7 @@ def _check_input_exists(input_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "inputs", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(input_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, input_type)
 
 
 def _check_llm_exists(llm_type: str) -> bool:
@@ -633,24 +652,7 @@ def _check_llm_exists(llm_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "llm", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(llm_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, llm_type)
 
 
 def _check_simulator_exists(sim_type: str) -> bool:
@@ -670,24 +672,7 @@ def _check_simulator_exists(sim_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "simulators", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(sim_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, sim_type)
 
 
 def _check_action_exists(action_name: str) -> bool:
@@ -726,24 +711,7 @@ def _check_background_exists(bg_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "backgrounds", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(bg_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, bg_type)
 
 
 def _check_api_key(raw_config: dict, verbose: bool):
@@ -781,7 +749,7 @@ def _print_config_summary(raw_config: dict, is_multi_mode: bool):
     raw_config : dict
         Raw configuration dictionary
     is_multi_mode : bool
-        Whether this is is a multi multi-mode configuration
+        Whether this is a multi-mode configuration
     """
     print()
     print("Configuration Summary:")

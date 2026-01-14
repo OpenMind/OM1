@@ -24,10 +24,28 @@ class UnitreeGo2StateConfig(BackgroundConfig):
 
 class UnitreeGo2State(Background[UnitreeGo2StateConfig]):
     """
-    Reads Unitree Go2 state from UnitreeGo2StateProvider.
+    Background task for reading and monitoring Unitree Go2 robot state data.
+
+    This background task initializes and manages a UnitreeGo2StateProvider
+    that continuously monitors the robot's internal state through the Unitree
+    Ethernet communication channel. The provider tracks various robot state
+    parameters including joint positions, velocities, battery status, and
+    operational modes.
+
+    The state data is essential for real-time robot control, safety monitoring,
+    and adaptive behavior planning in Unitree Go2 robot applications. The
+    provider ensures continuous state updates for responsive robot interactions.
     """
 
     def __init__(self, config: UnitreeGo2StateConfig):
+        """
+        Initialize the Unitree Go2 State background task.
+
+        Parameters
+        ----------
+        config : UnitreeGo2StateConfig
+            Configuration for the Unitree Go2 State background task.
+        """
         super().__init__(config)
 
         unitree_ethernet = self.config.unitree_ethernet

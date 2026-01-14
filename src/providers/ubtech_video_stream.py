@@ -40,6 +40,9 @@ class UbtechCameraVideoStream(VideoStream):
         YanAPI.yan_api_init(self.robot_ip)
 
     def on_video(self):
+        """
+        Main loop to handle video streaming from the Ubtech robot.
+        """
         logging.info("Starting Ubtech MJPEG video stream")
 
         try:
