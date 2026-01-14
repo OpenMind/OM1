@@ -18,20 +18,7 @@
         "unitree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
         "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
         "cortex_llm": {
-            "type": "object",
-            "description": "Configuration for the Cortex Large Language Model used by the system.",
-            "required": ["type"],
-            "properties": {
-                "type": {"type": "string", "description": "The type or provider of the LLM."},
-                "config": {
-                    "type": "object",
-                    "description": "Specific configuration parameters for the chosen LLM.",
-                    "properties": {
-                        "agent_name": {"type": "string"},
-                        "history_length": {"type": "integer"}
-                    }
-                }
-            }
+            "$ref": "#/definitions/cortex_llm"
         },
         "global_lifecycle_hooks": {
             "type": "array",
@@ -91,20 +78,7 @@
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
                         "cortex_llm": {
-                            "type": "object",
-                            "description": "Mode-specific Cortex LLM configuration.",
-                            "required": ["type"],
-                            "properties": {
-                                "type": {"type": "string", "description": "The type or provider of the LLM."},
-                                "config": {
-                                    "type": "object",
-                                    "description": "Specific configuration parameters for the chosen LLM.",
-                                    "properties": {
-                                        "agent_name": {"type": "string"},
-                                        "history_length": {"type": "integer"}
-                                    }
-                                }
-                            }
+                            "$ref": "#/definitions/cortex_llm"
                         },
                         "lifecycle_hooks": {
                             "type": "array",
@@ -183,6 +157,7 @@
                             }
                         }
                     }
+                }
             },
             "additionalProperties": false
         },
@@ -238,6 +213,23 @@
             }
         }
     },
+    "definitions": {
+        "cortex_llm": {
+            "type": "object",
+            "description": "Configuration for the Cortex Large Language Model.",
+            "required": ["type"],
+            "properties": {
+                "type": {"type": "string", "description": "The type or provider of the LLM."},
+                "config": {
+                    "type": "object",
+                    "description": "Specific configuration parameters for the chosen LLM.",
+                    "properties": {
+                        "agent_name": {"type": "string"},
+                        "history_length": {"type": "integer"}
+                    }
+                }
+            }
+        }
+    },
     "additionalProperties": false
-}
 }
