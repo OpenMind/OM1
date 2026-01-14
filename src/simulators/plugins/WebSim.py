@@ -583,7 +583,8 @@ class WebSim(Simulator):
 
                 try:
                     loop.run_until_complete(self.broadcast_state())
-                except Exception:
+                except Exception as e:
+                    logging.warning(f"Websim tick error: {e}")
                     loop = asyncio.get_event_loop()
                     loop.create_task(self.broadcast_state())
 
