@@ -18,6 +18,20 @@ class ROS2PublisherProvider(Node):
     """
 
     def __init__(self, topic: str = "speak_topic"):
+        """
+        Initialize the Ros2PublisherProvider instance.
+
+        Sets up the ROS2 publisher for the specified topic and message type.
+
+        Parameters
+        ----------
+        topic : str
+            The ROS2 topic name to publish messages to.
+        message_type : Any
+            The type of the ROS2 messages to be published (e.g., std_msgs.msg.String).
+        channel : str, optional
+            The CycloneDDS channel to use for communication. Defaults to "".
+        """
         try:
             super().__init__("ROS2_publisher_provider")
         except Exception as e:
