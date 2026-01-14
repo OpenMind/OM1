@@ -28,6 +28,16 @@ class Rtk(Background[RtkConfig]):
     """
 
     def __init__(self, config: RtkConfig):
+        """
+        Initialize the Rtk background task instance.
+
+        Sets up the RTK provider using the specified serial port from the configuration.
+
+        Parameters
+        ----------
+        config : RtkConfig
+            Configuration object containing the RTK serial port.
+        """
         super().__init__(config)
 
         port = self.config.serial_port
