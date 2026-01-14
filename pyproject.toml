@@ -40,6 +40,7 @@ dependencies = [
     "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
     "nest-asyncio==1.6.0",
     "tf-keras==2.18.0",
+    "duckduckgo-search>=7.0.0",
 ]
 
 [project.optional-dependencies]
