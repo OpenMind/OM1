@@ -91,8 +91,8 @@ def go2_state_processor(
         """
         Callback for receiving sport mode state messages.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         msg: SportModeState_
         """
         go2_sport_mode_state_msg = msg  # type: ignore
@@ -160,7 +160,7 @@ class UnitreeGo2StateProvider:
 
     def __init__(self, channel: str = ""):
         """
-        Robot and sensor configuration
+        Robot and sensor configuration.
         """
         self.channel = channel
 

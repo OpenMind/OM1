@@ -14,7 +14,7 @@ class UnitreeG1RememberLocationConfig(ActionConfig):
     """
     Configuration for Unitree G1 Remember Location connector.
 
-    Parameters:
+    Parameters
     ----------
     base_url : str
         The base URL for the remember location API.

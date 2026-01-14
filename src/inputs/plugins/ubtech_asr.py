@@ -39,10 +39,26 @@ class UbtechASRSensorConfig(SensorConfig):
 
 class UbtechASRInput(FuserInput[UbtechASRSensorConfig, Optional[str]]):
     """
-    Ubtech Robot ASR input handler that uses the UbtechASRProvider.
+    Ubtech Robot ASR (Automatic Speech Recognition) input handler.
+
+    Processes voice input from Ubtech robots using UbtechASRProvider for
+    real-time speech recognition. Integrates with IOProvider for message
+    handling and SleepTickerProvider for sleep management.
+
+    Supports multiple languages (English, Chinese, Korean) and implements
+    intelligent ASR pause/resume cooldown mechanism to prevent excessive
+    processing during active speech recognition.
     """
 
     def __init__(self, config: UbtechASRSensorConfig):
+        """
+        Initialize Ubtech ASR input handler.
+
+        Parameters
+        ----------
+        config : UbtechASRSensorConfig
+            Configuration for the sensor input
+        """
         super().__init__(config)
         self.messages: List[str] = []
         self.descriptor_for_LLM = "Voice"

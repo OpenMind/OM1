@@ -21,7 +21,7 @@ class SpeakRivaTTSConfig(ActionConfig):
     """
     Configuration for Riva TTS connector.
 
-    Parameters:
+    Parameters
     ----------
     api_key : Optional[str]
         OM API key.

@@ -29,6 +29,9 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
     """
 
     def load_rules_from_blockchain(self):
+        """
+        Load governance rules from the Ethereum blockchain.
+        """
         logging.info("Loading rules from Ethereum blockchain")
 
         # Construct JSON-RPC request
@@ -48,7 +51,10 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
         try:
             response = requests.post(
-                self.rpc_url, json=payload, headers={"Content-Type": "application/json"}
+                self.rpc_url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=10,
             )
             logging.debug(f"Blockchain response status: {response.status_code}")
 
@@ -113,7 +119,7 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
         self.io_provider = IOProvider()
         self.POLL_INTERVAL = 5  # seconds
-        self.rpc_url = "https://holesky.gateway.tenderly.co"  # Ethereum RPC URL
+        self.rpc_url = "https://holesky.drpc.org"  # Ethereum RPC URL
 
         # The smart contract address of the ERC-7777 Governance Smart Contract
         self.contract_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
@@ -133,7 +139,7 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for Ethereum Governance Law Changes
+        Poll for Ethereum Governance Law Changes.
 
         Returns
         -------
