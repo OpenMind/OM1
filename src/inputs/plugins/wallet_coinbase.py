@@ -31,6 +31,17 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
     """
 
     def __init__(self, config: WalletCoinbaseConfig):
+        """
+        Initialize the WalletCoinbase input handler.
+
+        Sets up the required providers and buffers for handling Coinbase wallet data.
+        Fetches the initial wallet balance.
+
+        Parameters
+        ----------
+        config : WalletCoinbaseConfig
+            Configuration for the sensor input, specifying the asset ID to query.
+        """
         super().__init__(config)
 
         self.asset_id = self.config.asset_id

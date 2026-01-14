@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -205,8 +206,8 @@ class FacePresenceProvider:
                 snap = self._fetch_snapshot()
                 text = snap.to_text()
                 self._emit(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Failed to fetch/emit face presence snapshot: {e}")
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -226,8 +227,8 @@ class FacePresenceProvider:
         for cb in callbacks:
             try:
                 cb(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Face presence callback failed: {e}")
 
     def _fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
         """
