@@ -148,7 +148,7 @@ class UnitreeGo2RPLidarProvider:
         relevant_distance_max: float = DEFAULT_RELEVANT_DISTANCE_MAX,
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
-        rplidar_config: RPLidarConfig = RPLidarConfig(),
+        rplidar_config: Optional[RPLidarConfig] = None,
         log_file: bool = False,
     ):
         """
@@ -174,6 +174,9 @@ class UnitreeGo2RPLidarProvider:
             Whether to log data to a local file
         """
         logging.info("Booting Unitree Go2 RPLidar (Serial)")
+
+        if rplidar_config is None:
+            rplidar_config = RPLidarConfig()
 
         self.serial_port = serial_port
         self.half_width_robot = half_width_robot
