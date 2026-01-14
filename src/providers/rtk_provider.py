@@ -26,7 +26,15 @@ class RtkProvider:
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration.
+        Initialize the RTKProvider instance.
+
+        Sets up the serial connection to the RTK device.
+
+        Parameters
+        ----------
+        serial_port : str, optional
+            The serial port path for connecting to the RTK device.
+            Defaults to "/dev/ttyACM0".
         """
         logging.info("Booting RTK Provider")
 
