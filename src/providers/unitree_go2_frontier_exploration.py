@@ -20,7 +20,7 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
     def __init__(
         self,
         topic: str = "explore/status",
-        context_aware_text: Dict = {"exploration_done": True},
+        context_aware_text: Optional[Dict] = None,
     ):
         """
         Initialize the Frontier Exploration Provider with a specific topic.
@@ -40,6 +40,8 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
 
         # Start Context Provider to update context when exploration is done
         self.context_provider = ContextProvider()
+        if context_aware_text is None:
+            context_aware_text = {"exploration_done": True}
         self.context_aware_text = context_aware_text
 
     def frontier_exploration_message_callback(self, data: zenoh.Sample):

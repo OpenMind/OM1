@@ -131,7 +131,7 @@ class LLM(T.Generic[R]):
         self._skip_state_management: bool = False
 
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Send a prompt to the LLM and receive a typed response.
