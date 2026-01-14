@@ -63,13 +63,18 @@ class RPLidarConfig(SensorConfig):
 
 class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
     """
-    RPLidar input handler.
-
-    A class that processes RPLidar inputs and generates text descriptions.
-    It maintains an internal buffer of processed messages.
+    RPLidar input handler for processing laser range finder data.
     """
 
     def __init__(self, config: RPLidarConfig):
+        """
+        Initialize the RPLidar input handler.
+
+        Parameters
+        ----------
+        config : RPLidarConfig
+            Configuration for the RPLidar input handler.
+        """
         super().__init__(config)
 
         # Track IO
@@ -184,7 +189,23 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
         return result
 
     def _extract_lidar_config(self, config: RPLidarConfig) -> dict:
-        """Extract lidar configuration parameters from sensor config."""
+        """
+        Extract lidar configuration parameters from sensor config.
+
+        Converts the RPLidarConfig Pydantic model into a dictionary format
+        suitable for passing to the RPLidarProvider constructor.
+
+        Parameters
+        ----------
+        config : RPLidarConfig
+            Configuration object containing all sensor parameters.
+
+        Returns
+        -------
+        dict
+            Dictionary containing all configuration parameters with their
+            corresponding field names and values.
+        """
         lidar_config = {
             "serial_port": config.serial_port,
             "use_zenoh": config.use_zenoh,
