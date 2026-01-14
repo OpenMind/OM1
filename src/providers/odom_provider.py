@@ -162,7 +162,23 @@ class OdomProvider:
         self, URID: str = "", use_zenoh: bool = False, channel: Optional[str] = ""
     ):
         """
-        Robot and sensor configuration.
+        Initialize the OdomProvider instance.
+
+        Sets up the connection to the odometry source, either via Zenoh or CycloneDDS,
+        depending on the configuration.
+
+        Parameters
+        ----------
+        URID : str, optional
+            The URID needed to connect to the Zenoh publisher in the local network.
+            Used primarily for TurtleBot4. Defaults to "".
+        use_zenoh : bool, optional
+            If True, get odom/pose data from Zenoh. Otherwise, use CycloneDDS
+            (e.g., for Unitree Go2). Defaults to False.
+        channel : str, optional
+            The channel to connect to the robot, used for CycloneDDS (e.g., Unitree Go2).
+            If not specified when use_zenoh is False, an error will be raised later.
+            Defaults to "".
         """
         logging.info("Booting Odom Provider")
 
