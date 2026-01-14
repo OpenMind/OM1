@@ -28,7 +28,15 @@ class GpsProvider:
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration.
+        Initialize the GpsProvider instance.
+
+        Sets up the serial connection to the GPS device.
+
+        Parameters
+        ----------
+        serial_port : str, optional
+            The serial port path for connecting to the GPS device.
+            Defaults to "/dev/ttyACM0".
         """
         logging.info(f"GPS_Provider booting GPS Provider at serial: {serial_port}")
 
