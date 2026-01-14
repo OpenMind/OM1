@@ -78,15 +78,18 @@ class TeleopsConversationProvider:
         base_url: str = "https://api.openmind.org/api/core/teleops/conversation",
     ):
         """
-        Initialize the Teleops conversation provider.
+        Initialize the TeleopsConversationProvider instance.
+
+        Sets up the configuration for storing conversation messages via the Teleops backend API.
 
         Parameters
         ----------
-        api_key : str, optional
-            API key for authenticating requests to the Teleops backend.
-            If None or empty, message storage will be disabled.
-        base_url : str, default="https://api.openmind.org/api/core/teleops/conversation"
-            Base URL for the Teleops conversation API endpoint.
+        api_key : Optional[str], optional
+            The API key for authenticating with the Teleops backend. If None or empty,
+            storing messages will be skipped. Defaults to None.
+        base_url : str, optional
+            The base URL for the Teleops conversation API endpoint.
+            Defaults to "https://api.openmind.org/api/core/teleops/conversation".
         """
         self.api_key = api_key
         self.base_url = base_url
