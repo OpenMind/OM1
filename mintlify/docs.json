@@ -45,10 +45,15 @@
                         ]
                     },
                     {
-                        "group": "Tutorials",
+                        "group": "Examples",
                         "pages": [
                             "examples/overview",
-                            "examples/conversation",
+                            "examples/conversation"
+                        ]
+                    },
+                    {
+                        "group": "Simulation Support",
+                        "pages": [
                             "examples/gazebo"
                         ]
                     },
@@ -191,7 +196,7 @@
         "links": [
             {
                 "label": "Support",
-                "href": "mailto:hello@openmind.org"
+                "href": "mailto:support@openmind.org"
             }
         ],
         "primary": {

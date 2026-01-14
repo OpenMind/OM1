@@ -8,6 +8,16 @@ description: "Quadruped Simulation and Control"
 The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
 
 To get started with **Gazebo** and **Unitree SDK**, please install **ROS2 Humble** first and use this **CycloneDDS** configuration. It uses `lo` as the network interface.
+We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
+
+To add it to `cyclonedds.xml`:
+
+```bash
+cd cyclonedds
+vi cyclonedds.xml
+```
+
+Add the following, then save and exit.
 
 ```xml
 <CycloneDDS>
@@ -24,7 +34,13 @@ To get started with **Gazebo** and **Unitree SDK**, please install **ROS2 Humble
 </CycloneDDS>
 ```
 
-We recommend that you export this in your `.bashrc` or equivalent configuration file.
+To add the config to your bashrc, run:
+
+```bash
+vim ~/.bashrc
+```
+
+And add the following:
 
 ```bash
 export CYCLONEDDS_URI='
@@ -42,48 +58,57 @@ export CYCLONEDDS_URI='
 </CycloneDDS>'
 ```
 
-Next, clone the [unitree-sdk](https://github.com/OpenMind/unitree-sdk) repository:
+Check if you have rosdep installed by running `rosdep` or `rosdep --version`. If it is not installed, run the following:
 
 ```bash
-git clone https://github.com/OpenMind/unitree-sdk.git
+sudo apt-get update
+sudo apt-get install python3-rosdep
 ```
 
-Then install all necessary dependencies:
+Once you've succesfully completed above steps, follow the following steps to start the gazebo simulation and run OM1 with it.
 
-```bash
-cd unitree-sdk
-rosdep install --from-paths . --ignore-src -r -y
-pip install -r requirements.txt
-```
+Step 1: Clone the [unitree-sdk](https://github.com/OpenMind/unitree-sdk) repository:
 
-Then build all packages:
+    ```bash
+    git clone https://github.com/OpenMind/unitree-sdk.git
+    ```
 
-```bash
-colcon build
-```
+Step 2: Install all the necessary dependencies:
 
-Now you should be able to launch the **Gazebo Simulator**.
+    ```bash
+    cd unitree-sdk
+    rosdep install --from-paths . --ignore-src -r -y
+    uv pip install -r pyproject.toml
+    ```
 
-Open the first terminal and run:
+Step 3: Build all the packages:
 
-```bash
-source install/setup.bash
-ros2 launch go2_gazebo_sim go2_launch.py
-```
+    ```bash
+    colcon build
+    ```
 
-Then open a second terminal and run:
+    Now you should be able to launch the **Gazebo Simulator**.
 
-```bash
-source install/setup.bash
-ros2 launch go2_sdk sensor_launch.py use_sim:=true
-```
+Step 4: Open a terminal and run:
 
-This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
+    ```bash
+    source install/setup.bash
+    ros2 launch go2_gazebo_sim go2_launch.py
+    ```
 
-## Start OM1
+Step 5: Open a new terminal and run:
 
-Refer to the [Installation Guide](../developing/1_get-started.mdx) for detailed instructions.
+    ```bash
+    source install/setup.bash
+    ros2 launch go2_sdk sensor_launch.py use_sim:=true
+    ```
 
-```bash
-uv run src/run.py unitree_go2_autonomy_sim
-```
+    This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
+
+Step 6: Start OM1
+
+    Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+
+    ```bash
+    uv run src/run.py unitree_go2_autonomy_sim
+    ```
