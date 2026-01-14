@@ -18,6 +18,16 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
     """
 
     def __init__(self, config: SensorConfig):
+        """
+        Initialize the SimplePaths input handler.
+
+        Sets up the required providers and buffers for handling simple path data.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the sensor input.
+        """
         super().__init__(config)
 
         # Track IO
@@ -37,7 +47,7 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for new messages from the RPLidar Provider.
+        Poll for new messages from the SimplePaths Provider.
 
         Checks the message buffer for new messages with a brief delay
         to prevent excessive CPU usage.

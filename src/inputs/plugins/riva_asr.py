@@ -66,7 +66,12 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
 
     def __init__(self, config: RivaASRSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize RivaASRInput instance.
+
+        Parameters
+        ----------
+        config : RivaASRSensorConfig
+            Configuration for the ASR input handler.
         """
         super().__init__(config)
 
