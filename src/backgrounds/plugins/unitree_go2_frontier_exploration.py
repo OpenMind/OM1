@@ -41,7 +41,7 @@ class UnitreeGo2FrontierExploration(Background[UnitreeGo2FrontierExplorationConf
 
         Sets up the Frontier Exploration provider using the specified topic and context-aware text
         from the configuration.
-
+        
         Parameters
         ----------
         config : UnitreeGo2FrontierExplorationConfig
