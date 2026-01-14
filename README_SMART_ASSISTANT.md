@@ -71,7 +71,7 @@ python src/run.py smart_assistant
 
 ## Bounty Submission
 
-🤖 **Home Assistant Integrated**: Home Assistant (Docker)  
-🚀 **Post Link**: [Twitter URL]  
-🎥 **Demo Video**: [Video URL]  
-📑 **Notes**: Real blockchain transactions, real HA API calls, documented setup
+- **Home Assistant Integrated**: Home Assistant (Docker)  
+- **Post Link**: https://x.com/minion_btc/status/2011567224855630114  
+- **Demo Video**: https://www.youtube.com/watch?v=O5WX-LpWhLY  
+- **Notes**: Real blockchain transactions, real HA API calls, documented setup
