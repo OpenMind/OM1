@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/cyclonedds/cyclonedds/install
-          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/integration-test.yml') }}
+          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/nightly-integration-tests.yml') }}
           restore-keys: |
             ${{ runner.os }}-cyclonedds-0.10.x-
 
