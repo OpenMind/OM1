@@ -125,14 +125,37 @@ class RPDriver(object):
         Parameters
         ----------
         port : str
-            Serial port name to which sensor is connected
+            Serial port name to which sensor is connected (e.g., '/dev/ttyUSB0' on Linux,
+            'COM3' on Windows). Must be a non-empty string.
         baudrate : int, optional
-            Baudrate for serial connection (the default is 115200)
+            Baudrate for serial connection. Must be a positive integer.
+            The default is 115200.
         timeout : float, optional
-            Serial port connection timeout in seconds (the default is 1)
-        logger : logging.Logger instance, optional
-            Logger instance, if none is provided new instance is created
+            Serial port connection timeout in seconds. Must be non-negative.
+            The default is 1.
+        logger : logging.Logger, optional
+            Logger instance for logging operations. If None is provided, a new logger
+            instance with name 'rplidar' is created.
+
+        Raises
+        ------
+        ValueError
+            If port is empty, baudrate is not positive, or timeout is negative.
+        RPLidarException
+            If connection to the serial port fails.
+
+        Notes
+        -----
+        The connection to the serial port is established automatically during initialization.
+        If the connection fails, an RPLidarException is raised.
         """
+        if not port or not isinstance(port, str) or not port.strip():
+            raise ValueError("Port must be a non-empty string")
+        if not isinstance(baudrate, int) or baudrate <= 0:
+            raise ValueError(f"Baudrate must be a positive integer, got {baudrate}")
+        if not isinstance(timeout, (int, float)) or timeout < 0:
+            raise ValueError(f"Timeout must be a non-negative number, got {timeout}")
+
         self._serial = None
         self.port = port
         self.baudrate = baudrate
@@ -148,8 +171,15 @@ class RPDriver(object):
         self.connect()
 
     def connect(self):
-        """Connects to the serial port with the name `self.port`. If it was
-        connected to another serial port disconnects from it first.
+        """Connects to the serial port with the name `self.port`.
+
+        If already connected to another serial port, disconnects from it first
+        before establishing the new connection.
+
+        Raises
+        ------
+        RPLidarException
+            If connection to the serial port fails due to serial communication errors.
         """
         if self._serial is not None:
             self.disconnect()
@@ -179,18 +209,34 @@ class RPDriver(object):
 
     @property
     def motor_speed(self):
-        """Get current motor speed (PWM value)."""
+        """Get current motor speed (PWM value).
+
+        Returns
+        -------
+        int
+            Current motor speed as PWM value (0-1023).
+        """
         return self._motor_speed
 
     @motor_speed.setter
     def motor_speed(self, pwm: int):
-        """
-        Set motor speed (PWM value).
+        """Set motor speed (PWM value).
 
         Parameters
         ----------
         pwm : int
-            PWM value to set the motor speed to.
+            PWM value to set the motor speed to. Must be between 0 and
+            MAX_MOTOR_PWM (1023).
+
+        Raises
+        ------
+        ValueError
+            If pwm is not within the valid range [0, MAX_MOTOR_PWM].
+
+        Notes
+        -----
+        If the motor is currently running, the new PWM value is applied
+        immediately to the motor.
         """
         if not (0 <= pwm <= MAX_MOTOR_PWM):
             raise ValueError(
@@ -201,7 +247,14 @@ class RPDriver(object):
             self._set_pwm(self._motor_speed)
 
     def start_motor(self):
-        """Starts sensor motor."""
+        """Starts sensor motor.
+
+        Notes
+        -----
+        This method configures the motor for both A1 and A2 RPLidar models.
+        For A1 models, it sets DTR to False. For A2 models, it sets the PWM
+        value to the current motor speed.
+        """
         self.logger.info("Starting motor")
         # For A1
         self._serial.setDTR(False)
@@ -211,7 +264,14 @@ class RPDriver(object):
         self.motor_running = True
 
     def stop_motor(self):
-        """Stops sensor motor."""
+        """Stops sensor motor.
+
+        Notes
+        -----
+        This method stops the motor for both A1 and A2 RPLidar models.
+        For A2 models, it sets PWM to 0. For A1 models, it sets DTR to True.
+        A short delay is introduced to ensure proper motor shutdown.
+        """
         self.logger.info("Stopping motor")
         # For A2
         self._set_pwm(0)
@@ -343,10 +403,30 @@ class RPDriver(object):
         Parameters
         ----------
         scan_type : str
-            Scan mode: normal, force, or express.
+            Scan mode: 'normal', 'force', or 'express'. The default is 'normal'.
+
+        Raises
+        ------
+        ValueError
+            If scan_type is not one of the supported scan modes.
+        RPLidarException
+            If a scan is already running, if sensor health check fails, or if
+            communication with the sensor fails.
+
+        Notes
+        -----
+        Before starting the scan, the method checks the sensor health status.
+        If the sensor reports an error status, it attempts to reset the sensor.
+        If the error persists after reset, an RPLidarException is raised.
         """
         if self.scanning[0]:
             raise RPLidarException("Scan already running!")
+
+        if scan_type not in _SCAN_TYPE:
+            valid_types = ", ".join(_SCAN_TYPE.keys())
+            raise ValueError(
+                f"Invalid scan_type '{scan_type}'. Must be one of: {valid_types}"
+            )
 
         # Check sensor health before starting
         status, error_code = self.get_health()
@@ -400,22 +480,43 @@ class RPDriver(object):
 
         Parameters
         ----------
-        max_buf_meas : int or False if you want unlimited buffer
+        scan_type : str, optional
+            Scan mode: 'normal', 'force', or 'express'. The default is 'normal'.
+        max_buf_meas : int or False, optional
             Maximum number of bytes to be stored inside the buffer. Once
-            number exceeds this limit buffer will be emptied out.
+            number exceeds this limit buffer will be emptied out. If False,
+            unlimited buffer is used. Must be a non-negative integer or False.
+            The default is 3000.
 
         Yields
         ------
         new_scan : bool
-            True if measurement belongs to a new scan
+            True if measurement belongs to a new scan.
         quality : int
-            Reflected laser pulse strength
+            Reflected laser pulse strength.
         angle : float
-            The measurement heading angle in degree units [0, 360)
+            The measurement heading angle in degree units [0, 360).
         distance : float
             Measured object distance related to the sensor's rotation center.
             In millimeters. Set to 0 when measure is invalid.
+
+        Raises
+        ------
+        ValueError
+            If max_buf_meas is negative or if scan_type is invalid.
+        RPLidarException
+            If sensor communication fails or if scan cannot be started.
+
+        Notes
+        -----
+        The motor is automatically started when this method is called. If a scan
+        is not already running, it will be started automatically.
         """
+        if max_buf_meas is not False and (not isinstance(max_buf_meas, int) or max_buf_meas < 0):
+            raise ValueError(
+                f"max_buf_meas must be a non-negative integer or False, got {max_buf_meas}"
+            )
+
         self.start_motor()
         if not self.scanning[0]:
             self.start(scan_type)
