@@ -12,10 +12,22 @@ from providers.rtk_provider import RtkProvider
 
 class Rtk(FuserInput[SensorConfig, Optional[dict]]):
     """
-    Reads RTK data from RTK provider.
+    RTK (Real-Time Kinematic) precision positioning input handler.
+
+    Processes high-precision GPS data from RTK provider to generate location
+    information with centimeter-level accuracy. Integrates with IOProvider
+    for message handling and provides formatted location data for LLM processing.
     """
 
     def __init__(self, config: SensorConfig):
+        """
+        Initialize RTK input handler.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the sensor input
+        """
         super().__init__(config)
 
         self.rtk = RtkProvider()
