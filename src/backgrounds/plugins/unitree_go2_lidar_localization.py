@@ -12,6 +12,16 @@ class UnitreeGo2LidarLocalization(Background[BackgroundConfig]):
     """
 
     def __init__(self, config: BackgroundConfig):
+        """
+        Initialize the UnitreeGo2LidarLocalization background task instance.
+
+        Sets up the Lidar Localization provider.
+
+        Parameters
+        ----------
+        config : BackgroundConfig
+            Configuration object for the background task.
+        """
         super().__init__(config)
 
         self.unitree_go2_lidar_localization_provider = (
