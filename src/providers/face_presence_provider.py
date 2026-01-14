@@ -55,10 +55,10 @@ class PresenceSnapshot:
         seen = set()
         clean: List[str] = []
         for n in self.names or []:
-            n = (n or "").strip()
-            if n and n.lower() != "unknown" and n not in seen:
-                seen.add(n)
-                clean.append(n)
+            name = (n or "").strip()
+            if name and name.lower() != "unknown" and name not in seen:
+                seen.add(name)
+                clean.append(name)
 
         k = len(clean)
         u = int(self.unknown_faces or 0)

@@ -160,14 +160,14 @@ class ActionOrchestrator:
         """
         for action in actions:
             logging.debug(f"Sending command: {action}")
-            action = self._normalize_action(action)
+            normalized_action = self._normalize_action(action)
 
-            agent_action = self._get_agent_action(action)
+            agent_action = self._get_agent_action(normalized_action)
             if agent_action is None:
                 continue
 
             action_response = asyncio.create_task(
-                self._promise_action(agent_action, action)
+                self._promise_action(agent_action, normalized_action)
             )
             self.promise_queue.append(action_response)
 
@@ -182,19 +182,19 @@ class ActionOrchestrator:
         """
         for action in actions:
             logging.debug(f"Sending command (sequential): {action}")
-            action = self._normalize_action(action)
+            normalized_action = self._normalize_action(action)
 
-            agent_action = self._get_agent_action(action)
+            agent_action = self._get_agent_action(normalized_action)
             if agent_action is None:
                 continue
 
             action_response = asyncio.create_task(
-                self._promise_action(agent_action, action)
+                self._promise_action(agent_action, normalized_action)
             )
             self.promise_queue.append(action_response)
             await action_response
 
-            action_label = action.type.lower()
+            action_label = normalized_action.type.lower()
             if action_label in self._completed_actions:
                 self._completed_actions[action_label].set()
 
@@ -210,14 +210,14 @@ class ActionOrchestrator:
         """
         for action in actions:
             logging.debug(f"Sending command (with dependencies): {action}")
-            action = self._normalize_action(action)
+            normalized_action = self._normalize_action(action)
 
-            agent_action = self._get_agent_action(action)
+            agent_action = self._get_agent_action(normalized_action)
             if agent_action is None:
                 continue
 
             action_response = asyncio.create_task(
-                self._promise_action_with_deps(agent_action, action)
+                self._promise_action_with_deps(agent_action, normalized_action)
             )
             self.promise_queue.append(action_response)
 
