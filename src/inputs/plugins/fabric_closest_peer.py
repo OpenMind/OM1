@@ -45,6 +45,16 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
     """
 
     def __init__(self, config: FabricClosestPeerConfig):
+        """
+        Initialize the FabricClosestPeer input handler.
+
+        Sets up the required providers and buffers for handling Fabric peer data.
+
+        Parameters
+        ----------
+        config : FabricClosestPeerConfig
+            Configuration for the sensor input.
+        """
         super().__init__(config)
 
         self.descriptor_for_LLM = "Closest Peer from Fabric"
