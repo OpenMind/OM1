@@ -23,15 +23,6 @@ class MessageType(Enum):
 class ConversationMessage:
     """
     Represents a conversation message with type, content, and timestamp.
-
-    Parameters
-    ----------
-    message_type : MessageType
-        The type of the message, either USER or ROBOT.
-    content : str
-        The text content of the message.
-    timestamp : float
-        Unix timestamp when the message was created.
     """
 
     message_type: MessageType

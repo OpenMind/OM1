@@ -47,35 +47,7 @@ class UbtechCameraVideoStream(VideoStream):
         jpeg_quality : int, optional
             JPEG compression quality (0-100). Higher values mean better quality but
             larger file size. Defaults to 70.
-
-        Raises
-        ------
-        ValueError
-            If `robot_ip` is empty, `fps` is less than or equal to 0, `resolution`
-            contains non-positive values, or `jpeg_quality` is not in the range [0, 100].
-
-        Notes
-        -----
-        This method initializes the YanAPI connection to the robot and prepares the
-        MJPEG stream client. The actual video streaming starts when `on_video()` is called.
         """
-        # Parameter validation
-        if not robot_ip or not robot_ip.strip():
-            raise ValueError("robot_ip must be a non-empty string")
-        
-        if fps is not None and fps <= 0:
-            raise ValueError(f"fps must be greater than 0, got {fps}")
-        
-        if resolution is not None:
-            if len(resolution) != 2:
-                raise ValueError(f"resolution must be a tuple of 2 integers, got {resolution}")
-            width, height = resolution
-            if width <= 0 or height <= 0:
-                raise ValueError(f"resolution width and height must be positive, got {resolution}")
-        
-        if not (0 <= jpeg_quality <= 100):
-            raise ValueError(f"jpeg_quality must be in range [0, 100], got {jpeg_quality}")
-
         super().__init__(
             frame_callback=frame_callback,
             frame_callbacks=frame_callbacks,
@@ -91,7 +63,9 @@ class UbtechCameraVideoStream(VideoStream):
         try:
             YanAPI.yan_api_init(self.robot_ip)
         except Exception as e:
-            logging.error(f"Failed to initialize YanAPI with robot_ip={self.robot_ip}: {e}")
+            logging.error(
+                f"Failed to initialize YanAPI with robot_ip={self.robot_ip}: {e}"
+            )
             raise
 
     def on_video(self):
