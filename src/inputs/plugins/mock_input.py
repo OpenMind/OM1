@@ -36,12 +36,53 @@ class MockSensorConfig(SensorConfig):
 
 class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
     """
-    Mock Input Functionality.
+    Mock input plugin for testing and development purposes.
+
+    This class provides a WebSocket-based mock input system that allows developers
+    to simulate sensor input data during testing and development. It creates a
+    WebSocket server that accepts incoming messages and processes them as if they
+    were coming from a real sensor device.
+
+    The mock input maintains an internal message buffer and converts raw WebSocket
+    messages into structured Message objects with timestamps. It supports multiple
+    concurrent client connections and handles message queuing for downstream
+    processing by the agent's input pipeline.
+
+    Typical use cases include:
+    - Testing agent behavior with simulated sensor data
+    - Development and debugging without physical hardware
+    - Integration testing of the input processing pipeline
+    - Demonstrating agent capabilities with controlled input scenarios
+
+    The WebSocket server runs in a separate daemon thread, allowing the main
+    application to continue processing while accepting mock input connections.
     """
 
     def __init__(self, config: MockSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize the MockInput instance with configuration.
+
+        Sets up the WebSocket server, initializes message buffers, and starts
+        the server thread for accepting client connections.
+
+        Parameters
+        ----------
+        config : MockSensorConfig
+            Configuration object containing the input settings. The config includes:
+            - `input_name`: Name identifier for this input source (default: "Mock Input")
+            - `host`: Host address for the WebSocket server (default: "localhost")
+            - `port`: Port number for the WebSocket server (default: 8765)
+
+        Notes
+        -----
+        The WebSocket server is automatically started in a separate daemon thread
+        during initialization. The server will accept connections at the configured
+        host and port address. If the server fails to start (e.g., port already in use),
+        an error will be logged but initialization will continue.
+
+        The message buffer is implemented as a thread-safe Queue, allowing safe
+        concurrent access from both the WebSocket handler thread and the main
+        polling thread.
         """
         super().__init__(config)
 

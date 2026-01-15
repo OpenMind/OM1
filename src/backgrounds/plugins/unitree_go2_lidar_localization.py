@@ -8,10 +8,22 @@ from providers.unitree_go2_lidar_localization_provider import (
 
 class UnitreeGo2LidarLocalization(Background[BackgroundConfig]):
     """
-    Reads lidar localization data from UnitreeGo2LidarLocalizationProvider.
+    Background task for reading lidar localization data from Unitree Go2 robot.
+
+    This class manages the integration with UnitreeGo2LidarLocalizationProvider
+    to provide real-time lidar-based localization data for navigation and mapping
+    applications.
     """
 
     def __init__(self, config: BackgroundConfig):
+        """
+        Initialize UnitreeGo2LidarLocalization background task.
+
+        Parameters
+        ----------
+        config : BackgroundConfig
+            Configuration object for background task settings.
+        """
         super().__init__(config)
 
         self.unitree_go2_lidar_localization_provider = (

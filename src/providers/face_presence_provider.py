@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -181,7 +182,7 @@ class FacePresenceProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to strop."""
+        """Request the background thread to stop."""
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)
@@ -205,8 +206,8 @@ class FacePresenceProvider:
                 snap = self._fetch_snapshot()
                 text = snap.to_text()
                 self._emit(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Failed to fetch/emit face presence snapshot: {e}")
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -226,8 +227,8 @@ class FacePresenceProvider:
         for cb in callbacks:
             try:
                 cb(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Face presence callback failed: {e}")
 
     def _fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
         """
