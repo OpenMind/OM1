@@ -3,14 +3,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
 from inputs.orchestrator import InputOrchestrator
 
 
-class MockInput(FuserInput[SensorConfig, str]):
+class MockInput(FuserInput[str]):
     def __init__(self):
-        super().__init__(SensorConfig())
+        super().__init__()
         self.poll_count = 0
         self.max_polls = 3
 
@@ -29,10 +28,10 @@ class MockInput(FuserInput[SensorConfig, str]):
 
 class ErrorInput(MockInput):
     async def _listen_loop(self):
-        while True:
-            await asyncio.sleep(0.1)
-            yield "error"
-            raise ValueError("Test error")
+        # Fail immediately to test error handling
+        await asyncio.sleep(0.1)
+        yield "error"
+        raise ValueError("Test error")
 
 
 @pytest.mark.asyncio
@@ -67,10 +66,14 @@ async def test_listen_multiple_inputs():
 
 @pytest.mark.asyncio
 async def test_input_exception_handling():
-    """Test that the InputOrchestrator handles exceptions from inputs."""
+    """Test that the InputOrchestrator handles exceptions from inputs gracefully."""
     error_input = ErrorInput()
     normal_input = MockInput()
     normal_input.raw_to_text = AsyncMock()
     orchestrator = InputOrchestrator([error_input, normal_input])
-    with pytest.raises(ValueError):
-        await orchestrator.listen()
+    
+    # Should not raise - error input fails but normal input continues
+    await asyncio.wait_for(orchestrator.listen(), timeout=5.0)
+    
+    # Normal input should have processed its events
+    assert normal_input.raw_to_text.call_count == 3  # type: ignore
