@@ -259,6 +259,7 @@ class FabricDataSubmitter:
                 self.base_url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json=json_dict,
+                timeout=10,
             )
 
             if request.status_code == 201:

@@ -39,6 +39,8 @@ Before contributing, please take a moment to read through the following guidelin
 
 **Contribution Workflow (Pull Requests):**
 
+**Please open an issue for discussion before submitting PRs that introduce new features, refactors, stylistic changes, or dependency upgrades. PRs of this type without prior discussion may be closed. Once approval is granted, you can start working and open a PR.**
+
 1.  **Fork the Repository:**  Click the "Fork" button on the top-right of the OM1 repository page to create your own copy.
 
 2.  **Clone Your Fork with CLI:**
@@ -65,7 +67,11 @@ Before contributing, please take a moment to read through the following guidelin
 
 7. **Local Testing**
 
-    Install pre-commit and execute `pre-commit install`. This ensures that pre-commit checks run before each commit. Alternatively, you can manually trigger all checks by running pre-commit run --all-files.
+    Install pre-commit and execute `pre-commit install`. This ensures that pre-commit checks run before each commit. Alternatively, you can manually trigger all checks by running
+
+    ```bash
+    pre-commit run --all-files
+    ```
 
     After you have updated the core documentation, make sure to run:
     ```bash

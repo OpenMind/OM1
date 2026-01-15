@@ -1,27 +1,26 @@
 {
-  "version": "v1.0.1",
-  "hertz": 1,
-  "name": "bits",
-  "unitree_ethernet": "en0",
-  "api_key": "openmind_free",
-  "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Bits.",
-  "system_governance": "",
-  "system_prompt_examples": "",
-  "agent_inputs": [
+  version: "v1.0.1",
+  hertz: 1,
+  name: "bits",
+  unitree_ethernet: "en0",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a smart, curious, and friendly dog. Your name is Bits.",
+  system_governance: "",
+  system_prompt_examples: "",
+  agent_inputs: [
     {
-      "type": "Gps",
+      type: "Gps",
       config: {
-        "serial_port": "/dev/cu.usbmodem101"
-      }
-    }
+        serial_port: "/dev/cu.usbmodem101",
+      },
+    },
   ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Bits",
-      "history_length": 0
-    }
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
-  ]
+  agent_actions: [],
 }

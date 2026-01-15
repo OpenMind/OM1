@@ -54,7 +54,7 @@ class BatteryStatus:
             charging_status=data.get("charging_status", False),
             temperature=data.get("temperature", 0.0),
             voltage=data.get("voltage", 0.0),
-            timestamp=data.get("timestamp", time.time()),
+            timestamp=data.get("timestamp", str(time.time())),
         )
 
 
@@ -236,18 +236,23 @@ class TeleopsStatusProvider:
             logging.error("API key is missing. Cannot get status.")
             return {}
 
-        api_key_id = self.api_key[9:25] if len(self.api_key) > 25 else self.api_key
-        request = requests.get(
-            f"{self.base_url}/{api_key_id}",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-        )
-        if request.status_code == 200:
-            return request.json()
-        else:
-            logging.error(
-                f"Failed to get status: {request.status_code} - {request.text}"
+        try:
+            api_key_id = self.api_key[9:25] if len(self.api_key) > 25 else self.api_key
+            request = requests.get(
+                f"{self.base_url}/{api_key_id}",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=10,
             )
-            return {}
+            if request.status_code == 200:
+                return request.json()
+            else:
+                logging.error(
+                    f"Failed to get status: {request.status_code} - {request.text}"
+                )
+        except requests.exceptions.RequestException as e:
+            logging.error(f"TeleopsStatusProvider: Error getting status: {e}")
+
+        return {}
 
     def _share_status_worker(self, status: TeleopsStatus):
         """
@@ -268,6 +273,7 @@ class TeleopsStatusProvider:
                 self.base_url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json=status.to_dict(),
+                timeout=10,
             )
 
             if request.status_code == 200:
