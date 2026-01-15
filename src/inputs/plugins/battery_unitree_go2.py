@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
 
@@ -17,21 +18,36 @@ except ImportError:
     )
 
     class ChannelSubscriber:
+        """
+        Placeholder for ChannelSubscriber when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
     class LowState_:
+        """
+        Placeholder for LowState_ when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+class UnitreeGo2BatteryConfig(SensorConfig):
+    """
+    Configuration for Unitree Go2 Battery Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
 
 
-class UnitreeGo2Battery(FuserInput[str]):
+class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
     """
     Unitree Go2 Lowstate bridge.
 
@@ -43,13 +59,13 @@ class UnitreeGo2Battery(FuserInput[str]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeGo2BatteryConfig):
         """
         Initialize Unitree bridge with empty message buffer.
         """
         super().__init__(config)
 
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()
@@ -83,11 +99,26 @@ class UnitreeGo2Battery(FuserInput[str]):
         self.descriptor_for_LLM = "Energy Levels"
 
     def LowStateMessageHandler(self, msg: LowState_):
-        self.low_state = msg
-        self.battery_percentage = round(float(msg.bms_state.soc), 2)  # type: ignore
-        self.battery_voltage = round(float(msg.power_v), 2)  # type: ignore
-        self.battery_amperes = round(float(msg.power_a), 2)  # type: ignore
-        self.battery_t = int((msg.temperature_ntc1 + msg.temperature_ntc2) / 2)  # type: ignore
+        """
+        Handle incoming LowState messages from Unitree Go2.
+
+        Parameters
+        ----------
+        msg : LowState_
+            Incoming LowState message
+        """
+        try:
+            self.low_state = msg
+            self.battery_percentage = round(float(msg.bms_state.soc), 2)  # type: ignore
+            self.battery_voltage = round(float(msg.power_v), 2)  # type: ignore
+            self.battery_amperes = round(float(msg.power_a), 2)  # type: ignore
+            self.battery_t = int((msg.temperature_ntc1 + msg.temperature_ntc2) / 2)  # type: ignore
+        except AttributeError as e:
+            logging.warning(f"Incomplete LowState message: {e}")
+            self.battery_percentage = 0.0
+            self.battery_voltage = 0.0
+            self.battery_amperes = 0.0
+            self.battery_t = 0
 
     async def report_status(self):
         """
@@ -116,7 +147,6 @@ class UnitreeGo2Battery(FuserInput[str]):
         List[float]
             list of floats
         """
-
         await asyncio.sleep(2.0)
         await self.report_status()
 
@@ -141,10 +171,9 @@ class UnitreeGo2Battery(FuserInput[str]):
 
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped message containing description
         """
-
         battery_percentage = raw_input[0]
         logging.debug(f"Battery percentage: {battery_percentage}")
 

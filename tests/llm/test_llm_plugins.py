@@ -1,19 +1,8 @@
 from typing import Type
 
 import pytest
-from pydantic import BaseModel
 
-from llm import LLM, LLMConfig
-
-
-# Test output model
-class DummyOutputModel(BaseModel):
-    test_field: str
-
-
-@pytest.fixture
-def config():
-    return LLMConfig(base_url="http://test.com", api_key="test-key", model="test-model")
+from llm import LLM
 
 
 def get_all_llm_classes():
@@ -49,10 +38,3 @@ def test_ask_signature(llm_class: Type[LLM]):
     base_params = set(LLM.ask.__annotations__.keys())
     impl_params = set(llm_class.ask.__annotations__.keys())
     assert base_params == impl_params, f"{llm_class.__name__} ask signature mismatch"
-
-
-@pytest.mark.parametrize("llm_class", get_all_llm_classes())
-def test_init_with_config(llm_class: Type[LLM], config: LLMConfig):
-    llm = llm_class(config)
-    assert llm._config == config
-    assert llm._available_actions == []

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
@@ -22,19 +23,18 @@ class XAILLM(LLM[R]):
     Parameters
     ----------
     config : LLMConfig
-        Configuration object containing API settings. If not provided, defaults
-        will be used.
+        Configuration object containing API settings.
     available_actions : list[AgentAction], optional
         List of available actions for function call generation. If provided.
     """
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
-        Initialize the DeepSeek LLM instance.
+        Initialize the XAI LLM instance.
         """
         super().__init__(config, available_actions)
 
@@ -51,10 +51,13 @@ class XAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
+    @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(self, prompt: str, messages: T.List[T.Dict[str, str]]) -> R | None:
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
-        Execute LLM query and parse response
+        Execute LLM query and parse response.
 
         Parameters
         ----------
@@ -83,12 +86,16 @@ class XAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gemini-2.0-flash-exp",
+                model=self._config.model or "grok-4-latest",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
+
+            if not response.choices:
+                logging.warning("xAI API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
@@ -110,7 +117,7 @@ class XAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
+                logging.info(f"XAI LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None

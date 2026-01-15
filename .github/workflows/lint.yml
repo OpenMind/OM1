@@ -14,12 +14,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -56,19 +56,40 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: "Set up Python"
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
 
-      - name: Run Ruff
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Run ruff
         run: uv run ruff check .
 
-      - name: Run Black
+      - name: Run black
         run: uv run black --check .
 
       - name: Run isort
         run: uv run isort --check-only .
 
-      - name: Run Pyright
+      - name: Run pyright
         run: uv run pyright --project ./pyrightconfig.json
+
+      - name: Run vulture
+        run: uv run vulture src/
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit hooks
+        id: pre-commit
+        run: |
+          pre-commit run --all-files --show-diff-on-failure

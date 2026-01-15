@@ -5,12 +5,20 @@ from actions.base import Interface
 
 
 class GPSAction(str, Enum):
+    """
+    Enumeration of possible GPS actions.
+    """
+
     SHARE_LOCATION = "share location"
     IDLE = "idle"
 
 
 @dataclass
 class GPSInput:
+    """
+    Input interface for the GPS action.
+    """
+
     action: GPSAction
 
 
