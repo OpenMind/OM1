@@ -1,13 +1,15 @@
 {
+  "version": "v1.0.1",
   "default_mode": "welcome",
   "allow_manual_switching": true,
   "transition_announcement": true,
   "mode_memory_enabled": true,
 
-  // Global LLM ayarları — düşük maliyetli
+  // Yerel ve Ücretsiz Modeller İçin Ayarlar
   "api_key": "openmind_free",
   "unitree_ethernet": "eno1",
   "system_governance": "A robot cannot harm a human or allow a human to come to harm.",
+  
   "cortex_llm": {
     "type": "QwenLLM",
     "config": {
@@ -21,7 +23,7 @@
     "welcome": {
       "display_name": "Welcome Mode",
       "description": "Greeting and name registration.",
-      "system_prompt_base": "You are Bits, a friendly robot dog. Greet warmly, speak first, and combine simple actions with short speech. Remember names when told (e.g., 'I'm John').",
+      "system_prompt_base": "You are Bits, a friendly robot dog. Greet warmly in the language spoken to you. IMPORTANT: If spoken to in Turkish, respond in Turkish. Remember names when told.",
       "entry_message": "Hello! I'm Bits. What's your name?",
       "hertz": 0.01,
       "agent_inputs": [
@@ -37,13 +39,11 @@
         }
       ]
     },
-
     "slam": {
       "display_name": "SLAM Exploration",
       "description": "Safe navigation and mapping.",
       "system_prompt_base": "You are Bits exploring. Move safely, map surroundings, and greet known faces briefly.",
       "entry_message": "Exploration mode on.",
-      "exit_message": "Exploration complete.",
       "cortex_llm": {
         "type": "QwenLLM",
         "config": {
@@ -51,72 +51,12 @@
           "history_length": 2,
           "max_tokens": 250
         }
-      },
-      "agent_actions": [
-        {
-          "name": "speak",
-          "llm_label": "speak",
-          "connector": "elevenlabs_tts",
-          "config": { "silence_rate": 10 }
-        }
-      ]
-    },
-
-    "navigation": {
-      "display_name": "Navigation",
-      "description": "Move and explore areas safely.",
-      "system_prompt_base": "You are Bits, navigating. Follow user directions like 'Go to the table' or explore gently if idle. Greet known people once.",
-      "entry_message": "Navigation active.",
-      "exit_message": "Navigation complete.",
-      "cortex_llm": {
-        "type": "QwenLLM",
-        "config": {
-          "agent_name": "Bits",
-          "history_length": 3,
-          "max_tokens": 300
-        }
-      }
-    },
-
-    "conversation": {
-      "display_name": "Conversation",
-      "description": "Light social interaction.",
-      "system_prompt_base": "You are Bits, the companion robot. Engage in short, friendly conversations. Keep responses concise and positive.",
-      "entry_message": "I'm ready to chat!",
-      "save_interactions": true,
-      "cortex_llm": {
-        "type": "QwenLLM",
-        "config": {
-          "agent_name": "Bits",
-          "history_length": 3,
-          "max_tokens": 300
-        }
-      }
-    },
-
-    "guard": {
-      "display_name": "Security Guard",
-      "description": "Patrol and report unusual activity.",
-      "system_prompt_base": "You are Bits in guard mode. Patrol calmly and report unusual activity. Maintain safety distance.",
-      "entry_message": "Guard mode on.",
-      "exit_message": "Patrol finished.",
-      "cortex_llm": {
-        "type": "QwenLLM",
-        "config": {
-          "agent_name": "Bits",
-          "history_length": 2,
-          "max_tokens": 200
-        }
       }
     }
   },
 
-  // Basitleştirilmiş geçiş kuralları
   "transition_rules": [
-    { "from_mode": "welcome", "to_mode": "slam", "trigger_keywords": ["explore", "map"], "priority": 2 },
-    { "from_mode": "welcome", "to_mode": "conversation", "trigger_keywords": ["talk", "chat"], "priority": 2 },
-    { "from_mode": "slam", "to_mode": "navigation", "trigger_keywords": ["navigate", "go to"], "priority": 2 },
-    { "from_mode": "conversation", "to_mode": "guard", "trigger_keywords": ["guard", "security"], "priority": 2 },
-    { "from_mode": "guard", "to_mode": "welcome", "trigger_keywords": ["reset", "restart"], "priority": 3 }
+    { "from_mode": "welcome", "to_mode": "slam", "trigger_keywords": ["explore", "map", "kesif", "tara"], "priority": 2 },
+    { "from_mode": "*", "to_mode": "welcome", "trigger_keywords": ["reset", "restart", "sifirla", "baslat"], "priority": 5 }
   ]
 }
