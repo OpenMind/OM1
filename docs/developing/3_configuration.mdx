@@ -77,6 +77,10 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 ## version
 
+The version field specifies the runtime configuration version. It is required for both single-mode and multi-mode configs.
+
+This field ensures that configuration files remain compatible as the runtime evolves. When the version in a config doesn’t match what the runtime expects, developers receive clear logs and errors instead of silent failures or unpredictable behavior.
+
 ### Runtime support
 
 The runtime/version.py module handles:
