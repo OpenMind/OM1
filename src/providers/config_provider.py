@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-import shutil
-from typing import Any, Dict
 from uuid import uuid4
 
 import json5
@@ -35,6 +33,7 @@ class ConfigProvider:
         self.running = False
 
         self.config_path = self._get_runtime_config_path()
+
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
@@ -103,76 +102,21 @@ class ConfigProvider:
         Handle request to update runtime configuration.
         """
         try:
-            try:
-                new_config: Any = json5.loads(config_str)
+            new_config = json5.loads(config_str)
 
-                # ensure parsed object is a dictionary
-                if not isinstance(new_config, dict):
-                    raise ValueError("Configuration root must be a JSON object")
+            temp_path = self.config_path + ".tmp"
+            with open(temp_path, "w") as f:
+                json.dump(new_config, f, indent=2)
 
-            except ValueError as e:
-                error_msg = f"Invalid JSON5 syntax: {e}"
-                logging.error(error_msg)
-                self._send_error_response(request_id, error_msg)
-                return
-            except Exception as e:
-                error_msg = f"Failed to parse configuration: {e}"
-                logging.error(error_msg)
-                self._send_error_response(request_id, error_msg)
-                return
+            os.rename(temp_path, self.config_path)
 
+            logging.info(f"Updated runtime config file: {self.config_path}")
 
-            # ensure backup_path always defined
-            backup_path: str | None = None
-
-            try:
-                if os.path.exists(self.config_path):
-                    backup_path = self.config_path + ".backup"
-                    try:
-                        shutil.copy2(self.config_path, backup_path)
-                        logging.debug(f"Created backup: {backup_path}")
-                    except Exception as backup_error:
-                        logging.warning(
-                            f"Failed to create backup: {backup_error}. "
-                            "Continuing with update..."
-                        )
-
-                temp_path = self.config_path + ".tmp"
-                with open(temp_path, "w") as f:
-                    json.dump(new_config, f, indent=2)
-
-                os.rename(temp_path, self.config_path)
-
-                if backup_path and os.path.exists(backup_path):
-                    try:
-                        os.remove(backup_path)
-                        logging.debug(f"Removed backup: {backup_path}")
-                    except Exception:
-                        pass
-
-                logging.info(
-                    f"Successfully updated runtime config file: {self.config_path}"
-                )
-                self._send_config_response(request_id)
-
-            except OSError as e:
-                error_msg = f"File system error while writing config: {e}"
-                logging.error(error_msg)
-
-                if backup_path and os.path.exists(backup_path):
-                    try:
-                        shutil.copy2(backup_path, self.config_path)
-                        logging.info("Restored config from backup after write failure")
-                    except Exception:
-                        pass
-
-                self._send_error_response(request_id, error_msg)
-                return
+            self._send_config_response(request_id)
 
         except Exception as e:
-            error_msg = f"Unexpected error in config update: {e}"
-            logging.error(error_msg, exc_info=True)
-            self._send_error_response(request_id, error_msg)
+            logging.error(f"Failed to update config: {e}")
+            self._send_error_response(request_id, f"Failed to update config: {e}")
 
     def _send_config_response(self, request_id: String):
         """
@@ -217,7 +161,7 @@ class ConfigProvider:
         except Exception as e:
             logging.error(f"Failed to send error response: {e}")
 
-    def _get_config_snapshot(self) -> Dict[str, Any]:
+    def _get_config_snapshot(self) -> dict:
         """
         Get a snapshot of the current runtime configuration.
         """
@@ -229,9 +173,7 @@ class ConfigProvider:
                 return {}
 
             with open(self.config_path, "r") as f:
-                data = json5.load(f)
-
-            return data if isinstance(data, dict) else {}
+                return json5.load(f)
 
         except Exception as e:
             logging.error(f"Failed to read config file {self.config_path}: {e}")

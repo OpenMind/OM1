@@ -21,6 +21,53 @@ from runtime.version import verify_runtime_version
 app = typer.Typer()
 
 
+def validate_config_schema(raw_config: dict, is_multi_mode: bool) -> None:
+    """
+    Validate the configuration against the appropriate schema.
+
+    Parameters
+    ----------
+    raw_config : dict
+        The raw configuration dictionary to validate.
+    is_multi_mode : bool
+        Whether this is a multi-mode configuration.
+
+    Raises
+    ------
+    typer.Exit
+        If validation fails or schema file is not found.
+    """
+    try:
+        schema_file = (
+            "multi_mode_schema.json" if is_multi_mode else "single_mode_schema.json"
+        )
+        schema_path = os.path.join(
+            os.path.dirname(__file__), "../config/schema", schema_file
+        )
+
+        if not os.path.exists(schema_path):
+            logging.error(
+                f"Schema file not found: {schema_path}. Cannot validate configuration."
+            )
+            raise typer.Exit(1)
+
+        with open(schema_path, "r") as f:
+            schema = json.load(f)
+
+        validate(instance=raw_config, schema=schema)
+        logging.debug(
+            f"Schema validation passed for {'multi-mode' if is_multi_mode else 'single-mode'} configuration"
+        )
+
+    except ValidationError as e:
+        field_path = ".".join(str(p) for p in e.path) if e.path else "root"
+        logging.error(f"Schema validation failed at field '{field_path}': {e.message}")
+        raise typer.Exit(1)
+    except Exception as e:
+        logging.error(f"Schema validation error: {e}")
+        raise typer.Exit(1)
+
+
 def setup_config_file(config_name: Optional[str]) -> Tuple[str, str]:
     """
     Set up the configuration file.
@@ -104,50 +151,17 @@ def start(
         with open(config_path, "r") as f:
             raw_config = json5.load(f)
 
-        # Validate JSON5 syntax
-        if not isinstance(raw_config, dict):
-            logging.error("Configuration root must be a JSON object")
-            raise typer.Exit(1)
-
-        # Detect config type and validate schema
         is_multi_mode = "modes" in raw_config and "default_mode" in raw_config
 
+        validate_config_schema(raw_config, is_multi_mode)
+
         try:
-            schema_file = (
-                "multi_mode_schema.json" if is_multi_mode else "single_mode_schema.json"
+            config_version = (
+                raw_config.get("version") if isinstance(raw_config, dict) else None
             )
-            schema_path = os.path.join(
-                os.path.dirname(__file__), "../config/schema", schema_file
+            verify_runtime_version(
+                config_version, config_name=config_name or "configuration"
             )
-
-            if not os.path.exists(schema_path):
-                logging.error(
-                    f"Schema file not found: {schema_path}. Cannot validate configuration."
-                )
-                raise typer.Exit(1)
-
-            with open(schema_path, "r") as f:
-                schema = json.load(f)
-
-            validate(instance=raw_config, schema=schema)
-            logging.debug(
-                f"Schema validation passed for {'multi-mode' if is_multi_mode else 'single-mode'} configuration"
-            )
-
-        except ValidationError as e:
-            field_path = ".".join(str(p) for p in e.path) if e.path else "root"
-            logging.error(
-                f"Schema validation failed at field '{field_path}': {e.message}"
-            )
-            raise typer.Exit(1)
-        except Exception as e:
-            logging.error(f"Schema validation error: {e}")
-            raise typer.Exit(1)
-
-        # Verify runtime version compatibility
-        try:
-            config_version = raw_config.get("version") if isinstance(raw_config, dict) else None
-            verify_runtime_version(config_version, config_name=config_name or "configuration")
             logging.debug(f"Version compatibility verified: {config_version}")
         except ValueError as e:
             logging.error(f"Version compatibility check failed: {e}")
