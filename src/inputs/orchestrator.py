@@ -36,9 +36,10 @@ class InputOrchestrator:
         """
         input_tasks = [
             asyncio.create_task(
-                self._listen_to_input_with_error_handling(input), name=f"input-{i}"
+                self._listen_to_input_with_error_handling(input),
+                name=f"input_{type(input).__name__}",
             )
-            for i, input in enumerate(self.inputs)
+            for input in self.inputs
         ]
         await asyncio.gather(*input_tasks, return_exceptions=True)
 
