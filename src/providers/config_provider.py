@@ -26,6 +26,9 @@ class ConfigProvider:
     """
 
     def __init__(self):
+        """
+        Initialize the ConfigProvider.
+        """
         self.session = None
         self.config_response_publisher = None
         self.config_request_subscriber = None
@@ -35,13 +38,18 @@ class ConfigProvider:
         self._initialize_zenoh()
 
     def _initialize_zenoh(self):
+        """
+        Initialize Zenoh session, publishers, and subscriber.
+        """
         try:
             self.session = open_zenoh_session()
 
+            # Publisher for config responses
             self.config_response_publisher = self.session.declare_publisher(
                 "om/config/response"
             )
 
+            # Subscriber for config requests
             self.config_request_subscriber = self.session.declare_subscriber(
                 "om/config/request", self._handle_config_request
             )
@@ -52,19 +60,39 @@ class ConfigProvider:
             logging.error(f"Failed to initialize ConfigProvider Zenoh session: {e}")
 
     def _get_runtime_config_path(self) -> str:
+        """
+        Get the path to the runtime config file in memory folder.
+
+        Returns
+        -------
+        str
+            Path to config/memory/.runtime.json5
+        """
         memory_folder_path = os.path.join(
             os.path.dirname(__file__), "../../config", "memory"
         )
         return os.path.abspath(os.path.join(memory_folder_path, ".runtime.json5"))
 
     def _handle_config_request(self, sample: zenoh.Sample):
+        """
+        Handle incoming config requests from Zenoh subscriber.
+
+        Responds with current runtime configuration.
+
+        Parameters
+        ----------
+        sample : zenoh.Sample
+            The Zenoh sample containing the serialized ConfigRequest message.
+        """
         try:
             request = ConfigRequest.deserialize(sample.payload.to_bytes())
             logging.debug(f"Received config request: {request.request_id}")
 
             if request.config and request.config.data:
+                # This is a set_config request
                 self._handle_set_config(request.request_id, request.config.data)
             else:
+                # This is a get_config request
                 self._send_config_response(request.request_id)
 
         except Exception as e:
@@ -147,7 +175,11 @@ class ConfigProvider:
             self._send_error_response(request_id, error_msg)
 
     def _send_config_response(self, request_id: String):
+        """
+        Send current runtime configuration as response.
+        """
         try:
+            # Get current config
             config_snapshot = self._get_config_snapshot()
             config_json_str = json.dumps(config_snapshot, indent=2)
 
@@ -167,6 +199,9 @@ class ConfigProvider:
             self._send_error_response(request_id, str(e))
 
     def _send_error_response(self, request_id: String, error_message: str):
+        """
+        Send error response.
+        """
         try:
             response = ConfigResponse(
                 header=prepare_header(str(uuid4())),
@@ -183,6 +218,9 @@ class ConfigProvider:
             logging.error(f"Failed to send error response: {e}")
 
     def _get_config_snapshot(self) -> Dict[str, Any]:
+        """
+        Get a snapshot of the current runtime configuration.
+        """
         try:
             if not os.path.exists(self.config_path):
                 logging.warning(
@@ -201,7 +239,7 @@ class ConfigProvider:
 
     def stop(self):
         """
-        Stop the ConfigProvider and close the Zenoh session.
+        Stop the ConfigProvider and cleanup Zenoh session.
         """
         if not self.running:
             logging.info("ConfigProvider is not running")
