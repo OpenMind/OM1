@@ -122,6 +122,18 @@ class FacePresenceProvider:
             Polling rate in events per second (e.g., 5.0 → every 0.2s).
         timeout_s : float, default 2.0
             HTTP request timeout in seconds.
+        prefer_recent : bool, default True
+            If True, use frame-based suppression with `recent_name_frames` data.
+            If False, use immediate snapshot from `now` array.
+        unknown_frac_threshold : float, default 0.15
+            Fraction threshold for unknown face suppression. When frames_recent
+            >= min_obs_window and unknown_fraction < this threshold, unknowns
+            are suppressed (reported as 0).
+        unknown_min_count : int, default 6
+            Minimum count threshold for unknown faces (reserved for future use).
+        min_obs_window : int, default 24
+            Minimum number of recent frames required before applying unknown
+            suppression logic. Used in conjunction with unknown_frac_threshold.
         """
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
