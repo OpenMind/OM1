@@ -15,9 +15,46 @@ rclpy.init()
 class ROS2PublisherProvider(Node):
     """
     Publisher provider for ROS 2.
+
+    This class extends ROS 2 Node to provide a publisher that queues and
+    publishes messages asynchronously in a separate thread. Messages are
+    added to a queue and processed sequentially by a background thread.
+
+    Attributes
+    ----------
+    publisher_ : rclpy.publisher.Publisher
+        The ROS 2 publisher instance for String messages.
+    _pending_messages : Queue
+        Queue for pending messages to be published.
+    _lock : threading.Lock
+        Lock for thread-safe operations.
+    running : bool
+        Flag indicating if the publisher thread is running.
+    _thread : Optional[threading.Thread]
+        Background thread for processing and publishing messages.
     """
 
     def __init__(self, topic: str = "speak_topic"):
+        """
+        Initialize the ROS 2 Publisher Provider.
+
+        Parameters
+        ----------
+        topic : str, optional
+            The ROS 2 topic name to publish messages to. Defaults to
+            "speak_topic". The publisher uses a queue size of 10.
+
+        Notes
+        -----
+        The initialization process:
+        1. Initializes the ROS 2 node with name "ROS2_publisher_provider"
+        2. Creates a String message publisher on the specified topic
+        3. Sets up internal message queue and threading constructs
+
+        If node initialization or publisher creation fails, errors are
+        logged but the initialization continues to allow graceful
+        degradation.
+        """
         try:
             super().__init__("ROS2_publisher_provider")
         except Exception as e:
