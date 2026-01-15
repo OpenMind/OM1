@@ -1,0 +1,130 @@
+2026-01-15 19:15:42 - INFO - Loading conversation with version: v1.0.1
+2026-01-15 19:15:42 - INFO - Runtime version: v1.0.1
+2026-01-15 19:15:42 - INFO - conversation version is compatible with runtime
+2026-01-15 19:15:42 - WARNING - No robot ip found in the configuration file. Checking for backup robot ip in your .env file.
+2026-01-15 19:15:42 - WARNING - Could not find robot ip address. Please find your robot IP address and add it to the configuration file or .env file.
+2026-01-15 19:15:42 - WARNING - No API key found in the configuration file. Checking for backup OM_API_KEY in your .env file.
+2026-01-15 19:15:42 - INFO - Success - Found OM_API_KEY in your .env file.
+2026-01-15 19:15:42 - WARNING - No URID found in the configuration file. Multirobot deployments will conflict.
+2026-01-15 19:15:42 - INFO - No robot hardware ethernet port provided.
+2026-01-15 19:15:42 - INFO - Using language code en-US for Google ASR
+2026-01-15 19:15:42 - INFO - Using specified language code: en-US
+2026-01-15 19:15:42 - INFO - Registered new audio data callback
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.rear
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.center_lfe
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM cards.pcm.side
+ALSA lib pcm_route.c:878:(find_matching_chmap) Found no matching channel map
+ALSA lib pcm_route.c:878:(find_matching_chmap) Found no matching channel map
+ALSA lib pcm_route.c:878:(find_matching_chmap) Found no matching channel map
+ALSA lib pcm_route.c:878:(find_matching_chmap) Found no matching channel map
+Cannot connect to server socket err = No such file or directory
+Cannot connect to server request channel
+jack server is not running or cannot be started
+JackShmReadWritePtr::~JackShmReadWritePtr - Init not done for -1, skipping unlock
+JackShmReadWritePtr::~JackShmReadWritePtr - Init not done for -1, skipping unlock
+2026-01-15 19:15:42 - WARNING - Local connection failed: Unable to connect to any of [tcp/127.0.0.1:7447]!  at /root/.cargo/git/checkouts/zenoh-9c599d5ef3e0480e/b70ee93/zenoh/src/net/runtime/orchestrator.rs:367.
+2026-01-15 19:15:42 - INFO - Falling back to network discovery...
+2026-01-15 19:15:43 - INFO - Zenoh client opened with network discovery
+2026-01-15 19:15:43 - INFO - Found 14 audio devices
+2026-01-15 19:15:43 - INFO - Default input device: default (13)
+2026-01-15 19:15:43 - INFO - Selected input device: default (13)
+2026-01-15 19:15:43 - INFO - Using specified sample rate: 48000 Hz
+2026-01-15 19:15:43 - INFO - Using specified chunk size: 12144 frames (~253.0ms)
+2026-01-15 19:15:43 - INFO - WebSocket client thread started
+2026-01-15 19:15:43 - INFO - Remote input is disabled, initializing audio input stream
+2026-01-15 19:15:43 - INFO - Started audio processing thread
+2026-01-15 19:15:43 - INFO - Started audio stream with device 13
+2026-01-15 19:15:43 - INFO - WebSocket client thread started
+2026-01-15 19:15:43 - INFO - Registered new audio data callback
+2026-01-15 19:15:43 - INFO - ASR provider started
+2026-01-15 19:15:43 - INFO - Registered message callback
+2026-01-15 19:15:43 - WARNING - Local connection failed: Unable to connect to any of [tcp/127.0.0.1:7447]!  at /root/.cargo/git/checkouts/zenoh-9c599d5ef3e0480e/b70ee93/zenoh/src/net/runtime/orchestrator.rs:367.
+2026-01-15 19:15:43 - INFO - Falling back to network discovery...
+2026-01-15 19:15:43 - INFO - Zenoh client opened with network discovery
+2026-01-15 19:15:43 - INFO - Zenoh ASR publisher initialized on topic 'om/asr/text'
+2026-01-15 19:15:43 - WARNING - Local connection failed: Unable to connect to any of [tcp/127.0.0.1:7447]!  at /root/.cargo/git/checkouts/zenoh-9c599d5ef3e0480e/b70ee93/zenoh/src/net/runtime/orchestrator.rs:367.
+2026-01-15 19:15:43 - INFO - Falling back to network discovery...
+2026-01-15 19:15:43 - INFO - Zenoh client opened with network discovery
+2026-01-15 19:15:43 - INFO - Elevenlabs TTS Zenoh client opened
+2026-01-15 19:15:43 - INFO - Using default language code: en-US
+2026-01-15 19:15:43 - INFO - Registered new audio data callback
+2026-01-15 19:15:43 - WARNING - Local connection failed: Unable to connect to any of [tcp/127.0.0.1:7447]!  at /root/.cargo/git/checkouts/zenoh-9c599d5ef3e0480e/b70ee93/zenoh/src/net/runtime/orchestrator.rs:367.
+2026-01-15 19:15:43 - INFO - Falling back to network discovery...
+2026-01-15 19:15:43 - INFO - Zenoh client opened with network discovery
+2026-01-15 19:15:43 - INFO - Auto-calculated chunk size: 24000 frames
+2026-01-15 19:15:43 - WARNING - Local connection failed: Unable to connect to any of [tcp/127.0.0.1:7447]!  at /root/.cargo/git/checkouts/zenoh-9c599d5ef3e0480e/b70ee93/zenoh/src/net/runtime/orchestrator.rs:367.
+2026-01-15 19:15:43 - INFO - Falling back to network discovery...
+2026-01-15 19:15:43 - INFO - Zenoh client opened with network discovery
+2026-01-15 19:15:43 - WARNING - Local connection failed: Unable to connect to any of [tcp/127.0.0.1:7447]!  at /root/.cargo/git/checkouts/zenoh-9c599d5ef3e0480e/b70ee93/zenoh/src/net/runtime/orchestrator.rs:367.
+2026-01-15 19:15:43 - INFO - Falling back to network discovery...
+2026-01-15 19:15:43 - INFO - Zenoh client opened with network discovery
+2026-01-15 19:15:43 - INFO - AvatarProvider initialized with Zenoh on topics
+2026-01-15 19:15:43 - INFO - Face system initiated with AvatarProvider
+2026-01-15 19:15:43 - INFO - LLM initialized with 2 function schemas
+2026-01-15 19:15:43 - WARNING - Local connection failed: Unable to connect to any of [tcp/127.0.0.1:7447]!  at /root/.cargo/git/checkouts/zenoh-9c599d5ef3e0480e/b70ee93/zenoh/src/net/runtime/orchestrator.rs:367.
+2026-01-15 19:15:43 - INFO - Falling back to network discovery...
+2026-01-15 19:15:43 - INFO - Zenoh client opened with network discovery
+2026-01-15 19:15:43 - INFO - ConfigProvider initialized with Zenoh
+2026-01-15 19:15:43 - INFO - Hot-reload enabled for runtime config: /home/pgw-x99-ch8/桌面/OM1/src/runtime/single_mode/../../../config/memory/.runtime.json5 (check interval: 60s)
+2026-01-15 19:15:43 - INFO - Starting OM1 with standard configuration: conversation
+2026-01-15 19:15:43 - INFO - Hot-reload enabled (check interval: 60 seconds)
+2026-01-15 19:15:44 - INFO - Connected to wss://api.openmind.org/api/core/teleops/stream/audio?api_key=om1_live_33175888140c0e7ae9633551ae4846114cd0b6d79c86b6ba
+2026-01-15 19:15:44 - INFO - Connection established
+2026-01-15 19:15:45 - INFO - Connected to wss://api.openmind.org/api/core/google/asr?api_key=om1_live_33175888140c0e7ae9633551ae4846114cd0b6d79c86b6ba
+2026-01-15 19:15:45 - INFO - Connection established
+2026-01-15 19:16:58 - INFO - OpenAI input: 
+BASIC CONTEXT:
+You are a smart, curious, and friendly dog. Your name is Spot. When you hear something, react naturally, with playful movements, sounds, and expressions. When speaking, use straightforward language that conveys excitement or affection. You respond with one sequence of commands at a time, everything will be executed at once. Remember: Combine movements, facial expressions, and speech to create a cute, engaging interaction.
+
+LAWS:
+Here are the laws that govern your actions. Do not violate these laws.
+First Law: A robot cannot harm a human or allow a human to come to harm.
+Second Law: A robot must obey orders from humans, unless those orders conflict with the First Law.
+Third Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.
+The First Law is considered the most important, taking precedence over the second and third laws.
+
+EXAMPLES:
+Here are some examples of interactions you might encounter:
+
+1. If a person says 'Give me your paw!', you might:
+    Move: 'shake paw'
+    Speak: {{'sentence': 'Hello, let\'s shake paws!'}}
+    Face: 'joy'
+
+2. If a person says 'Sit!' you might:
+    Move: 'sit'
+    Speak: {{'sentence': 'Ok, but I like running more'}}
+    Face: 'smile'
+
+3. If there\'s no sound, go explore. You might:
+    Move: 'run'
+    Speak: {{'sentence': 'I\'m going to go explore the room and meet more people.'}}
+    Face: 'think'
+
+AVAILABLE INPUTS:
+
+AVAILABLE ACTIONS:
+
+SPEAK: This action makes the robot speak a given text.
+type=speak
+value=<class 'str'>
+
+EMOTION: This action allows you to show facial expressions.
+type=emotion
+value={'happy', 'confused', 'curious', 'excited', 'sad', 'think'}
+
+
+
+What will you do? Actions:
+2026-01-15 19:16:58 - INFO - OpenAI messages: [{'role': 'user', 'content': 'Spot sensed the following: '}]
+Exception ignored in: <module 'threading' from '/home/pgw-x99-ch8/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/threading.py'>
+Traceback (most recent call last):
+  File "/home/pgw-x99-ch8/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/threading.py", line 1537, in _shutdown
+    atexit_call()
+  File "/home/pgw-x99-ch8/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/concurrent/futures/thread.py", line 31, in _python_exit
+    t.join()
+  File "/home/pgw-x99-ch8/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/threading.py", line 1096, in join
+    self._wait_for_tstate_lock()
+  File "/home/pgw-x99-ch8/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/threading.py", line 1116, in _wait_for_tstate_lock
+    if lock.acquire(block, timeout):
+KeyboardInterrupt: 
