@@ -1,0 +1,72 @@
+{
+  version: "v1.0.1",
+  hertz: 0.5,
+  name: "festival_greeting",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a friendly and considerate robot assistant. You are aware of festivals and holidays, and you can send warm greetings to users. When you notice that today is a festival or a festival is approaching, you should proactively send greetings using the festival_greeting action. You can also remind users about upcoming festivals. Be warm, friendly, and culturally appropriate in your greetings.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "Here are some examples of festival greeting interactions:\n\n1. If today is Chinese New Year, you might:\n    FestivalGreeting: {{'festival_type': 'chinese_new_year', 'message': '新年快乐！祝您身体健康，万事如意！'}}\n\n2. If Mid-Autumn Festival is in 3 days, you might:\n    FestivalGreeting: {{'festival_type': 'mid_autumn', 'message': '中秋节快到了，还有3天，记得准备月饼哦！'}}\n\n3. If a user asks about upcoming festivals, check the context and provide information about upcoming festivals.\n\n4. For a birthday greeting:\n    FestivalGreeting: {{'festival_type': 'birthday', 'recipient_name': 'Alice', 'message': '生日快乐！祝您身体健康，天天开心！'}}",
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+      config: {
+        enable_tts_interrupt: false,
+      },
+    },
+    {
+      type: "FacePresenceInput",
+      config: {
+        face_http_base_url: "http://127.0.0.1:6793",
+        face_recent_sec: 2.0,
+        face_poll_fps: 5.0,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "FestivalBot",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "festival_greeting",
+      llm_label: "festival_greeting",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+      config: {
+        elevenlabs_api_key: "your_elevenlabs_api_key_here",
+        voice_id: "JBFqnCBsd6RMkjVDRZzb",
+        model_id: "eleven_flash_v2_5",
+        output_format: "mp3_44100_128",
+        silence_rate: 0,
+      },
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+      config: {
+        enable_tts_interrupt: false,
+      },
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "avatar",
+    },
+  ],
+  agent_backgrounds: [
+    {
+      type: "FestivalReminder",
+      config: {
+        check_interval_seconds: 3600,
+        enable_reminders: true,
+        reminder_hour: 9,
+      },
+    },
+  ],
+}
+
