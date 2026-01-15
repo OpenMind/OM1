@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
@@ -138,21 +139,58 @@ class ModeManager:
 
         This file is used for hot reload monitoring. When this file changes,
         the system will reload the configuration.
+
+        Uses atomic write with backup mechanism for safe file operations.
         """
         runtime_config_path = self._get_runtime_config_path()
+        backup_path: Optional[str] = None
 
         try:
             runtime_config = mode_config_to_dict(self.config)
 
+            # Create backup if file exists
+            if os.path.exists(runtime_config_path):
+                backup_path = runtime_config_path + ".backup"
+                try:
+                    shutil.copy2(runtime_config_path, backup_path)
+                    logging.debug(f"Created backup: {backup_path}")
+                except Exception as backup_error:
+                    logging.warning(
+                        f"Failed to create backup: {backup_error}. "
+                        "Continuing with update..."
+                    )
+
+            # Write to temporary file first
             temp_file = runtime_config_path + ".tmp"
-            with open(temp_file, "w") as f:
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json5.dump(runtime_config, f, indent=2)
 
+            # Atomic rename
             os.rename(temp_file, runtime_config_path)
             logging.debug(f"Runtime config file created/updated: {runtime_config_path}")
 
+            # Remove backup after successful write
+            if backup_path and os.path.exists(backup_path):
+                try:
+                    os.remove(backup_path)
+                    logging.debug(f"Removed backup: {backup_path}")
+                except Exception:
+                    pass
+
+        except OSError as e:
+            error_msg = f"File system error while writing runtime config: {e}"
+            logging.error(error_msg)
+
+            # Restore from backup if available
+            if backup_path and os.path.exists(backup_path):
+                try:
+                    shutil.copy2(backup_path, runtime_config_path)
+                    logging.info("Restored runtime config from backup after write failure")
+                except Exception:
+                    pass
+
         except Exception as e:
-            logging.error(f"Error creating runtime config file: {e}")
+            logging.error(f"Error creating runtime config file: {e}", exc_info=True)
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         """
@@ -895,14 +933,29 @@ class ModeManager:
 
         This method is called after successful mode transitions to persist
         the current state for restoration on next startup.
+
+        Uses atomic write with backup mechanism for safe file operations.
         """
         if not self.config.mode_memory_enabled:
             return
 
         state_file = self._get_state_file_path()
+        backup_path: Optional[str] = None
 
         try:
             os.makedirs(os.path.dirname(state_file), exist_ok=True)
+
+            # Create backup if file exists
+            if os.path.exists(state_file):
+                backup_path = state_file + ".backup"
+                try:
+                    shutil.copy2(state_file, backup_path)
+                    logging.debug(f"Created backup: {backup_path}")
+                except Exception as backup_error:
+                    logging.warning(
+                        f"Failed to create backup: {backup_error}. "
+                        "Continuing with update..."
+                    )
 
             state_data = {
                 "last_active_mode": self.state.current_mode,
@@ -911,12 +964,34 @@ class ModeManager:
                 "transition_history": self.state.transition_history[-10:],
             }
 
+            # Write to temporary file first
             temp_file = state_file + ".tmp"
-            with open(temp_file, "w") as f:
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json.dump(state_data, f, indent=2)
 
+            # Atomic rename
             os.rename(temp_file, state_file)
             logging.debug(f"Mode state saved to {state_file}")
 
+            # Remove backup after successful write
+            if backup_path and os.path.exists(backup_path):
+                try:
+                    os.remove(backup_path)
+                    logging.debug(f"Removed backup: {backup_path}")
+                except Exception:
+                    pass
+
+        except OSError as e:
+            error_msg = f"File system error while writing mode state: {e}"
+            logging.error(error_msg)
+
+            # Restore from backup if available
+            if backup_path and os.path.exists(backup_path):
+                try:
+                    shutil.copy2(backup_path, state_file)
+                    logging.info("Restored mode state from backup after write failure")
+                except Exception:
+                    pass
+
         except Exception as e:
-            logging.error(f"Error saving mode state: {e}")
+            logging.error(f"Error saving mode state: {e}", exc_info=True)
