@@ -59,6 +59,7 @@ def mock_background():
 def sample_mode_config():
     """Sample mode configuration for testing."""
     return ModeConfig(
+        version="v1.0.0",
         name="test_mode",
         display_name="Test Mode",
         description="A test mode for unit testing",
@@ -153,6 +154,7 @@ class TestModeConfig:
     def test_mode_config_defaults(self):
         """Test mode config with default values."""
         config = ModeConfig(
+            version="v1.0.0",
             name="minimal_mode",
             display_name="Minimal Mode",
             description="Minimal test mode",
@@ -288,11 +290,11 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading all component types."""
-        mock_load_input.return_value = lambda config: mock_sensor
-        mock_load_simulator.return_value = lambda config: mock_simulator
+        mock_load_input.return_value = mock_sensor
+        mock_load_simulator.return_value = mock_simulator
         mock_load_action.return_value = mock_action
-        mock_load_background.return_value = lambda config: mock_background
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_background.return_value = mock_background
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_inputs = [{"type": "test_input", "config": {}}]
         sample_mode_config._raw_simulators = [{"type": "test_simulator", "config": {}}]
@@ -323,7 +325,7 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading components with global LLM configuration."""
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_llm = None
         sample_system_config.global_cortex_llm = {"type": "global_llm", "config": {}}
@@ -331,7 +333,7 @@ class TestLoadModeComponents:
         _load_mode_components(sample_mode_config, sample_system_config)
 
         assert sample_mode_config.cortex_llm == mock_llm
-        mock_load_llm.assert_called_once_with("global_llm")
+        mock_load_llm.assert_called_once()
 
     def test_load_mode_components_no_llm_raises_error(
         self,
@@ -363,6 +365,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_env_fallback(self):
         """Test that environment variables are used as fallback."""
         config_data = {
+            "version": "v1.0.1",
             "name": "env_test",
             "default_mode": "default",
             "robot_ip": "",
@@ -400,6 +403,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
+            "version": "v1.0.1",
             "name": "unitree_test",
             "default_mode": "default",
             "unitree_ethernet": "eth0",
@@ -426,6 +430,37 @@ class TestLoadModeConfig:
 
                 assert config.unitree_ethernet == "eth0"
                 mock_load_unitree.assert_called_once_with("eth0")
+
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_mode_config_invalid_version(self):
+        """Test load_mode_config with invalid version format."""
+        config_data = {
+            "version": "invalid_version",
+            "name": "invalid_version_test",
+            "default_mode": "default",
+            "modes": {
+                "default": {
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    "system_prompt_base": "Test prompt",
+                }
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.multi_mode.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                with pytest.raises(ValueError, match="Invalid version format"):
+                    load_mode_config("invalid_version_test")
 
         finally:
             os.unlink(temp_file)

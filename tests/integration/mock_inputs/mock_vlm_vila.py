@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 import logging
 import threading
 import time
@@ -7,10 +8,10 @@ from queue import Queue
 from typing import List, Optional
 
 import cv2
+from om1_vlm import VideoStream
 
-from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
-from inputs.plugins.vlm_vila import Message, VLMVila
+from inputs.plugins.vlm_vila import Message, VLMVila, VLMVilaConfig
 from providers.io_provider import IOProvider
 from providers.vlm_vila_provider import VLMVilaProvider
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
@@ -18,7 +19,7 @@ from tests.integration.mock_inputs.data_providers.mock_image_provider import (
 )
 
 
-class MockVideoStream:
+class MockVideoStream(VideoStream):
     """
     Mock video stream that sends mock images to frame callbacks instead of camera frames.
     """
@@ -149,7 +150,7 @@ class MockVideoStream:
                 # Process frame similar to original VideoStream
                 if elapsed <= 1.5 * frame_time and self.frame_callbacks:
                     _, buffer = cv2.imencode(".jpg", mock_image, self.encode_quality)
-                    frame_data = base64.b64encode(buffer).decode("utf-8")
+                    frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
                     # Send to all registered callbacks
                     for frame_callback in self.frame_callbacks:
@@ -206,13 +207,13 @@ class MockVLM_Vila(VLMVila):
     the mock image provider, while maintaining all the real object detection logic.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMVilaConfig = VLMVilaConfig()):
         """
         Initialize with the real VLM implementation but without opening camera.
 
         Parameters
         ----------
-        config : SensorConfig, optional
+        config : VLMVilaConfig, optional
             Configuration for the sensor
         """
 
@@ -263,8 +264,6 @@ class MockVLM_Vila(VLMVila):
 
         # Add the missing JSON parsing logic from the real VLMVila
         try:
-            import json
-
             json_message = json.loads(raw_message)
             if "vlm_reply" in json_message:
                 vlm_reply = json_message["vlm_reply"]

@@ -154,12 +154,19 @@ async def test_message_handler_basic_execution(sample_context):
     config = {"message": "Mode: {mode_name}"}
     handler = MessageHookHandler(config)
 
+    mock_tts = Mock()
+    mock_tts.add_pending_message = Mock()
+
     with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        result = await handler.execute(sample_context)
-        assert result is True
-        mock_logging.info.assert_called_once_with(
-            "Lifecycle hook message: Mode: test_mode"
-        )
+        with patch(
+            "runtime.multi_mode.hook.ElevenLabsTTSProvider", return_value=mock_tts
+        ):
+            result = await handler.execute(sample_context)
+            assert result is True
+            mock_logging.info.assert_called_once_with(
+                "Lifecycle hook message: Mode: test_mode"
+            )
+            mock_tts.add_pending_message.assert_called_once_with("Mode: test_mode")
 
 
 @pytest.mark.asyncio
