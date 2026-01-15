@@ -32,7 +32,7 @@ class InputOrchestrator:
         Start listening to all input sources concurrently.
 
         Creates and manages async tasks for each input source.
-        Each input runs independently - if one fails, others continue.
+        If one input fails, other inputs continue operating.
         """
         input_tasks = [
             asyncio.create_task(

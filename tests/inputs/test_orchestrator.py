@@ -66,14 +66,11 @@ async def test_listen_multiple_inputs():
 
 @pytest.mark.asyncio
 async def test_input_exception_handling():
-    """Test that the InputOrchestrator handles exceptions from inputs gracefully."""
+    """Test that when one input fails, other inputs continue operating."""
     error_input = ErrorInput()
     normal_input = MockInput()
     normal_input.raw_to_text = AsyncMock()
     orchestrator = InputOrchestrator([error_input, normal_input])
-    
-    # Should not raise - error input fails but normal input continues
+
     await asyncio.wait_for(orchestrator.listen(), timeout=5.0)
-    
-    # Normal input should have processed its events
-    assert normal_input.raw_to_text.call_count == 3  # type: ignore
+    assert normal_input.raw_to_text.call_count == 3
