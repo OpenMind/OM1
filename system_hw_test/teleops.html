@@ -1,0 +1,680 @@
+<h3>Remote Control</h3><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Video Stream with Remote Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .video-section {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .control-section {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            background-color: #000;
+        }
+
+        #videoDisplay {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .connection-panel {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .control-panel {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 200px;
+            margin: 15px auto;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            font-weight: bold;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:active, .control-btn.active {
+            background-color: #4CAF50;
+            color: white;
+            transform: scale(0.95);
+        }
+
+        .control-btn:disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            border-color: #999;
+        }
+
+        .empty-cell {
+            width: 60px;
+            height: 60px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #disconnectBtn {
+            background-color: #f44336;
+        }
+
+        #statusIndicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #ff0000;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        #statusText {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .status-connected {
+            background-color: #4CAF50 !important;
+        }
+
+        .url-input {
+            padding: 10px;
+            width: 80%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 5px;
+            font-size: 16px;
+        }
+
+        #stats {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .command-status {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e8f5e8;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+            text-align: left;
+        }
+
+        .api-key-section {
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .control-section {
+                flex: none;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Video Stream with Remote Control</h1>
+
+        <div class="main-content">
+            <div class="video-section">
+                <div class="connection-panel">
+                    <h3>Connection Status</h3>
+                    <div id="statusBar" style="margin-top: 10px;">
+                        <strong>Video Stream:</strong>
+                        <span id="statusIndicator"></span>
+                        <span id="statusText">Disconnected</span>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Robot Control:</strong>
+                        <span id="controlStatusIndicator" style="width: 15px; height: 15px; border-radius: 50%; background-color: #ff0000; display: inline-block; margin-right: 10px; vertical-align: middle;"></span>
+                        <span id="controlStatusText">Control Disconnected</span>
+                    </div>
+                </div>
+
+                <div id="videoContainer">
+                    <img id="videoDisplay" alt="Video stream will appear here">
+                </div>
+
+                <div id="stats">
+                    <div>Frames received: <span id="frameCount">0</span></div>
+                    <div>Average FPS: <span id="fps">0</span></div>
+                    <div>Last frame size: <span id="frameSize">0</span> bytes</div>
+                </div>
+
+                <div id="connectionControls">
+                    <button id="disconnectBtn" disabled>Disconnect All</button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="control-panel">
+                    <h3>API Connection</h3>
+
+                    <div class="api-key-section">
+                        <input type="password" id="apiKey" class="url-input" placeholder="Enter OM API Key" style="width: 70%;">
+                        <button id="connectBtn">Connect</button>
+                    </div>
+
+                    <div class="control-grid">
+                        <div class="empty-cell"></div>
+                        <button class="control-btn" id="forwardBtn" data-key="w">↑</button>
+                        <div class="empty-cell"></div>
+
+                        <button class="control-btn" id="leftBtn" data-key="a">←</button>
+                        <div class="empty-cell"></div>
+                        <button class="control-btn" id="rightBtn" data-key="d">→</button>
+
+                        <div class="empty-cell"></div>
+                        <button class="control-btn" id="backwardBtn" data-key="s">↓</button>
+                        <div class="empty-cell"></div>
+                    </div>
+
+                    <div class="instructions">
+                        <strong>Keyboard Controls:</strong><br>
+                        W - Move Forward<br>
+                        S - Move Backward<br>
+                        A - Turn Left<br>
+                        D - Turn Right<br><br>
+                        <em>Use keyboard or click buttons above</em>
+                    </div>
+
+                    <div class="command-status" id="commandStatus">
+                        vx: 0.0, vy: 0.0, vyaw: 0.0
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Video stream elements
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const apiKeyInput = document.getElementById('apiKey');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const videoDisplay = document.getElementById('videoDisplay');
+            const frameCountElement = document.getElementById('frameCount');
+            const fpsElement = document.getElementById('fps');
+            const frameSizeElement = document.getElementById('frameSize');
+
+            // Control elements
+            const controlStatusIndicator = document.getElementById('controlStatusIndicator');
+            const controlStatusText = document.getElementById('controlStatusText');
+            const commandStatusElement = document.getElementById('commandStatus');
+            const controlButtons = document.querySelectorAll('.control-btn');
+
+            // State variables
+            let websocket = null;
+            let controlWebsocket = null;
+            let frameCount = 0;
+            let startTime = null;
+            let isConnected = false;
+            let isControlConnected = false;
+            let keysPressed = new Set();
+            let currentCommand = { vx: 0.0, vy: 0.0, vyaw: 0.0 };
+
+            // Auto reconnect variables
+            let apiKey = '';
+            let controlReconnectTimer = null;
+            let videoReconnectTimer = null;
+            let controlReconnectAttempts = 0;
+            let videoReconnectAttempts = 0;
+            let maxReconnectAttempts = 10;
+            let baseReconnectDelay = 1000; // 1 second
+            let isManualDisconnect = false;
+
+            // Unified connection functionality
+            connectBtn.addEventListener('click', function() {
+                const inputApiKey = apiKeyInput.value.trim();
+                if (!inputApiKey) {
+                    alert('Please enter your OM API Key');
+                    return;
+                }
+                apiKey = inputApiKey;
+                isManualDisconnect = false;
+                controlReconnectAttempts = 0;
+                videoReconnectAttempts = 0;
+                connectToServices(apiKey);
+            });
+
+            disconnectBtn.addEventListener('click', function() {
+                isManualDisconnect = true;
+                clearReconnectTimers();
+                disconnectAll();
+            });
+
+            // Keyboard event listeners
+            document.addEventListener('keydown', function(event) {
+                if (!isControlConnected) return;
+
+                const key = event.key.toLowerCase();
+                if (['w', 'a', 's', 'd'].includes(key)) {
+                    event.preventDefault();
+                    if (!keysPressed.has(key)) {
+                        keysPressed.add(key);
+                        updateControlButtons();
+                        updateMovement();
+                    }
+                }
+            });
+
+            document.addEventListener('keyup', function(event) {
+                if (!isControlConnected) return;
+
+                const key = event.key.toLowerCase();
+                if (['w', 'a', 's', 'd'].includes(key)) {
+                    event.preventDefault();
+                    keysPressed.delete(key);
+                    updateControlButtons();
+                    updateMovement();
+                }
+            });
+
+            // Button event listeners
+            controlButtons.forEach(button => {
+                const key = button.dataset.key;
+                if (key) {
+                    button.addEventListener('mousedown', function() {
+                        if (!isControlConnected) return;
+                        keysPressed.add(key);
+                        updateControlButtons();
+                        updateMovement();
+                    });
+
+                    button.addEventListener('mouseup', function() {
+                        if (!isControlConnected) return;
+                        keysPressed.delete(key);
+                        updateControlButtons();
+                        updateMovement();
+                    });
+
+                    button.addEventListener('mouseleave', function() {
+                        if (!isControlConnected) return;
+                        keysPressed.delete(key);
+                        updateControlButtons();
+                        updateMovement();
+                    });
+                }
+            });
+
+            function connectToServices(apiKey) {
+                connectToVideoWebSocket(apiKey);
+                connectToControlWebSocket(apiKey);
+            }
+
+            function disconnectAll() {
+                if (websocket) {
+                    websocket.close();
+                }
+                if (controlWebsocket) {
+                    controlWebsocket.close();
+                }
+            }
+
+            function clearReconnectTimers() {
+                if (controlReconnectTimer) {
+                    clearTimeout(controlReconnectTimer);
+                    controlReconnectTimer = null;
+                }
+                if (videoReconnectTimer) {
+                    clearTimeout(videoReconnectTimer);
+                    videoReconnectTimer = null;
+                }
+            }
+
+            function scheduleControlReconnect() {
+                if (isManualDisconnect || controlReconnectAttempts >= maxReconnectAttempts) {
+                    if (controlReconnectAttempts >= maxReconnectAttempts) {
+                        updateControlStatus('Max reconnect attempts reached', 'red');
+                    }
+                    return;
+                }
+
+                const delay = Math.min(baseReconnectDelay * Math.pow(2, controlReconnectAttempts), 30000); // Max 30 seconds
+                controlReconnectAttempts++;
+
+                updateControlStatus(`Reconnecting in ${Math.ceil(delay/1000)}s (attempt ${controlReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
+
+                controlReconnectTimer = setTimeout(() => {
+                    console.log(`Control reconnect attempt ${controlReconnectAttempts}/${maxReconnectAttempts}`);
+                    connectToControlWebSocket(apiKey);
+                }, delay);
+            }
+
+            function scheduleVideoReconnect() {
+                if (isManualDisconnect || videoReconnectAttempts >= maxReconnectAttempts) {
+                    if (videoReconnectAttempts >= maxReconnectAttempts) {
+                        updateStatus('Max reconnect attempts reached', 'red');
+                    }
+                    return;
+                }
+
+                const delay = Math.min(baseReconnectDelay * Math.pow(2, videoReconnectAttempts), 30000); // Max 30 seconds
+                videoReconnectAttempts++;
+
+                updateStatus(`Reconnecting in ${Math.ceil(delay/1000)}s (attempt ${videoReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
+
+                videoReconnectTimer = setTimeout(() => {
+                    console.log(`Video reconnect attempt ${videoReconnectAttempts}/${maxReconnectAttempts}`);
+                    connectToVideoWebSocket(apiKey);
+                }, delay);
+            }
+
+            function connectToVideoWebSocket(apiKey) {
+                try {
+                    const videoUrl = `wss://api.openmind.org/api/core/teleops/video?api_key=${apiKey}`;
+                    websocket = new WebSocket(videoUrl);
+                    updateStatus('Connecting...', 'orange');
+                    connectBtn.disabled = true;
+
+                    websocket.onopen = function() {
+                        console.log('Video WebSocket connection established');
+                        updateStatus('Connected', 'green');
+                        disconnectBtn.disabled = false;
+                        isConnected = true;
+                        frameCount = 0;
+                        startTime = Date.now();
+                        videoReconnectAttempts = 0; // Reset on successful connection
+                        if (videoReconnectTimer) {
+                            clearTimeout(videoReconnectTimer);
+                            videoReconnectTimer = null;
+                        }
+                    };
+
+                    websocket.onmessage = function(event) {
+                        processVideoFrame(event.data);
+                    };
+
+                    websocket.onerror = function(error) {
+                        console.error('Video WebSocket error:', error);
+                        updateStatus('Error: ' + error.message, 'red');
+                    };
+
+                    websocket.onclose = function(event) {
+                        console.log('Video WebSocket connection closed', event);
+                        updateStatus('Disconnected', 'red');
+                        connectBtn.disabled = false;
+                        disconnectBtn.disabled = true;
+                        isConnected = false;
+
+                        // Auto reconnect if not manually disconnected
+                        if (!isManualDisconnect && apiKey) {
+                            scheduleVideoReconnect();
+                        }
+                    };
+                } catch (error) {
+                    console.error('Failed to create video WebSocket:', error);
+                    updateStatus('Connection failed: ' + error.message, 'red');
+                    connectBtn.disabled = false;
+                }
+            }
+
+            function connectToControlWebSocket(apiKey) {
+                try {
+                    const controlUrl = `wss://api.openmind.org/api/core/teleops/command?api_key=${apiKey}`;
+                    controlWebsocket = new WebSocket(controlUrl);
+
+                    updateControlStatus('Connecting...', 'orange');
+                    connectBtn.disabled = true;
+
+                    controlWebsocket.onopen = function() {
+                        console.log('Control WebSocket connection established');
+                        updateControlStatus('Control Connected', 'green');
+                        disconnectBtn.disabled = false;
+                        isControlConnected = true;
+                        enableControlButtons();
+                        controlReconnectAttempts = 0; // Reset on successful connection
+                        if (controlReconnectTimer) {
+                            clearTimeout(controlReconnectTimer);
+                            controlReconnectTimer = null;
+                        }
+                    };
+
+                    controlWebsocket.onerror = function(error) {
+                        console.error('Control WebSocket error:', error);
+                        updateControlStatus('Control Error: ' + error.message, 'red');
+                    };
+
+                    controlWebsocket.onclose = function(event) {
+                        console.log('Control WebSocket connection closed', event);
+                        updateControlStatus('Control Disconnected', 'red');
+                        connectBtn.disabled = false;
+                        disconnectBtn.disabled = true;
+                        isControlConnected = false;
+                        disableControlButtons();
+                        keysPressed.clear();
+                        updateControlButtons();
+                        currentCommand = { vx: 0.0, vy: 0.0, vyaw: 0.0 };
+                        updateCommandStatus();
+
+                        // Auto reconnect if not manually disconnected
+                        if (!isManualDisconnect && apiKey) {
+                            scheduleControlReconnect();
+                        }
+                    };
+                } catch (error) {
+                    console.error('Failed to create control WebSocket:', error);
+                    updateControlStatus('Control connection failed: ' + error.message, 'red');
+                    connectBtn.disabled = false;
+                }
+            }
+
+            function processVideoFrame(data) {
+                try {
+                    frameCount++;
+                    frameCountElement.textContent = frameCount;
+
+                    if (startTime) {
+                        const elapsedTime = (Date.now() - startTime) / 1000;
+                        const fps = (frameCount / elapsedTime).toFixed(2);
+                        fpsElement.textContent = fps;
+                    }
+
+                    frameSizeElement.textContent = data.length;
+
+                    if (typeof data === 'string') {
+                        let base64Data = data;
+                        if (data.startsWith('data:image')) {
+                            base64Data = data.split(',')[1];
+                        }
+                        videoDisplay.src = `data:image/jpeg;base64,${base64Data}`;
+                    } else {
+                        const reader = new FileReader();
+                        reader.onload = function() {
+                            const base64 = reader.result.split(',')[1];
+                            videoDisplay.src = `data:image/jpeg;base64,${base64}`;
+                        };
+                        reader.readAsDataURL(new Blob([data]));
+                    }
+                } catch (error) {
+                    console.error('Error processing video frame:', error);
+                }
+            }
+
+            function updateMovement() {
+                let vx = 0.0;
+                let vyaw = 0.0;
+
+                if (keysPressed.has('w')) vx = 0.5;
+                if (keysPressed.has('s')) vx = -0.5;
+                if (keysPressed.has('a')) vyaw = 0.5;
+                if (keysPressed.has('d')) vyaw = -0.5;
+
+                currentCommand = {
+                    vx: vx,
+                    vy: 0.0,
+                    vyaw: vyaw,
+                    timestamp: Date.now() / 1000
+                };
+
+                publishCommand();
+                updateCommandStatus();
+            }
+
+            function publishCommand() {
+                if (controlWebsocket && isControlConnected) {
+                    controlWebsocket.send(JSON.stringify(currentCommand));
+                    console.log('Published command:', currentCommand);
+                }
+            }
+
+            function updateControlButtons() {
+                controlButtons.forEach(button => {
+                    const key = button.dataset.key;
+                    if (key && keysPressed.has(key)) {
+                        button.classList.add('active');
+                    } else {
+                        button.classList.remove('active');
+                    }
+                });
+            }
+
+            function enableControlButtons() {
+                controlButtons.forEach(button => {
+                    button.disabled = false;
+                });
+            }
+
+            function disableControlButtons() {
+                controlButtons.forEach(button => {
+                    button.disabled = true;
+                    button.classList.remove('active');
+                });
+            }
+
+            function updateStatus(message, color) {
+                statusText.textContent = message;
+                statusIndicator.style.backgroundColor = color;
+                if (color === 'green') {
+                    statusIndicator.classList.add('status-connected');
+                } else {
+                    statusIndicator.classList.remove('status-connected');
+                }
+            }
+
+            function updateControlStatus(message, color) {
+                controlStatusText.textContent = message;
+                controlStatusIndicator.style.backgroundColor = color;
+            }
+
+            function updateCommandStatus() {
+                commandStatusElement.textContent =
+                    `vx: ${currentCommand.vx.toFixed(1)}, vy: ${currentCommand.vy.toFixed(1)}, vyaw: ${currentCommand.vyaw.toFixed(1)}`;
+            }
+
+            // Continuous command publishing (similar to Python version)
+            setInterval(function() {
+                if (isControlConnected && keysPressed.size > 0) {
+                    publishCommand();
+                }
+            }, 100); // 10 Hz
+
+            // Initialize
+            disableControlButtons();
+            updateCommandStatus();
+        });
+    </script>
+</body>
+</html>

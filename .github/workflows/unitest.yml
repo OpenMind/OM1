@@ -1,0 +1,87 @@
+name: Run Unit Tests
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev python3-pyaudio cmake
+
+      - name: Cache CycloneDDS build
+        uses: actions/cache@v4
+        with:
+          path: /tmp/cyclonedds/cyclonedds/install
+          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/unitest.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cyclonedds-0.10.x-
+
+      - name: Install cycloneDDS
+        run: |
+          if [ ! -d "/tmp/cyclonedds/cyclonedds/install" ]; then
+            echo "Building CycloneDDS from source..."
+            mkdir -p /tmp/cyclonedds
+            cd /tmp/cyclonedds
+            git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+            cd cyclonedds && mkdir build install && cd build
+            cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON
+            cmake --build . --target install
+          else
+            echo "Using cached CycloneDDS installation"
+          fi
+          echo "CYCLONEDDS_HOME=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
+          echo "/tmp/cyclonedds/cyclonedds/install/lib" >> $GITHUB_PATH
+          echo "CMAKE_PREFIX_PATH=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra dds
+
+      - name: Run unit tests
+        run: |
+          uv run pytest --log-cli-level=DEBUG -s
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ runner.os }}
+          path: .pytest_cache/

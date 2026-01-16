@@ -1,0 +1,62 @@
+# Documentation changes
+documentation:
+  - changed-files:
+    - any-glob-to-any-file: ['docs/**/*', '*.md', '*.mdx']
+
+# Robotics code
+robotics:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/**/*'
+      - 'system_hw_test/**/*'
+
+# Python files
+python:
+  - changed-files:
+    - any-glob-to-any-file: '**/*.py'
+
+# Docker/Infrastructure
+infrastructure:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/Dockerfile'
+      - '**/docker-compose*.yml'
+      - '**/*.dockerfile'
+
+# CI/CD changes
+ci-cd:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - '**/.github/**/*'
+
+# Dependencies
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'requirements.txt'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'poetry.lock'
+      - 'pyproject.toml'
+
+# Tests
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/test_*.py'
+      - '**/*_test.py'
+      - 'tests/**/*'
+
+# Configuration files
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
+      - '**/*.json5'
+      - '**/*.xml'
+      - '**/*.toml'
+      - '**/*.ini'
+      - '**/*.conf'

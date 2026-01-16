@@ -1,0 +1,63 @@
+name: Generate Config Schema
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/inputs/plugins/**'
+      - 'src/actions/**'
+      - 'src/backgrounds/plugins/**'
+      - 'src/llm/plugins/**'
+      - 'src/hooks/**'
+      - 'config/schema/multi_mode_schema.json'
+      - 'scripts/generate_schema.py'
+  workflow_dispatch:
+
+jobs:
+  generate-and-upload:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install json5
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set environment variables
+        run: |
+          echo "S3_BUCKET=${{ secrets.S3_BUCKET }}" >> $GITHUB_ENV
+          echo "CLOUDFRONT_DISTRIBUTION_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" >> $GITHUB_ENV
+
+      - name: Generate schema
+        run: |
+          python scripts/generate_schema.py
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp OM1_config_schema.json5 s3://$S3_BUCKET/om1-config-schema/config_schema_latest.json5 \
+            --content-type "application/json"
+
+          echo "✓ Uploaded to S3: s3://$S3_BUCKET/om1-config-schema/config_schema_latest.json5"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+            --paths "/om1-config-schema/*"

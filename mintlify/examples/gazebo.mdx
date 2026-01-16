@@ -1,0 +1,89 @@
+---
+title: Gazebo Simulator
+description: "Quadruped Simulation and Control"
+---
+
+## Simulation Instructions
+
+The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
+
+To get started with **Gazebo** and **Unitree SDK**, please install **ROS2 Humble** first and use this **CycloneDDS** configuration. It uses `lo` as the network interface.
+
+```xml
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+    </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>
+```
+
+We recommend that you export this in your `.bashrc` or equivalent configuration file.
+
+```bash
+export CYCLONEDDS_URI='
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+    </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>'
+```
+
+Next, clone the [unitree-sdk](https://github.com/OpenMind/unitree-sdk) repository:
+
+```bash
+git clone https://github.com/OpenMind/unitree-sdk.git
+```
+
+Then install all necessary dependencies:
+
+```bash
+cd unitree-sdk
+rosdep install --from-paths . --ignore-src -r -y
+pip install -r requirements.txt
+```
+
+Then build all packages:
+
+```bash
+colcon build
+```
+
+Now you should be able to launch the **Gazebo Simulator**.
+
+Open the first terminal and run:
+
+```bash
+source install/setup.bash
+ros2 launch go2_gazebo_sim go2_launch.py
+```
+
+Then open a second terminal and run:
+
+```bash
+source install/setup.bash
+ros2 launch go2_sdk sensor_launch.py use_sim:=true
+```
+
+This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
+
+## Start OM1
+
+Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+
+```bash
+uv run src/run.py unitree_go2_autonomy_sim
+```

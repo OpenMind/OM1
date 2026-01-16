@@ -1,0 +1,6 @@
+[submodule "src/unitree"]
+	path = src/unitree
+	url = https://github.com/OpenMind/unitree_sdk2_python.git
+[submodule "src/ubtech"]
+	path = src/ubtech
+	url = https://github.com/OpenMind/ubtech.git

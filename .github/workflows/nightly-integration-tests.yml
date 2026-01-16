@@ -1,0 +1,147 @@
+name: Run Nightly Integration Tests
+
+env:
+  OM1_API_KEY: ${{ secrets.OM1_API_KEY }}
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  nightly-integration-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev python3-pyaudio cmake
+
+      - name: Cache CycloneDDS build
+        uses: actions/cache@v4
+        with:
+          path: /tmp/cyclonedds/cyclonedds/install
+          key: ${{ runner.os }}-cyclonedds-0.10.x-${{ hashFiles('.github/workflows/nightly-integration-tests.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cyclonedds-0.10.x-
+
+      - name: Install cycloneDDS
+        run: |
+          if [ ! -d "/tmp/cyclonedds/cyclonedds/install" ]; then
+            echo "Building CycloneDDS from source..."
+            mkdir -p /tmp/cyclonedds
+            cd /tmp/cyclonedds
+            git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+            cd cyclonedds && mkdir build install && cd build
+            cmake .. -DCMAKE_INSTALL_PREFIX=../install -DBUILD_EXAMPLES=ON
+            cmake --build . --target install
+          else
+            echo "Using cached CycloneDDS installation"
+          fi
+          echo "CYCLONEDDS_HOME=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
+          echo "/tmp/cyclonedds/cyclonedds/install/lib" >> $GITHUB_PATH
+          echo "CMAKE_PREFIX_PATH=/tmp/cyclonedds/cyclonedds/install" >> $GITHUB_ENV
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra dds
+
+      - name: Run integration tests
+        run: |
+          uv run pytest -m "integration" --log-cli-level=DEBUG --junitxml=test-reports/results.xml -s
+
+      - name: Extract test summary
+        id: summary
+        run: |
+          python - << 'EOF'
+          import os
+          import xml.etree.ElementTree as ET
+
+          xml_file = 'test-reports/results.xml'
+          tree = ET.parse(xml_file)
+          root = tree.getroot()
+
+          def get_val(node, attr):
+              return int(node.get(attr, 0))
+
+          tests = 0
+          failures = 0
+          errors = 0
+
+          if root.tag == 'testsuites':
+              if root.get('tests'):
+                  tests = get_val(root, 'tests')
+                  failures = get_val(root, 'failures')
+                  errors = get_val(root, 'errors')
+              else:
+                  for suite in root.findall('testsuite'):
+                      tests += get_val(suite, 'tests')
+                      failures += get_val(suite, 'failures')
+                      errors += get_val(suite, 'errors')
+          else:
+              tests = get_val(root, 'tests')
+              failures = get_val(root, 'failures')
+              errors = get_val(root, 'errors')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"total={tests}\nfailures={failures}\nerrors={errors}\n")
+          EOF
+
+      - name: Notify Slack on failure
+        if: failure() && github.event_name == 'schedule'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"❌ @channel *Integration Tests Failed*\n\
+              *Repository:* \`${{ github.repository }}\`\n\
+              *Branch:* \`${{ github.ref_name }}\`\n\
+              *Total:* ${{ steps.summary.outputs.total }}  •  *Failures:* ${{ steps.summary.outputs.failures }}  •  *Errors:* ${{ steps.summary.outputs.errors }}\n\
+              🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>\"
+            }" \
+            ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on success
+        if: success() && github.event_name == 'schedule'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"✅ *All Integration Tests Passed*\n\
+              *Total:* ${{ steps.summary.outputs.total }}\n\
+              🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>\"
+            }" \
+            ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}

@@ -1,0 +1,107 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": [
+        "version",
+        "hertz",
+        "name",
+        "api_key",
+        "system_prompt_base",
+        "system_governance",
+        "system_prompt_examples",
+        "agent_inputs",
+        "cortex_llm",
+        "agent_actions"
+    ],
+    "properties": {
+        "version": {"type": "string"},
+        "hertz": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "The frequency (in Hz) at which the control loop runs. Must be positive."
+        },
+        "name": {"type": "string"},
+        "api_key": {"type": "string"},
+        "URID": {"type": "string"},
+        "unitree_ethernet": {"type": "string"},
+        "system_prompt_base": {"type": "string"},
+        "system_governance": {"type": "string"},
+        "system_prompt_examples": {"type": "string"},
+        "agent_inputs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                    "type": {"type": "string"},
+                    "config": {"type": "object"}
+                }
+            }
+        },
+        "simulators": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                    "type": {"type": "string"},
+                    "config": {"type": "object"}
+                }
+            }
+        },
+        "cortex_llm": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+                "type": {"type": "string"},
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "agent_name": {"type": "string"},
+                        "history_length": {"type": "integer"}
+                    }
+                }
+            }
+        },
+        "agent_actions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "connector"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "llm_label": {"type": "string"},
+                    "connector": {"type": "string"},
+                    "config": {"type": "object"},
+                    "exclude_from_prompt": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                }
+            }
+        },
+        "backgrounds": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                    "type": {"type": "string"},
+                    "config": {"type": "object"}
+                }
+            }
+        },
+        "action_execution_mode": {
+            "type": "string",
+            "enum": ["concurrent", "sequential", "dependencies"]
+        },
+        "action_dependencies": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {"type": "string"}
+            }
+        }
+    },
+    "additionalProperties": true
+}

@@ -1,0 +1,11 @@
+services:
+  zenoh-bridge-turtlebot4:
+    image: openmindagi/turtlebridge
+    container_name: zenoh-bridge-turtlebot4
+    network_mode: "host"
+    restart: always # Ensures the container restarts on reboot
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
