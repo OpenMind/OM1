@@ -158,6 +158,16 @@ class TestDetectConfigChanges:
 
         assert "agent_inputs" in changed
 
+
+    def test_detects_agent_inputs_content_change_same_length(self, runtime):
+        """Detect changes when agent_inputs content changes but length stays the same."""
+        old_config = MockRuntimeConfig(agent_inputs=[MagicMock(name="old_input")])
+        new_config = MockRuntimeConfig(agent_inputs=[MagicMock(name="new_input")])
+
+        changed = runtime._detect_config_changes(old_config, new_config)
+
+        assert "agent_inputs" in changed
+
     def test_detects_cortex_llm_change(self, runtime):
         """Test detection of cortex_llm instance change."""
         llm1 = MagicMock()

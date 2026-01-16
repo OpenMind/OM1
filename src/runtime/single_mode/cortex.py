@@ -309,23 +309,10 @@ class CortexRuntime:
             old_value = getattr(old_config, field, None)
             new_value = getattr(new_config, field, None)
             try:
-                # Simple length check first
-                if old_value is None and new_value is not None:
+                if old_value != new_value:
                     changed_fields.add(field)
-                elif old_value is not None and new_value is None:
-                    changed_fields.add(field)
-                elif old_value is not None and new_value is not None:
-                    # Check if both are lists and compare lengths
-                    if hasattr(old_value, "__len__") and hasattr(new_value, "__len__"):
-                        if len(old_value) != len(new_value):
-                            changed_fields.add(field)
-                            logging.debug(
-                                f"Config field '{field}' changed (length differs)"
-                            )
-                    elif old_value is not new_value:
-                        # Different objects, assume changed
-                        changed_fields.add(field)
-            except (TypeError, AttributeError):
+                    logging.debug(f"Config field '{field}' changed")
+            except Exception:
                 # If comparison fails, assume it changed to be safe
                 changed_fields.add(field)
                 logging.debug(
