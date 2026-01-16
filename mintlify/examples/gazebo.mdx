@@ -32,6 +32,12 @@ This will install ROS, RViz, Gazebo and all the relevant packages.
 
 For more details and a better understanding [refer](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html).
 
+If you don't have uv installed, use the following command to install it on your system.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 Use this **CycloneDDS** configuration. It uses `lo` as the network interface. We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
 To add it to `cyclonedds.xml`:
 
