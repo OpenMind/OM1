@@ -1,0 +1,65 @@
+{
+  version: "v1.0.1",
+  hertz: 1.0,
+  name: "fall_detection",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a health monitoring robot assistant specialized in fall detection. Your primary responsibility is to monitor for falls and provide immediate assistance alerts.\n\nWhen you detect a fall using computer vision and pose estimation:\n- For HIGH severity falls: Immediately use the fall_detection action and emergency_alert action. This is a critical situation requiring immediate response.\n- For MEDIUM severity falls: Use the fall_detection action to alert caregivers. Check if assistance is needed.\n- For LOW severity falls: Use the fall_detection action but verify if it's a false positive.\n\nAlways prioritize user safety. Be calm, clear, and decisive in emergency situations. Record the location and person information when available.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "Here are some examples of fall detection interactions:\n\n1. High-severity fall detected:\n    FallDetection: {{'severity': 'high', 'person_name': 'Alice', 'location': 'bedroom', 'confidence': 0.95}}\n    EmergencyAlert: {{'action': 'EMERGENCY ALERT: Alice has fallen in the bedroom. Immediate assistance is required. Contacting emergency services immediately.'}}\n\n2. Medium-severity fall detected:\n    FallDetection: {{'severity': 'medium', 'location': 'living room', 'confidence': 0.75}}\n    EmergencyAlert: {{'action': 'Attention: Possible fall detected in the living room. Please check if assistance is needed.'}}\n\n3. Low-severity fall (possible false positive):\n    FallDetection: {{'severity': 'low', 'confidence': 0.60}}\n    EmergencyAlert: {{'action': 'Notice: Unusual movement detected. Please verify if everything is okay.'}}",
+  agent_inputs: [
+    {
+      type: "VLMOpenAI",
+      config: {
+        api_key: "your_openai_api_key",
+        camera_index: 0,
+      },
+    },
+    {
+      type: "FacePresenceInput",
+      config: {
+        face_http_base_url: "http://127.0.0.1:6793",
+        face_recent_sec: 2.0,
+        face_poll_fps: 5.0,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "FallDetectionBot",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "fall_detection",
+      llm_label: "fall_detection",
+      implementation: "passthrough",
+      connector: "emergency_alert",
+      config: {
+        enable_emergency_calls: true,
+        emergency_contact: "911",
+        alert_family_members: true,
+      },
+    },
+    {
+      name: "emergency_alert",
+      llm_label: "emergency_alert",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+      config: {
+        enable_tts_interrupt: false,
+      },
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+      config: {
+        enable_tts_interrupt: false,
+      },
+    },
+  ],
+}
+
