@@ -149,3 +149,46 @@ Step 6: Start OM1
     ```bash
     uv run src/run.py unitree_go2_autonomy_sim
     ```
+
+Step 7: Start SLAM mode
+    Open a new terminal and run the following to start the SLAM mode for the robot to start mapping the area. Our Gazebo setup includes auto mapping feature, this will let the robot to generate a 2D map for the area which can then be utilised at later stage to make the robot move from point A to point B.
+
+    ```bash
+    source install/setup.bash
+    launch go2_sdk slam_launch.py use_sim:=true
+    ```
+
+Step 8: Save the map
+    After the SLAM mode is complete, you can save the map by using the following command. Replace <my_map> with the name you prefer for saving the map.
+
+    ```bash
+    source install/setup.bash
+    ros2 run nav2_map_server map_saver_cli -f my_map
+    ```
+
+Step 9: Navigate the robot across the map
+    Once you successfully save the map, you can run the following command in a new terminal to enable navigation. After running the command, simply head over to RViz window and press **2D goal pose**. Now click at any new location on the map to make the robot start navigating towards it.
+
+    Make sure the map name is same as the one you set up in the previous step.
+
+    ```bash
+    source install/setup.bash
+    ros2 launch go2_sdk nav2_launch.py use_sim:=true map_yaml_file:=my_map.yaml
+    ```
+
+Step 10:
+    You can start also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
+
+    ```bash
+    source install/setup.bash
+    ros2 run teleop_twist_keyboard teleop_twist_keyboard
+    ```
+
+    Use the keyboard controls displayed in the terminal to move the robot:
+
+    i - Move forward
+    , - Move backward
+    j - Turn left
+    l - Turn right
+    k - Stop
+    u/o/m/. - Move diagonally
