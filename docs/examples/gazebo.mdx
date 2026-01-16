@@ -18,9 +18,17 @@ It's ideal to have atleast 128 GB SSD storage for the setup to run smoothly.
 
 The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
 
-To get started with **Gazebo** and **Unitree SDK**, please install **ROS2 Humble** first and use this **CycloneDDS** configuration. It uses `lo` as the network interface.
-We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
+To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
 
+Install cyclonedds via https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html.
+
+To install ROS2 Humble, run the following command
+
+```bash
+sudo apt install ros-humble-desktop-full
+```
+
+Use this **CycloneDDS** configuration. It uses `lo` as the network interface. We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
 To add it to `cyclonedds.xml`:
 
 ```bash
@@ -37,7 +45,7 @@ Add the following, then save and exit.
             <Interfaces>
                 <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
             </Interfaces>
-    </General>
+        </General>
         <Discovery>
             <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
         </Discovery>
@@ -61,13 +69,20 @@ export CYCLONEDDS_URI='
             <Interfaces>
                 <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
             </Interfaces>
-    </General>
+        </General>
         <Discovery>
             <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
         </Discovery>
     </Domain>
 </CycloneDDS>'
 ```
+
+Now run
+
+```bash
+source ~/.bashrc
+```
+This will apply the latest changes in the current shell session.
 
 Check if you have rosdep installed by running `rosdep` or `rosdep --version`. If it is not installed, run the following:
 
@@ -88,6 +103,7 @@ Step 2: Install all the necessary dependencies:
 
     ```bash
     cd unitree-sdk
+    rosdep init
     rosdep install --from-paths . --ignore-src -r -y
     uv pip install -r pyproject.toml
     ```
