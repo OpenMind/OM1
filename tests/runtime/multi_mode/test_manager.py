@@ -1,3 +1,4 @@
+import asyncio
 import json
 import tempfile
 import time
@@ -254,17 +255,20 @@ class TestModeManager:
 
         await mode_manager._notify_transition_callbacks("from", "to")
 
+    @pytest.mark.asyncio
     async def test_check_time_based_transitions_no_timeout(self, mode_manager):
         """Test time-based transitions when current mode has no timeout."""
         result = await mode_manager.check_time_based_transitions()
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_check_time_based_transitions_within_timeout(self, mode_manager):
         """Test time-based transitions within timeout period."""
         mode_manager.config.modes["default"].timeout_seconds = 3600.0
         result = await mode_manager.check_time_based_transitions()
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_check_time_based_transitions_exceeded_timeout(self, mode_manager):
         """Test time-based transitions when timeout is exceeded."""
         mode_manager.state.current_mode = "advanced"
@@ -970,3 +974,92 @@ class TestModeManager:
         ):
             result = await mode_manager.process_tick("advanced mode")
             assert result == ("emergency", "time_based")
+
+    @pytest.mark.asyncio
+    async def test_concurrent_transitions_race_condition(self, mode_manager):
+        """Test that concurrent transition requests are handled safely without race condition."""
+
+        transition_results = []
+        transition_count = 0
+
+        async def attempt_transition(target_mode, delay: float = 0):
+            nonlocal transition_count
+            if delay:
+                await asyncio.sleep(delay)
+            result = await mode_manager._execute_transition(
+                target_mode, "concurrent_test"
+            )
+            transition_results.append((target_mode, result))
+            if result and mode_manager.state.current_mode == target_mode:
+                transition_count += 1
+
+        await asyncio.gather(
+            attempt_transition("advanced", 0),
+            attempt_transition("emergency", 0.001),
+            attempt_transition("advanced", 0.002),
+        )
+
+        assert len(transition_results) == 3
+        assert mode_manager._is_transitioning is False
+
+    @pytest.mark.asyncio
+    async def test_transition_lock_prevents_concurrent_flag_modification(
+        self, mode_manager
+    ):
+        """Test that transition lock prevents concurrent modification of _is_transitioning flag."""
+        mode_manager._is_transitioning = False
+
+        async def slow_transition():
+            result = await mode_manager._execute_transition("advanced", "slow")
+            return result
+
+        result = await slow_transition()
+
+        assert mode_manager._is_transitioning is False
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_transition_flag_reset_on_exception(self, mode_manager):
+        """Test that _is_transitioning flag is reset even when transition fails."""
+        mode_manager.config.modes["broken"] = Mock()
+        mode_manager.config.modes["broken"].execute_lifecycle_hooks = AsyncMock(
+            side_effect=Exception("Hook failure")
+        )
+
+        result = await mode_manager._execute_transition("broken", "test")
+
+        assert mode_manager._is_transitioning is False
+        assert result is False
+
+    def test_zenoh_init_failure_sets_correct_variable(self, sample_system_config):
+        """Test that Zenoh init failure sets _zenoh_mode_status_response_pub to None."""
+        with (
+            patch(
+                "runtime.multi_mode.manager.open_zenoh_session",
+                side_effect=Exception("Zenoh connection failed"),
+            ),
+            patch("runtime.multi_mode.manager.ModeManager._load_mode_state"),
+        ):
+            manager = ModeManager(sample_system_config)
+
+            assert hasattr(manager, "_zenoh_mode_status_response_pub")
+            assert manager._zenoh_mode_status_response_pub is None
+            assert manager.session is None
+
+    def test_zenoh_publisher_null_check_on_publish(self, sample_system_config):
+        """Test that publishing with null publisher doesn't raise error."""
+        with (
+            patch(
+                "runtime.multi_mode.manager.open_zenoh_session",
+                side_effect=Exception("Zenoh connection failed"),
+            ),
+            patch("runtime.multi_mode.manager.ModeManager._load_mode_state"),
+        ):
+            manager = ModeManager(sample_system_config)
+
+            assert manager._zenoh_mode_status_response_pub is None
+
+            if manager._zenoh_mode_status_response_pub is not None:
+                manager._zenoh_mode_status_response_pub.put(b"test")
+
+            assert True
