@@ -264,7 +264,7 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
 
         return Message(timestamp=time.time(), message=raw_input)
 
-    async def raw_to_text(self, raw_input: Optional[str]) -> None:
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Convert raw input to text and update message buffer.
 
