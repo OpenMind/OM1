@@ -88,11 +88,13 @@ def check_webcam(index_to_check):
     cap = cv2.VideoCapture(index_to_check)
     if not cap.isOpened():
         logging.error(f"YOLO did not find cam: {index_to_check}")
+        cap.release()
         return 0, 0
 
     # Set the best available resolution
     width, height = set_best_resolution(cap, RESOLUTIONS)
     logging.info(f"YOLO found cam: {index_to_check} set to {width}{height}")
+    cap.release()
     return width, height
 
 
