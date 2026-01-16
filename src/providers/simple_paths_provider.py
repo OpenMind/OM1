@@ -39,12 +39,21 @@ def simple_paths_processor(
         msg: zenoh.Sample
             The message containing paths data.
         """
-        paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
-        msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
-        current_time = time.time()
-        latency = current_time - msg_time
-        logging.debug(f"Received paths with latency: {latency:.6f} seconds")
-        logging.info(f"Received paths: {paths.paths}")
+        try:
+            paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
+        except Exception as e:
+            logging.error(f"Failed to deserialize paths message: {e}")
+            return
+
+        try:
+            msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
+            current_time = time.time()
+            latency = current_time - msg_time
+            logging.debug(f"Received paths with latency: {latency:.6f} seconds")
+            logging.info(f"Received paths: {paths.paths}")
+        except AttributeError as e:
+            logging.error(f"Invalid paths message structure: {e}")
+            return
 
         try:
             data_queue.put_nowait(paths)
@@ -54,8 +63,11 @@ def simple_paths_processor(
                 data_queue.put_nowait(paths)
             except Empty:
                 pass
+            except Exception as e:
+                logging.error(f"Error managing full queue: {e}")
 
     running = True
+    session = None
 
     try:
         session = open_zenoh_session()
@@ -63,6 +75,7 @@ def simple_paths_processor(
         logging.info("Zenoh is open for SimplePathsProvider")
     except Exception as e:
         logging.error(f"Failed to open Zenoh session: {e}")
+        running = False
 
     while running:
         try:
@@ -74,6 +87,14 @@ def simple_paths_processor(
             pass
 
         time.sleep(0.1)
+    
+    # Cleanup: close session if it was opened
+    if session is not None:
+        try:
+            session.close()
+            logging.info("SimplePathsProvider: Zenoh session closed")
+        except Exception as e:
+            logging.warning(f"Error closing Zenoh session: {e}")
 
 
 @singleton
@@ -159,25 +180,39 @@ class SimplePathsProvider:
             try:
                 paths = self.data_queue.get_nowait()
 
+                # Validate paths object before accessing attributes
+                if not hasattr(paths, "paths") or not isinstance(paths.paths, list):
+                    logging.warning("Invalid paths object received, skipping")
+                    continue
+
                 self.turn_left = []
                 self.turn_right = []
                 self.advance = []
                 self.retreat = False
 
                 for path in paths.paths:
-                    if path < 3:
-                        self.turn_left.append(path)
-                    elif path >= 3 and path <= 5:
-                        self.advance.append(path)
-                    elif path < 9:
-                        self.turn_right.append(path)
-                    elif path == 9:
+                    if not isinstance(path, (int, float)):
+                        logging.warning(f"Invalid path value type: {type(path)}, skipping")
+                        continue
+                    
+                    path_int = int(path)
+                    if path_int < 3:
+                        self.turn_left.append(path_int)
+                    elif path_int >= 3 and path_int <= 5:
+                        self.advance.append(path_int)
+                    elif path_int < 9:
+                        self.turn_right.append(path_int)
+                    elif path_int == 9:
                         self.retreat = True
 
-                self._valid_paths = paths
-                self._lidar_string = self._generate_movement_string(paths)
+                self._valid_paths = paths.paths if hasattr(paths, "paths") else []
+                self._lidar_string = self._generate_movement_string(self._valid_paths)
 
             except Empty:
+                time.sleep(0.1)
+                continue
+            except Exception as e:
+                logging.error(f"Error processing paths data: {e}", exc_info=True)
                 time.sleep(0.1)
                 continue
 
