@@ -12,6 +12,30 @@ T = TypeVar("T")
 class AvatarLLMState:
     """
     Singleton class to manage avatar thinking state during LLM processing.
+
+    This class implements a singleton pattern to manage avatar visual state transitions
+    during LLM (Large Language Model) processing. It coordinates between the avatar
+    provider and IO provider to display appropriate visual feedback when processing
+    voice inputs.
+
+    The class handles:
+        * Avatar state transitions (Think -> Happy) during LLM processing
+        * Voice input detection through IO provider
+        * Automatic state restoration after processing completion
+        * Thread-safe singleton initialization
+
+    The avatar state management is triggered automatically through the
+    `trigger_thinking` decorator, which wraps async LLM processing functions
+    and manages the avatar visual state lifecycle.
+
+    Attributes
+    ----------
+    avatar_provider : Optional[AvatarProvider]
+        The avatar provider instance for sending visual commands.
+        Initialized during singleton creation, may be None if initialization fails.
+    io_provider : Optional[IOProvider]
+        The IO provider instance for detecting voice input.
+        Initialized during singleton creation, may be None if initialization fails.
     """
 
     _instance = None
@@ -34,6 +58,25 @@ class AvatarLLMState:
     def __init__(self):
         """
         Initialize the AvatarLLMState singleton instance.
+
+        This method implements thread-safe singleton initialization. It is called
+        automatically when the singleton instance is first accessed. The initialization
+        process:
+
+        1. Creates and initializes the AvatarProvider instance for avatar control
+        2. Creates and initializes the IOProvider instance for voice input detection
+        3. Handles initialization failures gracefully by setting providers to None
+        4. Marks the instance as initialized to prevent re-initialization
+
+        If either provider fails to initialize, an error is logged and the provider
+        is set to None. The singleton will still be functional but may have limited
+        capabilities depending on which provider failed.
+
+        Notes
+        -----
+        This method uses the `_initialized` flag to ensure it only runs once,
+        even if `__init__` is called multiple times (which can happen with
+        singleton patterns in Python).
         """
         if not getattr(self, "_initialized", False):
             self.avatar_provider: Optional[AvatarProvider] = None
