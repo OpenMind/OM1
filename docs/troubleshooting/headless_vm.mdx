@@ -1,0 +1,25 @@
+---
+title: Headless/VM troubleshooting (no camera, no /dev/video0)
+---
+
+## Symptoms
+
+### 1) `docker compose` fails with `/dev/video0`
+Many cloud VMs do not expose a camera device. If your compose file maps `/dev/video0`, Docker can fail with:
+
+- `error gathering device information while adding custom device "/dev/video0": no such file or directory`
+
+### 2) Container restarts in a loop
+You may see:
+
+- `Status=restarting`
+- `ExitCode=1`
+- `RestartCount` keeps increasing
+
+## Fix 1: Remove the `/dev/video0` device mapping
+In `docker-compose.yml`, remove the line that maps `/dev/video0`:
+
+```yaml
+# Remove or comment out on headless VMs:
+# - /dev/video0:/dev/video0
+
