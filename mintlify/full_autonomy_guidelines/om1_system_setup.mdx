@@ -17,9 +17,12 @@ Get all the services up and running
 
 ```bash
     cd OM1-system-setup
-    docker compose up -d ota_agent
-    docker compose up -d ota_updater
-    docker compose up -d om1_monitor
+    cd OTA
+    docker-compose up -d ota_agent
+    docker-compose up -d ota_updater
+    cd ..
+    cd WIFI
+    docker-compose up -d om1_monitor
 ```
 
 ### ota_agent
