@@ -164,6 +164,10 @@ class QwenLLM(LLM[R]):
 
             response = await self._client.chat.completions.create(**request_params)
 
+            if not response.choices:
+                logging.warning("Qwen API returned empty choices")
+                return None
+
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
