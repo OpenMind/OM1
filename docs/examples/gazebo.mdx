@@ -39,6 +39,13 @@ To install compilers and other tools to build ROS packages, run
 sudo apt install ros-dev-tools
 ```
 
+Install the following additional dependencies
+
+```bash
+sudo apt install ros-humble-rmw-cyclonedds-cpp
+sudo apt install ros-humble-rosidl-generator-dds-idl
+```
+
 Set up your environment by sourcing the following file.
 
 ```bash
@@ -62,6 +69,8 @@ vi cyclonedds.xml
 Add the following, then save and exit.
 
 ```xml
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
         <General>
@@ -73,7 +82,7 @@ Add the following, then save and exit.
             <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
         </Discovery>
     </Domain>
-</CycloneDDS>
+</CycloneDDS>'
 ```
 
 To add the config to your bashrc, run:
@@ -85,6 +94,7 @@ vim ~/.bashrc
 And add the following:
 
 ```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
