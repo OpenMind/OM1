@@ -12,6 +12,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from runtime.config import validate_config_schema
 from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
@@ -143,6 +144,7 @@ def load_config(
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
+    validate_config_schema(raw_config)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
