@@ -195,21 +195,14 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
             logging.error(f"Error parsing Tesla data: {e}")
             return None
 
-        return """
+        return f"""
         Powertrain Transmission Travelled Distance: {powertrainTransmissionTravelledDistance} km
         Exterior Air Temperature: {exteriorAirTemperature} C
         Speed: {speed} km/h
         Powertrain Range: {powertrainRange} km
         Current Location Latitude: {currentLocationLatitude}
         Current Location Longitude: {currentLocationLongitude}
-        """.format(
-            powertrainTransmissionTravelledDistance=powertrainTransmissionTravelledDistance,
-            exteriorAirTemperature=exteriorAirTemperature,
-            speed=speed,
-            powertrainRange=powertrainRange,
-            currentLocationLatitude=currentLocationLatitude,
-            currentLocationLongitude=currentLocationLongitude,
-        )
+        """
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
