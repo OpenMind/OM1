@@ -79,7 +79,7 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 ## Getting Started
 
 ### Prerequisites
-- Docker and Docker Compose installed
+- Docker and docker compose installed (Makes sure the Docker Compose version is v2.32.4)
 - Access to all required repositories
 - Proper hardware setup
 
@@ -96,19 +96,19 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
    ```bash
    # Start OM1
    cd OM1
-   docker compose up om1 -d --no-build
+   docker-compose up om1 -d --no-build
 
    # Start ROS2 SDK components
    cd ../unitree_sdk
-   docker compose up orchestrator om1_sensor watchdog zenoh_bridge -d --no-build
+   docker-compose up orchestrator om1_sensor watchdog zenoh_bridge -d --no-build
 
    # Start Avatar frontend
    cd ../OM1-avatar
-   docker compose up -d --no-build
+   docker-compose up -d --no-build
 
    # Start Video Processor
    cd ../OM1-video-processor
-   docker compose up -d --no-build
+   docker-compose up -d --no-build
    ```
 
 ## What Happens Next
@@ -121,5 +121,3 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 ---
 
 Your robot is now ready to accompany you, assist with tasks, explore new environments, and learn alongside you.
-
-Note : We currently support Full autonomy for Unitree Go2 robot.Full autonomy for Unitree G1 will be released soon.
