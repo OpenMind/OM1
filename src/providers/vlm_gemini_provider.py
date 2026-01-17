@@ -14,7 +14,7 @@ class VLMGeminiProvider:
     """
     VLM Provider that handles video streaming and Gemini API communication.
 
-    This class implementationements a singleton pattern to manage video input streaming and API
+    This class implements a singleton pattern to manage video input streaming and API
     communication for vlm services. It runs in a separate thread to handle
     continuous vlm processing.
     """
@@ -100,7 +100,7 @@ class VLMGeminiProvider:
 
         Parameters
         ----------
-        callback : callable
+        message_callback : Optional[Callable]
             The callback function to process Gemini results.
         """
         self.message_callback = message_callback
