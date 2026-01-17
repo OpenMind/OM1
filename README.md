@@ -66,6 +66,26 @@ After launching OM1, the Spot agent will interact with you and perform (simulate
 Note: This is just an example agent configuration.
 If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
 
+#### macOS Camera Permission (Important!)
+
+If you're running on macOS and the Spot agent uses camera inputs, you may see an error like:
+```
+OpenCV: not authorized to capture video (status 0), requesting...
+OpenCV: camera failed to properly initialize!
+ERROR: COCO did not find cam: 0
+```
+
+**To fix this:**
+
+1. Open **System Settings** → **Privacy & Security** → **Camera**
+2. Find and enable camera access for:
+   - **Terminal** (if running from Terminal.app)
+   - **iTerm** (if using iTerm2)
+   - **Your IDE** (if running from VS Code, PyCharm, etc.)
+3. Restart the OM1 application after granting permission
+
+**Alternative:** You can test with a simulated camera input by modifying the agent configuration to use a different input source that doesn't require camera access.
+
 ## What's Next?
 
 * Try out some [examples](https://docs.openmind.org/examples)
