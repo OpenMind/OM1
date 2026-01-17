@@ -15,7 +15,7 @@ ToDo: use the `ffmpeg` in the Docker image?
 Start `Docker.app` on your Mac. Then, run the `bluenviron/mediamtx:latest-ffmpeg`:
 
 ```bash
-docker run --rm -it -p 8554:8554 -p 1935:1935 -p 8889:8889 -p 8189:8189/udp bluenviron/mediamtx:latest-ffmpeg
+docker run --rm -it -p 8554:8554 -p 8000:8000/udp -p 8001:8001/udp -p 1935:1935 -p 8889:8889 -p 8189:8189/udp bluenviron/mediamtx:latest-ffmpeg
 ```
 
 The point of the `-p 8554:8554` is to make the docker container RTSP listener port (on :8554 (TCP), :8000 (UDP/RTP), :8001 (UDP/RTCP)) available to the mac. `-p 1935:1935` allows access to the RTMP listener.
@@ -44,7 +44,7 @@ ffmpeg -hide_banner -list_devices true -f avfoundation -i dummy
 Then, start sending video data to the local `mediamtx` at `rtmp://localhost:1935/live`:
 
 ```bash
-ffmpeg -f avfoundation -video_size 1920x1080 -framerate 30 -i "0:0" -vcodec libx264 -preset ultrafast -tune zerolatency -f flv "rtmp://localhost:1935/live"
+ffmpeg -f avfoundation -video_size 1920x1080 -framerate 30 -i "0:0" -vcodec libx264 -pix_fmt yuv420p -preset ultrafast -tune zerolatency -f flv "rtmp://localhost:1935/live"
 ```
 
 -i "0:0": Specifies the input device. In this case, 0 refers to the video device index and the second 0 refers to the audio device index from the listed devices. Adjust these indices based on the output of the -list_devices command.
@@ -97,7 +97,11 @@ ffmpeg -f avfoundation -video_size 1920x1080 -framerate 30 -i "0:0" \
   "rtmp://api-video-ingest.openmind.org:1935/<OM_API_KEY_ID>?api_key=<OM_API_KEY>"
 ```
 
-**Note:** **OM_API_KEY_ID** refers to the first 16 digits of your API key, excluding the **om_prod_ prefix**. You can also find your corresponding **OM_API_KEY_ID** in our [portal](https://portal.openmind.org).
+**Note:** **OM_API_KEY_ID** refers to the first 16 characters of your API key, excluding the **om_prod_** prefix. You can also find your corresponding **OM_API_KEY_ID** in our [portal](https://portal.openmind.org).
+
+**Example:** If your API key is `om_prod_abc123def456ghij789klmnopqrst`, then:
+- `OM_API_KEY_ID` = `abc123def456ghij` (first 16 characters after `om_prod_`)
+- `OM_API_KEY` = Your full API key value
 
 You can view your video stream at:
 
