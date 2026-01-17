@@ -10,6 +10,40 @@ from typing import Any, Dict, List
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
+def check_dependencies():
+    """Check for required dependencies and provide helpful error messages."""
+    missing_deps = []
+
+    try:
+        import json5  # noqa: F401
+    except ImportError:
+        missing_deps.append("json5")
+
+    if missing_deps:
+        error_msg = f"""
+╔══════════════════════════════════════════════════════════════╗
+║                   MISSING DEPENDENCIES                       ║
+╚══════════════════════════════════════════════════════════════╝
+
+This script requires the following dependencies: {', '.join(missing_deps)}
+
+To fix this issue, please run the script using one of these methods:
+
+  1. Using uv (recommended):
+     $ uv run python scripts/generate_schema.py
+
+  2. Install dependencies manually:
+     $ pip install {' '.join(missing_deps)}
+
+  3. Install all project dependencies:
+     $ uv sync
+
+For more information, see: https://docs.openmind.org/
+"""
+        print(error_msg, file=sys.stderr)
+        sys.exit(1)
+
+
 class ConfigSchemaGenerator:
     """Scans OM1 codebase and generates configuration schema."""
 
@@ -624,6 +658,9 @@ def main():
     """
     Main entry point for schema generation script.
     """
+    # Check for required dependencies before proceeding
+    check_dependencies()
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(script_dir)
 
