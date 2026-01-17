@@ -396,8 +396,12 @@ class ConfigSchemaGenerator:
         Returns
         -------
         List[str]
-            List of absolute paths to Python files.
+            List of absolute paths to Python files. Returns empty list if
+            directory does not exist.
         """
+        if not os.path.exists(directory):
+            return []
+
         return [
             os.path.join(directory, f)
             for f in os.listdir(directory)
@@ -534,7 +538,7 @@ class ConfigSchemaGenerator:
                 "name": name,
                 "type": self._annotation_to_type(item.annotation),
                 "label": name.replace("_", " ").title(),
-                "required": has_default,
+                "required": not has_default,
                 "description": description,
             }
 
