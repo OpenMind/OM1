@@ -9,9 +9,21 @@ from actions.tweet.interface import TweetInput
 
 
 class TweetAPIConnector(ActionConnector[ActionConfig, TweetInput]):
-    """Connector for Twitter API."""
+    """
+    Connector for Twitter API.
+
+    This connector integrates with Twitter API v2 to post tweets from the robot.
+    """
 
     def __init__(self, config: ActionConfig):
+        """
+        Initialize the Twitter API connector.
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
         load_dotenv()
@@ -39,11 +51,13 @@ class TweetAPIConnector(ActionConnector[ActionConfig, TweetInput]):
         """
         try:
             # Log the tweet we're about to send
-            tweet_to_make = {"action": output_interface.tweet}  # type: ignore
+            # FIXED: Changed from output_interface.tweet to output_interface.action
+            tweet_to_make = {"action": output_interface.action}
             logging.info(f"SendThisToTwitterAPI: {tweet_to_make}")
 
             # Send tweet
-            response = self.client.create_tweet(text=output_interface.tweet)  # type: ignore
+            # FIXED: Changed from output_interface.tweet to output_interface.action
+            response = self.client.create_tweet(text=output_interface.action)
             tweet_id = response.data["id"]
             tweet_url = f"https://twitter.com/user/status/{tweet_id}"
             logging.info(f"Tweet sent successfully! URL: {tweet_url}")
