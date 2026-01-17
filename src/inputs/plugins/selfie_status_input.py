@@ -24,6 +24,16 @@ class SelfieStatus(FuserInput[SensorConfig, Optional[str]]):
     """
 
     def __init__(self, config: SensorConfig):
+        """
+        Initialize the SelfieStatus input handler.
+
+        Sets up the required providers and buffers for handling selfie status data.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the sensor input.
+        """
         super().__init__(config)
         self.io_provider = IOProvider()
         self.messages: Deque[Message] = deque(maxlen=50)
