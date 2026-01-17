@@ -103,6 +103,10 @@ class OpenAILLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
+            if not response.choices:
+                logging.warning("OpenAI API returned empty choices")
+                return None
+
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
