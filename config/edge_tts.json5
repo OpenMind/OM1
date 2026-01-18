@@ -42,9 +42,6 @@
       llm_label: "speak",
       implementation: "passthrough",
       connector: "edge_tts",
-      config: {
-        enable_tts_interrupt: false,
-      },
     },
     {
       name: "face",
