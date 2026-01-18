@@ -61,6 +61,10 @@ Run
 ```bash
 uv run src/run.py spot
 ```
+> **⚠️ Note for macOS Users:**
+> If you encounter camera access issues (e.g., black screen or initialization failure), please ensure your terminal application has permission to access the camera:
+> 1. Go to **System Settings** > **Privacy & Security** > **Camera**.
+> 2. Enable access for your terminal emulator (e.g., iTerm2, VS Code, or Terminal).
 
 After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
 
