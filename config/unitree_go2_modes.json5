@@ -289,8 +289,7 @@
         type: "OpenAILLM",
         config: {
           agent_name: "Bits",
-          history_length: 0,
-          model: "gpt-4.1",
+          history_length: 10,
         },
       },
       action_execution_mode: "concurrent",
@@ -402,6 +401,7 @@
           history_length: 20,
         },
       },
+      action_execution_mode: "concurrent",
       agent_inputs: [
         {
           type: "Odom",
@@ -422,7 +422,6 @@
           type: "FacePresence",
         },
       ],
-      action_execution_mode: "concurrent",
       agent_actions: [
         {
           name: "face",
@@ -597,6 +596,133 @@
         },
       ],
     },
+
+    person_follow: {
+      display_name: "Person Following",
+      description: "Follow a person autonomously using visual tracking",
+      system_prompt_base: "You are Bits in person-following mode. Your mission is to follow a person wherever they go.\n\n\
+BEHAVIOR RULES:\n\
+1. Movement is handled automatically by the tracking system - you do NOT need to issue any movement commands.\n\
+2. Focus on being a friendly companion while following.\n\
+3. React to the Person Following Status input:\n\
+   - When 'TRACKING STARTED': Say something like 'I see you! Following you now.' or 'Got you! Lead the way!'\n\
+   - When 'TRACKING': Occasionally make friendly comments like 'Still right behind you!' or 'Where are we going?'\n\
+   - When 'TRACKING LOST': Say 'I lost you! Please come back in front of me so I can see you.'\n\
+4. Respond to voice commands naturally while following.\n\
+5. If the user asks you to stop following, acknowledge and suggest switching modes.\n\
+6. Be playful and engaging - you're like a loyal puppy following their owner!\n\n\
+SAFETY:\n\
+- If you detect any obstacles or safety concerns from visual input, warn the user.\n\
+- Always prioritize not bumping into the person you're following.\n\n\
+VOICE RULE:\n\
+- If there is Voice input, ALWAYS respond with SPEAK.\n\
+- Keep responses short and energetic while moving.\n\
+- Don't talk too much - focus on following!",
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "Odom",
+        },
+        {
+          type: "UnitreeGo2Battery",
+        },
+        {
+          type: "GoogleASRRTSPInput",
+        },
+        {
+          type: "VLMVilaRTSP",
+        },
+        {
+          type: "PersonFollowingStatus",
+        },
+        {
+          type: "FacePresence",
+        },
+      ],
+      cortex_llm: {
+        type: "OpenAILLM",
+        config: {
+          agent_name: "Bits",
+          history_length: 5,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 15,
+          },
+        },
+      ],
+      backgrounds: [
+        {
+          type: "UnitreeGo2State",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "start_person_follow_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Person following mode activated. Stand in front of me so I can see you!",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "start_person_follow_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Switching to person following mode. Stand in front of me so I can follow you!",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "stop_person_follow_hook",
+          },
+          timeout_seconds: 5,
+          priority: 1,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            message: "Stopping person following. It was fun keeping up with you!",
+          },
+          priority: 0,
+        },
+      ],
+    },
   },
 
   transition_rules: [
@@ -660,6 +786,20 @@
       priority: 4,
       cooldown_seconds: 10.0,
     },
+    {
+      from_mode: "welcome",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "follow me",
+        "follow",
+        "come with me",
+        "track me",
+        "person following",
+      ],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
 
     // From SLAM mode
     {
@@ -706,6 +846,14 @@
       priority: 3,
       cooldown_seconds: 10.0,
     },
+    {
+      from_mode: "slam",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
 
     // From navigation mode
     {
@@ -730,6 +878,14 @@
       priority: 3,
       cooldown_seconds: 10.0,
     },
+    {
+      from_mode: "navigation",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
 
     // From conversation mode
     {
@@ -747,6 +903,14 @@
       trigger_keywords: ["guard", "security", "patrol", "keep watch"],
       priority: 2,
       timeout_seconds: 300.0, // Switch to guard mode after 5 minutes of inactivity
+    },
+    {
+      from_mode: "conversation",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
     },
 
     // From guard mode
@@ -769,6 +933,48 @@
       to_mode: "navigation",
       transition_type: "input_triggered",
       trigger_keywords: ["navigate", "go to location", "take me to"],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "guard",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+
+    // From person_follow mode
+    {
+      from_mode: "person_follow",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "stop following",
+        "stop",
+        "stay here",
+        "wait here",
+        "don't follow",
+        "chat",
+        "talk",
+      ],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "person_follow",
+      to_mode: "guard",
+      transition_type: "input_triggered",
+      trigger_keywords: ["guard", "security", "patrol"],
+      priority: 3,
+      cooldown_seconds: 10.0,
+    },
+    {
+      from_mode: "person_follow",
+      to_mode: "navigation",
+      transition_type: "input_triggered",
+      trigger_keywords: ["navigate", "go to", "take me to"],
       priority: 2,
       cooldown_seconds: 5.0,
     },
