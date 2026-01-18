@@ -59,6 +59,7 @@ macos = ["osascript"]
 dev = [
     "black>=24.10.0",
     "isort>=5.13.2",
+    "json5>=0.10.0",
     "pre-commit>=4.1.0",
     "pyright>=1.1.406",
     "pytest>=8.3.4",

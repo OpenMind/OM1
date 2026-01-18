@@ -2483,6 +2483,7 @@ macos = [
 dev = [
     { name = "black" },
     { name = "isort" },
+    { name = "json5" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -2544,6 +2545,7 @@ provides-extras = ["dds", "macos"]
 dev = [
     { name = "black", specifier = ">=24.10.0" },
     { name = "isort", specifier = ">=5.13.2" },
+    { name = "json5", specifier = ">=0.10.0" },
     { name = "pre-commit", specifier = ">=4.1.0" },
     { name = "pyright", specifier = ">=1.1.406" },
     { name = "pytest", specifier = ">=8.3.4" },

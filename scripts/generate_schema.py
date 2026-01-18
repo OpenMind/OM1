@@ -7,6 +7,15 @@ import os
 import sys
 from typing import Any, Dict, List
 
+# --- FIX START: Handle missing dependency gracefully ---
+try:
+    import json5
+except ImportError:
+    print("❌ Error: The 'json5' module is missing.")
+    print("Please run 'uv add --dev json5' to install the required dependency.")
+    sys.exit(1)
+# --- FIX END ---
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
@@ -44,7 +53,7 @@ class ConfigSchemaGenerator:
         str
             Absolute path to the generated schema file.
         """
-        import json5
+        # Note: 'import json5' removed from here as it is now checked globally.
 
         inputs = self.scan_inputs()
         llms = self.scan_llms()
@@ -67,8 +76,15 @@ class ConfigSchemaGenerator:
         }
 
         schema_path = os.path.join(self.root_dir, "OM1_config_schema.json5")
-        with open(schema_path, "w") as f:
-            json5.dump(schema, f, indent=2)
+        
+        # --- FIX START: Robust file writing ---
+        try:
+            with open(schema_path, "w", encoding="utf-8") as f:
+                json5.dump(schema, f, indent=2)
+        except Exception as e:
+            logging.error(f"Failed to write schema file at {schema_path}: {e}")
+            raise e
+        # --- FIX END ---
 
         return schema_path
 
@@ -87,7 +103,8 @@ class ConfigSchemaGenerator:
 
         for filepath in self._py_files(self.inputs_dir):
             try:
-                tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tree = ast.parse(f.read())
 
                 config_node = None
                 sensor_node = None
@@ -136,7 +153,8 @@ class ConfigSchemaGenerator:
 
         for filepath in self._py_files(self.llm_dir):
             try:
-                tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tree = ast.parse(f.read())
 
                 config_node = None
                 llm_node = None
@@ -182,7 +200,8 @@ class ConfigSchemaGenerator:
 
         for filepath in self._py_files(self.backgrounds_dir):
             try:
-                tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tree = ast.parse(f.read())
 
                 config_node = None
                 background_node = None
@@ -237,7 +256,8 @@ class ConfigSchemaGenerator:
 
             for filepath in self._py_files(connector_dir):
                 try:
-                    tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        tree = ast.parse(f.read())
 
                     # Find config class and connector class in the file
                     config_node = None
@@ -305,7 +325,7 @@ class ConfigSchemaGenerator:
             return {}
 
         try:
-            with open(self.schema_path, "r") as f:
+            with open(self.schema_path, "r", encoding="utf-8") as f:
                 schema = json.load(f)
 
             hooks_schema = schema.get("properties", {}).get(
@@ -333,7 +353,8 @@ class ConfigSchemaGenerator:
         for filepath in self._py_files(self.hooks_dir):
             try:
                 module_name = os.path.basename(filepath)[:-3]
-                tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tree = ast.parse(f.read())
 
                 functions = [
                     node.name
@@ -361,7 +382,7 @@ class ConfigSchemaGenerator:
             return {}
 
         try:
-            with open(self.schema_path, "r") as f:
+            with open(self.schema_path, "r", encoding="utf-8") as f:
                 schema = json.load(f)
 
             transition_schema = schema.get("properties", {}).get("transition_rules", {})
@@ -469,7 +490,8 @@ class ConfigSchemaGenerator:
             return []
 
         try:
-            tree = ast.parse(open(file_path, "r", encoding="utf-8").read())
+            with open(file_path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
             for node in tree.body:
                 if isinstance(node, ast.ClassDef) and node.name == class_name:
                     return self._parse_pydantic_fields_from_node(node)
@@ -632,10 +654,15 @@ def main():
         logging.info(f"✓ Schema generated successfully: {schema_path}")
         return 0
     except Exception as e:
-        logging.error(f"✗ Error: {e}")
-        import traceback
-
-        traceback.print_exc()
+        # --- FIX START: Better error logging ---
+        # Don't print stack trace for simple errors to avoid scaring users
+        if "json5" in str(e) or isinstance(e, FileNotFoundError):
+             logging.error(f"✗ Error: {e}")
+        else:
+             logging.error(f"✗ Unexpected Error: {e}")
+             import traceback
+             traceback.print_exc()
+        # --- FIX END ---
         return 1
 
 
