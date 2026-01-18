@@ -13,9 +13,6 @@
         enable_tts_interrupt: false,
       },
     },
-    {
-      type: "StatusReporter",
-    },
   ],
   simulators: [
     {
