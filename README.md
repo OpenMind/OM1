@@ -47,7 +47,7 @@ brew install portaudio ffmpeg
 For Linux
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-dev ffmpeg
+sudo apt-get install portaudio19-dev python3-dev ffmpeg
 ```
 
 ### Obtain an OpenMind API Key
@@ -117,7 +117,7 @@ We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the Bra
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 - **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
 
-Clone the following repoitories -
+Clone the following repositories -
 - git clone https://github.com/OpenMind/OM1.git
 - git clone https://github.com/OpenMind/unitree-sdk.git
 - git clone https://github.com/OpenMind/OM1-avatar.git
