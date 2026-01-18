@@ -24,16 +24,14 @@ class GpsConfig(BackgroundConfig):
 
 class Gps(Background[GpsConfig]):
     """
-    Background task for reading GPS and magnetometer data.
+    Background task for reading GPS position and magnetometer heading data.
 
-    This background task initializes and manages a GpsProvider instance
-    that connects to a GPS device via serial port. The provider reads
-    GPS coordinates (latitude, longitude, altitude) and magnetometer
-    data (yaw angle) from the connected device.
+    Manages a GpsProvider instance that connects to a GPS device via serial port,
+    processing GPS location data (latitude, longitude, altitude) and magnetometer
+    data (compass heading) for outdoor navigation and orientation.
 
-    The GPS data is used for robot localization and navigation, providing
-    absolute position information in outdoor environments where GPS signals
-    are available.
+    GPS data provides global position information for outdoor localization, while
+    magnetometer data provides heading information to determine orientation.
     """
 
     def __init__(self, config: GpsConfig):
@@ -43,10 +41,10 @@ class Gps(Background[GpsConfig]):
         Parameters
         ----------
         config : GpsConfig
-            Configuration object for the GPS background task. Must include
-            the serial_port parameter specifying the serial port where the
-            GPS device is connected. If serial_port is None, the provider
-            will not be initialized and an error will be logged.
+            Configuration object containing GPS-specific parameters:
+            - serial_port: The serial port path for connecting to the GPS device
+              (e.g., "/dev/ttyUSB0"). If not specified, an error will be logged and
+              the provider will not be initialized.
         """
         super().__init__(config)
 
