@@ -1,28 +1,27 @@
 {
-  "version": "v1.0.1",
-  "hertz": 10,
-  "name": "bits",
-  "unitree_ethernet": "en0",
-  "api_key": "openmind_free",
-  "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Bits.",
-  "system_governance": "",
-  "system_prompt_examples": "",
-  "agent_inputs": [
+  version: "v1.0.1",
+  hertz: 10,
+  name: "bits",
+  unitree_ethernet: "en0",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a smart, curious, and friendly dog. Your name is Bits.",
+  system_governance: "",
+  system_prompt_examples: "",
+  agent_inputs: [
     {
-      "type": "Odom",
+      type: "Odom",
       config: {
-        "use_zenoh": false,
-        "URID": "",     // only needed for Zenoh
-      }
-    }
+        use_zenoh: false,
+        URID: "", // only needed for Zenoh
+      },
+    },
   ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Bits",
-      "history_length": 0
-    }
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
-  ]
+  agent_actions: [],
 }

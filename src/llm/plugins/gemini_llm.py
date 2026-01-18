@@ -35,6 +35,13 @@ class GeminiLLM(LLM[R]):
     ):
         """
         Initialize the Gemini LLM instance.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
@@ -92,6 +99,10 @@ class GeminiLLM(LLM[R]):
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
+
+            if not response.choices:
+                logging.warning("Gemini API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
