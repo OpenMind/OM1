@@ -41,7 +41,7 @@
       name: "speak",
       llm_label: "speak",
       implementation: "passthrough",
-      connector: "elevenlabs_tts",
+      connector: "edge_tts",
       config: {
         enable_tts_interrupt: false,
       },
