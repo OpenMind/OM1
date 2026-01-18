@@ -60,10 +60,19 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
 
         try:
             # fetch wallet data
+            # fetch wallet data
             if not self.COINBASE_WALLET_ID:
-                raise ValueError("COINBASE_WALLET_ID environment variable is not set")
-
-            self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
+                logging.warning("COINBASE_WALLET_ID environment variable is not set. Attempting to create a new wallet...")
+                try:
+                    self.wallet = Wallet.create()
+                except Exception:
+                    # Fallback for SDKs requiring network_id
+                    self.wallet = Wallet.create(network_id="base-sepolia")
+                
+                logging.warning(f"Created new wallet: {self.wallet.id}")
+                logging.warning("IMPORTANT: Persist this WALLET_ID to your .env file to maintain access to these funds!")
+            else:
+                self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
             logging.info(f"Wallet: {self.wallet}")
 
             self.balance = float(self.wallet.balance(self.asset_id))
