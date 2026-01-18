@@ -66,7 +66,7 @@ class AgentTeleopsStatusBackground(Background[AgentTeleopsStatusConfig]):
         Parameters
         ----------
         config : AgentTeleopsStatusConfig
-        Configuration object for the background task.
+            Configuration object for the background task.
         """
         super().__init__(config)
 
