@@ -30,10 +30,33 @@ class OdomConfig(BackgroundConfig):
 
 class Odom(Background[OdomConfig]):
     """
-    Reads odometry data from Odom provider.
+    Background task for reading odometry data from Odom provider.
+
+    This background task initializes and manages an OdomProvider instance
+    that reads robot odometry data. The provider can connect via Zenoh
+    for distributed robot systems or via Unitree Ethernet for direct
+    hardware communication.
+
+    Odometry data includes position, orientation, and velocity information,
+    which are essential for robot localization, navigation, and path planning.
+    The background task continuously monitors odometry updates to maintain
+    accurate robot state information.
     """
 
     def __init__(self, config: OdomConfig):
+        """
+        Initialize Odom background task with configuration.
+
+        Parameters
+        ----------
+        config : OdomConfig
+            Configuration object for the odometry background task. The configuration
+            specifies the connection method (Zenoh or Unitree Ethernet) and
+            required connection parameters (URID for Zenoh, ethernet channel for Unitree).
+            If use_zenoh is True, the provider will subscribe to odometry data via Zenoh
+            using the specified URID. If use_zenoh is False and unitree_ethernet is provided,
+            the provider will connect directly to Unitree hardware via Ethernet.
+        """
         super().__init__(config)
 
         use_zenoh = self.config.use_zenoh

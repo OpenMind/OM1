@@ -18,7 +18,7 @@ class OpenRouter(LLM[R]):
     """
     An OpenRouter-based Language Learning Model implementation with function call support.
 
-    This class implements the LLM interface for OpenRouter's models (MEta and Anthropic), handling
+    This class implements the LLM interface for OpenRouter's models (Meta and Anthropic), handling
     configuration, authentication, and async API communication. It supports both
     traditional JSON structured output and function calling.
 
@@ -102,6 +102,10 @@ class OpenRouter(LLM[R]):
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
+
+            if not response.choices:
+                logging.warning("OpenRouter API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()

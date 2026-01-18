@@ -1,32 +1,34 @@
 {
-  "version": "v1.0.1",
-  "hertz": 1,
-  "name": "bits",
-  "unitree_ethernet": "en0",
-  "api_key": "openmind_free",
-  "system_prompt_base": "You are a smart, curious, and friendly dog. Your name is Bits.",
-  "system_governance": "",
-  "system_prompt_examples": "",
-  "agent_inputs": [
+  version: "v1.0.1",
+  hertz: 1,
+  name: "bits",
+  unitree_ethernet: "en0",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a smart, curious, and friendly dog. Your name is Bits.",
+  system_governance: "",
+  system_prompt_examples: "",
+  agent_inputs: [
     {
-      "type": "RPLidar",
-      "config": {
-        "serial_port": "/dev/cu.usbserial-0001",
-        "half_width_robot": 0.21,
-        "relevant_distance_max": 1.1,
-        "relevant_distance_min": 0.16,
-        "sensor_mounting_angle": 172.0,
-        "angles_blanked": [[-180.0, -170.0], [160, 180]]
-      }
-    }
+      type: "RPLidar",
+      config: {
+        serial_port: "/dev/cu.usbserial-0001",
+        half_width_robot: 0.21,
+        relevant_distance_max: 1.1,
+        relevant_distance_min: 0.16,
+        sensor_mounting_angle: 172.0,
+        angles_blanked: [
+          [-180.0, -170.0],
+          [160, 180],
+        ],
+      },
+    },
   ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "agent_name": "Bits",
-      "history_length": 0
-    }
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 0,
+    },
   },
-  "agent_actions": [
-  ]
+  agent_actions: [],
 }
