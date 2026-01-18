@@ -1,6 +1,7 @@
 # tests/providers/test_simple_paths_provider.py
 
 import pytest
+
 from src.providers.simple_paths_provider import SimplePathsProvider
 
 
@@ -93,8 +94,12 @@ def test_generate_movement_string_none_paths(simple_paths_provider):
 
     # Let's set internal state to non-empty, and pass a non-empty list to bypass 'if not valid_paths'.
     simple_paths_provider.advance = [3, 4, 5]
-    expected_with_internal_state = "The safe movement directions are: {'move forwards', 'stand still'}. "
-    result = simple_paths_provider._generate_movement_string(["dummy"]) # Pass non-empty list
+    expected_with_internal_state = (
+        "The safe movement directions are: {'move forwards', 'stand still'}. "
+    )
+    result = simple_paths_provider._generate_movement_string(
+        ["dummy"]
+    )  # Pass non-empty list
     assert result == expected_with_internal_state
 
     # Now, let's reset internal state to empty, but still pass a non-empty list to bypass the first check.
@@ -104,10 +109,14 @@ def test_generate_movement_string_none_paths(simple_paths_provider):
     simple_paths_provider.advance = []
     simple_paths_provider.retreat = False
     expected_only_stand_still = "The safe movement directions are: {'stand still'}. "
-    result_only_stand_still = simple_paths_provider._generate_movement_string(["dummy"]) # Pass non-empty list
+    result_only_stand_still = simple_paths_provider._generate_movement_string(
+        ["dummy"]
+    )  # Pass non-empty list
     assert result_only_stand_still == expected_only_stand_still
 
     # Now, test the "surrounded" message by passing an empty list.
     expected_surrounded = "You are surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
-    result_surrounded = simple_paths_provider._generate_movement_string([]) # Pass empty list
+    result_surrounded = simple_paths_provider._generate_movement_string(
+        []
+    )  # Pass empty list
     assert result_surrounded == expected_surrounded
