@@ -24,19 +24,26 @@ class DeepSeekLLM(LLM[R]):
     Parameters
     ----------
     config : LLMConfig
-        Configuration object containing API settings. If not provided, defaults
-        will be used.
+        Configuration object containing API settings.
     available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided.
+        List of available actions for function call generation. If provided,
+        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
         Initialize the DeepSeek LLM instance.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
@@ -55,7 +62,9 @@ class DeepSeekLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(self, prompt: str, messages: T.List[T.Dict[str, str]]) -> R | None:
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the DeepSeek API and get a structured response.
 
@@ -86,12 +95,16 @@ class DeepSeekLLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gemini-2.0-flash-exp",
+                model=self._config.model or "deepseek-chat",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
+
+            if not response.choices:
+                logging.warning("DeepSeek API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
@@ -113,7 +126,7 @@ class DeepSeekLLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
+                logging.info(f"DeepSeek LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None
