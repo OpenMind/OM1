@@ -129,9 +129,7 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
         try:
             # Create a temporary file for the audio
             # delete=False is required to let other processes/libs read it before deletion
-            with tempfile.NamedTemporaryFile(
-                suffix=".mp3", delete=False
-            ) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
                 temp_path = Path(temp_file.name)
 
             # Generate audio using edge-tts
@@ -146,13 +144,13 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
             # Load and play audio using pydub
             audio = AudioSegment.from_mp3(str(temp_path))
             logging.info(f"Edge TTS: Playing audio ({len(audio)}ms)")
-            
+
             # FIX: Use asyncio.to_thread to prevent blocking the event loop
             await asyncio.to_thread(play, audio)
 
         except Exception as e:
             logging.error(f"Error generating/playing audio with Edge TTS: {e}")
-            # We don't re-raise here to avoid crashing the whole connector loop, 
+            # We don't re-raise here to avoid crashing the whole connector loop,
             # just log error as per connect() logic.
             # If you want to bubble up, add 'raise' here.
 
@@ -163,7 +161,9 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
                     temp_path.unlink()
                     logging.debug("Edge TTS: Temp file cleaned up")
                 except Exception as cleanup_err:
-                    logging.warning(f"Edge TTS: Failed to delete temp file: {cleanup_err}")
+                    logging.warning(
+                        f"Edge TTS: Failed to delete temp file: {cleanup_err}"
+                    )
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
         """
@@ -185,7 +185,7 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
             if code == 2:
                 response_code = 1 if self.tts_enabled else 0
                 status_text = "TTS Enabled" if self.tts_enabled else "TTS Disabled"
-            
+
             # Enable the TTS (code == 1)
             elif code == 1:
                 self.tts_enabled = True
@@ -199,9 +199,9 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
                 logging.info("Edge TTS Disabled")
                 response_code = 0
                 status_text = "Edge TTS Disabled"
-            
+
             else:
-                return # Unknown code
+                return  # Unknown code
 
             tts_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
@@ -209,11 +209,9 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
                 code=response_code,
                 status=String(data=status_text),
             )
-            
+
             if self._zenoh_tts_status_response_pub:
-                self._zenoh_tts_status_response_pub.put(
-                    tts_status_response.serialize()
-                )
+                self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
 
         except Exception as e:
             logging.error(f"Error processing Zenoh TTS status request: {e}")
