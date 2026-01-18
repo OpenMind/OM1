@@ -1,0 +1,27 @@
+name: JSON5 Lint
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - '**.json5'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - '**.json5'
+
+jobs:
+  lint-json5:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install json5 linter
+        run: npm install -g json5
+      - name: Find and Lint JSON5 files
+        run: |
+          echo "Finding JSON5 files..."
+          find . -name "*.json5" -not -path "*/node_modules/*" -print0 | xargs -0 -I {} sh -c 'echo "Checking {}" && json5 -c "{}"'
