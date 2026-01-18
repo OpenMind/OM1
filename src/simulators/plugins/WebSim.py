@@ -582,11 +582,21 @@ class WebSim(Simulator):
                     asyncio.set_event_loop(loop)
 
                 try:
-                    loop.run_until_complete(self.broadcast_state())
+                    if loop.is_running():
+                        # If the event loop is already running (e.g., in Docker),
+                        # use run_coroutine_threadsafe to schedule the coroutine
+                        future = asyncio.run_coroutine_threadsafe(
+                            self.broadcast_state(), loop
+                        )
+                        # Wait for the result with a timeout to avoid blocking forever
+                        try:
+                            future.result(timeout=1.0)
+                        except TimeoutError:
+                            logging.warning("Websim broadcast timed out")
+                    else:
+                        loop.run_until_complete(self.broadcast_state())
                 except Exception as e:
                     logging.warning(f"Websim tick error: {e}")
-                    loop = asyncio.get_event_loop()
-                    loop.create_task(self.broadcast_state())
 
             except Exception as e:
                 logging.error(f"Error in tick: {e}")
