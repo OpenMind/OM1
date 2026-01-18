@@ -160,7 +160,25 @@ class UnitreeGo2StateProvider:
 
     def __init__(self, channel: str = ""):
         """
-        Robot and sensor configuration.
+        Initialize the Unitree Go2 State Provider.
+
+        Parameters
+        ----------
+        channel : str, optional
+            CycloneDDS channel name for subscribing to Unitree Go2 state data.
+            Defaults to empty string. The channel is used to receive sport mode
+            state messages from the robot via CycloneDDS communication.
+
+        Notes
+        -----
+        The initialization process sets up:
+        1. Communication queues for inter-process data exchange (data_queue and control_queue)
+        2. Thread management variables for state reader and processor threads
+        3. State tracking variables for current robot state, state code, and action progress
+
+        The provider uses a multi-process architecture where the state reader runs
+        in a separate process to handle CycloneDDS subscriptions, while the state
+        processor runs in a thread to process received state data.
         """
         self.channel = channel
 
