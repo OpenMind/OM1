@@ -100,6 +100,19 @@ class DualLLM(LLM[R]):
         config: DualLLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
+        """
+        Initialize the DualLLM instance.
+
+        Sets up the local and cloud LLMs based on configuration, initializes
+        the evaluation client, and prepares the history manager.
+
+        Parameters
+        ----------
+        config : DualLLMConfig
+            Configuration settings for the Dual LLM, including local and cloud LLM details.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
+        """
         super().__init__(config, available_actions)
 
         self._config: DualLLMConfig
@@ -238,9 +251,14 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
 
+            if not response.choices:
+                logging.warning("LLM evaluation returned empty choices")
+                return "local"
+
             content = response.choices[0].message.content
             if content is None:
                 return "local"
+
             result = content.strip().upper()
             return "local" if "A" in result else "cloud"
         except Exception as e:
