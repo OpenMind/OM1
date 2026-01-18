@@ -33,12 +33,12 @@ git clone https://github.com/OpenMind/OM1-system-setup
 ```bash
     cd OM1-system-setup
     cd WIFI
-    docker compose up -d om1_monitor
+    docker-compose up -d om1_monitor
 
     cd ..
     cd OTA
-    docker compose up -d ota_agent
-    docker compose up -d ota_updater
+    docker-compose up -d ota_agent
+    docker-compose up -d ota_updater
 ```
 
 The docker images are also available at Docker Hub [OTA](https://hub.docker.com/layers/openmindagi/ota/v1.0.0) and [om1_monitor](https://hub.docker.com/layers/openmindagi/om1_monitor/v1.0.0).
