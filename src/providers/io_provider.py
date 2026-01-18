@@ -283,9 +283,7 @@ class IOProvider:
             self._llm_prompt = value
 
     def clear_llm_prompt(self) -> None:
-        """C
-        lear the LLM prompt.
-        """
+        """Clear the LLM prompt."""
         with self._lock:
             self._llm_prompt = None
 

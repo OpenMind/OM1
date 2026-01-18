@@ -3,8 +3,7 @@
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
 <a href="https://docs.openmind.org/">Documentation</a> |
-<a href="https://x.com/openmind_agi">X</a> |
-<a href="https://discord.gg/openmind">Discord</a>
+<a href="https://x.com/openmind_agi">X</a>
 </p>
 
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
@@ -15,7 +14,7 @@
 * **Data Input**: Easily handles new data and sensors.
 * **Hardware Support via Plugins**: Supports new hardware through plugins for API endpoints and specific robot hardware connections to `ROS2`, `Zenoh`, and `CycloneDDS`. (We recommend `Zenoh` for all new development).
 * **Web-Based Debugging Display**: Monitor the system in action with WebSim (available at http://localhost:8000/) for easy visual debugging.
-* **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
+* **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 
 ## Architecture Overview
 ![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/dd91457d-010f-43d8-960e-d1165834aa58)
@@ -94,7 +93,7 @@ OM1 can interface with your HAL via USB, serial, ROS2, CycloneDDS, Zenoh, or web
 
 OM1 is developed on:
 
-* Nvidia Thor (running JetPak 7.0) - full support
+* Nvidia Thor (running JetPack 7.0) - full support
 * Jetson AGX Orin 64GB (running Ubuntu 22.04 and JetPack 6.1) - limited support
 * Mac Studio with Apple M2 Ultra with 48 GB unified memory (running MacOS Sequoia)
 * Mac Mini with Apple M4 Pro with 48 GB unified memory (running MacOS Sequoia)
@@ -102,26 +101,28 @@ OM1 is developed on:
 
 OM1 _should_ run on other platforms (such as Windows) and microcontrollers such as the Raspberry Pi 5 16GB.
 
+## Introduction to BrainPack
+
+From research to real-world autonomy, a platform that learns, moves, and builds with you.
+We'll shortly be releasing the **BOM** and details on **DIY** for the BrainPack.
+Stay tuned!
 
 ## Full Autonomy Guidance
 
-We're excited to introduce **full autonomy** for Unitree Go2 and G1. Full autonomy has four services that work together in a loop without manual intervention:
+We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
 
 - **om1**
 - **unitree_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
+- **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
 
-## Intro to BrainPack?
-From research to real-world autonomy, a platform that learns, moves, and builds with you.
-We'll shortly be releasing the **BOM** and details on **DIY** for it.
-Stay tuned!
-
-Clone the following repos -
-- https://github.com/OpenMind/OM1.git
-- https://github.com/OpenMind/unitree-sdk.git
-- https://github.com/OpenMind/OM1-avatar.git
-- https://github.com/OpenMind/OM1-video-processor.git
+Clone the following repoitories -
+- git clone https://github.com/OpenMind/OM1.git
+- git clone https://github.com/OpenMind/unitree-sdk.git
+- git clone https://github.com/OpenMind/OM1-avatar.git
+- git clone https://github.com/OpenMind/OM1-video-processor.git
+- git clone https://github.com/OpenMind/OM1-system-setup.git
 
 ## Starting the system
 To start all services, run the following commands:
@@ -146,28 +147,36 @@ command: ["unitree_go2_autonomy_advance"]
 
 ```bash
 cd OM1
-docker compose up om1 -d --no-build
+docker-compose up om1 -d --no-build
 ```
 
 - For unitree_sdk
 ```bash
 cd unitree_sdk
-docker compose up orchestrator -d --no-build
-docker compose up om1_sensor -d --no-build
-docker compose up watchdog -d --no-build
-docker compose up zenoh_bridge -d --no-build
+docker-compose up orchestrator -d --no-build
+docker-compose up om1_sensor -d --no-build
+docker-compose up watchdog -d --no-build
+docker-compose up zenoh_bridge -d --no-build
 ```
 
 - For OM1-avatar
 ```bash
 cd OM1-avatar
-docker compose up om1_avatar -d --no-build
+docker-compose up om1_avatar -d --no-build
 ```
 
 - For OM1-video-processor
 ```bash
 cd OM1-video-processor
-docker compose up -d
+docker-compose up -d
+```
+
+- For OM1-system-setup
+```bash
+cd OM1-system-setup
+docker-compose up -d ota_agent
+docker-compose up -d ota_updater
+docker-compose up -d om1_monitor
 ```
 
 ## Detailed Documentation

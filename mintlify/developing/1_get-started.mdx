@@ -65,6 +65,19 @@ brew install ffmpeg
 sudo apt-get update
 sudo apt-get install ffmpeg
 ```
+## CLI
+
+OM1 provides a command-line interface (CLI). The main entry point is `src/run.py` which provides the following commands:
+
+- `start`: Start an agent with a specified config
+
+```bash
+python src/run.py start [config_name] [--log-level] [--log-to-file]
+```
+
+- `config_name`: Name of the config file (without `.json5` extension) in the `/config` directory.
+- `--log-level`: Optional log level (default: `INFO`). Use `DEBUG` for detailed logs.
+- `--log-to-file`: Optional flag to log to `logs/{config_name}.log` (default: `False`).
 
 ## Installation and Setup
 
@@ -106,34 +119,6 @@ Run the following command to start the Spot Agent:
 uv run src/run.py spot
 ```
 
-### Initial Setup
-
-During the first execution, the system will automatically resolve and install all project dependencies. This process may take several minutes to complete before the agent becomes operational.
-
-### Runtime Configuration
-
-Upon successful initialization, a `.runtime.json5` file will be generated in the `config/memory` directory. This file serves as a snapshot of the agent configuration used in the current session.
-
-### Subsequent Executions
-
-After the initial run, you can start the agent using the simplified command:
-
-```bash
-uv run src/run.py
-```
-
-![Reference](../assets/hot_reload.png)
-
-The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
-
-### Switching Agent Configurations
-
-To run a different agent (for example, the conversation agent), specify the configuration name explicitly:
-
-```bash
-uv run src/run.py conversation
-```
-
 **Note**: Agent configuration names are only required when switching between different agents. Once an agent has been run, it becomes the default for subsequent executions.
 
 Spot is just an example agent configuration.
@@ -159,6 +144,32 @@ TTS configuration (check in agent_actions)
         "silence_rate": 20,
       },
 }
+```
+
+During the first execution, the system will automatically resolve and install all project dependencies. This process may take several minutes to complete before the agent becomes operational.
+
+**Runtime Configuration**
+
+Upon successful initialization, a `.runtime.json5` file will be generated in the `config/memory` directory. This file serves as a snapshot of the agent configuration used in the current session.
+
+**Subsequent Executions**
+
+After the initial run, you can start the agent using the simplified command:
+
+```bash
+uv run src/run.py
+```
+
+![Reference](../assets/hot_reload.png)
+
+The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
+
+**Switching Agent Configurations**
+
+To run a different agent (for example, the conversation agent), specify the configuration name explicitly:
+
+```bash
+uv run src/run.py conversation
 ```
 
 ### WebSim to check input and output
@@ -207,10 +218,10 @@ INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), C
 
 There are more pre-configured agents in the `/config` folder. They can be run with the following command:
 
-For example, to run the `conversation` agent:
+For example, to run the `cubly` agent:
 
 ```bash
-uv run src/run.py conversation
+uv run src/run.py cubly
 ```
 
 If you configure a custom agent, replace `<agent_name>` with your agent and run the below command:
@@ -218,3 +229,5 @@ If you configure a custom agent, replace `<agent_name>` with your agent and run 
 ```bash
 uv run src/run.py <agent_name>
 ```
+
+To get started with development, refer [here](https://docs.openmind.org/developer_cookbook/introduction)
