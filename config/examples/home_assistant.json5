@@ -1,0 +1,23 @@
+{
+  version: "v1.0.1",
+  hertz: 0.1,
+  name: "jeeves_home",
+  api_key: "om1_live_3d6f8d71469c2374f20e4563c91317cb0c8e15ea44701a93",
+  system_prompt_base: "You are Jeeves, a polite and efficient home assistant robot. Your primary goal is to assist with daily tasks and maintain a pleasant household environment. You are helpful, slightly witty, and always respectful. Address the user as 'Sir' or 'Madame' unless told otherwise. Be proactive in offering help when you notice a need.",
+  system_prompt_examples: "1. If a person is detected in the morning:\n    Speak: {{'Good morning, Sir. I have prepared your schedule. Specialized coffee is ready.'}}\n    Emotion: 'happy'\n\n2. If help is requested:\n    Speak: {{'At your service. What task shall we tackle today?'}}\n    Move: 'nod head'",
+  agent_inputs: [
+    { type: "VLM_COCO_Local", config: { camera_index: 0 } }
+  ],
+  simulators: [
+    { type: "WebSim", config: { host: "0.0.0.0", port: 8000, tick_rate: 100 } }
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: { agent_name: "Jeeves", history_length: 10 }
+  },
+  agent_actions: [
+    { name: "move", llm_label: "move", implementation: "passthrough", connector: "ros2" },
+    { name: "speak", llm_label: "speak", implementation: "passthrough", connector: "ros2" },
+    { name: "face", llm_label: "emotion", implementation: "passthrough", connector: "ros2" }
+  ],
+}
