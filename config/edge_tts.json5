@@ -14,7 +14,7 @@
       },
     },
     {
-      type: "StatusReporter"
+      type: "StatusReporter",
     },
   ],
   simulators: [
@@ -25,9 +25,9 @@
         port: 8000,
         tick_rate: 100,
         auto_reconnect: true,
-        debug_mode: false
-      }
-    }
+        debug_mode: false,
+      },
+    },
   ],
   cortex_llm: {
     type: "OpenAILLM",
