@@ -29,8 +29,9 @@ ACTION_MAP = {
     "move": "**** performed this motion: {}.",
 }
 
-
-class LLMHistoryManager:
+# Constants
+DEFAULT_SUMMARY_TIMEOUT = 10.0  # seconds
+EXPECTED_MESSAGE_COUNT_FOR_SUMMARY = 4  # previous summary + actions + 2 new messages
     """
     Manages the history of interactions for LLMs, including summarization.
     """
@@ -76,7 +77,7 @@ class LLMHistoryManager:
         Returns a new message containing the summary.
         """
         # Set timeout for API call
-        timeout = 10.0  # seconds
+        timeout = DEFAULT_SUMMARY_TIMEOUT
 
         try:
             if not messages:
@@ -87,7 +88,7 @@ class LLMHistoryManager:
 
             summary_prompt = ""
 
-            if len(messages) == 4:
+            if len(messages) == EXPECTED_MESSAGE_COUNT_FOR_SUMMARY:
                 # the normal case - previous summary and new data
                 # the previous summary
                 summary_prompt += f"{messages[0].content}\n"
@@ -184,8 +185,12 @@ class LLMHistoryManager:
                         logging.error(
                             f"Summarization failed: {summary_message.content}"
                         )
-                        messages.pop(0) if messages else None
-                        messages.pop(0) if messages else None
+                        # Remove oldest messages on error, but ensure we don't empty the list
+                        if len(messages) > 2:
+                            messages.pop(0)
+                            messages.pop(0)
+                        elif len(messages) > 0:
+                            messages.pop(0)
                     else:
                         logging.warning(f"Unexpected summary result: {summary_message}")
                 except asyncio.CancelledError:
@@ -203,8 +208,12 @@ class LLMHistoryManager:
             logging.warning("Summary task creation cancelled")
         except Exception as e:
             logging.error(f"Error starting summary task: {type(e).__name__}: {e}")
-            messages.pop(0) if messages else None
-            messages.pop(0) if messages else None
+            # Remove oldest messages on error, but ensure we don't empty the list
+            if len(messages) > 2:
+                messages.pop(0)
+                messages.pop(0)
+            elif len(messages) > 0:
+                messages.pop(0)
 
     def get_messages(self) -> List[dict]:
         """

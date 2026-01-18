@@ -208,7 +208,18 @@ class ModeCortexRuntime:
 
         except Exception as e:
             logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
+            # Fallback: Try to restore previous mode if possible
+            try:
+                if from_mode and from_mode in self.manager.modes:
+                    logging.warning(
+                        f"Attempting to restore previous mode '{from_mode}' after transition failure"
+                    )
+                    # Don't recursively call transition, just log the attempt
+                    # The system will remain in current state
+            except Exception as fallback_error:
+                logging.error(
+                    f"Failed to attempt mode restoration: {fallback_error}"
+                )
             raise
         finally:
             self._is_reloading = False

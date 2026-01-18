@@ -20,6 +20,11 @@ except ImportError:
 
 from .singleton import singleton
 
+# Constants
+DEFAULT_QUEUE_MAXSIZE = 5
+DEFAULT_POLL_INTERVAL = 0.1  # seconds
+DEFAULT_SUBSCRIBER_INIT_DEPTH = 10
+
 state_machine_codes = {
     100: "Agile",
     1001: "Damping",
@@ -122,9 +127,10 @@ def go2_state_processor(
         logging.error(f"Error initializing Unitree Go2 odom channel: {e}")
         return
 
+    subscriber = None
     try:
         subscriber = ChannelSubscriber(channel, SportModeState_)  # type: ignore
-        subscriber.Init(state_callback, 10)
+        subscriber.Init(state_callback, DEFAULT_SUBSCRIBER_INIT_DEPTH)
         logging.info(f"Subscribed to {channel} for Unitree Go2 state data")
     except Exception as e:
         logging.error(f"Error subscribing to Unitree Go2 state channel: {e}")
@@ -141,10 +147,14 @@ def go2_state_processor(
         except Empty:
             pass
 
-        time.sleep(0.1)
+        time.sleep(DEFAULT_POLL_INTERVAL)
 
     logging.info("Unitree Go2 state processor stopped.")
-    subscriber.Close()
+    if subscriber is not None:
+        try:
+            subscriber.Close()
+        except Exception as e:
+            logging.warning(f"Error closing subscriber: {e}")
 
 
 @singleton
@@ -164,7 +174,7 @@ class UnitreeGo2StateProvider:
         """
         self.channel = channel
 
-        self.data_queue = mp.Queue(maxsize=5)
+        self.data_queue = mp.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
         self.control_queue = mp.Queue()
 
         self._go2_state_reader_thread = None
@@ -236,7 +246,11 @@ class UnitreeGo2StateProvider:
                 self.go2_action_progress = data.get("go2_action_progress")
 
             except Empty:
-                time.sleep(0.1)
+                time.sleep(DEFAULT_POLL_INTERVAL)
+                continue
+            except Exception as e:
+                logging.error(f"Error processing state data: {e}", exc_info=True)
+                time.sleep(DEFAULT_POLL_INTERVAL)
                 continue
 
     @property
