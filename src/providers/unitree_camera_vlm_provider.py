@@ -58,8 +58,13 @@ class UnitreeCameraVideoStream(VideoStream):
             jpeg_quality=jpeg_quality,
         )
 
-        self.video_client = VideoClient()  # type: ignore
-        self.video_client.Init()
+        try:
+            self.video_client = VideoClient()  # type: ignore
+            self.video_client.Init()
+        except NameError:
+            print("Unitree SDK not found. Camera stream will not function.")
+            self.video_client = None
+
 
     def on_video(self):
         """
