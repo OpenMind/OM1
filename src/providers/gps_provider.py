@@ -258,10 +258,14 @@ class GpsProvider:
         """
         while self.running:
             if self.serial_connection:
-                # Read a line, decode, and remove whitespace
-                data = self.serial_connection.readline().decode("utf-8").strip()
-                logging.debug(f"Serial GPS/MAG: {data}")
-                self.magGPSProcessor(data)
+                try:
+                    # Read a line, decode, and remove whitespace
+                    data = self.serial_connection.readline().decode("utf-8", errors="ignore").strip()
+                    if data:
+                        logging.debug(f"Serial GPS/MAG: {data}")
+                        self.magGPSProcessor(data)
+                except Exception as e:
+                    logging.error(f"Error reading from serial connection: {e}")
             time.sleep(0.1)
 
     def stop(self):
@@ -272,6 +276,12 @@ class GpsProvider:
         if self._thread:
             logging.info("Stopping GPS provider")
             self._thread.join(timeout=5)
+        if self.serial_connection:
+            try:
+                self.serial_connection.close()
+                logging.info("GPS serial connection closed")
+            except Exception as e:
+                logging.error(f"Error closing serial connection: {e}")
 
     @property
     def data(self) -> Optional[dict]:

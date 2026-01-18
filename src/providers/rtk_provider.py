@@ -202,6 +202,12 @@ class RtkProvider:
         if self._thread:
             logging.info("Stopping RTK provider")
             self._thread.join(timeout=5)
+        if self.serial_connection:
+            try:
+                self.serial_connection.close()
+                logging.info("RTK serial connection closed")
+            except Exception as e:
+                logging.error(f"Error closing serial connection: {e}")
 
     @property
     def data(self) -> Optional[dict]:
