@@ -12,11 +12,18 @@ from providers.io_provider import IOProvider
 
 class Gps(FuserInput[SensorConfig, Optional[dict]]):
     """
-    Reads GPS and Magnetometer data from GPS provider.
+    GPS input handler for reading GPS and magnetometer data.
     """
 
     def __init__(self, config: SensorConfig):
+        """
+        Initialize the GPS input handler.
 
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the GPS sensor.
+        """
         super().__init__(config)
 
         self.gps = GpsProvider()
