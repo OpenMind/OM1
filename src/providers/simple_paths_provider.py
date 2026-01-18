@@ -30,6 +30,8 @@ def simple_paths_processor(
     """
     setup_logging("rplidar_processor", logging_config=logging_config)
 
+    session = None
+
     def paths_callback(msg: zenoh.Sample):
         """
         Callback for receiving paths messages.
@@ -39,21 +41,24 @@ def simple_paths_processor(
         msg: zenoh.Sample
             The message containing paths data.
         """
-        paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
-        msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
-        current_time = time.time()
-        latency = current_time - msg_time
-        logging.debug(f"Received paths with latency: {latency:.6f} seconds")
-        logging.info(f"Received paths: {paths.paths}")
-
         try:
-            data_queue.put_nowait(paths)
-        except Full:
+            paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
+            msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
+            current_time = time.time()
+            latency = current_time - msg_time
+            logging.debug(f"Received paths with latency: {latency:.6f} seconds")
+            logging.info(f"Received paths: {paths.paths}")
+
             try:
-                data_queue.get_nowait()
                 data_queue.put_nowait(paths)
-            except Empty:
-                pass
+            except Full:
+                try:
+                    data_queue.get_nowait()
+                    data_queue.put_nowait(paths)
+                except Empty:
+                    pass
+        except Exception as e:
+            logging.error(f"Error deserializing paths message: {e}")
 
     running = True
 
@@ -63,17 +68,22 @@ def simple_paths_processor(
         logging.info("Zenoh is open for SimplePathsProvider")
     except Exception as e:
         logging.error(f"Failed to open Zenoh session: {e}")
+        return
 
-    while running:
-        try:
-            cmd = control_queue.get_nowait()
-            if cmd == "STOP":
-                running = False
-                break
-        except Empty:
-            pass
+    try:
+        while running:
+            try:
+                cmd = control_queue.get_nowait()
+                if cmd == "STOP":
+                    running = False
+                    break
+            except Empty:
+                pass
 
-        time.sleep(0.1)
+            time.sleep(0.1)
+    finally:
+        if session is not None:
+            session.close()
 
 
 @singleton
@@ -144,11 +154,11 @@ class SimplePathsProvider:
 
         if self._simple_paths_processor_thread:
             self.control_queue.put("STOP")
-            self._simple_paths_processor_thread.join()
+            self._simple_paths_processor_thread.join(timeout=5)
             logging.info("SimplePathsProvider stopped.")
 
         if self._simple_paths_derived_thread:
-            self._simple_paths_derived_thread.join()
+            self._simple_paths_derived_thread.join(timeout=5)
             logging.info("SimplePathsProvider derived processor stopped.")
 
     def _simple_paths_derived_processor(self):
