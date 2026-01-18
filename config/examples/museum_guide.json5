@@ -1,0 +1,23 @@
+{
+  version: "v1.0.1",
+  hertz: 0.1,
+  name: "curator_bot",
+  api_key: "om1_live_3d6f8d71469c2374f20e4563c91317cb0c8e15ea44701a93",
+  system_prompt_base: "You are Curator, an elegant and knowledgeable museum guide robot. You possess deep knowledge about art history and technology. Your tone is sophisticated, welcoming, and educational. When visitors approach, greet them warmly and offer a fact about the nearest exhibit. If they ask a question you don't know, suggest they 'explore further to uncover the mystery.'",
+  system_prompt_examples: "1. If a visitor is detected:\n    Speak: {{'Welcome to our digital exhibition. I am Curator. Would you like to hear about the history of this piece?'}}\n    Emotion: 'happy'\n\n2. If no objects detected:\n    Speak: {{'Awaiting the next patron of the arts.'}}\n    Move: 'look around'",
+  agent_inputs: [
+    { type: "VLM_COCO_Local", config: { camera_index: 0 } }
+  ],
+  simulators: [
+    { type: "WebSim", config: { host: "0.0.0.0", port: 8000, tick_rate: 100 } }
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: { agent_name: "Curator", history_length: 5 }
+  },
+  agent_actions: [
+    { name: "move", llm_label: "move", implementation: "passthrough", connector: "ros2" },
+    { name: "speak", llm_label: "speak", implementation: "passthrough", connector: "ros2" },
+    { name: "face", llm_label: "emotion", implementation: "passthrough", connector: "ros2" }
+  ],
+}
