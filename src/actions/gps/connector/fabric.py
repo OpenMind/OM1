@@ -73,9 +73,12 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
         logging.info(f"GPSFabricConnector: Longitude: {longitude}")
         logging.info(f"GPSFabricConnector: Yaw: {yaw}")
 
-        if latitude is None and longitude is None and yaw is None:
-            # If no coordinates are available, log an error and return
-            logging.error("GPSFabricConnector: Coordinates not available.")
+        if latitude is None or longitude is None or yaw is None:
+            # If any coordinate is missing, log an error and return
+            logging.error(
+                f"GPSFabricConnector: Incomplete coordinates - "
+                f"latitude: {latitude}, longitude: {longitude}, yaw: {yaw}"
+            )
             return None
 
         try:
