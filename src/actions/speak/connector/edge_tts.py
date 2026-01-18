@@ -125,8 +125,10 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
         text : str
             Text to convert to speech
         """
+        temp_path = None
         try:
             # Create a temporary file for the audio
+            # delete=False is required to let other processes/libs read it before deletion
             with tempfile.NamedTemporaryFile(
                 suffix=".mp3", delete=False
             ) as temp_file:
@@ -144,14 +146,24 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
             # Load and play audio using pydub
             audio = AudioSegment.from_mp3(str(temp_path))
             logging.info(f"Edge TTS: Playing audio ({len(audio)}ms)")
-            play(audio)
-
-            # Clean up temporary file
-            temp_path.unlink()
+            
+            # FIX: Use asyncio.to_thread to prevent blocking the event loop
+            await asyncio.to_thread(play, audio)
 
         except Exception as e:
             logging.error(f"Error generating/playing audio with Edge TTS: {e}")
-            raise
+            # We don't re-raise here to avoid crashing the whole connector loop, 
+            # just log error as per connect() logic.
+            # If you want to bubble up, add 'raise' here.
+
+        finally:
+            # FIX: Ensure cleanup happens even if playback fails
+            if temp_path and temp_path.exists():
+                try:
+                    temp_path.unlink()
+                    logging.debug("Edge TTS: Temp file cleaned up")
+                except Exception as cleanup_err:
+                    logging.warning(f"Edge TTS: Failed to delete temp file: {cleanup_err}")
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
         """
@@ -162,53 +174,49 @@ class SpeakEdgeTTSConnector(ActionConnector[SpeakEdgeTTSConfig, SpeakInput]):
         data : zenoh.Sample
             The Zenoh sample received.
         """
-        tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.debug(f"Received TTS Control Status message: {tts_status}")
+        try:
+            tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
+            logging.debug(f"Received TTS Control Status message: {tts_status}")
 
-        code = tts_status.code
-        request_id = tts_status.request_id
+            code = tts_status.code
+            request_id = tts_status.request_id
 
-        # Read the current status (code == 2)
-        if code == 2:
+            # Read the current status (code == 2)
+            if code == 2:
+                response_code = 1 if self.tts_enabled else 0
+                status_text = "TTS Enabled" if self.tts_enabled else "TTS Disabled"
+            
+            # Enable the TTS (code == 1)
+            elif code == 1:
+                self.tts_enabled = True
+                logging.info("Edge TTS Enabled")
+                response_code = 1
+                status_text = "Edge TTS Enabled"
+
+            # Disable the TTS (code == 0)
+            elif code == 0:
+                self.tts_enabled = False
+                logging.info("Edge TTS Disabled")
+                response_code = 0
+                status_text = "Edge TTS Disabled"
+            
+            else:
+                return # Unknown code
+
             tts_status_response = TTSStatusResponse(
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,
-                code=1 if self.tts_enabled else 0,
-                status=String(
-                    data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                ),
+                code=response_code,
+                status=String(data=status_text),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
+            
+            if self._zenoh_tts_status_response_pub:
+                self._zenoh_tts_status_response_pub.put(
+                    tts_status_response.serialize()
+                )
 
-        # Enable the TTS (code == 1)
-        if code == 1:
-            self.tts_enabled = True
-            logging.info("Edge TTS Enabled")
-            tts_status_response = TTSStatusResponse(
-                header=prepare_header(tts_status.header.frame_id),
-                request_id=request_id,
-                code=1,
-                status=String(data="Edge TTS Enabled"),
-            )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
-
-        # Disable the TTS (code == 0)
-        if code == 0:
-            self.tts_enabled = False
-            logging.info("Edge TTS Disabled")
-            tts_status_response = TTSStatusResponse(
-                header=prepare_header(tts_status.header.frame_id),
-                request_id=request_id,
-                code=0,
-                status=String(data="Edge TTS Disabled"),
-            )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
+        except Exception as e:
+            logging.error(f"Error processing Zenoh TTS status request: {e}")
 
     def stop(self) -> None:
         """
