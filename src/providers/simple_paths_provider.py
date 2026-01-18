@@ -12,6 +12,9 @@ from zenoh_msgs import open_zenoh_session, sensor_msgs
 
 from .singleton import singleton
 
+# Constants
+PROCESS_JOIN_TIMEOUT = 5.0  # Timeout in seconds for process cleanup
+
 
 def simple_paths_processor(
     data_queue: mp.Queue,
@@ -30,6 +33,9 @@ def simple_paths_processor(
     """
     setup_logging("rplidar_processor", logging_config=logging_config)
 
+    session = None
+    subscriber = None
+
     def paths_callback(msg: zenoh.Sample):
         """
         Callback for receiving paths messages.
@@ -39,41 +45,63 @@ def simple_paths_processor(
         msg: zenoh.Sample
             The message containing paths data.
         """
-        paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
-        msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
-        current_time = time.time()
-        latency = current_time - msg_time
-        logging.debug(f"Received paths with latency: {latency:.6f} seconds")
-        logging.info(f"Received paths: {paths.paths}")
-
         try:
-            data_queue.put_nowait(paths)
-        except Full:
+            paths = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
+            msg_time = paths.header.stamp.sec + paths.header.stamp.nanosec * 1e-9
+            current_time = time.time()
+            latency = current_time - msg_time
+            logging.debug(f"Received paths with latency: {latency:.6f} seconds")
+            logging.info(f"Received paths: {paths.paths}")
+
             try:
-                data_queue.get_nowait()
                 data_queue.put_nowait(paths)
-            except Empty:
-                pass
+            except Full:
+                try:
+                    data_queue.get_nowait()
+                    data_queue.put_nowait(paths)
+                except Empty:
+                    pass
+        except Exception as e:
+            logging.error(
+                f"Error deserializing or processing paths message: {e}", exc_info=True
+            )
 
     running = True
 
     try:
         session = open_zenoh_session()
-        session.declare_subscriber("om/paths", paths_callback)
+        subscriber = session.declare_subscriber("om/paths", paths_callback)
         logging.info("Zenoh is open for SimplePathsProvider")
     except Exception as e:
         logging.error(f"Failed to open Zenoh session: {e}")
+        return
 
-    while running:
-        try:
-            cmd = control_queue.get_nowait()
-            if cmd == "STOP":
-                running = False
-                break
-        except Empty:
-            pass
+    try:
+        while running:
+            try:
+                cmd = control_queue.get_nowait()
+                if cmd == "STOP":
+                    running = False
+                    break
+            except Empty:
+                pass
 
-        time.sleep(0.1)
+            time.sleep(0.1)
+    finally:
+        # Cleanup resources
+        if subscriber is not None:
+            try:
+                subscriber.close()
+            except Exception as e:
+                logging.error(f"Error closing subscriber: {e}")
+
+        if session is not None:
+            try:
+                session.close()
+            except Exception as e:
+                logging.error(f"Error closing Zenoh session: {e}")
+
+        logging.info("SimplePathsProvider processor cleaned up")
 
 
 @singleton
@@ -143,12 +171,29 @@ class SimplePathsProvider:
         self._stop_event.set()
 
         if self._simple_paths_processor_thread:
-            self.control_queue.put("STOP")
-            self._simple_paths_processor_thread.join()
-            logging.info("SimplePathsProvider stopped.")
+            try:
+                self.control_queue.put("STOP")
+                self._simple_paths_processor_thread.join(timeout=PROCESS_JOIN_TIMEOUT)
+                if self._simple_paths_processor_thread.is_alive():
+                    logging.warning(
+                        "SimplePathsProvider process did not terminate in time, terminating forcefully"
+                    )
+                    self._simple_paths_processor_thread.terminate()
+                    self._simple_paths_processor_thread.join(timeout=1.0)
+            except Exception as e:
+                logging.error(f"Error stopping SimplePathsProvider process: {e}")
+            finally:
+                if self._simple_paths_processor_thread.is_alive():
+                    self._simple_paths_processor_thread.kill()
+                logging.info("SimplePathsProvider stopped.")
 
         if self._simple_paths_derived_thread:
-            self._simple_paths_derived_thread.join()
+            try:
+                self._simple_paths_derived_thread.join(timeout=PROCESS_JOIN_TIMEOUT)
+            except Exception as e:
+                logging.error(
+                    f"Error stopping SimplePathsProvider derived thread: {e}"
+                )
             logging.info("SimplePathsProvider derived processor stopped.")
 
     def _simple_paths_derived_processor(self):
@@ -159,25 +204,45 @@ class SimplePathsProvider:
             try:
                 paths = self.data_queue.get_nowait()
 
+                # Validate paths object structure
+                if not hasattr(paths, "paths") or not isinstance(paths.paths, list):
+                    logging.error(
+                        f"Invalid paths object structure: expected 'paths' attribute of type list, got {type(paths)}"
+                    )
+                    continue
+
                 self.turn_left = []
                 self.turn_right = []
                 self.advance = []
                 self.retreat = False
 
                 for path in paths.paths:
-                    if path < 3:
-                        self.turn_left.append(path)
-                    elif path >= 3 and path <= 5:
-                        self.advance.append(path)
-                    elif path < 9:
-                        self.turn_right.append(path)
-                    elif path == 9:
+                    if not isinstance(path, (int, float)):
+                        logging.warning(
+                            f"Invalid path value type: expected int or float, got {type(path)}"
+                        )
+                        continue
+
+                    path_int = int(path)
+                    if path_int < 3:
+                        self.turn_left.append(path_int)
+                    elif path_int >= 3 and path_int <= 5:
+                        self.advance.append(path_int)
+                    elif path_int < 9:
+                        self.turn_right.append(path_int)
+                    elif path_int == 9:
                         self.retreat = True
 
                 self._valid_paths = paths
                 self._lidar_string = self._generate_movement_string(paths)
 
             except Empty:
+                time.sleep(0.1)
+                continue
+            except Exception as e:
+                logging.error(
+                    f"Error processing paths in derived processor: {e}", exc_info=True
+                )
                 time.sleep(0.1)
                 continue
 
