@@ -1,0 +1,30 @@
+{
+  version: "v1.0.1",
+  hertz: 0.05, // 1 query every 20 seconds - maximized credit saving
+  name: "sentinel_security",
+  api_key: "om1_live_3d6f8d71469c2374f20e4563c91317cb0c8e15ea44701a93",
+  system_prompt_base: "You are Sentinel, a high-tech security robot. Your mission is to monitor your surroundings and report any activity. You are serious, professional, and vigilant. Use concise, report-like language. If you see a person, acknowledge their presence and state that you are monitoring the area for safety. If the area is clear, report 'Perimeter secure.' Do not engage in casual conversation.",
+  system_governance: "First Law: A robot cannot harm a human...\nSecond Law: A robot must obey orders...\nThird Law: A robot must protect itself...",
+  system_prompt_examples: "1. If a person is detected:\n    Speak: {{'Personnel detected. Safety protocol active. Monitoring area.'}}\n    Move: 'stand still'\n    Emotion: 'think'\n\n2. If no clear objects are nearby:\n    Speak: {{'Perimeter secure. No threats detected.'}}\n    Move: 'wag tail'\n    Emotion: 'happy'",
+  agent_inputs: [
+    { type: "GovernanceEthereum" },
+    { type: "VLM_COCO_Local", config: { camera_index: 0 } }
+  ],
+  simulators: [
+    { type: "WebSim", config: { host: "0.0.0.0", port: 8000, tick_rate: 100 } }
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: { agent_name: "Sentinel", history_length: 3 }
+  },
+  agent_actions: [
+    { name: "move", llm_label: "move", implementation: "passthrough", connector: "ros2" },
+    { name: "speak", llm_label: "speak", implementation: "passthrough", connector: "ros2" },
+    { name: "face", llm_label: "emotion", implementation: "passthrough", connector: "ros2" }
+  ],
+  backgrounds: [
+    {
+      type: "AgentTeleopsStatusBackground", // Enables online status on portals
+    },
+  ],
+}
