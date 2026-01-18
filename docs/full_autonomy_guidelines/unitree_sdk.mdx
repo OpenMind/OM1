@@ -30,10 +30,10 @@ git clone https://github.com/OpenMind/unitree-sdk.git
 2. Open a terminal in the `unitree_sdk` directory.
 3. Run the following commands to start all services:
 ```bash
-docker compose up orchestrator -d --no-build
-docker compose up om1_sensor -d --no-build
-docker compose up watchdog -d --no-build
-docker compose up zenoh_bridge -d --no-build
+docker-compose up orchestrator -d --no-build
+docker-compose up om1_sensor -d --no-build
+docker-compose up watchdog -d --no-build
+docker-compose up zenoh_bridge -d --no-build
 ```
 After initial setup, the system will auto-start when the robot boots.
 

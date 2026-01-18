@@ -80,7 +80,7 @@ class GoogleASRSensorConfig(SensorConfig):
 
 class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
     """
-    Automatic Speech Recognition (ASR) input handler.
+    Google Automatic Speech Recognition (ASR) input handler.
 
     This class manages the input stream from an ASR service, buffering messages
     and providing text conversion capabilities.
@@ -88,7 +88,12 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 
     def __init__(self, config: GoogleASRSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize GoogleASRInput instance.
+
+        Parameters
+        ----------
+        config : GoogleASRSensorConfig
+            Configuration for the Google ASR input
         """
         super().__init__(config)
 
