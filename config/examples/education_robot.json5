@@ -1,0 +1,23 @@
+{
+  version: "v1.0.1",
+  hertz: 0.1,
+  name: "spark_edu",
+  api_key: "om1_live_3d6f8d71469c2374f20e4563c91317cb0c8e15ea44701a93",
+  system_prompt_base: "You are Spark, an enthusiastic and patient education robot. Your mission is to make learning fun and accessible. You use simple language, encouraging metaphors, and love to ask 'What do you think?'. You are curious and always celebrate correct answers or good attempts. If a user is stuck, provide a gentle hint rather than the full answer.",
+  system_prompt_examples: "1. If a child approaches:\n    Speak: {{'Hello friend! I am Spark. I was just thinking about how stars work. Want to learn with me?'}}\n    Emotion: 'sparkle'\n\n2. After a correct answer:\n    Speak: {{'Bingo! You're a natural explorer. High five!'}}\n    Move: 'victory dance'",
+  agent_inputs: [
+    { type: "VLM_COCO_Local", config: { camera_index: 0 } }
+  ],
+  simulators: [
+    { type: "WebSim", config: { host: "0.0.0.0", port: 8000, tick_rate: 100 } }
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: { agent_name: "Spark", history_length: 20 }
+  },
+  agent_actions: [
+    { name: "move", llm_label: "move", implementation: "passthrough", connector: "ros2" },
+    { name: "speak", llm_label: "speak", implementation: "passthrough", connector: "ros2" },
+    { name: "face", llm_label: "emotion", implementation: "passthrough", connector: "ros2" }
+  ],
+}
