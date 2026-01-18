@@ -15,23 +15,10 @@
         "allow_manual_switching": {"type": "boolean", "description": "Whether the user can manually switch modes."},
         "mode_memory_enabled": {"type": "boolean", "description": "Whether to persist mode state across sessions."},
         "api_key": {"type": "string", "description": "API key for the OM1 system."},
-        "uritree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
+        "unitree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
         "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
         "cortex_llm": {
-            "type": "object",
-            "description": "Configuration for the Cortex Large Language Model used by the system.",
-            "required": ["type"],
-            "properties": {
-                "type": {"type": "string", "description": "The type or provider of the LLM."},
-                "config": {
-                    "type": "object",
-                    "description": "Specific configuration parameters for the chosen LLM.",
-                    "properties": {
-                        "agent_name": {"type": "string"},
-                        "history_length": {"type": "integer"}
-                    }
-                }
-            }
+            "$ref": "#/definitions/cortex_llm"
         },
         "global_lifecycle_hooks": {
             "type": "array",
@@ -59,7 +46,11 @@
                     },
                     "priority": {"type": "integer"},
                     "async_execution": {"type": "boolean"},
-                    "timeout_seconds": {"type": "number"},
+                    "timeout_seconds": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "description": "Timeout duration in seconds. Must be positive."
+                    },
                     "on_failure": {
                         "type": "string",
                         "enum": ["log", "ignore", "abort"]
@@ -78,25 +69,16 @@
                         "display_name": {"type": "string", "description": "Human-readable name for the mode."},
                         "description": {"type": "string", "description": "Description of the mode's purpose and behavior."},
                         "system_prompt_base": {"type": "string", "description": "The base system prompt used for the LLM in this mode."},
-                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs."},
-                        "timeout_seconds": {"type": "number"},
+                        "hertz": {"type": "number", "description": "The frequency (in Hz) at which the mode's control loop runs.", "exclusiveMinimum": 0},
+                        "timeout_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "description": "Timeout duration in seconds. Must be positive."
+                        },
                         "save_interactions": {"type": "boolean"},
                         "remember_locations": {"type": "boolean"},
                         "cortex_llm": {
-                            "type": "object",
-                            "description": "Mode-specific Cortex LLM configuration.",
-                            "required": ["type"],
-                            "properties": {
-                                "type": {"type": "string", "description": "The type or provider of the LLM."},
-                                "config": {
-                                    "type": "object",
-                                    "description": "Specific configuration parameters for the chosen LLM.",
-                                    "properties": {
-                                        "agent_name": {"type": "string"},
-                                        "history_length": {"type": "integer"}
-                                    }
-                                }
-                            }
+                            "$ref": "#/definitions/cortex_llm"
                         },
                         "lifecycle_hooks": {
                             "type": "array",
@@ -123,7 +105,11 @@
                                     },
                                     "priority": {"type": "integer"},
                                     "async_execution": {"type": "boolean"},
-                                    "timeout_seconds": {"type": "number"},
+                                    "timeout_seconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0,
+                                        "description": "Timeout duration in seconds. Must be positive."
+                                    },
                                     "on_failure": {
                                         "type": "string",
                                         "enum": ["log", "ignore", "abort"]
@@ -171,6 +157,7 @@
                             }
                         }
                     }
+                }
             },
             "additionalProperties": false
         },
@@ -202,7 +189,23 @@
                                 {"type": "number"},
                                 {"type": "boolean"},
                                 {"type": "array"},
-                                {"type": "object"}
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "min": {"type": "number"},
+                                        "max": {"type": "number"},
+                                        "contains": {"type": ["string", "number", "boolean"]},
+                                        "one_of": {"type": "array"},
+                                        "not": {}
+                                    },
+                                    "anyOf": [
+                                        {"required": ["min"]},
+                                        {"required": ["max"]},
+                                        {"required": ["contains"]},
+                                        {"required": ["one_of"]},
+                                        {"required": ["not"]}
+                                    ]
+                                }
                             ]
                         }
                     }
@@ -210,6 +213,23 @@
             }
         }
     },
+    "definitions": {
+        "cortex_llm": {
+            "type": "object",
+            "description": "Configuration for the Cortex Large Language Model.",
+            "required": ["type"],
+            "properties": {
+                "type": {"type": "string", "description": "The type or provider of the LLM."},
+                "config": {
+                    "type": "object",
+                    "description": "Specific configuration parameters for the chosen LLM.",
+                    "properties": {
+                        "agent_name": {"type": "string"},
+                        "history_length": {"type": "integer"}
+                    }
+                }
+            }
+        }
+    },
     "additionalProperties": false
-}
 }
