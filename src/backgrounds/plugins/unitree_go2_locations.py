@@ -30,17 +30,35 @@ class UnitreeGo2LocationsConfig(BackgroundConfig):
 
 class UnitreeGo2Locations(Background[UnitreeGo2LocationsConfig]):
     """
-    Reads locations from UnitreeGo2LocationsProvider.
+    Background task for managing Unitree Go2 robot location data.
+
+    This background task initializes and manages a UnitreeGo2LocationsProvider
+    that periodically fetches location information from an HTTP API endpoint.
+    The provider runs in a background thread and maintains a thread-safe cache
+    of location data that can be accessed by other components of the system.
+
+    The location data is used for navigation, path planning, and location-based
+    actions in Unitree Go2 robot applications. The provider automatically refreshes
+    the location cache at configurable intervals to ensure up-to-date information.
     """
 
     def __init__(self, config: UnitreeGo2LocationsConfig):
         """
-        Initialize the Locations background task.
+        Initialize the Unitree Go2 Locations background task.
 
         Parameters
         ----------
         config : UnitreeGo2LocationsConfig
-            Configuration for the background task.
+            Configuration object containing:
+            - base_url: The HTTP endpoint URL for fetching locations
+            - timeout: Request timeout in seconds for HTTP calls
+            - refresh_interval: How often to refresh location data in seconds
+
+        Notes
+        -----
+        The provider is automatically started during initialization and will
+        begin fetching location data in the background. The background thread
+        runs as a daemon thread and will be terminated when the main process exits.
         """
         super().__init__(config)
 
