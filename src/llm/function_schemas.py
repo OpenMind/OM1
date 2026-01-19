@@ -4,12 +4,12 @@ Utility functions for generating OpenAI function schemas from AgentActions.
 This module is separate from both the actions and llm modules to avoid circular imports.
 """
 
-import json
 import logging
 from enum import Enum
 from typing import get_type_hints
 
 from llm.output_model import Action
+from utils.json_parser import safe_json_loads
 
 
 def generate_function_schema_from_action(action) -> dict:
@@ -140,10 +140,10 @@ def convert_function_calls_to_actions(function_calls: list[dict]) -> list[Action
             function_args = call.get("function", {}).get("arguments", "{}")
 
             # Parse arguments if they're a string
+            # Uses safe_json_loads to handle Markdown-wrapped JSON from LLMs
             if isinstance(function_args, str):
-                try:
-                    args = json.loads(function_args)
-                except json.JSONDecodeError:
+                args = safe_json_loads(function_args, default=None)
+                if args is None:
                     logging.error(
                         f"Failed to parse function arguments: {function_args}"
                     )

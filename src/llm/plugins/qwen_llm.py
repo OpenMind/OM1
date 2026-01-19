@@ -12,6 +12,7 @@ from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
+from utils.json_parser import safe_json_loads
 
 R = T.TypeVar("R", bound=BaseModel)
 
@@ -36,23 +37,21 @@ def _parse_qwen_tool_calls(text: str) -> list:
     if not isinstance(text, str):
         return tool_calls
     for i, raw in enumerate(_QWEN_TOOL_CALL_RE.findall(text)):
-        try:
-            obj = json.loads(raw)
-            if name := obj.get("name"):
-                tool_calls.append(
-                    {
-                        "id": f"call_{i}",
-                        "type": "function",
-                        "function": {
-                            "name": name,
-                            "arguments": json.dumps(
-                                obj.get("arguments", {}), ensure_ascii=False
-                            ),
-                        },
-                    }
-                )
-        except Exception:
-            continue
+        # Use safe_json_loads to handle potentially malformed JSON
+        obj = safe_json_loads(raw, default=None, log_errors=False)
+        if obj and (name := obj.get("name")):
+            tool_calls.append(
+                {
+                    "id": f"call_{i}",
+                    "type": "function",
+                    "function": {
+                        "name": name,
+                        "arguments": json.dumps(
+                            obj.get("arguments", {}), ensure_ascii=False
+                        ),
+                    },
+                }
+            )
     return tool_calls
 
 
