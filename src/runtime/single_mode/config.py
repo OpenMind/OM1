@@ -13,7 +13,6 @@ from capabilities import (
     CapabilityDescriptor,
     CapabilityRegistry,
     ComponentType,
-    get_capability_registry,
 )
 from inputs import load_input
 from inputs.base import Sensor
