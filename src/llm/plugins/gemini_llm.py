@@ -35,6 +35,13 @@ class GeminiLLM(LLM[R]):
     ):
         """
         Initialize the Gemini LLM instance.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
