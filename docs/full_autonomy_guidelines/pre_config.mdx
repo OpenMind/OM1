@@ -219,7 +219,7 @@ Note: To stop the kiosk service, use sudo systemctl stop kiosk.service.
     RemainAfterExit=no
 
     [Install]
-    WantedBy=multi-user.Target
+    WantedBy=multi-user.target
 
     sudo systemctl daemon-reload
     sudo systemctl enable om1-container.service
