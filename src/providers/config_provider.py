@@ -182,6 +182,16 @@ class ConfigProvider:
     def stop(self):
         """
         Stop the ConfigProvider and cleanup Zenoh session.
+
+        Performs the following cleanup steps:
+        1. Sets running flag to False
+        2. Closes Zenoh session if it exists
+        3. Clears publisher and subscriber references
+
+        Notes
+        -----
+        The cleanup process is protected with exception handling to ensure
+        resources are released even if errors occur during shutdown.
         """
         if not self.running:
             logging.info("ConfigProvider is not running")
@@ -190,6 +200,17 @@ class ConfigProvider:
         self.running = False
 
         if self.session:
-            self.session.close()
-
-        logging.info("ConfigProvider stopped and Zenoh session closed")
+            try:
+                self.session.close()
+                logging.info("ConfigProvider stopped and Zenoh session closed")
+            except Exception as e:
+                logging.error(
+                    f"Error closing ConfigProvider Zenoh session: {e}",
+                    exc_info=True,
+                )
+            finally:
+                self.session = None
+                self.config_response_publisher = None
+                self.config_request_subscriber = None
+        else:
+            logging.info("ConfigProvider stopped (no session to close)")
