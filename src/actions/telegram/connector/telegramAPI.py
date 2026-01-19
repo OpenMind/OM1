@@ -29,7 +29,7 @@ class TelegramAPIConnector(ActionConnector[TelegramAPIConfig, TelegramInput]):
 
         Parameters
         ----------
-        config : ActionConfig
+        config : TelegramAPIConfig
             Configuration object for the connector.
         """
         super().__init__(config)
