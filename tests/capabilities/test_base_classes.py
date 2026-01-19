@@ -2,7 +2,6 @@
 Tests for capability introspection in base classes.
 """
 
-import pytest
 from typing import Optional
 from unittest.mock import MagicMock
 
