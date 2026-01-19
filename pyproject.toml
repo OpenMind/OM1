@@ -5,48 +5,41 @@ description = "OM1 - a modern agent and robotics runtime system"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "ultralytics",
-    "soundfile",
-    "sounddevice",
-    "pynmeagps",
-    "bleak",
-    "bezier",
-    "scipy",
-    "matplotlib",
-    "json5",
-    "jsonschema",
-    "pycdr2",
-    "eclipse-zenoh>=1.4.0",
-    "audiosegment",
-    "pyaudio",
-    "openai>=1.59.5",
-    "pillow>=11.1.0",
-    "python-dotenv>=1.0.1",
-    "typer>=0.15.1",
-    "opencv-python",
-    "deepface>=0.0.81",
-    "tensorflow>=2.15.0",
-    "tf_keras>=2.15.0",
-    "web3",
-    "numpy",
+    "ultralytics==8.3.156",
+    "soundfile==0.13.1",
+    "sounddevice==0.5.2",
+    "pynmeagps==1.0.50",
+    "bleak==0.22.3",
+    "matplotlib==3.10.1",
+    "json5==0.10.0",
+    "jsonschema==4.23.0",
+    "pycdr2==1.0.0",
+    "eclipse-zenoh==1.4.0",
+    "pyaudio==0.2.14",
+    "openai==1.60.1",
+    "pillow==11.1.0",
+    "python-dotenv==1.0.1",
+    "typer==0.15.1",
+    "opencv-python==4.11.0.86",
+    "deepface==0.0.93",
+    "web3==7.6.0",
+    "numpy==2.0.2",
     "cdp-sdk==0.21.0",
-    "hid",
-    "cv_bridge",
-    "torch",
-    "torchvision",
-    "pyserial",
-    "py-mjpeg",
-    "fastapi>=0.110.0",
-    "uvicorn>=0.27.1",
-    "websockets>=12.0",
+    "hid==1.0.6",
+    "cv_bridge==1.13.0.post0",
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "pyserial==3.5",
+    "py-mjpeg==1.0.1",
+    "fastapi==0.115.8",
+    "uvicorn==0.34.0",
+    "websockets==13.1",
     "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@eed03c9ccaf00641c706404e32f5b161804512a8",
-    "aiohttp>=3.9.3",
-    "python-multipart>=0.0.9",
-    "jinja2>=3.1.3",
-    "pydub>=0.25.1",
-    "pynput>=1.8.1",
+    "aiohttp==3.13.3",
+    "pynput==1.8.1",
     "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
-    "nest-asyncio>=1.6.0",
+    "nest-asyncio==1.6.0",
+    "tf-keras==2.18.0",
 ]
 
 [project.optional-dependencies]
@@ -57,14 +50,14 @@ macos = ["osascript"]
 
 [dependency-groups]
 dev = [
-    "black>=24.10.0",
-    "isort>=5.13.2",
-    "pre-commit>=4.1.0",
-    "pyright>=1.1.406",
-    "pytest>=8.3.4",
-    "pytest-asyncio>=0.25.2",
-    "ruff>=0.9.3",
-    "vulture>=2.10",
+    "black==25.1.0",
+    "isort==6.0.0",
+    "pre-commit==4.1.0",
+    "pyright==1.1.408",
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.2",
+    "ruff==0.9.3",
+    "vulture==2.10",
 ]
 
 [tool.pytest.ini_options]
@@ -95,7 +88,7 @@ src = ["src"]
 exclude = ["src/unitree", "src/ubtech"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "D"]
+select = ["E", "F", "D"]
 ignore = ["E203", "E501", "D100", "D104", "D200", "D205", "D401", "D404"]
 fixable = ["ALL"]
 unfixable = []

@@ -22,15 +22,35 @@ To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds an
 
 Install cyclonedds via https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html.
 
-To install ROS2 Humble, run the following command
+To install ROS2 Humble, go to this [link](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html). Follow the steps under Setup Sources.
+Now, run
 
 ```bash
+sudo apt update
+sudo apt upgrade
 sudo apt install ros-humble-desktop-full
 ```
 
 This will install ROS, RViz, Gazebo and all the relevant packages.
 
-For more details and a better understanding [refer](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html).
+To install compilers and other tools to build ROS packages, run
+
+```bash
+sudo apt install ros-dev-tools
+```
+
+Install the following additional dependencies
+
+```bash
+sudo apt install ros-humble-rmw-cyclonedds-cpp
+sudo apt install ros-humble-rosidl-generator-dds-idl
+```
+
+Set up your environment by sourcing the following file.
+
+```bash
+source /opt/ros/humble/setup.bash
+```
 
 If you don't have uv installed, use the following command to install it on your system.
 
@@ -49,6 +69,8 @@ vi cyclonedds.xml
 Add the following, then save and exit.
 
 ```xml
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
         <General>
@@ -60,7 +82,7 @@ Add the following, then save and exit.
             <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
         </Discovery>
     </Domain>
-</CycloneDDS>
+</CycloneDDS>'
 ```
 
 To add the config to your bashrc, run:
@@ -72,6 +94,7 @@ vim ~/.bashrc
 And add the following:
 
 ```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
@@ -113,7 +136,8 @@ Step 2: Install all the necessary dependencies:
 
     ```bash
     cd unitree-sdk
-    rosdep init
+    sudo rosdep init
+    rosdep update
     rosdep install --from-paths . --ignore-src -r -y
     uv pip install -r pyproject.toml
     ```
@@ -126,7 +150,7 @@ Step 3: Build all the packages:
 
     Now you should be able to launch the **Gazebo Simulator**.
 
-Step 4: Open a terminal and run:
+Step 4: Open a terminal and run the following commands. You'll now be able to see the Gazebo and RViZ windows launch on your system.
 
     ```bash
     source install/setup.bash
@@ -142,7 +166,17 @@ Step 5: Open a new terminal and run:
 
     This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
-Step 6: Start OM1
+Step 6: Run Zenoh Ros2 Bridge
+
+    To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+
+    After installing the Zenoh ROS 2 bridge, you can run it with the following command:
+
+    ```bash
+    zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
+    ```
+
+Step 7: Start OM1
 
     Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
@@ -150,7 +184,7 @@ Step 6: Start OM1
     uv run src/run.py unitree_go2_autonomy_sim
     ```
 
-Step 7: Start SLAM mode
+Step 8: Start SLAM mode
 
     Open a new terminal and run the following to start the SLAM mode for the robot to start mapping the area. Our Gazebo setup includes auto mapping feature, this will let the robot to generate a 2D map for the area which can then be utilised at later stage to make the robot move from point A to point B.
 
@@ -159,7 +193,7 @@ Step 7: Start SLAM mode
     launch go2_sdk slam_launch.py use_sim:=true
     ```
 
-Step 8: Save the map
+Step 9: Save the map
 
     After the SLAM mode is complete, you can save the map by using the following command. Replace `<my_map>` with the name you prefer for saving the map.
 
@@ -168,7 +202,7 @@ Step 8: Save the map
     ros2 run nav2_map_server map_saver_cli -f my_map
     ```
 
-Step 9: Navigate the robot across the map
+Step 10: Navigate the robot across the map
 
     Once you successfully save the map, you can run the following command in a new terminal to enable navigation. After running the command, simply head over to RViz window and press **2D goal pose**. Now click at any new location on the map to make the robot start navigating towards it.
 
@@ -179,7 +213,7 @@ Step 9: Navigate the robot across the map
     ros2 launch go2_sdk nav2_launch.py use_sim:=true map_yaml_file:=my_map.yaml
     ```
 
-Step 10: Teleoperate the robot in simulation
+Step 11: Teleoperate the robot in simulation
 
     You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
 
