@@ -43,11 +43,7 @@ class Rtk(Background[RtkConfig]):
         Parameters
         ----------
         config : RtkConfig
-            Configuration object containing RTK device settings. The config
-            must include a valid `serial_port` parameter specifying the
-            serial port path (e.g., '/dev/ttyUSB0' on Linux or 'COM3' on Windows).
-            If `serial_port` is None, an error will be logged and the provider
-            will not be initialized.
+            Configuration object containing RTK settings.
         """
         super().__init__(config)
 
