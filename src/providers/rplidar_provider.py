@@ -400,7 +400,7 @@ class RPLidarProvider:
                         np.arange(scan.angle_min, scan.angle_max, scan.angle_increment),
                     )
                 )
-                self.angles_final = np.flip(self.angles)
+                self.angles_final = np.flip(np.array(self.angles))
 
             # angles now run from 360.0 to 0 degrees
             if self.angles_final is not None:
