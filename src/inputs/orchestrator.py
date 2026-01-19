@@ -23,6 +23,11 @@ class InputOrchestrator:
     def __init__(self, inputs: Sequence[Sensor]):
         """
         Initialize InputOrchestrator instance with input sources.
+
+        Parameters
+        ----------
+        inputs : Sequence[Sensor]
+            Sequence of input sources to manage.
         """
         self.inputs = inputs
 
