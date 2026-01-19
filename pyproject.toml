@@ -40,7 +40,7 @@ dependencies = [
     "uvicorn==0.34.0",
     "websockets==13.1",
     "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@eed03c9ccaf00641c706404e32f5b161804512a8",
-    "aiohttp==3.11.16",
+    "aiohttp==3.13.3",
     "python-multipart==0.0.20",
     "jinja2==3.1.5",
     "pydub==0.25.1",
