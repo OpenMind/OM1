@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import Optional
 
 from actions.base import ActionConfig, ActionConnector
