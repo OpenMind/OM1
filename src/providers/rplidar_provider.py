@@ -130,33 +130,6 @@ class RPLidarProvider:
     RPLidar Provider.
 
     This class implements a singleton pattern to manage RPLidar data streaming.
-
-    Parameters
-    ----------
-    serial_port: str = "/dev/cu.usbserial-0001"
-        The name of the serial port in use by the RPLidar sensor.
-    half_width_robot: float = 0.20
-        The half width of the robot in m
-    angles_blanked: list = []
-        Regions of the scan to disregard, runs from -180 to +180 deg
-    relevant_distance_max: float = 1.1
-        Only consider barriers within this range, in m
-    relevant_distance_min: float = 0.08
-        Only consider barriers above this range, in m
-    sensor_mounting_angle: float = 180.0
-        The angle of the sensor zero relative to the way in which it's mounted
-    URID: str = ""
-        The URID of the robot, used for Zenoh communication
-    machine_type: str = "go2"
-        The type of the robot, e.g., "go2" or "tb4"
-    use_zenoh: bool = False
-        Whether to use Zenoh for communication
-    simple_paths: bool = False
-        Whether to use simple paths for path planning
-    rplidar_config: RPLidarConfig = RPLidarConfig()
-        Configuration for the RPLidar sensor
-    log_file: bool = False
-        Whether to log data to a local file
     """
 
     # Constants
@@ -187,67 +160,32 @@ class RPLidarProvider:
         """
         Initialize the RPLidar Provider with robot and sensor configuration.
 
-        This method sets up the RPLidar sensor connection, configures robot
-        dimensions and sensor parameters, and initializes internal state variables
-        for lidar data processing and path planning.
-
         Parameters
         ----------
-        serial_port : str, optional
+        serial_port: str = "/dev/cu.usbserial-0001"
             The name of the serial port in use by the RPLidar sensor.
-            Defaults to "/dev/cu.usbserial-0001".
-        half_width_robot : float, optional
-            The half width of the robot in meters. Used for obstacle detection
-            and path planning calculations. Defaults to 0.20.
-        angles_blanked : list, optional
-            Regions of the scan to disregard, specified as angle ranges.
-            Angles run from -180 to +180 degrees. If None, defaults to an
-            empty list. Defaults to None.
-        relevant_distance_max : float, optional
-            Only consider barriers within this range, in meters. Measurements
-            beyond this distance are ignored for obstacle detection.
-            Defaults to 1.1.
-        relevant_distance_min : float, optional
-            Only consider barriers above this range, in meters. Measurements
-            below this distance are ignored to filter out noise and close-range
-            artifacts. Defaults to 0.08.
-        sensor_mounting_angle : float, optional
-            The angle of the sensor zero relative to the way in which it's
-            mounted on the robot, in degrees. Used for coordinate transformation.
-            Defaults to 180.0.
-        URID : str, optional
-            The URID (Unique Resource Identifier) of the robot, used for
-            Zenoh communication when use_zenoh is enabled. Defaults to "".
-        machine_type : str, optional
-            The type of the robot, e.g., "go2" or "tb4". Used to configure
-            robot-specific parameters and behaviors. Defaults to "go2".
-        use_zenoh : bool, optional
-            Whether to use Zenoh for distributed communication. When enabled,
-            the provider will publish lidar data through Zenoh using the
-            specified URID. Defaults to False.
-        simple_paths : bool, optional
-            Whether to use simple paths for path planning. When enabled,
-            uses a simplified path planning algorithm. Defaults to False.
-        rplidar_config : RPLidarConfig, optional
-            Configuration object for the RPLidar sensor, containing parameters
-            such as max_buf_meas, min_len, and max_distance_mm. If not provided,
-            uses default RPLidarConfig values. Defaults to RPLidarConfig().
-        log_file : bool, optional
-            Whether to log lidar data to a local file. When enabled, creates
-            log files for debugging and analysis purposes. Defaults to False.
-
-        Notes
-        -----
-        The initialization process performs the following steps:
-        1. Configures serial port connection for the RPLidar sensor
-        2. Sets up robot geometry parameters (half_width_robot, angles_blanked)
-        3. Configures sensor detection ranges (relevant_distance_min/max)
-        4. Initializes internal state variables for scan processing
-        5. Creates an OdomProvider instance for odometry data integration
-        6. Sets up file logging if log_file is enabled
-
-        The provider uses a singleton pattern, ensuring only one instance
-        exists throughout the application lifecycle.
+        half_width_robot: float = 0.20
+            The half width of the robot in m
+        angles_blanked: list = []
+            Regions of the scan to disregard, runs from -180 to +180 deg
+        relevant_distance_max: float = 1.1
+            Only consider barriers within this range, in m
+        relevant_distance_min: float = 0.08
+            Only consider barriers above this range, in m
+        sensor_mounting_angle: float = 180.0
+            The angle of the sensor zero relative to the way in which it's mounted
+        URID: str = ""
+            The URID of the robot, used for Zenoh communication
+        machine_type: str = "go2"
+            The type of the robot, e.g., "go2" or "tb4"
+        use_zenoh: bool = False
+            Whether to use Zenoh for communication
+        simple_paths: bool = False
+            Whether to use simple paths for path planning
+        rplidar_config: RPLidarConfig = RPLidarConfig()
+            Configuration for the RPLidar sensor
+        log_file: bool = False
+            Whether to log data to a local file
         """
         logging.info("Booting RPLidar")
 
