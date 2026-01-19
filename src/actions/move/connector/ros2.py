@@ -10,6 +10,14 @@ class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
     """
 
     def __init__(self, config: ActionConfig):
+        """
+        Initialize the MoveUnitreeSDKConnector.
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
     async def connect(self, output_interface: MoveInput) -> None:
