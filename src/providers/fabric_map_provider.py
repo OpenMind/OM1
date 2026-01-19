@@ -226,7 +226,8 @@ class FabricDataSubmitter:
             raise ValueError("Provided data must be a dictionary.")
 
         if (
-            os.path.exists(self.filename_current)
+            self.filename_current is not None
+            and os.path.exists(self.filename_current)
             and os.path.getsize(self.filename_current) > self.max_file_size_bytes
         ):
             self.filename_current = self.update_filename()
