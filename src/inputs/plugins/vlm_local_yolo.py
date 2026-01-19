@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import cv2
 from pydantic import Field
-from ultralytics import YOLO
+from ultralytics import YOLO  # type: ignore
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
