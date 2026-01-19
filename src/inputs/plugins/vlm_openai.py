@@ -111,12 +111,12 @@ class VLMOpenAI(FuserInput[VLMOpenAIConfig, Optional[str]]):
                 "text_recognition"
             ],
             constraints=[
-                # Update rate is intentionally fixed at 2.0 Hz to balance latency and compute load.
+                # Documented nominal update rate is 2.0 Hz to balance latency and compute load; this class does not enforce it.
                 Constraint(
                     name="update_rate",
                     value=2.0,
                     unit="Hz",
-                    description="VLM inference frequency fixed at 2.0 Hz to balance responsiveness and computational load"
+                    description="Expected VLM inference frequency is 2.0 Hz to balance responsiveness and computational load (not enforced by this component)"
                 ),
                 Constraint(
                     name="camera_index",
