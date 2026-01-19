@@ -23,6 +23,17 @@ class UbtechASRProvider:
         return UbtechASRProvider._instance
 
     def __init__(self, robot_ip: str, language_code: str = "en"):
+        """
+        Initialize the UbtechASRProvider.
+
+        Parameters
+        ----------
+        robot_ip : str
+            The IP address of the Ubtech robot to connect to.
+        language_code : str, optional
+            The language code for ASR processing (default: "en").
+            This will be set on the robot via the system/language API endpoint.
+        """
         UbtechASRProvider._instance = self
 
         self.robot_ip = robot_ip
@@ -33,6 +44,7 @@ class UbtechASRProvider:
         self.session = requests.Session()  # Create a session object
         self.session.headers.update(self.headers)  # Update session headers
 
+        self._lock = threading.Lock()  # Thread lock for protecting shared state
         self.running = False
         self.paused = False  # Add paused flag
         self.just_resumed = False  # Add new flag
@@ -49,34 +61,47 @@ class UbtechASRProvider:
         cb : Optional[callable]
             The callback function to process recognized ASR messages.
         """
-        self._message_callback = cb
+        with self._lock:
+            self._message_callback = cb
 
     def start(self):
         """
         Start the ASR provider and its background thread.
         """
-        if self.running:
-            return
+        with self._lock:
+            if self.running:
+                return
 
-        logging.info("Starting UbtechASRProvider background thread...")
+            logging.info("Starting UbtechASRProvider background thread...")
 
-        self.running = True
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
+            self.running = True
+            self._thread = threading.Thread(target=self._run, daemon=True)
+            self._thread.start()
 
     def stop(self):
         """
         Stop the ASR provider and its background thread.
-        """
-        if not self.running:
-            return
 
-        logging.info("Stopping UbtechASRProvider background thread...")
-        self.running = False
+        This method ensures proper cleanup by:
+        - Stopping the background thread
+        - Closing the HTTP session to release resources
+        - Waiting for the thread to finish (with timeout)
+        """
+        with self._lock:
+            if not self.running:
+                return
+
+            logging.info("Stopping UbtechASRProvider background thread...")
+            self.running = False
+
         self._stop_voice_iat()
 
         if self._thread:
             self._thread.join(timeout=3)
+
+        # Close the session to release resources
+        if self.session:
+            self.session.close()
 
         logging.info("UbtechASRProvider stopped.")
 
@@ -85,26 +110,36 @@ class UbtechASRProvider:
         Pause the ASR provider to stop listening for new utterances.
         """
         logging.debug("Pausing UbtechASRProvider")
-        self.paused = True
+        with self._lock:
+            self.paused = True
 
     def resume(self):
         """
         Resume the ASR provider after being paused.
         """
         logging.debug("Resuming UbtechASRProvider")
-        self.paused = False
-        self.just_resumed = True  # Set flag on resume
+        with self._lock:
+            self.paused = False
+            self.just_resumed = True  # Set flag on resume
 
     def _run(self):
-        while self.running:
-            if self.just_resumed:  # Check if just resumed
+        while True:
+            with self._lock:
+                if not self.running:
+                    break
+                just_resumed = self.just_resumed
+                paused = self.paused
+                message_callback = self._message_callback
+                if just_resumed:
+                    self.just_resumed = False  # Clear flag
+
+            if just_resumed:  # Check if just resumed
                 logging.debug(
                     "UbtechASRProvider: Just resumed, adding a 1.0s delay before listening."
                 )
                 time.sleep(1.0)  # Add delay
-                self.just_resumed = False  # Clear flag
 
-            if self.paused:
+            if paused:
                 time.sleep(0.1)  # Sleep while paused
                 continue
 
@@ -121,11 +156,11 @@ class UbtechASRProvider:
                     logging.debug(
                         f"UbtechASRProvider: Successfully got utterance: '{text}'"
                     )
-                    if self._message_callback:
+                    if message_callback:
                         logging.debug(
                             f"UbtechASRProvider: Calling message callback with: '{text}'"
                         )
-                        self._message_callback(text)
+                        message_callback(text)
                 # If text is None here, it means _get_single_utterance timed out or returned no speech, which is normal.
 
             except (
@@ -197,11 +232,12 @@ class UbtechASRProvider:
             time.sleep(0.2)  # 200ms pause
 
             for i in range(100):  # Poll for ~10 seconds (100 * 0.1s)
-                if not self.running:
-                    logging.debug(
-                        "UbtechASRProvider: Not running, exiting _get_single_utterance loop."
-                    )
-                    return None
+                with self._lock:
+                    if not self.running:
+                        logging.debug(
+                            "UbtechASRProvider: Not running, exiting _get_single_utterance loop."
+                        )
+                        return None
                 res = self._get_voice_iat()
                 logging.debug(
                     f"UbtechASRProvider: _get_voice_iat (attempt {i+1}) returned: {res}"
