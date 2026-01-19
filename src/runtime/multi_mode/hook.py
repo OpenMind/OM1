@@ -66,6 +66,14 @@ class LifecycleHookHandler:
     """
 
     def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize the LifecycleHookHandler with configuration.
+
+        Parameters
+        ----------
+        config : Dict[str, Any]
+            Configuration object for the hook handler.
+        """
         self.config = config
 
     async def execute(self, context: Dict[str, Any]) -> bool:
