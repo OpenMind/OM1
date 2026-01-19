@@ -1,7 +1,7 @@
-# tests/providers/test_d435_provider.py
+import math
 
 import pytest
-import math
+
 from src.providers.d435_provider import D435Provider
 
 
@@ -9,11 +9,9 @@ from src.providers.d435_provider import D435Provider
 def d435_provider():
     """
     Fixture to create a D435Provider instance for testing.
-    Uses _singleton_class to get the original class and __new__ to avoid running __init__.
     """
-    original_class = D435Provider._singleton_class
+    original_class = D435Provider._singleton_class  # type: ignore
     provider = original_class.__new__(original_class)
-    # No specific initialization needed for calculate_angle_and_distance
     return provider
 
 
