@@ -55,6 +55,11 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
 
         Sets up the required providers and buffers for handling Tesla data processing.
         Initializes connection to the Tesla service and registers message handlers.
+
+        Parameters
+        ----------
+        config : DIMOTeslaConfig
+            Configuration settings for the sensor input.
         """
         super().__init__(config)
 
