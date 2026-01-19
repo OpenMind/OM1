@@ -160,7 +160,12 @@ class UnitreeGo2StateProvider:
 
     def __init__(self, channel: str = ""):
         """
-        Robot and sensor configuration.
+        Initialize the Unitree Go2 State Provider.
+
+        Parameters
+        ----------
+        channel : str, optional
+            CycloneDDS channel to subscribe to for Unitree Go2 state data. Defaults to "".
         """
         self.channel = channel
 
