@@ -15,6 +15,10 @@ rclpy.init()
 class ROS2PublisherProvider(Node):
     """
     Publisher provider for ROS 2.
+
+    This class extends ROS 2 Node to provide a publisher that queues and
+    publishes messages asynchronously in a separate thread. Messages are
+    added to a queue and processed sequentially by a background thread.
     """
 
     def __init__(self, topic: str = "speak_topic"):
