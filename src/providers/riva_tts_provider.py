@@ -28,12 +28,15 @@ class RivaTTSProvider:
         api_key: Optional[str] = None,
     ):
         """
-        Initialize the TTS provider with given URL.
+        Initialize the TTS provider with given URL and API key.
 
         Parameters
         ----------
         url : str
-            The URL endpoint for the TTS service
+            The URL endpoint for the TTS service.
+        api_key : str, optional
+            The API key for the TTS service. If provided, it's used in the
+            request headers. Defaults to None.
         """
         self.running: bool = False
         self._audio_stream: AudioOutputStream = AudioOutputStream(
