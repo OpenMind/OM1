@@ -1,32 +1,30 @@
-"""
-Tests for floating-point edge cases in RPLidar provider.
-
-These tests verify that near-zero floating-point comparisons are handled
-safely to prevent division by very small numbers.
-"""
+"""Tests for floating-point edge cases in RPLidar provider."""
 
 import ast
+import math
 from pathlib import Path
+
+import pytest
+
+from providers.rplidar_provider import RPLidarProvider
+
+
+@pytest.fixture
+def rplidar_provider():
+    actual_class = RPLidarProvider._singleton_class  # type: ignore
+    provider = actual_class.__new__(actual_class)
+    return provider
 
 
 class TestFloatingPointSourceAnalysis:
-    """Static analysis tests for floating-point comparisons."""
 
     def test_distance_function_uses_epsilon_comparison(self):
-        """Test that distance_point_to_line_segment uses epsilon-based comparison.
-
-        BUG: Using `dx == 0 and dy == 0` for floating-point comparison is dangerous.
-        If dx = 1e-16, the check fails but dx*dx = 1e-32 causes division overflow.
-
-        FIXED: Should use epsilon-based comparison like `abs(dx) < EPSILON`.
-        """
         source_file = Path("src/providers/rplidar_provider.py")
         assert source_file.exists(), "rplidar_provider.py not found"
 
         source_code = source_file.read_text()
         tree = ast.parse(source_code)
 
-        # Find the distance_point_to_line_segment function
         target_func = None
         for node in ast.walk(tree):
             if (
@@ -38,14 +36,10 @@ class TestFloatingPointSourceAnalysis:
 
         assert target_func is not None, "distance_point_to_line_segment not found"
 
-        # Look for problematic pattern: `dx == 0` or `dy == 0`
         has_exact_zero_comparison = False
-
         for node in ast.walk(target_func):
             if isinstance(node, ast.Compare):
-                # Check for pattern: variable == 0
                 if len(node.ops) == 1 and isinstance(node.ops[0], ast.Eq):
-                    # Check if comparing to 0
                     for comparator in node.comparators:
                         if (
                             isinstance(comparator, ast.Constant)
@@ -54,56 +48,92 @@ class TestFloatingPointSourceAnalysis:
                             has_exact_zero_comparison = True
                             break
 
-        assert not has_exact_zero_comparison, (
-            "BUG FOUND: distance_point_to_line_segment uses exact zero comparison (== 0). "
-            "This is dangerous for floating-point numbers. "
-            "Should use epsilon-based comparison like abs(value) < EPSILON or check denominator."
-        )
+        assert (
+            not has_exact_zero_comparison
+        ), "distance_point_to_line_segment uses exact zero comparison (== 0)"
 
 
 class TestFloatingPointBehavior:
-    """Tests demonstrating the floating-point division issue."""
 
     def test_near_zero_division_causes_overflow(self):
-        """Prove that dividing by near-zero causes extreme values."""
         dx = 1e-16
         dy = 0.0
 
-        # This check would PASS (dx is not exactly 0)
         exact_zero_check = dx == 0 and dy == 0
-        assert not exact_zero_check, "dx is not exactly zero"
+        assert not exact_zero_check
 
-        # But the denominator is extremely small
         denominator = dx * dx + dy * dy
-        assert denominator < 1e-30, f"Denominator {denominator} is extremely small"
+        assert denominator < 1e-30
 
-        # Division by this small number causes huge result
-        numerator = 1.0
-        result = numerator / denominator
-        assert result > 1e30, "Division causes extreme value"
+        result = 1.0 / denominator
+        assert result > 1e30
 
     def test_epsilon_comparison_catches_near_zero(self):
-        """Prove that epsilon comparison catches near-zero values."""
         dx = 1e-16
         dy = 0.0
         EPSILON = 1e-10
 
-        # Exact zero check FAILS
         exact_check = dx == 0 and dy == 0
         assert not exact_check
 
-        # Epsilon check PASSES (catches the small value)
         epsilon_check = abs(dx) < EPSILON and abs(dy) < EPSILON
-        assert epsilon_check, "Epsilon comparison should catch near-zero"
+        assert epsilon_check
 
     def test_denominator_check_is_safer(self):
-        """Prove that checking denominator directly is safer."""
         dx = 1e-16
         dy = 0.0
         EPSILON = 1e-10
 
         denominator = dx * dx + dy * dy
+        assert denominator < EPSILON
 
-        # Denominator check catches the issue
-        is_too_small = denominator < EPSILON
-        assert is_too_small, "Denominator check should catch near-zero"
+
+class TestDistancePointToLineSegment:
+
+    def test_normal_line_segment(self, rplidar_provider):
+        result = rplidar_provider.distance_point_to_line_segment(
+            px=0.0, py=1.0, x1=0.0, y1=0.0, x2=2.0, y2=0.0
+        )
+        assert result == pytest.approx(1.0, rel=1e-9)
+
+    def test_point_on_line_segment(self, rplidar_provider):
+        result = rplidar_provider.distance_point_to_line_segment(
+            px=1.0, py=0.0, x1=0.0, y1=0.0, x2=2.0, y2=0.0
+        )
+        assert result == pytest.approx(0.0, abs=1e-9)
+
+    def test_zero_length_segment(self, rplidar_provider):
+        result = rplidar_provider.distance_point_to_line_segment(
+            px=3.0, py=4.0, x1=0.0, y1=0.0, x2=0.0, y2=0.0
+        )
+        assert result == pytest.approx(5.0, rel=1e-9)
+
+    def test_near_zero_segment_no_crash(self, rplidar_provider):
+        result = rplidar_provider.distance_point_to_line_segment(
+            px=1.0, py=1.0, x1=0.0, y1=0.0, x2=1e-16, y2=0.0
+        )
+        assert not math.isnan(result)
+        assert not math.isinf(result)
+        assert result == pytest.approx(math.sqrt(2), rel=0.01)
+
+    def test_extremely_small_segment_no_crash(self, rplidar_provider):
+        result = rplidar_provider.distance_point_to_line_segment(
+            px=1.0, py=1.0, x1=0.0, y1=0.0, x2=1e-200, y2=1e-200
+        )
+        assert not math.isnan(result)
+        assert not math.isinf(result)
+        expected = math.sqrt(1.0**2 + 1.0**2)
+        assert result == pytest.approx(expected, rel=0.01)
+
+    def test_diagonal_line_segment(self, rplidar_provider):
+        result = rplidar_provider.distance_point_to_line_segment(
+            px=0.0, py=1.0, x1=0.0, y1=0.0, x2=1.0, y2=1.0
+        )
+        expected = math.sqrt(2) / 2
+        assert result == pytest.approx(expected, rel=1e-6)
+
+    def test_point_beyond_segment_end(self, rplidar_provider):
+        result = rplidar_provider.distance_point_to_line_segment(
+            px=5.0, py=0.0, x1=0.0, y1=0.0, x2=2.0, y2=0.0
+        )
+        assert result == pytest.approx(3.0, rel=1e-9)
