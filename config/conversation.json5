@@ -37,4 +37,9 @@
       connector: "avatar",
     },
   ],
+   backgrounds: [
+     {
+       type: "AgentTeleopsStatusBackground",
+     },
+   ],
 }
