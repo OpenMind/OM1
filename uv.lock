@@ -240,20 +240,6 @@ wheels = [
 ]
 
 [[package]]
-name = "audiosegment"
-version = "0.23.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-    { name = "pydub" },
-    { name = "webrtcvad" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/20/d6/0e82be75053f43c0cf04a266c0b2ab6a5b7648d542fb3271ea0b5da6685f/audiosegment-0.23.0.tar.gz", hash = "sha256:ce230615db2ded83d454c688f424ca014c7927343e0f33e509b4bf627b5b97b2", size = 34838, upload-time = "2020-08-20T19:08:22.473Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/78/2f062377cc32dbe8cbd74ede1e2cb26ec36350b83095b5a6e06cc6f9c251/audiosegment-0.23.0-py3-none-any.whl", hash = "sha256:2f8f60431d85e6499a845aed14e64fdd371aeb7b02db2352934f6a31a5c0ed5e", size = 34246, upload-time = "2020-08-20T19:08:20.734Z" },
-]
-
-[[package]]
 name = "av"
 version = "15.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -313,32 +299,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b3/ca/824b1195773ce6166d388573fc106ce56d4a805bd7427b624e063596ec58/beautifulsoup4-4.12.3.tar.gz", hash = "sha256:74e3d1928edc070d21748185c46e3fb33490f22f52a3addee9aee0f4f7781051", size = 581181, upload-time = "2024-01-17T16:53:17.902Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b1/fe/e8c672695b37eecc5cbf43e1d0638d88d66ba3a44c4d321c796f4e59167f/beautifulsoup4-4.12.3-py3-none-any.whl", hash = "sha256:b80878c9f40111313e55da8ba20bdba06d8fa3969fc68304167741bbf9e082ed", size = 147925, upload-time = "2024-01-17T16:53:12.779Z" },
-]
-
-[[package]]
-name = "bezier"
-version = "2024.6.20"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/1a/28aa7a72a5029f416c7d04c5cdae1b0b00d1c6c72a986689458e8e586446/bezier-2024.6.20.tar.gz", hash = "sha256:0b46357eb6019f969a583093f66e6b73747d5e41c10d9f3dfe327b2aa43dff8c", size = 354590, upload-time = "2024-06-21T04:22:24.33Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/26/6fe7391f422fb18ce258c904cd951f1cedd4e0e13fc4f664b9eec240fc36/bezier-2024.6.20-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:65d12159b919e3076c6a1b90c811b740cb1eb557d250947edb7bbc9a2157490d", size = 1248773, upload-time = "2024-06-21T04:21:40.626Z" },
-    { url = "https://files.pythonhosted.org/packages/9f/72/055a5a2f3988fe6ab9dad8f9ba6cfa59af0bbddd6972a76a3659b90ec281/bezier-2024.6.20-cp310-cp310-macosx_14_0_x86_64.whl", hash = "sha256:ad7ec863f3fa70bd0774ea49cd8f9ad6310251055ee127917b9b8dce085a9e91", size = 1906400, upload-time = "2024-06-21T04:21:49.839Z" },
-    { url = "https://files.pythonhosted.org/packages/b6/20/0984381a3c9042810b2f9cf39dedac2acffe0546ded10a56cfa43ec4914b/bezier-2024.6.20-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4b8c081eacc25c840b1991a11961421cdb0ec41906df015db9ff08322cf63486", size = 1924387, upload-time = "2024-06-21T04:21:52.921Z" },
-    { url = "https://files.pythonhosted.org/packages/db/70/4ecdf9758fd680fdf423051b58ca2e64b6ff4cdd04f62dc1baceed0e0adf/bezier-2024.6.20-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fd1d4776212bdd9aa08ad57fb6a82978d50d0eba6f58f68fad9b83446fe895f3", size = 2499029, upload-time = "2024-06-21T04:21:55.166Z" },
-    { url = "https://files.pythonhosted.org/packages/88/9d/8a08db203aef6289c174bdc9566a2a7a8ff60e5fabbb8c1170b9ff2261ab/bezier-2024.6.20-cp310-cp310-win_amd64.whl", hash = "sha256:191a3c9081d16b36425cc66297f6a8e4460c1b2d43c2ddcd271014fdf99b1e46", size = 1809884, upload-time = "2024-06-21T04:21:57.794Z" },
-    { url = "https://files.pythonhosted.org/packages/96/d5/02911e75ada6f740910a7203510920947acec31c7e910c8cac521ce897bc/bezier-2024.6.20-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:c860cc0e777a06cda9afa019824b9f48578b2964b0ae18ea7cbbe9d1a02066b6", size = 1249223, upload-time = "2024-06-21T04:22:00.109Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/e0/90eeab82f5e5c2c1f63e2ad7bf9ec188e0c699a410f4df1d886bd6a4b1b4/bezier-2024.6.20-cp311-cp311-macosx_14_0_x86_64.whl", hash = "sha256:28c50de2b7bc7afd19b3115e3f8ecad36bc281bf4eafbc335a7651b801dd3544", size = 1907265, upload-time = "2024-06-21T04:22:03.033Z" },
-    { url = "https://files.pythonhosted.org/packages/aa/81/b22deec7817ebdc2da7c45920687b5697830bc0961c83a1d2a72856b3ac7/bezier-2024.6.20-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:29bbecca56d6d152cd566ba626ceab1a95bbaf05205acf680da6d4d5beb0e87b", size = 2016937, upload-time = "2024-06-21T04:22:05.938Z" },
-    { url = "https://files.pythonhosted.org/packages/0e/ec/836adeee81afaabd7f41f7bc3840ffc7e8b50ac1b3ffdf6f6894a13cbcd4/bezier-2024.6.20-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3d3205f96f982f0dc45e1776d8995d572e228b0dbeab234c0acf4618a2e8dce0", size = 2592354, upload-time = "2024-06-21T04:22:08.258Z" },
-    { url = "https://files.pythonhosted.org/packages/70/9b/cab28cdae18f739122905088845f8285f6271af3332e46b051c536804289/bezier-2024.6.20-cp311-cp311-win_amd64.whl", hash = "sha256:ab942ec30c73425d7b7020cbde4e1b7bd7792e914fac585565786b205ef54c94", size = 1810077, upload-time = "2024-06-21T04:22:10.947Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/4b/dcfed092496f53565d40f7c3846db030babb227d9e25e44c7e1d4371713f/bezier-2024.6.20-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:e18733c1fcf01a08822e6e8a6f86eb6e56067f368e4b09653d25368881765d7d", size = 1246686, upload-time = "2024-06-21T04:22:12.98Z" },
-    { url = "https://files.pythonhosted.org/packages/03/4d/a71c92270739cba039bc110e0c805c3b2f2c8360d7fac3ec861842443571/bezier-2024.6.20-cp312-cp312-macosx_14_0_x86_64.whl", hash = "sha256:bbe9e09dfee5cd23033aa4caf3b32b3d05d5977604b95b9c4e0220376c3c34b6", size = 1903253, upload-time = "2024-06-21T04:22:15.049Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/3c/326228895c155a657079ac0094e8a3d225986332cc5b4c838f48ec18fbad/bezier-2024.6.20-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5199407fb9ad8bbae313dde49119ee33d684c2f81358082edea97345df6f493c", size = 1972128, upload-time = "2024-06-21T04:22:17.15Z" },
-    { url = "https://files.pythonhosted.org/packages/00/a5/dfa67b0de68ca25f37eeef3b85686f191991e8f20f76fdbde870dacb1c56/bezier-2024.6.20-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:21241b81f75739e2cfb2f705a9bb6e55489cc2d8a1d2a514b68ca55514aa5f09", size = 2556550, upload-time = "2024-06-21T04:22:19.461Z" },
-    { url = "https://files.pythonhosted.org/packages/11/3c/713170cd340a8fc81cc9acb88a5c371f9aaf43102bcdfec9e543843faee4/bezier-2024.6.20-cp312-cp312-win_amd64.whl", hash = "sha256:8cf8c3e373440f799a48ccdf51bdd6428ceef5e1dd9bae9eb01711a0a73b8fdc", size = 1802892, upload-time = "2024-06-21T04:22:22.185Z" },
 ]
 
 [[package]]
@@ -2484,8 +2444,6 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aiohttp" },
-    { name = "audiosegment" },
-    { name = "bezier" },
     { name = "bleak" },
     { name = "cdp-sdk" },
     { name = "cv-bridge" },
@@ -2494,7 +2452,6 @@ dependencies = [
     { name = "eclipse-zenoh" },
     { name = "fastapi" },
     { name = "hid" },
-    { name = "jinja2" },
     { name = "json5" },
     { name = "jsonschema" },
     { name = "matplotlib" },
@@ -2507,17 +2464,12 @@ dependencies = [
     { name = "py-mjpeg" },
     { name = "pyaudio" },
     { name = "pycdr2" },
-    { name = "pydub" },
     { name = "pynmeagps" },
     { name = "pynput" },
     { name = "pyserial" },
     { name = "python-dotenv" },
-    { name = "python-multipart" },
-    { name = "scipy" },
     { name = "sounddevice" },
     { name = "soundfile" },
-    { name = "tensorflow" },
-    { name = "tf-keras" },
     { name = "torch" },
     { name = "torchvision" },
     { name = "typer" },
@@ -2550,8 +2502,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = "==3.13.3" },
-    { name = "audiosegment", specifier = "==0.23.0" },
-    { name = "bezier", specifier = "==2024.6.20" },
     { name = "bleak", specifier = "==0.22.3" },
     { name = "cdp-sdk", specifier = "==0.21.0" },
     { name = "cv-bridge", specifier = "==1.13.0.post0" },
@@ -2561,7 +2511,6 @@ requires-dist = [
     { name = "eclipse-zenoh", specifier = "==1.4.0" },
     { name = "fastapi", specifier = "==0.115.8" },
     { name = "hid", specifier = "==1.0.6" },
-    { name = "jinja2", specifier = "==3.1.5" },
     { name = "json5", specifier = "==0.10.0" },
     { name = "jsonschema", specifier = "==4.23.0" },
     { name = "matplotlib", specifier = "==3.10.1" },
@@ -2575,17 +2524,12 @@ requires-dist = [
     { name = "py-mjpeg", specifier = "==1.0.1" },
     { name = "pyaudio", specifier = "==0.2.14" },
     { name = "pycdr2", specifier = "==1.0.0" },
-    { name = "pydub", specifier = "==0.25.1" },
     { name = "pynmeagps", specifier = "==1.0.50" },
     { name = "pynput", specifier = "==1.8.1" },
     { name = "pyserial", specifier = "==3.5" },
     { name = "python-dotenv", specifier = "==1.0.1" },
-    { name = "python-multipart", specifier = "==0.0.20" },
-    { name = "scipy", specifier = "==1.15.2" },
     { name = "sounddevice", specifier = "==0.5.2" },
     { name = "soundfile", specifier = "==0.13.1" },
-    { name = "tensorflow", specifier = "==2.18.0" },
-    { name = "tf-keras", specifier = "==2.18.0" },
     { name = "torch", specifier = "==2.6.0" },
     { name = "torchvision", specifier = "==0.21.0" },
     { name = "typer", specifier = "==0.15.1" },
@@ -3264,15 +3208,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pydub"
-version = "0.25.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fe/9a/e6bca0eed82db26562c73b5076539a4a08d3cffd19c3cc5913a3e61145fd/pydub-0.25.1.tar.gz", hash = "sha256:980a33ce9949cab2a569606b65674d748ecbca4f0796887fd6f46173a7b0d30f", size = 38326, upload-time = "2021-03-10T02:09:54.659Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a6/53/d78dc063216e62fc55f6b2eebb447f6a4b0a59f55c8406376f76bf959b08/pydub-0.25.1-py2.py3-none-any.whl", hash = "sha256:65617e33033874b59d87db603aa1ed450633288aefead953b30bded59cb599a6", size = 32327, upload-time = "2021-03-10T02:09:53.503Z" },
-]
-
-[[package]]
 name = "pygments"
 version = "2.19.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3601,15 +3536,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bc/57/e84d88dfe0aec03b7a2d4327012c1627ab5f03652216c63d49846d7a6c58/python-dotenv-1.0.1.tar.gz", hash = "sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca", size = 39115, upload-time = "2024-01-23T06:33:00.505Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/3e/b68c118422ec867fa7ab88444e1274aa40681c606d59ac27de5a5588f082/python_dotenv-1.0.1-py3-none-any.whl", hash = "sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a", size = 19863, upload-time = "2024-01-23T06:32:58.246Z" },
-]
-
-[[package]]
-name = "python-multipart"
-version = "0.0.20"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f3/87/f44d7c9f274c7ee665a29b885ec97089ec5dc034c7f3fafa03da9e39a09e/python_multipart-0.0.20.tar.gz", hash = "sha256:8dd0cab45b8e23064ae09147625994d090fa46f5b0d1e13af944c331a7fa9d13", size = 37158, upload-time = "2024-12-16T19:45:46.972Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/58/38b5afbc1a800eeea951b9285d3912613f2603bdf897a4ab0f4bd7f405fc/python_multipart-0.0.20-py3-none-any.whl", hash = "sha256:8a62d3a8335e06589fe01f2a3e178cdcc632f3fbe0d492ad9ee0ec35aab1f104", size = 24546, upload-time = "2024-12-16T19:45:44.423Z" },
 ]
 
 [[package]]
@@ -4255,18 +4181,6 @@ wheels = [
 ]
 
 [[package]]
-name = "tf-keras"
-version = "2.18.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "tensorflow" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/a4/7d0acc28cde2b29b8114552ce3258dafdc6b2186d24bf8e912de713dd74f/tf_keras-2.18.0.tar.gz", hash = "sha256:ebf744519b322afead33086a2aba872245473294affd40973694f3eb7c7ad77d", size = 1260765, upload-time = "2024-10-24T22:58:06.652Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/ed/e08afca471299b04a34cd548e64e89d0153eda0e6cf9b715356777e24774/tf_keras-2.18.0-py3-none-any.whl", hash = "sha256:c431d04027eef790fcd3261cf7fdf93eb74f3cb32e05078b57b7f5a54bd53262", size = 1725427, upload-time = "2024-10-24T22:58:03.918Z" },
-]
-
-[[package]]
 name = "toml"
 version = "0.10.2"
 source = { registry = "https://pypi.org/simple" }
@@ -4580,12 +4494,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/09/4a/7679004558ff67724
 wheels = [
     { url = "https://files.pythonhosted.org/packages/31/81/580fe1e55face22795025bc303c38a035d81865413d81ca2836dc6c4ce83/web3-7.6.0-py3-none-any.whl", hash = "sha256:670dac222b2ec5ce72f4572d8e5d91afe79fcac03af9dabfc69da4fe9f6621df", size = 1351846, upload-time = "2024-11-22T17:54:08.941Z" },
 ]
-
-[[package]]
-name = "webrtcvad"
-version = "2.0.10"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/89/34/e2de2d97f3288512b9ea56f92e7452f8207eb5a0096500badf9dfd48f5e6/webrtcvad-2.0.10.tar.gz", hash = "sha256:f1bed2fb25b63fb7b1a55d64090c993c9c9167b28485ae0bcdd81cf6ede96aea", size = 66156, upload-time = "2017-01-07T23:05:18.732Z" }
 
 [[package]]
 name = "websockets"
