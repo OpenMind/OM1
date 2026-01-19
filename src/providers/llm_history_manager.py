@@ -105,10 +105,16 @@ class LLMHistoryManager:
         """
         if not self.config_name:
             return None
+        # Sanitize config_name to avoid directory traversal or unsafe paths
+        safe_name = os.path.basename(self.config_name)
+        if os.path.sep in safe_name:
+            safe_name = safe_name.replace(os.path.sep, "_")
+        if os.path.altsep:
+            safe_name = safe_name.replace(os.path.altsep, "_")
         memory_folder = os.path.join(
             os.path.dirname(__file__), "../../config/memory"
         )
-        return os.path.join(memory_folder, f"history_{self.config_name}.jsonl")
+        return os.path.join(memory_folder, f"history_{safe_name}.jsonl")
 
     def save_history(self) -> None:
         """
