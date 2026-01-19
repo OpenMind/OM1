@@ -130,33 +130,6 @@ class RPLidarProvider:
     RPLidar Provider.
 
     This class implements a singleton pattern to manage RPLidar data streaming.
-
-    Parameters
-    ----------
-    serial_port: str = "/dev/cu.usbserial-0001"
-        The name of the serial port in use by the RPLidar sensor.
-    half_width_robot: float = 0.20
-        The half width of the robot in m
-    angles_blanked: list = []
-        Regions of the scan to disregard, runs from -180 to +180 deg
-    relevant_distance_max: float = 1.1
-        Only consider barriers within this range, in m
-    relevant_distance_min: float = 0.08
-        Only consider barriers above this range, in m
-    sensor_mounting_angle: float = 180.0
-        The angle of the sensor zero relative to the way in which it's mounted
-    URID: str = ""
-        The URID of the robot, used for Zenoh communication
-    machine_type: str = "go2"
-        The type of the robot, e.g., "go2" or "tb4"
-    use_zenoh: bool = False
-        Whether to use Zenoh for communication
-    simple_paths: bool = False
-        Whether to use simple paths for path planning
-    rplidar_config: RPLidarConfig = RPLidarConfig()
-        Configuration for the RPLidar sensor
-    log_file: bool = False
-        Whether to log data to a local file
     """
 
     # Constants
@@ -185,7 +158,34 @@ class RPLidarProvider:
         log_file: bool = False,
     ):
         """
-        Robot and sensor configuration.
+        Initialize the RPLidar Provider with robot and sensor configuration.
+
+        Parameters
+        ----------
+        serial_port: str = "/dev/cu.usbserial-0001"
+            The name of the serial port in use by the RPLidar sensor.
+        half_width_robot: float = 0.20
+            The half width of the robot in m
+        angles_blanked: list = []
+            Regions of the scan to disregard, runs from -180 to +180 deg
+        relevant_distance_max: float = 1.1
+            Only consider barriers within this range, in m
+        relevant_distance_min: float = 0.08
+            Only consider barriers above this range, in m
+        sensor_mounting_angle: float = 180.0
+            The angle of the sensor zero relative to the way in which it's mounted
+        URID: str = ""
+            The URID of the robot, used for Zenoh communication
+        machine_type: str = "go2"
+            The type of the robot, e.g., "go2" or "tb4"
+        use_zenoh: bool = False
+            Whether to use Zenoh for communication
+        simple_paths: bool = False
+            Whether to use simple paths for path planning
+        rplidar_config: RPLidarConfig = RPLidarConfig()
+            Configuration for the RPLidar sensor
+        log_file: bool = False
+            Whether to log data to a local file
         """
         logging.info("Booting RPLidar")
 
@@ -400,7 +400,7 @@ class RPLidarProvider:
                         np.arange(scan.angle_min, scan.angle_max, scan.angle_increment),
                     )
                 )
-                self.angles_final = np.flip(self.angles)
+                self.angles_final = np.flip(np.array(self.angles))
 
             # angles now run from 360.0 to 0 degrees
             if self.angles_final is not None:
