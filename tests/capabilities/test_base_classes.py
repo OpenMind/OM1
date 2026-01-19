@@ -3,7 +3,6 @@ Tests for capability introspection in base classes.
 """
 
 from typing import Optional
-from unittest.mock import MagicMock
 
 from actions.base import ActionConfig, ActionConnector
 from capabilities import CapabilityDescriptor, ComponentType, Constraint
