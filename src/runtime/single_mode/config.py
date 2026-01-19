@@ -329,7 +329,8 @@ def _build_capability_registry(
     CapabilityRegistry
         Registry populated with all available capability descriptors
     """
-    registry = get_capability_registry()
+    # Use a fresh registry instance to avoid leaking capabilities between configurations
+    registry = CapabilityRegistry()
 
     # Collect capabilities from actions
     for action in agent_actions:
