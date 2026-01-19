@@ -112,6 +112,11 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
     def __init__(self, config: SensorConfig):
         """
         Initialize GovernanceEthereum instance.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration settings for the sensor input.
         """
         super().__init__(config)
 
