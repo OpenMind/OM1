@@ -126,15 +126,25 @@ class LLMHistoryManager:
         if not path:
             return
 
+        temp_path = f"{path}.tmp"
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w", encoding="utf-8") as f:
+            with open(temp_path, "w", encoding="utf-8") as f:
                 for msg in self.history:
                     f.write(
                         json.dumps({"role": msg.role, "content": msg.content}) + "\n"
                     )
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, path)
             logging.debug(f"Saved {len(self.history)} messages to {path}")
         except Exception as e:
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception:
+                # Best-effort cleanup of temp file; ignore secondary errors
+                pass
             logging.error(f"Error saving history to {path}: {e}")
 
     def load_history(self) -> None:
