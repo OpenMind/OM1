@@ -92,7 +92,7 @@ def check_webcam(index_to_check):
 
     # Set the best available resolution
     width, height = set_best_resolution(cap, RESOLUTIONS)
-    logging.info(f"YOLO found cam: {index_to_check} set to {width}{height}")
+    logging.info(f"YOLO found cam: {index_to_check} set to {width}x{height}")
     return width, height
 
 
