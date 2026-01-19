@@ -398,6 +398,8 @@ class ConfigSchemaGenerator:
         List[str]
             List of absolute paths to Python files.
         """
+        if not os.path.exists(directory):
+            return []
         return [
             os.path.join(directory, f)
             for f in os.listdir(directory)
