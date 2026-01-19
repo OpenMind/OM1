@@ -30,7 +30,17 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
     def load_rules_from_blockchain(self):
         """
-        Load governance rules from the Ethereum blockchain.
+        Load the governance rules from the Ethereum blockchain.
+
+        This function queries the Ethereum blockchain to retrieve the current
+        set of governance rules based on predefined contract address and
+        function selectors. It handles potential errors during the blockchain
+        interaction.
+
+        Returns
+        -------
+        str
+            The retrieved governance rules as a string, or an error message.
         """
         logging.info("Loading rules from Ethereum blockchain")
 
@@ -111,7 +121,17 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
     def __init__(self, config: SensorConfig):
         """
-        Initialize GovernanceEthereum instance.
+        Initialize the Ethereum Governance input handler.
+
+        Sets up the required providers and buffers for monitoring
+        Ethereum blockchain governance events. Initializes the
+        Web3 connection and polling mechanism.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration object containing sensor-specific parameters.
+            Expected to include blockchain connection details if applicable.
         """
         super().__init__(config)
 

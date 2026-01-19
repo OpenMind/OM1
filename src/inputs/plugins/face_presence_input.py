@@ -54,6 +54,16 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
     def __init__(self, config: FacePresenceConfig):
         """
         Initialize the face presence input.
+
+        Sets up the provider and internal buffers for detecting and
+        reporting face presence data. Registers necessary callbacks
+        for receiving updates from the underlying provider.
+
+        Parameters
+        ----------
+        config : FacePresenceConfig
+            Configuration object containing face presence sensor settings
+            such as HTTP base URL, polling frequency, and time windows.
         """
         super().__init__(config)
 

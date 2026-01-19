@@ -23,6 +23,14 @@ class InputOrchestrator:
     def __init__(self, inputs: Sequence[Sensor]):
         """
         Initialize InputOrchestrator instance with input sources.
+
+        Sets up the orchestrator to manage the provided sequence of
+        input sources, preparing them for concurrent listening.
+
+        Parameters
+        ----------
+        inputs : Sequence[Sensor]
+            Sequence of input sources (Sensor instances) to manage.
         """
         self.inputs = inputs
 
