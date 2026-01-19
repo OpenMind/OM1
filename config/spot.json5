@@ -57,4 +57,9 @@
       connector: "ros2",
     },
   ],
+   backgrounds: [
+     {
+       type: "AgentTeleopsStatusBackground",
+     },
+   ],
 }
