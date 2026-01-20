@@ -39,7 +39,7 @@ class Gps(Background[GpsConfig]):
         Initialize the Gps background task instance.
 
         Sets up the GPS provider using the specified serial port from the configuration.
-        
+
         Parameters
         ----------
         config : GpsConfig
