@@ -19,6 +19,15 @@
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to `OpenAI 4o`, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
 
+### Windows (Quick Start)
+
+OM1 is primarily developed on Linux/Mac, but it can also be run on Windows (recommended via Docker Desktop + WSL2).
+
+**Prerequisites**
+- Install Git for Windows and verify:
+  ```bash
+  git --version
+
 ### Package Management and VENV
 
 You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
