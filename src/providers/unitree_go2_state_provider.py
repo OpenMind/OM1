@@ -151,11 +151,6 @@ def go2_state_processor(
 class UnitreeGo2StateProvider:
     """
     Unitree Go2 State Provider.
-
-    Parameters
-    ----------
-    channel : str
-        CycloneDDS channel to subscribe to for Unitree Go2 state data.
     """
 
     def __init__(self, channel: str = ""):

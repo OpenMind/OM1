@@ -128,6 +128,7 @@ def test_video_stream_resize(mock_video_client):
     img_array = np.frombuffer(img_data, dtype=np.uint8)
     decoded_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
 
+    assert decoded_img is not None, "Failed to decode image"
     height, width = decoded_img.shape[:2]
     assert width <= 640
     assert height <= 480
