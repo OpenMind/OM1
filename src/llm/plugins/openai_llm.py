@@ -103,6 +103,10 @@ class OpenAILLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
+            if not response.choices:
+                logging.warning("OpenAI API returned empty choices")
+                return None
+
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
@@ -113,8 +117,8 @@ class OpenAILLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls

@@ -36,6 +36,14 @@ class UnitreeGo2FrontierExploration(Background[UnitreeGo2FrontierExplorationConf
     """
 
     def __init__(self, config: UnitreeGo2FrontierExplorationConfig):
+        """
+        Initialize UnitreeGo2FrontierExploration background task.
+
+        Parameters
+        ----------
+        config : UnitreeGo2FrontierExplorationConfig
+            Configuration object for background task settings.
+        """
         super().__init__(config)
 
         topic = self.config.topic
