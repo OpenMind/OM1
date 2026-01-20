@@ -124,7 +124,10 @@ class SimulatorOrchestrator:
         Stop the simulator executor and wait for all tasks to complete.
         """
         self._stop_event.set()
-        self._simulator_executor.shutdown(wait=True)
+        try:
+            self._simulator_executor.shutdown(wait=True)
+        except Exception as e:
+            logging.error(f"Error shutting down SimulatorOrchestrator executor: {e}", exc_info=True)
 
     def __del__(self):
         """

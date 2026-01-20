@@ -652,10 +652,21 @@ class RPLidarProvider:
                 self.control_queue.put("STOP")
                 time.sleep(0.5)
             self._rplidar_processor_thread.join(timeout=5)
+            if self._rplidar_processor_thread.is_alive():
+                logging.warning("RPLidar processor process did not stop within timeout period")
 
         if self._serial_processor_thread:
             logging.info("Stopping RPLidar serial processor thread")
             self._serial_processor_thread.join(timeout=5)
+            if self._serial_processor_thread.is_alive():
+                logging.warning("RPLidar serial processor thread did not stop within timeout period")
+
+        if self.use_zenoh and self.zen is not None:
+            try:
+                self.zen.close()
+                logging.info("RPLidar Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing RPLidar Zenoh session: {e}", exc_info=True)
 
     @property
     def valid_paths(self) -> Optional[list]:

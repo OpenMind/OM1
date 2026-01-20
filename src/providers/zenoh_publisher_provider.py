@@ -108,6 +108,11 @@ class ZenohPublisherProvider:
         self.running = False
         if self._thread:
             self._thread.join(timeout=5)
+            if self._thread.is_alive():
+                logging.warning("Zenoh Publisher Provider thread did not stop within timeout period")
         if self.session is not None:
-            self.session.close()
+            try:
+                self.session.close()
+            except Exception as e:
+                logging.error(f"Error closing Zenoh session: {e}", exc_info=True)
         logging.info("Zenoh Publisher Provider stopped")

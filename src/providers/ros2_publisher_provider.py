@@ -117,7 +117,12 @@ class ROS2PublisherProvider(Node):
 
         if self._thread:
             self._thread.join(timeout=5)
+            if self._thread.is_alive():
+                logging.warning("ROS2 Publisher Provider thread did not stop within timeout period")
 
-        self.publisher_.Close()
+        try:
+            self.publisher_.Close()
+        except Exception as e:
+            logging.error(f"Error closing ROS2 publisher: {e}", exc_info=True)
 
         logging.info("ROS2 Publisher Provider stopped")

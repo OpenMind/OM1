@@ -215,12 +215,18 @@ class UnitreeGo2StateProvider:
 
         if self._go2_state_reader_thread:
             self.control_queue.put("STOP")
-            self._go2_state_reader_thread.join()
-            logging.info("Unitree Go2 state reader stopped.")
+            self._go2_state_reader_thread.join(timeout=5)
+            if self._go2_state_reader_thread.is_alive():
+                logging.warning("Unitree Go2 state reader process did not stop within timeout period")
+            else:
+                logging.info("Unitree Go2 state reader stopped.")
 
         if self._go2_state_processor_thread:
-            self._go2_state_processor_thread.join()
-            logging.info("Unitree Go2 state processor stopped.")
+            self._go2_state_processor_thread.join(timeout=5)
+            if self._go2_state_processor_thread.is_alive():
+                logging.warning("Unitree Go2 state processor thread did not stop within timeout period")
+            else:
+                logging.info("Unitree Go2 state processor stopped.")
 
     def _go2_state_processor(self):
         """
