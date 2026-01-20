@@ -1,4 +1,3 @@
-import time
 from unittest.mock import patch
 
 import pytest
@@ -75,11 +74,14 @@ def test_store_user_message(mock_post):
     """Test storing a user message with an API key."""
     provider = TeleopsConversationProvider(api_key="test_key")
 
-    provider.store_user_message("Hello")
+    with patch.object(provider.executor, "submit") as mock_submit:
+        provider.store_user_message("Hello")
+        assert mock_submit.call_count == 1
 
-    time.sleep(0.1)
-
-    assert True
+        call_args = mock_submit.call_args
+        message = call_args[0][1]  # Second argument to submit is the message
+        assert message.content == "Hello"
+        assert message.message_type == MessageType.USER
 
 
 @patch("providers.teleops_conversation_provider.requests.post")
@@ -87,11 +89,14 @@ def test_store_robot_message(mock_post):
     """Test storing a robot message with an API key."""
     provider = TeleopsConversationProvider(api_key="test_key")
 
-    provider.store_robot_message("Hi there")
+    with patch.object(provider.executor, "submit") as mock_submit:
+        provider.store_robot_message("Hi there")
+        assert mock_submit.call_count == 1
 
-    time.sleep(0.1)
-
-    assert True
+        call_args = mock_submit.call_args
+        message = call_args[0][1]  # Second argument to submit is the message
+        assert message.content == "Hi there"
+        assert message.message_type == MessageType.ROBOT
 
 
 def test_store_message_without_api_key():
