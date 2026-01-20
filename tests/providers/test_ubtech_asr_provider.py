@@ -103,8 +103,6 @@ def test_stop(mock_requests):
 def test_stop_when_not_running(mock_requests):
     """Test stopping when not running."""
     provider = UbtechASRProvider(robot_ip="192.168.1.100")
-
-    # Should not raise any exception
     provider.stop()
 
     assert provider.running is False
