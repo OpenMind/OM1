@@ -103,7 +103,18 @@ def test_store_message_without_api_key():
     """Test storing messages when no API key is provided."""
     provider = TeleopsConversationProvider(api_key=None)
 
-    provider.store_user_message("Hello")
-    provider.store_robot_message("Hi")
+    with patch.object(provider.executor, "submit") as mock_submit:
 
-    assert True
+        provider.store_user_message("Hello")
+        provider.store_robot_message("Hi")
+
+        assert mock_submit.call_count == 2
+
+        call_args = mock_submit.call_args
+        message = call_args[0][1]  # Second argument to submit is the message
+        assert message.content == "Hi"
+        assert message.message_type == MessageType.ROBOT
+
+        message = mock_submit.call_args_list[0][0][1]
+        assert message.content == "Hello"
+        assert message.message_type == MessageType.USER
