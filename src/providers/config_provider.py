@@ -189,6 +189,14 @@ class ConfigProvider:
 
         self.running = False
 
+        if self.config_request_subscriber:
+            self.config_request_subscriber.undeclare()
+            self.config_request_subscriber = None
+
+        if self.config_response_publisher:
+            self.config_response_publisher.undeclare()
+            self.config_response_publisher = None
+
         if self.session:
             self.session.close()
 
