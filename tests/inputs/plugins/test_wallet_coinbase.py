@@ -183,6 +183,42 @@ async def test_poll_with_successful_wallet_refresh_calculates_delta():
 
 
 @pytest.mark.asyncio
+async def test_poll_uses_asyncio_to_thread_for_blocking_calls():
+    """_poll should use asyncio.to_thread for non-blocking SDK calls."""
+    mock_wallet = MagicMock()
+    mock_wallet.balance.return_value = "2.0"
+
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure"),
+        patch(
+            "inputs.plugins.wallet_coinbase.Wallet.fetch",
+            return_value=mock_wallet,
+        ),
+        patch(
+            "inputs.plugins.wallet_coinbase.asyncio.sleep",
+            new=AsyncMock(return_value=None),
+        ),
+        patch(
+            "inputs.plugins.wallet_coinbase.asyncio.to_thread",
+            new=AsyncMock(side_effect=[mock_wallet, "3.0"]),
+        ) as mock_to_thread,
+    ):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+        await wallet._poll()
+
+        assert mock_to_thread.call_count == 2, (
+            "Expected 2 asyncio.to_thread calls " "for Wallet.fetch and wallet.balance"
+        )
+
+
+@pytest.mark.asyncio
 async def test_raw_to_text_positive_balance_change():
     """_raw_to_text should return Message for positive deltas."""
     with (
@@ -222,6 +258,34 @@ async def test_raw_to_text_negative_balance_change():
         result = await wallet._raw_to_text(raw_input)
 
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_appends_message_on_positive_change():
+    """raw_to_text should append message to buffer when balance increases."""
+    with patch.dict(os.environ, {}, clear=True):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+    assert len(wallet.messages) == 0
+
+    with patch("inputs.plugins.wallet_coinbase.time.time", return_value=1234.0):
+        await wallet.raw_to_text([2.0, 0.5])
+
+    assert len(wallet.messages) == 1
+    assert wallet.messages[0].message == "0.50000"
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_does_not_append_on_zero_change():
+    """raw_to_text should not append message when balance is unchanged."""
+    with patch.dict(os.environ, {}, clear=True):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+    assert len(wallet.messages) == 0
+
+    await wallet.raw_to_text([2.0, 0.0])
+
+    assert len(wallet.messages) == 0
 
 
 def test_formatted_latest_buffer_with_multiple_transactions():

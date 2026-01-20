@@ -105,11 +105,14 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
         #     logging.info(f"WalletCoinbase: Faucet transaction: {faucet_transaction}")
 
         try:
-            self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)  # type: ignore
-            logging.info(
-                f"WalletCoinbase: Wallet refreshed: {self.wallet.balance(self.asset_id)}, the current balance is {self.balance}"
+            self.wallet = await asyncio.to_thread(
+                Wallet.fetch, self.COINBASE_WALLET_ID  # type: ignore
             )
-            self.balance = float(self.wallet.balance(self.asset_id))
+            balance_raw = await asyncio.to_thread(self.wallet.balance, self.asset_id)
+            logging.info(
+                f"WalletCoinbase: Wallet refreshed: {balance_raw}, the current balance is {self.balance}"
+            )
+            self.balance = float(balance_raw)
             balance_change = self.balance - self.balance_previous
             self.balance_previous = self.balance
         except Exception as e:
