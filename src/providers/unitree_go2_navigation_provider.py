@@ -266,6 +266,22 @@ class UnitreeGo2NavigationProvider:
         except Exception:
             logging.exception("Failed to cancel navigation goals")
 
+    def stop(self):
+        """
+        Stop the navigation provider by unsubscribing from topics and cleaning up resources.
+        """
+        self.running = False
+
+        if self.session:
+            self.session.close()
+            logging.info("Zenoh session closed")
+
+        if self.ai_status_pub:
+            self.ai_status_pub.undeclare()
+            logging.info("AI status publisher closed")
+
+        logging.warning("Navigation Provider is not running")
+
     @property
     def navigation_state(self) -> str:
         """
