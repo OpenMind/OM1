@@ -250,4 +250,3 @@ class TestFabricDataSubmitter:
         provider.executor.submit.assert_called_once_with(ANY, fabric_data)
         submitted_func = provider.executor.submit.call_args[0][0]
         assert submitted_func == provider._share_data_worker
-
