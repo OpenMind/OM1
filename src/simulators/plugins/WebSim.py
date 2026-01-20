@@ -49,7 +49,7 @@ class WebSim(Simulator):
         self._tick_interval = 0.1  # 100ms tick rate
 
         self.state_dict = {}
-        # Initialize state
+
         self.state = SimulatorState(
             inputs={},
             current_action="idle",
@@ -65,23 +65,19 @@ class WebSim(Simulator):
 
         logging.info("Initializing WebSim...")
 
-        # Initialize FastAPI app
         self.app = FastAPI()
 
-        # Mount assets directory
         assets_path = os.path.join(os.path.dirname(__file__), "assets")
         if not os.path.exists(assets_path):
             os.makedirs(assets_path)
         self.app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
 
-        # Ensure the logo exists in assets directory
         logo_path = os.path.join(assets_path, "OM_Logo_b_transparent.png")
         if not os.path.exists(logo_path):
             logging.warning(f"Logo not found at {logo_path}")
 
         self.active_connections: List[WebSocket] = []
 
-        # Setup routes
         @self.app.get("/")
         async def get_index():
             return HTMLResponse(
@@ -479,7 +475,6 @@ class WebSim(Simulator):
             finally:
                 self.active_connections.remove(websocket)
 
-        # Start server thread
         try:
             logging.info("Starting WebSim server thread...")
             self.server_thread = threading.Thread(target=self._run_server, daemon=True)
@@ -487,7 +482,6 @@ class WebSim(Simulator):
             time.sleep(1)
 
             if self.server_thread.is_alive():
-                # Using ANSI color codes for cyan text and bold
                 logging.info(
                     "\033[1;36mWebSim server started successfully - Open http://localhost:8000 in your browser\033[0m"
                 )
@@ -498,14 +492,15 @@ class WebSim(Simulator):
             logging.error(f"Error starting WebSim server thread: {e}")
 
     def _run_server(self):
-        """Run the FastAPI server."""
+        """
+        Run the FastAPI server.
+        """
         config = uvicorn.Config(
             app=self.app,
-            host="0.0.0.0",  # Still bind to all interfaces
+            host="0.0.0.0",
             port=8000,
             log_level="error",
             server_header=False,
-            # Override the default startup message
             log_config={
                 "version": 1,
                 "disable_existing_loggers": False,
@@ -532,13 +527,14 @@ class WebSim(Simulator):
         server.run()
 
     async def broadcast_state(self):
-        """Broadcast current state to all connected clients."""
+        """
+        Broadcast current state to all connected clients.
+        """
         if not self.active_connections:
             return
 
         try:
 
-            # Broadcast to all clients
             disconnected = []
             for connection in self.active_connections:
                 try:
@@ -574,7 +570,6 @@ class WebSim(Simulator):
         """Update simulator state."""
         if self._initialized:
             try:
-                # Get or create event loop
                 try:
                     loop = asyncio.get_event_loop()
                 except RuntimeError:
@@ -582,11 +577,18 @@ class WebSim(Simulator):
                     asyncio.set_event_loop(loop)
 
                 try:
-                    loop.run_until_complete(self.broadcast_state())
+                    if loop.is_running():
+                        future = asyncio.run_coroutine_threadsafe(
+                            self.broadcast_state(), loop
+                        )
+                        try:
+                            future.result(timeout=1.0)
+                        except TimeoutError:
+                            logging.warning("Websim broadcast timed out")
+                    else:
+                        loop.run_until_complete(self.broadcast_state())
                 except Exception as e:
                     logging.warning(f"Websim tick error: {e}")
-                    loop = asyncio.get_event_loop()
-                    loop.create_task(self.broadcast_state())
 
             except Exception as e:
                 logging.error(f"Error in tick: {e}")
@@ -594,7 +596,14 @@ class WebSim(Simulator):
             time.sleep(0.5)
 
     def sim(self, actions: List[Action]) -> None:
-        """Handle simulation updates from commands."""
+        """
+        Handle simulation updates from commands.
+
+        Parameters
+        ----------
+        actions : List[Action]
+            List of actions to process in the simulation.
+        """
         if not self._initialized:
             logging.warning("WebSim not initialized, skipping sim update")
             return
@@ -621,7 +630,6 @@ class WebSim(Simulator):
                         }
                     )
 
-                # Process system latency relative to earliest time
                 fuser_end_time = self.io_provider.fuser_end_time or 0
                 llm_start_time = self.io_provider.llm_start_time or 0
                 llm_end_time = self.io_provider.llm_end_time or 0
@@ -676,7 +684,9 @@ class WebSim(Simulator):
             logging.error(f"Error in sim update: {e}")
 
     async def cleanup(self):
-        """Clean up resources."""
+        """
+        Clean up resources.
+        """
         logging.info("Cleaning up WebSim...")
         self._initialized = False
 
