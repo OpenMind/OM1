@@ -159,14 +159,37 @@ class LLMHistoryManager:
 
         try:
             with open(path, "r", encoding="utf-8") as f:
-                for line in f:
+                for line_number, line in enumerate(f, start=1):
                     line = line.strip()
                     if not line:
                         continue
-                    data = json.loads(line)
-                    self.history.append(
-                        ChatMessage(role=data["role"], content=data["content"])
-                    )
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError as decode_error:
+                        logging.warning(
+                            f"Skipping invalid JSON in history file {path} "
+                            f"on line {line_number}: {decode_error}"
+                        )
+                        continue
+
+                    if not isinstance(data, dict):
+                        logging.warning(
+                            f"Skipping non-object JSON entry in history file {path} "
+                            f"on line {line_number}: {data!r}"
+                        )
+                        continue
+
+                    role = data.get("role")
+                    content = data.get("content")
+                    if not isinstance(role, str) or not isinstance(content, str):
+                        logging.warning(
+                            f"Skipping history entry with missing or invalid 'role' "
+                            f"or 'content' in file {path} on line {line_number}: "
+                            f"{data!r}"
+                        )
+                        continue
+
+                    self.history.append(ChatMessage(role=role, content=content))
             if self.history:
                 logging.info(
                     f"Loaded {len(self.history)} messages from history: {path}"
