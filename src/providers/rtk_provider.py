@@ -16,12 +16,9 @@ class RtkProvider:
     """
     RTK Provider.
 
-    This class implements a singleton pattern to manage:
-        * RTK data from serial
-
-    Parameters
-    ----------
-    serial_port: str = ""
+    This class handles the connection to an RTK device via a serial port,
+    processes incoming NMEA messages, and provides access to the latest RTK
+    position data.
     """
 
     def __init__(self, serial_port: str = ""):
@@ -32,9 +29,8 @@ class RtkProvider:
 
         Parameters
         ----------
-        serial_port : str, optional
-            The serial port path for connecting to the RTK device.
-            Defaults to "/dev/ttyACM0".
+        serial_port : str
+            The serial port to connect to the RTK device.
         """
         logging.info("Booting RTK Provider")
 
