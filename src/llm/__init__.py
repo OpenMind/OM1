@@ -131,7 +131,9 @@ class LLM(T.Generic[R]):
         self._skip_state_management: bool = False
 
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self,
+        prompt: str,
+        messages: T.Optional[T.List[T.Dict[str, str]]] = None,
     ) -> T.Optional[R]:
         """
         Send a prompt to the LLM and receive a typed response.
@@ -140,8 +142,9 @@ class LLM(T.Generic[R]):
         ----------
         prompt : str
             Input text to send to the model
-        messages : List[Dict[str, str]]
-            List of message dictionaries to send to the model.
+        messages : Optional[List[Dict[str, str]]]
+            Optional list of message dictionaries to send to the model. If None,
+            the caller should construct an appropriate message history.
 
         Returns
         -------
