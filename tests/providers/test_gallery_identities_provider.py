@@ -13,6 +13,13 @@ def reset_singleton():
     """Reset singleton instances between tests."""
     GalleryIdentitiesProvider.reset()  # type: ignore
     yield
+
+    try:
+        provider = GalleryIdentitiesProvider()
+        provider.stop(wait=True)
+    except Exception:
+        pass
+
     GalleryIdentitiesProvider.reset()  # type: ignore
 
 
@@ -70,6 +77,8 @@ def test_start():
     assert not provider._stop.is_set()
     assert provider._thread is not None
 
+    provider.stop(wait=True)
+
 
 def test_start_already_running():
     """Test starting the provider when it's already running."""
@@ -82,12 +91,14 @@ def test_start_already_running():
 
     assert provider._thread == thread1
 
+    provider.stop(wait=True)
+
 
 def test_stop():
     """Test stopping the provider."""
     provider = GalleryIdentitiesProvider()
     provider.start()
-    provider.stop()
+    provider.stop(wait=True)
 
     assert provider._stop.is_set()
 

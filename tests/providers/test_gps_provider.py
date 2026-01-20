@@ -11,6 +11,13 @@ def reset_singleton():
     """Reset singleton instances between tests."""
     GpsProvider.reset()  # type: ignore
     yield
+
+    try:
+        provider = GpsProvider()
+        provider.stop()
+    except Exception:
+        pass
+
     GpsProvider.reset()  # type: ignore
 
 
@@ -18,9 +25,8 @@ def reset_singleton():
 def mock_serial():
     with patch("providers.gps_provider.serial.Serial") as mock_serial_class:
         mock_serial_instance = MagicMock()
-        mock_serial_instance.readline.return_value.decode.return_value.strip.return_value = (
-            ""
-        )
+        mock_serial_instance.readline.return_value = b""
+        mock_serial_instance.is_open = True
         mock_serial_class.return_value = mock_serial_instance
         yield mock_serial_class, mock_serial_instance
 
