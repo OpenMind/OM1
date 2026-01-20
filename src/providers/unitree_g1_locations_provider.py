@@ -74,6 +74,10 @@ class UnitreeG1LocationsProvider:
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
+            if self._thread.is_alive():
+                logging.warning(
+                    "UnitreeG1LocationsProvider thread did not stop within timeout period"
+                )
 
     def _run(self) -> None:
         """
@@ -115,8 +119,14 @@ class UnitreeG1LocationsProvider:
                 logging.error("Unexpected format from location list API")
                 return
             self._update_locations(locations)
-        except Exception:
-            logging.exception("Error fetching locations")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Network error fetching locations: {e}")
+        except requests.exceptions.Timeout as e:
+            logging.error(f"Timeout fetching locations: {e}")
+        except requests.exceptions.JSONDecodeError as e:
+            logging.error(f"Failed to parse JSON response: {e}")
+        except Exception as e:
+            logging.exception(f"Unexpected error fetching locations: {e}")
 
     def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
         """
