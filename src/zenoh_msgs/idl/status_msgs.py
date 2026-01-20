@@ -111,3 +111,16 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
     request_id: String
     code: int8
     status: String
+
+
+@dataclass
+class ChargingStatus(IdlStruct, typename="ChargingStatus"):
+    class Code(Enum):
+        DISCHARGING = 0
+        CHARGING = 1
+        ENROUTE_CHARGING = 2
+        FULLY_CHARGED = 3
+
+    header: Header
+    code: int8
+    status: String

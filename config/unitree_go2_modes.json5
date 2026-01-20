@@ -103,6 +103,9 @@
           "type": "UnitreeGo2Battery"
         },
         {
+          "type": "ChargingStatusUnitreeGo2"
+        },
+        {
           "type": "GoogleASRRTSPInput"
         },
         {
@@ -201,6 +204,9 @@
           "type": "UnitreeGo2Battery"
         },
         {
+          "type": "ChargingStatusUnitreeGo2"
+        },
+        {
           "type": "GoogleASRRTSPInput"
         },
         {
@@ -278,6 +284,9 @@
           "type": "UnitreeGo2Battery"
         },
         {
+          "type": "ChargingStatusUnitreeGo2"
+        },
+        {
           "type": "GoogleASRRTSPInput"
         },
         {
@@ -343,6 +352,9 @@
         },
         {
           "type": "UnitreeGo2Battery"
+        },
+        {
+          "type": "ChargingStatusUnitreeGo2"
         },
         {
           "type": "GoogleASRRTSPInput"
