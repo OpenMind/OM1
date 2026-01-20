@@ -297,3 +297,9 @@ class TeleopsStatusProvider:
             The status of the machine to be shared.
         """
         self.executor.submit(self._share_status_worker, status)
+
+    def stop(self):
+        """
+        Stop the TeleopsStatusProvider and clean up resources.
+        """
+        self.executor.shutdown(wait=True)

@@ -114,7 +114,10 @@ class ROS2PublisherProvider(Node):
         Stop the publisher provider and clean up resources.
         """
         self.running = False
+
         if self._thread:
             self._thread.join(timeout=5)
-        self._publisher.Close()
+
+        self.publisher_.Close()
+
         logging.info("ROS2 Publisher Provider stopped")
