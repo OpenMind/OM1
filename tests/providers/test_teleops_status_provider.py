@@ -1,9 +1,6 @@
-# tests/providers/test_teleops_status_provider.py
-
 import time
 from unittest.mock import MagicMock, patch
 
-import pytest
 from requests.exceptions import RequestException
 
 from src.providers.teleops_status_provider import (
@@ -408,8 +405,3 @@ class TestTeleopsStatusProvider:
         from unittest.mock import ANY
 
         provider.executor.submit.assert_called_once_with(ANY, status_obj)
-
-
-# --- Run tests ---
-if __name__ == "__main__":
-    pytest.main()
