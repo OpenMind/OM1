@@ -1,8 +1,6 @@
 import logging
 from typing import Callable, Optional, Union
 
-from om1_speech import AudioOutputStream
-
 from .singleton import singleton
 
 
@@ -75,11 +73,25 @@ class ElevenLabsTTSProvider:
 
         # Initialize TTS provider
         self.running: bool = False
-        self._audio_stream: AudioOutputStream = AudioOutputStream(
-            url=url,
-            headers={"x-api-key": api_key} if api_key else None,
-            enable_tts_interrupt=enable_tts_interrupt,
-        )
+        self.audio_available: bool = True
+        self._audio_stream = None
+
+        # Try to initialize audio output stream with graceful degradation
+        try:
+            from om1_speech import AudioOutputStream
+
+            self._audio_stream = AudioOutputStream(
+                url=url,
+                headers={"x-api-key": api_key} if api_key else None,
+                enable_tts_interrupt=enable_tts_interrupt,
+            )
+        except Exception as e:
+            self.audio_available = False
+            logging.warning(
+                f"Audio output device not available: {e}. "
+                "TTS will be disabled. This is normal for headless systems, "
+                "Docker containers, or systems without audio hardware."
+            )
 
         # Set Eleven Labs TTS parameters
         self._voice_id = voice_id
@@ -114,6 +126,10 @@ class ElevenLabsTTSProvider:
         enable_tts_interrupt : bool
             If True, enables TTS interrupt when ASR detects speech.
         """
+        if not self.audio_available or self._audio_stream is None:
+            logging.warning("TTS configure skipped: audio device not available")
+            return
+
         restart_needed = (
             url != self._audio_stream._url
             or api_key != self.api_key
@@ -137,12 +153,18 @@ class ElevenLabsTTSProvider:
         self._output_format = output_format
         self._enable_tts_interrupt = enable_tts_interrupt
 
-        self._audio_stream: AudioOutputStream = AudioOutputStream(
-            url=url,
-            headers={"x-api-key": api_key} if api_key else None,
-            enable_tts_interrupt=enable_tts_interrupt,
-        )
-        self._audio_stream.start()
+        try:
+            from om1_speech import AudioOutputStream
+
+            self._audio_stream = AudioOutputStream(
+                url=url,
+                headers={"x-api-key": api_key} if api_key else None,
+                enable_tts_interrupt=enable_tts_interrupt,
+            )
+            self._audio_stream.start()
+        except Exception as e:
+            self.audio_available = False
+            logging.warning(f"Failed to reconfigure TTS audio stream: {e}")
 
     def register_tts_state_callback(self, tts_state_callback: Optional[Callable]):
         """
@@ -153,7 +175,7 @@ class ElevenLabsTTSProvider:
         tts_state_callback : Optional[Callable]
             The callback function to receive TTS state changes.
         """
-        if tts_state_callback is not None:
+        if tts_state_callback is not None and self._audio_stream is not None:
             self._audio_stream.set_tts_state_callback(tts_state_callback)
 
     def create_pending_message(self, text: str) -> dict:
@@ -193,6 +215,10 @@ class ElevenLabsTTSProvider:
         message : Union[str, dict]
             The message to be added, typically containing text and TTS parameters.
         """
+        if not self.audio_available or self._audio_stream is None:
+            logging.debug("TTS message skipped: audio device not available")
+            return
+
         if not self.running:
             logging.warning(
                 "TTS provider is not running. Call start() before adding messages."
@@ -212,6 +238,8 @@ class ElevenLabsTTSProvider:
         int
             The number of pending messages.
         """
+        if self._audio_stream is None:
+            return 0
         return self._audio_stream._pending_requests.qsize()
 
     def start(self):
@@ -220,6 +248,13 @@ class ElevenLabsTTSProvider:
         """
         if self.running:
             logging.warning("Eleven Labs TTS provider is already running")
+            return
+
+        if not self.audio_available or self._audio_stream is None:
+            logging.warning(
+                "TTS provider cannot start: audio device not available. "
+                "The agent will continue without text-to-speech."
+            )
             return
 
         self.running = True
@@ -234,4 +269,5 @@ class ElevenLabsTTSProvider:
             return
 
         self.running = False
-        self._audio_stream.stop()
+        if self._audio_stream is not None:
+            self._audio_stream.stop()

@@ -29,6 +29,9 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
 
     Parameters
     ----------
+    enabled : bool
+        Whether TTS is enabled. Set to False to disable audio output on
+        headless systems, Docker containers, or systems without audio hardware.
     elevenlabs_api_key : Optional[str]
         ElevenLabs API key.
     voice_id : str
@@ -41,6 +44,10 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
         Number of responses to skip before speaking.
     """
 
+    enabled: bool = Field(
+        default=True,
+        description="Whether TTS is enabled. Set to False for headless systems.",
+    )
     elevenlabs_api_key: Optional[str] = Field(
         default=None,
         description="ElevenLabs API key",
@@ -87,6 +94,26 @@ class SpeakElevenLabsTTSConnector(
             Configuration for the connector.
         """
         super().__init__(config)
+
+        # Check if TTS is enabled via configuration
+        self.config_enabled = self.config.enabled
+        if not self.config_enabled:
+            logging.info(
+                "TTS is disabled via configuration. "
+                "Text-to-speech will not be available."
+            )
+            self.tts = None
+            self.asr = None
+            self.session = None
+            self.auido_pub = None
+            self.tts_enabled = False
+            self.silence_rate = 0
+            self.silence_counter = 0
+            self.io_provider = IOProvider()
+            self.conversation_provider = TeleopsConversationProvider(
+                api_key=getattr(self.config, "api_key", None)
+            )
+            return
 
         # OM API key
         api_key = getattr(self.config, "api_key", None)

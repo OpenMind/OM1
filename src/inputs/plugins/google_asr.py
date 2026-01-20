@@ -37,6 +37,9 @@ class GoogleASRSensorConfig(SensorConfig):
 
     Parameters
     ----------
+    enabled : bool
+        Whether ASR is enabled. Set to False to disable audio input on
+        headless systems, Docker containers, or systems without audio hardware.
     api_key : Optional[str]
         API Key.
     rate : int
@@ -57,6 +60,10 @@ class GoogleASRSensorConfig(SensorConfig):
         Whether to use remote input.
     """
 
+    enabled: bool = Field(
+        default=True,
+        description="Whether ASR is enabled. Set to False for headless systems.",
+    )
     api_key: Optional[str] = Field(default=None, description="API Key")
     rate: int = Field(default=48000, description="Sampling rate")
     chunk: int = Field(default=12144, description="Chunk size")
@@ -97,6 +104,26 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         """
         super().__init__(config)
 
+        # Check if ASR is enabled
+        self.enabled = self.config.enabled
+        if not self.enabled:
+            logging.info(
+                "ASR is disabled via configuration. "
+                "Speech recognition will not be available."
+            )
+            self.asr = None
+            self.session = None
+            self.asr_publisher = None
+            self.messages = []
+            self.message_buffer = Queue()
+            self.io_provider = IOProvider()
+            self.descriptor_for_LLM = "Voice"
+            self.global_sleep_ticker_provider = SleepTickerProvider()
+            self.conversation_provider = TeleopsConversationProvider(
+                api_key=self.config.api_key
+            )
+            return
+
         # Buffer for storing the final output
         self.messages: List[str] = []
 
@@ -107,7 +134,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         # Buffer for storing messages
         self.message_buffer: Queue[str] = Queue()
 
-        # Initialize ASR provider
         # Initialize ASR provider
         api_key = self.config.api_key
         rate = self.config.rate
@@ -137,7 +163,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
-        self.asr: ASRProvider = ASRProvider(
+        self.asr: Optional[ASRProvider] = ASRProvider(
             rate=rate,
             chunk=chunk,
             ws_url=base_url,

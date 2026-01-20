@@ -1,7 +1,6 @@
 import logging
 from typing import Callable, Optional
 
-from om1_speech import AudioInputStream
 from om1_utils import ws
 
 from .singleton import singleton
@@ -52,20 +51,34 @@ class ASRProvider:
             If True, enables TTS interrupt.
         """
         self.running: bool = False
+        self.audio_available: bool = True
         self.ws_client: ws.Client = ws.Client(url=ws_url)
         self.stream_ws_client: Optional[ws.Client] = (
             ws.Client(url=stream_url) if stream_url else None
         )
-        self.audio_stream: AudioInputStream = AudioInputStream(
-            rate=rate,
-            chunk=chunk,
-            device=device_id,
-            device_name=microphone_name,  # type: ignore
-            audio_data_callback=self.ws_client.send_message,
-            language_code=language_code,
-            remote_input=remote_input,
-            enable_tts_interrupt=enable_tts_interrupt,
-        )
+
+        # Try to initialize audio input stream with graceful degradation
+        self.audio_stream = None
+        try:
+            from om1_speech import AudioInputStream
+
+            self.audio_stream = AudioInputStream(
+                rate=rate,
+                chunk=chunk,
+                device=device_id,
+                device_name=microphone_name,  # type: ignore
+                audio_data_callback=self.ws_client.send_message,
+                language_code=language_code,
+                remote_input=remote_input,
+                enable_tts_interrupt=enable_tts_interrupt,
+            )
+        except Exception as e:
+            self.audio_available = False
+            logging.warning(
+                f"Audio input device not available: {e}. "
+                "ASR will be disabled. This is normal for headless systems, "
+                "Docker containers, or systems without audio hardware."
+            )
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
@@ -88,6 +101,13 @@ class ASRProvider:
         """
         if self.running:
             logging.warning("ASR provider is already running")
+            return
+
+        if not self.audio_available or self.audio_stream is None:
+            logging.warning(
+                "ASR provider cannot start: audio device not available. "
+                "The agent will continue without speech recognition."
+            )
             return
 
         self.running = True
@@ -114,7 +134,8 @@ class ASRProvider:
         Stops the audio stream and websocket clients, and sets the running state to False.
         """
         self.running = False
-        self.audio_stream.stop()
+        if self.audio_stream is not None:
+            self.audio_stream.stop()
         self.ws_client.stop()
 
         if self.stream_ws_client:
