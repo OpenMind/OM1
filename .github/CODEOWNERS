@@ -1,0 +1,11 @@
+# Default owners for everything
+* @OpenMind/core-developer-team
+
+# OM Code Reviewer Rules
+*.mdx @OpenMind/devrel-team @OpenMind/openmind-core
+*.md @OpenMind/devrel-team @OpenMind/openmind-core
+/docs/ @OpenMind/devrel-team @OpenMind/openmind-core
+/config/ @OpenMind/core-developer-team @OpenMind/openmind-core
+/src/ @OpenMind/robotics-team @OpenMind/openmind-core
+/system_hw_test/ @OpenMind/robotics-team @OpenMind/openmind-core
+/.github/ @OpenMind/openmind-core

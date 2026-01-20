@@ -25,6 +25,29 @@ class UbtechCameraVideoStream(VideoStream):
         resolution: Optional[Tuple[int, int]] = (640, 480),
         jpeg_quality: int = 70,
     ):
+        """
+        Initialize the Ubtech camera video stream.
+
+        Parameters
+        ----------
+        robot_ip : str
+            The IP address of the Ubtech robot. Must be a non-empty string.
+        frame_callback : callable, optional
+            A single callback function to process video frames. The function should
+            accept a base64-encoded JPEG string as input.
+        frame_callbacks : list of callables, optional
+            A list of callback functions to process video frames. Each function should
+            accept a base64-encoded JPEG string as input.
+        fps : int, optional
+            Target frames per second for the video stream. Must be greater than 0.
+            Defaults to 30 if not specified.
+        resolution : tuple of int, optional
+            Target resolution for the video stream as (width, height). Both values
+            must be positive integers. Defaults to (640, 480) if not specified.
+        jpeg_quality : int, optional
+            JPEG compression quality (0-100). Higher values mean better quality but
+            larger file size. Defaults to 70.
+        """
         super().__init__(
             frame_callback=frame_callback,
             frame_callbacks=frame_callbacks,
@@ -40,6 +63,9 @@ class UbtechCameraVideoStream(VideoStream):
         YanAPI.yan_api_init(self.robot_ip)
 
     def on_video(self):
+        """
+        Main loop to handle video streaming from the Ubtech robot.
+        """
         logging.info("Starting Ubtech MJPEG video stream")
 
         try:

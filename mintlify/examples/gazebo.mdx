@@ -3,41 +3,233 @@ title: Gazebo Simulator
 description: "Quadruped Simulation and Control"
 ---
 
+## Minimum System Requirements
+
+| Component | Minimum | Good/Recommended | Ideal |
+|-----------|---------|------------------|-------|
+| **CPU** | Intel i7 (10th gen) or AMD Ryzen 7-8 cores minimum | Intel i9 (12th gen+) or AMD Ryzen 9-12 cores | AMD Ryzen 9 7950X or Intel i9-13900K 16+ cores (24+ threads) |
+| **RAM** | 16 GB | 32 GB | 64 GB|
+| **GPU** | NVIDIA GTX 1660 Ti 6 GB VRAM | NVIDIA RTX 3070 or RTX 4060 Ti 8-12 GB VRAM | NVIDIA RTX 4080/4090 16+ GB VRAM with CUDA 11.8+ |
+| **OS** | Ubuntu 22.04 | Ubuntu 22.04 | Ubuntu 22.04 |
+
+It's ideal to have atleast 128 GB SSD storage for the setup to run smoothly.
+
 ## Simulation Instructions
 
-The Gazebo simulator is an industry standard simulator for robots. The robot shape/size is specified via `.dae` files and those robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses. 
+The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
 
-### MacOS (Gazebo Harmonic)
+To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
 
-```bash
-./gazebo/macOS.sh
-```
-The script also checks and installs Gazebo Harmonic https://gazebosim.org/docs/harmonic/getstarted/ if not already installed. If this is your first time installing Gazebo, grab a coffee, since this will take a while (1/2 hour or more). 
+Install cyclonedds via https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html.
 
-This will open a gazebo room with a bathtub and chairs. Now, add your robot!
-
-### Ubuntu (Gazebo Classic)
+To install ROS2 Humble, go to this [link](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html). Follow the steps under Setup Sources.
+Now, run
 
 ```bash
-./gazebo/ubuntu.sh
+sudo apt update
+sudo apt upgrade
+sudo apt install ros-humble-desktop-full
 ```
 
-For now, ROS2 is required for the simulation to interact with OM1 in Gazebo Classic, check https://docs.ros.org/en/humble/Installation.html for installation instructions.
+This will install ROS, RViz, Gazebo and all the relevant packages.
 
-`ffmpeg` is required for streaming the simulated video feed to OM1. If your system doesn't have `ffmpeg`, you should install it using `sudo apt-get install ffmpeg`.
-
-Note: The simulated camera feed is streamed to a virtual video device at `/dev/video10`, thus requiring the `camera_index` in the VLM config to be 10. Modify as needed if the virtual camera needs to be reordered or if OM1 needs to read from another camera.
-
-Note: It is also possible to run the Gazebo Harmonic simulation on Ubuntu.
-
-## Start OM1
-
-Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+To install compilers and other tools to build ROS packages, run
 
 ```bash
-uv run src/run.py quadruped_sim
+sudo apt install ros-dev-tools
 ```
 
-**Finally, start the simulation by clicking the "play" (>) button in the Gazebo simulator.**
+Install the following additional dependencies
 
-Note: Remember to set the correct API key in the `config/quadruped_sim.json5` file or in your `.env`.
+```bash
+sudo apt install ros-humble-rmw-cyclonedds-cpp
+sudo apt install ros-humble-rosidl-generator-dds-idl
+```
+
+Set up your environment by sourcing the following file.
+
+```bash
+source /opt/ros/humble/setup.bash
+```
+
+If you don't have uv installed, use the following command to install it on your system.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Use this **CycloneDDS** configuration. It uses `lo` as the network interface. We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
+To add it to `cyclonedds.xml`:
+
+```bash
+cd cyclonedds
+vi cyclonedds.xml
+```
+
+Add the following, then save and exit.
+
+```xml
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI='
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+        </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>'
+```
+
+To add the config to your bashrc, run:
+
+```bash
+vim ~/.bashrc
+```
+
+And add the following:
+
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI='
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+        </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>'
+```
+
+Now run
+
+```bash
+source ~/.bashrc
+```
+This will apply the latest changes in the current shell session.
+
+Check if you have rosdep installed by running `rosdep` or `rosdep --version`. If it is not installed, run the following:
+
+```bash
+sudo apt-get update
+sudo apt-get install python3-rosdep
+```
+
+Once you've successfully completed above steps, follow the following steps to start the gazebo simulation and run OM1 with it.
+
+Step 1: Clone the [unitree-sdk](https://github.com/OpenMind/unitree-sdk) repository:
+
+    ```bash
+    git clone https://github.com/OpenMind/unitree-sdk.git
+    ```
+
+Step 2: Install all the necessary dependencies:
+
+    ```bash
+    cd unitree-sdk
+    sudo rosdep init
+    rosdep update
+    rosdep install --from-paths . --ignore-src -r -y
+    uv pip install -r pyproject.toml
+    ```
+
+Step 3: Build all the packages:
+
+    ```bash
+    colcon build
+    ```
+
+    Now you should be able to launch the **Gazebo Simulator**.
+
+Step 4: Open a terminal and run the following commands. You'll now be able to see the Gazebo and RViZ windows launch on your system.
+
+    ```bash
+    source install/setup.bash
+    ros2 launch go2_gazebo_sim go2_launch.py
+    ```
+
+Step 5: Open a new terminal and run:
+
+    ```bash
+    source install/setup.bash
+    ros2 launch go2_sdk sensor_launch.py use_sim:=true
+    ```
+
+    This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
+
+Step 6: Run Zenoh Ros2 Bridge
+
+    To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+
+    After installing the Zenoh ROS 2 bridge, you can run it with the following command:
+
+    ```bash
+    zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
+    ```
+
+Step 7: Start OM1
+
+    Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+
+    ```bash
+    uv run src/run.py unitree_go2_autonomy_sim
+    ```
+
+Step 8: Start SLAM mode
+
+    Open a new terminal and run the following to start the SLAM mode for the robot to start mapping the area. Our Gazebo setup includes auto mapping feature, this will let the robot to generate a 2D map for the area which can then be utilised at later stage to make the robot move from point A to point B.
+
+    ```bash
+    source install/setup.bash
+    launch go2_sdk slam_launch.py use_sim:=true
+    ```
+
+Step 9: Save the map
+
+    After the SLAM mode is complete, you can save the map by using the following command. Replace `<my_map>` with the name you prefer for saving the map.
+
+    ```bash
+    source install/setup.bash
+    ros2 run nav2_map_server map_saver_cli -f my_map
+    ```
+
+Step 10: Navigate the robot across the map
+
+    Once you successfully save the map, you can run the following command in a new terminal to enable navigation. After running the command, simply head over to RViz window and press **2D goal pose**. Now click at any new location on the map to make the robot start navigating towards it.
+
+    Make sure the map name is same as the one you set up in the previous step.
+
+    ```bash
+    source install/setup.bash
+    ros2 launch go2_sdk nav2_launch.py use_sim:=true map_yaml_file:=my_map.yaml
+    ```
+
+Step 11: Teleoperate the robot in simulation
+
+    You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
+
+    ```bash
+    source install/setup.bash
+    ros2 run teleop_twist_keyboard teleop_twist_keyboard
+    ```
+
+    Use the keyboard controls displayed in the terminal to move the robot:
+    ```
+    i - Move forward
+    , - Move backward
+    j - Turn left
+    l - Turn right
+    k - Stop
+    u/o/m/. - Move diagonally
+    ```
+
+Note: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!

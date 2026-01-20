@@ -71,7 +71,7 @@ class ZenohPublisherProvider:
         if self.session is None:
             logging.info("No open Zenoh session, returning")
             return
-        logging.info("Publishing message: {} ".format(msg))
+        logging.info(f"Publishing message: {msg} ")
         payload = ZBytes(json.dumps(msg))
         self.session.put(self.pub_topic, payload)
 
@@ -89,7 +89,7 @@ class ZenohPublisherProvider:
 
     def _run(self):
         """
-        Internal loop that processes and publishes pending messages.
+        Process and publish pending messages in an internal loop.
         """
         while self.running:
             try:

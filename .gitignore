@@ -18,6 +18,9 @@ wheels/
 # IDE
 .vscode/
 
+# Claude Code
+CLAUDE.md
+
 # Debug files
 front_image.jpg
 turtlebot4_debug.jpg
@@ -42,3 +45,4 @@ logs/
 
 # Mode system state files
 config/memory
+config/.runtime.json5
