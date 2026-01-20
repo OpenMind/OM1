@@ -1,7 +1,9 @@
 import asyncio
 import functools
 import logging
-from dataclasses import dataclass
+import json
+import os
+from dataclasses import dataclass, asdict
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 import openai
@@ -34,6 +36,8 @@ class LLMHistoryManager:
     """
     Manages the history of interactions for LLMs, including summarization.
     """
+
+    HISTORY_FILE = "conversation_history.json"
 
     def __init__(
         self,
@@ -87,6 +91,33 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # Load existing history
+        self.load_history()
+
+    def save_history(self):
+        """Save the conversation history to disk."""
+        try:
+            with open(self.HISTORY_FILE, "w") as f:
+                json.dump([asdict(msg) for msg in self.history], f, indent=2)
+            logging.debug(f"Saved {len(self.history)} messages to {self.HISTORY_FILE}")
+        except Exception as e:
+            logging.error(f"Failed to save history: {e}")
+
+    def load_history(self):
+        """Load the conversation history from disk."""
+        if not os.path.exists(self.HISTORY_FILE):
+            return
+
+        try:
+            with open(self.HISTORY_FILE, "r") as f:
+                data = json.load(f)
+                self.history = [ChatMessage(**msg) for msg in data]
+            logging.info(
+                f"Loaded {len(self.history)} messages from {self.HISTORY_FILE}"
+            )
+        except Exception as e:
+            logging.error(f"Failed to load history: {e}")
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -238,6 +269,7 @@ class LLMHistoryManager:
                     if summary_message.role == "assistant":
                         del messages[:num_summarized]
                         messages.insert(0, summary_message)
+                        self.save_history()
                         logging.info("Successfully summarized the state")
                     elif (
                         summary_message.role == "system"
@@ -324,6 +356,7 @@ class LLMHistoryManager:
 
                 logging.debug(f"Inputs: {inputs}")
                 self.history_manager.history.append(inputs)
+                self.history_manager.save_history()
 
                 messages = self.history_manager.get_messages()
                 logging.debug(f"messages:\n{messages}")
@@ -351,6 +384,7 @@ class LLMHistoryManager:
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)
                     )
+                    self.history_manager.save_history()
 
                     if (
                         self.history_manager.config.history_length > 0
