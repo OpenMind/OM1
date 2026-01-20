@@ -62,6 +62,11 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
     def __init__(self, config: UnitreeGo2BatteryConfig):
         """
         Initialize Unitree bridge with empty message buffer.
+
+        Parameters
+        ----------
+        config : UnitreeGo2BatteryConfig
+            Configuration settings for the sensor input.
         """
         super().__init__(config)
 
