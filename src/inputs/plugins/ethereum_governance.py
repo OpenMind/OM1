@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Optional
 
-import requests
+import aiohttp
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -28,13 +28,17 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         If connection to Ethereum network fails
     """
 
-    def load_rules_from_blockchain(self):
+    async def load_rules_from_blockchain(self) -> Optional[str]:
         """
         Load governance rules from the Ethereum blockchain.
+
+        Returns
+        -------
+        Optional[str]
+            Decoded governance rules string, or None on error.
         """
         logging.info("Loading rules from Ethereum blockchain")
 
-        # Construct JSON-RPC request
         payload = {
             "jsonrpc": "2.0",
             "id": 636815446436324,
@@ -50,41 +54,50 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         }
 
         try:
-            response = requests.post(
-                self.rpc_url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=10,
-            )
-            logging.debug(f"Blockchain response status: {response.status_code}")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.rpc_url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as response:
+                    logging.debug(f"Blockchain response status: {response.status}")
 
-            if response.status_code == 200:
-                result = response.json()
-                if "result" in result and result["result"]:
-                    hex_response = result["result"]
-                    logging.debug(f"Raw blockchain response: {hex_response}")
+                    if response.status == 200:
+                        result = await response.json()
+                        if "result" in result and result["result"]:
+                            hex_response = result["result"]
+                            logging.debug(f"Raw blockchain response: {hex_response}")
 
-                    # Decode the response using Web3.py
-                    decoded_data = self.decode_eth_response(hex_response)
-                    logging.debug(f"Decoded blockchain data: {decoded_data}")
-                    return decoded_data
-                else:
-                    logging.error("Error: No valid result in blockchain response")
-            else:
-                logging.error(
-                    f"Error: Blockchain request failed with status {response.status_code}"
-                )
-
+                            decoded_data = self.decode_eth_response(hex_response)
+                            logging.debug(f"Decoded blockchain data: {decoded_data}")
+                            return decoded_data
+                        else:
+                            logging.error(
+                                "Error: No valid result in blockchain response"
+                            )
+                    else:
+                        logging.error(
+                            f"Error: Blockchain request failed with status {response.status}"
+                        )
         except Exception as e:
             logging.error(f"Error loading rules from blockchain: {e}")
 
         return None
 
-    def decode_eth_response(self, hex_response):
+    def decode_eth_response(self, hex_response: str) -> Optional[str]:
         """
         Decodes an Ethereum eth_call response.
-        Extracts and decodes a UTF-8 string from ABI-encoded data.
-        Cleans any unwanted control characters.
+
+        Parameters
+        ----------
+        hex_response : str
+            Hexadecimal string response from Ethereum eth_call.
+
+        Returns
+        -------
+        Optional[str]
+            Decoded string, or None on error.
         """
         if hex_response.startswith("0x"):
             hex_response = hex_response[2:]
@@ -123,7 +136,7 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         self.descriptor_for_LLM = "Universal Laws"
 
         self.io_provider = IOProvider()
-        self.POLL_INTERVAL = 5  # seconds
+        self.POLL_INTERVAL = 5.0  # seconds
         self.rpc_url = "https://holesky.drpc.org"  # Ethereum RPC URL
 
         # The smart contract address of the ERC-7777 Governance Smart Contract
@@ -136,11 +149,12 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         # getLatestRuleSetVersion(0x254e2f1e)
         # It's currently = 2
         self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
-
-        self.universal_rule = self.load_rules_from_blockchain()
+        self.universal_rule: Optional[str] = None
         self.messages: list[Message] = []
 
-        logging.info(f"7777 rules: {self.universal_rule}")
+        logging.info(
+            "GovernanceEthereum initialized, rules will be loaded on first poll"
+        )
 
     async def _poll(self) -> Optional[str]:
         """
@@ -154,11 +168,12 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         await asyncio.sleep(self.POLL_INTERVAL)
 
         try:
-            rules = self.load_rules_from_blockchain()
+            rules = await self.load_rules_from_blockchain()
             logging.debug(f"7777 rules: {rules}")
             return rules
         except Exception as e:
             logging.error(f"Error fetching blockchain data: {e}")
+            return None
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
