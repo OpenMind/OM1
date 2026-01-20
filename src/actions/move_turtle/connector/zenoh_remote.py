@@ -45,7 +45,7 @@ class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]
 
         Parameters
         ----------
-        config : ActionConfig
+        config : MoveZenohRemoteConfig
             The configuration for the action connector.
         """
         super().__init__(config)

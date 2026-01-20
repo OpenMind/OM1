@@ -24,10 +24,27 @@ class RtkConfig(BackgroundConfig):
 
 class Rtk(Background[RtkConfig]):
     """
-    Reads RTK data from RTK provider.
+    Background task for reading RTK (Real-Time Kinematic) positioning data.
+
+    This background task initializes and manages a RtkProvider instance
+    that connects to an RTK GPS device via serial port. RTK technology provides
+    centimeter-level positioning accuracy by using carrier-phase measurements
+    and corrections from a reference station.
+
+    The RTK data is used for high-precision robot localization and navigation,
+    particularly in applications requiring accurate positioning such as
+    autonomous navigation, mapping, and precision agriculture.
     """
 
     def __init__(self, config: RtkConfig):
+        """
+        Initialize RTK background task with configuration.
+
+        Parameters
+        ----------
+        config : RtkConfig
+            Configuration object containing RTK settings.
+        """
         super().__init__(config)
 
         port = self.config.serial_port
