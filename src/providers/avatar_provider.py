@@ -137,6 +137,10 @@ class AvatarProvider:
             self.avatar_subscriber.undeclare()
             self.avatar_subscriber = None
 
+        if self.avatar_healthcheck_publisher:
+            self.avatar_healthcheck_publisher.undeclare()
+            self.avatar_healthcheck_publisher = None
+
         if self.session:
             self.session.close()
 
