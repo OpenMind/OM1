@@ -198,6 +198,9 @@ class ConfigProvider:
             self.config_response_publisher = None
 
         if self.session:
-            self.session.close()
+            try:
+                self.session.close()
+            except Exception as e:
+                logging.error(f"Error closing Zenoh session: {e}", exc_info=True)
 
         logging.info("ConfigProvider stopped and Zenoh session closed")

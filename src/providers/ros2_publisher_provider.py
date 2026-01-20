@@ -118,6 +118,10 @@ class ROS2PublisherProvider(Node):
         if self._thread:
             self._thread.join(timeout=5)
 
-        self.publisher_.Close()
+        try:
+            if hasattr(self, "publisher_") and self.publisher_ is not None:
+                self.publisher_.Close()
+        except Exception as e:
+            logging.error(f"Error closing ROS2 publisher: {e}", exc_info=True)
 
         logging.info("ROS2 Publisher Provider stopped")

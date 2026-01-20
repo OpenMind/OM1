@@ -309,18 +309,23 @@ class RPLidarProvider:
         if not isinstance(json_line, str):
             raise ValueError("Provided json_line must be a json string.")
 
-        if (
-            self.filename_current is not None
-            and os.path.exists(self.filename_current)
-            and os.path.getsize(self.filename_current) > self.max_file_size_bytes
-        ):
-            self.filename_current = self.update_filename()
-            logging.info(f"New rpscan file name: {self.filename_current}")
+        try:
+            if (
+                self.filename_current is not None
+                and os.path.exists(self.filename_current)
+                and os.path.getsize(self.filename_current) > self.max_file_size_bytes
+            ):
+                self.filename_current = self.update_filename()
+                logging.info(f"New rpscan file name: {self.filename_current}")
 
-        if self.filename_current is not None:
-            with open(self.filename_current, "a", encoding="utf-8") as f:
-                f.write(json_line + "\n")
-                f.flush()
+            if self.filename_current is not None:
+                with open(self.filename_current, "a", encoding="utf-8") as f:
+                    f.write(json_line + "\n")
+                    f.flush()
+        except OSError as e:
+            logging.error(f"Failed to write to file {self.filename_current}: {e}", exc_info=True)
+        except Exception as e:
+            logging.error(f"Unexpected error writing to file {self.filename_current}: {e}", exc_info=True)
 
     def listen_scan(self, data: zenoh.Sample):
         """

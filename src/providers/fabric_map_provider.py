@@ -225,17 +225,26 @@ class FabricDataSubmitter:
         if not isinstance(data, dict):
             raise ValueError("Provided data must be a dictionary.")
 
-        if (
-            os.path.exists(self.filename_current)
-            and os.path.getsize(self.filename_current) > self.max_file_size_bytes
-        ):
-            self.filename_current = self.update_filename()
-            logging.info(f"new file name: {self.filename_current}")
+        if self.filename_current is None:
+            logging.warning("Cannot write to file: filename_current is None")
+            return
 
-        with open(self.filename_current, "a", encoding="utf-8") as f:
-            json_line = json.dumps(data)
-            f.write(json_line + "\n")
-            f.flush()
+        try:
+            if (
+                os.path.exists(self.filename_current)
+                and os.path.getsize(self.filename_current) > self.max_file_size_bytes
+            ):
+                self.filename_current = self.update_filename()
+                logging.info(f"new file name: {self.filename_current}")
+
+            with open(self.filename_current, "a", encoding="utf-8") as f:
+                json_line = json.dumps(data)
+                f.write(json_line + "\n")
+                f.flush()
+        except OSError as e:
+            logging.error(f"Failed to write to file {self.filename_current}: {e}", exc_info=True)
+        except Exception as e:
+            logging.error(f"Unexpected error writing to file {self.filename_current}: {e}", exc_info=True)
 
     def _share_data_worker(self, data: FabricData):
         """
