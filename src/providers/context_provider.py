@@ -76,13 +76,20 @@ class ContextProvider:
     def stop(self):
         """
         Stop the ContextProvider and clean up resources.
+
+        This method closes the Zenoh session and cleans up resources.
+        Any exceptions during session closure will propagate to allow
+        maintainers to debug race conditions.
+
+        Notes
+        -----
+        Resource cleanup is performed in the following order:
+        1. Close the Zenoh session if it exists
+        2. Log successful stop
+        3. Clear session and publisher references
         """
         if self.session:
-            try:
-                self.session.close()
-                logging.info("ContextProvider stopped")
-            except Exception as e:
-                logging.error(f"Error stopping ContextProvider: {e}")
-            finally:
-                self.session = None
-                self.publisher = None
+            self.session.close()
+            logging.info("ContextProvider stopped")
+            self.session = None
+            self.publisher = None
