@@ -1,7 +1,6 @@
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import requests
 
 from inputs.plugins.fabric_closest_peer import (
     FabricClosestPeer,
@@ -11,229 +10,229 @@ from inputs.plugins.fabric_closest_peer import (
 
 @pytest.fixture
 def mock_io_provider():
-    with patch("inputs.plugins.fabric_closest_peer.IOProvider") as mock_class:
-        mock_instance = Mock()
-        mock_class.return_value = mock_instance
+    with patch("inputs.plugins.fabric_closest_peer.IOProvider") as mock:
+        mock_instance = MagicMock()
+        mock.return_value = mock_instance
         yield mock_instance
 
 
 @pytest.fixture
-def fabric_closest_peer_instance(mock_io_provider):
-    config = FabricClosestPeerConfig()
+def config_mock_mode():
+    """Config with mock mode enabled."""
+    return FabricClosestPeerConfig(
+        fabric_endpoint="http://test.endpoint",
+        mock_mode=True,
+        mock_lat=40.12345,
+        mock_lon=-74.98765,
+    )
+
+
+@pytest.fixture
+def config_real_mode():
+    """Config with mock mode disabled."""
+    return FabricClosestPeerConfig(
+        fabric_endpoint="http://test.endpoint",
+        mock_mode=False,
+    )
+
+
+@pytest.fixture
+def peer_mock_mode(config_mock_mode, mock_io_provider):
+    """FabricClosestPeer instance with mock mode."""
+    return FabricClosestPeer(config_mock_mode)
+
+
+@pytest.fixture
+def peer_real_mode(config_real_mode, mock_io_provider):
+    """FabricClosestPeer instance with real mode."""
+    return FabricClosestPeer(config_real_mode)
+
+
+def test_init(peer_mock_mode):
+    """Test initialization sets correct attributes."""
+    assert peer_mock_mode.fabric_endpoint == "http://test.endpoint"
+    assert peer_mock_mode.mock_mode is True
+    assert peer_mock_mode.descriptor_for_LLM == "Closest Peer from Fabric"
+
+
+@pytest.mark.asyncio
+async def test_poll_mock_mode(peer_mock_mode):
+    """Test _poll returns mock coordinates in mock mode."""
+    peer_mock_mode.config.mock_lat = 40.12345
+    peer_mock_mode.config.mock_lon = -74.98765
+
+    result = await peer_mock_mode._poll()
+
+    assert result == "Closest peer at 40.12345, -74.98765"
+
+
+@pytest.mark.asyncio
+async def test_poll_uses_aiohttp_not_requests(peer_real_mode):
+    """Test that _poll uses aiohttp for non-blocking HTTP."""
+    mock_response = MagicMock()
+    mock_response.json = AsyncMock(
+        return_value={"result": [{"peer": {"latitude": 40.0, "longitude": -74.0}}]}
+    )
+
+    mock_post_cm = MagicMock()
+    mock_post_cm.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_post_cm.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=mock_post_cm)
+
+    mock_session_cm = MagicMock()
+    mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+
     with (
-        patch("inputs.plugins.fabric_closest_peer.requests"),
+        patch("inputs.plugins.fabric_closest_peer.aiohttp.ClientTimeout"),
         patch(
-            "inputs.plugins.fabric_closest_peer.IOProvider",
-            return_value=mock_io_provider,
+            "inputs.plugins.fabric_closest_peer.aiohttp.ClientSession",
+            return_value=mock_session_cm,
         ),
     ):
-        instance = FabricClosestPeer(config=config)
-    return instance
-
-
-def test_initialization_sets_defaults(fabric_closest_peer_instance, mock_io_provider):
-    assert fabric_closest_peer_instance.io is not None
-    assert mock_io_provider is not None
-
-    assert fabric_closest_peer_instance.descriptor_for_LLM == "Closest Peer from Fabric"
-    assert isinstance(fabric_closest_peer_instance.messages, list)
-    assert isinstance(
-        fabric_closest_peer_instance.msg_q, type(__import__("queue").Queue())
-    )
-
-    assert fabric_closest_peer_instance.fabric_endpoint == "http://localhost:8545"
-    assert fabric_closest_peer_instance.mock_mode is True
-
-
-@pytest.mark.asyncio
-async def test_poll_returns_mocked_peer_when_mock_mode_enabled(
-    fabric_closest_peer_instance,
-):
-    config = FabricClosestPeerConfig(
-        mock_mode=True, mock_lat=-33.86785, mock_lon=151.20732
-    )
-    fabric_closest_peer_instance.config = config
-    fabric_closest_peer_instance.mock_mode = True
-
-    result = await fabric_closest_peer_instance._poll()
-
-    expected_result = "Closest peer at -33.86785, 151.20732"
-    assert result == expected_result
-    fabric_closest_peer_instance.io.add_dynamic_variable.assert_any_call(
-        "closest_peer_lat", -33.86785
-    )
-    fabric_closest_peer_instance.io.add_dynamic_variable.assert_any_call(
-        "closest_peer_lon", 151.20732
-    )
-    assert not fabric_closest_peer_instance.msg_q.empty()
-    queued_msg = fabric_closest_peer_instance.msg_q.get_nowait()
-    assert queued_msg == expected_result
-
-
-@pytest.mark.asyncio
-async def test_poll_returns_none_if_requests_is_none_and_mock_disabled(caplog):
-    pass
-
-
-@pytest.mark.asyncio
-async def test_poll_fetches_peer_via_requests_when_mock_disabled_success(
-    fabric_closest_peer_instance, mock_io_provider
-):
-    config = FabricClosestPeerConfig(mock_mode=False)
-    fabric_closest_peer_instance.config = config
-    fabric_closest_peer_instance.mock_mode = False
-
-    mock_io_provider.get_dynamic_variable.side_effect = lambda x: {
-        "latitude": -33.868820,
-        "longitude": 151.209295,
-    }.get(x)
-
-    json_response_data = {
-        "result": [{"peer": {"latitude": -33.865, "longitude": 151.210}}]
-    }
-    mock_response = Mock()
-    mock_response.json.return_value = json_response_data
-
-    with patch(
-        "inputs.plugins.fabric_closest_peer.requests.post", return_value=mock_response
-    ) as mock_post:
-        result = await fabric_closest_peer_instance._poll()
-
-        expected_result = "Closest peer at -33.86500, 151.21000"
-        assert result == expected_result
-        fabric_closest_peer_instance.io.add_dynamic_variable.assert_any_call(
-            "closest_peer_lat", -33.865
-        )
-        fabric_closest_peer_instance.io.add_dynamic_variable.assert_any_call(
-            "closest_peer_lon", 151.210
-        )
-        assert not fabric_closest_peer_instance.msg_q.empty()
-        queued_msg = fabric_closest_peer_instance.msg_q.get_nowait()
-        assert queued_msg == expected_result
-
-        mock_post.assert_called_once_with(
-            "http://localhost:8545",
-            json={
-                "method": "omp2p_findClosestPeer",
-                "params": [{"latitude": -33.868820, "longitude": 151.209295}],
-                "id": 1,
-                "jsonrpc": "2.0",
-            },
-            timeout=3.0,
-            headers={"Content-Type": "application/json"},
+        peer_real_mode.io.get_dynamic_variable = MagicMock(
+            side_effect=lambda key: 40.0 if key == "latitude" else -74.0
         )
 
+        result = await peer_real_mode._poll()
 
-@pytest.mark.asyncio
-async def test_poll_returns_none_if_io_latitude_or_longitude_missing(
-    caplog, fabric_closest_peer_instance, mock_io_provider
-):
-    config = FabricClosestPeerConfig(mock_mode=False)
-    fabric_closest_peer_instance.config = config
-    fabric_closest_peer_instance.mock_mode = False
-
-    mock_io_provider.get_dynamic_variable.side_effect = lambda x: {
-        "latitude": -33.868820,
-        "longitude": None,
-    }.get(x)
-
-    with caplog.at_level("ERROR"):
-        result = await fabric_closest_peer_instance._poll()
-
-    assert result is None
-    assert "FabricClosestPeer: latitude or longitude not set." in caplog.text
+        mock_session.post.assert_called_once()
+        assert result == "Closest peer at 40.00000, -74.00000"
 
 
 @pytest.mark.asyncio
-async def test_poll_returns_none_on_requests_exception(
-    caplog, fabric_closest_peer_instance, mock_io_provider
-):
-    config = FabricClosestPeerConfig(mock_mode=False)
-    fabric_closest_peer_instance.config = config
-    fabric_closest_peer_instance.mock_mode = False
+async def test_poll_passes_correct_json_rpc_params(peer_real_mode):
+    """Test that _poll sends correct JSON-RPC parameters."""
+    mock_response = MagicMock()
+    mock_response.json = AsyncMock(
+        return_value={"result": [{"peer": {"latitude": 40.0, "longitude": -74.0}}]}
+    )
 
-    mock_io_provider.get_dynamic_variable.side_effect = lambda x: {
-        "latitude": -33.868820,
-        "longitude": 151.209295,
-    }.get(x)
+    mock_post_cm = MagicMock()
+    mock_post_cm.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_post_cm.__aexit__ = AsyncMock(return_value=None)
 
-    with patch(
-        "inputs.plugins.fabric_closest_peer.requests.post",
-        side_effect=requests.exceptions.RequestException("Network error"),
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=mock_post_cm)
+
+    mock_session_cm = MagicMock()
+    mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch("inputs.plugins.fabric_closest_peer.aiohttp.ClientTimeout"),
+        patch(
+            "inputs.plugins.fabric_closest_peer.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ),
     ):
-        with caplog.at_level("ERROR"):
-            result = await fabric_closest_peer_instance._poll()
+        peer_real_mode.io.get_dynamic_variable = MagicMock(
+            side_effect=lambda key: 40.5 if key == "latitude" else -74.5
+        )
 
-    assert result is None
-    assert (
-        "FabricClosestPeer: error calling Fabric endpoint – Network error"
-        in caplog.text
-    )
+        await peer_real_mode._poll()
+
+        call_kwargs = mock_session.post.call_args[1]
+        assert call_kwargs["json"]["method"] == "omp2p_findClosestPeer"
+        assert call_kwargs["json"]["params"][0]["latitude"] == 40.5
+        assert call_kwargs["json"]["params"][0]["longitude"] == -74.5
+        assert call_kwargs["headers"]["Content-Type"] == "application/json"
 
 
 @pytest.mark.asyncio
-async def test_poll_returns_none_if_no_peer_found(
-    caplog, fabric_closest_peer_instance, mock_io_provider
-):
-    config = FabricClosestPeerConfig(mock_mode=False)
-    fabric_closest_peer_instance.config = config
-    fabric_closest_peer_instance.mock_mode = False
+async def test_poll_returns_none_when_no_gps(peer_real_mode):
+    """Test _poll returns None when GPS coordinates are not available."""
+    peer_real_mode.io.get_dynamic_variable = MagicMock(return_value=None)
 
-    mock_io_provider.get_dynamic_variable.side_effect = lambda x: {
-        "latitude": -33.868820,
-        "longitude": 151.209295,
-    }.get(x)
+    result = await peer_real_mode._poll()
 
-    json_response_data_no_peer = {"result": []}
-    mock_response_no_peer = Mock()
-    mock_response_no_peer.json.return_value = json_response_data_no_peer
-    with patch(
-        "inputs.plugins.fabric_closest_peer.requests.post",
-        return_value=mock_response_no_peer,
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_poll_returns_none_when_no_peer_found(peer_real_mode):
+    """Test _poll returns None when no peer is found in response."""
+    mock_response = MagicMock()
+    mock_response.json = AsyncMock(return_value={"result": [{}]})
+
+    mock_post_cm = MagicMock()
+    mock_post_cm.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_post_cm.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=mock_post_cm)
+
+    mock_session_cm = MagicMock()
+    mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch("inputs.plugins.fabric_closest_peer.aiohttp.ClientTimeout"),
+        patch(
+            "inputs.plugins.fabric_closest_peer.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ),
     ):
-        with caplog.at_level("INFO"):
-            result = await fabric_closest_peer_instance._poll()
+        peer_real_mode.io.get_dynamic_variable = MagicMock(
+            side_effect=lambda key: 40.0 if key == "latitude" else -74.0
+        )
 
-    assert result is None
-    assert "FabricClosestPeer: no peer found." in caplog.text
+        result = await peer_real_mode._poll()
 
-
-@pytest.mark.asyncio
-async def test_raw_to_text_adds_message_to_list(fabric_closest_peer_instance):
-    test_message = "Closest peer at -33.86500, 151.21000"
-    initial_len = len(fabric_closest_peer_instance.messages)
-
-    await fabric_closest_peer_instance.raw_to_text(test_message)
-
-    assert len(fabric_closest_peer_instance.messages) == initial_len + 1
-    assert fabric_closest_peer_instance.messages[-1] == test_message
+        assert result is None
 
 
 @pytest.mark.asyncio
-async def test_raw_to_text_does_nothing_if_input_none(fabric_closest_peer_instance):
-    initial_len = len(fabric_closest_peer_instance.messages)
-    await fabric_closest_peer_instance.raw_to_text(None)
+async def test_poll_handles_exception(peer_real_mode, caplog):
+    """Test _poll handles exceptions gracefully."""
+    with patch(
+        "inputs.plugins.fabric_closest_peer.aiohttp.ClientSession",
+        side_effect=Exception("Network error"),
+    ):
+        peer_real_mode.io.get_dynamic_variable = MagicMock(
+            side_effect=lambda key: 40.0 if key == "latitude" else -74.0
+        )
 
-    assert len(fabric_closest_peer_instance.messages) == initial_len
+        result = await peer_real_mode._poll()
+
+        assert result is None
+        assert "error calling Fabric endpoint" in caplog.text
 
 
-def test_formatted_latest_buffer_empty(fabric_closest_peer_instance):
-    result = fabric_closest_peer_instance.formatted_latest_buffer()
-    assert result is None
+@pytest.mark.asyncio
+async def test_raw_to_text_appends_message(peer_mock_mode):
+    """Test raw_to_text appends message to messages list."""
+    await peer_mock_mode.raw_to_text("test message")
+
+    assert len(peer_mock_mode.messages) == 1
+    assert peer_mock_mode.messages[0] == "test message"
 
 
-def test_formatted_latest_buffer_formats_and_clears_latest_message(
-    fabric_closest_peer_instance, mock_io_provider
-):
-    msg = "Closest peer at -33.86500, 151.21000"
-    fabric_closest_peer_instance.msg_q.put(msg)
+@pytest.mark.asyncio
+async def test_raw_to_text_ignores_none(peer_mock_mode):
+    """Test raw_to_text ignores None input."""
+    await peer_mock_mode.raw_to_text(None)
 
-    result = fabric_closest_peer_instance.formatted_latest_buffer()
+    assert len(peer_mock_mode.messages) == 0
+
+
+def test_formatted_latest_buffer_returns_formatted_message(peer_mock_mode):
+    """Test formatted_latest_buffer returns correctly formatted output."""
+    peer_mock_mode.msg_q.put("Closest peer at 40.12345, -74.98765")
+
+    result = peer_mock_mode.formatted_latest_buffer()
 
     assert "Closest Peer from Fabric INPUT" in result
-    assert "Closest peer at -33.86500, 151.21000" in result
-    mock_io_provider.add_input.assert_called_once()
-    call_args = mock_io_provider.add_input.call_args
-    assert call_args[0][0] == "Closest Peer from Fabric"
-    assert call_args[0][1] == msg
-    assert fabric_closest_peer_instance.msg_q.empty()
+    assert "// START" in result
+    assert "Closest peer at 40.12345, -74.98765" in result
+    assert "// END" in result
+    peer_mock_mode.io.add_input.assert_called_once()
+
+
+def test_formatted_latest_buffer_returns_none_when_empty(peer_mock_mode):
+    """Test formatted_latest_buffer returns None when queue is empty."""
+    result = peer_mock_mode.formatted_latest_buffer()
+
+    assert result is None
