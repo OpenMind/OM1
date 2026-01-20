@@ -1,9 +1,5 @@
-# tests/providers/test_fabric_map_provider.py
-
 import time
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from src.providers.fabric_map_provider import (
     FabricData,
@@ -252,8 +248,3 @@ class TestFabricDataSubmitter:
         provider.executor.submit.assert_called_once_with(ANY, fabric_data)
         submitted_func = provider.executor.submit.call_args[0][0]
         assert submitted_func == provider._share_data_worker
-
-
-# --- Run tests ---
-if __name__ == "__main__":
-    pytest.main()
