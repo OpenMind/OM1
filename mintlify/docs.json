@@ -150,7 +150,8 @@
                     {
                         "group": "API Reference",
                         "pages": [
-                            "api-reference/introduction"
+                            "api-reference/introduction",
+                            "api-reference/api_pricing"
                         ]
                     },
                     {
