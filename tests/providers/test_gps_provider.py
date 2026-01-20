@@ -18,6 +18,9 @@ def reset_singleton():
 def mock_serial():
     with patch("providers.gps_provider.serial.Serial") as mock_serial_class:
         mock_serial_instance = MagicMock()
+        mock_serial_instance.readline.return_value.decode.return_value.strip.return_value = (
+            ""
+        )
         mock_serial_class.return_value = mock_serial_instance
         yield mock_serial_class, mock_serial_instance
 
