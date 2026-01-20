@@ -133,6 +133,10 @@ class AvatarProvider:
 
         self.running = False
 
+        if self.avatar_subscriber:
+            self.avatar_subscriber.undeclare()
+            self.avatar_subscriber = None
+
         if self.session:
             self.session.close()
 
