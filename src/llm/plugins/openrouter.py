@@ -117,8 +117,8 @@ class OpenRouter(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls
