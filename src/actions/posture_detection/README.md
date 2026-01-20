@@ -48,6 +48,15 @@ The `HealthDetectionProvider` manages:
 
 ```json5
 {
+  agent_inputs: [
+    {
+      type: "PostureDetectionInput",
+      config: {
+        posture_detection_base_url: "http://localhost:8080",
+        poll_interval: 1.0,
+      },
+    },
+  ],
   agent_actions: [
     {
       name: "posture_detection",
@@ -109,24 +118,43 @@ The reminder system is designed to be supportive and non-intrusive:
 - **Interval Control**: Configurable minimum time between reminders (default: 30 minutes)
 - **Severity-based**: More urgent reminders for severe posture issues
 
-## Integration with VLM
+## Integration with Posture Detection Service
 
-The posture detection typically works with Vision Language Models (VLM):
+The posture detection works with a dedicated posture detection service that provides structured posture data:
 
 ```json5
 {
   agent_inputs: [
     {
-      type: "VLMOpenAI",
+      type: "PostureDetectionInput",
       config: {
-        camera_index: 0,
+        posture_detection_base_url: "http://localhost:8080",
+        poll_interval: 1.0,
       },
     },
   ],
 }
 ```
 
-The LLM analyzes visual input to detect posture based on body pose estimation.
+The `PostureDetectionInput` polls the posture detection service at `/posture/status` endpoint and provides structured posture information to the LLM, which then triggers the `PostureDetection` action when poor posture is detected.
+
+### Posture Detection Service API
+
+The posture detection service should provide a REST API endpoint:
+
+- **GET /posture/status**: Returns current posture detection data:
+  ```json
+  {
+    "posture_type": "slumped",
+    "severity": "moderate",
+    "duration_seconds": 1800.0,
+    "person_name": "Bob",
+    "recommendation": "Try standing up and stretching your back.",
+    "confidence": 0.85
+  }
+  ```
+
+The service can use computer vision, pose estimation, or other methods to detect posture.
 
 ## Health Benefits
 
