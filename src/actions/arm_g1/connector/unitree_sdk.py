@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from actions.arm_g1.interface import ArmInput
 from actions.base import ActionConfig, ActionConnector
@@ -27,7 +28,10 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
             self.client.Init()
             logging.info("G1 Arm Action Client initialized successfully.")
         except Exception as e:
-            logging.error(f"Failed to initialize G1 Arm Action Client: {e}")
+            logging.error(
+                f"Failed to initialize G1 Arm Action Client: {e}",
+                exc_info=True,
+            )
 
     async def connect(self, output_interface: ArmInput) -> None:
         """
@@ -44,7 +48,7 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
             logging.info("No action to perform, returning.")
             return
 
-        action_id = None
+        action_id: Optional[int] = None
 
         if output_interface.action == "left kiss":
             action_id = 12
@@ -64,5 +68,16 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
             logging.warning(f"Unknown action: {output_interface.action}")
             return
 
-        logging.info(f"Executing action with ID: {action_id}")
-        self.client.ExecuteAction(action_id)
+        if action_id is None:
+            logging.error(f"Action ID is None for action: {output_interface.action}")
+            return
+
+        try:
+            logging.info(f"Executing action with ID: {action_id}")
+            self.client.ExecuteAction(action_id)
+        except Exception as e:
+            logging.error(
+                f"Failed to execute arm action (ID: {action_id}, action: {output_interface.action}): {e}",
+                exc_info=True,
+            )
+            raise
