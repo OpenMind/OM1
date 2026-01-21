@@ -1,4 +1,5 @@
-from unittest.mock import Mock, mock_open, patch
+import types
+from unittest.mock import mock_open, patch
 
 import pytest
 from pydantic import BaseModel
@@ -13,7 +14,7 @@ class DummyOutputModel(BaseModel):
 
 
 class MockLLM(LLM[BaseModel]):
-    async def ask(self, prompt: str) -> BaseModel:
+    async def ask(self, prompt: str, messages=None) -> BaseModel:
         raise NotImplementedError
 
 
@@ -58,20 +59,21 @@ def test_llm_config():
 
 
 def test_load_llm_mock_implementation():
+
     with (
         patch("llm.find_module_with_class") as mock_find_module,
-        patch("importlib.import_module") as mock_import,
+        patch("llm.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "mock_llm"
-        mock_module = Mock()
-        mock_module.MockLLM = MockLLM
+        mock_module = types.ModuleType("mock_llm")
+        setattr(mock_module, "MockLLM", MockLLM)
         mock_import.return_value = mock_module
 
-        result = load_llm("MockLLM")
+        result = load_llm({"type": "MockLLM"})
 
         mock_find_module.assert_called_once_with("MockLLM")
         mock_import.assert_called_once_with("llm.plugins.mock_llm")
-        assert result == MockLLM
+        assert isinstance(result, LLM)
 
 
 def test_load_llm_not_found():
@@ -80,29 +82,30 @@ def test_load_llm_not_found():
 
         with pytest.raises(
             ValueError,
-            match="Class 'NonexistentLLM' not found in any LLM plugin module",
+            match="Class 'NonexistentLLM' not found in .*LLM plugin module",
         ):
-            load_llm("NonexistentLLM")
+            load_llm({"type": "NonexistentLLM"})
 
 
 def test_load_llm_invalid_type():
+
     with (
         patch("llm.find_module_with_class") as mock_find_module,
-        patch("importlib.import_module") as mock_import,
+        patch("llm.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "invalid_llm"
 
         class InvalidLLM:
             pass
 
-        mock_module = Mock()
-        mock_module.InvalidLLM = InvalidLLM
+        mock_module = types.ModuleType("invalid_llm")
+        setattr(mock_module, "InvalidLLM", InvalidLLM)
         mock_import.return_value = mock_module
 
         with pytest.raises(
             ValueError, match="'InvalidLLM' is not a valid LLM subclass"
         ):
-            load_llm("InvalidLLM")
+            load_llm({"type": "InvalidLLM"})
 
 
 def test_find_module_with_class_success():

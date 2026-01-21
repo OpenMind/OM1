@@ -460,6 +460,8 @@
         {
           type: "UnitreeGo2Navigation",
         },
+      ],
+      lifecycle_hooks: [
         {
           type: "UnitreeGo2Locations",
         },
@@ -693,6 +695,8 @@ VOICE RULE:\n\
           },
           priority: 1,
         },
+      ],
+      lifecycle_hooks: [
         {
           hook_type: "on_startup",
           handler_type: "message",

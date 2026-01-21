@@ -1,4 +1,4 @@
-import datetime as datetime
+import datetime
 import logging
 import re
 import threading
@@ -16,19 +16,22 @@ class RtkProvider:
     """
     RTK Provider.
 
-    This class implements a singleton pattern to manage:
-        * RTK data from serial
-
-    Parameters
-    ----------
-    serial_port: str = ""
+    This class handles the connection to an RTK device via a serial port,
+    processes incoming NMEA messages, and provides access to the latest RTK
+    position data.
     """
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration
-        """
+        Initialize the RTKProvider instance.
 
+        Sets up the serial connection to the RTK device.
+
+        Parameters
+        ----------
+        serial_port : str
+            The serial port to connect to the RTK device.
+        """
         logging.info("Booting RTK Provider")
 
         baudrate = 115200
@@ -77,7 +80,14 @@ class RtkProvider:
         return dt.timestamp()
 
     def get_latest_gngga_message(self, nmea_data):
+        """
+        Extract the latest GNGGA message from a block of NMEA data.
 
+        Parameters
+        ----------
+        nmea_data : str
+            The block of NMEA data as a string.
+        """
         pattern = re.compile(
             r"(\$GNGGA,(?P<time>\d{6}(?:\.\d+)?),[^*]*\*[0-9A-Fa-f]{2})", re.MULTILINE
         )
@@ -104,7 +114,14 @@ class RtkProvider:
             return most_recent[1]
 
     def magRTKProcessor(self, msg):
+        """
+        Process incoming RTK NMEA messages.
 
+        Parameters
+        ----------
+        msg : NMEA message object
+            The NMEA message to process.
+        """
         try:
             logging.debug(f"RTK:{msg}")
 
@@ -175,8 +192,8 @@ class RtkProvider:
                         data = data.decode("utf-8", errors="ignore")
                         latest_GNGGA = self.get_latest_gngga_message(data)
                         if latest_GNGGA:
-                            parsed_nema = NMEAReader.parse(latest_GNGGA)
-                            self.magRTKProcessor(parsed_nema)
+                            parsed_nmea = NMEAReader.parse(latest_GNGGA)
+                            self.magRTKProcessor(parsed_nmea)
                     bytes_waiting = self.serial_connection.in_waiting
 
             time.sleep(0.1)

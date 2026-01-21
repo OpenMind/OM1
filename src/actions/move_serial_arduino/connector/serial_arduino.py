@@ -1,31 +1,63 @@
-import logging
-import time
-
-import serial
-
-from actions.base import ActionConfig, ActionConnector
-from actions.move.interface import MoveInput
-
 """
 This only works if you actually have a serial port connected to your computer, such as, via a USB serial dongle. On Mac, you can determine the correct name to use via `ls /dev/cu.usb*`.
 """
 
+import logging
+import time
 
-class MoveSerialConnector(ActionConnector[MoveInput]):
+import serial
+from pydantic import Field
 
-    def __init__(self, config: ActionConfig):
+from actions.base import ActionConfig, ActionConnector
+from actions.move.interface import MoveInput
+
+
+class MoveSerialConfig(ActionConfig):
+    """
+    Configuration for Serial to Arduino connector.
+
+    Parameters
+    ----------
+    port : str
+        The serial port to connect to the Arduino (e.g., COM3 or /dev/cu.usbmodem14101). Leave empty to simulate.
+    """
+
+    port: str = Field(
+        default="",
+        description="The serial port to connect to the Arduino (e.g., COM3 or /dev/cu.usbmodem14101). Leave empty to simulate.",
+    )
+
+
+class MoveSerialConnector(ActionConnector[MoveSerialConfig, MoveInput]):
+    """
+    Connector that sends move commands via serial to an Arduino.
+    """
+
+    def __init__(self, config: MoveSerialConfig):
+        """
+        Initialize the MoveSerialConnector.
+
+        Parameters
+        ----------
+        config : MoveSerialConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
-        # Open the serial port
-        self.port = (
-            ""  # specify your serial port here, such as COM1 or /dev/cu.usbmodem14101
-        )
+        self.port = self.config.port
         self.ser = None
         if self.port:
             self.ser = serial.Serial(self.port, 9600)
 
     async def connect(self, output_interface: MoveInput) -> None:
+        """
+        Connect the input protocol to the move action via serial to Arduino.
 
+        Parameters
+        ----------
+        output_interface : MoveInput
+            The input protocol containing the action details.
+        """
         new_msg = {"move": ""}
 
         if output_interface.action == "be still":
@@ -51,5 +83,7 @@ class MoveSerialConnector(ActionConnector[MoveInput]):
             logging.info(f"SerialNotOpen - Simulating transmit: {message}")
 
     def tick(self) -> None:
+        """
+        Periodic tick function to maintain connection.
+        """
         time.sleep(0.1)
-        # logging.info("Connector Tick")

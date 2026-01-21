@@ -1,35 +1,31 @@
 import time
-from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from llm.output_model import Action
 
 
-@dataclass
-class SimulatorConfig:
+class SimulatorConfig(BaseModel):
     """
     Configuration class for Simulator implementations.
-
-    Parameters
-    ----------
-    **kwargs : dict
-        Additional configuration parameters
     """
 
-    def __init__(self, **kwargs):
-        # Store any config parameters
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    model_config = ConfigDict(extra="allow")
+
+    name: Optional[str] = Field(default=None, description="Name of the simulator")
+    host: Optional[str] = Field(default=None, description="Host address for simulator")
+    port: Optional[int] = Field(default=None, description="Port number for simulator")
 
 
 class Simulator:
     """
-    Base class for simulation components
+    Base class for simulation components.
     """
 
     def __init__(self, config: SimulatorConfig):
         """
-        Initialize simulator with configuration
+        Initialize simulator with configuration.
 
         Parameters
         ----------
@@ -37,17 +33,17 @@ class Simulator:
             Configuration object for the simulator
         """
         self.config = config
-        self.name = getattr(config, "name", "Simulator")
+        self.name = config.name or "Simulator"
 
     def sim(self, actions: List[Action]) -> None:
         """
-        Simulate the environment with the given actions
+        Simulate the environment with the given actions.
         """
         pass
 
     def tick(self) -> None:
         """
-        Run the simulator for one tick
+        Run the simulator for one tick.
 
         Note: This method should not block the event loop.
         """

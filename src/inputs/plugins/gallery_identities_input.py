@@ -1,34 +1,39 @@
 import asyncio
 import time
 from collections import deque
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Deque, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.gallery_identities_provider import GalleryIdentitiesProvider
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
+class GalleryIdentitiesConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for Gallery Identities Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    face_http_base_url : str
+        Base URL for the Face HTTP service.
+    gallery_poll_fps : float
+        Polling frequency in frames per second.
     """
 
-    timestamp: float
-    message: str
+    face_http_base_url: str = Field(
+        default="http://127.0.0.1:6793",
+        description="Base URL for the Face HTTP service",
+    )
+    gallery_poll_fps: float = Field(
+        default=1.0, description="Polling frequency in frames per second"
+    )
 
 
-class GalleryIdentities(FuserInput[str]):
+class GalleryIdentities(FuserInput[GalleryIdentitiesConfig, Optional[str]]):
     """
     Async input that adapts the GalleryIdentitiesProvider to the fuser/LLM pipeline.
 
@@ -41,8 +46,8 @@ class GalleryIdentities(FuserInput[str]):
     - Produce a compact, prompt-ready block via `formatted_latest_buffer()`.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
-        """Initialize the GalleryIdentities input adapter
+    def __init__(self, config: GalleryIdentitiesConfig):
+        """Initialize the GalleryIdentities input adapter.
 
         Subscribes to `GalleryIdentitiesProvider` and adapts its messages into
         a compact INPUT block for the LLM (“Gallery Identities …”). Uses a small
@@ -50,13 +55,8 @@ class GalleryIdentities(FuserInput[str]):
 
         Parameters
         ----------
-        config : SensorConfig, optional
-            Runtime configuration. Supported (optional) fields:
-            - face_http_base_url : str   Base URL of the face HTTP API (default "http://127.0.0.1:6793").
-            - gallery_poll_fps   : float Polling rate in Hz (e.g., 0.5 → every 2 s).
-            - http_timeout_sec   : float HTTP timeout per request (seconds).
-            - descriptor_for_LLM : str   Input block label (default "Gallery Identities").
-
+        config : GalleryIdentitiesConfig, optional
+            Runtime configuration.
         """
         super().__init__(config)
 
@@ -66,8 +66,8 @@ class GalleryIdentities(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue(maxsize=64)
 
         # Config mirrors FacePresence input naming where possible
-        base_url = getattr(self.config, "face_http_base_url", "http://127.0.0.1:6793")
-        fps = float(getattr(self.config, "gallery_poll_fps", 1.0))  # default 1 Hz
+        base_url = self.config.face_http_base_url
+        fps = self.config.gallery_poll_fps
 
         self.provider: GalleryIdentitiesProvider = GalleryIdentitiesProvider(
             base_url=base_url, fps=fps, timeout_s=2.0
@@ -101,13 +101,21 @@ class GalleryIdentities(FuserInput[str]):
                 pass
 
     async def _poll(self) -> Optional[str]:
+        """
+        Poll for new messages from the gallery identities service.
+
+        Returns
+        -------
+        Optional[str]
+            The next message from the buffer if available, None otherwise
+        """
         await asyncio.sleep(0.5)
         try:
             return self.message_buffer.get_nowait()
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -116,14 +124,17 @@ class GalleryIdentities(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
@@ -140,7 +151,10 @@ class GalleryIdentities(FuserInput[str]):
         """
         if raw_input is None:
             return
-        self.messages.append(await self._raw_to_text(raw_input))
+
+        message = await self._raw_to_text(raw_input)
+        if message is not None:
+            self.messages.append(message)
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """

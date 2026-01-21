@@ -314,7 +314,7 @@
             let isControlConnected = false;
             let keysPressed = new Set();
             let currentCommand = { vx: 0.0, vy: 0.0, vyaw: 0.0 };
-            
+
             // Auto reconnect variables
             let apiKey = '';
             let controlReconnectTimer = null;
@@ -434,9 +434,9 @@
 
                 const delay = Math.min(baseReconnectDelay * Math.pow(2, controlReconnectAttempts), 30000); // Max 30 seconds
                 controlReconnectAttempts++;
-                
+
                 updateControlStatus(`Reconnecting in ${Math.ceil(delay/1000)}s (attempt ${controlReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
-                
+
                 controlReconnectTimer = setTimeout(() => {
                     console.log(`Control reconnect attempt ${controlReconnectAttempts}/${maxReconnectAttempts}`);
                     connectToControlWebSocket(apiKey);
@@ -453,9 +453,9 @@
 
                 const delay = Math.min(baseReconnectDelay * Math.pow(2, videoReconnectAttempts), 30000); // Max 30 seconds
                 videoReconnectAttempts++;
-                
+
                 updateStatus(`Reconnecting in ${Math.ceil(delay/1000)}s (attempt ${videoReconnectAttempts}/${maxReconnectAttempts})`, 'orange');
-                
+
                 videoReconnectTimer = setTimeout(() => {
                     console.log(`Video reconnect attempt ${videoReconnectAttempts}/${maxReconnectAttempts}`);
                     connectToVideoWebSocket(apiKey);
@@ -498,7 +498,7 @@
                         connectBtn.disabled = false;
                         disconnectBtn.disabled = true;
                         isConnected = false;
-                        
+
                         // Auto reconnect if not manually disconnected
                         if (!isManualDisconnect && apiKey) {
                             scheduleVideoReconnect();
@@ -548,7 +548,7 @@
                         updateControlButtons();
                         currentCommand = { vx: 0.0, vy: 0.0, vyaw: 0.0 };
                         updateCommandStatus();
-                        
+
                         // Auto reconnect if not manually disconnected
                         if (!isManualDisconnect && apiKey) {
                             scheduleControlReconnect();
