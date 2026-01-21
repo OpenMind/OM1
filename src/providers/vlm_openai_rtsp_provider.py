@@ -14,7 +14,7 @@ from .singleton import singleton
 @singleton
 class VLMOpenAIRTSPProvider:
     """
-    VLM Provider that handles audio streaming and websocket communication.
+    VLM Provider that handles video streaming and websocket communication.
 
     This class implements a singleton pattern to manage video stream from RTSP and websocket
     communication for vlm services. It runs in a separate thread to handle
@@ -45,6 +45,8 @@ class VLMOpenAIRTSPProvider:
             The RTSP URL for the video stream. Defaults to "rtsp://localhost:8554/top_camera".
         decode_format : str
             The decode format for the video stream. Defaults to "H264".
+        prompt : str
+            The prompt for the VLM analysis. Defaults to "What is the most interesting aspect in this series of images?".
         fps : int
             The fps for the VLM service connection.
         batch_size : int
@@ -153,7 +155,7 @@ class VLMOpenAIRTSPProvider:
 
         Parameters
         ----------
-        callback : callable
+        message_callback: Optional[Callable]
             The callback function to process VLM results.
         """
         self.message_callback = message_callback
