@@ -117,7 +117,7 @@ We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the Bra
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 - **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
 
-Clone the following repoitories -
+Clone the following repositories -
 - git clone https://github.com/OpenMind/OM1.git
 - git clone https://github.com/OpenMind/unitree-sdk.git
 - git clone https://github.com/OpenMind/OM1-avatar.git
@@ -147,36 +147,36 @@ command: ["unitree_go2_autonomy_advance"]
 
 ```bash
 cd OM1
-docker compose up om1 -d --no-build
+docker-compose up om1 -d --no-build
 ```
 
 - For unitree_sdk
 ```bash
 cd unitree_sdk
-docker compose up orchestrator -d --no-build
-docker compose up om1_sensor -d --no-build
-docker compose up watchdog -d --no-build
-docker compose up zenoh_bridge -d --no-build
+docker-compose up orchestrator -d --no-build
+docker-compose up om1_sensor -d --no-build
+docker-compose up watchdog -d --no-build
+docker-compose up zenoh_bridge -d --no-build
 ```
 
 - For OM1-avatar
 ```bash
 cd OM1-avatar
-docker compose up om1_avatar -d --no-build
+docker-compose up om1_avatar -d --no-build
 ```
 
 - For OM1-video-processor
 ```bash
 cd OM1-video-processor
-docker compose up -d
+docker-compose up -d
 ```
 
 - For OM1-system-setup
 ```bash
 cd OM1-system-setup
-docker compose up -d ota_agent
-docker compose up -d ota_updater
-docker compose up -d om1_monitor
+docker-compose up -d ota_agent
+docker-compose up -d ota_updater
+docker-compose up -d om1_monitor
 ```
 
 ## Detailed Documentation

@@ -35,6 +35,13 @@ class XAILLM(LLM[R]):
     ):
         """
         Initialize the XAI LLM instance.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
@@ -93,6 +100,10 @@ class XAILLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
+            if not response.choices:
+                logging.warning("xAI API returned empty choices")
+                return None
+
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
@@ -103,8 +114,8 @@ class XAILLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls
