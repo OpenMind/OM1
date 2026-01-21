@@ -607,6 +607,11 @@ class RPLidarProvider:
                 scan_array = np.array(scan)
                 logging.debug(f"_serial_processor: {scan_array.ndim}")
 
+                # Validate array shape before indexing
+                if scan_array.ndim != 2 or scan_array.shape[1] < 2:
+                    logging.warning(f"Invalid scan array shape: {scan_array.shape}, skipping")
+                    continue
+
                 # the driver sends angles in degrees between from 0 to 360
                 # warning - the driver may send two or more readings per angle,
                 # this can be confusing for the code

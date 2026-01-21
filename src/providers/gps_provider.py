@@ -281,6 +281,8 @@ class GpsProvider:
         if self._thread:
             logging.info("Stopping GPS provider")
             self._thread.join(timeout=5)
+            if self._thread.is_alive():
+                logging.warning("GPS provider thread did not stop within timeout period")
 
         if self.serial_connection and self.serial_connection.is_open:
             try:
