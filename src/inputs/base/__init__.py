@@ -47,6 +47,11 @@ class Sensor(T.Generic[ConfigType, R]):
     def __init__(self, config: ConfigType):
         """
         Initialize an Sensor instance.
+
+        Parameters
+        ----------
+        config : ConfigType
+            Configuration object for the sensor.
         """
         self.config = config
         pass

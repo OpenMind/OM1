@@ -52,6 +52,11 @@ class ZenohListenerProvider:
     def start(self, message_callback: Optional[Callable] = None):
         """
         Start the listener provider by launching the background thread.
+
+        Parameters
+        ----------
+        message_callback : Optional[Callable]
+            Optional callback function that will be called with each incoming Zenoh sample.
         """
         if self.running:
             logging.warning("Zenoh Listener Provider is already running")

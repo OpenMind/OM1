@@ -37,6 +37,16 @@ Detection = collections.namedtuple("Detection", "label, bbox, score")
 def check_webcam(index_to_check):
     """
     Checks if a webcam is available and returns True if found, False otherwise.
+
+    Parameters
+    ----------
+    index_to_check : int
+        The camera index to check.
+
+    Returns
+    -------
+    bool
+        True if the webcam is available, False otherwise.
     """
     cap = cv2.VideoCapture(index_to_check)  # 0 is the default camera index
     if not cap.isOpened():

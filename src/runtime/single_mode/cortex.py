@@ -23,12 +23,6 @@ class CortexRuntime:
     The CortexRuntime orchestrates communication between memory, fuser,
     actions, and manages inputs/outputs. It controls the agent's execution
     cycle and coordinates all major subsystems.
-
-    Parameters
-    ----------
-    config : RuntimeConfig
-        Configuration object containing all runtime settings including
-        agent inputs, cortex LLM settings, and execution parameters.
     """
 
     config: RuntimeConfig

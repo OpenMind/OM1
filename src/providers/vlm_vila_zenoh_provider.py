@@ -28,6 +28,8 @@ class VLMVilaZenohProvider:
 
         Parameters
         ----------
+        ws_url : str
+            The WebSocket URL for the VLM service.
         topic : str
             The zenoh topic for the video stream. Defaults to "rgb_image".
         decode_format : str
@@ -59,7 +61,7 @@ class VLMVilaZenohProvider:
 
         Parameters
         ----------
-        callback : callable
+        message_callback : Optional[Callable]
             The callback function to process VLM results.
         """
         if message_callback is not None:

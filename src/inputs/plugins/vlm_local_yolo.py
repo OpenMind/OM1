@@ -84,6 +84,16 @@ def set_best_resolution(cap: cv2.VideoCapture, resolutions: List[tuple]) -> tupl
 def check_webcam(index_to_check):
     """
     Checks if a webcam is available and returns True if found, False otherwise.
+
+    Parameters
+    ----------
+    index_to_check : int
+        The camera index to check.
+
+    Returns
+    -------
+    tuple
+        Tuple of (width, height) if webcam is found, (0, 0) otherwise.
     """
     cap = cv2.VideoCapture(index_to_check)
     if not cap.isOpened():
@@ -271,12 +281,13 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
 
     def write_str_to_file(self, json_line: str):
         """
-        Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
+        Writes a string to a file in JSON lines format. If the file exceeds max_file_size_bytes,
         creates a new file with a timestamp.
 
         Parameters
         ----------
-        - data: Dictionary to write
+        json_line : str
+            JSON string to write to the file.
         """
         if not isinstance(json_line, str):
             raise ValueError("Provided json_line must be a json string.")

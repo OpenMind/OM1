@@ -93,6 +93,8 @@ class ElevenLabsTTSProvider:
             The URL endpoint for the TTS service.
         api_key : str
             The API key for the TTS service.
+        elevenlabs_api_key : Optional[str]
+            An alternative Eleven Labs specific API key.
         voice_id : str, optional
             The name of the voice for Eleven Labs TTS service.
         model_id : str, optional

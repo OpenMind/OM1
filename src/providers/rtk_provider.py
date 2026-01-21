@@ -64,6 +64,16 @@ class RtkProvider:
         """
         Convert a UTC datetime.time object to a Unix timestamp by combining
         it with the local computer's current date.
+
+        Parameters
+        ----------
+        utc_time_obj : datetime.time
+            A UTC time object to convert.
+
+        Returns
+        -------
+        float
+            Unix timestamp representing the combined date and time.
         """
         if not isinstance(utc_time_obj, datetime.time):
             raise TypeError("Expected a datetime.time object")
