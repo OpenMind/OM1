@@ -52,6 +52,15 @@ Before contributing, please take a moment to read through the following guidelin
 
 3. **Setup Development Environment**
     Refer [documentation](https://docs.openmind.org/developing/1_get-started) to setup your development environment.
+    > **Note for Windows users:**
+> 
+> If you are developing on Windows, we recommend using either:
+> - Git Bash (recommended), or  
+> - Windows Subsystem for Linux (WSL)  
+>
+> Some commands in the documentation (such as `ls`, `chmod`, and shell scripts) may not work in the default Windows Command Prompt.  
+> Make sure Python 3.10+ is installed and available in your PATH before running setup commands.
+
 
 4.  **Create a Branch:**  Create a new branch for your work.  Use a descriptive name that reflects the purpose of your changes (e.g., `fix-bug-xyz`, `add-feature-abc`, `docs-improve-readme`).
     ```bash
