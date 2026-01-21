@@ -137,7 +137,9 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                     return None
 
             if self.vehicle_jwt is not None:
-                if output_interface.action == "lock doors":
+                action = str(output_interface.action).lower()
+
+                if action == "lock doors":
                     url = f"{self.base_url}/{self.token_id}/commands/doors/lock"
                     response = requests.post(
                         url,
@@ -150,7 +152,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                         logging.error(
                             f"Error locking door: {response.status_code} {response.text}"
                         )
-                elif output_interface.action == "unlock doors":
+                elif action == "unlock doors":
                     url = f"{self.base_url}/{self.token_id}/commands/doors/unlock"
                     response = requests.post(
                         url,
@@ -163,7 +165,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                         logging.error(
                             f"Error unlocking door: {response.status_code} {response.text}"
                         )
-                elif output_interface.action == "open frunk":
+                elif action == "open frunk":
                     url = f"{self.base_url}/{self.token_id}/commands/frunk/open"
                     response = requests.post(
                         url,
@@ -176,7 +178,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                         logging.error(
                             f"Error opening frunk: {response.status_code} {response.text}"
                         )
-                elif output_interface.action == "open trunk":
+                elif action == "open trunk":
                     url = f"{self.base_url}/{self.token_id}/commands/trunk/open"
                     response = requests.post(
                         url,
@@ -189,7 +191,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                         logging.error(
                             f"Error opening trunk: {response.status_code} {response.text}"
                         )
-                elif output_interface.action == "idle":
+                elif action == "idle":
                     logging.info("DIMO Tesla: Idle")
                 else:
                     logging.error(f"Unknown action: {output_interface.action}")
