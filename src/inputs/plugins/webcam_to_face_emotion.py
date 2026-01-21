@@ -131,7 +131,10 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
             )
 
             # Determine the dominant emotion
-            self.emotion = result[0]["dominant_emotion"]
+            if isinstance(result, list) and len(result) > 0:
+                emotion_data = result[0]
+                if isinstance(emotion_data, dict):
+                    self.emotion = emotion_data.get("dominant_emotion", "")
 
         if self.emotion == "":
             message = "I do not see anyone, so I can't estimate their emotion."
