@@ -15,6 +15,11 @@ class D435Provider:
     """
 
     def __init__(self):
+        """
+        Initialize the D435Provider instance.
+
+        Sets up the Zenoh subscriber for obstacle point cloud data and starts the provider.
+        """
         self.obstacle = []
         self.running = False
         self.session = None
