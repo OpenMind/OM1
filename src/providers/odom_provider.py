@@ -412,9 +412,15 @@ class OdomProvider:
 
         if self._odom_reader_thread:
             self._odom_reader_thread.terminate()
-            self._odom_reader_thread.join()
-            logging.info("OdomProvider reader thread stopped.")
+            self._odom_reader_thread.join(timeout=5)
+            if self._odom_reader_thread.is_alive():
+                logging.warning("OdomProvider reader process did not stop within timeout period")
+            else:
+                logging.info("OdomProvider reader thread stopped.")
 
         if self._odom_processor_thread:
-            self._odom_processor_thread.join()
-            logging.info("OdomProvider processor thread stopped.")
+            self._odom_processor_thread.join(timeout=5)
+            if self._odom_processor_thread.is_alive():
+                logging.warning("OdomProvider processor thread did not stop within timeout period")
+            else:
+                logging.info("OdomProvider processor thread stopped.")

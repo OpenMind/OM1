@@ -144,12 +144,18 @@ class SimplePathsProvider:
 
         if self._simple_paths_processor_thread:
             self.control_queue.put("STOP")
-            self._simple_paths_processor_thread.join()
-            logging.info("SimplePathsProvider stopped.")
+            self._simple_paths_processor_thread.join(timeout=5)
+            if self._simple_paths_processor_thread.is_alive():
+                logging.warning("SimplePathsProvider process did not stop within timeout period")
+            else:
+                logging.info("SimplePathsProvider stopped.")
 
         if self._simple_paths_derived_thread:
-            self._simple_paths_derived_thread.join()
-            logging.info("SimplePathsProvider derived processor stopped.")
+            self._simple_paths_derived_thread.join(timeout=5)
+            if self._simple_paths_derived_thread.is_alive():
+                logging.warning("SimplePathsProvider derived processor thread did not stop within timeout period")
+            else:
+                logging.info("SimplePathsProvider derived processor stopped.")
 
     def _simple_paths_derived_processor(self):
         """
