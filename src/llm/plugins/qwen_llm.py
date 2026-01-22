@@ -7,7 +7,7 @@ import typing as T
 import openai
 from pydantic import BaseModel
 
-from llm import LLM, LLMConfig
+from llm import LLM, LLMConfig, with_llm_retry
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from providers.avatar_llm_state_provider import AvatarLLMState
@@ -118,6 +118,7 @@ class QwenLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
+    @with_llm_retry(max_retries=3, backoff_base=2.0)
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
     ) -> R | None:
