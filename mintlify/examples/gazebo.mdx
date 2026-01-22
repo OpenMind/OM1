@@ -98,12 +98,12 @@ Open your bashrc file
 vi ~/.bashrc
 ```
 
-Add the following
+Add the following, replacing `/path/to/cyclonedds` with the actual path to your CycloneDDS installation:
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
-export CYCLONEDDS_URI=/home/openmind/Documents/GitHub/cyclonedds/cyclonedds.xml
+export CYCLONEDDS_HOME=/path/to/cyclonedds/install
+export CYCLONEDDS_URI=/path/to/cyclonedds/cyclonedds.xml
 export CYCLONEDDS_INTERFACE=lo
 ```
 
@@ -118,12 +118,12 @@ To add the config to your bashrc, run:
 vim ~/.bashrc
 ```
 
-And add the following:
+And add the following, replacing `/path/to/cyclonedds` with the actual path to your CycloneDDS installation:
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export CYCLONEDDS_INTERFACE=lo
-export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
+export CYCLONEDDS_HOME=/path/to/cyclonedds/install
 export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
