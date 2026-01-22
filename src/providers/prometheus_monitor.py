@@ -5,7 +5,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, cast
 
 from prometheus_client import Counter, Gauge, start_http_server
 
@@ -110,12 +110,12 @@ class PrometheusMonitor:
         self._check_thread: Optional[threading.Thread] = None
         self._server_started = False
 
-        # Reference module-level metrics
-        self._status_gauge = _status_gauge
-        self._heartbeat_gauge = _heartbeat_gauge
-        self._error_counter = _error_counter
-        self._providers_total = _providers_total
-        self._uptime_gauge = _uptime_gauge
+        # Reference module-level metrics (guaranteed non-None after _init_metrics)
+        self._status_gauge: Gauge = cast(Gauge, _status_gauge)
+        self._heartbeat_gauge: Gauge = cast(Gauge, _heartbeat_gauge)
+        self._error_counter: Counter = cast(Counter, _error_counter)
+        self._providers_total: Gauge = cast(Gauge, _providers_total)
+        self._uptime_gauge: Gauge = cast(Gauge, _uptime_gauge)
 
         logging.info("PrometheusMonitor initialized")
 
