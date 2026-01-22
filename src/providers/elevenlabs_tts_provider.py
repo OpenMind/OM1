@@ -12,20 +12,8 @@ class ElevenLabsTTSProvider:
     Text-to-Speech Provider that manages an audio output stream.
 
     A singleton class that handles text-to-speech conversion and audio output
-    through a dedicated thread.
-
-    Parameters
-    ----------
-    url : str
-        The URL endpoint for the TTS service. (Default is https://api.openmind.org/api/core/elevenlabs/tts)
-    api_key : str
-        The API key for the TTS service
-    voice_id : str, optional
-        The name of the voice for Eleven Labs TTS service (default is JBFqnCBsd6RMkjVDRZzb)
-    model_id : str, optional
-        The name of the model for Eleven Labs TTS service (default is eleven_multilingual
-    output_format : str, optional
-        The output format for the audio stream (default is mp3_44100_128)
+    through a dedicated thread. It provides integration with Eleven Labs TTS service
+    for generating speech from text with configurable voice, model, and output format.
     """
 
     def __init__(
@@ -52,7 +40,7 @@ class ElevenLabsTTSProvider:
             Defaults to "https://api.openmind.org/api/core/elevenlabs/tts".
         api_key : str, optional
             The primary API key for the TTS service. If provided, it's used in the
-            request headers. Defaults to None.
+            request headers as "x-api-key". Defaults to None.
         elevenlabs_api_key : str, optional
             An alternative Eleven Labs specific API key. If provided, it's included
             in the request payload for TTS generation. Defaults to None.
@@ -63,11 +51,19 @@ class ElevenLabsTTSProvider:
             The ID/name of the model to use for TTS synthesis.
             Defaults to "eleven_flash_v2_5".
         output_format : str, optional
-            The desired audio output format (e.g., mp3, wav).
+            The desired audio output format (e.g., mp3_44100_128, wav).
             Defaults to "mp3_44100_128".
         enable_tts_interrupt : bool, optional
             If True, enables the ability to interrupt ongoing TTS playback when ASR
             detects new speech input. Defaults to False.
+
+        Notes
+        -----
+        The provider uses a singleton pattern, ensuring only one instance exists
+        throughout the application lifecycle. The audio output stream is initialized
+        lazily and can be started/stopped using the `start()` and `stop()` methods.
+        Both `api_key` and `elevenlabs_api_key` can be provided simultaneously,
+        with `api_key` used in headers and `elevenlabs_api_key` in the request payload.
         """
         self.api_key = api_key
         self.elevenlabs_api_key = elevenlabs_api_key
