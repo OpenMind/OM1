@@ -218,11 +218,20 @@ class TeleopsStatusProvider:
 
         Parameters
         ----------
-        api_key : str
-            API key for authentication. Default is None.
+        api_key : Optional[str]
+            API key for authentication with the teleops status API.
+            If None or empty string, status retrieval and sharing operations
+            will fail with an error log. Default is None.
         base_url : str
-            Base URL for the teleops status API. Default is
-            "https://api.openmind.org/api/core/teleops/status".
+            Base URL for the teleops status API endpoint. This URL is used
+            for both retrieving and sharing teleops status information.
+            Default is "https://api.openmind.org/api/core/teleops/status".
+
+        Notes
+        -----
+        This provider uses a singleton pattern and creates a ThreadPoolExecutor
+        with a single worker thread for asynchronous status sharing operations.
+        The executor is automatically cleaned up when `stop()` is called.
         """
         self.api_key = api_key
         self.base_url = base_url
