@@ -8,7 +8,6 @@ from providers.prometheus_monitor import HealthStatus, PrometheusMonitor, Provid
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    """Reset singleton instance between tests."""
     PrometheusMonitor.reset()  # type: ignore
     yield
     PrometheusMonitor.reset()  # type: ignore
@@ -16,7 +15,6 @@ def reset_singleton():
 
 @pytest.fixture
 def monitor():
-    """Create a PrometheusMonitor instance with short timeouts for testing."""
     with patch("providers.prometheus_monitor.start_http_server"):
         m = PrometheusMonitor(heartbeat_timeout=1.0, check_interval=0.1)
         yield m
@@ -24,7 +22,6 @@ def monitor():
 
 
 def test_singleton_pattern():
-    """Test that PrometheusMonitor is a singleton."""
     with patch("providers.prometheus_monitor.start_http_server"):
         m1 = PrometheusMonitor()
         m2 = PrometheusMonitor()
@@ -32,7 +29,6 @@ def test_singleton_pattern():
 
 
 def test_register_provider(monitor):
-    """Test registering a provider."""
     monitor.register("TestProvider", metadata={"type": "test"})
 
     status = monitor.get_status("TestProvider")
@@ -40,7 +36,6 @@ def test_register_provider(monitor):
 
 
 def test_register_with_recovery_callback(monitor):
-    """Test registering a provider with recovery callback."""
     callback = MagicMock(return_value=True)
     monitor.register("TestProvider", recovery_callback=callback)
 
@@ -48,7 +43,6 @@ def test_register_with_recovery_callback(monitor):
 
 
 def test_unregister_provider(monitor):
-    """Test unregistering a provider."""
     monitor.register("TestProvider")
     assert monitor.get_status("TestProvider") is not None
 
@@ -57,7 +51,6 @@ def test_unregister_provider(monitor):
 
 
 def test_heartbeat_updates_timestamp(monitor):
-    """Test that heartbeat updates the last_heartbeat timestamp."""
     monitor.register("TestProvider")
     initial_time = monitor._providers["TestProvider"].last_heartbeat
 
@@ -68,7 +61,6 @@ def test_heartbeat_updates_timestamp(monitor):
 
 
 def test_heartbeat_recovers_unhealthy_provider(monitor):
-    """Test that heartbeat recovers an unhealthy provider."""
     monitor.register("TestProvider")
 
     with monitor._lock:
@@ -80,7 +72,6 @@ def test_heartbeat_recovers_unhealthy_provider(monitor):
 
 
 def test_report_error_increments_counter(monitor):
-    """Test that report_error increments error count."""
     monitor.register("TestProvider")
 
     monitor.report_error("TestProvider", "Test error")
@@ -89,7 +80,6 @@ def test_report_error_increments_counter(monitor):
 
 
 def test_report_error_multiple_times(monitor):
-    """Test reporting multiple errors."""
     monitor.register("TestProvider")
 
     monitor.report_error("TestProvider", "Error 1")
@@ -100,7 +90,6 @@ def test_report_error_multiple_times(monitor):
 
 
 def test_get_all_statuses(monitor):
-    """Test getting status of all providers."""
     monitor.register("Provider1")
     monitor.register("Provider2")
 
@@ -112,7 +101,6 @@ def test_get_all_statuses(monitor):
 
 
 def test_provider_becomes_unhealthy_without_heartbeat(monitor):
-    """Test that provider becomes unhealthy without heartbeat."""
     monitor.register("TestProvider")
 
     with monitor._lock:
@@ -124,7 +112,6 @@ def test_provider_becomes_unhealthy_without_heartbeat(monitor):
 
 
 def test_recovery_callback_called_on_unhealthy(monitor):
-    """Test that recovery callback is called when provider becomes unhealthy."""
     callback = MagicMock(return_value=True)
     monitor.register("TestProvider", recovery_callback=callback)
 
@@ -138,7 +125,6 @@ def test_recovery_callback_called_on_unhealthy(monitor):
 
 
 def test_recovery_callback_success_restores_health(monitor):
-    """Test that successful recovery restores health status."""
     callback = MagicMock(return_value=True)
     monitor.register("TestProvider", recovery_callback=callback)
 
@@ -152,7 +138,6 @@ def test_recovery_callback_success_restores_health(monitor):
 
 
 def test_recovery_callback_failure_keeps_unhealthy(monitor):
-    """Test that failed recovery keeps provider unhealthy."""
     callback = MagicMock(return_value=False)
     monitor.register("TestProvider", recovery_callback=callback)
 
@@ -166,7 +151,6 @@ def test_recovery_callback_failure_keeps_unhealthy(monitor):
 
 
 def test_recovery_callback_exception_handled(monitor):
-    """Test that exceptions in recovery callback are handled."""
     callback = MagicMock(side_effect=Exception("Recovery failed"))
     monitor.register("TestProvider", recovery_callback=callback)
 
@@ -180,7 +164,6 @@ def test_recovery_callback_exception_handled(monitor):
 
 
 def test_start_creates_check_thread(monitor):
-    """Test that start creates the health check thread."""
     monitor.start(port=19090)
 
     assert monitor._running is True
@@ -189,7 +172,6 @@ def test_start_creates_check_thread(monitor):
 
 
 def test_stop_terminates_check_thread(monitor):
-    """Test that stop terminates the health check thread."""
     monitor.start(port=19091)
     thread = monitor._check_thread
 
@@ -202,19 +184,16 @@ def test_stop_terminates_check_thread(monitor):
 
 
 def test_heartbeat_for_unregistered_provider(monitor):
-    """Test that heartbeat for unregistered provider is ignored."""
     monitor.heartbeat("UnknownProvider")
     # Should not raise exception
 
 
 def test_report_error_for_unregistered_provider(monitor):
-    """Test that report_error for unregistered provider is ignored."""
     monitor.report_error("UnknownProvider", "Error")
     # Should not raise exception
 
 
 def test_uptime_metric_updated(monitor):
-    """Test that uptime metric is updated during health check."""
     initial_uptime = monitor._uptime_gauge._value.get()
 
     time.sleep(0.1)
@@ -225,7 +204,6 @@ def test_uptime_metric_updated(monitor):
 
 
 def test_provider_state_dataclass():
-    """Test ProviderState dataclass initialization."""
     state = ProviderState(name="Test")
 
     assert state.name == "Test"
@@ -237,14 +215,12 @@ def test_provider_state_dataclass():
 
 
 def test_health_status_enum():
-    """Test HealthStatus enum values."""
     assert HealthStatus.HEALTHY.value == "healthy"
     assert HealthStatus.UNHEALTHY.value == "unhealthy"
     assert HealthStatus.UNKNOWN.value == "unknown"
 
 
 def test_register_updates_existing_provider(monitor):
-    """Test that re-registering updates existing provider."""
     callback1 = MagicMock()
     callback2 = MagicMock()
 
@@ -255,7 +231,6 @@ def test_register_updates_existing_provider(monitor):
 
 
 def test_concurrent_heartbeats(monitor):
-    """Test concurrent heartbeat calls are thread-safe."""
     import threading
 
     monitor.register("TestProvider")
