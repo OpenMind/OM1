@@ -118,3 +118,14 @@ def test_store_message_without_api_key():
         message = mock_submit.call_args_list[0][0][1]
         assert message.content == "Hello"
         assert message.message_type == MessageType.USER
+
+
+def test_stop():
+    """Test that stop() properly shuts down the executor."""
+    provider = TeleopsConversationProvider()
+    assert provider.executor is not None
+    
+    provider.stop()
+    
+    # After stop(), executor should be shut down
+    assert provider.executor._shutdown is True

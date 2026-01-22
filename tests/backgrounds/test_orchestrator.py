@@ -61,3 +61,13 @@ async def test_start_background(orchestrator):
         assert orchestrator._submitted_backgrounds == expected_background_names
     finally:
         orchestrator.stop()
+
+
+@pytest.mark.asyncio
+async def test_stop(orchestrator):
+    """Test that orchestrator stops cleanly and shuts down executor."""
+    orchestrator.start()
+    orchestrator.stop()
+    
+    # After stop(), executor should be shut down
+    assert orchestrator._background_executor._shutdown is True

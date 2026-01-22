@@ -183,3 +183,14 @@ class TeleopsConversationProvider:
             True if the API key is set, False otherwise.
         """
         return self.api_key is not None and self.api_key != ""
+
+    def stop(self):
+        """
+        Stop the TeleopsConversationProvider and clean up resources.
+        """
+        if self.executor:
+            try:
+                self.executor.shutdown(wait=True)
+                logging.info("TeleopsConversationProvider executor shut down")
+            except Exception as e:
+                logging.error(f"Error shutting down TeleopsConversationProvider executor: {e}", exc_info=True)

@@ -343,7 +343,12 @@ class ActionOrchestrator:
         Stop the action executor and wait for all tasks to complete.
         """
         self._stop_event.set()
-        self._connector_executor.shutdown(wait=True)
+        if self._connector_executor:
+            try:
+                self._connector_executor.shutdown(wait=True)
+                logging.info("ActionOrchestrator executor shut down")
+            except Exception as e:
+                logging.error(f"Error shutting down ActionOrchestrator executor: {e}", exc_info=True)
 
     def __del__(self):
         """

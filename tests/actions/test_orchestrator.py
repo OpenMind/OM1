@@ -463,6 +463,8 @@ class TestActionOrchestratorEdgeCases:
         orchestrator.stop()
 
         assert orchestrator._stop_event.is_set()
+        # After stop(), executor should be shut down
+        assert orchestrator._connector_executor._shutdown is True
 
 
 class TestActionOrchestratorModeComparison:

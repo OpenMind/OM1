@@ -91,7 +91,12 @@ class BackgroundOrchestrator:
         tasks to finish gracefully.
         """
         self._stop_event.set()
-        self._background_executor.shutdown(wait=True)
+        if self._background_executor:
+            try:
+                self._background_executor.shutdown(wait=True)
+                logging.info("BackgroundOrchestrator executor shut down")
+            except Exception as e:
+                logging.error(f"Error shutting down BackgroundOrchestrator executor: {e}", exc_info=True)
 
     def __del__(self):
         """

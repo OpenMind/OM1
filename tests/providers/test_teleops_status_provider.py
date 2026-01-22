@@ -274,3 +274,14 @@ def test_teleops_status_provider_initialization_failure():
 
     assert provider.api_key is None
     assert provider.base_url == "https://api.openmind.org/api/core/teleops/status"
+
+
+def test_stop(mock_teleops_dependencies):
+    """Test that stop() properly shuts down the executor."""
+    provider = TeleopsStatusProvider()
+    assert provider.executor is not None
+    
+    provider.stop()
+    
+    # After stop(), executor should be shut down
+    assert provider.executor._shutdown is True

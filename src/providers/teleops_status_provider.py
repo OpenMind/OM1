@@ -302,4 +302,9 @@ class TeleopsStatusProvider:
         """
         Stop the TeleopsStatusProvider and clean up resources.
         """
-        self.executor.shutdown(wait=True)
+        if self.executor:
+            try:
+                self.executor.shutdown(wait=True)
+                logging.info("TeleopsStatusProvider executor shut down")
+            except Exception as e:
+                logging.error(f"Error shutting down TeleopsStatusProvider executor: {e}", exc_info=True)

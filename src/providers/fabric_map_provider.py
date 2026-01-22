@@ -292,3 +292,14 @@ class FabricDataSubmitter:
         """
         logging.debug(f"share data: {data}")
         self.executor.submit(self._share_data_worker, data)
+
+    def stop(self):
+        """
+        Stop the FabricDataSubmitter and clean up resources.
+        """
+        if self.executor:
+            try:
+                self.executor.shutdown(wait=True)
+                logging.info("FabricDataSubmitter executor shut down")
+            except Exception as e:
+                logging.error(f"Error shutting down FabricDataSubmitter executor: {e}", exc_info=True)

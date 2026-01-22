@@ -245,3 +245,14 @@ def test_write_to_local_file(mock_requests):
         time.sleep(0.1)
 
         assert os.path.exists(provider.filename_current)
+
+
+def test_stop():
+    """Test that stop() properly shuts down the executor."""
+    provider = FabricDataSubmitter()
+    assert provider.executor is not None
+    
+    provider.stop()
+    
+    # After stop(), executor should be shut down
+    assert provider.executor._shutdown is True
