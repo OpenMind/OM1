@@ -1,17 +1,57 @@
 """Shared fixtures for CLI tests."""
 
+import re
 from pathlib import Path
 from typing import Generator
 
 import pytest
-from typer.testing import CliRunner
+from typer.testing import CliRunner as _CliRunner
 
 from cli.main import app
 
 
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences from text."""
+    ansi_pattern = re.compile(r"\x1b\[[0-9;]*m")
+    return ansi_pattern.sub("", text)
+
+
+class StrippedResult:
+    """Wrapper for CLI result with ANSI-stripped output."""
+
+    def __init__(self, result):
+        """Initialize with original result."""
+        self._result = result
+        self._output = strip_ansi(result.output)
+
+    @property
+    def output(self) -> str:
+        """Return ANSI-stripped output."""
+        return self._output
+
+    @property
+    def exit_code(self) -> int:
+        """Return exit code."""
+        return self._result.exit_code
+
+    @property
+    def exception(self):
+        """Return exception if any."""
+        return self._result.exception
+
+
+class CliRunner(_CliRunner):
+    """CLI runner that strips ANSI codes from output for reliable assertions."""
+
+    def invoke(self, *args, **kwargs):
+        """Invoke CLI and return result with ANSI codes stripped."""
+        result = super().invoke(*args, **kwargs)
+        return StrippedResult(result)
+
+
 @pytest.fixture
 def runner() -> CliRunner:
-    """Create a CLI test runner."""
+    """Create a CLI test runner that strips ANSI codes from output."""
     return CliRunner()
 
 
