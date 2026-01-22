@@ -1,9 +1,11 @@
+import asyncio
 import importlib
 import inspect
 import logging
 import os
 import re
 import typing as T
+from functools import wraps
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,6 +13,88 @@ from llm.function_schemas import generate_function_schemas_from_actions
 from providers.io_provider import IOProvider
 
 R = T.TypeVar("R")
+
+
+def with_llm_retry(max_retries: int = 3, backoff_base: float = 2.0):
+    """
+    Decorator to add retry logic to LLM API calls with exponential backoff.
+
+    This decorator wraps async LLM methods to automatically retry on failures,
+    improving reliability when dealing with temporary network issues, rate limits,
+    or transient API errors.
+
+    Parameters
+    ----------
+    max_retries : int, optional
+        Maximum number of retry attempts (default: 3)
+    backoff_base : float, optional
+        Base for exponential backoff calculation in seconds (default: 2.0)
+        Wait time = backoff_base ** attempt (e.g., 2s, 4s, 8s)
+
+    Returns
+    -------
+    Callable
+        Decorated async function with retry logic
+
+    Examples
+    --------
+    >>> @with_llm_retry(max_retries=3, backoff_base=2.0)
+    >>> async def ask(self, prompt, messages):
+    >>>     return await self._client.chat.completions.create(...)
+
+    Notes
+    -----
+    - Retries on any Exception
+    - Uses exponential backoff to avoid overwhelming the API
+    - Logs warnings on retry attempts and errors on final failure
+    - Returns None after all retries are exhausted
+    """
+
+    def decorator(func: T.Callable[..., T.Awaitable[T.Optional[R]]]) -> T.Callable[..., T.Awaitable[T.Optional[R]]]:
+        @wraps(func)
+        async def wrapper(*args: T.Any, **kwargs: T.Any) -> T.Optional[R]:
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        wait_time = backoff_base ** attempt
+                        logging.warning(
+                            f"LLM call failed (attempt {attempt + 1}/{max_retries}), "
+                            f"retrying in {wait_time:.1f}s: {type(e).__name__}: {e}"
+                        )
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logging.error(
+                            f"LLM call failed after {max_retries} attempts: "
+                            f"{type(e).__name__}: {e}"
+                        )
+                        logging.error(
+                            "=" * 70
+                        )
+                        logging.error(
+                            "LLM is unavailable. The system will continue attempting to call "
+                            "the LLM in the next cycle."
+                        )
+                        logging.error(
+                            "Options:"
+                        )
+                        logging.error(
+                            "  1. Wait - The system will automatically retry in the next cycle"
+                        )
+                        logging.error(
+                            "  2. Exit - Press Ctrl+C to stop the process"
+                        )
+                        logging.error(
+                            "=" * 70
+                        )
+                        # Return None to allow the loop to continue
+                        # The runtime will skip this tick and try again in the next cycle
+                        return None
+
+        return wrapper
+
+    return decorator
 
 
 class LLMConfig(BaseModel):
