@@ -134,3 +134,13 @@ convention = "numpy"
 exclude = ["src/unitree/", "src/ubtech/", "system_hw_test/"]
 min_confidence = 80
 paths = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cli", "src/runtime", "src/llm", "src/actions", "src/inputs", "src/providers", "src/backgrounds", "src/simulators", "src/fuser", "src/hooks", "src/zenoh_msgs"]
