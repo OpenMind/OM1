@@ -12,7 +12,6 @@ def ws_url():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    """Reset singleton instances between tests."""
     ASRProvider.reset()  # type: ignore
     yield
     ASRProvider.reset()  # type: ignore
@@ -48,9 +47,16 @@ def test_register_message_callback(ws_url, mock_dependencies):
     callback = Mock()
     provider.register_message_callback(callback)
 
-    mock_ws_client.return_value.register_message_callback.assert_called_once_with(
-        callback
+    # Callback is wrapped with heartbeat, so check it was called with a callable
+    mock_ws_client.return_value.register_message_callback.assert_called_once()
+    registered_wrapper = (
+        mock_ws_client.return_value.register_message_callback.call_args[0][0]
     )
+    assert callable(registered_wrapper)
+
+    # Verify wrapper calls original callback
+    registered_wrapper("test_message")
+    callback.assert_called_once_with("test_message")
 
 
 def test_start(ws_url, mock_dependencies):

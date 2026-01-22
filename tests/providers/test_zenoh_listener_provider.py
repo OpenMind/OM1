@@ -40,7 +40,6 @@ def test_initialization_failure():
 
 
 def test_register_message_callback_success():
-    """Test registering a message callback."""
     with patch("providers.zenoh_listener_provider.open_zenoh_session") as mock_zenoh:
         mock_session = MagicMock()
         mock_subscriber = MagicMock()
@@ -49,12 +48,19 @@ def test_register_message_callback_success():
 
         provider = ZenohListenerProvider(topic="test/topic")
 
-        def callback(sample):
-            pass
-
+        callback = MagicMock()
         provider.register_message_callback(callback)
 
-        mock_session.declare_subscriber.assert_called_once_with("test/topic", callback)
+        # Callback is wrapped with heartbeat, so check it was called with topic and a callable
+        mock_session.declare_subscriber.assert_called_once()
+        call_args = mock_session.declare_subscriber.call_args[0]
+        assert call_args[0] == "test/topic"
+        assert callable(call_args[1])
+
+        # Verify wrapper calls original callback
+        mock_sample = MagicMock()
+        call_args[1](mock_sample)
+        callback.assert_called_once_with(mock_sample)
 
 
 def test_register_message_callback_without_session():
@@ -84,7 +90,6 @@ def test_start_without_callback():
 
 
 def test_start_with_callback():
-    """Test starting provider with callback."""
     with patch("providers.zenoh_listener_provider.open_zenoh_session") as mock_zenoh:
         mock_session = MagicMock()
         mock_subscriber = MagicMock()
@@ -93,13 +98,15 @@ def test_start_with_callback():
 
         provider = ZenohListenerProvider(topic="test/topic")
 
-        def callback(sample):
-            pass
-
+        callback = MagicMock()
         provider.start(message_callback=callback)
 
         assert provider.running is True
-        mock_session.declare_subscriber.assert_called_once_with("test/topic", callback)
+        # Callback is wrapped with heartbeat, so check it was called with topic and a callable
+        mock_session.declare_subscriber.assert_called_once()
+        call_args = mock_session.declare_subscriber.call_args[0]
+        assert call_args[0] == "test/topic"
+        assert callable(call_args[1])
 
 
 def test_start_already_running():
