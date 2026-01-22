@@ -97,6 +97,7 @@ class ZenohPublisherProvider:
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         logging.info("Zenoh Publisher Provider started")
+        self._monitor.heartbeat("ZenohPublisherProvider")
 
     def _run(self):
         """

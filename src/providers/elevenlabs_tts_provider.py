@@ -222,6 +222,7 @@ class ElevenLabsTTSProvider:
 
         self.running = True
         self._audio_stream.start()
+        self._monitor.heartbeat("ElevenLabsTTSProvider")
 
     def stop(self):
         """

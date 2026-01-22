@@ -53,8 +53,13 @@ class ZenohListenerProvider:
         message_callback : Callable
             The function that will be called with each incoming Zenoh sample.
         """
-        if self.session is not None:
-            self.session.declare_subscriber(self.sub_topic, message_callback)
+        if self.session is not None and message_callback is not None:
+
+            def wrapper(sample: zenoh.Sample) -> None:
+                self._monitor.heartbeat("ZenohListenerProvider")
+                message_callback(sample)
+
+            self.session.declare_subscriber(self.sub_topic, wrapper)
         else:
             logging.error("Cannot register callback; Zenoh session is not available.")
 
