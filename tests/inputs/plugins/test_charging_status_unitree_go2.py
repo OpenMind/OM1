@@ -147,10 +147,14 @@ async def test_raw_to_text_appends_to_buffer(mock_charging_provider, mock_io_pro
     await plugin.raw_to_text("DISCHARGING: Robot is running on battery power.")
 
     assert len(plugin.messages) == 1
-    assert plugin.messages[0].message == "DISCHARGING: Robot is running on battery power."
+    assert (
+        plugin.messages[0].message == "DISCHARGING: Robot is running on battery power."
+    )
 
 
-def test_formatted_latest_buffer_with_messages(mock_charging_provider, mock_io_provider):
+def test_formatted_latest_buffer_with_messages(
+    mock_charging_provider, mock_io_provider
+):
     """Test formatted_latest_buffer returns formatted message and clears buffer."""
     mock_io_instance = Mock()
     mock_io_provider.return_value = mock_io_instance
@@ -158,8 +162,9 @@ def test_formatted_latest_buffer_with_messages(mock_charging_provider, mock_io_p
     plugin = ChargingStatusUnitreeGo2()
 
     # Simulate adding a message
-    from inputs.base import Message
     import time
+
+    from inputs.base import Message
 
     test_message = Message(
         timestamp=time.time(), message="CHARGING: Robot is currently charging."
