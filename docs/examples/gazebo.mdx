@@ -69,8 +69,6 @@ vi cyclonedds.xml
 Add the following, then save and exit.
 
 ```xml
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
         <General>
@@ -82,7 +80,26 @@ export CYCLONEDDS_URI='
             <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
         </Discovery>
     </Domain>
-</CycloneDDS>'
+</CycloneDDS>
+```
+
+Open your bashrc file
+
+```bash
+vi ~/.bashrc
+```
+
+Add the following
+
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
+export CYCLONEDDS_URI=/home/openmind/Documents/GitHub/cyclonedds/cyclonedds.xml
+```
+
+Apply the changes
+```bash
+source ~/.bashrc
 ```
 
 To add the config to your bashrc, run:
@@ -95,6 +112,7 @@ And add the following:
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
 export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
@@ -179,6 +197,14 @@ Step 6: Run Zenoh Ros2 Bridge
 Step 7: Start OM1
 
     Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+
+    Then add the optional Python CycloneDDS module to OM1, run
+
+    ```bash
+    uv pip install -r pyproject.toml --extra dds
+    ```
+
+    Setup your API key and run your simulation agent:
 
     ```bash
     uv run src/run.py unitree_go2_autonomy_sim
