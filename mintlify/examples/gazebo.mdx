@@ -16,8 +16,6 @@ It's ideal to have atleast 128 GB SSD storage for the setup to run smoothly.
 
 ## Simulation Instructions
 
-The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
-
 To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
 
 Install cyclonedds via https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html.
@@ -69,8 +67,6 @@ vi cyclonedds.xml
 Add the following, then save and exit.
 
 ```xml
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
         <General>
@@ -82,7 +78,27 @@ export CYCLONEDDS_URI='
             <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
         </Discovery>
     </Domain>
-</CycloneDDS>'
+</CycloneDDS>
+```
+
+Open your bashrc file
+
+```bash
+vi ~/.bashrc
+```
+
+Add the following
+
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
+export CYCLONEDDS_URI=/home/openmind/Documents/GitHub/cyclonedds/cyclonedds.xml
+export CYCLONEDDS_INTERFACE=lo
+```
+
+Apply the changes
+```bash
+source ~/.bashrc
 ```
 
 To add the config to your bashrc, run:
@@ -95,6 +111,8 @@ And add the following:
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_INTERFACE=lo
+export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
 export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
@@ -179,6 +197,14 @@ Step 6: Run Zenoh Ros2 Bridge
 Step 7: Start OM1
 
     Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+
+    Then add the optional Python CycloneDDS module to OM1, run
+
+    ```bash
+    uv pip install -r pyproject.toml --extra dds
+    ```
+
+    Setup your API key and run your simulation agent:
 
     ```bash
     uv run src/run.py unitree_go2_autonomy_sim

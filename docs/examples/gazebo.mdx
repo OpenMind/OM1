@@ -16,8 +16,6 @@ It's ideal to have atleast 128 GB SSD storage for the setup to run smoothly.
 
 ## Simulation Instructions
 
-The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
-
 To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
 
 Install cyclonedds via https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html.
@@ -95,6 +93,7 @@ Add the following
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
 export CYCLONEDDS_URI=/home/openmind/Documents/GitHub/cyclonedds/cyclonedds.xml
+export CYCLONEDDS_INTERFACE=lo
 ```
 
 Apply the changes
@@ -112,6 +111,7 @@ And add the following:
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_INTERFACE=lo
 export CYCLONEDDS_HOME=/home/openmind/Documents/GitHub/cyclonedds/install
 export CYCLONEDDS_URI='
 <CycloneDDS>
