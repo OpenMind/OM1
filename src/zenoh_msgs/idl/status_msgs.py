@@ -205,3 +205,20 @@ class ConfigResponse(IdlStruct, typename="ConfigResponse"):
     request_id: String
     config: String
     message: String
+
+
+@dataclass
+class ChargingStatus(IdlStruct, typename="ChargingStatus"):
+    """Charging status message."""
+
+    class Code(Enum):
+        """Code enum for ChargingStatus."""
+
+        DISCHARGING = 0
+        CHARGING = 1
+        ENROUTE_CHARGING = 2
+        FULLY_CHARGED = 3
+
+    header: Header
+    code: int8
+    status: String
