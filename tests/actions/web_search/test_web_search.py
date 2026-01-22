@@ -1,5 +1,3 @@
-"""Tests for WebSearch action."""
-
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,8 +10,6 @@ from actions.web_search.interface import WebSearch, WebSearchInput, WebSearchOut
 
 
 class TestWebSearchInterface:
-    """Tests for WebSearch interface."""
-
     def test_web_search_input_default(self):
         """Test WebSearchInput with default values."""
         input_obj = WebSearchInput()
@@ -44,8 +40,6 @@ class TestWebSearchInterface:
 
 
 class TestDuckDuckGoConfig:
-    """Tests for DuckDuckGoConfig."""
-
     def test_default_values(self):
         """Test config with default values."""
         config = DuckDuckGoConfig()
@@ -66,8 +60,6 @@ class TestDuckDuckGoConfig:
 
 
 class TestDuckDuckGoConnector:
-    """Tests for DuckDuckGoConnector."""
-
     @pytest.fixture
     def mock_io_provider(self):
         """Mock IOProvider."""
