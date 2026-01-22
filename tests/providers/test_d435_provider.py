@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from src.providers.d435_provider import D435Provider
+from providers.d435_provider import D435Provider
 
 
 @pytest.fixture

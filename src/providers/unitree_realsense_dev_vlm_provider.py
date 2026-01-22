@@ -303,7 +303,7 @@ class UnitreeRealSenseDevVLMProvider:
 
         Parameters
         ----------
-        callback : Optional[callable]
+        message_callback : Optional[Callable]
             The callback function to process VLM results.
         """
         if message_callback is not None:
