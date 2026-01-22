@@ -20,6 +20,7 @@ dependencies = [
     "pillow==11.1.0",
     "python-dotenv==1.0.1",
     "typer==0.15.1",
+    "rich==13.9.4",
     "opencv-python==4.11.0.86",
     "deepface==0.0.93",
     "web3==7.6.0",
