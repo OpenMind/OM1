@@ -123,8 +123,12 @@ jobs:
           EOF
 
       - name: Notify Slack on failure
-        if: failure() && github.event_name == 'schedule'
+        if: failure() && github.event_name == 'schedule' && secrets.ONCALL_SLACK_WEBHOOK_URL != ''
         run: |
+          if [ -z "${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}" ]; then
+            echo "ONCALL_SLACK_WEBHOOK_URL secret is not set, skipping Slack notification"
+            exit 0
+          fi
           curl -X POST -H 'Content-type: application/json' \
             --data "{
               \"text\": \"❌ @channel *Integration Tests Failed*\n\
@@ -133,15 +137,19 @@ jobs:
               *Total:* ${{ steps.summary.outputs.total }}  •  *Failures:* ${{ steps.summary.outputs.failures }}  •  *Errors:* ${{ steps.summary.outputs.errors }}\n\
               🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>\"
             }" \
-            ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}
+            "${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}"
 
       - name: Notify Slack on success
-        if: success() && github.event_name == 'schedule'
+        if: success() && github.event_name == 'schedule' && secrets.ONCALL_SLACK_WEBHOOK_URL != ''
         run: |
+          if [ -z "${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}" ]; then
+            echo "ONCALL_SLACK_WEBHOOK_URL secret is not set, skipping Slack notification"
+            exit 0
+          fi
           curl -X POST -H 'Content-type: application/json' \
             --data "{
               \"text\": \"✅ *All Integration Tests Passed*\n\
               *Total:* ${{ steps.summary.outputs.total }}\n\
               🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>\"
             }" \
-            ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}
+            "${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}"
