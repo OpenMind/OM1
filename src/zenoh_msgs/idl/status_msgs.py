@@ -148,8 +148,72 @@ class TTSStatusResponse(IdlStruct, typename="TTSStatusResponse"):
 
 
 @dataclass
-class ChargingStatus(IdlStruct, typename="ChargingStatus"):
+class ASRText(IdlStruct, typename="ASRText"):
+    """ASR text message."""
+
+    header: Header
+    text: str
+
+
+@dataclass
+class AvatarFaceRequest(IdlStruct, typename="AvatarFaceRequest"):
+    """Avatar face request message."""
+
     class Code(Enum):
+        """Code enum for AvatarFaceRequest."""
+
+        SWITCH_FACE = 0
+        STATUS = 1
+
+    header: Header
+    request_id: String
+    code: int8
+    face_text: String
+
+
+@dataclass
+class AvatarFaceResponse(IdlStruct, typename="AvatarFaceResponse"):
+    """Avatar face response message."""
+
+    class Code(Enum):
+        """Code enum for AvatarFaceResponse."""
+
+        ACTIVE = 0
+        INACTIVE = 1
+        UNKNOWN = 2
+
+    header: Header
+    request_id: String
+    code: int8
+    message: String
+
+
+@dataclass
+class ConfigRequest(IdlStruct, typename="ConfigRequest"):
+    """Request message for configuration requests."""
+
+    header: Header
+    request_id: String
+    config: String = String("")  # ignored for GET_CONFIG
+
+
+@dataclass
+class ConfigResponse(IdlStruct, typename="ConfigResponse"):
+    """Response message for configuration requests."""
+
+    header: Header
+    request_id: String
+    config: String
+    message: String
+
+
+@dataclass
+class ChargingStatus(IdlStruct, typename="ChargingStatus"):
+    """Charging status message."""
+
+    class Code(Enum):
+        """Code enum for ChargingStatus."""
+
         DISCHARGING = 0
         CHARGING = 1
         ENROUTE_CHARGING = 2
