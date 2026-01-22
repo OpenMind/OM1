@@ -1,5 +1,3 @@
-"""Tests for Discord webhook action."""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,30 +10,22 @@ from actions.discord.interface import Discord, DiscordInput
 
 
 class TestDiscordInput:
-    """Tests for DiscordInput dataclass."""
-
     def test_default_values(self):
-        """Test DiscordInput with default values."""
         input_obj = DiscordInput()
         assert input_obj.action == ""
 
     def test_with_value(self):
-        """Test DiscordInput with custom value."""
         input_obj = DiscordInput(action="Hello from robot!")
         assert input_obj.action == "Hello from robot!"
 
     def test_with_markdown(self):
-        """Test DiscordInput with Discord markdown."""
         input_obj = DiscordInput(action="**Bold** and *italic* text")
         assert "**Bold**" in input_obj.action
         assert "*italic*" in input_obj.action
 
 
 class TestDiscordInterface:
-    """Tests for Discord interface."""
-
     def test_interface_creation(self):
-        """Test Discord interface creation."""
         input_obj = DiscordInput(action="Test message")
         output_obj = DiscordInput(action="Test message")
         message = Discord(input=input_obj, output=output_obj)
@@ -44,10 +34,7 @@ class TestDiscordInterface:
 
 
 class TestDiscordWebhookConfig:
-    """Tests for DiscordWebhookConfig."""
-
     def test_with_webhook_url(self):
-        """Test config with webhook URL."""
         config = DiscordWebhookConfig(
             webhook_url="https://discord.com/api/webhooks/123/abc"
         )
@@ -56,7 +43,6 @@ class TestDiscordWebhookConfig:
         assert config.avatar_url is None
 
     def test_with_all_options(self):
-        """Test config with all options."""
         config = DiscordWebhookConfig(
             webhook_url="https://discord.com/api/webhooks/123/abc",
             username="RobotBot",
@@ -68,10 +54,7 @@ class TestDiscordWebhookConfig:
 
 
 class TestDiscordWebhookConnector:
-    """Tests for DiscordWebhookConnector."""
-
     def test_init_with_webhook_url(self):
-        """Test initialization with webhook URL."""
         config = DiscordWebhookConfig(
             webhook_url="https://discord.com/api/webhooks/123/abc"
         )
@@ -81,7 +64,6 @@ class TestDiscordWebhookConnector:
         )
 
     def test_init_without_webhook_url(self):
-        """Test initialization without webhook URL logs warning."""
         with patch("actions.discord.connector.webhook.logging.warning") as mock_warning:
             config = DiscordWebhookConfig(webhook_url="")
             DiscordWebhookConnector(config)
@@ -91,11 +73,8 @@ class TestDiscordWebhookConnector:
 
 
 class TestDiscordWebhookConnectorConnect:
-    """Tests for DiscordWebhookConnector.connect method."""
-
     @pytest.fixture
     def connector_with_url(self):
-        """Create a connector with webhook URL."""
         config = DiscordWebhookConfig(
             webhook_url="https://discord.com/api/webhooks/123/abc"
         )
@@ -103,7 +82,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.fixture
     def connector_with_options(self):
-        """Create a connector with all options."""
         config = DiscordWebhookConfig(
             webhook_url="https://discord.com/api/webhooks/123/abc",
             username="TestBot",
@@ -113,7 +91,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_without_webhook_url(self):
-        """Test that connect returns early without webhook URL."""
         config = DiscordWebhookConfig(webhook_url="")
         connector = DiscordWebhookConnector(config)
 
@@ -124,7 +101,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_with_empty_message(self, connector_with_url):
-        """Test that connect skips empty message."""
         with patch("actions.discord.connector.webhook.logging.warning") as mock_warning:
             input_obj = DiscordInput(action="")
             await connector_with_url.connect(input_obj)
@@ -132,7 +108,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_logs_message(self, connector_with_url):
-        """Test that connect logs the message being sent."""
         with patch(
             "actions.discord.connector.webhook.aiohttp.ClientSession"
         ) as mock_session:
@@ -159,7 +134,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_sends_correct_payload(self, connector_with_url):
-        """Test that connect sends correct JSON payload."""
         with patch(
             "actions.discord.connector.webhook.aiohttp.ClientSession"
         ) as mock_session:
@@ -189,7 +163,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_includes_username_and_avatar(self, connector_with_options):
-        """Test that connect includes username and avatar when configured."""
         with patch(
             "actions.discord.connector.webhook.aiohttp.ClientSession"
         ) as mock_session:
@@ -220,7 +193,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_logs_success_on_204(self, connector_with_url):
-        """Test that connect logs success on 204 response."""
         with patch(
             "actions.discord.connector.webhook.aiohttp.ClientSession"
         ) as mock_session:
@@ -252,7 +224,6 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_handles_error_response(self, connector_with_url):
-        """Test that connect handles error responses."""
         with patch(
             "actions.discord.connector.webhook.aiohttp.ClientSession"
         ) as mock_session:
