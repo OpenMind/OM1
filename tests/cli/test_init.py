@@ -53,7 +53,9 @@ class TestInitCommand:
         )
         assert result.exit_code == 0
 
-    def test_init_existing_without_force(self, runner: CliRunner, mock_config_dir: Path):
+    def test_init_existing_without_force(
+        self, runner: CliRunner, mock_config_dir: Path
+    ):
         """Test init fails on existing config without --force."""
         runner.invoke(app, ["init", "test_existing"])
         result = runner.invoke(app, ["init", "test_existing"])

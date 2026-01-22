@@ -12,7 +12,9 @@ class TestListCommand:
         """Test list --help."""
         result = runner.invoke(app, ["list", "--help"])
         assert result.exit_code == 0
-        assert "mode-aware" in result.output.lower() or "standard" in result.output.lower()
+        assert (
+            "mode-aware" in result.output.lower() or "standard" in result.output.lower()
+        )
 
     def test_list_default(self, runner: CliRunner):
         """Test list command with default options."""

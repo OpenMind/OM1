@@ -25,7 +25,10 @@ class TestInfoCommand:
         """Test info with an existing config (test)."""
         result = runner.invoke(app, ["info", "test"])
         if result.exit_code == 0:
-            assert "configuration" in result.output.lower() or "type" in result.output.lower()
+            assert (
+                "configuration" in result.output.lower()
+                or "type" in result.output.lower()
+            )
 
     def test_info_json_output(self, runner: CliRunner):
         """Test info --json with existing config."""
