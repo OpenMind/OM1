@@ -17,34 +17,14 @@ Usage:
     om1 init <name>         Create a new configuration
 """
 
-import os
-import sys
-
-# Ensure src directory is at the beginning of sys.path
-# This is needed because om1-modules installs a conflicting zenoh_msgs package
-_src_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-elif sys.path[0] != _src_dir:
-    sys.path.remove(_src_dir)
-    sys.path.insert(0, _src_dir)
-
-# Remove cached zenoh_msgs if it was loaded from wrong location
-if "zenoh_msgs" in sys.modules:
-    _zenoh_msgs = sys.modules["zenoh_msgs"]
-    if hasattr(_zenoh_msgs, "__file__") and _zenoh_msgs.__file__:
-        if "site-packages" in _zenoh_msgs.__file__:
-            # Remove the wrongly cached module and its submodules
-            _to_remove = [k for k in sys.modules if k.startswith("zenoh_msgs")]
-            for k in _to_remove:
-                del sys.modules[k]
-
 import multiprocessing as mp
 from typing import Optional
 
 import dotenv
 import typer
 
+# Bootstrap must be imported first to configure sys.path for zenoh_msgs conflict
+import cli._bootstrap  # noqa: F401
 from cli import __version__
 from cli.commands.doctor import doctor
 from cli.commands.env import env
