@@ -102,9 +102,7 @@ Add the following, replacing `/path/to/cyclonedds` with the actual path to your 
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_HOME=/path/to/cyclonedds/install
 export CYCLONEDDS_URI=/path/to/cyclonedds/cyclonedds.xml
-export CYCLONEDDS_INTERFACE=lo
 ```
 
 Apply the changes
@@ -122,8 +120,6 @@ And add the following, replacing `/path/to/cyclonedds` with the actual path to y
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_INTERFACE=lo
-export CYCLONEDDS_HOME=/path/to/cyclonedds/install
 export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
