@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 import zenoh
 
@@ -54,9 +54,13 @@ class UnitreeGo2ChargingProvider(ZenohListenerProvider):
         else:
             logging.warning("Received empty ChargingStatus message")
 
-    def start(self):
+    def start(self, message_callback: Optional[Callable] = None):
         """
         Start the Charging Provider by registering the message callback.
+
+        Parameters
+        ----------
+        message_callback : Optional[Callable], optional
         """
         if not self.running:
             self.register_message_callback(self.charging_message_callback)

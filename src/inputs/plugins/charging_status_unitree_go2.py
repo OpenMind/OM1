@@ -1,33 +1,15 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.unitree_go2_charging_provider import UnitreeGo2ChargingProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class ChargingStatusUnitreeGo2(FuserInput[str]):
+class ChargingStatusUnitreeGo2(FuserInput[SensorConfig, str]):
     """
     Charging status input plugin for LLM prompts.
 
@@ -63,15 +45,15 @@ class ChargingStatusUnitreeGo2(FuserInput[str]):
 
         logging.info("ChargingStatusUnitreeGo2 plugin initialized")
 
-    async def _poll(self) -> Optional[str]:
+    async def _poll(self) -> str:
         """
         Poll the Charging provider for charging status.
 
         Returns
         -------
-        Optional[str]
+        str
             Status message indicating the current charging state,
-            or None if no status is available.
+            or empty string if no status is available.
         """
         await asyncio.sleep(0.1)  # Brief delay to prevent excessive polling
 
@@ -79,7 +61,7 @@ class ChargingStatusUnitreeGo2(FuserInput[str]):
             status = self.charging_provider.charging_status
 
             if status is None:
-                return None
+                return ""
 
             status_map = {
                 0: "DISCHARGING: Robot is running on battery power.",
@@ -99,7 +81,7 @@ class ChargingStatusUnitreeGo2(FuserInput[str]):
             logging.error(f"Error polling charging status: {e}")
             return "CHARGING ERROR: Unable to determine charging state."
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: str) -> Optional[Message]:
         """
         Convert raw input string to Message dataclass.
 
@@ -110,7 +92,7 @@ class ChargingStatusUnitreeGo2(FuserInput[str]):
 
         Returns
         -------
-        Message
+        Optional[Message]
             Message dataclass containing the status and timestamp
         """
         return Message(timestamp=time.time(), message=raw_input)
