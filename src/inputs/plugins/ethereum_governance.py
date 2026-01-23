@@ -81,11 +81,24 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         return None
 
     def decode_eth_response(self, hex_response):
-        """
-        Decodes an Ethereum eth_call response.
-        Extracts and decodes a UTF-8 string from ABI-encoded data.
-        Cleans any unwanted control characters.
-        """
+    """
+    Decodes an Ethereum eth_call response using manual byte slicing.
+
+    Design notes:
+    - This function assumes a fixed ABI layout for the getRuleSet() contract call.
+    - It relies on Python slicing and int.from_bytes semantics.
+    - Empty or short byte slices do NOT raise errors by design
+      (e.g. int.from_bytes(b'', 'big') == 0).
+
+    Implications:
+    - ABI stability is assumed.
+    - Malformed or unexpected input may result in silent defaults
+      instead of explicit exceptions.
+
+    This behavior is intentional and represents a design trade-off
+    favoring simplicity over strict validation.
+    """
+
         if hex_response.startswith("0x"):
             hex_response = hex_response[2:]
 
