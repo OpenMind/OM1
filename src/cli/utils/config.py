@@ -1,5 +1,6 @@
 """Configuration file utilities for CLI."""
 
+import logging
 import os
 from pathlib import Path
 from typing import List, Tuple
@@ -107,7 +108,8 @@ def list_configs() -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
                 mode_configs.append((config_name, display_name))
             else:
                 standard_configs.append((config_name, display_name))
-        except Exception:
+        except Exception as e:
+            logging.debug("Failed to parse config %s: %s", config_name, e)
             standard_configs.append((config_name, "Invalid config"))
 
     return standard_configs, mode_configs
