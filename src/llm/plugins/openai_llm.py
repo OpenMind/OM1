@@ -5,7 +5,7 @@ import typing as T
 import openai
 from pydantic import BaseModel
 
-from llm import LLM, LLMConfig
+from llm import LLM, LLMConfig, with_llm_retry
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from providers.avatar_llm_state_provider import AvatarLLMState
@@ -63,6 +63,7 @@ class OpenAILLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
+    @with_llm_retry()  # Uses config values: self._max_retries and self._retry_backoff_base
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
     ) -> T.Optional[R]:

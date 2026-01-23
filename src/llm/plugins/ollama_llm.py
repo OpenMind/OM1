@@ -6,7 +6,7 @@ import typing as T
 import httpx
 from pydantic import BaseModel, Field
 
-from llm import LLM, LLMConfig
+from llm import LLM, LLMConfig, with_llm_retry
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
 from providers.avatar_llm_state_provider import AvatarLLMState
@@ -118,6 +118,7 @@ class OllamaLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
+    @with_llm_retry()
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
     ) -> T.Optional[R]:
