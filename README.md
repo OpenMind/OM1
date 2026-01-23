@@ -2,7 +2,7 @@
 
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
-<a href="https://docs.openmind.org/">Documentation</a> |
+<a href="https://docs.openmind.org/">Docs</a> |
 <a href="https://x.com/openmind_agi">X</a>
 </p>
 
