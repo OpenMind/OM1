@@ -1,9 +1,11 @@
+import asyncio
 import importlib
 import inspect
 import logging
 import os
 import re
 import typing as T
+from functools import wraps
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,6 +13,100 @@ from llm.function_schemas import generate_function_schemas_from_actions
 from providers.io_provider import IOProvider
 
 R = T.TypeVar("R")
+
+
+def with_llm_retry(max_retries: T.Optional[int] = None, backoff_base: T.Optional[float] = None):
+    """
+    Decorator to add retry logic to LLM API calls with exponential backoff.
+
+    This decorator wraps async LLM methods to automatically retry on failures,
+    improving reliability when dealing with temporary network issues, rate limits,
+    or transient API errors.
+
+    Parameters
+    ----------
+    max_retries : int, optional
+        Maximum number of retry attempts. If None, uses config value (default: 3)
+    backoff_base : float, optional
+        Base for exponential backoff calculation in seconds.
+        If None, uses config value (default: 1.5)
+        Wait time = backoff_base ** attempt (e.g., 1s, 1.5s, 2.25s)
+
+    Returns
+    -------
+    Callable
+        Decorated async function with retry logic
+
+    Examples
+    --------
+    >>> # Use default values from config
+    >>> @with_llm_retry()
+    >>> async def ask(self, prompt, messages):
+    >>>     return await self._client.chat.completions.create(...)
+    
+    >>> # Override for time-sensitive applications
+    >>> @with_llm_retry(max_retries=2, backoff_base=1.0)
+    >>> async def ask(self, prompt, messages):
+    >>>     return await self._client.chat.completions.create(...)
+
+    Notes
+    -----
+    - Retries on any Exception
+    - Uses exponential backoff to avoid overwhelming the API
+    - Logs warnings on retry attempts and errors on final failure
+    - Returns None after all retries are exhausted
+    - Can be configured via LLMConfig or decorator parameters
+    """
+
+    def decorator(func: T.Callable[..., T.Awaitable[T.Optional[R]]]) -> T.Callable[..., T.Awaitable[T.Optional[R]]]:
+        @wraps(func)
+        async def wrapper(self: T.Any, *args: T.Any, **kwargs: T.Any) -> T.Optional[R]:
+            # Get retry config from instance or use decorator params
+            retries = max_retries if max_retries is not None else getattr(self, '_max_retries', 3)
+            backoff = backoff_base if backoff_base is not None else getattr(self, '_retry_backoff_base', 1.5)
+            
+            for attempt in range(retries):
+                try:
+                    return await func(self, *args, **kwargs)
+                except Exception as e:
+                    if attempt < retries - 1:
+                        wait_time = backoff ** attempt
+                        logging.warning(
+                            f"LLM call failed (attempt {attempt + 1}/{retries}), "
+                            f"retrying in {wait_time:.1f}s: {type(e).__name__}: {e}"
+                        )
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logging.error(
+                            f"LLM call failed after {retries} attempts: "
+                            f"{type(e).__name__}: {e}"
+                        )
+                        logging.error(
+                            "=" * 70
+                        )
+                        logging.error(
+                            "LLM is unavailable. The system will continue attempting to call "
+                            "the LLM in the next cycle."
+                        )
+                        logging.error(
+                            "Options:"
+                        )
+                        logging.error(
+                            "  1. Wait - The system will automatically retry in the next cycle"
+                        )
+                        logging.error(
+                            "  2. Exit - Press Ctrl+C to stop the process"
+                        )
+                        logging.error(
+                            "=" * 70
+                        )
+                        # Return None to allow the loop to continue
+                        # The runtime will skip this tick and try again in the next cycle
+                        return None
+
+        return wrapper
+
+    return decorator
 
 
 class LLMConfig(BaseModel):
@@ -50,6 +146,12 @@ class LLMConfig(BaseModel):
     )
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
+    )
+    max_retries: T.Optional[int] = Field(
+        default=3, description="Maximum number of retry attempts for LLM calls"
+    )
+    retry_backoff_base: T.Optional[float] = Field(
+        default=1.5, description="Base for exponential backoff in seconds (e.g., 1.5 means 1s, 1.5s, 2.25s)"
     )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
@@ -129,6 +231,10 @@ class LLM(T.Generic[R]):
 
         # Enable state management by default
         self._skip_state_management: bool = False
+        
+        # Get retry configuration from config
+        self._max_retries = getattr(config, 'max_retries', 3)
+        self._retry_backoff_base = getattr(config, 'retry_backoff_base', 2.0)
 
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
