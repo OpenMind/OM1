@@ -118,13 +118,29 @@ def test(
     test_paths: List[str] = []
 
     if path:
-        test_path = Path(path)
-        if not test_path.is_absolute():
-            test_path = project_root / path
-        if not test_path.exists():
-            print_error(f"Test path not found: {path}")
-            raise typer.Exit(1)
-        test_paths.append(str(test_path))
+        # Handle pytest selectors (e.g., tests/file.py::TestClass::test_method)
+        if "::" in path:
+            # Extract file path part before ::
+            file_part = path.split("::")[0]
+            test_file = Path(file_part)
+            if not test_file.is_absolute():
+                test_file = project_root / file_part
+            if not test_file.exists():
+                print_error(f"Test file not found: {file_part}")
+                raise typer.Exit(1)
+            # Pass full selector to pytest
+            if not Path(path.split("::")[0]).is_absolute():
+                test_paths.append(str(project_root / path))
+            else:
+                test_paths.append(path)
+        else:
+            test_path = Path(path)
+            if not test_path.is_absolute():
+                test_path = project_root / path
+            if not test_path.exists():
+                print_error(f"Test path not found: {path}")
+                raise typer.Exit(1)
+            test_paths.append(str(test_path))
     elif all_tests:
         unit_path = project_root / "tests"
         integration_path = project_root / "tests_integration"
