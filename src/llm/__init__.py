@@ -33,12 +33,24 @@ class LLMConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    base_url: T.Optional[str] = None
-    api_key: T.Optional[str] = None
-    model: T.Optional[str] = None
-    timeout: T.Optional[int] = 10
-    agent_name: T.Optional[str] = "IRIS"
-    history_length: T.Optional[int] = 0
+    base_url: T.Optional[str] = Field(
+        default=None, description="Base URL for the LLM API endpoint"
+    )
+    api_key: T.Optional[str] = Field(
+        default=None, description="Authentication key for the LLM service"
+    )
+    model: T.Optional[str] = Field(
+        default=None, description="Name of the LLM model to use"
+    )
+    timeout: T.Optional[int] = Field(
+        default=10, description="Request timeout in seconds"
+    )
+    agent_name: T.Optional[str] = Field(
+        default="IRIS", description="Name of the agent identity"
+    )
+    history_length: T.Optional[int] = Field(
+        default=0, description="Number of past interactions to keep in context"
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
@@ -95,7 +107,7 @@ class LLM(T.Generic[R]):
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: LLMConfig,
         available_actions: T.Optional[list] = None,
     ):
         # Set up the LLM configuration
@@ -115,7 +127,12 @@ class LLM(T.Generic[R]):
         # Set up the IO provider
         self.io_provider = IOProvider()
 
-    async def ask(self, prompt: str, messages: T.List[T.Dict[str, str]] = []) -> R:
+        # Enable state management by default
+        self._skip_state_management: bool = False
+
+    async def ask(
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the LLM and receive a typed response.
 
@@ -179,9 +196,9 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     return None
 
 
-def load_llm(class_name: str) -> T.Type[LLM]:
+def get_llm_class(class_name: str) -> T.Type[LLM]:
     """
-    Load an LLM class by its class name.
+    Get an LLM class by its class name.
 
     Parameters
     ----------
@@ -209,8 +226,72 @@ def load_llm(class_name: str) -> T.Type[LLM]:
         ):
             raise ValueError(f"'{class_name}' is not a valid LLM subclass")
 
-        logging.debug(f"Loaded LLM {class_name} from {module_name}.py")
+        logging.debug(f"Got LLM class {class_name} from {module_name}.py")
         return llm_class
+
+    except ImportError as e:
+        raise ValueError(f"Could not import LLM module '{module_name}': {e}")
+    except AttributeError:
+        raise ValueError(
+            f"Class '{class_name}' not found in LLM module '{module_name}'"
+        )
+
+
+def load_llm(
+    llm_config: T.Dict[str, T.Any],
+    available_actions: T.Optional[list] = None,
+) -> LLM:
+    """
+    Load an LLM instance with its configuration.
+
+    Parameters
+    ----------
+    llm_config : dict
+        Configuration dictionary
+    available_actions : list, optional
+        List of available actions for function calling
+
+    Returns
+    -------
+    LLM
+        The instantiated LLM
+    """
+    class_name = llm_config["type"]
+    module_name = find_module_with_class(class_name)
+
+    if module_name is None:
+        raise ValueError(f"Class '{class_name}' not found in LLM plugin module")
+
+    try:
+        module = importlib.import_module(f"llm.plugins.{module_name}")
+        llm_class = getattr(module, class_name)
+
+        if not (
+            inspect.isclass(llm_class)
+            and issubclass(llm_class, LLM)
+            and llm_class != LLM
+        ):
+            raise ValueError(f"'{class_name}' is not a valid LLM subclass")
+
+        config_class = None
+        for _, obj in module.__dict__.items():
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, LLMConfig)
+                and obj != LLMConfig
+            ):
+                config_class = obj
+
+        config_dict = llm_config.get("config", {})
+        if config_class is not None:
+            config = config_class(
+                **(config_dict if isinstance(config_dict, dict) else {})
+            )
+        else:
+            config = LLMConfig(**(config_dict if isinstance(config_dict, dict) else {}))
+
+        logging.debug(f"Loaded LLM {class_name} from {module_name}.py")
+        return llm_class(config=config, available_actions=available_actions)
 
     except ImportError as e:
         raise ValueError(f"Could not import LLM module '{module_name}': {e}")

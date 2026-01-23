@@ -1,18 +1,53 @@
 import logging
+from typing import Optional
+
+from pydantic import Field
 
 from backgrounds.base import Background, BackgroundConfig
 from providers.gps_provider import GpsProvider
 
 
-class Gps(Background):
+class GpsConfig(BackgroundConfig):
     """
-    Reads GPS and Magnetometer data from GPS provider.
+    Configuration for GPS Background.
+
+    Parameters
+    ----------
+    serial_port : Optional[str]
+        Serial port for GPS device.
     """
 
-    def __init__(self, config: BackgroundConfig = BackgroundConfig()):
+    serial_port: Optional[str] = Field(
+        default=None, description="Serial port for GPS device"
+    )
+
+
+class Gps(Background[GpsConfig]):
+    """
+    Background task for reading GPS position and magnetometer heading data.
+
+    Manages a GpsProvider instance that connects to a GPS device via serial port,
+    processing GPS location data (latitude, longitude, altitude) and magnetometer
+    data (compass heading) for outdoor navigation and orientation.
+
+    GPS data provides global position information for outdoor localization, while
+    magnetometer data provides heading information to determine orientation.
+    """
+
+    def __init__(self, config: GpsConfig):
+        """
+        Initialize the Gps background task instance.
+
+        Sets up the GPS provider using the specified serial port from the configuration.
+
+        Parameters
+        ----------
+        config : GpsConfig
+            Configuration object containing the GPS serial port.
+        """
         super().__init__(config)
 
-        port = getattr(config, "serial_port", None)
+        port = self.config.serial_port
         if port is None:
             logging.error("GPS serial port not specified in config")
             return

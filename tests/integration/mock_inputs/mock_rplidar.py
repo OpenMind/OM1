@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
-from inputs.plugins.rplidar import Message, RPLidar
+from inputs.plugins.rplidar import Message, RPLidar, RPLidarConfig
 from providers.io_provider import IOProvider
 from providers.rplidar_provider import RPLidarProvider
 from tests.integration.mock_inputs.data_providers.mock_lidar_scan_provider import (
@@ -24,13 +24,13 @@ class MockRPLidar(RPLidar):
     connecting to real hardware.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: RPLidarConfig = RPLidarConfig()):
         """
         Initialize with mock lidar provider that reuses real processing logic.
 
         Parameters
         ----------
-        config : SensorConfig, optional
+        config : RPLidarConfig, optional
             Configuration for the sensor
         """
         # Initialize base FuserInput class, skipping RPLidar.__init__ to avoid hardware setup

@@ -15,6 +15,10 @@ R = TypeVar("R")
 
 @dataclass
 class ChatMessage:
+    """
+    Represents a chat message with role and content.
+    """
+
     role: str
     content: str
 
@@ -27,6 +31,10 @@ ACTION_MAP = {
 
 
 class LLMHistoryManager:
+    """
+    Manages the history of interactions for LLMs, including summarization.
+    """
+
     def __init__(
         self,
         config: LLMConfig,
@@ -34,6 +42,24 @@ class LLMHistoryManager:
         system_prompt: str = "You are a helpful assistant that summarizes a succession of events and interactions accurately and concisely. You are watching a robot named **** interact with people and the world. Your goal is to help **** remember what the robot felt, saw, and heard, and how the robot responded to those inputs.",
         summary_command: str = "\nConsidering the new information, write an updated summary of the situation for ****. Emphasize information that **** needs to know to respond to people and situations in the best possible and most compelling way.",
     ):
+        """
+        Initialize the LLMHistoryManager.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration object containing LLM settings and parameters.
+        client : Union[openai.AsyncClient, openai.OpenAI]
+            OpenAI client instance for making API calls (async or sync).
+        system_prompt : str, optional
+            System prompt template for summarization. Defaults to a prompt
+            that describes the assistant's role in summarizing robot interactions.
+            The string "****" will be replaced with the agent name.
+        summary_command : str, optional
+            Command template appended to messages when requesting summaries.
+            Defaults to a command asking for an updated situation summary.
+            The string "****" will be replaced with the agent name.
+        """
         self.client = client
 
         # configuration
@@ -65,8 +91,28 @@ class LLMHistoryManager:
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
         Summarize a list of messages using the OpenAI API.
-        Returns a new message containing the summary.
+
+        Parameters
+        ----------
+        messages : List[ChatMessage]
+            List of chat messages to summarize.
+
+        Returns
+        -------
+        ChatMessage
+            A new message containing the summary with role "assistant" or
+            "system" (in case of errors).
+
+        Raises
+        ------
+        asyncio.TimeoutError
+            If the API request times out.
+        openai.APIError
+            If there's an error with the OpenAI API.
         """
+        # Set timeout for API call
+        timeout = 10.0  # seconds
+
         try:
             if not messages:
                 logging.warning("No messages to summarize")
@@ -100,18 +146,30 @@ class LLMHistoryManager:
 
             logging.info(f"Information to summarize:\n{summary_prompt}")
 
-            # Set timeout for API call
-            timeout = 10.0  # seconds
-            response = await asyncio.wait_for(
-                self.client.chat.completions.create(  # type: ignore
-                    model=self.config.model or "gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": self.system_prompt},
-                        {"role": "user", "content": summary_prompt},
-                    ],
-                ),
-                timeout=timeout,
-            )
+            api_kwargs = {
+                "model": self.config.model or "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": summary_prompt},
+                ],
+            }
+
+            if isinstance(self.client, openai.AsyncClient):
+                response = await asyncio.wait_for(
+                    self.client.chat.completions.create(**api_kwargs),
+                    timeout=timeout,
+                )
+            else:
+                loop = asyncio.get_running_loop()
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            self.client.chat.completions.create, **api_kwargs
+                        ),
+                    ),
+                    timeout=timeout,
+                )
 
             if not response or not response.choices:
                 logging.error("Invalid API response format")
@@ -120,6 +178,11 @@ class LLMHistoryManager:
                 )
 
             summary = response.choices[0].message.content
+            if summary is None:
+                logging.error("Received empty summary from API")
+                return ChatMessage(
+                    role="system", content="Error: Received empty summary from API"
+                )
             return ChatMessage(role="assistant", content=f"Previously, {summary}")
 
         except asyncio.TimeoutError:
@@ -136,7 +199,19 @@ class LLMHistoryManager:
 
     async def start_summary_task(self, messages: List[ChatMessage]):
         """
-        Start a new task to summarize the messages.
+        Start a new asynchronous task to summarize the messages.
+
+        Parameters
+        ----------
+        messages : List[ChatMessage]
+            List of chat messages to summarize. This list will be modified
+            in-place when the summary task completes successfully.
+
+        Notes
+        -----
+        If a previous summary task is still running, this method will return
+        early without starting a new task. The summary result will be added
+        to the messages list via a callback when the task completes.
         """
         if not messages:
             logging.warning("No messages to summarize in start_summary_task")
@@ -148,6 +223,7 @@ class LLMHistoryManager:
                 return
 
             messages_copy = messages.copy()
+            num_summarized = len(messages_copy)
             self._summary_task = asyncio.create_task(
                 self.summarize_messages(messages_copy)
             )
@@ -160,8 +236,8 @@ class LLMHistoryManager:
 
                     summary_message = task.result()
                     if summary_message.role == "assistant":
-                        messages.clear()
-                        messages.append(summary_message)
+                        del messages[:num_summarized]
+                        messages.insert(0, summary_message)
                         logging.info("Successfully summarized the state")
                     elif (
                         summary_message.role == "system"
@@ -195,14 +271,33 @@ class LLMHistoryManager:
     def get_messages(self) -> List[dict]:
         """
         Get messages in format required by OpenAI API.
+
+        Returns
+        -------
+        List[dict]
+            List of message dictionaries with "role" and "content" keys,
+            formatted for OpenAI API consumption.
         """
         return [{"role": msg.role, "content": msg.content} for msg in self.history]
 
     @staticmethod
-    def update_history():
+    def update_history() -> (
+        Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]
+    ):
+        """
+        Decorator to manage LLM history around an async function.
+
+        Returns
+        -------
+        Callable
+            Decorator function.
+        """
+
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
             @functools.wraps(func)
-            async def wrapper(self: Any, prompt: str, *args, **kwargs) -> R:
+            async def wrapper(self: Any, prompt: str, *args: Any, **kwargs: Any) -> R:
+                if getattr(self, "_skip_state_management", False):
+                    return await func(self, prompt, *args, **kwargs)
 
                 if self._config.history_length == 0:
                     response = await func(self, prompt, [], *args, **kwargs)
@@ -214,13 +309,13 @@ class LLMHistoryManager:
                 cycle = self.history_manager.frame_index
                 logging.debug(f"LLM Tasking cycle debug tracker: {cycle}")
 
+                current_tick = self.io_provider.tick_counter
                 formatted_inputs = f"{self.agent_name} sensed the following: "
                 for input_type, input_info in self.io_provider.inputs.items():
-                    logging.debug(f"LLM: {input_type}")
-                    logging.debug(f"LLM: {input_info}")
-                    formatted_inputs += f"{input_type}. {input_info.input} | "
-
-                # formatted_inputs = f"**** sensed the following: {" | ".join(f"{input_type}: {input_info.input}" for input_type, input_info in self.io_provider.inputs.items())}"
+                    if input_info.tick == current_tick:
+                        logging.debug(f"LLM: {input_type} (tick #{input_info.tick})")
+                        logging.debug(f"LLM: {input_info}")
+                        formatted_inputs += f"{input_type}. {input_info.input} | "
 
                 formatted_inputs = formatted_inputs.replace("..", ".")
                 formatted_inputs = formatted_inputs.replace("  ", " ")
@@ -254,7 +349,7 @@ class LLMHistoryManager:
                     action_message = action_message.replace("****", self.agent_name)
 
                     self.history_manager.history.append(
-                        ChatMessage(role="user", content=action_message)
+                        ChatMessage(role="assistant", content=action_message)
                     )
 
                     if (

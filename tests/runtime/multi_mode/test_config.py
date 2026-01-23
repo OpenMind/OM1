@@ -59,13 +59,12 @@ def mock_background():
 def sample_mode_config():
     """Sample mode configuration for testing."""
     return ModeConfig(
+        version="v1.0.0",
         name="test_mode",
         display_name="Test Mode",
         description="A test mode for unit testing",
         system_prompt_base="You are a test assistant.",
         hertz=2.0,
-        entry_message="Entering test mode",
-        exit_message="Exiting test mode",
         timeout_seconds=300.0,
         remember_locations=True,
         save_interactions=True,
@@ -80,7 +79,6 @@ def sample_system_config():
         default_mode="default",
         config_name="test_config",
         allow_manual_switching=True,
-        transition_announcement=True,
         mode_memory_enabled=True,
         api_key="test_api_key",
         robot_ip="192.168.1.100",
@@ -149,8 +147,6 @@ class TestModeConfig:
         assert config.description == "A test mode for unit testing"
         assert config.system_prompt_base == "You are a test assistant."
         assert config.hertz == 2.0
-        assert config.entry_message == "Entering test mode"
-        assert config.exit_message == "Exiting test mode"
         assert config.timeout_seconds == 300.0
         assert config.remember_locations is True
         assert config.save_interactions is True
@@ -158,14 +154,13 @@ class TestModeConfig:
     def test_mode_config_defaults(self):
         """Test mode config with default values."""
         config = ModeConfig(
+            version="v1.0.0",
             name="minimal_mode",
             display_name="Minimal Mode",
             description="Minimal test mode",
             system_prompt_base="Basic prompt",
         )
         assert config.hertz == 1.0
-        assert config.entry_message is None
-        assert config.exit_message is None
         assert config.timeout_seconds is None
         assert config.remember_locations is False
         assert config.save_interactions is False
@@ -243,7 +238,6 @@ class TestModeSystemConfig:
         assert config.default_mode == "default"
         assert config.config_name == "test_config"
         assert config.allow_manual_switching is True
-        assert config.transition_announcement is True
         assert config.mode_memory_enabled is True
         assert config.api_key == "test_api_key"
         assert config.robot_ip == "192.168.1.100"
@@ -260,7 +254,6 @@ class TestModeSystemConfig:
         )
         assert config.config_name == ""
         assert config.allow_manual_switching is True
-        assert config.transition_announcement is True
         assert config.mode_memory_enabled is True
         assert config.api_key is None
         assert config.robot_ip is None
@@ -297,11 +290,11 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading all component types."""
-        mock_load_input.return_value = lambda config: mock_sensor
-        mock_load_simulator.return_value = lambda config: mock_simulator
+        mock_load_input.return_value = mock_sensor
+        mock_load_simulator.return_value = mock_simulator
         mock_load_action.return_value = mock_action
-        mock_load_background.return_value = lambda config: mock_background
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_background.return_value = mock_background
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_inputs = [{"type": "test_input", "config": {}}]
         sample_mode_config._raw_simulators = [{"type": "test_simulator", "config": {}}]
@@ -332,7 +325,7 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading components with global LLM configuration."""
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_llm = None
         sample_system_config.global_cortex_llm = {"type": "global_llm", "config": {}}
@@ -340,7 +333,7 @@ class TestLoadModeComponents:
         _load_mode_components(sample_mode_config, sample_system_config)
 
         assert sample_mode_config.cortex_llm == mock_llm
-        mock_load_llm.assert_called_once_with("global_llm")
+        mock_load_llm.assert_called_once()
 
     def test_load_mode_components_no_llm_raises_error(
         self,
@@ -372,18 +365,21 @@ class TestLoadModeConfig:
     def test_load_mode_config_env_fallback(self):
         """Test that environment variables are used as fallback."""
         config_data = {
-            "name": "env_test",
+            "version": "v1.0.1",
             "default_mode": "default",
-            "robot_ip": "",
             "api_key": "openmind_free",
-            "URID": "default",
+            "system_governance": "Env governance",
             "modes": {
                 "default": {
+                    "hertz": 1.0,
                     "display_name": "Default",
                     "description": "Default mode",
                     "system_prompt_base": "Test prompt",
+                    "agent_inputs": [],
+                    "agent_actions": [],
                 }
             },
+            "cortex_llm": {"type": "test_llm"},
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
@@ -409,9 +405,48 @@ class TestLoadModeConfig:
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
-            "name": "unitree_test",
-            "default_mode": "default",
+            "version": "v1.0.1",
             "unitree_ethernet": "eth0",
+            "default_mode": "default",
+            "api_key": "openmind_free",
+            "system_governance": "Env governance",
+            "modes": {
+                "default": {
+                    "hertz": 1.0,
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    "system_prompt_base": "Test prompt",
+                    "agent_inputs": [],
+                    "agent_actions": [],
+                }
+            },
+            "cortex_llm": {"type": "test_llm"},
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.multi_mode.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                config = load_mode_config("unitree_test")
+
+                assert config.unitree_ethernet == "eth0"
+                mock_load_unitree.assert_called_once_with("eth0")
+
+        finally:
+            os.unlink(temp_file)
+
+    def test_load_mode_config_invalid_version(self):
+        """Test load_mode_config with invalid version format."""
+        config_data = {
+            "version": "invalid_version",
+            "name": "invalid_version_test",
+            "default_mode": "default",
             "modes": {
                 "default": {
                     "display_name": "Default",
@@ -431,10 +466,8 @@ class TestLoadModeConfig:
             with patch("runtime.multi_mode.config.os.path.join") as mock_join:
                 mock_join.return_value = temp_file
 
-                config = load_mode_config("unitree_test")
-
-                assert config.unitree_ethernet == "eth0"
-                mock_load_unitree.assert_called_once_with("eth0")
+                with pytest.raises(ValueError, match="Invalid version format"):
+                    load_mode_config("invalid_version_test")
 
         finally:
             os.unlink(temp_file)
