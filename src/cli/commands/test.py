@@ -138,7 +138,15 @@ def test(
             print_error("Integration tests directory not found: tests_integration/")
             raise typer.Exit(1)
         test_paths.append(str(integration_path))
+    elif unit:
+        # Explicit unit test mode - only run tests/ directory
+        unit_path = project_root / "tests"
+        if not unit_path.exists():
+            print_error("Unit tests directory not found: tests/")
+            raise typer.Exit(1)
+        test_paths.append(str(unit_path))
     else:
+        # Default: run unit tests
         unit_path = project_root / "tests"
         if not unit_path.exists():
             print_error("Tests directory not found: tests/")

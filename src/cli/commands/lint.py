@@ -162,18 +162,34 @@ def _run_ruff_format(
     verbose: bool,
     cwd: Path,
 ) -> bool:
-    """Run ruff formatter."""
+    """Run ruff formatter.
+
+    Parameters
+    ----------
+    target : str
+        Path to format
+    apply : bool
+        If True, apply formatting changes. If False with check_only=False,
+        shows diff without applying.
+    check_only : bool
+        If True, only check formatting (don't modify files)
+    verbose : bool
+        Enable verbose output
+    cwd : Path
+        Working directory
+    """
     console.print("[cyan]Running ruff format...[/cyan]")
 
     cmd: List[str] = [sys.executable, "-m", "ruff", "format", target]
 
     if check_only:
         cmd.append("--check")
+    elif not apply:
+        # Show diff but don't apply
+        cmd.append("--diff")
 
     if verbose:
         cmd.append("--verbose")
-
-    if verbose:
         print_info(f"Command: {' '.join(cmd)}")
 
     try:
