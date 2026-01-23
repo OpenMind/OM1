@@ -56,10 +56,28 @@ Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it 
 
 ### Launching OM1
 
-Run
-```bash
-uv run src/run.py spot
-```
+
+To launch OM1, use the following command from the project's root directory (i.e., after running the cd OM1 command). This command automatically activates the virtual environment managed by the uv package manager and runs the specified agent.
+
+
+Important Note: Before running the command, ensure your API key (OM_API_KEY) is defined in the .env file or as an environment variable.
+
+Run:
+Shell
+```uv run src/run.py <AGENT_ADI>```
+
+Example: To run the spot agent:
+Shell
+```uv run src/run.py spot```
+Available Agents
+
+The <AGENT_NAME> parameter represents the name of the configuration file, without the .json5 extension, located in the config/ directory.
+| AGENT_NAME Example | Configuration File | Description |
+| --- | --- | --- |
+| **spot** | `config/spot.json5` | The default Spot agent (webcam and LLM integration). |
+| **turtlebot4** | `config/turtlebot4.json5` | Base configuration for the TurtleBot 4 robot. |
+| **unitree_go2_autonomy** | `config/unitree_go2_autonomy.json5` | Autonomy mode for the Unitree Go2 robot. |
+
 
 After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
 
