@@ -351,12 +351,12 @@ class GreetingConversationStateMachineProvider:
                 confidence_result["overall"] < 0.3
                 and confidence_result["breakdown"]["engagement"] < 0.2
             ):
-                print("Person re-engaged, reverting to conversing")
+                logging.info("Person re-engaged, reverting to conversing")
                 return ConversationState.CONVERSING
 
         # Emergency timeout - force finish after very long concluding
         if self.current_state == ConversationState.CONCLUDING and time_in_state > 15.0:
-            print("Emergency timeout - forcing finish")
+            logging.info("Emergency timeout - forcing finish")
             return ConversationState.FINISHED
 
         return self.current_state

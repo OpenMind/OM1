@@ -367,7 +367,9 @@ class ActionOrchestrator:
                 else:
                     converted_params[key] = value
             else:
-                converted_params[key] = value
+                logging.warning(
+                    f"Parameter '{key}' not found in input type hints for action '{agent_action.llm_label}'"
+                )
 
         input_interface = input_type(**converted_params)
 
