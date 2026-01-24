@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import threading
-import time
 import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
@@ -77,6 +76,9 @@ class ActionOrchestrator:
                     f"Connector {agent_action.llm_label} already submitted, skipping."
                 )
                 continue
+
+            agent_action.connector.set_stop_event(self._stop_event)
+
             self._connector_executor.submit(self._run_connector_loop, agent_action)
             self._submitted_connectors.add(agent_action.llm_label)
 
@@ -99,7 +101,7 @@ class ActionOrchestrator:
                 action.connector.tick()
             except Exception as e:
                 logging.error(f"Error in connector {action.llm_label}: {e}")
-                time.sleep(0.1)
+                self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """

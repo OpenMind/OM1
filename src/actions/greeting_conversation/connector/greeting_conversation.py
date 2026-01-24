@@ -145,7 +145,7 @@ class GreetingConversationConnector(
         """
         logging.info("Ticking....")
 
-        time.sleep(10)
+        self.sleep(10)
 
         if time.time() - self.tts_triggered_time < self.tts_duration:
             logging.info(
