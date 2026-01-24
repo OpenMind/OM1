@@ -5,21 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSocket Video Stream with Remote Control</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-            padding: 20px;
-        }
+       /* Dark Mode Feature - Toggle between light and dark themes */
+:root {
+    --bg-color: #f0f0f0;
+    --text-color: #333;
+    --container-bg: white;
+}
 
+[data-theme="dark"] {
+    --bg-color: #1a1a1a;
+    --text-color: #ffffff;
+    --container-bg: #2d2d2d;
+}
+        
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+}
         .container {
             text-align: center;
-            background-color: white;
+            background-color: var(--container-bg);
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -212,6 +221,9 @@
     </style>
 </head>
 <body>
+    <button onclick="toggleTheme()" style="position: fixed; top: 10px; right: 10px; padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; background: #007bff; color: white; z-index: 1000;">
+        🌙 Dark Mode
+    </button>
     <div class="container">
         <h1>WebSocket Video Stream with Remote Control</h1>
 
@@ -676,5 +688,28 @@
             updateCommandStatus();
         });
     </script>
+
+    <script>
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    const button = document.querySelector('button[onclick="toggleTheme()"]');
+    button.textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    const button = document.querySelector('button[onclick="toggleTheme()"]');
+    if (button) {
+        button.textContent = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+});
+</script>
 </body>
 </html>
