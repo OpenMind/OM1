@@ -187,10 +187,12 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
         try:
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         except Exception:
+            logging.exception("UnitreeRealSenseDevVLM: Cap set buffer size failed")
             pass
         try:
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # type: ignore
         except Exception:
+            logging.exception("UnitreeRealSenseDevVLM: Cap set FOURCC failed")
             pass
         return cap
 
@@ -224,7 +226,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
 
             try:
                 result = subprocess.run(
-                    ["v4l2-ctl", f"--device={device}", "--list-formats"],
+                    ["/usr/bin/v4l2-ctl", f"--device={device}", "--list-formats"],
                     capture_output=True,
                     text=True,
                     shell=False,

@@ -52,6 +52,7 @@ def _parse_qwen_tool_calls(text: str) -> list:
                     }
                 )
         except Exception:
+            logging.exception("CLI: Error in loop, continuing...")
             continue
     return tool_calls
 

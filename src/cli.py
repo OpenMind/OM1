@@ -611,6 +611,7 @@ def _check_class_in_dir(directory: str, class_name: str) -> bool:
                         if isinstance(node, ast.ClassDef) and node.name == class_name:
                             return True
             except Exception:
+                logging.exception("CLI: Error in loop, continuing...")
                 continue
     return False
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 from collections import deque
 from queue import Empty, Queue
@@ -107,6 +108,7 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
             try:
                 self.message_buffer.put_nowait(text_line)
             except Exception:
+                logging.exception("FacePresenceInput: Failed to put message in buffer")
                 pass
 
     async def _poll(self) -> Optional[str]:

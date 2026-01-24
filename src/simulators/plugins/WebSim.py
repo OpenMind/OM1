@@ -508,7 +508,7 @@ class WebSim(Simulator):
         """
         config = uvicorn.Config(
             app=self.app,
-            host="0.0.0.0",
+            host="127.0.0.1",
             port=8000,
             log_level="error",
             server_header=False,
