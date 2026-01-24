@@ -118,8 +118,23 @@ class MessageHookHandler(LifecycleHookHandler):
                 formatted_message = message.format(**context)
                 logging.info(f"Lifecycle hook message: {formatted_message}")
 
+                api_key = self.config.get("api_key")
+                elevenlabs_api_key = self.config.get("elevenlabs_api_key")
+                voice_id = self.config.get("voice_id", "JBFqnCBsd6RMkjVDRZzb")
+                model_id = self.config.get("model_id", "eleven_flash_v2_5")
+                output_format = self.config.get("output_format", "mp3_44100_128")
+
                 try:
-                    ElevenLabsTTSProvider().add_pending_message(formatted_message)
+                    provider = ElevenLabsTTSProvider(
+                        url="https://api.openmind.org/api/core/elevenlabs/tts",
+                        api_key=api_key,
+                        elevenlabs_api_key=elevenlabs_api_key,
+                        voice_id=voice_id,
+                        model_id=model_id,
+                        output_format=output_format,
+                    )
+                    provider.start()
+                    provider.add_pending_message(formatted_message)
                 except Exception as e:
                     logging.error(f"Error adding TTS message: {e}")
                     return False

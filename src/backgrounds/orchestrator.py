@@ -61,6 +61,9 @@ class BackgroundOrchestrator:
                     f"Background {background.name} already submitted, skipping."
                 )
                 continue
+
+            background.set_stop_event(self._stop_event)
+
             self._background_executor.submit(self._run_background_loop, background)
             self._submitted_backgrounds.add(background.name)
 

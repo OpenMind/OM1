@@ -130,6 +130,10 @@ class ModeCortexRuntime:
 
         logging.info(f"Initializing mode: {mode_config.display_name}")
 
+        self.mode_manager.state.user_context.clear()
+
+        logging.info("Setting up cortex components for mode")
+
         self.fuser = Fuser(self.current_config)
         self.action_orchestrator = ActionOrchestrator(self.current_config)
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
@@ -220,6 +224,17 @@ class ModeCortexRuntime:
         logging.debug("Stopping current orchestrators...")
 
         self.sleep_ticker_provider.skip_sleep = True
+
+        if self.background_orchestrator:
+            self.background_orchestrator.stop()
+
+        if self.simulator_orchestrator:
+            logging.debug("Stopping simulator orchestrator")
+            self.simulator_orchestrator.stop()
+
+        if self.action_orchestrator:
+            logging.debug("Stopping action orchestrator")
+            self.action_orchestrator.stop()
 
         tasks_to_cancel = {}
 

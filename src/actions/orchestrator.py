@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import threading
 import time
@@ -332,10 +333,46 @@ class ActionOrchestrator:
         logging.debug(
             f"Calling action {agent_action.llm_label} with type {action.type.lower()} and argument {action.value}"
         )
-        input_interface = T.get_type_hints(agent_action.interface)["input"](
-            **{"action": action.value}
-        )
+
+        try:
+            parsed_value = json.loads(action.value)
+            if isinstance(parsed_value, dict):
+                input_params = parsed_value
+            else:
+                input_params = {"action": action.value}
+        except (json.JSONDecodeError, TypeError):
+            input_params = {"action": action.value}
+
+        input_type = T.get_type_hints(agent_action.interface)["input"]
+        input_type_hints = T.get_type_hints(input_type)
+
+        converted_params = {}
+        for key, value in input_params.items():
+            if key in input_type_hints:
+                expected_type = input_type_hints[key]
+                if hasattr(expected_type, "__mro__") and any(
+                    base.__name__ == "Enum" for base in expected_type.__mro__
+                ):
+                    converted_params[key] = expected_type(value)
+                elif expected_type is float:
+                    converted_params[key] = float(value)
+                elif expected_type is int:
+                    converted_params[key] = int(value)
+                elif expected_type is bool:
+                    converted_params[key] = (
+                        bool(value)
+                        if not isinstance(value, str)
+                        else value.lower() in ("true", "1", "yes")
+                    )
+                else:
+                    converted_params[key] = value
+            else:
+                converted_params[key] = value
+
+        input_interface = input_type(**converted_params)
+
         await agent_action.connector.connect(input_interface)
+
         return input_interface
 
     def stop(self):
