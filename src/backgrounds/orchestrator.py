@@ -2,6 +2,7 @@ import asyncio
 import logging
 import threading
 import time
+import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
@@ -15,6 +16,11 @@ class BackgroundOrchestrator:
     Handles concurrent execution of multiple background tasks in separate
     threads, ensuring they run independently without blocking the main event loop.
     Supports graceful shutdown and error handling for individual background tasks.
+
+    This class supports the context manager protocol for proper resource cleanup:
+        with BackgroundOrchestrator(config) as orchestrator:
+            orchestrator.start()
+            # ... use orchestrator ...
     """
 
     _config: RuntimeConfig
@@ -22,6 +28,7 @@ class BackgroundOrchestrator:
     _background_executor: ThreadPoolExecutor
     _submitted_backgrounds: set[str]
     _stop_event: threading.Event
+    _stopped: bool
 
     def __init__(self, config: RuntimeConfig):
         """
@@ -41,6 +48,7 @@ class BackgroundOrchestrator:
         )
         self._submitted_backgrounds = set()
         self._stop_event = threading.Event()
+        self._stopped = False
 
     def start(self) -> asyncio.Future:
         """
@@ -82,19 +90,62 @@ class BackgroundOrchestrator:
                 logging.error(f"Error in background {background.name}: {e}")
                 time.sleep(0.1)
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the background executor and wait for all tasks to complete.
 
         Sets the stop event to signal all background loops to terminate,
         then shuts down the thread pool executor and waits for all running
         tasks to finish gracefully.
+
+        This method is idempotent - calling it multiple times is safe.
         """
+        if self._stopped:
+            return
+        self._stopped = True
         self._stop_event.set()
         self._background_executor.shutdown(wait=True)
 
-    def __del__(self):
+    def __enter__(self) -> "BackgroundOrchestrator":
         """
-        Clean up the BackgroundOrchestrator by stopping the executor.
+        Enter the context manager.
+
+        Returns
+        -------
+        BackgroundOrchestrator
+            The orchestrator instance.
+        """
+        return self
+
+    def __exit__(
+        self,
+        exc_type: T.Optional[type],
+        exc_val: T.Optional[BaseException],
+        exc_tb: T.Optional[T.Any],
+    ) -> None:
+        """
+        Exit the context manager and ensure resources are cleaned up.
+
+        Parameters
+        ----------
+        exc_type : Optional[type]
+            The exception type if an exception was raised.
+        exc_val : Optional[BaseException]
+            The exception value if an exception was raised.
+        exc_tb : Optional[Any]
+            The traceback if an exception was raised.
         """
         self.stop()
+
+    def __del__(self) -> None:
+        """
+        Clean up the BackgroundOrchestrator by stopping the executor.
+
+        Note: This is a fallback cleanup mechanism. Prefer using the context
+        manager protocol or explicitly calling stop() for reliable cleanup.
+        """
+        try:
+            self.stop()
+        except Exception:
+            # Suppress exceptions during garbage collection
+            pass

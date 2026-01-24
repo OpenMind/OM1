@@ -14,6 +14,11 @@ class SimulatorOrchestrator:
     Manages data flow to one or more simulators.
 
     Note: It is important that the simulators do not block the event loop.
+
+    This class supports the context manager protocol for proper resource cleanup:
+        with SimulatorOrchestrator(config) as orchestrator:
+            orchestrator.start()
+            # ... use orchestrator ...
     """
 
     promise_queue: T.List[asyncio.Task[T.Any]]
@@ -22,6 +27,7 @@ class SimulatorOrchestrator:
     _simulator_executor: ThreadPoolExecutor
     _submitted_simulators: T.Set[str]
     _stop_event: threading.Event
+    _stopped: bool
 
     def __init__(self, config: RuntimeConfig):
         self._config = config
@@ -34,6 +40,7 @@ class SimulatorOrchestrator:
         )
         self._submitted_simulators = set()
         self._stop_event = threading.Event()
+        self._stopped = False
 
     def start(self):
         """
@@ -119,15 +126,58 @@ class SimulatorOrchestrator:
         simulator.sim(actions)
         return None
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the simulator executor and wait for all tasks to complete.
+
+        This method is idempotent - calling it multiple times is safe.
         """
+        if self._stopped:
+            return
+        self._stopped = True
         self._stop_event.set()
         self._simulator_executor.shutdown(wait=True)
 
-    def __del__(self):
+    def __enter__(self) -> "SimulatorOrchestrator":
         """
-        Clean up the SimulatorOrchestrator by stopping the executor.
+        Enter the context manager.
+
+        Returns
+        -------
+        SimulatorOrchestrator
+            The orchestrator instance.
+        """
+        return self
+
+    def __exit__(
+        self,
+        exc_type: T.Optional[type],
+        exc_val: T.Optional[BaseException],
+        exc_tb: T.Optional[T.Any],
+    ) -> None:
+        """
+        Exit the context manager and ensure resources are cleaned up.
+
+        Parameters
+        ----------
+        exc_type : Optional[type]
+            The exception type if an exception was raised.
+        exc_val : Optional[BaseException]
+            The exception value if an exception was raised.
+        exc_tb : Optional[Any]
+            The traceback if an exception was raised.
         """
         self.stop()
+
+    def __del__(self) -> None:
+        """
+        Clean up the SimulatorOrchestrator by stopping the executor.
+
+        Note: This is a fallback cleanup mechanism. Prefer using the context
+        manager protocol or explicitly calling stop() for reliable cleanup.
+        """
+        try:
+            self.stop()
+        except Exception:
+            # Suppress exceptions during garbage collection
+            pass

@@ -20,6 +20,11 @@ class ActionOrchestrator:
     - dependencies: Actions wait for their dependencies to complete before executing
 
     Note: It is very important that the actions do not block the event loop.
+
+    This class supports the context manager protocol for proper resource cleanup:
+        with ActionOrchestrator(config) as orchestrator:
+            orchestrator.start()
+            # ... use orchestrator ...
     """
 
     promise_queue: T.List[asyncio.Task[T.Any]]
@@ -31,6 +36,7 @@ class ActionOrchestrator:
     _execution_mode: str
     _action_dependencies: T.Dict[str, T.List[str]]
     _completed_actions: T.Dict[str, asyncio.Event]
+    _stopped: bool
 
     def __init__(self, config: RuntimeConfig):
         """
@@ -56,6 +62,7 @@ class ActionOrchestrator:
         self._execution_mode = config.action_execution_mode or "concurrent"
         self._action_dependencies = config.action_dependencies or {}
         self._completed_actions = {}
+        self._stopped = False
 
     def start(self) -> asyncio.Future:
         """
@@ -338,15 +345,58 @@ class ActionOrchestrator:
         await agent_action.connector.connect(input_interface)
         return input_interface
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the action executor and wait for all tasks to complete.
+
+        This method is idempotent - calling it multiple times is safe.
         """
+        if self._stopped:
+            return
+        self._stopped = True
         self._stop_event.set()
         self._connector_executor.shutdown(wait=True)
 
-    def __del__(self):
+    def __enter__(self) -> "ActionOrchestrator":
         """
-        Clean up the ActionOrchestrator by stopping the executor.
+        Enter the context manager.
+
+        Returns
+        -------
+        ActionOrchestrator
+            The orchestrator instance.
+        """
+        return self
+
+    def __exit__(
+        self,
+        exc_type: T.Optional[type],
+        exc_val: T.Optional[BaseException],
+        exc_tb: T.Optional[T.Any],
+    ) -> None:
+        """
+        Exit the context manager and ensure resources are cleaned up.
+
+        Parameters
+        ----------
+        exc_type : Optional[type]
+            The exception type if an exception was raised.
+        exc_val : Optional[BaseException]
+            The exception value if an exception was raised.
+        exc_tb : Optional[Any]
+            The traceback if an exception was raised.
         """
         self.stop()
+
+    def __del__(self) -> None:
+        """
+        Clean up the ActionOrchestrator by stopping the executor.
+
+        Note: This is a fallback cleanup mechanism. Prefer using the context
+        manager protocol or explicitly calling stop() for reliable cleanup.
+        """
+        try:
+            self.stop()
+        except Exception:
+            # Suppress exceptions during garbage collection
+            pass
