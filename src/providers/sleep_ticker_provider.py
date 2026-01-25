@@ -58,28 +58,29 @@ class SleepTickerProvider:
     async def sleep(self, duration: float) -> None:
         """
         Create and await an asynchronous sleep task.
-
         Creates a new sleep task and stores it as the current task. The task can
         be cancelled if skip_sleep is set to True while the sleep is in progress.
-
         Parameters
         ----------
         duration : float
-            The duration to sleep in seconds.
-
+            The duration to sleep in seconds. Must be non-negative.
         Returns
         -------
         None
-
         Raises
         ------
+        ValueError
+            If duration is negative.
         asyncio.CancelledError
             If the sleep operation is cancelled, though this is caught internally.
         """
-        try:
-            self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
-            await self._current_sleep_task
-        except asyncio.CancelledError:
-            pass
-        finally:
-            self._current_sleep_task = None
+    if duration < 0:
+        raise ValueError(f"Sleep duration must be non-negative, got {duration}")
+    
+    try:
+        self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
+        await self._current_sleep_task
+    except asyncio.CancelledError:
+        pass
+    finally:
+        self._current_sleep_task = None
