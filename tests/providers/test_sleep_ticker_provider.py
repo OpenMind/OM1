@@ -58,3 +58,10 @@ async def test_skip_sleep_property(sleep_ticker):
     assert sleep_ticker.skip_sleep is False
     sleep_ticker.skip_sleep = True
     assert sleep_ticker.skip_sleep is True
+
+@pytest.mark.asyncio
+async def test_sleep_negative_duration():
+    """Test that sleep raises ValueError for negative duration."""
+    provider = SleepTickerProvider()
+    with pytest.raises(ValueError, match="Sleep duration must be non-negative"):
+        await provider.sleep(-1.0)
