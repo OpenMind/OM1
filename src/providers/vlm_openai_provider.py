@@ -28,7 +28,7 @@ class VLMOpenAIProvider:
         camera_index: int = 0,
     ):
         """
-        Initialize the VLM Provider.
+        Initialize the VLM provider.
 
         Parameters
         ----------
@@ -36,12 +36,15 @@ class VLMOpenAIProvider:
             The base URL for the OM API.
         api_key : str
             The API key for the OM API.
-        fps : int
-            The frames per second for the video stream.
-        stream_url : str, optional
-            The URL for the video stream. If not provided, defaults to None.
+        fps : int, optional
+            Frames per second for the video stream.
+            Default is 10.
+        stream_url : str or None, optional
+            WebSocket URL for streaming video frames.
+            If None, streaming via WebSocket is disabled.
         camera_index : int
-            The camera index for the video stream device. Defaults to 0.
+            Camera device index used by the video stream.
+            Default is 0.
         """
         self.running: bool = False
         self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
