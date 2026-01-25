@@ -157,9 +157,17 @@ class TeleopsConversationProvider:
                 logging.debug(
                     f"Failed to store {message.message_type.value} message: {request.status_code} - {request.text}"
                 )
+        except requests.exceptions.Timeout:
+            logging.debug(
+                f"Timeout while storing {message.message_type.value} conversation message"
+            )
+        except requests.exceptions.RequestException as e:
+            logging.debug(
+                f"Request error storing {message.message_type.value} conversation message: {str(e)}"
+            )
         except Exception as e:
             logging.debug(
-                f"Error storing {message.message_type.value} conversation message: {str(e)}"
+                f"Unexpected error storing {message.message_type.value} conversation message: {str(e)}"
             )
 
     def _store_message(self, message: ConversationMessage) -> None:

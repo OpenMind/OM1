@@ -116,7 +116,12 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
                     if response.status != 200:
                         return None
 
-                    data = await response.json()
+                    try:
+                        data = await response.json()
+                    except Exception as e:
+                        logging.debug(f"PersonFollowingStatus: Failed to parse JSON response: {e}")
+                        return None
+
                     is_tracked = data.get("is_tracked", False)
                     status = data.get("status", "UNKNOWN")
                     target_track_id = data.get("target_track_id")

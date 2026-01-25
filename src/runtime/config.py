@@ -31,8 +31,19 @@ def _load_schema(schema_file: str) -> dict:
             f"Schema file not found: {schema_path}. Cannot validate configuration."
         )
 
-    with open(schema_path, "r") as f:
-        return json.load(f)
+    try:
+        with open(schema_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except OSError as e:
+        logging.error(f"Error reading schema file '{schema_path}': {e}")
+        raise FileNotFoundError(
+            f"Failed to read schema file '{schema_path}': {e}"
+        ) from e
+    except json.JSONDecodeError as e:
+        logging.error(f"Invalid JSON in schema file '{schema_path}': {e}")
+        raise ValueError(
+            f"Schema file '{schema_path}' contains invalid JSON: {e}"
+        ) from e
 
 
 def validate_config_schema(raw_config: dict) -> None:
