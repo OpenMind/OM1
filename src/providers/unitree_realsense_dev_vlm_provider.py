@@ -49,6 +49,15 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
         jpeg_quality : int, optional
             The JPEG quality for frame encoding, ranging from 0 to 100. Default is 70.
         """
+        if fps is not None and fps <= 0:
+            raise ValueError("fps must be greater than 0")
+        if resolution is not None:
+            if not isinstance(resolution, tuple) or len(resolution) != 2:
+                raise ValueError("resolution must be a tuple of two integers")
+            if resolution[0] <= 0 or resolution[1] <= 0:
+                raise ValueError("resolution values must be positive integers")
+        if not (0 <= jpeg_quality <= 100):
+            raise ValueError("jpeg_quality must be between 0 and 100")
         super().__init__(
             frame_callback=frame_callback,
             frame_callbacks=frame_callbacks,
@@ -57,7 +66,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
             jpeg_quality=jpeg_quality,
         )
 
-    def on_video(self):
+    def on_video(self) -> None:
         """
         Main video capture and processing loop.
 
@@ -156,7 +165,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
                 self._cap.release()
                 logger.info("Released video capture device")
 
-    def _open_camera(self, cam):
+    def _open_camera(self, cam: str) -> Optional[cv2.VideoCapture]:
         """
         Attempt to open the camera device and set desired properties.
 
@@ -194,7 +203,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
             pass
         return cap
 
-    def _find_rgb_device(self, skip_devices=None):
+    def _find_rgb_device(self, skip_devices: Optional[set] = None) -> Optional[str]:
         """
         Find the first viable RGB camera device supporting common RGB formats.
         Optionally skips devices listed in skip_devices.
@@ -284,7 +293,24 @@ class UnitreeRealSenseDevVLMProvider:
             The JPEG quality for the video stream. Default is 70.
         stream_url : str, optional
             The URL for the video stream. If not provided, defaults to None.
+
+        Raises
+        ------
+        ValueError
+            If fps is less than or equal to 0, resolution contains non-positive values,
+            or jpeg_quality is not between 0 and 100.
         """
+        if not ws_url or not ws_url.strip():
+            raise ValueError("ws_url cannot be empty")
+        if fps <= 0:
+            raise ValueError("fps must be greater than 0")
+        if resolution is not None:
+            if not isinstance(resolution, tuple) or len(resolution) != 2:
+                raise ValueError("resolution must be a tuple of two integers")
+            if resolution[0] <= 0 or resolution[1] <= 0:
+                raise ValueError("resolution values must be positive integers")
+        if not (0 <= jpeg_quality <= 100):
+            raise ValueError("jpeg_quality must be between 0 and 100")
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
         self.stream_ws_client: Optional[ws.Client] = (
@@ -297,7 +323,7 @@ class UnitreeRealSenseDevVLMProvider:
             jpeg_quality=jpeg_quality,
         )
 
-    def register_message_callback(self, message_callback: Optional[Callable]):
+    def register_message_callback(self, message_callback: Optional[Callable]) -> None:
         """
         Register a callback for processing VLM results.
 
@@ -309,7 +335,7 @@ class UnitreeRealSenseDevVLMProvider:
         if message_callback is not None:
             self.ws_client.register_message_callback(message_callback)
 
-    def start(self):
+    def start(self) -> None:
         """
         Start the VLM provider.
 
@@ -332,7 +358,7 @@ class UnitreeRealSenseDevVLMProvider:
 
         logging.info("Unitree RealSenseDev VLM provider started")
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the VLM provider.
 
