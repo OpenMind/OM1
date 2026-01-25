@@ -52,6 +52,7 @@ RUN git submodule update --init --recursive
 
 RUN cp -r config config_defaults
 
+ENV UV_HTTP_TIMEOUT=120
 RUN uv venv /app/OM1/.venv && \
     uv pip install -r pyproject.toml --extra dds
 
@@ -85,6 +86,15 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo '  exec python src/run.py "$@"' >> /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
+
+# Create a non-root user and change ownership of the necessary files.
+RUN groupadd -r openmind && useradd -r -g openmind openmind
+# Change ownership of the config and entrypoint.sh directories to the openmind user.
+RUN chown -R openmind:openmind /app/OM1/config /entrypoint.sh
+# Change ownership of WORKDIR OM1 so that openmind users can read the main files
+RUN chown openmind:openmind /app/OM1
+
+USER openmind
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["spot"]
