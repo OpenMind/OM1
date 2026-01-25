@@ -237,6 +237,22 @@ class UnitreeG1NavigationProvider:
         except Exception:
             logging.exception("Failed to cancel navigation goals")
 
+    def stop(self):
+        """
+        Stop the navigation provider and clean up resources.
+        """
+        self.running = False
+
+        if self.session:
+            self.session.close()
+            self.session = None
+
+        if self.ai_status_pub:
+            self.ai_status_pub.undeclare()
+            self.ai_status_pub = None
+
+        logging.info("G1 Navigation Provider stopped")
+
     @property
     def navigation_state(self) -> str:
         """

@@ -113,15 +113,29 @@ class FacePresenceProvider:
 
         Parameters
         ----------
-        base_url : str
+        base_url : str, optional
             Base HTTP URL of the face stream API (e.g., "http://127.0.0.1:6793").
-            The provider will call POST `{base_url}/who`.
-        recent_sec : float, default 3.0
+            The provider will call POST `{base_url}/who`. Defaults to "http://127.0.0.1:6793".
+        recent_sec : float, optional
             Lookback window passed to `/who` (seconds of presence history).
-        fps : float, default 5.0
+            Defaults to 3.0.
+        fps : float, optional
             Polling rate in events per second (e.g., 5.0 → every 0.2s).
-        timeout_s : float, default 2.0
-            HTTP request timeout in seconds.
+            Defaults to 5.0.
+        timeout_s : float, optional
+            HTTP request timeout in seconds. Defaults to 2.0.
+        prefer_recent : bool, optional
+            If True, prioritize recent face detection data when fetching snapshots.
+            Defaults to True.
+        unknown_frac_threshold : float, optional
+            Fraction threshold for suppressing unknown face counts based on recent frames.
+            Defaults to 0.15.
+        unknown_min_count : int, optional
+            Minimum count of unknown faces required before applying suppression logic.
+            Defaults to 6.
+        min_obs_window : int, optional
+            Minimum observation window size (in frames) used for unknown face suppression.
+            Defaults to 24.
         """
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
