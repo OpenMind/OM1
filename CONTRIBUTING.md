@@ -50,8 +50,7 @@ Before contributing, please take a moment to read through the following guidelin
     ```
     (Replace `<your-username>` with your GitHub username.)
 
-3. **Setup Development Environment**
-    Refer [documentation](https://docs.openmind.org/developing/1_get-started) to setup your development environment.
+3. **Set up Development Environment:** Refer to the [documentation](https://docs.openmind.org/developing/1_get-started) to set up your development environment.
 
 4.  **Create a Branch:**  Create a new branch for your work.  Use a descriptive name that reflects the purpose of your changes (e.g., `fix-bug-xyz`, `add-feature-abc`, `docs-improve-readme`).
     ```bash
