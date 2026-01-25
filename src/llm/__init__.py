@@ -4,6 +4,8 @@ import logging
 import os
 import re
 import typing as T
+from pathlib import Path
+from typing import Optional, Set
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,6 +13,39 @@ from llm.function_schemas import generate_function_schemas_from_actions
 from providers.io_provider import IOProvider
 
 R = T.TypeVar("R")
+
+_VALID_LLM_MODULE_NAMES: Optional[Set[str]] = None
+
+
+def _enumerate_valid_llm_modules(llm_plugins_dir: str = "src/llm/plugins") -> Set[str]:
+    """Enumerates valid LLM module names from the llm plugins directory."""
+    valid_modules = set()
+    plugins_path = Path(llm_plugins_dir)
+
+    if not plugins_path.is_dir():
+        logging.warning(f"LLM plugins directory '{llm_plugins_dir}' not found.")
+        return valid_modules
+
+    for plugin_file in plugins_path.iterdir():
+        if plugin_file.suffix == ".py" and plugin_file.name != "__init__.py":
+            module_name = plugin_file.stem
+            valid_modules.add(module_name)
+
+    return valid_modules
+
+
+def _get_valid_llm_module_names() -> Set[str]:
+    """Gets the cached set of valid LLM module names."""
+    global _VALID_LLM_MODULE_NAMES
+    if _VALID_LLM_MODULE_NAMES is None:
+        _VALID_LLM_MODULE_NAMES = _enumerate_valid_llm_modules()
+    return _VALID_LLM_MODULE_NAMES
+
+
+def _validate_llm_module_name(module_name: str) -> bool:
+    """Validates module_name against the whitelist."""
+    valid_modules = _get_valid_llm_module_names()
+    return module_name in valid_modules
 
 
 class LLMConfig(BaseModel):
@@ -110,10 +145,8 @@ class LLM(T.Generic[R]):
         config: LLMConfig,
         available_actions: T.Optional[list] = None,
     ):
-        # Set up the LLM configuration
         self._config = config
 
-        # Set up available actions for function calling
         self._available_actions = available_actions or []
         self.function_schemas = []
         if self._available_actions:
@@ -124,10 +157,8 @@ class LLM(T.Generic[R]):
                 f"LLM initialized with {len(self.function_schemas)} function schemas"
             )
 
-        # Set up the IO provider
         self.io_provider = IOProvider()
 
-        # Enable state management by default
         self._skip_state_management: bool = False
 
     async def ask(
@@ -187,7 +218,13 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
             pattern = rf"^class\s+{re.escape(class_name)}\s*\([^)]*LLM[^)]*\)\s*:"
 
             if re.search(pattern, content, re.MULTILINE):
-                return plugin_file[:-3]
+                candidate_module_name = plugin_file[:-3]
+                if not _validate_llm_module_name(candidate_module_name):
+                    logging.warning(
+                        f"Potential security issue: Found class '{class_name}' in module '{candidate_module_name}', but module name is not in whitelist. Skipping."
+                    )
+                    continue
+                return candidate_module_name
 
         except Exception as e:
             logging.warning(f"Could not read {plugin_file}: {e}")
@@ -214,6 +251,11 @@ def get_llm_class(class_name: str) -> T.Type[LLM]:
 
     if module_name is None:
         raise ValueError(f"Class '{class_name}' not found in any LLM plugin module")
+
+    if not re.match(r"^[a-zA-Z0-9_-]+$", module_name):
+        raise ValueError(
+            f"Invalid characters in LLM module name '{module_name}'. Only alphanumeric, underscore, and hyphen are allowed."
+        )
 
     try:
         module = importlib.import_module(f"llm.plugins.{module_name}")
@@ -261,6 +303,11 @@ def load_llm(
 
     if module_name is None:
         raise ValueError(f"Class '{class_name}' not found in LLM plugin module")
+
+    if not re.match(r"^[a-zA-Z0-9_-]+$", module_name):
+        raise ValueError(
+            f"Invalid characters in LLM module name '{module_name}'. Only alphanumeric, underscore, and hyphen are allowed."
+        )
 
     try:
         module = importlib.import_module(f"llm.plugins.{module_name}")

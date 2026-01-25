@@ -4,8 +4,45 @@ import logging
 import os
 import re
 import typing as T
+from pathlib import Path
+from typing import Optional, Set
 
 from inputs.base import Sensor, SensorConfig
+
+_VALID_INPUT_MODULE_NAMES: Optional[Set[str]] = None
+
+
+def _enumerate_valid_input_modules(
+    inputs_plugins_dir: str = "src/inputs/plugins",
+) -> Set[str]:
+    """Enumerates valid input module names from the inputs plugins directory."""
+    valid_modules: Set[str] = set()
+    plugins_path = Path(inputs_plugins_dir)
+
+    if not plugins_path.is_dir():
+        logging.warning(f"Input plugins directory '{inputs_plugins_dir}' not found.")
+        return valid_modules
+
+    for plugin_file in plugins_path.iterdir():
+        if plugin_file.suffix == ".py" and plugin_file.name != "__init__.py":
+            module_name = plugin_file.stem
+            valid_modules.add(module_name)
+
+    return valid_modules
+
+
+def _get_valid_input_module_names() -> Set[str]:
+    """Gets the cached set of valid input module names."""
+    global _VALID_INPUT_MODULE_NAMES
+    if _VALID_INPUT_MODULE_NAMES is None:
+        _VALID_INPUT_MODULE_NAMES = _enumerate_valid_input_modules()
+    return _VALID_INPUT_MODULE_NAMES
+
+
+def _validate_input_module_name(module_name: str) -> bool:
+    """Validates module_name against the whitelist."""
+    valid_modules = _get_valid_input_module_names()
+    return module_name in valid_modules
 
 
 def find_module_with_class(class_name: str) -> T.Optional[str]:
@@ -41,7 +78,13 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
             )
 
             if re.search(pattern, content, re.MULTILINE):
-                return plugin_file[:-3]
+                candidate_module_name = plugin_file[:-3]
+                if not _validate_input_module_name(candidate_module_name):
+                    logging.warning(
+                        f"Potential security issue: Found class '{class_name}' in module '{candidate_module_name}', but module name is not in whitelist. Skipping."
+                    )
+                    continue
+                return candidate_module_name
 
         except Exception as e:
             logging.warning(f"Could not read {plugin_file}: {e}")
@@ -68,6 +111,11 @@ def load_input(input_config: T.Dict[str, T.Any]) -> Sensor:
 
     if module_name is None:
         raise ValueError(f"Class '{class_name}' not found in any input plugin module")
+
+    if not re.match(r"^[a-zA-Z0-9_-]+$", module_name):
+        raise ValueError(
+            f"Invalid characters in input module name '{module_name}'. Only alphanumeric, underscore, and hyphen are allowed."
+        )
 
     try:
         module = importlib.import_module(f"inputs.plugins.{module_name}")

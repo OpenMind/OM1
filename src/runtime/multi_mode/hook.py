@@ -5,9 +5,47 @@ import os
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
+
+_VALID_HOOK_MODULE_NAMES: Optional[Set[str]] = None
+
+
+def _enumerate_valid_hook_modules(hooks_dir_path: str = "src/hooks") -> Set[str]:
+    """Enumerates valid hook module names from the hooks directory."""
+    valid_modules: Set[str] = set()
+    hooks_path = Path(hooks_dir_path)
+
+    if not hooks_path.is_dir():
+        logging.warning(f"Hooks directory '{hooks_dir_path}' not found.")
+        return valid_modules
+
+    for hook_file in hooks_path.iterdir():
+        if hook_file.suffix == ".py" and hook_file.name != "__init__.py":
+            module_name = hook_file.stem
+            valid_modules.add(module_name)
+
+    return valid_modules
+
+
+def _get_valid_hook_module_names() -> Set[str]:
+    """Gets the cached set of valid hook module names."""
+    global _VALID_HOOK_MODULE_NAMES
+    if _VALID_HOOK_MODULE_NAMES is None:
+        current_file_dir = Path(__file__).resolve().parent
+        hooks_dir_absolute = current_file_dir.parent.parent / "hooks"
+        _VALID_HOOK_MODULE_NAMES = _enumerate_valid_hook_modules(
+            str(hooks_dir_absolute)
+        )
+    return _VALID_HOOK_MODULE_NAMES
+
+
+def _validate_hook_module_name(module_name: str) -> bool:
+    """Validates module_name against the whitelist."""
+    valid_modules = _get_valid_hook_module_names()
+    return module_name in valid_modules
 
 
 class LifecycleHookType(Enum):
@@ -212,6 +250,11 @@ class FunctionHookHandler(LifecycleHookHandler):
             return False
 
         try:
+            if not re.match(r"^[a-zA-Z0-9_-]+$", module_name):
+                raise ValueError(
+                    f"Invalid characters in hook module name '{module_name}'. Only alphanumeric, underscore, and hyphen are allowed."
+                )
+
             func = self._find_function_in_module(module_name, function_name)
             if not func:
                 return False
@@ -250,6 +293,12 @@ class FunctionHookHandler(LifecycleHookHandler):
 
             if not os.path.exists(hooks_dir):
                 logging.error(f"Hooks directory not found at {hooks_dir}")
+                return None
+
+            if not _validate_hook_module_name(module_name):
+                logging.error(
+                    f"Potential security issue: Hook module name '{module_name}' is not in whitelist."
+                )
                 return None
 
             module_file = os.path.join(hooks_dir, f"{module_name}.py")
