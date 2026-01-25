@@ -363,7 +363,6 @@ def test_function_handler_creation():
 @pytest.mark.asyncio
 async def test_function_handler_no_function():
     """Test function handler with no function specified."""
-    # FunctionHookConfig requires both fields, so this should raise validation error
     with pytest.raises(Exception):
         config = FunctionHookConfig(module_name="test_module")  # type: ignore
         FunctionHookHandler(config)
@@ -372,7 +371,6 @@ async def test_function_handler_no_function():
 @pytest.mark.asyncio
 async def test_function_handler_no_module():
     """Test function handler with no module specified."""
-    # FunctionHookConfig requires both fields, so this should raise validation error
     with pytest.raises(Exception):
         config = FunctionHookConfig(function="test_func")  # type: ignore
         FunctionHookHandler(config)

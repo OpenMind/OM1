@@ -509,7 +509,9 @@ def create_hook_handler(hook: LifecycleHook) -> Optional[LifecycleHookHandler]:
         return None
 
 
-def parse_lifecycle_hooks(raw_hooks: List[Dict]) -> List[LifecycleHook]:
+def parse_lifecycle_hooks(
+    raw_hooks: List[Dict], api_key: Optional[str] = None
+) -> List[LifecycleHook]:
     """
     Parse raw lifecycle hooks configuration into LifecycleHook objects.
 
@@ -517,6 +519,8 @@ def parse_lifecycle_hooks(raw_hooks: List[Dict]) -> List[LifecycleHook]:
     ----------
     raw_hooks : List[Dict]
         Raw hook configuration data
+    api_key : Optional[str]
+        Global API key to inject into message hooks if not specified
 
     Returns
     -------
@@ -526,10 +530,15 @@ def parse_lifecycle_hooks(raw_hooks: List[Dict]) -> List[LifecycleHook]:
     hooks = []
     for hook_data in raw_hooks:
         try:
+            handler_config = hook_data.get("handler_config", {}).copy()
+
+            if api_key is not None and "api_key" not in handler_config:
+                handler_config["api_key"] = api_key
+
             hook = LifecycleHook(
                 hook_type=LifecycleHookType(hook_data["hook_type"]),
                 handler_type=hook_data["handler_type"],
-                handler_config=hook_data.get("handler_config", {}),
+                handler_config=handler_config,
                 async_execution=hook_data.get("async_execution", True),
                 timeout_seconds=hook_data.get("timeout_seconds", 5.0),
                 on_failure=hook_data.get("on_failure", "ignore"),

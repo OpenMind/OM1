@@ -320,6 +320,9 @@ class ModeCortexRuntime:
         if not self.current_config:
             raise RuntimeError("No current config available")
 
+        # Re-enable sleep operations
+        self.sleep_ticker_provider.skip_sleep = False
+
         # Start input listener
         self.input_orchestrator = InputOrchestrator(self.current_config.agent_inputs)
         self.input_listener_task = asyncio.create_task(self.input_orchestrator.listen())
@@ -489,10 +492,12 @@ class ModeCortexRuntime:
 
         try:
             while True:
-                if not self.sleep_ticker_provider.skip_sleep and self.current_config:
-                    await self.sleep_ticker_provider.sleep(
-                        1 / self.current_config.hertz
-                    )
+                skip_status = self.sleep_ticker_provider.skip_sleep
+                sleep_duration = (
+                    1 / self.current_config.hertz if self.current_config else 1
+                )
+                if not skip_status and self.current_config:
+                    await self.sleep_ticker_provider.sleep(sleep_duration)
 
                 # Helper to yield control to event loop
                 await asyncio.sleep(0)

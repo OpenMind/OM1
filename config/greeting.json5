@@ -22,7 +22,7 @@
 
   modes: {
     approaching: {
-      display_name: "Approaching Mode",
+      display_name: "Approaching Person Mode",
       description: "Robot approaches detected humans autonomously.",
       system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform. Your primary function is to autonomously approach detected humans in your environment while ensuring safety and smooth navigation. Use your sensors to identify humans and navigate towards them in a polite manner.",
       hertz: 1,
@@ -31,7 +31,7 @@
       agent_actions: [],
       backgrounds: [
         {
-          type: "ApproachingMock",
+          type: "ApproachingPerson",
         },
       ],
       lifecycle_hooks: [],
@@ -61,7 +61,13 @@
       lifecycle_hooks: [
         {
           hook_type: "on_startup",
-
+          handler_type: "message",
+          handler_config: {
+            message: "Hello! I'm Bits, how can I help you today?",
+          },
+        },
+        {
+          hook_type: "on_entry",
           handler_type: "message",
           handler_config: {
             message: "Hello! I'm Bits, how can I help you today?",

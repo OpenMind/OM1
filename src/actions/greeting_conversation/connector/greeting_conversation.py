@@ -124,9 +124,9 @@ class GreetingConversationConnector(
 
         self.tts.add_pending_message(output_interface.response)
 
-        # Estimate TTS duration based on text length (~150 words per minute speech rate)
+        # Estimate TTS duration based on text length (~100 words per minute speech rate)
         word_count = len(output_interface.response.split())
-        self.tts_duration = (word_count / 150.0) * 60.0  # Convert to seconds
+        self.tts_duration = (word_count / 100.0) * 60.0  # Convert to seconds
         self.tts_triggered_time = time.time()
 
         response = self.greeting_state_provider.process_conversation(llm_output)
@@ -143,7 +143,7 @@ class GreetingConversationConnector(
         Tick method for the connector.
         Periodically updates the conversation state even without LLM input.
         """
-        logging.info("Ticking....")
+        logging.info("GreetingConversationConnector tick called")
 
         self.sleep(10)
 
