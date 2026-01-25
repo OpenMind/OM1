@@ -109,7 +109,7 @@ Stay tuned!
 
 ## Full Autonomy Guidance
 
-We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
+We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has four services that work together in a loop without manual intervention:
 
 - **om1**
 - **unitree_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
