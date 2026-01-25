@@ -24,7 +24,7 @@
       type: "GoogleASRInput",
     },
     {
-      type: "VLMVilaZenoh",
+      type: "VLMVila",
     },
     {
       type: "SimplePaths",
