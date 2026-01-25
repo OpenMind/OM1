@@ -23,6 +23,7 @@
 ## Getting Started
 
 To get started with OM1, let's run the Spot agent. Spot uses your webcam to capture and label objects. These text captions are then sent to the LLM, which returns `movement`, `speech` and `face` action commands. These commands are displayed on WebSim along with basic timing and other debugging information.
+This example is intended as a minimal end-to-end demo to help new users understand how inputs, LLM reasoning, and action outputs are connected in OM1.
 
 ### Package Management and VENV
 
