@@ -85,8 +85,11 @@ class SleepTickerProvider:
             self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
             await self._current_sleep_task
         except asyncio.CancelledError:
-            # Cancellation is an expected control-flow mechanism (e.g., via skip_sleep);
-            # the error is intentionally suppressed, and cleanup happens in the finally block.
-            pass
+            # If the provider is intentionally skipping sleep, cancellation is expected.
+            # Otherwise, re-raise to respect external cooperative cancellation.
+            if self.skip_sleep:
+                pass
+            else:
+                raise
         finally:
             self._current_sleep_task = None
