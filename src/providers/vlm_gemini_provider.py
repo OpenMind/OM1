@@ -33,14 +33,15 @@ class VLMGeminiProvider:
         Parameters
         ----------
         base_url : str
-            The base URL for the OM API.
+            The base URL for the OM API endpoint used for Gemini API communication.
         api_key : str
-            The API key for the OM API.
-        fps : int
-            The frames per second for the video stream.
+            The API key for authenticating with the OM API.
+        fps : int, optional
+            The frames per second for the video stream. Defaults to 10.
         stream_url : str, optional
-            The URL for the video stream. If not provided, defaults to None.
-        camera_index : int
+            The URL for the WebSocket video stream. If not provided (None),
+            WebSocket streaming is disabled. Defaults to None.
+        camera_index : int, optional
             The camera index for the video stream device. Defaults to 0.
         """
         self.running: bool = False
