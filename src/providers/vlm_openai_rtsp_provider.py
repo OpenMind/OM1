@@ -48,12 +48,22 @@ class VLMOpenAIRTSPProvider:
         prompt : str
             The prompt for the VLM analysis. Defaults to "What is the most interesting aspect in this series of images?".
         fps : int
-            The fps for the VLM service connection.
+            The fps for the VLM service connection. Must be greater than 0.
         batch_size : int
             Number of frames to collect before sending to OpenAI. Defaults to 5.
         batch_interval : float
             Time interval in seconds between batch processing. Defaults to 0.5.
+
+        Raises
+        ------
+        ValueError
+            If `fps` is less than or equal to 0, or if `rtsp_url` is empty.
         """
+        if fps <= 0:
+            raise ValueError("fps must be greater than 0")
+        if not rtsp_url or not rtsp_url.strip():
+            raise ValueError("rtsp_url cannot be empty")
+        
         self.running: bool = False
         self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.video_stream: VideoRTSPStream = VideoRTSPStream(
@@ -69,7 +79,7 @@ class VLMOpenAIRTSPProvider:
         self.frame_queue: deque = deque(maxlen=batch_size)
         self.batch_task: Optional[asyncio.Task] = None
 
-    def _queue_frame(self, frame_data: str):
+    def _queue_frame(self, frame_data: str) -> None:
         """
         Queue a video frame for batch processing.
 
@@ -85,7 +95,7 @@ class VLMOpenAIRTSPProvider:
         except Exception as e:
             logging.error(f"Error queuing frame: {e}")
 
-    async def _process_batch(self):
+    async def _process_batch(self) -> None:
         """
         Process batches of frames at regular intervals.
         """
@@ -98,7 +108,7 @@ class VLMOpenAIRTSPProvider:
 
                 await self._send_batch_to_openai(frames_to_process)
 
-    async def _send_batch_to_openai(self, frames: List[str]):
+    async def _send_batch_to_openai(self, frames: List[str]) -> None:
         """
         Send a batch of frames to OpenAI API.
 
@@ -149,18 +159,18 @@ class VLMOpenAIRTSPProvider:
         except Exception as e:
             logging.error(f"Error processing batch: {e}")
 
-    def register_message_callback(self, message_callback: Optional[Callable]):
+    def register_message_callback(self, message_callback: Optional[Callable]) -> None:
         """
         Register a callback for processing VLM results.
 
         Parameters
         ----------
-        message_callback: Optional[Callable]
+        message_callback : Optional[Callable]
             The callback function to process VLM results.
         """
         self.message_callback = message_callback
 
-    def start(self):
+    def start(self) -> None:
         """
         Start the VLM RTSP provider.
 
@@ -179,7 +189,7 @@ class VLMOpenAIRTSPProvider:
 
         logging.info("OpenAI VLM RTSP provider started with batch processing")
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the VLM RTSP provider.
 
