@@ -84,4 +84,8 @@ class RivaTTSProvider:
         Stop the TTS provider and cleanup resources.
         """
         self.running = False
-        self._audio_stream.stop()
+        try:
+            self._audio_stream.stop()
+            logging.info("Riva TTS Provider stopped")
+        except Exception as e:
+            logging.error(f"Error stopping Riva TTS Provider: {e}", exc_info=True)

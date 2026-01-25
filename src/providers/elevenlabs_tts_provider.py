@@ -234,4 +234,8 @@ class ElevenLabsTTSProvider:
             return
 
         self.running = False
-        self._audio_stream.stop()
+        try:
+            self._audio_stream.stop()
+            logging.info("Eleven Labs TTS Provider stopped")
+        except Exception as e:
+            logging.error(f"Error stopping Eleven Labs TTS Provider: {e}", exc_info=True)

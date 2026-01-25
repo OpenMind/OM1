@@ -90,5 +90,13 @@ class VLMVilaZenohProvider:
         """
         self.running = False
 
-        self.video_stream.stop()
-        self.ws_client.stop()
+        try:
+            self.video_stream.stop()
+        except Exception as e:
+            logging.error(f"Error stopping VLM Vila Zenoh video stream: {e}", exc_info=True)
+        
+        try:
+            self.ws_client.stop()
+            logging.info("VLM Vila Zenoh Provider stopped")
+        except Exception as e:
+            logging.error(f"Error stopping VLM Vila Zenoh websocket client: {e}", exc_info=True)

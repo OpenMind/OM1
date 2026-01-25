@@ -76,4 +76,8 @@ class ZenohListenerProvider:
         self.running = False
 
         if self.session is not None:
-            self.session.close()
+            try:
+                self.session.close()
+                logging.info("Zenoh Listener Provider session closed")
+            except Exception as e:
+                logging.error(f"Error closing Zenoh Listener Provider session: {e}", exc_info=True)

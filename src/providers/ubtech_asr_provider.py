@@ -73,10 +73,23 @@ class UbtechASRProvider:
 
         logging.info("Stopping UbtechASRProvider background thread...")
         self.running = False
-        self._stop_voice_iat()
+        
+        try:
+            self._stop_voice_iat()
+        except Exception as e:
+            logging.error(f"Error stopping UbtechASR voice IAT: {e}", exc_info=True)
 
         if self._thread:
             self._thread.join(timeout=3)
+            if self._thread.is_alive():
+                logging.warning("UbtechASRProvider thread did not stop within timeout period")
+        
+        try:
+            if hasattr(self, 'session') and self.session:
+                self.session.close()
+                logging.info("UbtechASRProvider session closed")
+        except Exception as e:
+            logging.error(f"Error closing UbtechASRProvider session: {e}", exc_info=True)
 
         logging.info("UbtechASRProvider stopped.")
 

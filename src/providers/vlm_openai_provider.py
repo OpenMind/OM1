@@ -133,7 +133,15 @@ class VLMOpenAIProvider:
         Stops the video stream and processing thread.
         """
         self.running = False
-        self.video_stream.stop()
+        try:
+            self.video_stream.stop()
+        except Exception as e:
+            logging.error(f"Error stopping VLM OpenAI video stream: {e}", exc_info=True)
 
         if self.stream_ws_client:
-            self.stream_ws_client.stop()
+            try:
+                self.stream_ws_client.stop()
+            except Exception as e:
+                logging.error(f"Error stopping VLM OpenAI stream websocket client: {e}", exc_info=True)
+        
+        logging.info("VLM OpenAI Provider stopped")

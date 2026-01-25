@@ -114,8 +114,18 @@ class ASRProvider:
         Stops the audio stream and websocket clients, and sets the running state to False.
         """
         self.running = False
-        self.audio_stream.stop()
-        self.ws_client.stop()
+        try:
+            self.audio_stream.stop()
+        except Exception as e:
+            logging.error(f"Error stopping ASR audio stream: {e}", exc_info=True)
+        
+        try:
+            self.ws_client.stop()
+        except Exception as e:
+            logging.error(f"Error stopping ASR websocket client: {e}", exc_info=True)
 
         if self.stream_ws_client:
-            self.stream_ws_client.stop()
+            try:
+                self.stream_ws_client.stop()
+            except Exception as e:
+                logging.error(f"Error stopping ASR stream websocket client: {e}", exc_info=True)
