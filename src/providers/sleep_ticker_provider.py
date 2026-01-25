@@ -74,13 +74,15 @@ class SleepTickerProvider:
         asyncio.CancelledError
             If the sleep operation is cancelled, though this is caught internally.
         """
-    if duration < 0:
-        raise ValueError(f"Sleep duration must be non-negative, got {duration}")
-    
-    try:
-        self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
-        await self._current_sleep_task
-    except asyncio.CancelledError:
-        pass
-    finally:
-        self._current_sleep_task = None
+        if duration < 0:
+            raise ValueError(f"Sleep duration must be non-negative, got {duration}")
+        
+        try:
+            self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
+            await self._current_sleep_task
+        except asyncio.CancelledError:
+            # Cancellation is an expected control-flow mechanism (e.g., via skip_sleep);
+            # the error is intentionally suppressed, and cleanup happens in the finally block.
+            pass
+        finally:
+            self._current_sleep_task = None
