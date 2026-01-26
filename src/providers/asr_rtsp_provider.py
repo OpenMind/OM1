@@ -78,10 +78,11 @@ class ASRRTSPProvider:
             logging.warning("ASR RTSP provider is already running")
             return
 
-        self.running = True
+        # Start clients/streams first; mark running only after successful start
         self.ws_client.start()
         self.audio_stream.start()
 
+        self.running = True
         logging.info("ASR RTSP provider started")
 
     def stop(self):

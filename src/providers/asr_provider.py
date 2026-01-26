@@ -90,7 +90,7 @@ class ASRProvider:
             logging.warning("ASR provider is already running")
             return
 
-        self.running = True
+        # Start clients and streams first; only mark as running on success
         self.ws_client.start()
         self.audio_stream.start()
 
@@ -105,6 +105,7 @@ class ASRProvider:
                     self.audio_stream.fill_buffer_remote
                 )
 
+        self.running = True
         logging.info("ASR provider started")
 
     def stop(self):
