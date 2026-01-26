@@ -27,7 +27,7 @@ class ContextProvider:
         self.publisher = None
         self._initialize_zenoh()
 
-    def _initialize_zenoh(self):
+    def _initialize_zenoh(self) -> None:
         """
         Initialize Zenoh session and publisher.
         """
@@ -40,7 +40,7 @@ class ContextProvider:
             self.session = None
             self.publisher = None
 
-    def update_context(self, context: Dict[str, Any]):
+    def update_context(self, context: Dict[str, Any]) -> None:
         """
         Update the user context for context-aware transitions.
 
@@ -60,7 +60,7 @@ class ContextProvider:
         except Exception as e:
             logging.error(f"Error sending context update: {e}")
 
-    def set_context_field(self, key: str, value: Any):
+    def set_context_field(self, key: str, value: Any) -> None:
         """
         Update a single context field.
 
@@ -73,7 +73,7 @@ class ContextProvider:
         """
         self.update_context({key: value})
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the ContextProvider and clean up resources.
         """
