@@ -41,26 +41,26 @@ def generate_function_schema_from_action(action) -> dict:
             properties[field_name] = {
                 "type": "string",
                 "enum": enum_values,
-                "description": f"The {field_name} to perform. Must be one of: {', '.join(enum_values)}",
+                "description": f"The {field_name} to perform. Must be one of: {', '.join(str(v) for v in enum_values)}",
             }
-        elif isinstance(field_type, str):
+        elif field_type is bool:
             properties[field_name] = {
-                "type": "string",
+                "type": "boolean",
                 "description": f"The {field_name} parameter",
             }
-        elif isinstance(field_type, int):
+        elif field_type is int:
             properties[field_name] = {
                 "type": "integer",
                 "description": f"The {field_name} parameter",
             }
-        elif isinstance(field_type, float):
+        elif field_type is float:
             properties[field_name] = {
                 "type": "number",
                 "description": f"The {field_name} parameter",
             }
-        elif isinstance(field_type, bool):
+        elif field_type is str:
             properties[field_name] = {
-                "type": "boolean",
+                "type": "string",
                 "description": f"The {field_name} parameter",
             }
         else:
