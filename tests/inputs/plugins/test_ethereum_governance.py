@@ -1,10 +1,11 @@
 import asyncio
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from inputs.base import SensorConfig
-from inputs.plugins.ethereum_governance import GovernanceEthereum
+from inputs.plugins.ethereum_governance import GovernanceEthereum, Message
 
 
 @pytest.fixture
@@ -52,14 +53,16 @@ async def test_load_rules_from_blockchain_success_scenario(governance_instance):
     mock_client_session_cm.__aexit__.return_value = None
 
     # Patch decode_eth_response to return a predictable value
-    with patch.object(
-        governance_instance, "decode_eth_response", return_value=expected_decoded
-    ):
-        with patch(
+    with (
+        patch.object(
+            governance_instance, "decode_eth_response", return_value=expected_decoded
+        ),
+        patch(
             "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
             return_value=mock_client_session_cm,
-        ):
-            result = await governance_instance.load_rules_from_blockchain()
+        ),
+    ):
+        result = await governance_instance.load_rules_from_blockchain()
 
     assert result == expected_decoded
     mock_session.post.assert_called_once()
@@ -83,12 +86,14 @@ async def test_load_rules_from_blockchain_http_error(governance_instance, caplog
     mock_client_session_cm.__aenter__.return_value = mock_session
     mock_client_session_cm.__aexit__.return_value = None
 
-    with caplog.at_level("ERROR"):
-        with patch(
+    with (
+        caplog.at_level("ERROR"),
+        patch(
             "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
             return_value=mock_client_session_cm,
-        ):
-            result = await governance_instance.load_rules_from_blockchain()
+        ),
+    ):
+        result = await governance_instance.load_rules_from_blockchain()
 
     assert result is None
     assert "Blockchain request failed with status 404" in caplog.text
@@ -115,12 +120,14 @@ async def test_load_rules_from_blockchain_no_result_in_response(
     mock_client_session_cm.__aenter__.return_value = mock_session
     mock_client_session_cm.__aexit__.return_value = None
 
-    with caplog.at_level("ERROR"):
-        with patch(
+    with (
+        caplog.at_level("ERROR"),
+        patch(
             "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
             return_value=mock_client_session_cm,
-        ):
-            result = await governance_instance.load_rules_from_blockchain()
+        ),
+    ):
+        result = await governance_instance.load_rules_from_blockchain()
 
     assert result is None
     assert "No valid result in blockchain response" in caplog.text
@@ -142,12 +149,14 @@ async def test_load_rules_from_blockchain_exception(governance_instance, caplog)
     mock_client_session_cm.__aenter__.return_value = mock_session
     mock_client_session_cm.__aexit__.return_value = None
 
-    with caplog.at_level("ERROR"):
-        with patch(
+    with (
+        caplog.at_level("ERROR"),
+        patch(
             "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
             return_value=mock_client_session_cm,
-        ):
-            result = await governance_instance.load_rules_from_blockchain()
+        ),
+    ):
+        result = await governance_instance.load_rules_from_blockchain()
 
     assert result is None
     assert "Error loading rules from blockchain" in caplog.text
@@ -212,11 +221,11 @@ def test_initialization_sets_defaults(governance_instance, mock_io_provider):
 async def test_poll_calls_load_rules_and_returns_result(governance_instance):
     expected_result = "Poll Result Rule"
     mock_load_func = AsyncMock(return_value=expected_result)
-    with patch.object(
-        governance_instance, "load_rules_from_blockchain", mock_load_func
+    with (
+        patch.object(governance_instance, "load_rules_from_blockchain", mock_load_func),
+        patch("asyncio.sleep"),
     ):
-        with patch("asyncio.sleep"):
-            result = await governance_instance._poll()
+        result = await governance_instance._poll()
 
     assert result == expected_result
     mock_load_func.assert_awaited_once()
@@ -225,12 +234,12 @@ async def test_poll_calls_load_rules_and_returns_result(governance_instance):
 @pytest.mark.asyncio
 async def test_poll_handles_exception_from_load_rules(governance_instance, caplog):
     mock_load_func = AsyncMock(side_effect=Exception("Load Error"))
-    with patch.object(
-        governance_instance, "load_rules_from_blockchain", mock_load_func
+    with (
+        patch.object(governance_instance, "load_rules_from_blockchain", mock_load_func),
+        caplog.at_level("ERROR"),
+        patch("asyncio.sleep"),
     ):
-        with caplog.at_level("ERROR"):
-            with patch("asyncio.sleep"):
-                result = await governance_instance._poll()
+        result = await governance_instance._poll()
 
     assert result is None
     assert "Error fetching blockchain data" in caplog.text
@@ -238,8 +247,6 @@ async def test_poll_handles_exception_from_load_rules(governance_instance, caplo
 
 @pytest.mark.asyncio
 async def test_raw_to_text_converts_string_to_message(governance_instance):
-    import time
-
     test_rule_str = "Raw Governance Rule Text"
     timestamp_before = time.time()
 
@@ -272,8 +279,6 @@ async def test_raw_to_text_adds_unique_message_to_buffer(governance_instance):
 
 @pytest.mark.asyncio
 async def test_raw_to_text_does_not_add_duplicate_message(governance_instance):
-    from inputs.plugins.ethereum_governance import Message
-
     test_rule_str = "Duplicate Governance Rule"
     existing_msg = Message(timestamp=1233.0, message=test_rule_str)
     governance_instance.messages = [existing_msg]
@@ -295,8 +300,6 @@ def test_formatted_latest_buffer_empty(governance_instance):
 def test_formatted_latest_buffer_formats_latest_message(
     governance_instance, mock_io_provider
 ):
-    from inputs.plugins.ethereum_governance import Message
-
     msg = Message(timestamp=1234.0, message="formatted buffered message")
     governance_instance.messages = [msg]
 
