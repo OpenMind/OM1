@@ -1,8 +1,12 @@
 import asyncio
 import functools
+import json
 import logging
+import os
+import tempfile
+import threading
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union
 
 import openai
 
@@ -22,6 +26,15 @@ class ChatMessage:
     role: str
     content: str
 
+    def to_dict(self) -> Dict[str, str]:
+        """Convert to dictionary for JSON serialization."""
+        return {"role": self.role, "content": self.content}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, str]) -> "ChatMessage":
+        """Create ChatMessage from dictionary."""
+        return cls(role=data["role"], content=data["content"])
+
 
 ACTION_MAP = {
     "emotion": "**** felt: {}.",
@@ -32,7 +45,16 @@ ACTION_MAP = {
 
 class LLMHistoryManager:
     """
-    Manages the history of interactions for LLMs, including summarization.
+    Manages the history of interactions for LLMs, including summarization
+    and disk persistence for crash recovery.
+
+    Features (Issue #985):
+    - Automatic save to disk after each interaction
+    - Load history on startup if file exists
+    - Atomic writes to prevent corruption
+    - Graceful handling of corrupted files
+    - Thread-safe disk operations
+    - Configurable auto-save interval
     """
 
     def __init__(
@@ -49,6 +71,7 @@ class LLMHistoryManager:
         ----------
         config : LLMConfig
             Configuration object containing LLM settings and parameters.
+            New fields: history_file_path, auto_save_interval for persistence.
         client : Union[openai.AsyncClient, openai.OpenAI]
             OpenAI client instance for making API calls (async or sync).
         system_prompt : str, optional
@@ -87,6 +110,238 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # Persistence settings (Issue #985)
+        self._history_file_path: Optional[str] = getattr(
+            config, "history_file_path", None
+        )
+        self._auto_save_interval: int = getattr(config, "auto_save_interval", 1)
+        self._save_counter: int = 0
+        self._file_lock = threading.RLock()
+        self._last_save_hash: Optional[int] = None
+
+        # Load history from disk on startup
+        if self._history_file_path:
+            self._load_history()
+
+    # =========================================================================
+    # Persistence Methods (Issue #985)
+    # =========================================================================
+
+    def _get_history_file_path(self) -> Optional[str]:
+        """
+        Get the path to the history file, creating directory if needed.
+
+        Returns
+        -------
+        Optional[str]
+            The absolute path to the history file, or None if not configured.
+        """
+        if not self._history_file_path:
+            return None
+
+        # Ensure parent directory exists
+        history_dir = os.path.dirname(self._history_file_path)
+        if history_dir and not os.path.exists(history_dir):
+            os.makedirs(history_dir, mode=0o755, exist_ok=True)
+
+        return self._history_file_path
+
+    def _load_history(self) -> bool:
+        """
+        Load conversation history from disk.
+
+        Returns
+        -------
+        bool
+            True if history was loaded successfully, False otherwise.
+        """
+        file_path = self._get_history_file_path()
+        if not file_path:
+            return False
+
+        with self._file_lock:
+            try:
+                if not os.path.exists(file_path):
+                    logging.debug(f"No history file found at {file_path}")
+                    return False
+
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                # Validate structure
+                if not isinstance(data, dict):
+                    logging.warning("Invalid history file format: expected dict")
+                    return False
+
+                # Load messages
+                messages = data.get("messages", [])
+                if not isinstance(messages, list):
+                    logging.warning("Invalid messages format: expected list")
+                    return False
+
+                self.history = [
+                    ChatMessage.from_dict(msg)
+                    for msg in messages
+                    if isinstance(msg, dict) and "role" in msg and "content" in msg
+                ]
+
+                # Load frame index
+                self.frame_index = data.get("frame_index", 0)
+
+                # Update save hash to avoid unnecessary saves
+                self._last_save_hash = self._compute_history_hash()
+
+                logging.info(
+                    f"Loaded {len(self.history)} messages from {file_path} "
+                    f"(frame_index={self.frame_index})"
+                )
+                return True
+
+            except json.JSONDecodeError as e:
+                logging.warning(f"Corrupted history file at {file_path}: {e}")
+                # Backup corrupted file for debugging
+                self._backup_corrupted_file(file_path)
+                return False
+            except Exception as e:
+                logging.error(f"Error loading history from {file_path}: {e}")
+                return False
+
+    def _backup_corrupted_file(self, file_path: str) -> None:
+        """
+        Backup a corrupted history file for debugging.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to the corrupted file.
+        """
+        try:
+            if os.path.exists(file_path):
+                import time
+
+                backup_path = f"{file_path}.corrupted.{int(time.time())}"
+                os.rename(file_path, backup_path)
+                logging.info(f"Backed up corrupted file to {backup_path}")
+        except Exception as e:
+            logging.warning(f"Failed to backup corrupted file: {e}")
+
+    def _save_history(self) -> bool:
+        """
+        Save conversation history to disk using atomic writes.
+
+        Returns
+        -------
+        bool
+            True if history was saved successfully, False otherwise.
+        """
+        file_path = self._get_history_file_path()
+        if not file_path:
+            return False
+
+        # Check if save is needed (hash comparison)
+        current_hash = self._compute_history_hash()
+        if current_hash == self._last_save_hash:
+            logging.debug("History unchanged, skipping save")
+            return True
+
+        with self._file_lock:
+            try:
+                # Prepare data
+                data = {
+                    "version": "1.0",
+                    "agent_name": self.agent_name,
+                    "frame_index": self.frame_index,
+                    "message_count": len(self.history),
+                    "messages": [msg.to_dict() for msg in self.history],
+                }
+
+                # Atomic write: write to temp file, then rename
+                dir_path = os.path.dirname(file_path) or "."
+                fd, temp_path = tempfile.mkstemp(
+                    suffix=".tmp", prefix=".history_", dir=dir_path
+                )
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8") as f:
+                        json.dump(data, f, indent=2, ensure_ascii=False)
+                        f.flush()
+                        os.fsync(f.fileno())
+
+                    # Atomic rename
+                    os.replace(temp_path, file_path)
+                    self._last_save_hash = current_hash
+
+                    logging.debug(f"Saved {len(self.history)} messages to {file_path}")
+                    return True
+
+                except Exception as e:
+                    # Clean up temp file on error
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+                    raise e
+
+            except Exception as e:
+                logging.error(f"Error saving history to {file_path}: {e}")
+                return False
+
+    def _compute_history_hash(self) -> int:
+        """
+        Compute a hash of the current history state.
+
+        Returns
+        -------
+        int
+            Hash of the history for change detection.
+        """
+        return hash(
+            (
+                self.frame_index,
+                tuple((msg.role, msg.content) for msg in self.history),
+            )
+        )
+
+    def _maybe_auto_save(self) -> None:
+        """
+        Perform auto-save if the save interval has been reached.
+        """
+        if not self._history_file_path:
+            return
+
+        self._save_counter += 1
+        if self._save_counter >= self._auto_save_interval:
+            self._save_counter = 0
+            self._save_history()
+
+    def save(self) -> bool:
+        """
+        Explicitly save history to disk.
+
+        Returns
+        -------
+        bool
+            True if save was successful, False otherwise.
+        """
+        return self._save_history()
+
+    def load(self) -> bool:
+        """
+        Explicitly load history from disk.
+
+        Returns
+        -------
+        bool
+            True if load was successful, False otherwise.
+        """
+        return self._load_history()
+
+    def clear(self) -> None:
+        """
+        Clear all history from memory and optionally from disk.
+        """
+        self.history.clear()
+        self.frame_index = 0
+        self._last_save_hash = None
+        self._save_history()
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -239,6 +494,8 @@ class LLMHistoryManager:
                         del messages[:num_summarized]
                         messages.insert(0, summary_message)
                         logging.info("Successfully summarized the state")
+                        # Save after summarization (Issue #985)
+                        self._save_history()
                     elif (
                         summary_message.role == "system"
                         and "Error" in summary_message.content
@@ -351,6 +608,9 @@ class LLMHistoryManager:
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)
                     )
+
+                    # Auto-save after each interaction (Issue #985)
+                    self.history_manager._maybe_auto_save()
 
                     if (
                         self.history_manager.config.history_length > 0
