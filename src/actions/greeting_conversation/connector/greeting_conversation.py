@@ -141,6 +141,7 @@ class GreetingConversationConnector(
     def tick(self) -> None:
         """
         Tick method for the connector.
+
         Periodically updates the conversation state even without LLM input.
         """
         logging.info("GreetingConversationConnector tick called")
@@ -163,8 +164,7 @@ class GreetingConversationConnector(
                 {"greeting_conversation_finished": True}
             )
 
-        # Log state updates if state changed or high confidence
-        # if state_update.get("confidence", {}).get("overall", 0) > 0.7:
+        # Log the updated state
         logging.info(
             f"State: {state_update.get('current_state')}, "
             f"Confidence: {state_update.get('confidence', {}).get('overall', 0):.2f}, "
