@@ -64,6 +64,24 @@ class PresenceSnapshot:
         u = int(self.unknown_faces or 0)
 
         def join_names(ns: List[str]) -> str:
+            """Join a list of names into a grammatically correct string.
+
+            Formats names with proper English conjunctions:
+            - Empty list: ""
+            - Single name: "Alice"
+            - Two names: "Alice and Bob"
+            - Three+ names: "Alice, Bob and Charlie"
+
+            Parameters
+            ----------
+            ns : List[str]
+                List of names to join.
+
+            Returns
+            -------
+            str
+                Grammatically formatted string of names.
+            """
             if not ns:
                 return ""
             if len(ns) == 1:
