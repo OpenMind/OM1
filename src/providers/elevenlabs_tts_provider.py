@@ -56,14 +56,6 @@ class ElevenLabsTTSProvider:
         enable_tts_interrupt : bool, optional
             If True, enables the ability to interrupt ongoing TTS playback when ASR
             detects new speech input. Defaults to False.
-
-        Notes
-        -----
-        The provider uses a singleton pattern, ensuring only one instance exists
-        throughout the application lifecycle. The audio output stream is initialized
-        lazily and can be started/stopped using the `start()` and `stop()` methods.
-        Both `api_key` and `elevenlabs_api_key` can be provided simultaneously,
-        with `api_key` used in headers and `elevenlabs_api_key` in the request payload.
         """
         self.api_key = api_key
         self.elevenlabs_api_key = elevenlabs_api_key
