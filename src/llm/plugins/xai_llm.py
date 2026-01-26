@@ -28,7 +28,7 @@ class XAIConfig(LLMConfig):
     """XAI-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/nearai",
+        default="https://api.openmind.org/api/core/xai",
         description="Base URL for the XAI API endpoint",
     )
     model: T.Optional[T.Union[XAIModel, str]] = Field(
