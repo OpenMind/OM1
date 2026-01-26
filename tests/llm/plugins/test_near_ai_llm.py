@@ -3,9 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from llm import LLMConfig
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.near_ai_llm import NearAILLM
+from llm.plugins.near_ai_llm import NearAIConfig, NearAILLM
 
 
 class DummyOutputModel(BaseModel):
@@ -15,7 +14,7 @@ class DummyOutputModel(BaseModel):
 @pytest.fixture
 def config():
     """Fixture providing a basic LLM configuration."""
-    return LLMConfig(
+    return NearAIConfig(
         base_url="https://api.test.nearai.com/",
         api_key="test_api_key",
         model="test-model",
@@ -124,26 +123,26 @@ class TestNearAILLMInit:
 
     def test_init_default_base_url(self):
         """Test default base URL when not provided."""
-        config = LLMConfig(api_key="test_key")
+        config = NearAIConfig(api_key="test_key")
         llm = NearAILLM(config, available_actions=None)
         assert "nearai" in str(llm._client.base_url)
 
     def test_init_default_model(self):
         """Test default model is set when not provided."""
-        config = LLMConfig(api_key="test_key")
+        config = NearAIConfig(api_key="test_key")
         llm = NearAILLM(config, available_actions=None)
         assert llm._config.model is not None
         assert "qwen" in llm._config.model.lower()
 
     def test_init_requires_api_key(self):
         """Test that initialization fails without API key."""
-        config = LLMConfig(base_url="test_url")
+        config = NearAIConfig(base_url="test_url")
         with pytest.raises(ValueError, match="config file missing api_key"):
             NearAILLM(config, available_actions=None)
 
     def test_init_with_empty_api_key(self):
         """Test that initialization fails with empty API key."""
-        config = LLMConfig(api_key="")
+        config = NearAIConfig(api_key="")
         with pytest.raises(ValueError, match="config file missing api_key"):
             NearAILLM(config, available_actions=None)
 
