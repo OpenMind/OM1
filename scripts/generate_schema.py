@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Generate OM1 configuration schema from codebase."""
 
 import ast
