@@ -40,7 +40,15 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
 
     def __init__(self, config: SensorConfig):
         """
-        Initialize FaceEmotionCapture instance.
+        Initialize the FaceEmotionCapture input handler.
+
+        Sets up the required providers and resources for handling facial emotion recognition.
+        Initializes OpenCV face cascade classifier and webcam capture if available.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the sensor input.
         """
         super().__init__(config)
 
