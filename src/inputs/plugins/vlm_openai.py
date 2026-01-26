@@ -94,44 +94,12 @@ class VLMOpenAI(FuserInput[VLMOpenAIConfig, Optional[str]]):
 
     def get_capabilities(self) -> Optional[CapabilityDescriptor]:
         """
-        Get capability descriptor for the VLM OpenAI sensor.
+        Return the capability descriptor for this sensor.
 
-        Returns
-        -------
-        CapabilityDescriptor
-            Describes vision capabilities and constraints
+        This implementation delegates to the base class to avoid introducing
+        capability-introspection behavior in this component.
         """
-        return CapabilityDescriptor(
-            component_name="camera_vlm",
-            component_type=ComponentType.SENSOR,
-            supported_features=[
-                "image_capture",
-                "scene_description",
-                "object_detection",
-                "text_recognition"
-            ],
-            constraints=[
-                # Documented nominal update rate is 2.0 Hz to balance latency and compute load; this class does not enforce it.
-                Constraint(
-                    name="update_rate",
-                    value=2.0,
-                    unit="Hz",
-                    description="Expected VLM inference frequency is 2.0 Hz to balance responsiveness and computational load (not enforced by this component)"
-                ),
-                Constraint(
-                    name="camera_index",
-                    value=self.config.camera_index,
-                    description="Active camera device index"
-                ),
-            ],
-            is_available=True,
-            description="Vision Language Model sensor using OpenAI API",
-            metadata={
-                "model_type": "vlm",
-                "provider": "openai",
-                "base_url": self.config.base_url,
-            },
-        )
+        return super().get_capabilities()
 
     def _handle_vlm_message(self, raw_message: ChatCompletion):
         """
