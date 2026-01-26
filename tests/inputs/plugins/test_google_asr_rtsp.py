@@ -777,6 +777,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     with patch("time.time", return_value=fixed_timestamp):
         result = instance.formatted_latest_buffer()
 
+    assert result is not None
     assert "INPUT: Voice" in result
     assert msg_content in result
     assert len(instance.messages) == 0
