@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from providers.rplidar_provider import RPLidarConfig, RPLidarProvider
+from providers.rplidar_provider import MachineType, RPLidarConfig, RPLidarProvider
 
 
 @pytest.fixture(autouse=True)
@@ -157,3 +157,58 @@ def test_log_file_initialization(mock_rplidar_dependencies):
         assert provider.write_to_local_file is True
         assert provider.filename_current == "dump/lidar_1234567890_123456Z.jsonl"
         mock_time.assert_called()
+
+
+def test_machine_type_enum_go2(mock_rplidar_dependencies):
+    """Test initialization with MachineType.GO2 enum."""
+    provider = RPLidarProvider(machine_type=MachineType.GO2)
+
+    assert provider.machine_type == MachineType.GO2
+    assert provider.machine_type.value == "go2"
+
+
+def test_machine_type_enum_tb4(mock_rplidar_dependencies):
+    """Test initialization with MachineType.TB4 enum."""
+    provider = RPLidarProvider(machine_type=MachineType.TB4)
+
+    assert provider.machine_type == MachineType.TB4
+    assert provider.machine_type.value == "tb4"
+
+
+def test_machine_type_string_backward_compatibility_go2(mock_rplidar_dependencies):
+    """Test backward compatibility with string 'go2'."""
+    provider = RPLidarProvider(machine_type="go2")
+
+    assert provider.machine_type == MachineType.GO2
+    assert isinstance(provider.machine_type, MachineType)
+
+
+def test_machine_type_string_backward_compatibility_tb4(mock_rplidar_dependencies):
+    """Test backward compatibility with string 'tb4'."""
+    provider = RPLidarProvider(machine_type="tb4")
+
+    assert provider.machine_type == MachineType.TB4
+    assert isinstance(provider.machine_type, MachineType)
+
+
+def test_machine_type_string_case_insensitive(mock_rplidar_dependencies):
+    """Test that string machine_type is case-insensitive."""
+    provider = RPLidarProvider(machine_type="GO2")
+
+    assert provider.machine_type == MachineType.GO2
+
+
+def test_machine_type_invalid_string_defaults_to_go2(mock_rplidar_dependencies):
+    """Test that invalid string machine_type defaults to GO2 with warning."""
+    with patch("providers.rplidar_provider.logging.warning") as mock_warning:
+        provider = RPLidarProvider(machine_type="invalid_type")
+
+        assert provider.machine_type == MachineType.GO2
+        mock_warning.assert_called_once()
+
+
+def test_machine_type_default_value(mock_rplidar_dependencies):
+    """Test that machine_type defaults to MachineType.GO2."""
+    provider = RPLidarProvider()
+
+    assert provider.machine_type == MachineType.GO2

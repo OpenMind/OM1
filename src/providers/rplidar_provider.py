@@ -6,6 +6,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass
+from enum import Enum
 from queue import Empty, Full
 from typing import Dict, List, Optional, Union
 
@@ -20,6 +21,18 @@ from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
 from .d435_provider import D435Provider
 from .rplidar_driver import RPDriver
 from .singleton import singleton
+
+
+class MachineType(Enum):
+    """
+    Enumeration for supported machine/robot types.
+
+    This enum provides type-safe machine type selection for RPLidarProvider
+    and other components that need to distinguish between different robot platforms.
+    """
+
+    GO2 = "go2"
+    TB4 = "tb4"
 
 
 @dataclass
@@ -151,7 +164,7 @@ class RPLidarProvider:
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
         URID: str = "",
-        machine_type: str = "go2",
+        machine_type: Union[MachineType, str] = MachineType.GO2,
         use_zenoh: bool = False,
         simple_paths: bool = False,
         rplidar_config: RPLidarConfig = RPLidarConfig(),
@@ -176,8 +189,9 @@ class RPLidarProvider:
             The angle of the sensor zero relative to the way in which it's mounted
         URID: str = ""
             The URID of the robot, used for Zenoh communication
-        machine_type: str = "go2"
-            The type of the robot, e.g., "go2" or "tb4"
+        machine_type: Union[MachineType, str] = MachineType.GO2
+            The type of the robot. Can be a MachineType enum or string ("go2" or "tb4").
+            String values are converted to MachineType enum for type safety.
         use_zenoh: bool = False
             Whether to use Zenoh for communication
         simple_paths: bool = False
@@ -188,6 +202,18 @@ class RPLidarProvider:
             Whether to log data to a local file
         """
         logging.info("Booting RPLidar")
+
+        # Convert string to enum for backward compatibility
+        if isinstance(machine_type, str):
+            try:
+                machine_type = MachineType(machine_type.lower())
+            except ValueError:
+                logging.warning(
+                    f"Unsupported machine type: {machine_type}. "
+                    f"Supported types are {[mt.value for mt in MachineType]}. "
+                    f"Defaulting to {MachineType.GO2.value}."
+                )
+                machine_type = MachineType.GO2
 
         self.serial_port = serial_port
         self.half_width_robot = half_width_robot
@@ -263,21 +289,22 @@ class RPLidarProvider:
                 self.zen = open_zenoh_session()
                 logging.info(f"Zenoh move client opened {self.zen}")
 
-                if self.machine_type == "tb4":
+                if self.machine_type == MachineType.TB4:
                     logging.info(
-                        f"{self.machine_type} RPLIDAR listener starting with URID: {self.URID}"
+                        f"{self.machine_type.value} RPLIDAR listener starting with URID: {self.URID}"
                     )
                     self.zen.declare_subscriber(
                         f"{self.URID}/pi/scan", self.listen_scan
                     )
 
-                if self.machine_type == "go2":
-                    logging.info(f"{self.machine_type} RPLIDAR listener starting")
+                if self.machine_type == MachineType.GO2:
+                    logging.info(f"{self.machine_type.value} RPLIDAR listener starting")
                     self.zen.declare_subscriber("scan", self.listen_scan)
 
-                if self.machine_type != "tb4" and self.machine_type != "go2":
+                if self.machine_type not in (MachineType.TB4, MachineType.GO2):
                     raise ValueError(
-                        f"Unsupported machine type: {self.machine_type}. Supported types are 'tb4' and 'go2'."
+                        f"Unsupported machine type: {self.machine_type.value}. "
+                        f"Supported types are {[mt.value for mt in MachineType]}."
                     )
 
             except Exception as e:
