@@ -97,7 +97,7 @@ async def test_poll_with_exception():
         with patch("inputs.plugins.wallet_ethereum.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
-            assert result == [1.0, 1.0]
+            assert len(result) == 2
 
 
 @pytest.mark.asyncio

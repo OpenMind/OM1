@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from inputs.base import Message
 from inputs.plugins.vlm_openai_rtsp import VLMOpenAIRTSP, VLMOpenAIRTSPConfig
 
 
@@ -29,8 +30,7 @@ async def test_poll():
         sensor = VLMOpenAIRTSP(config=config)
 
         result = await sensor._poll()
-
-        assert result is not None or result is None
+        assert result is None
 
 
 def test_formatted_latest_buffer():
@@ -43,4 +43,18 @@ def test_formatted_latest_buffer():
         sensor = VLMOpenAIRTSP(config=config)
 
         result = sensor.formatted_latest_buffer()
-        assert result is None or isinstance(result, str)
+        assert result is None
+
+        test_message = Message(
+            timestamp=123.456, message="I see a person walking through a doorway"
+        )
+        sensor.messages.append(test_message)
+
+        result = sensor.formatted_latest_buffer()
+        assert isinstance(result, str)
+        assert "INPUT:" in result
+        assert "Vision" in result
+        assert "I see a person" in result
+        assert "// START" in result
+        assert "// END" in result
+        assert len(sensor.messages) == 0
