@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from inputs.base import Message
 from inputs.plugins.zenoh import ZenohListener, ZenohListenerConfig
 
 
@@ -81,9 +80,7 @@ def test_formatted_latest_buffer_with_messages():
         sensor = ZenohListener(config=config)
         sensor.io_provider = MagicMock()
 
-        sensor.messages = [
-            Message(timestamp=1000.0, message="Test message"),
-        ]
+        sensor.messages = ["Test message"]
 
         result = sensor.formatted_latest_buffer()
 
