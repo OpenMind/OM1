@@ -231,6 +231,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
 
     result = instance.formatted_latest_buffer()
 
+    assert result is not None
     assert "Latitude, Longitude, and Yaw INPUT" in result
     assert "Formatted GPS data" in result
     assert len(instance.buf) == 0
@@ -257,6 +258,8 @@ def test_xy_to_latlon_conversion(mock_io_provider, mock_odom_provider):
     dx = 100.0
     dy = 200.0
 
+    assert instance.lat0 is not None
+    assert instance.lon0 is not None
     lat0_rad = math.radians(instance.lat0)
     lon0_rad = math.radians(instance.lon0)
 
