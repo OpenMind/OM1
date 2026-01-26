@@ -29,6 +29,8 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
         ----------
         topic : str, optional
             The topic on which to subscribe for frontier exploration messages (default is "explore/status").
+        context_aware_text : Dict, optional
+            The context text to be sent when exploration is complete. Defaults to {"exploration_done": True}.
         """
         super().__init__(topic)
         logging.info("Frontier Exploration Provider initialized with topic: %s", topic)
