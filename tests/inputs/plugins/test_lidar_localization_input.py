@@ -22,9 +22,6 @@ async def test_poll():
         patch("inputs.plugins.lidar_localization_input.IOProvider"),
         patch("inputs.plugins.lidar_localization_input.asyncio.sleep", new=AsyncMock()),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.lidar_localization_input import LidarLocalizationInput
-
         config = SensorConfig()
         sensor = LidarLocalizationInput(config=config)
 
