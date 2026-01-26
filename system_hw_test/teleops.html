@@ -1,8 +1,9 @@
-<h3>Remote Control</h3><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="WebSocket Video Stream with Remote Control for robot teleoperation">
     <title>WebSocket Video Stream with Remote Control</title>
     <style>
         body {
@@ -208,12 +209,87 @@
                 flex: none;
                 width: 100%;
             }
+
+            .control-grid {
+                max-width: 100%;
+                gap: 8px;
+            }
+
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+
+            .url-input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            button {
+                width: 100%;
+                margin: 4px 0;
+            }
+
+            .container {
+                padding: 10px;
+            }
+        }
+
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .control-btn {
+                min-width: 60px;
+                min-height: 60px;
+                touch-action: manipulation;
+            }
+
+            button {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+        }
+
+        /* Accessibility improvements */
+        .control-btn:focus,
+        button:focus {
+            outline: 3px solid #4CAF50;
+            outline-offset: 2px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WebSocket Video Stream with Remote Control</h1>
+        <h3>Remote Control</h3>
 
         <div class="main-content">
             <div class="video-section">
@@ -255,18 +331,18 @@
                         <button id="connectBtn">Connect</button>
                     </div>
 
-                    <div class="control-grid">
-                        <div class="empty-cell"></div>
-                        <button class="control-btn" id="forwardBtn" data-key="w">↑</button>
-                        <div class="empty-cell"></div>
+                    <div class="control-grid" role="group" aria-label="Robot movement controls">
+                        <div class="empty-cell" aria-hidden="true"></div>
+                        <button class="control-btn" id="forwardBtn" data-key="w" aria-label="Move forward" title="Move Forward (W)">↑</button>
+                        <div class="empty-cell" aria-hidden="true"></div>
 
-                        <button class="control-btn" id="leftBtn" data-key="a">←</button>
-                        <div class="empty-cell"></div>
-                        <button class="control-btn" id="rightBtn" data-key="d">→</button>
+                        <button class="control-btn" id="leftBtn" data-key="a" aria-label="Turn left" title="Turn Left (A)">←</button>
+                        <div class="empty-cell" aria-hidden="true"></div>
+                        <button class="control-btn" id="rightBtn" data-key="d" aria-label="Turn right" title="Turn Right (D)">→</button>
 
-                        <div class="empty-cell"></div>
-                        <button class="control-btn" id="backwardBtn" data-key="s">↓</button>
-                        <div class="empty-cell"></div>
+                        <div class="empty-cell" aria-hidden="true"></div>
+                        <button class="control-btn" id="backwardBtn" data-key="s" aria-label="Move backward" title="Move Backward (S)">↓</button>
+                        <div class="empty-cell" aria-hidden="true"></div>
                     </div>
 
                     <div class="instructions">
@@ -376,6 +452,7 @@
             controlButtons.forEach(button => {
                 const key = button.dataset.key;
                 if (key) {
+                    // Mouse events
                     button.addEventListener('mousedown', function() {
                         if (!isControlConnected) return;
                         keysPressed.add(key);
@@ -391,6 +468,31 @@
                     });
 
                     button.addEventListener('mouseleave', function() {
+                        if (!isControlConnected) return;
+                        keysPressed.delete(key);
+                        updateControlButtons();
+                        updateMovement();
+                    });
+
+                    // Touch events for mobile support
+                    button.addEventListener('touchstart', function(e) {
+                        e.preventDefault();
+                        if (!isControlConnected) return;
+                        keysPressed.add(key);
+                        updateControlButtons();
+                        updateMovement();
+                    });
+
+                    button.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        if (!isControlConnected) return;
+                        keysPressed.delete(key);
+                        updateControlButtons();
+                        updateMovement();
+                    });
+
+                    button.addEventListener('touchcancel', function(e) {
+                        e.preventDefault();
                         if (!isControlConnected) return;
                         keysPressed.delete(key);
                         updateControlButtons();
