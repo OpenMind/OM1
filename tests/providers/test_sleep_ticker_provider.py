@@ -58,3 +58,28 @@ async def test_skip_sleep_property(sleep_ticker):
     assert sleep_ticker.skip_sleep is False
     sleep_ticker.skip_sleep = True
     assert sleep_ticker.skip_sleep is True
+
+
+@pytest.mark.asyncio
+async def test_skip_sleep_immediate_return(sleep_ticker):
+    """Test that sleep immediately returns when skip_sleep is True."""
+    sleep_ticker.skip_sleep = True
+
+    start_time = time.time()
+    await sleep_ticker.sleep(1.0)  # Should return immediately, not sleep for 1 second
+    duration = time.time() - start_time
+
+    # Should return almost instantly (much less than 1 second)
+    assert duration < 0.1
+    assert sleep_ticker._current_sleep_task is None
+
+
+@pytest.mark.asyncio
+async def test_skip_sleep_no_task_creation(sleep_ticker):
+    """Test that no sleep task is created when skip_sleep is True."""
+    sleep_ticker.skip_sleep = True
+
+    await sleep_ticker.sleep(0.5)
+
+    # Verify no task was created
+    assert sleep_ticker._current_sleep_task is None

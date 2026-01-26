@@ -61,6 +61,9 @@ class SleepTickerProvider:
 
         Creates a new sleep task and stores it as the current task. The task can
         be cancelled if skip_sleep is set to True while the sleep is in progress.
+        If skip_sleep is already True when this method is called, it immediately
+        returns without creating a sleep task, allowing tests and code to bypass
+        sleep delays when desired.
 
         Parameters
         ----------
@@ -76,6 +79,10 @@ class SleepTickerProvider:
         asyncio.CancelledError
             If the sleep operation is cancelled, though this is caught internally.
         """
+        # Immediately return if skip_sleep is set, allowing tests and code to bypass sleep delays
+        if self.skip_sleep:
+            return
+
         try:
             self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
             await self._current_sleep_task
