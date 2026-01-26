@@ -57,6 +57,7 @@ class LLMConfig(BaseModel):
     )
     auto_save_interval: int = Field(
         default=1,
+        ge=1,
         description="Number of interactions before auto-save triggers. 1 = save every interaction.",
     )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)

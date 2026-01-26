@@ -5,6 +5,7 @@ import logging
 import os
 import tempfile
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TypeVar, Union
 
@@ -112,10 +113,36 @@ class LLMHistoryManager:
         self.io_provider = IOProvider()
 
         # Persistence settings (Issue #985)
-        self._history_file_path: Optional[str] = getattr(
+        raw_history_file_path: Optional[str] = getattr(
             config, "history_file_path", None
         )
-        self._auto_save_interval: int = getattr(config, "auto_save_interval", 1)
+
+        # Validate and sanitize history file path to prevent directory traversal
+        self._history_file_path: Optional[str] = None
+        if raw_history_file_path:
+            try:
+                base_dir = os.getcwd()
+                abs_path = os.path.abspath(raw_history_file_path)
+
+                # Reject paths with directory traversal
+                normalized = os.path.normpath(raw_history_file_path)
+                if ".." in normalized.split(os.sep):
+                    raise ValueError("history_file_path contains directory traversal")
+
+                # Ensure path is within base directory
+                common = os.path.commonpath([base_dir, abs_path])
+                if common != base_dir:
+                    raise ValueError("history_file_path is outside allowed directory")
+
+                self._history_file_path = abs_path
+            except (ValueError, OSError) as exc:
+                logging.warning(
+                    "Ignoring unsafe history_file_path %r: %s",
+                    raw_history_file_path,
+                    exc,
+                )
+
+        self._auto_save_interval: int = max(1, getattr(config, "auto_save_interval", 1))
         self._save_counter: int = 0
         self._file_lock = threading.RLock()
         self._last_save_hash: Optional[int] = None
@@ -143,7 +170,11 @@ class LLMHistoryManager:
         # Ensure parent directory exists
         history_dir = os.path.dirname(self._history_file_path)
         if history_dir and not os.path.exists(history_dir):
-            os.makedirs(history_dir, mode=0o755, exist_ok=True)
+            try:
+                os.makedirs(history_dir, mode=0o755, exist_ok=True)
+            except OSError as e:
+                logging.warning(f"Failed to create history directory {history_dir}: {e}")
+                return None
 
         return self._history_file_path
 
@@ -180,14 +211,19 @@ class LLMHistoryManager:
                     logging.warning("Invalid messages format: expected list")
                     return False
 
-                self.history = [
-                    ChatMessage.from_dict(msg)
-                    for msg in messages
-                    if isinstance(msg, dict) and "role" in msg and "content" in msg
-                ]
+                loaded_messages: List[ChatMessage] = []
+                for msg in messages:
+                    if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                        loaded_messages.append(ChatMessage.from_dict(msg))
+                    else:
+                        logging.warning("Skipping malformed history message: %r", msg)
+                self.history = loaded_messages
 
                 # Load frame index
                 self.frame_index = data.get("frame_index", 0)
+
+                # Reset save counter for predictable auto-save behavior
+                self._save_counter = 0
 
                 # Update save hash to avoid unnecessary saves
                 self._last_save_hash = self._compute_history_hash()
@@ -218,8 +254,6 @@ class LLMHistoryManager:
         """
         try:
             if os.path.exists(file_path):
-                import time
-
                 backup_path = f"{file_path}.corrupted.{int(time.time())}"
                 os.rename(file_path, backup_path)
                 logging.info(f"Backed up corrupted file to {backup_path}")
@@ -303,13 +337,19 @@ class LLMHistoryManager:
     def _maybe_auto_save(self) -> None:
         """
         Perform auto-save if the save interval has been reached.
+        Thread-safe counter management.
         """
         if not self._history_file_path:
             return
 
-        self._save_counter += 1
-        if self._save_counter >= self._auto_save_interval:
-            self._save_counter = 0
+        should_save = False
+        with self._file_lock:
+            self._save_counter += 1
+            if self._save_counter >= self._auto_save_interval:
+                self._save_counter = 0
+                should_save = True
+
+        if should_save:
             self._save_history()
 
     def save(self) -> bool:
