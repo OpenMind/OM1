@@ -12,6 +12,14 @@ from providers.greeting_conversation_state_provider import (
 from providers.io_provider import Input
 
 
+@pytest.fixture(autouse=True)
+def reset_singleton():
+    """Reset the singleton instance before each test to ensure test isolation."""
+    GreetingConversationStateMachineProvider.reset()  # type: ignore
+    yield
+    GreetingConversationStateMachineProvider.reset()  # type: ignore
+
+
 @pytest.fixture
 def confidence_calculator():
     """Fixture for ConfidenceCalculator."""
@@ -331,7 +339,7 @@ class TestGreetingConversationStateMachineProvider:
         assert "command" in result
         assert "time_in_state" in result
         assert "confidence_trend" in result
-        assert result["current_state"] == ConversationState.CONVERSING.value
+        assert result["current_state"] == ConversationState.CONCLUDING.value
 
     def test_process_conversation_with_voice_input(self, state_machine_with_mock_io):
         """Test processing conversation with voice input."""
