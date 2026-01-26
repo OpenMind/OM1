@@ -77,7 +77,15 @@ jobs:
 
       - name: Run unit tests
         run: |
-          uv run pytest --log-cli-level=DEBUG -s
+          uv run pytest --cov --cov-report=term --cov-report=xml --cov-report=html --log-cli-level=DEBUG -s
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -85,3 +93,10 @@ jobs:
         with:
           name: test-results-${{ runner.os }}
           path: .pytest_cache/
+
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-${{ runner.os }}
+          path: htmlcov/

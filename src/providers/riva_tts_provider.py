@@ -13,13 +13,6 @@ class RivaTTSProvider:
 
     A singleton class that handles text-to-speech conversion and audio output
     through a dedicated thread.
-
-    Parameters
-    ----------
-    url : str
-        The URL endpoint for the TTS service
-    api_key : str, optional
-        The API key for the TTS service (default is None)
     """
 
     def __init__(
