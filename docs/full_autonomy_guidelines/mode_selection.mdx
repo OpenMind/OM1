@@ -41,6 +41,17 @@ Example config to setup context_aware transition type for transitioning into nav
     }
 ```
 
+```
+    {
+      from_mode: "mode_1",
+      to_mode: "mode_2",
+      transition_type: "context_aware",
+      context_conditions: { owner_identified: true, temperature: 70 },
+      priority: 2,
+      cooldown_seconds: 5.0,
+    }
+```
+
 ## Time based
 
 Time-based transitions enable the robot to automatically switch operational modes after a predefined period of elapsed time. These transitions are designed to ensure safe and secure operation without requiring continuous user input.
@@ -78,7 +89,7 @@ Step 2: Start talking to your robot dog and ask it to switch to a particular mod
     trigger_keywords: ["explore", "map", "navigate", "look around", "slam", "wander"]
 - Desired mode: **Navigation**
     trigger_keywords: ["navigate", "navigation", "go to", "take me to", "show me"]
-- Desired mode: **Guard**-+*
+- Desired mode: **Guard**
     trigger_keywords: ["guard", "security", "patrol", "keep watch"]
 
 ## Manual Trigger (via Portal)
