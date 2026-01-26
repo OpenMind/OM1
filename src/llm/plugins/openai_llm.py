@@ -18,8 +18,8 @@ R = T.TypeVar("R", bound=BaseModel)
 class OpenAIModel(str, Enum):
     """Available OpenAI models."""
 
-    GPT_4_o = "gpt-4o"
-    GPT_4_o_MINI = "gpt-4o-mini"
+    GPT_4_O = "gpt-4o"
+    GPT_4_O_MINI = "gpt-4o-mini"
     GPT_4_1 = "gpt-4.1"
     GPT_4_1_MINI = "gpt-4.1-mini"
     GPT_4_1_NANO = "gpt-4.1-nano"

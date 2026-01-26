@@ -20,7 +20,7 @@ class OpenRouterModel(str, Enum):
 
     LLAMA_3_3_70B = "meta-llama/llama-3.3-70b-instruct"
     LLAMA_3_1_70B = "meta-llama/llama-3.1-70b-instruct"
-    ANTHROPIC_CONNET_4_5 = "anthropic/claude-sonnet-4.5"
+    ANTHROPIC_SONNET_4_5 = "anthropic/claude-sonnet-4.5"
     ANTHROPIC_OPUS_4_1 = "anthropic/claude-opus-4.1"
 
 
