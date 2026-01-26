@@ -163,3 +163,38 @@ def test_language_map_has_no_duplicates():
     """Test that no two languages map to the same code."""
     codes = list(LANGUAGE_CODE_MAP.values())
     assert len(codes) == len(set(codes))
+
+
+def test_formatted_latest_buffer_empty(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test formatted_latest_buffer returns None when buffer is empty."""
+    config = GoogleASRSensorConfig(api_key="test_key")
+    sensor = GoogleASRInput(config=config)
+
+    result = sensor.formatted_latest_buffer()
+
+    assert result is None
+
+
+def test_formatted_latest_buffer_with_messages(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test formatted_latest_buffer formats message correctly."""
+    from unittest.mock import MagicMock
+
+    config = GoogleASRSensorConfig(api_key="test_key")
+    sensor = GoogleASRInput(config=config)
+    sensor.io_provider = MagicMock()
+
+    sensor.messages = ["Message 1", "Message 2"]
+
+    result = sensor.formatted_latest_buffer()
+
+    assert result is not None
+    assert "Message 2" in result  # Should contain latest message
+    assert "INPUT: Voice" in result
+    assert "// START" in result
+    assert "// END" in result
+    sensor.io_provider.add_input.assert_called_once()
+    assert len(sensor.messages) == 0

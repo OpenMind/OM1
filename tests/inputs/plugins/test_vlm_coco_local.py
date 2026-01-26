@@ -82,12 +82,27 @@ async def test_raw_to_text_buffer_management(vlm_coco_local):
 
 
 def test_formatted_latest_buffer(vlm_coco_local):
-    vlm_coco_local.messages = [Message(message="test message", timestamp=123.456)]
+    """Test formatted_latest_buffer formats message correctly."""
+    from unittest.mock import MagicMock
+
+    vlm_coco_local.io_provider = MagicMock()
+    vlm_coco_local.messages = [
+        Message(message="test message 1", timestamp=123.456),
+        Message(message="test message 2", timestamp=123.457),
+    ]
     result = vlm_coco_local.formatted_latest_buffer()
-    assert "test message" in result
+
+    assert result is not None
+    assert "test message 2" in result  # Should contain latest message
+    assert "INPUT: Vision" in result
+    assert "// START" in result
+    assert "// END" in result
+    vlm_coco_local.io_provider.add_input.assert_called_once()
     assert vlm_coco_local.messages == []
 
 
 def test_formatted_latest_buffer_empty(vlm_coco_local):
+    """Test formatted_latest_buffer returns None when buffer is empty."""
     vlm_coco_local.messages = []
-    assert vlm_coco_local.formatted_latest_buffer() is None
+    result = vlm_coco_local.formatted_latest_buffer()
+    assert result is None
