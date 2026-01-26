@@ -83,15 +83,48 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
 
     @staticmethod
     def _wrap_angle(a: float) -> float:
+        """Normalize an angle to the range [-π, π].
+
+        Parameters
+        ----------
+        a : float
+            The angle in radians to normalize.
+
+        Returns
+        -------
+        float
+            The normalized angle in the range [-π, π].
+        """
         return (a + math.pi) % (2 * math.pi) - math.pi
 
     def _xy_to_latlon(self, x: float, y: float):
+        """Convert local X/Y coordinates to latitude/longitude.
+
+        Uses a simple equirectangular projection from the configured origin.
+
+        Parameters
+        ----------
+        x : float
+            East offset from origin in meters.
+        y : float
+            North offset from origin in meters.
+
+        Returns
+        -------
+        tuple[float, float]
+            Latitude and longitude in degrees.
+        """
         φ0, λ0 = map(math.radians, (self.lat0, self.lon0))  # type: ignore
         φ = φ0 + y / R_EARTH
         λ = λ0 + x / (R_EARTH * math.cos(φ0))
         return map(math.degrees, (φ, λ))
 
     async def _update_pose(self):
+        """Update the robot's global pose from odometry data.
+
+        Reads current position from the odometry provider, applies yaw offset,
+        converts to lat/lon, and publishes coordinates to IOProvider.
+        """
         o = self.odom
         logging.debug(f"Odom data: {o}")
         self.pose_x = self.odom.x
