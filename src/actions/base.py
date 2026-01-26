@@ -3,32 +3,28 @@ import typing as T
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from pydantic import BaseModel, ConfigDict
-
 IT = T.TypeVar("IT")
 OT = T.TypeVar("OT")
-CT = T.TypeVar("CT", bound="ActionConfig")
 
 
 @dataclass
 class MoveCommand:
-    """
-    Move command interface.
+    """Represents a movement command for robot locomotion.
 
-    Parameters
+    Attributes
     ----------
     dx : float
-        Distance to move in the x direction.
+        Forward/backward displacement in meters.
     yaw : float
-        Yaw angle to turn.
+        Rotation angle in radians.
     start_x : float
-        Starting x position.
+        Starting X position, defaults to 0.0.
     start_y : float
-        Starting y position.
+        Starting Y position, defaults to 0.0.
     turn_complete : bool
-        Whether the turn is complete.
+        Whether the turn has been completed, defaults to False.
     speed : float
-        Speed of movement.
+        Movement speed multiplier, defaults to 0.5.
     """
 
     dx: float
@@ -39,83 +35,101 @@ class MoveCommand:
     speed: float = 0.5
 
 
-class ActionConfig(BaseModel):
-    """
-    Configuration class for Action implementations.
+@dataclass
+class ActionConfig:
+    """Configuration class for Action implementations.
+
+    Parameters
+    ----------
+    **kwargs : dict
+        Additional configuration parameters
     """
 
-    model_config = ConfigDict(extra="allow")
+    def __init__(self, **kwargs):
+        """Initialize ActionConfig with dynamic attributes.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Arbitrary keyword arguments that will be set as instance attributes.
+        """
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 @dataclass
 class Interface(T.Generic[IT, OT]):
-    """
-    An interface for a action.
+    """Generic interface for actions.
 
-    Parameters
+    Attributes
     ----------
     input : IT
-        The input type for the interface.
+        The input type for the action.
     output : OT
-        The output type for the interface.
+        The output type for the action.
     """
 
     input: IT
     output: OT
 
 
-class ActionConnector(ABC, T.Generic[CT, OT]):
-    """
-    A connector for an action.
+class ActionConnector(ABC, T.Generic[OT]):
+    """Abstract base class for action connectors.
+
+    Action connectors handle the communication between the agent's
+    action decisions and the actual hardware or simulation endpoints.
     """
 
-    def __init__(self, config: CT):
-        """
-        Initialize the ActionConnector.
+    def __init__(self, config: ActionConfig):
+        """Initialize the action connector.
 
         Parameters
         ----------
-        config : CT
-            Configuration for the action connector.
+        config : ActionConfig
+            Configuration object containing connector-specific settings.
         """
-        self.config: CT = config
+        self.config = config
 
     @abstractmethod
-    async def connect(self, output_interface: OT) -> None:
-        """
-        Connect the input protocol to the action.
+    async def connect(self, input_protocol: OT) -> None:
+        """Send an action command to the connected endpoint.
+
+        This method must be implemented by subclasses to handle
+        the actual transmission of action commands.
 
         Parameters
         ----------
-        output_interface : OT
-            The input protocol containing the action details.
+        input_protocol : OT
+            The action input data to be sent to the endpoint.
         """
         pass
 
     def tick(self) -> None:
-        """
-        Tick method for periodic updates.
+        """Execute a single iteration of the connector's main loop.
+
+        This default implementation sleeps for 60 seconds. Subclasses
+        should override this method to implement custom tick behavior
+        with appropriate timing for their specific use case.
         """
         time.sleep(60)
 
 
 @dataclass
 class AgentAction:
-    """
-    Base class for agent actions.
+    """Base class for agent actions.
 
-    Parameters
+    Attributes
     ----------
     name : str
-        The name of the action.
+        The name identifier for this action.
     llm_label : str
-        The label used by the LLM for this action.
+        The label used by the LLM to reference this action.
     interface : Type[Interface]
         The interface type for this action.
     connector : ActionConnector
-        The connector for this action.
+        The connector instance handling action execution.
     exclude_from_prompt : bool
-        Whether to exclude this action from the prompt.
+        Whether to exclude this action from LLM prompts.
     """
 
     name: str
