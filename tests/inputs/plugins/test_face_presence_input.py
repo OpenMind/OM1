@@ -21,15 +21,17 @@ def test_initialization_creates_providers_and_buffers(mock_io_provider):
 
     mock_provider_constructor = Mock(return_value=mock_provider_instance)
 
-    with patch(
-        "inputs.plugins.face_presence_input.FacePresenceProvider",
-        new=mock_provider_constructor,
-    ):
-        with patch(
+    with (
+        patch(
+            "inputs.plugins.face_presence_input.FacePresenceProvider",
+            new=mock_provider_constructor,
+        ),
+        patch(
             "inputs.plugins.face_presence_input.IOProvider",
             return_value=mock_io_provider,
-        ):
-            instance = FacePresence(config=config)
+        ),
+    ):
+        instance = FacePresence(config=config)
 
     mock_provider_constructor.assert_called_once()
     mock_provider_instance.start.assert_called_once()
