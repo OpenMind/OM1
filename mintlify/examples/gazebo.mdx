@@ -16,11 +16,20 @@ It's ideal to have atleast 128 GB SSD storage for the setup to run smoothly.
 
 ## Simulation Instructions
 
-The Gazebo simulator is an industry-standard simulator for robots. Robot shapes and sizes are specified via `.dae` files, and these robots can then navigate a defined digital world. The simulation framework is useful for prototyping, debugging, and reinforcement learning, among many other uses.
-
 To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
 
-Install cyclonedds via https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html.
+Install cyclonedds from this [link](https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html) or follow the instructions below.
+
+```bash
+apt-get install git cmake gcc
+```
+
+```bash
+git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
+cd cyclonedds && mkdir build install && cd build
+cmake -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=$HOME/Documents/GitHub/cyclonedds/install ..
+cmake --build . --target install
+```
 
 To install ROS2 Humble, go to this [link](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html). Follow the steps under Setup Sources.
 Now, run
@@ -69,8 +78,6 @@ vi cyclonedds.xml
 Add the following, then save and exit.
 
 ```xml
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI='
 <CycloneDDS>
     <Domain>
         <General>
@@ -82,7 +89,25 @@ export CYCLONEDDS_URI='
             <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
         </Discovery>
     </Domain>
-</CycloneDDS>'
+</CycloneDDS>
+```
+
+Open your bashrc file
+
+```bash
+vi ~/.bashrc
+```
+
+Add the following, replacing `/path/to/cyclonedds` with the actual path to your CycloneDDS installation:
+
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=/path/to/cyclonedds/cyclonedds.xml
+```
+
+Apply the changes
+```bash
+source ~/.bashrc
 ```
 
 To add the config to your bashrc, run:
@@ -91,7 +116,7 @@ To add the config to your bashrc, run:
 vim ~/.bashrc
 ```
 
-And add the following:
+And add the following, replacing `/path/to/cyclonedds` with the actual path to your CycloneDDS installation:
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
@@ -180,6 +205,14 @@ Step 7: Start OM1
 
     Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
+    Then add the optional Python CycloneDDS module to OM1, run
+
+    ```bash
+    uv pip install -r pyproject.toml --extra dds
+    ```
+
+    Setup your API key and run your simulation agent:
+
     ```bash
     uv run src/run.py unitree_go2_autonomy_sim
     ```
@@ -229,7 +262,7 @@ Step 11: Teleoperate the robot in simulation
     j - Turn left
     l - Turn right
     k - Stop
-    u/o/m/. - Move diagonally
+    U/O/M/> - Move diagonally
     ```
 
 Note: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
