@@ -338,7 +338,7 @@ class ConfigSchemaGenerator:
                 functions = [
                     node.name
                     for node in tree.body
-                    if isinstance(node, ast.AsyncFunctionDef)
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
                 ]
 
                 if functions:
