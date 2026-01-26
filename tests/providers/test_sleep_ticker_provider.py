@@ -62,38 +62,29 @@ async def test_skip_sleep_property(sleep_ticker):
 
 @pytest.mark.asyncio
 async def test_skip_sleep_before_sleep(sleep_ticker):
-    # Set skip_sleep to True before calling sleep
     sleep_ticker.skip_sleep = True
 
     start_time = time.time()
     await sleep_ticker.sleep(1.0)
     duration = time.time() - start_time
 
-    # Sleep should return immediately
     assert duration < 0.1
 
 
 @pytest.mark.asyncio
 async def test_skip_sleep_setter_cancels_task(sleep_ticker):
-    # Start a long sleep
     sleep_task = asyncio.create_task(sleep_ticker.sleep(2.0))
 
-    # Give it a moment to start
     await asyncio.sleep(0.05)
 
-    # Cancel by setting skip_sleep to True
     sleep_ticker.skip_sleep = True
 
-    # Wait for the task to complete
     await sleep_task
-
-    # Should have been cancelled quickly
     assert sleep_ticker._current_sleep_task is None
 
 
 @pytest.mark.asyncio
 async def test_multiple_sleeps_sequential(sleep_ticker):
-    # Test that multiple sleeps work correctly in sequence
     start_time = time.time()
     await sleep_ticker.sleep(0.05)
     await sleep_ticker.sleep(0.05)
@@ -105,7 +96,6 @@ async def test_multiple_sleeps_sequential(sleep_ticker):
 
 @pytest.mark.asyncio
 async def test_concurrent_sleep_calls(sleep_ticker):
-    # Test that concurrent sleep calls work independently
     async def sleep_task(duration):
         await sleep_ticker.sleep(duration)
 
@@ -119,20 +109,17 @@ async def test_concurrent_sleep_calls(sleep_ticker):
     await asyncio.gather(*tasks)
     duration = time.time() - start_time
 
-    # Should complete in approximately 0.1 seconds (concurrent)
     assert duration < 0.3
 
 
 @pytest.mark.asyncio
 async def test_skip_sleep_reset(sleep_ticker):
-    # Test resetting skip_sleep back to False
     sleep_ticker.skip_sleep = True
     assert sleep_ticker.skip_sleep is True
 
     sleep_ticker.skip_sleep = False
     assert sleep_ticker.skip_sleep is False
 
-    # Now sleep should work normally
     start_time = time.time()
     await sleep_ticker.sleep(0.05)
     duration = time.time() - start_time
@@ -141,7 +128,6 @@ async def test_skip_sleep_reset(sleep_ticker):
 
 @pytest.mark.asyncio
 async def test_skip_sleep_no_active_task(sleep_ticker):
-    # Setting skip_sleep when there's no active task should not raise an error
     assert sleep_ticker._current_sleep_task is None
     sleep_ticker.skip_sleep = True
     assert sleep_ticker.skip_sleep is True
@@ -149,48 +135,39 @@ async def test_skip_sleep_no_active_task(sleep_ticker):
 
 @pytest.mark.asyncio
 async def test_sleep_zero_duration(sleep_ticker):
-    # Test sleeping for zero duration
     start_time = time.time()
     await sleep_ticker.sleep(0.0)
     duration = time.time() - start_time
 
-    # Should complete very quickly
     assert duration < 0.1
     assert sleep_ticker._current_sleep_task is None
 
 
 @pytest.mark.asyncio
 async def test_sleep_very_short_duration(sleep_ticker):
-    # Test sleeping for a very short duration
     start_time = time.time()
     await sleep_ticker.sleep(0.001)
     duration = time.time() - start_time
 
-    # Should complete quickly
     assert duration < 0.1
     assert sleep_ticker._current_sleep_task is None
 
 
 @pytest.mark.asyncio
 async def test_task_cleanup_on_cancellation(sleep_ticker):
-    # Start a sleep and cancel it
     sleep_task = asyncio.create_task(sleep_ticker.sleep(2.0))
     await asyncio.sleep(0.05)
 
-    # Verify task is stored
     assert sleep_ticker._current_sleep_task is not None
 
-    # Cancel via skip_sleep
     sleep_ticker.skip_sleep = True
     await sleep_task
 
-    # Verify task is cleaned up
     assert sleep_ticker._current_sleep_task is None
 
 
 @pytest.mark.asyncio
 async def test_skip_sleep_thread_safety(sleep_ticker):
-    # Test thread-safe access to skip_sleep property
     import threading
 
     def toggle_skip():
@@ -206,5 +183,4 @@ async def test_skip_sleep_thread_safety(sleep_ticker):
     for t in threads:
         t.join()
 
-    # Should complete without errors
     assert isinstance(sleep_ticker.skip_sleep, bool)
