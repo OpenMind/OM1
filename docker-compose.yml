@@ -41,6 +41,13 @@ services:
       - NET_ADMIN
     security_opt:
       - apparmor:unconfined
+      - no-new-privileges:true
     group_add:
       - audio
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/log
+      - /run
+      - /var/run
     command: ["unitree_go2_modes"]
