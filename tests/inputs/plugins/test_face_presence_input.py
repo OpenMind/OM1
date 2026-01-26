@@ -1,10 +1,11 @@
 import time
 from collections import deque
+from queue import Queue
 from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.plugins.face_presence_input import FacePresence, FacePresenceConfig
+from inputs.plugins.face_presence_input import FacePresence, FacePresenceConfig, Message
 
 
 @pytest.fixture
@@ -45,8 +46,6 @@ def test_initialization_creates_providers_and_buffers(mock_io_provider):
     assert instance.messages.maxlen == 300
 
     assert hasattr(instance, "message_buffer")
-    from queue import Queue
-
     assert isinstance(instance.message_buffer, Queue)
     assert instance.message_buffer.maxsize == 64
 
@@ -175,8 +174,6 @@ def test_formatted_latest_buffer_empty(face_presence_instance):
 def test_formatted_latest_buffer_formats_and_clears_latest_message(
     face_presence_instance, mock_io_provider
 ):
-    from inputs.plugins.face_presence_input import Message
-
     msg = Message(timestamp=1234.0, message="present=[eve], unknown=1, ts=123460")
     face_presence_instance.messages = [msg]
 

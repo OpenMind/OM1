@@ -2,6 +2,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from inputs.base import Message, SensorConfig
+from inputs.plugins.gps import Gps
+
 
 def test_initialization():
     """Test basic initialization."""
@@ -9,9 +12,6 @@ def test_initialization():
         patch("inputs.plugins.gps.GpsProvider"),
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         config = SensorConfig()
         sensor = Gps(config=config)
 
@@ -26,9 +26,6 @@ async def test_poll_with_data():
         patch("inputs.plugins.gps.GpsProvider") as mock_provider_class,
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         mock_provider = MagicMock()
         mock_provider.data = {
             "gps_lat": 37.7749,
@@ -56,9 +53,6 @@ async def test_poll_with_no_data():
         patch("inputs.plugins.gps.GpsProvider") as mock_provider_class,
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         mock_provider = MagicMock()
         mock_provider.data = None
         mock_provider_class.return_value = mock_provider
@@ -79,9 +73,6 @@ async def test_raw_to_text_with_valid_north_east_location():
         patch("inputs.plugins.gps.GpsProvider"),
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         config = SensorConfig()
         sensor = Gps(config=config)
 
@@ -110,9 +101,6 @@ async def test_raw_to_text_with_valid_south_west_location():
         patch("inputs.plugins.gps.GpsProvider"),
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         config = SensorConfig()
         sensor = Gps(config=config)
 
@@ -138,9 +126,6 @@ async def test_raw_to_text_with_poor_quality():
         patch("inputs.plugins.gps.GpsProvider"),
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         config = SensorConfig()
         sensor = Gps(config=config)
 
@@ -163,9 +148,6 @@ async def test_raw_to_text_with_none():
         patch("inputs.plugins.gps.GpsProvider"),
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         config = SensorConfig()
         sensor = Gps(config=config)
 
@@ -179,9 +161,6 @@ def test_formatted_latest_buffer_with_messages():
         patch("inputs.plugins.gps.GpsProvider"),
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import Message, SensorConfig
-        from inputs.plugins.gps import Gps
-
         config = SensorConfig()
         sensor = Gps(config=config)
         sensor.io_provider = MagicMock()
@@ -204,9 +183,6 @@ def test_formatted_latest_buffer_empty():
         patch("inputs.plugins.gps.GpsProvider"),
         patch("inputs.plugins.gps.IOProvider"),
     ):
-        from inputs.base import SensorConfig
-        from inputs.plugins.gps import Gps
-
         config = SensorConfig()
         sensor = Gps(config=config)
 
