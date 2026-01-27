@@ -1,7 +1,7 @@
+#!/bin/bash
 # chmod +x mintlify.sh
 # invoke with ./mintlify.sh
 
-#!/bin/bash
 set -e
 
 # Step 1: Copy docs to mintlify/

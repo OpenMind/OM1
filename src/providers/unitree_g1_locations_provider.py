@@ -17,15 +17,6 @@ class UnitreeG1LocationsProvider:
     This class implements a singleton pattern to manage:
         * Periodic background fetching of location data from an HTTP API
         * Thread-safe access to the location dictionary
-
-    Parameters
-    ----------
-    base_url : str, optional
-        The HTTP endpoint to fetch locations from. Default is "http://localhost:5000/maps/locations/list".
-    timeout : int, optional
-        Timeout for HTTP requests in seconds. Default is 5.
-    refresh_interval : int, optional
-        How often to refresh locations in seconds. Default is 30.
     """
 
     def __init__(

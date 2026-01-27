@@ -45,7 +45,6 @@ class ROS2PublisherProvider(Node):
 
         # Pending message queue and threading constructs
         self._pending_messages = Queue()
-        self._lock = threading.Lock()
         self.running: bool = False
         self._thread: Optional[threading.Thread] = None
 
