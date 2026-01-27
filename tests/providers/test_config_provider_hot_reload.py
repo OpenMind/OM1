@@ -12,14 +12,14 @@ from providers.config_provider import ConfigProvider
 class TestConfigProviderHotReload:
     @pytest.fixture(autouse=True)
     def reset_singleton(self):
-        ConfigProvider.reset()
+        ConfigProvider.reset()  # type: ignore
         yield
         try:
             provider = ConfigProvider()
             provider.stop()
         except Exception:
             pass
-        ConfigProvider.reset()
+        ConfigProvider.reset()  # type: ignore
 
     @patch("providers.config_provider.open_zenoh_session")
     def test_hot_reload_lifecycle(self, mock_session_cls):
@@ -46,7 +46,7 @@ class TestConfigProviderHotReload:
         try:
             # Patch the config path on the underlying class to use our temp file
             with patch.object(
-                ConfigProvider._singleton_class,
+                ConfigProvider._singleton_class,  # type: ignore
                 "_get_runtime_config_path",
                 return_value=tmp_path,
             ):
