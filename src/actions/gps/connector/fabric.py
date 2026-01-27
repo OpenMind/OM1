@@ -1,15 +1,4 @@
-"""GPS Fabric Connector - Fixed Version for Issue #1608
-
-This module provides a connector for sharing GPS coordinates via a Fabric network.
-Contains fixes for:
-- Incorrect coordinate validation logic (and -> or)
-- Missing return value consistency
-- Missing HTTP status code validation  
-- Missing JSON-RPC error field check
-"""
-
 import logging
-from typing import Optional
 
 import requests
 from pydantic import Field
