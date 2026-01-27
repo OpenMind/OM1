@@ -9,7 +9,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -97,10 +97,10 @@ class ConfigFileWatcher:
     def __init__(
         self,
         config_path: Path,
-        callback: Callable[[Path], Awaitable[None]] | None = None,
+        callback: Callable[[Path], Any] | None = None,
         debounce_seconds: float = 0.5,
         *,
-        on_change_callback: Callable[..., Awaitable[None]] | None = None,
+        on_change_callback: Callable[..., Any] | None = None,
     ):
         if on_change_callback is None:
             on_change_callback = callback
