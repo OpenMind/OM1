@@ -50,7 +50,8 @@ class ConfigFileHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        event_path = Path(event.src_path).resolve()
+        event_path_str = str(event.src_path)
+        event_path = Path(event_path_str).resolve()
         if event_path != self.target_path:
             return
 
