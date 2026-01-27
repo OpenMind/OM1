@@ -126,13 +126,25 @@ class FunctionGenerator:
 
             param_schema = FunctionGenerator.python_type_to_json_schema(param_type)
 
+                # Basic docstring parsing (Google/NumPy style simple extraction)
             docstring = inspect.getdoc(method)
-            if docstring and param_name in docstring:
-                param_schema["description"] = f"Parameter {param_name}"
+            if docstring:
+                import re
+                # Try to find "param_name : type\n    Description" or "param_name\n    Description"
+                # This is a simple regex and might not cover all cases but is better than nothing
+                pattern = re.compile(rf"{param_name}\s*:?.*?\n\s+(.+?)(\n\s*\n|\n\s*\w+|$)", re.DOTALL)
+                match = pattern.search(docstring)
+                if match:
+                    description = match.group(1).replace("\n", " ").strip()
+                    param_schema["description"] = description
+                elif param_name in docstring:
+                     # Fallback if specific parsing fails but name is mentioned
+                     pass 
 
-            required.append(param_name)
-
-            if param.default != inspect.Parameter.empty:
+            if param.default == inspect.Parameter.empty:
+                required.append(param_name)
+            else:
+                # Optional parameter
                 desc = param_schema.get("description", f"Parameter {param_name}")
                 if "(optional)" not in desc and "(optional" not in desc:
                     param_schema["description"] = (
@@ -145,7 +157,7 @@ class FunctionGenerator:
             "type": "function",
             "function": {
                 "name": getattr(method, "_llm_name", method.__name__),
-                "description": getattr(method, "_llm_description", ""),
+                "description": getattr(method, "_llm_description", "") or inspect.getdoc(method) or "",
                 "parameters": {
                     "type": "object",
                     "properties": properties,
@@ -173,10 +185,15 @@ class FunctionGenerator:
         """
         functions = {}
 
-        for _, method in inspect.getmembers(cls_instance, predicate=inspect.ismethod):
-            if getattr(method.__func__, "_llm_function", False):
+        # Inspect for both methods (instances) and functions (classes)
+        predicate = lambda x: inspect.isfunction(x) or inspect.ismethod(x)
+        for _, method in inspect.getmembers(cls_instance, predicate=predicate):
+            # Unwrap if it's a bound method to get the function attributes
+            func_obj = method.__func__ if hasattr(method, "__func__") else method
+            
+            if getattr(func_obj, "_llm_function", False):
                 function_schema = FunctionGenerator.extract_function_schema(method)
-                functions[getattr(method, "_llm_name", method.__name__)] = (
+                functions[getattr(func_obj, "_llm_name", func_obj.__name__)] = (
                     function_schema
                 )
 
