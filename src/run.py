@@ -127,7 +127,11 @@ def start(
                 f"Hot-reload enabled (check interval: {check_interval} seconds)"
             )
 
-        asyncio.run(runtime.run())
+        try:
+            asyncio.run(runtime.run())
+        except Exception as e:
+            logging.error(f"Error starting runtime: {e}")
+            raise typer.Exit(1)
 
     except FileNotFoundError:
         logging.error(f"Configuration file not found: {config_path}")
