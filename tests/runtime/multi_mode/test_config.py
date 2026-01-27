@@ -1,6 +1,6 @@
 import os
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
@@ -464,3 +464,11 @@ class TestLoadModeConfig:
 
         finally:
             os.unlink(temp_file)
+
+    def test_load_mode_config_invalid_json(self):
+        """Test load_mode_config raises ValueError when JSON5 content is invalid."""
+        with patch("runtime.multi_mode.config.os.path.join") as mock_join:
+            mock_join.return_value = "invalid_config.json5"
+            with patch("builtins.open", mock_open(read_data="invalid json5")):
+                with pytest.raises(ValueError):
+                    load_mode_config("invalid_config")
