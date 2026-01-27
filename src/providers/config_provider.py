@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import threading
+import time
 from uuid import uuid4
 
 import json5
@@ -31,10 +33,12 @@ class ConfigProvider:
         self.config_response_publisher = None
         self.config_request_subscriber = None
         self.running = False
+        self._watcher_thread = None
 
         self.config_path = self._get_runtime_config_path()
 
         self._initialize_zenoh()
+        self.start_watching()
 
     def _initialize_zenoh(self):
         """
@@ -117,6 +121,41 @@ class ConfigProvider:
         except Exception as e:
             logging.error(f"Failed to update config: {e}")
             self._send_error_response(request_id, f"Failed to update config: {e}")
+
+    def start_watching(self):
+        """Start the configuration file watcher thread."""
+        if not self.running:
+            return
+
+        self._watcher_thread = threading.Thread(target=self._watcher_loop, daemon=True)
+        self._watcher_thread.start()
+        logging.info("ConfigProvider file watcher started")
+
+    def _watcher_loop(self):
+        """Monitor configuration file for changes."""
+        last_mtime = 0
+        try:
+            if os.path.exists(self.config_path):
+                last_mtime = os.path.getmtime(self.config_path)
+        except OSError:
+            pass
+
+        while self.running:
+            try:
+                time.sleep(1)  # Check every second
+                
+                if not os.path.exists(self.config_path):
+                    continue
+
+                current_mtime = os.path.getmtime(self.config_path)
+                if current_mtime != last_mtime:
+                    last_mtime = current_mtime
+                    logging.info(f"Detected change in {self.config_path}, broadcasting update")
+                    # Broadcast update with special request_id
+                    self._send_config_response(request_id=String("BROADCAST_UPDATE"))
+            except Exception as e:
+                logging.error(f"Error in config watcher loop: {e}")
+                time.sleep(5)  # Back off on error
 
     def _send_config_response(self, request_id: String):
         """
