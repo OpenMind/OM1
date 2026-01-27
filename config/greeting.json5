@@ -1,0 +1,105 @@
+{
+  // Configuration version
+  version: "v1.0.1",
+
+  // Mode system configuration for Unitree Go2
+  default_mode: "greeting",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "openmind_free",
+  unitree_ethernet: "enP2p1s0",
+  system_governance: "",
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 10,
+      model: "gpt-4.1-mini",
+    },
+  },
+
+  modes: {
+    approaching: {
+      display_name: "Approaching Person Mode",
+      description: "Robot approaches detected humans autonomously.",
+      system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform. Your primary function is to autonomously approach detected humans in your environment while ensuring safety and smooth navigation. Use your sensors to identify humans and navigate towards them in a polite manner.",
+      hertz: 1,
+      agent_inputs: [],
+      action_execution_mode: "concurrent",
+      agent_actions: [],
+      backgrounds: [
+        {
+          type: "ApproachingPerson",
+        },
+      ],
+      lifecycle_hooks: [],
+    },
+    greeting: {
+      display_name: "Greeting Conversation Mode",
+      description: "Robot engages in greeting conversations with users upon approach.",
+      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform. Your primary function is to initiate and maintain greeting conversations with users who approach you. Use your conversational skills to make users feel welcome and comfortable.",
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "GoogleASRInput",
+          config: {
+            enable_tts_interrupt: false,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "greeting_conversation",
+          llm_label: "greeting_conversation",
+          connector: "greeting_conversation",
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Hello! I'm Bits, how can I help you today?",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Hello! I'm Bits, how can I help you today?",
+          },
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            message: "It was great chatting with you! Have a wonderful day!",
+          },
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    {
+      from_mode: "approaching",
+      to_mode: "greeting",
+      transition_type: "context_aware",
+      context_conditions: { approaching_detected: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "greeting",
+      to_mode: "approaching",
+      transition_type: "context_aware",
+      context_conditions: { greeting_conversation_finished: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+  ],
+}
