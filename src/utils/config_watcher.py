@@ -71,10 +71,15 @@ class ConfigFileHandler(FileSystemEventHandler):
         logging.info(f"Config file modified: {event_path}")
 
         if self._loop and self._loop.is_running():
+            # --- PERUBAHAN: Bungkus callback dalam fungsi async untuk mendapatkan Coroutine ---
+            async def _wrapper():
+                await self.callback(event_path)
+
             asyncio.run_coroutine_threadsafe(
-                self.callback(event_path),
+                _wrapper(),  # Panggil _wrapper() untuk mendapatkan objek Coroutine
                 self._loop,
             )
+            # --- PERUBAHAN SELESAI ---
         else:
             logging.warning("Event loop not available, cannot trigger callback")
 
@@ -140,8 +145,11 @@ class ConfigFileWatcher:
 
         self._observer = Observer()
         watch_dir = self.config_path.parent
+        # --- PERUBAHAN: Tambahkan assert untuk memberi tahu pyright bahwa _observer bukan None ---
+        assert self._observer is not None, "Observer should be initialized here"
         self._observer.schedule(self._handler, str(watch_dir), recursive=False)
         self._observer.start()
+        # --- PERUBAHAN SELESAI ---
 
         self._watching = True
         logging.info(
