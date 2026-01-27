@@ -105,12 +105,41 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         try:
             response_bytes = bytes.fromhex(hex_response)
 
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
-            string_length = int.from_bytes(response_bytes[96:128], "big")
+            # Validate minimum response length (at least 128 bytes for ABI encoding)
+            if len(response_bytes) < 128:
+                logging.error(
+                    f"Response too short: {len(response_bytes)} bytes, "
+                    "expected at least 128 bytes"
+                )
+                return None
+
+            # Read the dynamic offset for the string data (first 32 bytes)
+            string_offset = int.from_bytes(response_bytes[64:96], "big")
+
+            # Validate offset is within bounds
+            if string_offset + 32 > len(response_bytes):
+                logging.error(
+                    f"Invalid string offset: {string_offset}, "
+                    f"response length: {len(response_bytes)}"
+                )
+                return None
+
+            # Read string length from the offset position
+            string_length = int.from_bytes(
+                response_bytes[string_offset : string_offset + 32], "big"
+            )
+
+            # Validate string length is within bounds
+            if string_offset + 32 + string_length > len(response_bytes):
+                logging.error(
+                    f"String length exceeds response bounds: offset={string_offset}, "
+                    f"length={string_length}, response_size={len(response_bytes)}"
+                )
+                return None
 
             # Extract and decode string
-            string_bytes = response_bytes[128 : 128 + string_length]
+            string_start = string_offset + 32
+            string_bytes = response_bytes[string_start : string_start + string_length]
             decoded_string = string_bytes.decode("utf-8")
 
             # Remove unexpected control characters (like \x19)
@@ -118,6 +147,12 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
             return cleaned_string
 
+        except ValueError as e:
+            logging.error(f"Hex decoding error: {e}")
+            return None
+        except UnicodeDecodeError as e:
+            logging.error(f"UTF-8 decoding error: {e}")
+            return None
         except Exception as e:
             logging.error(f"Decoding error: {e}")
             return None
