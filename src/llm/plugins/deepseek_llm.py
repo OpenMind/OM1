@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,25 +15,36 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class DeepSeekModel(str, Enum):
+    """Available DeepSeek models."""
+
+    DEEPSEEK_CHAT = "deepseek-chat"
+
+
+class DeepSeekConfig(LLMConfig):
+    """DeepSeek-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/deepseek",
+        description="Base URL for the DeepSeek API endpoint",
+    )
+    model: T.Optional[T.Union[DeepSeekModel, str]] = Field(
+        default=DeepSeekModel.DEEPSEEK_CHAT,
+        description="DeepSeek model to use",
+    )
+
+
 class DeepSeekLLM(LLM[R]):
     """
     An DeepSeek-based Language Learning Model implementation.
 
     This class implements the LLM interface for DeepSeek's conversation models, handling
     configuration, authentication, and async API communication.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided,
-        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: DeepSeekConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -40,7 +52,7 @@ class DeepSeekLLM(LLM[R]):
 
         Parameters
         ----------
-        config : LLMConfig
+        config : DeepSeekConfig
             Configuration settings for the LLM.
         available_actions : list[AgentAction], optional
             List of available actions for function calling.

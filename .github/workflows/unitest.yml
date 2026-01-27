@@ -77,11 +77,21 @@ jobs:
 
       - name: Run unit tests
         run: |
-          uv run pytest --log-cli-level=DEBUG -s
+          uv run pytest --cov --cov-report=xml --cov-report=term --junitxml=junit.xml -o junit_family=legacy --log-cli-level=DEBUG -s
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
         with:
-          name: test-results-${{ runner.os }}
-          path: .pytest_cache/
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          files: ./junit.xml
+          fail_ci_if_error: false
