@@ -76,6 +76,9 @@ class SleepTickerProvider:
         asyncio.CancelledError
             If the sleep operation is cancelled, though this is caught internally.
         """
+        if self.skip_sleep:
+            return
+
         try:
             self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
             await self._current_sleep_task
