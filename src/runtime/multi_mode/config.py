@@ -382,13 +382,21 @@ def load_mode_config(
         else mode_source_path
     )
 
-    with open(config_path, "r") as f:
-        try:
+    try:
+        with open(config_path, "r") as f:
             raw_config = json5.load(f)
-        except Exception as e:
-            raise ValueError(
-                f"Failed to parse configuration file '{config_path}': {e}"
-            ) from e
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"Configuration file not found: '{config_path}'"
+        )
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid JSON5 syntax in configuration file '{config_path}': {e}"
+        ) from e
+    except Exception as e:
+        raise ValueError(
+            f"Failed to parse configuration file '{config_path}': {e}"
+        ) from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
