@@ -143,14 +143,16 @@ class ConfigProvider:
         while self.running:
             try:
                 time.sleep(1)  # Check every second
-                
+
                 if not os.path.exists(self.config_path):
                     continue
 
                 current_mtime = os.path.getmtime(self.config_path)
                 if current_mtime != last_mtime:
                     last_mtime = current_mtime
-                    logging.info(f"Detected change in {self.config_path}, broadcasting update")
+                    logging.info(
+                        f"Detected change in {self.config_path}, broadcasting update"
+                    )
                     # Broadcast update with special request_id
                     self._send_config_response(request_id=String("BROADCAST_UPDATE"))
             except Exception as e:
