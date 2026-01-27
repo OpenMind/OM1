@@ -54,22 +54,6 @@ class Sensor(T.Generic[ConfigType, R]):
         self.config = config
         pass
 
-    def get_capabilities(self) -> T.Optional["CapabilityDescriptor"]:
-        """
-        Get the capability descriptor for this sensor.
-
-        Override this method to expose runtime capabilities, supported features,
-        and constraints (e.g., update rate, resolution, data types).
-        If not overridden, returns None indicating no capability information
-        is available.
-
-        Returns
-        -------
-        Optional[CapabilityDescriptor]
-            A descriptor of this sensor's capabilities, or None if not implemented
-        """
-        return None
-
     async def _raw_to_text(self, raw_input: R) -> T.Optional[Message]:
         """
         Convert raw input data into text format for processing.
