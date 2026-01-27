@@ -14,6 +14,7 @@ wheels/
 htmlcov/
 coverage.xml
 *.cover
+junit.xml
 
 # Virtual environments
 .venv
