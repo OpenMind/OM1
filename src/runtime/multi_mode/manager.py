@@ -107,7 +107,7 @@ class ModeManager:
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
             self.session = None
-            self.pub = None
+            self._zenoh_mode_status_response_pub = None
 
         logging.info(
             f"Mode Manager initialized with current mode: {self.state.current_mode}"
@@ -534,89 +534,89 @@ class ModeManager:
                 return True
 
             self._is_transitioning = True
+            from_mode = self.state.current_mode
 
-        from_mode = self.state.current_mode
+            try:
+                if from_mode == target_mode:
+                    logging.debug(
+                        f"Already in target mode '{target_mode}', skipping transition"
+                    )
+                    return True
 
-        try:
+                transition_key = f"{from_mode}->{target_mode}"
+                self.transition_cooldowns[transition_key] = time.time()
 
-            if from_mode == target_mode:
-                logging.debug(
-                    f"Already in target mode '{target_mode}', skipping transition"
-                )
-                return True
+                from_config = self.config.modes.get(from_mode)
+                to_config = self.config.modes[target_mode]
 
-            transition_key = f"{from_mode}->{target_mode}"
-            self.transition_cooldowns[transition_key] = time.time()
+                transition_context = {
+                    "from_mode": from_mode,
+                    "to_mode": target_mode,
+                    "reason": reason,
+                    "timestamp": time.time(),
+                    "transition_key": transition_key,
+                }
 
-            from_config = self.config.modes.get(from_mode)
-            to_config = self.config.modes[target_mode]
+                # Execute exit hooks for the current mode
+                if from_config:
+                    logging.debug(f"Executing exit hooks for mode: {from_mode}")
+                    exit_success = await from_config.execute_lifecycle_hooks(
+                        LifecycleHookType.ON_EXIT, transition_context.copy()
+                    )
+                    if not exit_success:
+                        logging.warning(f"Some exit hooks failed for mode: {from_mode}")
 
-            transition_context = {
-                "from_mode": from_mode,
-                "to_mode": target_mode,
-                "reason": reason,
-                "timestamp": time.time(),
-                "transition_key": transition_key,
-            }
-
-            # Execute exit hooks for the current mode
-            if from_config:
-                logging.debug(f"Executing exit hooks for mode: {from_mode}")
-                exit_success = await from_config.execute_lifecycle_hooks(
+                # Execute global exit hooks
+                global_exit_success = await self.config.execute_global_lifecycle_hooks(
                     LifecycleHookType.ON_EXIT, transition_context.copy()
                 )
-                if not exit_success:
-                    logging.warning(f"Some exit hooks failed for mode: {from_mode}")
+                if not global_exit_success:
+                    logging.warning("Some global exit hooks failed")
 
-            # Execute global exit hooks
-            global_exit_success = await self.config.execute_global_lifecycle_hooks(
-                LifecycleHookType.ON_EXIT, transition_context.copy()
-            )
-            if not global_exit_success:
-                logging.warning("Some global exit hooks failed")
+                # Update state
+                self.state.previous_mode = from_mode
+                self.state.current_mode = target_mode
+                self.state.mode_start_time = time.time()
+                self.state.last_transition_time = time.time()
+                self.state.transition_history.append(
+                    f"{from_mode}->{target_mode}:{reason}"
+                )
 
-            # Update state
-            self.state.previous_mode = from_mode
-            self.state.current_mode = target_mode
-            self.state.mode_start_time = time.time()
-            self.state.last_transition_time = time.time()
-            self.state.transition_history.append(f"{from_mode}->{target_mode}:{reason}")
+                if len(self.state.transition_history) > 50:
+                    self.state.transition_history = self.state.transition_history[-25:]
 
-            if len(self.state.transition_history) > 50:
-                self.state.transition_history = self.state.transition_history[-25:]
+                logging.info(
+                    f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
+                )
 
-            logging.info(
-                f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
-            )
+                # Execute entry hooks for the new mode
+                logging.debug(f"Executing entry hooks for mode: {target_mode}")
+                entry_success = await to_config.execute_lifecycle_hooks(
+                    LifecycleHookType.ON_ENTRY, transition_context.copy()
+                )
+                if not entry_success:
+                    logging.warning(f"Some entry hooks failed for mode: {target_mode}")
 
-            # Execute entry hooks for the new mode
-            logging.debug(f"Executing entry hooks for mode: {target_mode}")
-            entry_success = await to_config.execute_lifecycle_hooks(
-                LifecycleHookType.ON_ENTRY, transition_context.copy()
-            )
-            if not entry_success:
-                logging.warning(f"Some entry hooks failed for mode: {target_mode}")
+                # Execute global entry hooks
+                global_entry_success = await self.config.execute_global_lifecycle_hooks(
+                    LifecycleHookType.ON_ENTRY, transition_context.copy()
+                )
+                if not global_entry_success:
+                    logging.warning("Some global entry hooks failed")
 
-            # Execute global entry hooks
-            global_entry_success = await self.config.execute_global_lifecycle_hooks(
-                LifecycleHookType.ON_ENTRY, transition_context.copy()
-            )
-            if not global_entry_success:
-                logging.warning("Some global entry hooks failed")
+                await self._notify_transition_callbacks(from_mode, target_mode)
 
-            await self._notify_transition_callbacks(from_mode, target_mode)
+                self._save_mode_state()
 
-            self._save_mode_state()
+                return True
 
-            return True
-
-        except Exception as e:
-            logging.error(
-                f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
-            )
-            return False
-        finally:
-            self._is_transitioning = False
+            except Exception as e:
+                logging.error(
+                    f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
+                )
+                return False
+            finally:
+                self._is_transitioning = False
 
     def get_available_transitions(self) -> List[str]:
         """
@@ -660,7 +660,7 @@ class ModeManager:
             "transition_history": self.state.transition_history[-5:],
             "timeout_seconds": current_config.timeout_seconds,
             "time_remaining": (
-                current_config.timeout_seconds - mode_duration
+                max(0, current_config.timeout_seconds - mode_duration)
                 if current_config.timeout_seconds
                 else None
             ),
@@ -759,9 +759,10 @@ class ModeManager:
                 current_mode=String(self.state.current_mode),
                 message=String(json.dumps(self.get_mode_info())),
             )
-            return self._zenoh_mode_status_response_pub.put(
-                mode_status_response.serialize()
-            )
+            if self._zenoh_mode_status_response_pub is not None:
+                return self._zenoh_mode_status_response_pub.put(
+                    mode_status_response.serialize()
+                )
 
     def _zenoh_context_update(self, data: zenoh.Sample):
         """
@@ -779,11 +780,36 @@ class ModeManager:
             if isinstance(context_data, dict):
                 self.update_user_context(context_data)
                 logging.info(f"Updated user context with: {context_data}")
+
+                if self._main_event_loop and self._main_event_loop.is_running():
+                    self._main_event_loop.call_soon_threadsafe(
+                        lambda: asyncio.create_task(
+                            self._check_and_apply_context_transition()
+                        )
+                    )
             else:
                 logging.warning(f"Invalid context data format: {context_data}")
 
         except (json.JSONDecodeError, Exception) as e:
             logging.error(f"Error processing context update: {e}")
+
+    async def _check_and_apply_context_transition(self):
+        """
+        Check for context-aware transitions and apply them if conditions are met.
+
+        This method is called when the user context is updated to ensure
+        that context-aware transitions can occur even when the LLM is not triggered.
+        """
+        try:
+            context_target = await self.check_context_aware_transitions()
+            if context_target:
+                logging.info(
+                    f"Context-aware transition triggered by context update: "
+                    f"{self.state.current_mode} -> {context_target}"
+                )
+                await self._execute_transition(context_target, "context_aware")
+        except Exception as e:
+            logging.error(f"Error checking context-aware transitions: {e}")
 
     async def _handle_mode_switch_request(
         self, frame_id: str, request_id: str, target_mode: str
@@ -819,7 +845,8 @@ class ModeManager:
                 message=String(f"Failed to switch to mode {target_mode}"),
             )
 
-        self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
+        if self._zenoh_mode_status_response_pub is not None:
+            self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
 
     def _get_state_file_path(self) -> str:
         """
