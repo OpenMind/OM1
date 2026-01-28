@@ -201,11 +201,26 @@ class RtkProvider:
     def stop(self):
         """
         Stop the RTK provider.
+        
+        This method performs the following cleanup steps:
+        1. Sets running flag to False to stop the processing thread
+        2. Waits for the thread to finish (with timeout)
+        3. Closes the serial connection if it exists and is open
+        
+        Notes
+        -----
+        - The thread join has a 5-second timeout to prevent blocking indefinitely
+        - Serial connection is closed to prevent resource leaks
         """
         self.running = False
         if self._thread:
             logging.info("Stopping RTK provider")
             self._thread.join(timeout=5)
+        
+        if self.serial_connection and self.serial_connection.is_open:
+            port_name = getattr(self.serial_connection, 'port', 'unknown')
+            self.serial_connection.close()
+            logging.info(f"RTK serial port {port_name} closed")
 
     @property
     def data(self) -> Optional[dict]:
