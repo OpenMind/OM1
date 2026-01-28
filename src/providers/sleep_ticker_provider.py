@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 from typing import Optional
 
@@ -83,6 +84,9 @@ class SleepTickerProvider:
             self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
             await self._current_sleep_task
         except asyncio.CancelledError:
+            logging.warning("Sleep operation was cancelled.")
             pass
+        except Exception as e:
+            logging.error(f"Error during sleep operation: {e}")
         finally:
             self._current_sleep_task = None

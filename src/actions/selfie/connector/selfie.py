@@ -179,7 +179,7 @@ class SelfieConnector(ActionConnector[SelfieConfig, SelfieInput]):
                     unknown_now,
                 )
                 return True
-            time.sleep(self.poll_ms / 1000.0)
+            self.sleep(self.poll_ms / 1000.0)
         logging.error("Selfie gate: timeout waiting for exactly 1 face.")
         return False
 
