@@ -12,3 +12,20 @@ description: "Guide to troubleshoot some common issues"
 | Robot not moving        | Connection issue/Network issue            | Restart OM1/Robot and check your internet connection                                        |
 | OpenSSL certificate issue | Security certificate not found | `uv pip install certifi` `export SSL_CERT_FILE=$(python3 -m certifi)` `export REQUESTS_CA_BUNDLE=$(python3 -m certifi)` |
 | Error message during build: `fatal error: portaudio.h: No such file or directory compilation terminated. error: command '/usr/bin/gcc' failed with exit code 1` | The issue is due to python-all-dev being deprecated and unavailable in non standard Ubuntu installations. | Installing only PortAudio development headers fixes the problem: `sudo apt-get update` `sudo apt-get install portaudio19-dev`|
+## Headless / VM Deployments: Expected Behavior
+When running OM1 in headless environments (such as cloud VMs or servers without attached hardware),
+some subsystems may log errors or warnings related to missing devices or unavailable services.
+
+This behavior is expected in configurations where components such as:
+- Audio input / output (ASR, TTS)
+- Camera or vision-based inputs (VLM, COCO)
+- Local robot network interfaces
+
+are enabled in configuration files but the corresponding hardware is not present.
+
+In these cases:
+- Errors indicate unavailable dependencies, not a broken runtime
+- The core runtime may continue operating normally
+- Disabling unused inputs in the configuration is recommended for headless deployments
+
+This behavior is considered expected unless explicitly stated otherwise in the configuration or release notes.
