@@ -1,3 +1,5 @@
+import threading
+import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -86,3 +88,87 @@ def test_agent_action_structure(agent_action):
     assert agent_action.name == "test_action"
     assert agent_action.interface == SampleInterface
     assert isinstance(agent_action.connector, SampleConnector)
+
+
+def test_sleep_without_stop_event(test_connector):
+    """Test that sleep works normally when no stop event is set."""
+    start_time = time.time()
+    result = test_connector.sleep(0.1)
+    duration = time.time() - start_time
+
+    assert result is True
+    assert duration >= 0.1
+
+
+def test_sleep_with_stop_event_not_triggered(test_connector):
+    """Test that sleep completes normally when stop event is set but not triggered."""
+    stop_event = threading.Event()
+    test_connector.set_stop_event(stop_event)
+
+    start_time = time.time()
+    result = test_connector.sleep(0.1)
+    duration = time.time() - start_time
+
+    assert result is True
+    assert duration >= 0.1
+
+
+def test_sleep_interrupted_by_stop_event(test_connector):
+    """Test that sleep is interrupted when stop event is set during sleep."""
+    stop_event = threading.Event()
+    test_connector.set_stop_event(stop_event)
+
+    def trigger_stop():
+        time.sleep(0.05)
+        stop_event.set()
+
+    # Start a thread to trigger the stop event
+    stop_thread = threading.Thread(target=trigger_stop)
+    stop_thread.start()
+
+    start_time = time.time()
+    result = test_connector.sleep(1.0)
+    duration = time.time() - start_time
+
+    stop_thread.join()
+
+    assert result is False
+    assert duration < 0.2
+    assert test_connector.should_stop() is True
+
+
+def test_sleep_already_stopped(test_connector):
+    """Test that sleep returns immediately when stop event is already set."""
+    stop_event = threading.Event()
+    stop_event.set()
+    test_connector.set_stop_event(stop_event)
+
+    start_time = time.time()
+    result = test_connector.sleep(1.0)
+    duration = time.time() - start_time
+
+    assert result is False
+    assert duration < 0.1
+    assert test_connector.should_stop() is True
+
+
+def test_should_stop_without_event(test_connector):
+    """Test that should_stop returns False when no stop event is set."""
+    assert test_connector.should_stop() is False
+
+
+def test_should_stop_with_event_not_set(test_connector):
+    """Test that should_stop returns False when stop event exists but is not set."""
+    stop_event = threading.Event()
+    test_connector.set_stop_event(stop_event)
+
+    assert test_connector.should_stop() is False
+
+
+def test_should_stop_with_event_set(test_connector):
+    """Test that should_stop returns True when stop event is set."""
+    stop_event = threading.Event()
+    test_connector.set_stop_event(stop_event)
+    stop_event.set()
+
+    assert test_connector.should_stop() is True
