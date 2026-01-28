@@ -1,16 +1,44 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
 from llm.output_model import CortexOutputModel
+from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
 R = T.TypeVar("R", bound=BaseModel)
+
+
+class OpenAIModel(str, Enum):
+    """Available OpenAI models."""
+
+    GPT_4_O = "gpt-4o"
+    GPT_4_O_MINI = "gpt-4o-mini"
+    GPT_4_1 = "gpt-4.1"
+    GPT_4_1_MINI = "gpt-4.1-mini"
+    GPT_4_1_NANO = "gpt-4.1-nano"
+    GPT_5 = "gpt-5"
+    GPT_5_MINI = "gpt-5-mini"
+    GPT_5_NANO = "gpt-5-nano"
+
+
+class OpenAIConfig(LLMConfig):
+    """OpenAI-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/openai",
+        description="Base URL for the OpenAI API endpoint",
+    )
+    model: T.Optional[T.Union[OpenAIModel, str]] = Field(
+        default=OpenAIModel.GPT_4_1_MINI,
+        description="OpenAI model to use",
+    )
 
 
 class OpenAILLM(LLM[R]):
@@ -20,20 +48,11 @@ class OpenAILLM(LLM[R]):
     This class implements the LLM interface for OpenAI's GPT models, handling
     configuration, authentication, and async API communication. It supports both
     traditional JSON structured output and function calling.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings. If not provided, defaults
-        will be used.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided,
-        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
         self,
-        config: LLMConfig = LLMConfig(),
+        config: OpenAIConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -41,7 +60,7 @@ class OpenAILLM(LLM[R]):
 
         Parameters
         ----------
-        config : LLMConfig, optional
+        config : OpenAILLMConfig, optional
             Configuration settings for the LLM.
         available_actions : list[AgentAction], optional
             List of available actions for function calling.
@@ -61,10 +80,11 @@ class OpenAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
+    @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
-    ) -> R | None:
+        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+    ) -> T.Optional[R]:
         """
         Send a prompt to the OpenAI API and get a structured response.
 
@@ -82,8 +102,8 @@ class OpenAILLM(LLM[R]):
             parsing fails.
         """
         try:
-            logging.info(f"OpenAI LLM input: {prompt}")
-            logging.debug(f"OpenAI LLM messages: {messages}")
+            logging.info(f"OpenAI input: {prompt}")
+            logging.info(f"OpenAI messages: {messages}")
 
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
@@ -102,6 +122,10 @@ class OpenAILLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
+            if not response.choices:
+                logging.warning("OpenAI API returned empty choices")
+                return None
+
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
@@ -112,8 +136,8 @@ class OpenAILLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls
@@ -122,7 +146,6 @@ class OpenAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None

@@ -20,13 +20,14 @@ sys.modules["pyaudio"] = mock_pyaudio
 
 # Import after mocking
 from providers.riva_tts_provider import RivaTTSProvider  # noqa: E402
-from providers.singleton import singleton  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    singleton.instances = {}
+    """Reset singleton instances between tests."""
+    RivaTTSProvider.reset()  # type: ignore
     yield
+    RivaTTSProvider.reset()  # type: ignore
 
 
 @pytest.fixture(autouse=True)

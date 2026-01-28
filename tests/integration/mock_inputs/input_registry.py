@@ -1,12 +1,6 @@
-"""
-Mock input registry for integration tests.
-
-This module allows mock input plugins to be registered temporarily with the
-main input loading system during tests.
-"""
-
 import logging
 import sys
+from types import ModuleType
 
 from tests.integration.mock_inputs.mock_rplidar import MockRPLidar
 from tests.integration.mock_inputs.mock_vlm_coco import MockVLM_COCO
@@ -58,7 +52,10 @@ def register_mock_inputs():
     }
 
     for module_name, mock_classes in mock_modules.items():
-        sys.modules[module_name] = type("MockModule", (), mock_classes)
+        mock_module = ModuleType(module_name)
+        for class_name, class_obj in mock_classes.items():
+            setattr(mock_module, class_name, class_obj)
+        sys.modules[module_name] = mock_module
 
     logging.info("Registered mock inputs by directly replacing classes")
 

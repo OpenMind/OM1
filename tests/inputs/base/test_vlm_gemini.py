@@ -2,8 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.base import SensorConfig
-from inputs.plugins.vlm_gemini import Message, VLMGemini
+from inputs.plugins.vlm_gemini import Message, VLMGemini, VLMGeminiConfig
 
 
 @pytest.fixture
@@ -16,7 +15,7 @@ def mock_vlm_provider():
 
 @pytest.fixture
 def vlm_input(mock_vlm_provider):
-    return VLMGemini(config=SensorConfig(api_key="test_api_key"))
+    return VLMGemini(config=VLMGeminiConfig(api_key="test_api_key"))
 
 
 def test_init(vlm_input, mock_vlm_provider):
@@ -30,7 +29,7 @@ def test_init(vlm_input, mock_vlm_provider):
 
 def test_missing_api_key():
     with pytest.raises(ValueError):
-        VLMGemini(config=SensorConfig(api_key=""))
+        VLMGemini(config=VLMGeminiConfig(api_key=""))
 
 
 def test_handle_vlm_message(vlm_input):

@@ -1,67 +1,85 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusProvider
 
 try:
-    from unitree.unitree_sdk2py.core.channel import ChannelSubscriber
-    from unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_ import (  # type: ignore
-        BmsState_,
-        LowState_,
-    )
+    from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
+    from unitree.unitree_sdk2py.idl.unitree_hg.msg import dds_  # type: ignore
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
     )
 
     class BmsState_:
+        """
+        Placeholder for BmsState_ when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
     class LowState_:
+        """
+        Placeholder for LowState_ when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+# Data structure documentation:
+#
+# class BmsState_(idl.IdlStruct, typename="unitree_hg.msg.dds_.BmsState_"):
+#     version_high: types.uint8
+#     version_low: types.uint8
+#     fn: types.uint8
+#     cell_vol: types.array[types.uint16, 40]
+#     bmsvoltage: types.array[types.uint32, 3]
+#     current: types.int32
+#     soc: types.uint8
+#     soh: types.uint8
+#     temperature: types.array[types.int16, 12]
+#     cycle: types.uint16
+#     manufacturer_date: types.uint16
+#     bmsstate: types.array[types.uint32, 5]
+#     reserve: types.array[types.uint32, 3]
+#
+# class LowState_(idl.IdlStruct, typename="unitree_hg.msg.dds_.LowState_"):
+#     version: types.array[types.uint32, 2]
+#     mode_pr: types.uint8
+#     mode_machine: types.uint8
+#     tick: types.uint32
+#     imu_state: 'unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_.IMUState_'
+#     motor_state: types.array['unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_.MotorState_', 35]
+#     wireless_remote: types.array[types.uint8, 40]
 
 
-"""
-class BmsState_(idl.IdlStruct, typename="unitree_hg.msg.dds_.BmsState_"):
-    version_high: types.uint8
-    version_low: types.uint8
-    fn: types.uint8
-    cell_vol: types.array[types.uint16, 40]
-    bmsvoltage: types.array[types.uint32, 3]
-    current: types.int32
-    soc: types.uint8
-    soh: types.uint8
-    temperature: types.array[types.int16, 12]
-    cycle: types.uint16
-    manufacturer_date: types.uint16
-    bmsstate: types.array[types.uint32, 5]
-    reserve: types.array[types.uint32, 3]
+class UnitreeG1BasicConfig(SensorConfig):
+    """
+    Configuration for Unitree G1 Basic Sensor.
 
-class LowState_(idl.IdlStruct, typename="unitree_hg.msg.dds_.LowState_"):
-    version: types.array[types.uint32, 2]
-    mode_pr: types.uint8
-    mode_machine: types.uint8
-    tick: types.uint32
-    imu_state: 'unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_.IMUState_'
-    motor_state: types.array['unitree.unitree_sdk2py.idl.unitree_hg.msg.dds_.MotorState_', 35]
-    wireless_remote: types.array[types.uint8, 40]
-"""
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    unitree_ethernet : Optional[str]
+        Unitree Ethernet Interface.
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    unitree_ethernet: Optional[str] = Field(
+        default=None, description="Unitree Ethernet Interface"
+    )
 
 
-class UnitreeG1Basic(FuserInput[str]):
+class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
     """
     Unitree G1 Basic Functionality.
 
@@ -74,13 +92,13 @@ class UnitreeG1Basic(FuserInput[str]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UnitreeG1BasicConfig):
         """
         Initialize Unitree bridge with empty message buffer.
         """
         super().__init__(config)
 
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         # IO provider
         self.io_provider = IOProvider()
@@ -96,17 +114,17 @@ class UnitreeG1Basic(FuserInput[str]):
         self.lowstate_subscriber = None
         self.bmsstate_subscriber = None
 
-        unitree_ethernet = getattr(self.config, "unitree_ethernet", None)
+        unitree_ethernet = self.config.unitree_ethernet
         logging.info(f"UnitreeG1Basic using ethernet: {unitree_ethernet}")
 
         # Joint angles e.g.
         if unitree_ethernet and unitree_ethernet != "":
             # only set up if we are connected to a robot
-            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)
+            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)  # type: ignore
             self.lowstate_subscriber.Init(self.LowStateHandler, 10)
 
             # Battery specific data
-            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", BmsState_)
+            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", BmsState_)  # type: ignore
             self.bmsstate_subscriber.Init(self.BMSStateHandler, 10)
 
         # battery state
@@ -118,7 +136,15 @@ class UnitreeG1Basic(FuserInput[str]):
         self.g1_lowbatt_percent = 20.0  # percent
         self.descriptor_for_LLM = "Energy Level"
 
-    def BMSStateHandler(self, msg: BmsState_):
+    def BMSStateHandler(self, msg: dds_.BmsState_):  # type: ignore
+        """
+        Handle incoming BmsState messages from the Unitree robot.
+
+        Parameters
+        ----------
+        msg : dds_.BmsState_
+            The incoming BmsState message containing battery state information.
+        """
         self.bms_state = msg
         logging.debug(f"BmsState_: {msg}")
 
@@ -127,7 +153,15 @@ class UnitreeG1Basic(FuserInput[str]):
         self.battery_percentage = float(msg.soc)  # type: ignore
         self.battery_temperature = float(msg.temperature[0])  # type: ignore
 
-    def LowStateHandler(self, msg: LowState_):
+    def LowStateHandler(self, msg: dds_.LowState_):  # type: ignore
+        """
+        Handle incoming LowState messages from the Unitree robot.
+
+        Parameters
+        ----------
+        msg : dds_.LowState_
+            The incoming LowState message containing robot state information.
+        """
         self.low_state = msg
         logging.debug(f"LowState_: {msg}")
 
@@ -158,7 +192,6 @@ class UnitreeG1Basic(FuserInput[str]):
         List[float]
             list of floats
         """
-
         await asyncio.sleep(2.0)
 
         await self.update_status()

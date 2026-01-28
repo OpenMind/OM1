@@ -1,14 +1,18 @@
 from dataclasses import dataclass
-from typing import List
-from unittest.mock import patch
+from typing import Any, List, Optional
+from unittest.mock import MagicMock, patch
 
 from fuser import Fuser
-from inputs.base import Sensor
+from inputs.base import Sensor, SensorConfig
 from providers.io_provider import IOProvider
+from runtime.single_mode.config import RuntimeConfig
 
 
 @dataclass
-class MockSensor(Sensor):
+class MockSensor(Sensor[SensorConfig, Any]):
+    def __init__(self):
+        super().__init__(SensorConfig())
+
     def formatted_latest_buffer(self):
         return "test input"
 
@@ -16,24 +20,28 @@ class MockSensor(Sensor):
 @dataclass
 class MockAction:
     name: str
-    llm_label: str = None
+    llm_label: Optional[str] = None
     exclude_from_prompt: bool = False
 
 
-@dataclass
-class MockConfig:
-    system_prompt_base: str = "system prompt base"
-    system_governance: str = "system governance"
-    system_prompt_examples: str = "system prompt examples"
-    agent_actions: List[MockAction] = None
+def create_mock_config(
+    agent_actions: Optional[List[MockAction]] = None,
+) -> RuntimeConfig:
+    """Create a mock RuntimeConfig for testing."""
+    if agent_actions is None:
+        agent_actions = []
 
-    def __post_init__(self):
-        if self.agent_actions is None:
-            self.agent_actions = []
+    mock_config = MagicMock(spec=RuntimeConfig)
+    mock_config.system_prompt_base = "system prompt base"
+    mock_config.system_governance = "system governance"
+    mock_config.system_prompt_examples = "system prompt examples"
+    mock_config.agent_actions = agent_actions
+
+    return mock_config
 
 
 def test_fuser_initialization():
-    config = MockConfig()
+    config = create_mock_config()
     io_provider = IOProvider()
 
     with patch("fuser.IOProvider", return_value=io_provider):
@@ -45,7 +53,7 @@ def test_fuser_initialization():
 @patch("time.time")
 def test_fuser_timestamps(mock_time):
     mock_time.return_value = 1000
-    config = MockConfig()
+    config = create_mock_config()
     io_provider = IOProvider()
 
     with patch("fuser.IOProvider", return_value=io_provider):
@@ -58,8 +66,10 @@ def test_fuser_timestamps(mock_time):
 @patch("fuser.describe_action")
 def test_fuser_with_inputs_and_actions(mock_describe):
     mock_describe.return_value = "action description"
-    config = MockConfig(agent_actions=[MockAction("action1"), MockAction("action2")])
-    inputs = [MockSensor()]
+    config = create_mock_config(
+        agent_actions=[MockAction("action1"), MockAction("action2")]
+    )
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
     io_provider = IOProvider()
 
     with patch("fuser.IOProvider", return_value=io_provider):
