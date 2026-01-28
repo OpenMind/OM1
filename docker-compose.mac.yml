@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  om1:
+    build:
+      context: .
+      dockerfile: Dockerfile.mac
+    image: openmindagi/om1:mac
+    container_name: om1-mac
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - OM_API_KEY=${OM_API_KEY}
+      - VIRTUAL_ENV=/app/OM1/.venv
+      - PATH=/app/OM1/.venv/bin:$PATH
+    volumes:
+      - ./config:/app/OM1/config
+      - ./cyclonedds:/cyclonedds
+      - ${HOME}/shared_data/locations:/app/OM1/locations:rw
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: ["spot"]
