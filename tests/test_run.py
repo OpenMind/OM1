@@ -174,14 +174,7 @@ class TestStartCommand:
                                         else:
                                             raise
                                     except ImportError:
-                                        if (
-                                            type(e).__name__ == "Exit"
-                                            and hasattr(e, "exit_code")
-                                            and e.exit_code == 1
-                                        ):
-                                            exception_raised = True
-                                        else:
-                                            raise
+                                        pass
 
                                 assert (
                                     exception_raised
