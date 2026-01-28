@@ -32,7 +32,7 @@ class MoveTronSDKConnector(ActionConnector[MoveTronSDKConfig, MoveInput]):
 
         Parameters
         ----------
-        config : ActionConfig
+        config : MoveTronSDKConfig
             Configuration object for the connector.
         """
         super().__init__(config)
