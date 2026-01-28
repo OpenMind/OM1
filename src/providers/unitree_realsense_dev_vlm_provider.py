@@ -1,7 +1,7 @@
 import base64
 import glob
 import logging
-import os
+import subprocess
 import time
 from typing import Callable, List, Optional, Tuple
 
@@ -31,6 +31,24 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
         resolution: Optional[Tuple[int, int]] = (640, 480),
         jpeg_quality: int = 70,
     ):
+        """
+        Initialize the video stream.
+
+        Parameters
+        ----------
+        frame_callback : callable, optional
+            A single callback function to process video frames. The callback
+            receives a base64-encoded frame string as its argument.
+        frame_callbacks : list of callables, optional
+            A list of callback functions to process video frames. Each callback
+            receives a base64-encoded frame string as its argument.
+        fps : int, optional
+            Frames per second for the video stream. Default is 30.
+        resolution : tuple of int, optional
+            The resolution for the video stream as (width, height). Default is (640, 480).
+        jpeg_quality : int, optional
+            The JPEG quality for frame encoding, ranging from 0 to 100. Default is 70.
+        """
         super().__init__(
             frame_callback=frame_callback,
             frame_callbacks=frame_callbacks,
@@ -204,11 +222,18 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
             if device in skip_devices:
                 continue
 
-            cmd = f"v4l2-ctl --device={device} --list-formats"
             try:
-                formats = os.popen(cmd).read()
+                result = subprocess.run(
+                    ["v4l2-ctl", f"--device={device}", "--list-formats"],
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                )
+                formats = result.stdout
             except Exception as e:
-                logger.exception("Failed to run command '%s': %s", cmd, e)
+                logger.exception(
+                    "Failed to run v4l2-ctl for device '%s': %s", device, e
+                )
                 continue
 
             try:
@@ -278,7 +303,7 @@ class UnitreeRealSenseDevVLMProvider:
 
         Parameters
         ----------
-        callback : Optional[callable]
+        message_callback : Optional[Callable]
             The callback function to process VLM results.
         """
         if message_callback is not None:

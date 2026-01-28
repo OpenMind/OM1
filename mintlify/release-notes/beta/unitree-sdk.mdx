@@ -80,10 +80,10 @@ git clone https://github.com/OpenMind/unitree-sdk.git
 ```
 ```bash
 cd unitree_sdk
-docker compose up orchestrator -d --no-build
-docker compose up om1_sensor -d --no-build
-docker compose up watchdog -d --no-build
-docker compose up zenoh_bridge -d --no-build
+docker-compose up orchestrator -d --no-build
+docker-compose up om1_sensor -d --no-build
+docker-compose up watchdog -d --no-build
+docker-compose up zenoh_bridge -d --no-build
 ```
 
 The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/unitree_sdk/v1.0.0-beta.3).

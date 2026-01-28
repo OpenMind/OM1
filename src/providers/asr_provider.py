@@ -73,7 +73,7 @@ class ASRProvider:
 
         Parameters
         ----------
-        callback : Optional[Callable])
+        message_callback : Optional[Callable]
             The callback function to process ASR results.
         """
         if message_callback is not None:
