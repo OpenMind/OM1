@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
+
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
@@ -60,18 +62,129 @@ class LifecycleHook:
     priority: int = 0
 
 
+class HookConfig(BaseModel):
+    """
+    Base configuration class for hook handlers.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+
+class MessageHookConfig(HookConfig):
+    """
+    Configuration for MessageHookHandler.
+
+    Parameters
+    ----------
+    message : str
+        The message to log or announce. Supports {variable} formatting.
+    api_key : Optional[str]
+        OpenMind API key for TTS service.
+    elevenlabs_api_key : Optional[str]
+        ElevenLabs API key.
+    voice_id : str
+        ElevenLabs voice ID.
+    model_id : str
+        ElevenLabs model ID.
+    output_format : str
+        Audio output format.
+    """
+
+    message: str = Field(
+        default="",
+        description="The message to log or announce. Supports {variable} formatting.",
+    )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="OpenMind API key for TTS service",
+    )
+    elevenlabs_api_key: Optional[str] = Field(
+        default=None,
+        description="ElevenLabs API key",
+    )
+    voice_id: str = Field(
+        default="JBFqnCBsd6RMkjVDRZzb",
+        description="ElevenLabs voice ID",
+    )
+    model_id: str = Field(
+        default="eleven_flash_v2_5",
+        description="ElevenLabs model ID",
+    )
+    output_format: str = Field(
+        default="mp3_44100_128",
+        description="Audio output format",
+    )
+
+
+class CommandHookConfig(HookConfig):
+    """
+    Configuration for CommandHookHandler.
+
+    Parameters
+    ----------
+    command : str
+        The shell command to execute. Supports {variable} formatting.
+    """
+
+    command: str = Field(
+        default="",
+        description="The shell command to execute. Supports {variable} formatting.",
+    )
+
+
+class FunctionHookConfig(HookConfig):
+    """
+    Configuration for FunctionHookHandler.
+
+    Parameters
+    ----------
+    module_name : str
+        Name of the module file (without .py extension) in the hooks directory.
+    function : str
+        Name of the function to call.
+    """
+
+    module_name: str = Field(
+        description="Name of the module file (without .py extension) in the hooks directory",
+    )
+    function: str = Field(
+        description="Name of the function to call",
+    )
+
+
+class ActionHookConfig(HookConfig):
+    """
+    Configuration for ActionHookHandler.
+
+    Parameters
+    ----------
+    action_type : str
+        The type/name of the action to execute.
+    action_config : Dict[str, Any]
+        Configuration dictionary for the action.
+    """
+
+    action_type: str = Field(
+        description="The type/name of the action to execute",
+    )
+    action_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Configuration dictionary for the action",
+    )
+
+
 class LifecycleHookHandler:
     """
     Base class for lifecycle hook handlers.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: HookConfig):
         """
         Initialize the LifecycleHookHandler with configuration.
 
         Parameters
         ----------
-        config : Dict[str, Any]
+        config : HookConfig
             Configuration object for the hook handler.
         """
         self.config = config
@@ -98,6 +211,10 @@ class MessageHookHandler(LifecycleHookHandler):
     Handler that logs or announces a message.
     """
 
+    def __init__(self, config: MessageHookConfig):
+        super().__init__(config)
+        self.config: MessageHookConfig = config
+
     async def execute(self, context: Dict[str, Any]) -> bool:
         """
         Execute the lifecycle message.
@@ -112,14 +229,22 @@ class MessageHookHandler(LifecycleHookHandler):
         bool
             True if execution was successful, False otherwise
         """
-        message = self.config.get("message", "")
-        if message:
+        if self.config.message:
             try:
-                formatted_message = message.format(**context)
+                formatted_message = self.config.message.format(**context)
                 logging.info(f"Lifecycle hook message: {formatted_message}")
 
                 try:
-                    ElevenLabsTTSProvider().add_pending_message(formatted_message)
+                    provider = ElevenLabsTTSProvider(
+                        url="https://api.openmind.org/api/core/elevenlabs/tts",
+                        api_key=self.config.api_key,
+                        elevenlabs_api_key=self.config.elevenlabs_api_key,
+                        voice_id=self.config.voice_id,
+                        model_id=self.config.model_id,
+                        output_format=self.config.output_format,
+                    )
+                    provider.start()
+                    provider.add_pending_message(formatted_message)
                 except Exception as e:
                     logging.error(f"Error adding TTS message: {e}")
                     return False
@@ -136,6 +261,10 @@ class CommandHookHandler(LifecycleHookHandler):
     Handler that executes a shell command.
     """
 
+    def __init__(self, config: CommandHookConfig):
+        super().__init__(config)
+        self.config: CommandHookConfig = config
+
     async def execute(self, context: Dict[str, Any]) -> bool:
         """
         Execute the lifecycle command.
@@ -150,13 +279,12 @@ class CommandHookHandler(LifecycleHookHandler):
         bool
             True if execution was successful, False otherwise
         """
-        command = self.config.get("command", "")
-        if not command:
+        if not self.config.command:
             logging.warning("No command specified for command hook")
             return False
 
         try:
-            formatted_command = command.format(**context)
+            formatted_command = self.config.command.format(**context)
 
             process = await asyncio.create_subprocess_shell(
                 formatted_command,
@@ -186,6 +314,10 @@ class FunctionHookHandler(LifecycleHookHandler):
     Handler that calls a Python function from a specified module.
     """
 
+    def __init__(self, config: FunctionHookConfig):
+        super().__init__(config)
+        self.config: FunctionHookConfig = config
+
     async def execute(self, context: Dict[str, Any]) -> bool:
         """
         Execute the lifecycle function.
@@ -200,19 +332,10 @@ class FunctionHookHandler(LifecycleHookHandler):
         bool
             True if execution was successful, False otherwise
         """
-        module_name = self.config.get("module_name")
-        function_name = self.config.get("function")
-
-        if not function_name:
-            logging.error("No function specified for function hook")
-            return False
-
-        if not module_name:
-            logging.error("No module_name specified for function hook")
-            return False
-
         try:
-            func = self._find_function_in_module(module_name, function_name)
+            func = self._find_function_in_module(
+                self.config.module_name, self.config.function
+            )
             if not func:
                 return False
 
@@ -308,8 +431,9 @@ class ActionHookHandler(LifecycleHookHandler):
     Handler that executes an agent action.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: ActionHookConfig):
         super().__init__(config)
+        self.config: ActionHookConfig = config
         self.action = None
 
     async def execute(self, context: Dict[str, Any]) -> bool:
@@ -327,17 +451,14 @@ class ActionHookHandler(LifecycleHookHandler):
             True if execution was successful, False otherwise
         """
         if not self.action:
-            action_type = self.config.get("action_type")
-            if not action_type:
-                logging.error("No action_type specified for action hook")
-                return False
-
-            action_config = self.config.get("action_config", {})
             try:
                 from actions import load_action
 
                 self.action = load_action(
-                    {"type": action_type, "config": action_config}
+                    {
+                        "type": self.config.action_type,
+                        "config": self.config.action_config,
+                    }
                 )
             except Exception as e:
                 logging.error(f"Error loading action for lifecycle hook: {e}")
@@ -367,20 +488,30 @@ def create_hook_handler(hook: LifecycleHook) -> Optional[LifecycleHookHandler]:
     """
     handler_type = hook.handler_type.lower()
 
-    if handler_type == "message":
-        return MessageHookHandler(hook.handler_config)
-    elif handler_type == "command":
-        return CommandHookHandler(hook.handler_config)
-    elif handler_type == "function":
-        return FunctionHookHandler(hook.handler_config)
-    elif handler_type == "action":
-        return ActionHookHandler(hook.handler_config)
-    else:
-        logging.error(f"Unknown hook handler type: {handler_type}")
+    try:
+        if handler_type == "message":
+            config = MessageHookConfig(**hook.handler_config)
+            return MessageHookHandler(config)
+        elif handler_type == "command":
+            config = CommandHookConfig(**hook.handler_config)
+            return CommandHookHandler(config)
+        elif handler_type == "function":
+            config = FunctionHookConfig(**hook.handler_config)
+            return FunctionHookHandler(config)
+        elif handler_type == "action":
+            config = ActionHookConfig(**hook.handler_config)
+            return ActionHookHandler(config)
+        else:
+            logging.error(f"Unknown hook handler type: {handler_type}")
+            return None
+    except Exception as e:
+        logging.error(f"Error creating hook handler config for {handler_type}: {e}")
         return None
 
 
-def parse_lifecycle_hooks(raw_hooks: List[Dict]) -> List[LifecycleHook]:
+def parse_lifecycle_hooks(
+    raw_hooks: List[Dict], api_key: Optional[str] = None
+) -> List[LifecycleHook]:
     """
     Parse raw lifecycle hooks configuration into LifecycleHook objects.
 
@@ -388,6 +519,8 @@ def parse_lifecycle_hooks(raw_hooks: List[Dict]) -> List[LifecycleHook]:
     ----------
     raw_hooks : List[Dict]
         Raw hook configuration data
+    api_key : Optional[str]
+        Global API key to inject into message hooks if not specified
 
     Returns
     -------
@@ -397,10 +530,15 @@ def parse_lifecycle_hooks(raw_hooks: List[Dict]) -> List[LifecycleHook]:
     hooks = []
     for hook_data in raw_hooks:
         try:
+            handler_config = hook_data.get("handler_config", {}).copy()
+
+            if api_key is not None and "api_key" not in handler_config:
+                handler_config["api_key"] = api_key
+
             hook = LifecycleHook(
                 hook_type=LifecycleHookType(hook_data["hook_type"]),
                 handler_type=hook_data["handler_type"],
-                handler_config=hook_data.get("handler_config", {}),
+                handler_config=handler_config,
                 async_execution=hook_data.get("async_execution", True),
                 timeout_seconds=hook_data.get("timeout_seconds", 5.0),
                 on_failure=hook_data.get("on_failure", "ignore"),
