@@ -12,6 +12,14 @@ class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
     """
 
     def __init__(self, config: ActionConfig):
+        """
+        Initialize the MoveUnitreeSDKConnector.
+
+        Parameters
+        ----------
+        config : ActionConfig
+            Configuration for the action connector.
+        """
         super().__init__(config)
 
     def get_capabilities(self) -> Optional[CapabilityDescriptor]:

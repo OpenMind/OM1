@@ -36,15 +36,14 @@ class Gps(Background[GpsConfig]):
 
     def __init__(self, config: GpsConfig):
         """
-        Initialize GPS background task with configuration.
+        Initialize the Gps background task instance.
+
+        Sets up the GPS provider using the specified serial port from the configuration.
 
         Parameters
         ----------
         config : GpsConfig
-            Configuration object containing GPS-specific parameters:
-            - serial_port: The serial port path for connecting to the GPS device
-              (e.g., "/dev/ttyUSB0"). If not specified, an error will be logged and
-              the provider will not be initialized.
+            Configuration object containing the GPS serial port.
         """
         super().__init__(config)
 
