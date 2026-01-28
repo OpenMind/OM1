@@ -9,7 +9,6 @@ from typing import Optional
 import zenoh
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-
 from zenoh_msgs import (
     Odometry,
     PoseWithCovarianceStamped,
@@ -145,12 +144,12 @@ class TronOdomProvider:
             return
         else:
             if not self.topic:
-                logging.error("Topic must be specified to start the Tron Odom Provider.")
+                logging.error(
+                    "Topic must be specified to start the Tron Odom Provider."
+                )
                 return
 
-            logging.info(
-                f"Starting Tron Odom Provider on Zenoh topic: {self.topic}"
-            )
+            logging.info(f"Starting Tron Odom Provider on Zenoh topic: {self.topic}")
 
             self._odom_reader_thread = mp.Process(
                 target=tron_odom_processor,
