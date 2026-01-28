@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -17,34 +17,49 @@ def fps():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    VLMVilaProvider._instance = None
+    """Reset singleton instances between tests."""
+    VLMVilaProvider.reset()  # type: ignore
     yield
+    VLMVilaProvider.reset()  # type: ignore
 
 
 @pytest.fixture
 def mock_dependencies():
+    mock_ws_client_instance = MagicMock()
+    mock_video_stream_instance = MagicMock()
     with (
-        patch("providers.vlm_vila_provider.ws.Client") as mock_ws_client,
-        patch("providers.vlm_vila_provider.VideoStream") as mock_video_stream,
+        patch(
+            "providers.vlm_vila_provider.ws.Client",
+            return_value=mock_ws_client_instance,
+        ) as mock_ws_client_class,
+        patch(
+            "providers.vlm_vila_provider.VideoStream",
+            return_value=mock_video_stream_instance,
+        ) as mock_video_stream_class,
     ):
-        yield mock_ws_client, mock_video_stream
+        yield mock_ws_client_class, mock_video_stream_class, mock_ws_client_instance, mock_video_stream_instance
 
 
 def test_initialization(ws_url, fps, mock_dependencies):
-    mock_ws_client, mock_video_stream = mock_dependencies
+    (
+        mock_ws_client_class,
+        mock_video_stream_class,
+        mock_ws_client_instance,
+        mock_video_stream_instance,
+    ) = mock_dependencies
     provider = VLMVilaProvider(ws_url, fps=fps)
 
-    mock_ws_client.assert_called_once_with(url=ws_url)
-    mock_video_stream.assert_called_once_with(
-        provider.ws_client.send_message, fps=fps, device_index=0
+    mock_ws_client_class.assert_called_once_with(url=ws_url)
+    mock_video_stream_class.assert_called_once_with(
+        mock_ws_client_instance.send_message, fps=fps, device_index=0
     )
 
     assert not provider.running
-    assert provider.ws_client is not None
-    assert provider.video_stream is not None
+    assert provider.ws_client is mock_ws_client_instance
+    assert provider.video_stream is mock_video_stream_instance
 
 
-def test_singleton_pattern(ws_url, fps):
+def test_singleton_pattern(ws_url, fps, mock_dependencies):
     provider1 = VLMVilaProvider(ws_url, fps=fps)
     provider2 = VLMVilaProvider(ws_url, fps=fps)
 
@@ -54,27 +69,30 @@ def test_singleton_pattern(ws_url, fps):
 
 
 def test_register_message_callback(ws_url, fps, mock_dependencies):
+    _, _, mock_ws_client_instance, _ = mock_dependencies
     provider = VLMVilaProvider(ws_url, fps=fps)
-    callback = Mock()
+    callback = MagicMock()
 
     provider.register_message_callback(callback)
-    provider.ws_client.register_message_callback.assert_called_once_with(callback)
+    mock_ws_client_instance.register_message_callback.assert_called_once_with(callback)
 
 
 def test_start(ws_url, fps, mock_dependencies):
+    _, _, mock_ws_client_instance, mock_video_stream_instance = mock_dependencies
     provider = VLMVilaProvider(ws_url, fps=fps)
     provider.start()
 
     assert provider.running
-    provider.ws_client.start.assert_called_once()
-    provider.video_stream.start.assert_called_once()
+    mock_ws_client_instance.start.assert_called_once()
+    mock_video_stream_instance.start.assert_called_once()
 
 
 def test_stop(ws_url, fps, mock_dependencies):
+    _, _, mock_ws_client_instance, mock_video_stream_instance = mock_dependencies
     provider = VLMVilaProvider(ws_url, fps=fps)
     provider.start()
     provider.stop()
 
     assert not provider.running
-    provider.video_stream.stop.assert_called_once()
-    provider.ws_client.stop.assert_called_once()
+    mock_video_stream_instance.stop.assert_called_once()
+    mock_ws_client_instance.stop.assert_called_once()

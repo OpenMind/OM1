@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -22,34 +22,49 @@ def api_key():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    VLMOpenAIProvider._instance = None
+    """Reset singleton instances between tests."""
+    VLMOpenAIProvider.reset()  # type: ignore
     yield
+    VLMOpenAIProvider.reset()  # type: ignore
 
 
 @pytest.fixture
 def mock_dependencies():
+    mock_client_instance = MagicMock()
+    mock_video_stream_instance = MagicMock()
     with (
-        patch("providers.vlm_openai_provider.AsyncOpenAI") as mock_client,
-        patch("providers.vlm_openai_provider.VideoStream") as mock_video_stream,
+        patch(
+            "providers.vlm_openai_provider.AsyncOpenAI",
+            return_value=mock_client_instance,
+        ) as mock_client_class,
+        patch(
+            "providers.vlm_openai_provider.VideoStream",
+            return_value=mock_video_stream_instance,
+        ) as mock_video_stream_class,
     ):
-        yield mock_client, mock_video_stream
+        yield mock_client_class, mock_video_stream_class, mock_client_instance, mock_video_stream_instance
 
 
 def test_initialization(base_url, api_key, fps, mock_dependencies):
-    mock_client, mock_video_stream = mock_dependencies
+    (
+        mock_client_class,
+        mock_video_stream_class,
+        mock_client_instance,
+        mock_video_stream_instance,
+    ) = mock_dependencies
     provider = VLMOpenAIProvider(base_url, api_key, fps=fps)
 
-    mock_client.assert_called_once_with(api_key=api_key, base_url=base_url)
-    mock_video_stream.assert_called_once_with(
+    mock_client_class.assert_called_once_with(api_key=api_key, base_url=base_url)
+    mock_video_stream_class.assert_called_once_with(
         frame_callback=provider._process_frame, fps=fps, device_index=0
     )
 
     assert not provider.running
-    assert provider.api_client is not None
-    assert provider.video_stream is not None
+    assert provider.api_client is mock_client_instance
+    assert provider.video_stream is mock_video_stream_instance
 
 
-def test_singleton_pattern(base_url, api_key, fps):
+def test_singleton_pattern(base_url, api_key, fps, mock_dependencies):
     provider1 = VLMOpenAIProvider(base_url, api_key, fps=fps)
     provider2 = VLMOpenAIProvider(base_url, api_key, fps=fps)
 
@@ -60,7 +75,7 @@ def test_singleton_pattern(base_url, api_key, fps):
 
 def test_register_message_callback(base_url, api_key, fps, mock_dependencies):
     provider = VLMOpenAIProvider(base_url, api_key, fps=fps)
-    callback = Mock()
+    callback = MagicMock()
 
     provider.register_message_callback(callback)
     assert provider.message_callback == callback
@@ -68,23 +83,25 @@ def test_register_message_callback(base_url, api_key, fps, mock_dependencies):
 
 @pytest.mark.asyncio
 async def test_start(base_url, api_key, fps, mock_dependencies):
+    _, _, mock_client_instance, mock_video_stream_instance = mock_dependencies
     provider = VLMOpenAIProvider(base_url, api_key, fps=fps)
     provider.start()
 
     assert provider.running
-    provider.video_stream.start.assert_called_once()
+    mock_video_stream_instance.start.assert_called_once()
 
     # Simulate processing a frame so the async API call is triggered.
     # (Using "fake_frame" as an example frame.)
     await provider._process_frame("fake_frame")
     # Now assert the chat.completions.create was called.
-    provider.api_client.chat.completions.create.assert_called_once()
+    mock_client_instance.chat.completions.create.assert_called_once()
 
 
 def test_stop(base_url, api_key, fps, mock_dependencies):
+    _, _, _, mock_video_stream_instance = mock_dependencies
     provider = VLMOpenAIProvider(base_url, api_key, fps=fps)
     provider.start()
     provider.stop()
 
     assert not provider.running
-    provider.video_stream.stop.assert_called_once()
+    mock_video_stream_instance.stop.assert_called_once()

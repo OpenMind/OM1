@@ -1,44 +1,81 @@
 import asyncio
 import logging
 import time
-import typing
+from typing import Dict, Optional
 
 import requests
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.selfie.interface import SelfieInput
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
 
-_JSON = typing.Dict[str, typing.Any]
 
-
-class SelfieConnector(ActionConnector[SelfieInput]):
+class SelfieConfig(ActionConfig):
     """
-    Enroll a selfie through the face HTTP service :
+    Configuration for Selfie connector.
+
+    Parameters
+    ----------
+    face_http_base_url : str
+        Base URL for the face HTTP service.
+    face_recent_sec : float
+        Recency window in seconds for face detection.
+    poll_ms : int
+        Polling interval in milliseconds.
+    timeout_sec : int
+        Default timeout in seconds for operations.
+    http_timeout_sec : float
+        HTTP request timeout in seconds.
     """
 
-    def __init__(self, config: ActionConfig):
+    face_http_base_url: str = Field(
+        default="http://127.0.0.1:6793",
+        description="Base URL for the face HTTP service.",
+    )
+    face_recent_sec: float = Field(
+        default=1.0,
+        description="Recency window in seconds for face detection.",
+    )
+    poll_ms: int = Field(
+        default=200,
+        description="Polling interval in milliseconds.",
+    )
+    timeout_sec: int = Field(
+        default=15,
+        description="Default timeout in seconds for operations.",
+    )
+    http_timeout_sec: float = Field(
+        default=5.0,
+        description="HTTP request timeout in seconds.",
+    )
+
+
+class SelfieConnector(ActionConnector[SelfieConfig, SelfieInput]):
+    """
+    Enroll a selfie through the face HTTP service.
+    """
+
+    def __init__(self, config: SelfieConfig):
         """
-        Initialize the connector
+        Initialize the connector.
 
         Parameters
         ----------
-        config : ActionConfig
+        config : SelfieConfig
             Configuration for the connector.
         """
         super().__init__(config)
 
-        self.base_url: str = getattr(
-            self.config, "face_http_base_url", "http://127.0.0.1:6793"
-        )
+        self.base_url: str = self.config.face_http_base_url
 
-        self.recent_sec: float = float(getattr(self.config, "face_recent_sec", 1.0))
-        self.poll_ms: int = int(getattr(self.config, "poll_ms", 200))
-        self.default_timeout: int = int(getattr(self.config, "timeout_sec", 15))
-        self.http_timeout: float = float(getattr(self.config, "http_timeout_sec", 5.0))
+        self.recent_sec = self.config.face_recent_sec
+        self.poll_ms = self.config.poll_ms
+        self.default_timeout = self.config.timeout_sec
+        self.http_timeout = self.config.http_timeout_sec
 
-        self.evelenlabs_tts_provider = ElevenLabsTTSProvider()
+        self.elevenlabs_tts_provider = ElevenLabsTTSProvider()
         self.io_provider = IOProvider()
 
     def _write_status(self, line: str):
@@ -55,7 +92,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
         except Exception as e:
             logging.warning("SelfieStatus write failed: %s", e)
 
-    def _post_json(self, path: str, body: _JSON) -> typing.Optional[_JSON]:
+    def _post_json(self, path: str, body: Dict) -> Optional[Dict]:
         """
         POST JSON to the face service.
 
@@ -63,12 +100,12 @@ class SelfieConnector(ActionConnector[SelfieInput]):
         ----------
         path : str
             Endpoint path (e.g., "/who", "/selfie").
-        body : _JSON
+        body : Dict
             Request body dict.
 
         Returns
         -------
-        typing.Optional[_JSON]
+        typing.Optional[Dict]
             Parsed JSON dict on success; None on error.
         """
         url = f"{self.base_url}{path}"
@@ -79,13 +116,13 @@ class SelfieConnector(ActionConnector[SelfieInput]):
             logging.warning("HTTP POST %s failed (%s) body=%s", url, e, body)
             return None
 
-    def _get_config(self) -> _JSON:
+    def _get_config(self) -> Dict:
         """
         Fetch current service config.
 
         Returns
         -------
-        typing.Optional[_JSON]
+        typing.Optional[Dict]
         """
         resp = self._post_json("/config", {"get": True}) or {}
         return resp if isinstance(resp, dict) else {}
@@ -101,13 +138,13 @@ class SelfieConnector(ActionConnector[SelfieInput]):
         """
         _ = self._post_json("/config", {"set": {"blur": bool(on)}})
 
-    def _who_snapshot(self) -> typing.Optional[_JSON]:
+    def _who_snapshot(self) -> Optional[Dict]:
         """
         Query current faces within the recency window.
 
         Returns
         -------
-        typing.Optional[_JSON]
+        typing.Optional[Dict]
             Dict with keys like "now" (list of known IDs) and "unknown_now" (int),
             or None on error.
         """
@@ -142,7 +179,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
                     unknown_now,
                 )
                 return True
-            time.sleep(self.poll_ms / 1000.0)
+            self.sleep(self.poll_ms / 1000.0)
         logging.error("Selfie gate: timeout waiting for exactly 1 face.")
         return False
 
@@ -184,7 +221,7 @@ class SelfieConnector(ActionConnector[SelfieInput]):
                     f"failed reason={reason} faces={faces}",
                     time.time(),
                 )
-                self.evelenlabs_tts_provider.add_pending_message(
+                self.elevenlabs_tts_provider.add_pending_message(
                     f"Woof! Woof! I saw {faces} faces. Please make sure only your face is visible and try again."
                 )
                 return
@@ -197,15 +234,15 @@ class SelfieConnector(ActionConnector[SelfieInput]):
                 self.io_provider.add_input(
                     "SelfieStatus", "failed reason=service", time.time()
                 )
-                self.evelenlabs_tts_provider.add_pending_message(
+                self.elevenlabs_tts_provider.add_pending_message(
                     "Woof! Woof! I couldn't see you clearly. Please try again."
                 )
                 return
 
             logging.info("[Selfie] Enrolled selfie for '%s' successfully.", name)
             self.io_provider.add_input("SelfieStatus", f"ok id={name}", time.time())
-            self.evelenlabs_tts_provider.add_pending_message(
-                f"Woof! Woof! I see you {name}!"
+            self.elevenlabs_tts_provider.add_pending_message(
+                f"Woof! Woof! I remember you, {name}! You are now enrolled."
             )
 
         finally:

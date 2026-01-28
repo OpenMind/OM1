@@ -5,15 +5,15 @@ description: "RPLidar A1M8 Setup and Use"
 
 ## RPLidar
 
-These instructions are for an SLAMTEC RPLIDAR A1M8. This unit is used on the TurtleBot4 and can be added to the Unitree Go2. 
+These instructions are for an SLAMTEC RPLIDAR A1M8. This unit is used on the TurtleBot4 and can be added to the Unitree Go2.
 
-## Architecture 
+## Architecture
 
-The collision avoidance and path checking code pre-computes 9 different paths, 4 to the left, one straight ahead, 4 to the right, and one to the back. For each of the 9 possible paths, the code checks whether the path approaches any detected object to within `half_width_robot`. If not, the path is considered to be a valid choice and the motion system can execute that path. 
+The collision avoidance and path checking code pre-computes 9 different paths, 4 to the left, one straight ahead, 4 to the right, and one to the back. For each of the 9 possible paths, the code checks whether the path approaches any detected object to within `half_width_robot`. If not, the path is considered to be a valid choice and the motion system can execute that path.
 
 ## Assumptions
 
-The code assumes that any unpredictable barriers (e.g. humans crossing the path of the robot) will be avoided using separate code within the `action` driver, such as by issuing a "STOP" command when an object is detected in front of the robot.  
+The code assumes that any unpredictable barriers (e.g. humans crossing the path of the robot) will be avoided using separate code within the `action` driver, such as by issuing a "STOP" command when an object is detected in front of the robot.
 
 ## Setup
 
@@ -27,14 +27,14 @@ half_width_robot = 0.20  # the width of the robot is 40 cm
 relevant_distance_max = 1.1  # meters
 relevant_distance_min = 0.16 # meters
 sensor_mounting_angle = 180.0  # corrects for how sensor is mounted
-angles_blanked = [[-180.0, -160.0], [32.0, 46.6]] 
+angles_blanked = [[-180.0, -160.0], [32.0, 46.6]]
 ```
 
 ### How to determine the sensor_mounting_angle and the angles_blanked
 
-- `sensor_mounting_angle`: The `sensor_mounting_angle` refers to the angle between the LIDAR sensor's scanning plane and the horizontal plane of your robot or platform. The `sensor_mounting_angle` can be read physically from the LIDAR. Refer to the following image for guidance:  
+- `sensor_mounting_angle`: The `sensor_mounting_angle` refers to the angle between the LIDAR sensor's scanning plane and the horizontal plane of your robot or platform. The `sensor_mounting_angle` can be read physically from the LIDAR. Refer to the following image for guidance:
 
-![sensor_mounting_angle](../assets/lidar_angle.png)  
+![sensor_mounting_angle](../assets/lidar_angle.png)
 
 - `angles_blanked`: The `angles_blanked` array can be used to prevent fixed obstructions in the field of view of the LIDAR from producing erroneous object avoidance messages.
 
@@ -43,8 +43,8 @@ angles_blanked = [[-180.0, -160.0], [32.0, 46.6]]
 Determine the serial port the sensor is using:
 
 ```bash
-ls /dev/tty.*  
-ls /dev/cu.*  
+ls /dev/tty.*
+ls /dev/cu.*
 ```
 
 Then, run
@@ -71,7 +71,7 @@ Typically, this command would be executed on your laptop, connected to the Turtl
 
 ## Using the RPLidar A1M8 in OM1
 
-Configure the `.json5` as needed: 
+Configure the `.json5` as needed:
 
 ```python
 """

@@ -54,7 +54,7 @@ class BatteryStatus:
             charging_status=data.get("charging_status", False),
             temperature=data.get("temperature", 0.0),
             voltage=data.get("voltage", 0.0),
-            timestamp=data.get("timestamp", time.time()),
+            timestamp=data.get("timestamp", str(time.time())),
         )
 
 
@@ -216,9 +216,12 @@ class TeleopsStatusProvider:
         """
         Initialize the TeleopsStatusProvider.
 
+        Sets up the teleops status provider with API authentication and base URL.
+        Initializes a thread pool executor for asynchronous status sharing operations.
+
         Parameters
         ----------
-        api_key : str
+        api_key : Optional[str]
             API key for authentication. Default is None.
         base_url : str
             Base URL for the teleops status API. Default is
@@ -236,18 +239,23 @@ class TeleopsStatusProvider:
             logging.error("API key is missing. Cannot get status.")
             return {}
 
-        api_key_id = self.api_key[9:25] if len(self.api_key) > 25 else self.api_key
-        request = requests.get(
-            f"{self.base_url}/{api_key_id}",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-        )
-        if request.status_code == 200:
-            return request.json()
-        else:
-            logging.error(
-                f"Failed to get status: {request.status_code} - {request.text}"
+        try:
+            api_key_id = self.api_key[9:25] if len(self.api_key) > 25 else self.api_key
+            request = requests.get(
+                f"{self.base_url}/{api_key_id}",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=10,
             )
-            return {}
+            if request.status_code == 200:
+                return request.json()
+            else:
+                logging.error(
+                    f"Failed to get status: {request.status_code} - {request.text}"
+                )
+        except requests.exceptions.RequestException as e:
+            logging.error(f"TeleopsStatusProvider: Error getting status: {e}")
+
+        return {}
 
     def _share_status_worker(self, status: TeleopsStatus):
         """
@@ -268,6 +276,7 @@ class TeleopsStatusProvider:
                 self.base_url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json=status.to_dict(),
+                timeout=10,
             )
 
             if request.status_code == 200:
@@ -291,3 +300,9 @@ class TeleopsStatusProvider:
             The status of the machine to be shared.
         """
         self.executor.submit(self._share_status_worker, status)
+
+    def stop(self):
+        """
+        Stop the TeleopsStatusProvider and clean up resources.
+        """
+        self.executor.shutdown(wait=True)

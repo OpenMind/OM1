@@ -13,7 +13,7 @@ This example uses your `default` audio in (microphone) and your `default` audio 
 uv run src/run.py conversation
 ```
 
-Especially on Linux, such as on Ubuntu 20.04 on the Nvidia Orin, audio support can be marginal. Expect some audio inputs and outputs to not work correctly, or to advertise incorrect hardware capabilities, such as USB microphones that report zero input channels etc. 
+Especially on Linux, such as on Ubuntu 20.04 on the Nvidia Orin, audio support can be marginal. Expect some audio inputs and outputs to not work correctly, or to advertise incorrect hardware capabilities, such as USB microphones that report zero input channels etc.
 
 ## Enumerating your Audio
 
@@ -25,7 +25,7 @@ python test_audio.py
 
 ## Testing Audio
 
-You can provide test sentences to speak by adding the `MockInput` to the config file:  
+You can provide test sentences to speak by adding the `MockInput` to the config file:
 
 ```bash
 {
@@ -36,4 +36,4 @@ You can provide test sentences to speak by adding the `MockInput` to the config 
 }
 ```
 
-Then connect to the `ws` (`wscat -c ws://localhost:8765`) and type in the words you want the system to speak. This is useful to debug audio out issues and related settings such as chunk values. 
+Then connect to the `ws` (`wscat -c ws://localhost:8765`) and type in the words you want the system to speak. This is useful to debug audio out issues and related settings such as chunk values.
