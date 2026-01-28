@@ -4,7 +4,6 @@ import random
 from queue import Queue
 from typing import List, Optional
 
-import zenoh
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
@@ -121,9 +120,7 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         logging.info(f"Tron AI command.connect: {output_interface.action}")
 
         if self.odom.position["moving"]:
-            logging.info(
-                "Disregard new AI movement command - robot is already moving"
-            )
+            logging.info("Disregard new AI movement command - robot is already moving")
             return
 
         if self.pending_movements.qsize() > 0:
