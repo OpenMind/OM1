@@ -1,10 +1,9 @@
 import logging
 import time
 import typing as T
-from enum import Enum
 
 import openai
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -15,38 +14,23 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
-class XAIModel(str, Enum):
-    """Available XAI models."""
-
-    GROK_2_LATEST = "grok-2-latest"
-    GROK_3_BETA = "grok-3-beta"
-    GROK_4_LATEST = "grok-4-latest"
-    GROK_4 = "grok-4"
-
-
-class XAIConfig(LLMConfig):
-    """XAI-specific configuration with model enum."""
-
-    base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/xai",
-        description="Base URL for the XAI API endpoint",
-    )
-    model: T.Optional[T.Union[XAIModel, str]] = Field(
-        default=XAIModel.GROK_4_LATEST,
-        description="XAI model to use",
-    )
-
-
 class XAILLM(LLM[R]):
     """
     XAI LLM implementation using OpenAI-compatible API.
 
     Handles authentication and response parsing for XAI endpoints.
+
+    Parameters
+    ----------
+    config : LLMConfig
+        Configuration object containing API settings.
+    available_actions : list[AgentAction], optional
+        List of available actions for function call generation. If provided.
     """
 
     def __init__(
         self,
-        config: XAIConfig,
+        config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -54,7 +38,7 @@ class XAILLM(LLM[R]):
 
         Parameters
         ----------
-        config : XAIConfig
+        config : LLMConfig
             Configuration settings for the LLM.
         available_actions : list[AgentAction], optional
             List of available actions for function calling.

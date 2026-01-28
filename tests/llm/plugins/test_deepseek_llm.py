@@ -3,8 +3,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
+from llm import LLMConfig
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.deepseek_llm import DeepSeekConfig, DeepSeekLLM
+from llm.plugins.deepseek_llm import DeepSeekLLM
 
 
 class DummyOutputModel(BaseModel):
@@ -13,7 +14,7 @@ class DummyOutputModel(BaseModel):
 
 @pytest.fixture
 def config():
-    return DeepSeekConfig(base_url="test_url/", api_key="test_key", model="test_model")
+    return LLMConfig(base_url="test_url/", api_key="test_key", model="test_model")
 
 
 @pytest.fixture
@@ -97,7 +98,7 @@ async def test_init_with_config(llm, config):
 @pytest.mark.asyncio
 async def test_init_empty_key():
     """Test fallback API key when no credentials provided"""
-    config = DeepSeekConfig(base_url="test_url")
+    config = LLMConfig(base_url="test_url")
     with pytest.raises(ValueError, match="config file missing api_key"):
         DeepSeekLLM(config, available_actions=None)
 

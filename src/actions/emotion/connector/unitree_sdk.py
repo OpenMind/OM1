@@ -1,4 +1,5 @@
 import logging
+import time
 
 from pydantic import Field
 
@@ -92,4 +93,4 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
         """
         Periodic tick function to maintain connection.
         """
-        self.sleep(5)
+        time.sleep(5)

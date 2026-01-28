@@ -1,10 +1,9 @@
 import logging
 import time
 import typing as T
-from enum import Enum
 
 import openai
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -15,38 +14,25 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
-class NearAIModel(str, Enum):
-    """Available NearAI models."""
-
-    QWEN_30B_A3B_INSTRUCT_2507 = "qwen3-30b-a3b-instruct-2507"
-    QWEN_2_5_VL_72B_INSTRUCT = "qwen2.5-vl-72b-instruct"
-    QWEN_2_5_7B_INSTRUCT = "qwen2.5-7b-instruct"
-
-
-class NearAIConfig(LLMConfig):
-    """NearAI-specific configuration with model enum."""
-
-    base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/nearai",
-        description="Base URL for the NearAI API endpoint",
-    )
-    model: T.Optional[T.Union[NearAIModel, str]] = Field(
-        default=NearAIModel.QWEN_30B_A3B_INSTRUCT_2507,
-        description="NearAI model to use",
-    )
-
-
 class NearAILLM(LLM[R]):
     """
     An NearAI-based Language Learning Model implementation.
 
     This class implements the LLM interface for Near AI's open-source models, handling
     configuration, authentication, and async API communication.
+
+    Parameters
+    ----------
+    config : LLMConfig
+        Configuration object containing API settings.
+    available_actions : list[AgentAction], optional
+        List of available actions for function call generation. If provided,
+        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
         self,
-        config: NearAIConfig,
+        config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -54,7 +40,7 @@ class NearAILLM(LLM[R]):
 
         Parameters
         ----------
-        config : NearAIConfig
+        config : LLMConfig
             Configuration settings for the LLM.
         available_actions : list[AgentAction], optional
             List of available actions for function calling.

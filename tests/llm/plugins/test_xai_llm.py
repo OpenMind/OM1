@@ -3,8 +3,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
+from llm import LLMConfig
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.xai_llm import XAILLM, XAIConfig
+from llm.plugins.xai_llm import XAILLM
 
 
 # Test output model
@@ -14,7 +15,7 @@ class DummyOutputModel(BaseModel):
 
 @pytest.fixture
 def config():
-    return XAIConfig(base_url="test_url/", api_key="test_key", model="test_model")
+    return LLMConfig(base_url="test_url/", api_key="test_key", model="test_model")
 
 
 @pytest.fixture
@@ -96,7 +97,7 @@ async def test_init_with_config(llm, config):
 
 @pytest.mark.asyncio
 async def test_init_empty_key():
-    config = XAIConfig(base_url="test_url")
+    config = LLMConfig(base_url="test_url")
     with pytest.raises(ValueError, match="config file missing api_key"):
         XAILLM(config, available_actions=None)
 

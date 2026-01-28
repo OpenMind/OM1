@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 from typing import Optional
 
 import zenoh
@@ -326,7 +327,7 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
         -------
         None
         """
-        self.sleep(0.05)
+        time.sleep(0.05)
         logging.debug("Gamepad tick")
 
         data = None

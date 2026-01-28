@@ -1,6 +1,7 @@
 import logging
 import math
 import random
+import time
 from queue import Queue
 from typing import List, Optional
 
@@ -252,7 +253,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         """
         Periodic tick to process movement commands.
         """
-        self.sleep(0.1)
+        time.sleep(0.1)
 
         logging.debug("Move tick")
 
@@ -260,7 +261,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
             # this value is never precisely zero except while
             # booting and waiting for data to arrive
             logging.info("Waiting for odom data")
-            self.sleep(0.5)
+            time.sleep(0.5)
             return
 
         # physical collision event ALWAYS takes precedence

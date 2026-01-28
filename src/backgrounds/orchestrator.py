@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
@@ -60,9 +61,6 @@ class BackgroundOrchestrator:
                     f"Background {background.name} already submitted, skipping."
                 )
                 continue
-
-            background.set_stop_event(self._stop_event)
-
             self._background_executor.submit(self._run_background_loop, background)
             self._submitted_backgrounds.add(background.name)
 
@@ -82,7 +80,7 @@ class BackgroundOrchestrator:
                 background.run()
             except Exception as e:
                 logging.error(f"Error in background {background.name}: {e}")
-                self._stop_event.wait(timeout=0.1)
+                time.sleep(0.1)
 
     def stop(self):
         """
