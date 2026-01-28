@@ -9,8 +9,6 @@ import rclpy  # type: ignore
 from rclpy.node import Node  # type: ignore
 from std_msgs.msg import String  # type: ignore
 
-rclpy.init()
-
 
 class ROS2PublisherProvider(Node):
     """
@@ -31,6 +29,13 @@ class ROS2PublisherProvider(Node):
             The ROS 2 topic name to publish messages to. Defaults to
             "speak_topic". The publisher uses a queue size of 10.
         """
+        # Avoid side effects at import time; initialize rclpy only when needed.
+        try:
+            if not rclpy.ok():
+                rclpy.init()
+        except Exception as e:
+            logging.exception(f"rclpy initialization error: {e}")
+
         try:
             super().__init__("ROS2_publisher_provider")
         except Exception as e:
@@ -118,6 +123,18 @@ class ROS2PublisherProvider(Node):
         if self._thread:
             self._thread.join(timeout=5)
 
-        self.publisher_.Close()
+        # Best-effort ROS2 cleanup (safe for mocked tests and partial init failures).
+        try:
+            pub = getattr(self, "publisher_", None)
+            if pub is not None and hasattr(self, "destroy_publisher"):
+                self.destroy_publisher(pub)  # type: ignore[attr-defined]
+        except Exception as e:
+            logging.exception(f"Error destroying ROS2 publisher: {e}")
+
+        try:
+            if hasattr(self, "destroy_node"):
+                self.destroy_node()  # type: ignore[attr-defined]
+        except Exception as e:
+            logging.exception(f"Error destroying ROS2 node: {e}")
 
         logging.info("ROS2 Publisher Provider stopped")
