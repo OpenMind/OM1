@@ -12,6 +12,7 @@ from runtime.multi_mode.cortex import ModeCortexRuntime
 @pytest.fixture
 def sample_mode_config():
     mode_config = ModeConfig(
+        version="v1.0.1",
         name="test_mode",
         display_name="Test Mode",
         description="A test mode",
@@ -579,7 +580,7 @@ class TestModeCortexRuntimeHotReload:
             await runtime._reload_config()
 
             mock_load_config.assert_called_once_with(
-                "test_config", mode_soure_path="/fake/path/test_config.json5"
+                "test_config", mode_source_path="/fake/path/test_config.json5"
             )
             runtime._stop_current_orchestrators.assert_called_once()
             runtime._initialize_mode.assert_called_once_with("test_mode")

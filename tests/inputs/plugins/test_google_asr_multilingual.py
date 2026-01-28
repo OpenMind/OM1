@@ -2,8 +2,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from inputs.base import SensorConfig
-from inputs.plugins.google_asr import LANGUAGE_CODE_MAP, GoogleASRInput
+from inputs.plugins.google_asr import (
+    LANGUAGE_CODE_MAP,
+    GoogleASRInput,
+    GoogleASRSensorConfig,
+)
 
 
 @pytest.fixture
@@ -74,7 +77,7 @@ def test_init_with_korean_language(
     mock_asr_provider, mock_sleep_ticker, mock_conversation
 ):
     """Test ASR initialization with Korean language."""
-    config = SensorConfig(api_key="test_key", language="korean")
+    config = GoogleASRSensorConfig(api_key="test_key", language="korean")
     _ = GoogleASRInput(config=config)
 
     # Verify ASR provider was called with Korean language code
@@ -86,7 +89,7 @@ def test_init_with_spanish_language(
     mock_asr_provider, mock_sleep_ticker, mock_conversation
 ):
     """Test ASR initialization with Spanish language."""
-    config = SensorConfig(api_key="test_key", language="spanish")
+    config = GoogleASRSensorConfig(api_key="test_key", language="spanish")
     _ = GoogleASRInput(config=config)
 
     call_args = mock_asr_provider.call_args
@@ -97,7 +100,7 @@ def test_init_with_japanese_language(
     mock_asr_provider, mock_sleep_ticker, mock_conversation
 ):
     """Test ASR initialization with Japanese language."""
-    config = SensorConfig(api_key="test_key", language="japanese")
+    config = GoogleASRSensorConfig(api_key="test_key", language="japanese")
     _ = GoogleASRInput(config=config)
 
     call_args = mock_asr_provider.call_args
@@ -108,7 +111,7 @@ def test_init_with_case_insensitive_language(
     mock_asr_provider, mock_sleep_ticker, mock_conversation
 ):
     """Test that language names are case-insensitive."""
-    config = SensorConfig(api_key="test_key", language="KOREAN")
+    config = GoogleASRSensorConfig(api_key="test_key", language="KOREAN")
     _ = GoogleASRInput(config=config)
 
     call_args = mock_asr_provider.call_args
@@ -119,7 +122,7 @@ def test_init_with_whitespace_in_language(
     mock_asr_provider, mock_sleep_ticker, mock_conversation
 ):
     """Test that language names handle whitespace."""
-    config = SensorConfig(api_key="test_key", language="  korean  ")
+    config = GoogleASRSensorConfig(api_key="test_key", language="  korean  ")
     _ = GoogleASRInput(config=config)
 
     call_args = mock_asr_provider.call_args
@@ -130,7 +133,7 @@ def test_init_with_unsupported_language_defaults_to_english(
     mock_asr_provider, mock_sleep_ticker, mock_conversation, caplog
 ):
     """Test that unsupported language defaults to English with warning."""
-    config = SensorConfig(api_key="test_key", language="klingon")
+    config = GoogleASRSensorConfig(api_key="test_key", language="klingon")
     _ = GoogleASRInput(config=config)
 
     call_args = mock_asr_provider.call_args
@@ -142,7 +145,7 @@ def test_init_without_language_defaults_to_english(
     mock_asr_provider, mock_sleep_ticker, mock_conversation
 ):
     """Test that missing language config defaults to English."""
-    config = SensorConfig(api_key="test_key")
+    config = GoogleASRSensorConfig(api_key="test_key")
     _ = GoogleASRInput(config=config)
 
     call_args = mock_asr_provider.call_args

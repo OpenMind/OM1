@@ -43,18 +43,6 @@ class UnitreeGo2NavigationProvider:
     - Disables AI mode when navigation starts (ACCEPTED/EXECUTING status)
     - Re-enables AI mode only on successful navigation completion (SUCCEEDED status)
     - Keeps AI mode disabled on navigation failure/cancellation (CANCELED/ABORTED status)
-
-    Parameters
-    ----------
-    navigation_status_topic : str, optional
-        The ROS2 topic to subscribe for navigation status messages.
-        Default: "navigate_to_pose/_action/status"
-        Alternative: "navigate_to_pose/_action/feedback" for more detailed updates
-    goal_pose_topic : str, optional
-        The topic on which to publish goal poses (default is "goal_pose").
-    cancel_goal_topic : str, optional
-        The topic on which to publish goal cancellations
-        (default is "navigate_to_pose/_action/cancel_goal").
     """
 
     def __init__(
@@ -277,6 +265,22 @@ class UnitreeGo2NavigationProvider:
             self._nav_in_progress = False
         except Exception:
             logging.exception("Failed to cancel navigation goals")
+
+    def stop(self):
+        """
+        Stop the navigation provider by unsubscribing from topics and cleaning up resources.
+        """
+        self.running = False
+
+        if self.session:
+            self.session.close()
+            logging.info("Zenoh session closed")
+
+        if self.ai_status_pub:
+            self.ai_status_pub.undeclare()
+            logging.info("AI status publisher closed")
+
+        logging.warning("Navigation Provider is not running")
 
     @property
     def navigation_state(self) -> str:

@@ -1,7 +1,23 @@
 ---
-title: Architecture Overview
-description: "Full autonomy architecture and system components"
+title: Full Autonomy
+description: "Full autonomy architecture and introduction"
 ---
+
+OM1 supports Full Autonomy Mode on both Nvidia AGX and Thor platforms, enabling advanced perception, mapping, navigation, and interaction capabilities with minimal human input.
+
+   - AGX: Supported with a limited feature set.
+
+   - Thor: Provides comprehensive support for full autonomy.
+
+On the Nvidia Thor platform, OM1 includes advanced machine learning capabilities such as:
+
+   - Face recognition
+
+   - Anonymization
+
+Thor is fully supported and optimized for ML-driven workloads, making it the recommended platform for deployments requiring advanced autonomy and perception features.
+
+The Full Autonomy stack is built from modular, containerized services that communicate through well-defined interfaces. The diagram below shows how these components interact within the system.
 
 ![Architecture Diagram](../assets/full-autonomy-assets/full_autonomy_architecture.png)
 
@@ -54,7 +70,7 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 6. **Openmind Privacy System - Face detection and Anonymisation** - A real-time, on-device face detection and blurring module designed to protect personal identity during video capture and streaming. It runs entirely on the robot’s edge device, requiring no cloud or network connectivity.
 
 7. **Auto charging** - The system uses AprilTag-based visual docking combined with Nav2 navigation. When the robot needs to charge, it navigates to the charging station's general area using the Nav2 stack. Once nearby, it switches to precision docking mode where it detects AprilTags mounted on or near the charging dock using its onboard cameras.
-    
+
     The docking process involves:
         - Visual servoing - The robot aligns itself with the charging station by tracking the AprilTag's pose
         - Precise approach - It approaches the dock using the tag's position and orientation data
@@ -63,7 +79,7 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 ## Getting Started
 
 ### Prerequisites
-- Docker and Docker Compose installed
+- Docker and docker compose installed (Makes sure the Docker Compose version is v2.32.4)
 - Access to all required repositories
 - Proper hardware setup
 
@@ -105,5 +121,3 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 ---
 
 Your robot is now ready to accompany you, assist with tasks, explore new environments, and learn alongside you.
-
-Note : We currently support Full autonomy for Unitree Go2 robot.Full autonomy for Unitree G1 will be released soon.
