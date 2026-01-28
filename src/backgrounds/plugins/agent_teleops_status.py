@@ -101,4 +101,4 @@ class AgentTeleopsStatusBackground(Background[AgentTeleopsStatusConfig]):
             )
         )
 
-        time.sleep(60)
+        self.sleep(60)

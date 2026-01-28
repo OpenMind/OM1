@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import tempfile
 import time
 from unittest.mock import AsyncMock, Mock, patch
@@ -1063,3 +1064,361 @@ class TestModeManager:
                 manager._zenoh_mode_status_response_pub.put(b"test")
 
             assert True
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_no_transition(self, mode_manager):
+        """Test _check_and_apply_context_transition when no transition is triggered."""
+        mode_manager.state.user_context = {"location": "office"}
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value=None
+        ) as mock_check:
+            await mode_manager._check_and_apply_context_transition()
+
+            mock_check.assert_called_once()
+            assert mode_manager.state.current_mode == "default"
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_with_transition(
+        self, mode_manager
+    ):
+        """Test _check_and_apply_context_transition successfully triggers transition."""
+        mode_manager.state.user_context = {"location": "lab"}
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value="advanced"
+        ) as mock_check:
+            with patch.object(
+                mode_manager, "_execute_transition", return_value=True
+            ) as mock_execute:
+                await mode_manager._check_and_apply_context_transition()
+
+                mock_check.assert_called_once()
+                mock_execute.assert_called_once_with("advanced", "context_aware")
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_exception_in_check(
+        self, mode_manager
+    ):
+        """Test _check_and_apply_context_transition handles exceptions gracefully."""
+        mode_manager.state.user_context = {"location": "lab"}
+
+        with patch.object(
+            mode_manager,
+            "check_context_aware_transitions",
+            side_effect=Exception("Test error"),
+        ):
+            await mode_manager._check_and_apply_context_transition()
+
+            assert mode_manager.state.current_mode == "default"
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_exception_in_execute(
+        self, mode_manager
+    ):
+        """Test _check_and_apply_context_transition handles transition execution errors."""
+        mode_manager.state.user_context = {"battery_level": 10}
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value="emergency"
+        ):
+            with patch.object(
+                mode_manager,
+                "_execute_transition",
+                side_effect=Exception("Transition failed"),
+            ):
+                await mode_manager._check_and_apply_context_transition()
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_high_priority(self, mode_manager):
+        """Test that _check_and_apply_context_transition uses highest priority transition."""
+        mode_manager.state.user_context = {
+            "location": "lab",
+            "battery_level": 10,
+        }
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value="emergency"
+        ) as mock_check:
+            with patch.object(
+                mode_manager, "_execute_transition", return_value=True
+            ) as mock_execute:
+                await mode_manager._check_and_apply_context_transition()
+
+                mock_check.assert_called_once()
+                mock_execute.assert_called_once_with("emergency", "context_aware")
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_wildcard_mode(self, mode_manager):
+        """Test _check_and_apply_context_transition with wildcard from_mode."""
+        mode_manager.state.current_mode = "emergency"
+        mode_manager.state.user_context = {
+            "user_skill": "expert",
+            "complexity_level": "high",
+        }
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value="advanced"
+        ) as mock_check:
+            with patch.object(
+                mode_manager, "_execute_transition", return_value=True
+            ) as mock_execute:
+                await mode_manager._check_and_apply_context_transition()
+
+                mock_check.assert_called_once()
+                mock_execute.assert_called_once_with("advanced", "context_aware")
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_cooldown_respected(
+        self, mode_manager
+    ):
+        """Test that _check_and_apply_context_transition respects cooldown periods."""
+        mode_manager.state.user_context = {"location": "lab"}
+        mode_manager.config.transition_rules[4].cooldown_seconds = 5.0
+        mode_manager.transition_cooldowns["default->advanced"] = time.time()
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value=None
+        ) as mock_check:
+            await mode_manager._check_and_apply_context_transition()
+
+            mock_check.assert_called_once()
+            assert mode_manager.state.current_mode == "default"
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_multiple_conditions(
+        self, mode_manager
+    ):
+        """Test _check_and_apply_context_transition with complex multi-condition rules."""
+        mode_manager.state.user_context = {
+            "user_skill": "expert",
+            "complexity_level": "very_high",
+            "location": "lab",
+        }
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value="advanced"
+        ) as mock_check:
+            with patch.object(
+                mode_manager, "_execute_transition", return_value=True
+            ) as mock_execute:
+                await mode_manager._check_and_apply_context_transition()
+
+                mock_check.assert_called_once()
+                mock_execute.assert_called_once_with("advanced", "context_aware")
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_logs_info_on_transition(
+        self, mode_manager, caplog
+    ):
+        """Test that _check_and_apply_context_transition logs info when transition occurs."""
+        mode_manager.state.user_context = {"location": "lab"}
+
+        with patch.object(
+            mode_manager, "check_context_aware_transitions", return_value="advanced"
+        ):
+            with patch.object(mode_manager, "_execute_transition", return_value=True):
+                with caplog.at_level(logging.INFO):
+                    await mode_manager._check_and_apply_context_transition()
+
+                    assert any(
+                        "Context-aware transition triggered by context update"
+                        in record.message
+                        for record in caplog.records
+                    )
+                    assert any(
+                        "default -> advanced" in record.message
+                        for record in caplog.records
+                    )
+
+    @pytest.mark.asyncio
+    async def test_check_and_apply_context_transition_logs_error_on_exception(
+        self, mode_manager, caplog
+    ):
+        """Test that _check_and_apply_context_transition logs errors on exceptions."""
+        with patch.object(
+            mode_manager,
+            "check_context_aware_transitions",
+            side_effect=Exception("Test error"),
+        ):
+            with caplog.at_level(logging.ERROR):
+                await mode_manager._check_and_apply_context_transition()
+
+                assert any(
+                    "Error checking context-aware transitions" in record.message
+                    for record in caplog.records
+                )
+                assert any("Test error" in record.message for record in caplog.records)
+
+    def test_zenoh_context_update_valid_context(self, mode_manager):
+        """Test _zenoh_context_update with valid context data."""
+        context_data = {"location": "lab", "battery_level": 50}
+
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        mock_loop = Mock()
+        mock_loop.is_running.return_value = True
+        mode_manager._main_event_loop = mock_loop
+
+        mode_manager._zenoh_context_update(mock_sample)
+
+        assert mode_manager.state.user_context["location"] == "lab"
+        assert mode_manager.state.user_context["battery_level"] == 50
+
+        mock_loop.call_soon_threadsafe.assert_called_once()
+
+    def test_zenoh_context_update_triggers_transition_check(self, mode_manager):
+        """Test that _zenoh_context_update triggers _check_and_apply_context_transition."""
+        context_data = {"location": "lab"}
+
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        mock_loop = Mock()
+        mock_loop.is_running.return_value = True
+        mode_manager._main_event_loop = mock_loop
+
+        mode_manager._zenoh_context_update(mock_sample)
+
+        assert mode_manager.state.user_context["location"] == "lab"
+        mock_loop.call_soon_threadsafe.assert_called_once()
+
+    def test_zenoh_context_update_invalid_json(self, mode_manager, caplog):
+        """Test _zenoh_context_update with invalid JSON data."""
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = "invalid json {{"
+
+        with caplog.at_level(logging.ERROR):
+            mode_manager._zenoh_context_update(mock_sample)
+
+            assert any(
+                "Error processing context update" in record.message
+                for record in caplog.records
+            )
+
+    def test_zenoh_context_update_non_dict_data(self, mode_manager, caplog):
+        """Test _zenoh_context_update with non-dictionary data."""
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(["not", "a", "dict"])
+
+        with caplog.at_level(logging.WARNING):
+            mode_manager._zenoh_context_update(mock_sample)
+
+            assert any(
+                "Invalid context data format" in record.message
+                for record in caplog.records
+            )
+
+    def test_zenoh_context_update_no_event_loop(self, mode_manager, caplog):
+        """Test _zenoh_context_update when event loop is not set."""
+        context_data = {"location": "office"}
+
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        mode_manager._main_event_loop = None
+
+        with caplog.at_level(logging.INFO):
+            mode_manager._zenoh_context_update(mock_sample)
+
+            assert mode_manager.state.user_context["location"] == "office"
+            assert any(
+                "Updated user context with" in record.message
+                for record in caplog.records
+            )
+
+    def test_zenoh_context_update_event_loop_not_running(self, mode_manager):
+        """Test _zenoh_context_update when event loop is not running."""
+        context_data = {"battery_level": 15}
+
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        loop = Mock()
+        loop.is_running.return_value = False
+        mode_manager._main_event_loop = loop
+
+        mode_manager._zenoh_context_update(mock_sample)
+
+        assert mode_manager.state.user_context["battery_level"] == 15
+
+        loop.call_soon_threadsafe.assert_not_called()
+
+    def test_zenoh_context_update_merges_with_existing_context(self, mode_manager):
+        """Test that _zenoh_context_update merges with existing context."""
+        mode_manager.state.user_context = {"existing_key": "existing_value"}
+
+        context_data = {"location": "lab", "new_key": "new_value"}
+
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        mock_loop = Mock()
+        mock_loop.is_running.return_value = True
+        mode_manager._main_event_loop = mock_loop
+
+        mode_manager._zenoh_context_update(mock_sample)
+
+        assert mode_manager.state.user_context["existing_key"] == "existing_value"
+        assert mode_manager.state.user_context["location"] == "lab"
+        assert mode_manager.state.user_context["new_key"] == "new_value"
+
+    @pytest.mark.asyncio
+    async def test_zenoh_context_update_end_to_end_transition(self, mode_manager):
+        """Test end-to-end: _zenoh_context_update triggers actual transition."""
+        context_data = {"location": "lab"}
+
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        loop = asyncio.get_event_loop()
+        mode_manager._main_event_loop = loop
+
+        transition_called = asyncio.Event()
+        mode_manager._execute_transition
+
+        async def mock_execute(target, reason):
+            transition_called.set()
+            return True
+
+        with patch.object(
+            mode_manager, "_execute_transition", side_effect=mock_execute
+        ):
+            mode_manager._zenoh_context_update(mock_sample)
+
+            try:
+                await asyncio.wait_for(transition_called.wait(), timeout=1.0)
+                assert mode_manager.state.user_context["location"] == "lab"
+            except asyncio.TimeoutError:
+                pass
+
+    def test_zenoh_context_update_logs_debug_message(self, mode_manager, caplog):
+        """Test that _zenoh_context_update logs debug message on receive."""
+        context_data = {"test_key": "test_value"}
+
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        with caplog.at_level(logging.DEBUG):
+            mode_manager._zenoh_context_update(mock_sample)
+
+            assert any(
+                "Received context update" in record.message for record in caplog.records
+            )
+
+    def test_zenoh_context_update_logs_info_on_update(self, mode_manager, caplog):
+        """Test that _zenoh_context_update logs info after updating context."""
+        context_data = {"status": "active"}
+
+        # Mock zenoh.Sample
+        mock_sample = Mock()
+        mock_sample.payload.to_string.return_value = json.dumps(context_data)
+
+        with caplog.at_level(logging.INFO):
+            mode_manager._zenoh_context_update(mock_sample)
+
+            assert any(
+                "Updated user context with" in record.message
+                for record in caplog.records
+            )

@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,6 +15,28 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class OpenRouterModel(str, Enum):
+    """Available OpenRouter models."""
+
+    LLAMA_3_3_70B = "meta-llama/llama-3.3-70b-instruct"
+    LLAMA_3_1_70B = "meta-llama/llama-3.1-70b-instruct"
+    ANTHROPIC_SONNET_4_5 = "anthropic/claude-sonnet-4.5"
+    ANTHROPIC_OPUS_4_1 = "anthropic/claude-opus-4.1"
+
+
+class OpenRouterConfig(LLMConfig):
+    """OpenRouter-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/openrouter",
+        description="Base URL for the OpenRouter API endpoint",
+    )
+    model: T.Optional[T.Union[OpenRouterModel, str]] = Field(
+        default=OpenRouterModel.LLAMA_3_3_70B,
+        description="OpenRouter model to use",
+    )
+
+
 class OpenRouter(LLM[R]):
     """
     An OpenRouter-based Language Learning Model implementation with function call support.
@@ -21,19 +44,11 @@ class OpenRouter(LLM[R]):
     This class implements the LLM interface for OpenRouter's models (Meta and Anthropic), handling
     configuration, authentication, and async API communication. It supports both
     traditional JSON structured output and function calling.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided,
-        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: OpenRouterConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -41,7 +56,7 @@ class OpenRouter(LLM[R]):
 
         Parameters
         ----------
-        config : OpenRouterConfig, optional
+        config : OpenRouterConfig
             Configuration settings for the LLM.
         available_actions : list[AgentAction], optional
             List of available actions for function calling.
