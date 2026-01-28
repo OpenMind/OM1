@@ -106,6 +106,23 @@ class IOProvider:
         with self._lock:
             self._inputs.pop(key, None)
 
+    def get_input(self, key: str) -> Optional[Input]:
+        """
+        Get an input by its key.
+
+        Parameters
+        ----------
+        key : str
+            The input identifier.
+
+        Returns
+        -------
+        Input or None
+            The Input object if found, None otherwise.
+        """
+        with self._lock:
+            return self._inputs.get(key)
+
     def add_input_timestamp(self, key: str, timestamp: float) -> None:
         """
         Add a timestamp for an existing input.
@@ -201,7 +218,7 @@ class IOProvider:
     @fuser_available_actions.setter
     def fuser_available_actions(self, value: Optional[str]) -> None:
         """
-        set the fuser available actions.
+        Set the fuser available actions.
         """
         with self._lock:
             self._fuser_available_actions = value
@@ -283,9 +300,7 @@ class IOProvider:
             self._llm_prompt = value
 
     def clear_llm_prompt(self) -> None:
-        """C
-        lear the LLM prompt.
-        """
+        """Clear the LLM prompt."""
         with self._lock:
             self._llm_prompt = None
 

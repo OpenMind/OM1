@@ -12,9 +12,20 @@ from providers.io_provider import IOProvider
 
 class SerialReader(FuserInput[SensorConfig, Optional[str]]):
     """
-    Reads data from serial port, typically from an Arduino
+    Serial port input reader for Arduino and other serial devices.
 
-    Maintains a buffer of messages.
+    This class reads data from a serial port connection, typically used for
+    interfacing with Arduino microcontrollers or other serial devices. It
+    maintains an internal buffer of processed messages and converts raw serial
+    data into structured text descriptions suitable for LLM processing.
+
+    The reader supports configurable serial port settings (port, baudrate, timeout)
+    and handles connection errors gracefully. It processes incoming serial data
+    in real-time and maintains a message buffer for downstream processing.
+
+    Typical use cases include reading sensor data from Arduino (e.g., heart rate
+    monitors, grip strength sensors) and converting raw serial output into
+    natural language descriptions for the agent's context.
     """
 
     # simple code example to ingest serial data written by an Arduino, such as:
@@ -35,7 +46,30 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
 
     def __init__(self, config: SensorConfig):
         """
-        Initialize with empty message buffer.
+        Initialize the serial reader with configuration.
+
+        Sets up the serial port connection, initializes the message buffer,
+        and configures the IO provider for tracking input data.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration object containing sensor settings. The serial port
+            connection parameters (port, baudrate, timeout) are currently
+            hardcoded in the implementation but should be configurable via
+            the config object in future versions.
+
+        Notes
+        -----
+        The serial port connection is attempted during initialization. If the
+        connection fails (e.g., port not found, permission denied), an error is
+        logged but the initialization continues. The `ser` attribute will be None
+        in case of connection failure, and subsequent polling operations will
+        return None until a successful connection is established.
+
+        The default serial port is set to "/dev/cu.usbmodem1101" (macOS) with
+        a baudrate of 9600. Users should modify these values to match their
+        specific hardware configuration.
         """
         super().__init__(config)
 

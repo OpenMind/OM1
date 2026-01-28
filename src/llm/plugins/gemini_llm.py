@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,27 +15,50 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class GeminiModel(str, Enum):
+    """Available Gemini models."""
+
+    GEMINI_2_5_FLASH = "gemini-2.5-flash"
+    GEMINI_2_5_FLASH_LITE = "gemini-2.5-flash-lite"
+    GEMINI_2_5_PRO = "gemini-2.5-pro"
+    GEMINI_3_PRO = "gemini-3-pro"
+    GEMINI_3_FLASH = "gemini-3-flash"
+
+
+class GeminiConfig(LLMConfig):
+    """Gemini-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/gemini",
+        description="Base URL for the Gemini API endpoint",
+    )
+    model: T.Optional[T.Union[GeminiModel, str]] = Field(
+        default=GeminiModel.GEMINI_2_5_FLASH,
+        description="Gemini model to use",
+    )
+
+
 class GeminiLLM(LLM[R]):
     """
     Google Gemini LLM implementation using OpenAI-compatible API.
 
     Handles authentication and response parsing for Gemini endpoints.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: GeminiConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
         Initialize the Gemini LLM instance.
+
+        Parameters
+        ----------
+        config : GeminiConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
@@ -57,7 +81,7 @@ class GeminiLLM(LLM[R]):
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
     ) -> T.Optional[R]:
         """
-        Execute LLM query and parse response
+        Execute LLM query and parse response.
 
         Parameters
         ----------
@@ -93,6 +117,10 @@ class GeminiLLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
+            if not response.choices:
+                logging.warning("Gemini API returned empty choices")
+                return None
+
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
@@ -103,8 +131,8 @@ class GeminiLLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls

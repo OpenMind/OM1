@@ -67,6 +67,7 @@ class QwenLLM(LLM[R]):
                 "model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
             }
         }
+
     Parameters
     ----------
     config : LLMConfig
@@ -87,6 +88,19 @@ class QwenLLM(LLM[R]):
         config: LLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
+        """
+        Initialize the QwenLLM instance.
+
+        Sets up the async client for the local Qwen model, configures extra body parameters,
+        and initializes the history manager.
+
+        Parameters
+        ----------
+        config : LLMConfig
+            Configuration settings for the LLM, including the model name.
+        available_actions : list, optional
+            List of available actions for function call generation.
+        """
         super().__init__(config, available_actions)
 
         if not config.model:
@@ -149,6 +163,10 @@ class QwenLLM(LLM[R]):
                 request_params["tool_choice"] = "required"
 
             response = await self._client.chat.completions.create(**request_params)
+
+            if not response.choices:
+                logging.warning("Qwen API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()

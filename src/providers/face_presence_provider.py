@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -11,7 +12,7 @@ from .singleton import singleton
 @dataclass
 class PresenceSnapshot:
     """
-    Canonical record returned by `/who`
+    Canonical record returned by `/who`.
 
     Attributes
     ----------
@@ -112,17 +113,30 @@ class FacePresenceProvider:
 
         Parameters
         ----------
-        base_url : str
+        base_url : str, optional
             Base HTTP URL of the face stream API (e.g., "http://127.0.0.1:6793").
-            The provider will call POST `{base_url}/who`.
-        recent_sec : float, default 3.0
+            The provider will call POST `{base_url}/who`. Defaults to "http://127.0.0.1:6793".
+        recent_sec : float, optional
             Lookback window passed to `/who` (seconds of presence history).
-        fps : float, default 5.0
+            Defaults to 3.0.
+        fps : float, optional
             Polling rate in events per second (e.g., 5.0 → every 0.2s).
-        timeout_s : float, default 2.0
-            HTTP request timeout in seconds.
+            Defaults to 5.0.
+        timeout_s : float, optional
+            HTTP request timeout in seconds. Defaults to 2.0.
+        prefer_recent : bool, optional
+            If True, prioritize recent face detection data when fetching snapshots.
+            Defaults to True.
+        unknown_frac_threshold : float, optional
+            Fraction threshold for suppressing unknown face counts based on recent frames.
+            Defaults to 0.15.
+        unknown_min_count : int, optional
+            Minimum count of unknown faces required before applying suppression logic.
+            Defaults to 6.
+        min_obs_window : int, optional
+            Minimum observation window size (in frames) used for unknown face suppression.
+            Defaults to 24.
         """
-
         self.base_url = base_url.rstrip("/")
         self.recent_sec = float(recent_sec)
         self.period = 1.0 / max(1e-6, float(fps))
@@ -172,7 +186,7 @@ class FacePresenceProvider:
                 pass
 
     def start(self) -> None:
-        """Start the background polling thread"""
+        """Start the background polling thread."""
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
@@ -182,7 +196,7 @@ class FacePresenceProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to strop"""
+        """Request the background thread to stop."""
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)
@@ -206,8 +220,8 @@ class FacePresenceProvider:
                 snap = self._fetch_snapshot()
                 text = snap.to_text()
                 self._emit(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Failed to fetch/emit face presence snapshot: {e}")
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -227,8 +241,8 @@ class FacePresenceProvider:
         for cb in callbacks:
             try:
                 cb(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Face presence callback failed: {e}")
 
     def _fetch_snapshot(self, recent_sec: Optional[float] = None) -> PresenceSnapshot:
         """
@@ -245,6 +259,7 @@ class FacePresenceProvider:
         ----------
         recent_sec : Optional[float]
             Lookback window in seconds (overrides self.recent_sec if given).
+
         Returns
         -------
         PresenceSnapshot

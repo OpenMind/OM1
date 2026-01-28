@@ -12,6 +12,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from runtime.config import validate_config_schema
 from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
@@ -133,11 +134,17 @@ def load_config(
         else config_source_path
     )
 
-    with open(config_path, "r+") as f:
-        raw_config = json5.load(f)
+    with open(config_path, "r") as f:
+        try:
+            raw_config = json5.load(f)
+        except Exception as e:
+            raise ValueError(
+                f"Failed to parse configuration file '{config_path}': {e}"
+            ) from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
+    validate_config_schema(raw_config)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -297,7 +304,6 @@ def add_meta(
     dict
         The updated runtime configuration.
     """
-
     # logging.info(f"config before {config}")
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key

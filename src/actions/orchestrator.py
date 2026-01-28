@@ -1,7 +1,7 @@
 import asyncio
+import json
 import logging
 import threading
-import time
 import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
@@ -33,6 +33,15 @@ class ActionOrchestrator:
     _completed_actions: T.Dict[str, asyncio.Event]
 
     def __init__(self, config: RuntimeConfig):
+        """
+        Initialize the ActionOrchestrator with runtime configuration.
+
+        Parameters
+        ----------
+        config : RuntimeConfig
+            Runtime configuration containing agent actions, execution mode,
+            and dependency information.
+        """
         self._config = config
         self.promise_queue = []
         self._connector_workers = (
@@ -40,6 +49,7 @@ class ActionOrchestrator:
         )
         self._connector_executor = ThreadPoolExecutor(
             max_workers=self._connector_workers,
+            thread_name_prefix="action-orchestrator-connector-",
         )
         self._submitted_connectors = set()
         self._stop_event = threading.Event()
@@ -47,9 +57,18 @@ class ActionOrchestrator:
         self._action_dependencies = config.action_dependencies or {}
         self._completed_actions = {}
 
-    def start(self):
+    def start(self) -> asyncio.Future:
         """
-        Start actions and connectors in separate threads
+        Start actions and connectors in separate threads.
+
+        Submits each agent action's connector to the thread pool executor
+        for concurrent execution. Skips connectors that have already been
+        submitted to prevent duplicates.
+
+        Returns
+        -------
+        asyncio.Future
+            A future object for compatibility with async interfaces.
         """
         for agent_action in self._config.agent_actions:
             if agent_action.llm_label in self._submitted_connectors:
@@ -57,6 +76,9 @@ class ActionOrchestrator:
                     f"Connector {agent_action.llm_label} already submitted, skipping."
                 )
                 continue
+
+            agent_action.connector.set_stop_event(self._stop_event)
+
             self._connector_executor.submit(self._run_connector_loop, agent_action)
             self._submitted_connectors.add(agent_action.llm_label)
 
@@ -64,14 +86,22 @@ class ActionOrchestrator:
 
     def _run_connector_loop(self, action: AgentAction):
         """
-        Thread-based connector loop
+        Thread-based connector loop.
+
+        Continuously calls the connector's tick() method in a loop until
+        the stop event is set. Handles exceptions gracefully with error logging.
+
+        Parameters
+        ----------
+        action : AgentAction
+            The agent action whose connector should be run in the loop.
         """
         while not self._stop_event.is_set():
             try:
                 action.connector.tick()
             except Exception as e:
                 logging.error(f"Error in connector {action.llm_label}: {e}")
-                time.sleep(0.1)
+                self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
@@ -305,10 +335,48 @@ class ActionOrchestrator:
         logging.debug(
             f"Calling action {agent_action.llm_label} with type {action.type.lower()} and argument {action.value}"
         )
-        input_interface = T.get_type_hints(agent_action.interface)["input"](
-            **{"action": action.value}
-        )
+
+        try:
+            parsed_value = json.loads(action.value)
+            if isinstance(parsed_value, dict):
+                input_params = parsed_value
+            else:
+                input_params = {"action": action.value}
+        except (json.JSONDecodeError, TypeError):
+            input_params = {"action": action.value}
+
+        input_type = T.get_type_hints(agent_action.interface)["input"]
+        input_type_hints = T.get_type_hints(input_type)
+
+        converted_params = {}
+        for key, value in input_params.items():
+            if key in input_type_hints:
+                expected_type = input_type_hints[key]
+                if hasattr(expected_type, "__mro__") and any(
+                    base.__name__ == "Enum" for base in expected_type.__mro__
+                ):
+                    converted_params[key] = expected_type(value)
+                elif expected_type is float:
+                    converted_params[key] = float(value)
+                elif expected_type is int:
+                    converted_params[key] = int(value)
+                elif expected_type is bool:
+                    converted_params[key] = (
+                        bool(value)
+                        if not isinstance(value, str)
+                        else value.lower() in ("true", "1", "yes")
+                    )
+                else:
+                    converted_params[key] = value
+            else:
+                logging.warning(
+                    f"Parameter '{key}' not found in input type hints for action '{agent_action.llm_label}'"
+                )
+
+        input_interface = input_type(**converted_params)
+
         await agent_action.connector.connect(input_interface)
+
         return input_interface
 
     def stop(self):

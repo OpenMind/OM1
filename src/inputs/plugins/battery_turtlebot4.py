@@ -39,6 +39,17 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
     """
 
     def __init__(self, config: TurtleBot4BatteryConfig):
+        """
+        Initialize the TurtleBot4Battery input handler.
+
+        Sets up the required providers, buffers, and status variables
+        for handling TurtleBot4 battery data.
+
+        Parameters
+        ----------
+        config : TurtleBot4BatteryConfig
+            Configuration for the sensor input.
+        """
         super().__init__(config)
 
         api_key = self.config.api_key
@@ -114,7 +125,7 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
 
     def listener_dock(self, sample: zenoh.Sample):
         """
-        Process docking status updates
+        Process docking status updates.
 
         Parameters
         ----------
@@ -150,7 +161,6 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
         -------
         List[str]
         """
-
         await asyncio.sleep(2.0)
         await self.report_status()
 

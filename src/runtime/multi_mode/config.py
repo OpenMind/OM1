@@ -13,6 +13,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from runtime.config import validate_config_schema
 from runtime.multi_mode.hook import (
     LifecycleHook,
     LifecycleHookType,
@@ -382,10 +383,16 @@ def load_mode_config(
     )
 
     with open(config_path, "r") as f:
-        raw_config = json5.load(f)
+        try:
+            raw_config = json5.load(f)
+        except Exception as e:
+            raise ValueError(
+                f"Failed to parse configuration file '{config_path}': {e}"
+            ) from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
+    validate_config_schema(raw_config)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -429,7 +436,7 @@ def load_mode_config(
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         global_cortex_llm=raw_config.get("cortex_llm"),
         global_lifecycle_hooks=parse_lifecycle_hooks(
-            raw_config.get("global_lifecycle_hooks", [])
+            raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
         ),
         _raw_global_lifecycle_hooks=raw_config.get("global_lifecycle_hooks", []),
     )
@@ -442,7 +449,9 @@ def load_mode_config(
             description=mode_data.get("description", ""),
             system_prompt_base=mode_data["system_prompt_base"],
             hertz=mode_data.get("hertz", 1.0),
-            lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", [])),
+            lifecycle_hooks=parse_lifecycle_hooks(
+                mode_data.get("lifecycle_hooks", []), api_key=g_api_key
+            ),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
             save_interactions=mode_data.get("save_interactions", False),

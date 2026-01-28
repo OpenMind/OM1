@@ -1,7 +1,6 @@
 import logging
 import math
 import random
-import time
 from queue import Queue
 from typing import List, Optional
 
@@ -28,7 +27,7 @@ class MoveUnitreeSDKAdvanceConfig(ActionConfig):
     """
     Configuration for MoveUnitreeSDKAdvance connector.
 
-    Parameters:
+    Parameters
     ----------
     unitree_ethernet : str
         Ethernet channel for Unitree Go2 odometry data.
@@ -215,8 +214,8 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Move the robot with specified velocities.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         vx : float
             Linear velocity in the x direction (m/s).
         vy : float
@@ -257,19 +256,19 @@ class MoveUnitreeSDKAdvanceConnector(
 
         if self.odom is None:
             logging.info("Waiting for odom data = self.odom is None")
-            time.sleep(0.5)
+            self.sleep(0.5)
             return
 
         if self.odom.position["odom_x"] == 0.0:
             # this value is never precisely zero except while
             # booting and waiting for data to arrive
             logging.info("Waiting for odom data, x == 0.0")
-            time.sleep(0.5)
+            self.sleep(0.5)
             return
 
         if self.odom.position["body_attitude"] != RobotState.STANDING:
             logging.info("Cannot move - dog is sitting")
-            time.sleep(0.5)
+            self.sleep(0.5)
             return
 
         # if we got to this point, we have good data and we are able to
@@ -380,7 +379,7 @@ class MoveUnitreeSDKAdvanceConnector(
                     )
                     self.clean_abort()
 
-        time.sleep(0.1)
+        self.sleep(0.1)
 
     def _process_turn_left(self):
         """
@@ -477,13 +476,13 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Normalize angle to [-180, 180] range.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         angle : float
             Angle in degrees to normalize.
 
-        Returns:
-        --------
+        Returns
+        -------
         float
             Normalized angle in degrees within the range [-180, 180].
         """
@@ -497,15 +496,15 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Calculate shortest angular distance between two angles.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         current : float
             Current angle in degrees.
         target : float
             Target angle in degrees.
 
-        Returns:
-        --------
+        Returns
+        -------
         float
             Shortest angular distance in degrees, rounded to 2 decimal places.
         """
@@ -520,13 +519,13 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Execute turn based on gap direction and lidar constraints.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         gap : float
             The angle gap in degrees to turn.
 
-        Returns:
-        --------
+        Returns
+        -------
         bool
             True if the turn was executed successfully, False if blocked by a barrier.
         """

@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,28 +15,47 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class DeepSeekModel(str, Enum):
+    """Available DeepSeek models."""
+
+    DEEPSEEK_CHAT = "deepseek-chat"
+
+
+class DeepSeekConfig(LLMConfig):
+    """DeepSeek-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/deepseek",
+        description="Base URL for the DeepSeek API endpoint",
+    )
+    model: T.Optional[T.Union[DeepSeekModel, str]] = Field(
+        default=DeepSeekModel.DEEPSEEK_CHAT,
+        description="DeepSeek model to use",
+    )
+
+
 class DeepSeekLLM(LLM[R]):
     """
     An DeepSeek-based Language Learning Model implementation.
 
     This class implements the LLM interface for DeepSeek's conversation models, handling
     configuration, authentication, and async API communication.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: DeepSeekConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
         Initialize the DeepSeek LLM instance.
+
+        Parameters
+        ----------
+        config : DeepSeekConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
@@ -87,12 +107,16 @@ class DeepSeekLLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gemini-2.0-flash-exp",
+                model=self._config.model or "deepseek-chat",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
+
+            if not response.choices:
+                logging.warning("DeepSeek API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
@@ -104,8 +128,8 @@ class DeepSeekLLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls
@@ -114,7 +138,7 @@ class DeepSeekLLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
+                logging.info(f"DeepSeek LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None

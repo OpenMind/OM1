@@ -45,10 +45,15 @@
                         ]
                     },
                     {
-                        "group": "Tutorials",
+                        "group": "Examples",
                         "pages": [
                             "examples/overview",
-                            "examples/conversation",
+                            "examples/conversation"
+                        ]
+                    },
+                    {
+                        "group": "Simulation Support",
+                        "pages": [
                             "examples/gazebo"
                         ]
                     },
@@ -84,6 +89,12 @@
             {
                 "tab": "Developer Cookbook",
                 "groups": [
+                    {
+                        "group": "Introduction",
+                        "pages": [
+                            "developer_cookbook/introduction"
+                        ]
+                    },
                     {
                         "group": "Input Plugins",
                         "pages": [
@@ -130,8 +141,6 @@
                     {
                         "group": "Recipes",
                         "pages": [
-
-                            "developer_cookbook/introduction",
                             "developer_cookbook/config",
                             "developer_cookbook/input",
                             "developer_cookbook/new_mode"
@@ -202,7 +211,7 @@
         "links": [
             {
                 "label": "Support",
-                "href": "mailto:hello@openmind.org"
+                "href": "mailto:support@openmind.org"
             }
         ],
         "primary": {

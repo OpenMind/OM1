@@ -138,7 +138,6 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
         Message
             Timestamped message containing description
         """
-
         filtered_detections = None
 
         if raw_input is not None:
