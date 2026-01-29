@@ -8,7 +8,6 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
-from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.io_provider import IOProvider
 from providers.kokoro_tts_provider import KokoroTTSProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
@@ -70,8 +69,6 @@ class SpeakKokoroTTSConfig(ActionConfig):
     )
 
 
-# unstable / not released
-# from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
 class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput]):
     """
     A "Speak" connector that uses the Kokoro TTS Provider to perform Text-to-Speech.
@@ -141,18 +138,9 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         except Exception as e:
             logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
 
-        # ASR Provider
-        base_url = getattr(
-            self.config,
-            "base_url",
-            f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
-        )
-        self.asr = ASRRTSPProvider(ws_url=base_url)
-
         # Initialize Kokoro TTS Provider
         self.tts = KokoroTTSProvider(
-            # url="http://127.0.0.1:8880/v1",
-            url="https://indefatigably-gigantesque-jamila.ngrok-free.dev/v1",
+            url="http://127.0.0.1:8880/v1",
             api_key=api_key,
             voice_id=voice_id,
             model_id=model_id,
@@ -164,8 +152,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
 
         # Configure Kokoro TTS Provider to ensure settings are applied
         self.tts.configure(
-            # url="http://127.0.0.1:8880/v1",
-            url="https://indefatigably-gigantesque-jamila.ngrok-free.dev/v1",
+            url="http://127.0.0.1:8880/v1",
             api_key=api_key,
             voice_id=voice_id,
             model_id=model_id,
@@ -193,7 +180,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
 
     async def connect(self, output_interface: SpeakInput) -> None:
         """
-        Process a speak action by sending text to Elevenlabs TTS.
+        Process a speak action by sending text to Koboro TTS.
 
         Parameters
         ----------
@@ -239,7 +226,6 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             self.auido_pub.put(state.serialize())
             return
 
-        self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
         self.tts.add_pending_message(pending_message)
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
@@ -308,9 +294,6 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         if self.session:
             self.session.close()
             logging.info("Elevenlabs TTS Zenoh client closed")
-
-        if self.asr:
-            self.asr.stop()
 
         if self.tts:
             self.tts.stop()
