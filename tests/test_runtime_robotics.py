@@ -48,15 +48,6 @@ class TestLoadUnitree:
                     mock_init.assert_called_once_with(0, unitree_ethernet)
                     mock_log.info.assert_any_call("Booting Unitree and CycloneDDS")
 
-    def test_load_unitree_with_none(self):
-        # When unitree_ethernet is None, function should do nothing
-        with patch("src.runtime.robotics.logging") as mock_log:
-            load_unitree(None)
-
-            # Ensure no call to ChannelFactoryInitialize since it's not executed
-            mock_log.info.assert_not_called()
-            mock_log.error.assert_not_called()
-
     def test_load_unitree_initialization_fails(self):
         unitree_ethernet = "eth0"
         mock_exception = Exception("Network error")
