@@ -3,7 +3,6 @@ This only works if you actually have a serial port connected to your computer, s
 """
 
 import logging
-import time
 
 import serial
 from pydantic import Field
@@ -86,4 +85,4 @@ class MoveSerialConnector(ActionConnector[MoveSerialConfig, MoveInput]):
         """
         Periodic tick function to maintain connection.
         """
-        time.sleep(0.1)
+        self.sleep(0.1)
