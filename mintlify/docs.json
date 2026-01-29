@@ -90,6 +90,12 @@
                 "tab": "Developer Cookbook",
                 "groups": [
                     {
+                        "group": "Introduction",
+                        "pages": [
+                            "developer_cookbook/introduction"
+                        ]
+                    },
+                    {
                         "group": "Input Plugins",
                         "pages": [
                             "developing/4_inputs",
@@ -135,8 +141,6 @@
                     {
                         "group": "Recipes",
                         "pages": [
-
-                            "developer_cookbook/introduction",
                             "developer_cookbook/config",
                             "developer_cookbook/input",
                             "developer_cookbook/new_mode"
