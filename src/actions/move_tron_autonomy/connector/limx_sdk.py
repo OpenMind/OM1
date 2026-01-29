@@ -8,7 +8,7 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_tron_autonomy.interface import MoveInput
-from providers.rplidar_provider import RPLidarProvider
+from providers.simple_paths_provider import SimplePathsProvider
 from providers.tron_odom_provider import RobotState, TronOdomProvider
 from zenoh_msgs import geometry_msgs, open_zenoh_session
 
@@ -53,7 +53,8 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         super().__init__(config)
 
         # Movement parameters
-        self.turn_speed = 0.8
+        self.move_speed = 0.25
+        self.turn_speed = 0.35
         self.angle_tolerance = 5.0  # degrees
         self.distance_tolerance = 0.05  # meters
         self.pending_movements: Queue[Optional[MoveCommand]] = Queue()
@@ -72,7 +73,7 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         except Exception as e:
             logging.error(f"Error opening Zenoh client for Tron: {e}")
 
-        self.lidar = RPLidarProvider()
+        self.path_provider = SimplePathsProvider()
         self.odom = TronOdomProvider(topic=odom_topic)
 
         logging.info(f"Tron Autonomy Odom Provider: {self.odom}")
@@ -258,14 +259,14 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
 
                 fb = 0
                 if goal_dx > 0:
-                    if 4 not in self.lidar.advance:
+                    if 4 not in self.path_provider.advance:
                         logging.warning("Cannot advance due to barrier")
                         self.clean_abort()
                         return
                     fb = 1
 
                 if goal_dx < 0:
-                    if not self.lidar.retreat:
+                    if not self.path_provider.retreat:
                         logging.warning("Cannot retreat due to barrier")
                         self.clean_abort()
                         return
@@ -280,7 +281,7 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
                         logging.debug(
                             f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
                         )
-                        self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
+                        self._move_robot(-1 * fb * 0.15, 0.0, 0.0)
                 else:
                     logging.info(
                         "Phase 2 - Movement completed normally, processing next AI command"
@@ -293,12 +294,12 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         """
         Process turn left command with safety check.
         """
-        if not self.lidar.turn_left:
+        if not self.path_provider.turn_left:
             logging.warning("Cannot turn left due to barrier")
             return
 
-        path = random.choice(self.lidar.turn_left)
-        path_angle = self.lidar.path_angles[path]
+        path = random.choice(self.path_provider.turn_left)
+        path_angle = self.path_provider.path_angles[path]
 
         target_yaw = self._normalize_angle(
             -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
@@ -317,12 +318,12 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         """
         Process turn right command with safety check.
         """
-        if not self.lidar.turn_right:
+        if not self.path_provider.turn_right:
             logging.warning("Cannot turn right due to barrier")
             return
 
-        path = random.choice(self.lidar.turn_right)
-        path_angle = self.lidar.path_angles[path]
+        path = random.choice(self.path_provider.turn_right)
+        path_angle = self.path_provider.path_angles[path]
 
         target_yaw = self._normalize_angle(
             -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
@@ -341,12 +342,12 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         """
         Process move forward command with safety check.
         """
-        if not self.lidar.advance:
+        if not self.path_provider.advance:
             logging.warning("Cannot advance due to barrier")
             return
 
-        path = random.choice(self.lidar.advance)
-        path_angle = self.lidar.path_angles[path]
+        path = random.choice(self.path_provider.advance)
+        path_angle = self.path_provider.path_angles[path]
 
         target_yaw = self._normalize_angle(
             -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
@@ -365,7 +366,7 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         """
         Process move back command with safety check.
         """
-        if not self.lidar.retreat:
+        if not self.path_provider.retreat:
             logging.warning("Cannot retreat due to barrier")
             return
 
@@ -376,7 +377,7 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
                 turn_complete=True,
-                speed=0.3,
+                speed=0.25,
             )
         )
 
@@ -438,15 +439,15 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
             True if the turn was executed successfully, False if blocked by a barrier.
         """
         if gap > 0:  # Turn left
-            if not self.lidar.turn_left:
+            if not self.path_provider.turn_left:
                 logging.warning("Cannot turn left due to barrier")
                 return False
-            sharpness = min(self.lidar.turn_left)
+            sharpness = min(self.path_provider.turn_left)
             self._move_robot(sharpness * 0.15, 0, self.turn_speed)
         else:  # Turn right
-            if not self.lidar.turn_right:
+            if not self.path_provider.turn_right:
                 logging.warning("Cannot turn right due to barrier")
                 return False
-            sharpness = 8 - max(self.lidar.turn_right)
+            sharpness = 8 - max(self.path_provider.turn_right)
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
