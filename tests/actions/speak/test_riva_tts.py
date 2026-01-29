@@ -53,7 +53,7 @@ class MockSpeakRivaTTSConnector(ActionConnector):
 @pytest.fixture
 def action_config():
     config = ActionConfig()
-    config.__dict__.update(
+    config.__dict__.update(  # type: ignore
         {
             "microphone_device_id": "test_mic_id",
             "speaker_device_id": "test_speaker_id",

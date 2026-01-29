@@ -150,7 +150,7 @@ class UnitreeCameraVLMProvider:
         base_url : str
             The base URL for the VLM service connection.
         fps : int, optional
-            The frames per second for the VLM service connection. Defaults to 15.
+            The frames per second for the VLM service connection. Defaults to 60.
         resolution : tuple of int, optional
             The resolution for the video stream. Defaults to (640, 480).
         jpeg_quality : int, optional
@@ -176,7 +176,7 @@ class UnitreeCameraVLMProvider:
 
         Parameters
         ----------
-        callback : Optional[callable]
+        message_callback : Optional[Callable]
             The callback function to process VLM results.
         """
         if message_callback is not None:
