@@ -1,5 +1,4 @@
 import sys
-from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -225,9 +224,7 @@ def test_register_tts_state_callback():
 
     provider.register_tts_state_callback(callback)
 
-    cast(
-        MagicMock, provider._audio_stream.set_tts_state_callback
-    ).assert_called_once_with(callback)
+    provider._audio_stream.set_tts_state_callback.assert_called_once_with(callback)  # type: ignore
 
 
 def test_register_tts_state_callback_none():
@@ -236,7 +233,7 @@ def test_register_tts_state_callback_none():
 
     provider.register_tts_state_callback(None)
 
-    cast(MagicMock, provider._audio_stream.set_tts_state_callback).assert_not_called()
+    provider._audio_stream.set_tts_state_callback.assert_not_called()  # type: ignore
 
 
 def test_create_pending_message():
@@ -270,7 +267,7 @@ def test_add_pending_message_string():
         provider.add_pending_message("test message")
 
         mock_create.assert_called_once_with("test message")
-        cast(MagicMock, provider._audio_stream.add_request).assert_called_once()
+        provider._audio_stream.add_request.assert_called_once()  # type: ignore
 
 
 def test_add_pending_message_dict():
@@ -283,7 +280,7 @@ def test_add_pending_message_dict():
     with patch("providers.kokoro_tts_provider.logging") as mock_logging:
         provider.add_pending_message(message_dict)
 
-        cast(MagicMock, provider._audio_stream.add_request).assert_called_once_with(
+        provider._audio_stream.add_request.assert_called_once_with(  # type: ignore
             message_dict
         )
         mock_logging.info.assert_called()
@@ -297,7 +294,7 @@ def test_add_pending_message_not_running():
     with patch("providers.kokoro_tts_provider.logging") as mock_logging:
         provider.add_pending_message("test message")
 
-        cast(MagicMock, provider._audio_stream.add_request).assert_not_called()
+        provider._audio_stream.add_request.assert_not_called()  # type: ignore
         mock_logging.warning.assert_called_once_with(
             "TTS provider is not running. Call start() before adding messages."
         )
@@ -306,12 +303,12 @@ def test_add_pending_message_not_running():
 def test_get_pending_message_count():
     """Test getting pending message count."""
     provider = KokoroTTSProvider()
-    cast(MagicMock, provider._audio_stream._pending_requests.qsize).return_value = 5
+    provider._audio_stream._pending_requests.qsize.return_value = 5  # type: ignore
 
     count = provider.get_pending_message_count()
 
     assert count == 5
-    cast(MagicMock, provider._audio_stream._pending_requests.qsize).assert_called_once()
+    provider._audio_stream._pending_requests.qsize.assert_called_once()  # type: ignore
 
 
 def test_start_when_not_running():
@@ -322,7 +319,7 @@ def test_start_when_not_running():
     provider.start()
 
     assert provider.running is True
-    cast(MagicMock, provider._audio_stream.start).assert_called_once()
+    provider._audio_stream.start.assert_called_once()  # type: ignore
 
 
 def test_start_when_already_running():
@@ -346,7 +343,7 @@ def test_stop_when_running():
     provider.stop()
 
     assert provider.running is False
-    cast(MagicMock, provider._audio_stream.stop).assert_called_once()
+    provider._audio_stream.stop.assert_called_once()  # type: ignore
 
 
 def test_stop_when_not_running():
@@ -366,18 +363,15 @@ def test_start_stop_integration():
     """Test complete start and stop cycle."""
     provider = KokoroTTSProvider()
 
-    # Initial state
     assert provider.running is False
 
-    # Start
     provider.start()
     assert provider.running is True
-    cast(MagicMock, provider._audio_stream.start).assert_called_once()
+    provider._audio_stream.start.assert_called_once()  # type: ignore
 
-    # Stop
     provider.stop()
     assert provider.running is False
-    cast(MagicMock, provider._audio_stream.stop).assert_called_once()
+    provider._audio_stream.stop.assert_called_once()  # type: ignore
 
 
 def test_singleton_behavior():

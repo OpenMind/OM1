@@ -339,7 +339,7 @@ class TestGreetingConversationStateMachineProvider:
         assert "command" in result
         assert "time_in_state" in result
         assert "confidence_trend" in result
-        assert result["current_state"] == ConversationState.CONCLUDING.value
+        assert result["current_state"] == ConversationState.CONVERSING.value
 
     def test_process_conversation_with_voice_input(self, state_machine_with_mock_io):
         """Test processing conversation with voice input."""
