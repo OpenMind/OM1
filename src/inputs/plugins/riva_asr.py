@@ -175,7 +175,7 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
 
         Returns
         -------
-        Optional[str]
+        Optional[Message]
             Processed text message or None if input is None
         """
         if raw_input is None:
