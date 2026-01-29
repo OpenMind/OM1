@@ -26,7 +26,7 @@
       name: "speak",
       llm_label: "speak",
       implementation: "passthrough",
-      connector: "kokoro_tts",
+      connector: "elevenlabs_tts",
       config: {
         enable_tts_interrupt: false,
       },
