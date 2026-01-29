@@ -15,9 +15,6 @@
   agent_inputs: [
     {
       type: "TronOdom",
-      config: {
-        topic: "odom",
-      },
     },
     {
       type: "GoogleASRInput",
@@ -41,10 +38,6 @@
       name: "move_tron_autonomy",
       llm_label: "move",
       connector: "limx_sdk",
-      config: {
-        odom_topic: "odom",
-        cmd_vel_topic: "cmd_vel",
-      },
     },
     {
       name: "speak",
