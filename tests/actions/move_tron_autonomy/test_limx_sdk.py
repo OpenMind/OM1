@@ -8,7 +8,7 @@ from actions.move_tron_autonomy.connector.limx_sdk import (
     MoveTronZenohConfig,
     MoveTronZenohConnector,
 )
-from actions.move_tron_autonomy.interface import MoveInput
+from actions.move_tron_autonomy.interface import MoveInput, MovementAction
 from providers.tron_odom_provider import RobotState
 
 
@@ -129,7 +129,7 @@ class TestConnect:
     async def test_connect_robot_already_moving(self, connector, mock_dependencies):
         """Test connect when robot is already moving."""
         mock_dependencies["odom"].position["moving"] = True
-        move_input = MoveInput(action="move forwards")
+        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
 
         await connector.connect(move_input)
 
@@ -142,7 +142,7 @@ class TestConnect:
         connector.pending_movements.put(
             MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False)
         )
-        move_input = MoveInput(action="move forwards")
+        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
 
         await connector.connect(move_input)
 
@@ -155,7 +155,7 @@ class TestConnect:
     ):
         """Test connect when waiting for location data."""
         mock_dependencies["odom"].position["odom_x"] = 0.0
-        move_input = MoveInput(action="move forwards")
+        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
 
         await connector.connect(move_input)
 
@@ -164,7 +164,7 @@ class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_turn_left(self, connector, mock_dependencies):
         """Test connect with turn left command."""
-        move_input = MoveInput(action="turn left")
+        move_input = MoveInput(action=MovementAction.TURN_LEFT)
 
         await connector.connect(move_input)
 
@@ -176,7 +176,7 @@ class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_turn_right(self, connector, mock_dependencies):
         """Test connect with turn right command."""
-        move_input = MoveInput(action="turn right")
+        move_input = MoveInput(action=MovementAction.TURN_RIGHT)
 
         await connector.connect(move_input)
 
@@ -188,7 +188,7 @@ class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_move_forwards(self, connector, mock_dependencies):
         """Test connect with move forwards command."""
-        move_input = MoveInput(action="move forwards")
+        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
 
         await connector.connect(move_input)
 
@@ -199,7 +199,7 @@ class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_move_back(self, connector, mock_dependencies):
         """Test connect with move back command."""
-        move_input = MoveInput(action="move back")
+        move_input = MoveInput(action=MovementAction.MOVE_BACK)
 
         await connector.connect(move_input)
 
@@ -212,7 +212,7 @@ class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_stand_still(self, connector, mock_dependencies):
         """Test connect with stand still command."""
-        move_input = MoveInput(action="stand still")
+        move_input = MoveInput(action=MovementAction.STAND_STILL)
 
         await connector.connect(move_input)
 
@@ -221,7 +221,7 @@ class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_unknown_action(self, connector, mock_dependencies):
         """Test connect with unknown action."""
-        move_input = MoveInput(action="unknown action")
+        move_input = MoveInput(action="unknown action")  # type: ignore[arg-type]
 
         await connector.connect(move_input)
 
