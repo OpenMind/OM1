@@ -10,87 +10,62 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
-from providers.asr_provider import ASRProvider
+from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
 from zenoh_msgs import ASRText, open_zenoh_session, prepare_header
 
-LANGUAGE_CODE_MAP: dict = {
-    "english": "en-US",
-    "chinese": "cmn-Hans-CN",
-    "german": "de-DE",
-    "french": "fr-FR",
-    "japanese": "ja-JP",
-    "korean": "ko-KR",
-    "spanish": "es-ES",
-    "italian": "it-IT",
-    "portuguese": "pt-BR",
-    "russian": "ru-RU",
-    "arabic": "ar-SA",
-}
 
-
-class GoogleASRSensorConfig(SensorConfig):
+class RivaASRRTSPSensorConfig(SensorConfig):
     """
-    Configuration for Google ASR Sensor.
+    Configuration for Riva ASR Sensor.
 
     Parameters
     ----------
     api_key : Optional[str]
         API Key.
+    rtsp_url : str
+        RTSP URL for the audio stream. Default is "rtsp://localhost:8554/audio".
     rate : int
-        Sampling rate.
-    chunk : int
-        Chunk size.
-    base_url : Optional[str]
-        Base URL for the ASR service.
-    microphone_device_id : Optional[str]
-        Microphone Device ID.
-    microphone_name : Optional[str]
-        Microphone Name.
-    language : str
-        Language for speech recognition.
-    remote_input : bool
-        Whether to use remote input.
+        Sampling rate. Default is 16000.
+    base_url : str
+        Base URL for the ASR service. Default is "wss://api-asr.openmind.org".
+    enable_tts_interrupt : bool
+        Enable TTS interrupt when ASR detects speech during playback.
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    rate: int = Field(default=48000, description="Sampling rate")
-    chunk: int = Field(default=12144, description="Chunk size")
-    base_url: Optional[str] = Field(
-        default=None, description="Base URL for the ASR service"
+    rtsp_url: str = Field(
+        default="rtsp://localhost:8554/audio",
+        description="RTSP URL for the audio stream",
     )
-    microphone_device_id: Optional[int] = Field(
-        default=None, description="Microphone Device ID"
+    rate: int = Field(default=16000, description="Sampling rate")
+    base_url: str = Field(
+        default="wss://api-asr.openmind.org", description="Base URL for the ASR service"
     )
-    microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
-    language: str = Field(
-        default="english", description="Language for speech recognition"
-    )
-    remote_input: bool = Field(default=False, description="Whether to use remote input")
     enable_tts_interrupt: bool = Field(
         default=False,
         description="Enable TTS interrupt (does not mute mic during TTS playback)",
     )
 
 
-class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
+class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
     """
-    Google Automatic Speech Recognition (ASR) input handler.
+    Automatic Speech Recognition (ASR) input handler.
 
     This class manages the input stream from an ASR service, buffering messages
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: GoogleASRSensorConfig):
+    def __init__(self, config: RivaASRRTSPSensorConfig):
         """
-        Initialize GoogleASRInput instance.
+        Initialize RivaASRInput instance.
 
         Parameters
         ----------
-        config : GoogleASRSensorConfig
-            Configuration for the Google ASR input
+        config : RivaASRRTSPSensorConfig
+            Configuration for the ASR input handler.
         """
         super().__init__(config)
 
@@ -105,39 +80,18 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize ASR provider
-        # Initialize ASR provider
         api_key = self.config.api_key
+        rtsp_url = self.config.rtsp_url
         rate = self.config.rate
-        chunk = self.config.chunk
-        base_url = (
-            self.config.base_url
-            or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
-        )
-        microphone_device_id = self.config.microphone_device_id
-        microphone_name = self.config.microphone_name
+        base_url = self.config.base_url
 
-        language = self.config.language.strip().lower()
-
-        if language not in LANGUAGE_CODE_MAP:
-            logging.error(
-                f"Language {language} not supported. Current supported languages are : {list(LANGUAGE_CODE_MAP.keys())}. Defaulting to English"
-            )
-            language = "english"
-
-        language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
-        logging.info(f"Using language code {language_code} for Google ASR")
-
-        remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
-        self.asr: ASRProvider = ASRProvider(
+        self.asr: ASRRTSPProvider = ASRRTSPProvider(
+            rtsp_url=rtsp_url,
             rate=rate,
-            chunk=chunk,
             ws_url=base_url,
-            device_id=microphone_device_id,
-            microphone_name=microphone_name,
-            language_code=language_code,
-            remote_input=remote_input,
+            language_code="en-US",
             enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
@@ -209,8 +163,8 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 
         Returns
         -------
-        Optional[Message]
-            Processed message or None if input is None
+        Optional[str]
+            Processed text message or None if input is None
         """
         if raw_input is None:
             return None
@@ -229,7 +183,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         pending_message = await self._raw_to_text(raw_input)
         if pending_message is None:
             if len(self.messages) != 0:
-                # Skip sleep if there's already a message in the messages buffer
                 self.global_sleep_ticker_provider.skip_sleep = True
 
         if pending_message is not None:
@@ -281,7 +234,7 @@ INPUT: {self.descriptor_for_LLM}
 
     def stop(self):
         """
-        Stop the ASR input.
+        Stop the ASR input handler and clean up resources.
         """
         if self.asr:
             self.asr.stop()
