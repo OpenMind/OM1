@@ -2,6 +2,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+pytest.importorskip(
+    "ubtech.ubtechapi", reason="Ubtech SDK not installed"
+)
+
 from inputs.base import Message
 from inputs.plugins.ubtech_camera_vlm_input import (
     UbtechCameraVLMInput,

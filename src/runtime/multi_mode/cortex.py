@@ -11,6 +11,7 @@ from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.mcp_provider import MCPBridge
 from runtime.multi_mode.config import (
     LifecycleHookType,
     ModeSystemConfig,
@@ -33,6 +34,7 @@ class ModeCortexRuntime:
     io_provider: IOProvider
     sleep_ticker_provider: SleepTickerProvider
     config_provider: ConfigProvider
+    mcp_bridge: Optional[MCPBridge]
 
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
@@ -68,6 +70,7 @@ class ModeCortexRuntime:
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
+        self.mcp_bridge = MCPBridge(getattr(mode_config, "mcp", None))
 
         # Hot-reload configuration
         self.hot_reload = hot_reload
@@ -140,6 +143,11 @@ class ModeCortexRuntime:
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
+
+        if self.mcp_bridge:
+            self.mcp_bridge.update_actions(self.current_config.agent_actions)
+            self.mcp_bridge.update_action_orchestrator(self.action_orchestrator)
+            self.mcp_bridge.attach_llm(self.current_config.cortex_llm)
 
     async def _handle_mode_transitions(self):
         """
@@ -323,6 +331,11 @@ class ModeCortexRuntime:
         # Re-enable sleep operations
         self.sleep_ticker_provider.skip_sleep = False
 
+        if self.mcp_bridge:
+            await self.mcp_bridge.start()
+            self.mcp_bridge.set_event_loop(asyncio.get_running_loop())
+            self.mcp_bridge.attach_llm(self.current_config.cortex_llm)
+
         # Start input listener
         self.input_orchestrator = InputOrchestrator(self.current_config.agent_inputs)
         self.input_listener_task = asyncio.create_task(self.input_orchestrator.listen())
@@ -380,6 +393,8 @@ class ModeCortexRuntime:
 
         # Stop ConfigProvider
         self.config_provider.stop()
+        if self.mcp_bridge:
+            await self.mcp_bridge.stop()
 
         logging.debug("Tasks cleaned up successfully")
 
@@ -562,10 +577,16 @@ class ModeCortexRuntime:
             logging.debug("Skipping tick during config reload")
             return
 
-        if self.simulator_orchestrator:
-            await self.simulator_orchestrator.promise(output.actions)
+        mcp_actions, native_actions = ([], output.actions)
+        if self.mcp_bridge:
+            mcp_actions, native_actions = self.mcp_bridge.split_actions(output.actions)
+            if mcp_actions:
+                await self.mcp_bridge.handle_mcp_actions(mcp_actions)
 
-        await self.action_orchestrator.promise(output.actions)
+        if self.simulator_orchestrator:
+            await self.simulator_orchestrator.promise(native_actions)
+
+        await self.action_orchestrator.promise(native_actions)
 
     def get_mode_info(self) -> dict:
         """
@@ -673,6 +694,9 @@ class ModeCortexRuntime:
 
             self.mode_config = new_mode_config
             self.mode_manager.config = new_mode_config
+            if self.mcp_bridge:
+                await self.mcp_bridge.stop()
+            self.mcp_bridge = MCPBridge(getattr(new_mode_config, "mcp", None))
 
             if current_mode not in new_mode_config.modes:
                 logging.warning(

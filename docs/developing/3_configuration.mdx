@@ -207,3 +207,47 @@ Defines the agent's available capabilities, including action names, their implem
 You can customize the actions following the [Action Plugin Guide](6_actions.mdx)
 
 To introduce multimode config, refer [introduce new mode](https://docs.openmind.org/developer_cookbook/new_mode)
+
+## MCP (Model Context Protocol)
+
+OM1 can act as both an **MCP client** (using external MCP tools) and an **MCP server** (exposing OM1 actions).
+
+Example `mcp` block:
+
+```json5
+"mcp": {
+  "enabled": true,
+  "tool_prefix": "mcp",
+  "inject_results_input": true,
+  "results_input_config": {
+    "descriptor": "Recent MCP tool results"
+  },
+  "clients": [
+    {
+      "name": "memory",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    {
+      "name": "weather",
+      "transport": "streamable-http",
+      "url": "http://localhost:8001/mcp"
+    }
+  ],
+  "server": {
+    "enabled": true,
+    "name": "om1",
+    "transport": "streamable-http",
+    "host": "0.0.0.0",
+    "port": 8765,
+    "path": "/mcp",
+    "allow_actions": ["move", "speak"]
+  }
+}
+```
+
+Notes:
+- `clients` are external MCP servers OM1 can call as tools.
+- `server` exposes OM1 actions via MCP (tools: `om1_actions`, `om1_action`).
+- Keep `tool_prefix` as `mcp` so tool arguments are preserved correctly.

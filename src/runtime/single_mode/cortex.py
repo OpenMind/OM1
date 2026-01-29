@@ -12,6 +12,7 @@ from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
+from providers.mcp_provider import MCPBridge
 from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.orchestrator import SimulatorOrchestrator
 
@@ -39,6 +40,7 @@ class CortexRuntime:
     sleep_ticker_provider: SleepTickerProvider
     io_provider: IOProvider
     config_provider: ConfigProvider
+    mcp_bridge: Optional[MCPBridge]
 
     def __init__(
         self,
@@ -73,6 +75,10 @@ class CortexRuntime:
         self.sleep_ticker_provider = SleepTickerProvider()
         self.io_provider = IOProvider()
         self.config_provider = ConfigProvider()
+        self.mcp_bridge = MCPBridge(getattr(config, "mcp", None))
+        if self.mcp_bridge:
+            self.mcp_bridge.update_actions(config.agent_actions)
+            self.mcp_bridge.update_action_orchestrator(self.action_orchestrator)
 
         self.last_modified: float = 0.0
         self.config_watcher_task: Optional[asyncio.Task] = None
@@ -267,6 +273,12 @@ class CortexRuntime:
             self.action_orchestrator = ActionOrchestrator(new_config)
             self.simulator_orchestrator = SimulatorOrchestrator(new_config)
             self.background_orchestrator = BackgroundOrchestrator(new_config)
+            if self.mcp_bridge:
+                await self.mcp_bridge.stop()
+            self.mcp_bridge = MCPBridge(getattr(new_config, "mcp", None))
+            if self.mcp_bridge:
+                self.mcp_bridge.update_actions(new_config.agent_actions)
+                self.mcp_bridge.update_action_orchestrator(self.action_orchestrator)
 
             await self._start_orchestrators()
 
@@ -371,6 +383,11 @@ class CortexRuntime:
         """
         logging.debug("Starting orchestrators...")
 
+        if self.mcp_bridge:
+            await self.mcp_bridge.start()
+            self.mcp_bridge.set_event_loop(asyncio.get_running_loop())
+            self.mcp_bridge.attach_llm(self.config.cortex_llm)
+
         input_orchestrator = InputOrchestrator(self.config.agent_inputs)
         self.input_listener_task = asyncio.create_task(input_orchestrator.listen())
 
@@ -415,6 +432,8 @@ class CortexRuntime:
 
         # Stop ConfigProvider
         self.config_provider.stop()
+        if self.mcp_bridge:
+            await self.mcp_bridge.stop()
 
         logging.debug("Tasks cleaned up successfully")
 
@@ -506,10 +525,18 @@ class CortexRuntime:
                 logging.debug("No output from LLM")
                 return
 
+            mcp_actions, native_actions = ([], output.actions)
+            if self.mcp_bridge:
+                mcp_actions, native_actions = self.mcp_bridge.split_actions(
+                    output.actions
+                )
+                if mcp_actions:
+                    await self.mcp_bridge.handle_mcp_actions(mcp_actions)
+
             # Trigger the simulators
-            await self.simulator_orchestrator.promise(output.actions)
+            await self.simulator_orchestrator.promise(native_actions)
 
             # Trigger the actions
-            await self.action_orchestrator.promise(output.actions)
+            await self.action_orchestrator.promise(native_actions)
         except Exception as error:
             logging.error(f"Error in cortex tick: {error}")

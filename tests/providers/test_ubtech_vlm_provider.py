@@ -2,6 +2,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip(
+    "ubtech.ubtechapi", reason="Ubtech SDK not installed"
+)
+
 from providers.ubtech_vlm_provider import UbtechVLMProvider
 
 

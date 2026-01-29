@@ -3,6 +3,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+pytest.importorskip(
+    "unitree.unitree_sdk2py", reason="Unitree SDK not installed"
+)
+
 from actions.base import MoveCommand
 from actions.move_go2_autonomy.connector.unitree_sdk_advance import (
     MoveUnitreeSDKAdvanceConfig,

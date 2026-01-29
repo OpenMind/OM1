@@ -17,6 +17,14 @@ except ImportError:
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
     )
 
+    class ChannelSubscriber:  # type: ignore
+        """
+        Placeholder for ChannelSubscriber when Unitree SDK is not installed.
+        """
+
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("Unitree SDK not installed")
+
     class BmsState_:
         """
         Placeholder for BmsState_ when Unitree SDK is not installed.
@@ -32,6 +40,12 @@ except ImportError:
 
         def __init__(self):
             pass
+
+    class _DDSStub:
+        BmsState_ = BmsState_
+        LowState_ = LowState_
+
+    dds_ = _DDSStub()  # type: ignore
 
 
 # Data structure documentation:

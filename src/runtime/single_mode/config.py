@@ -62,6 +62,8 @@ class RuntimeConfig:
         Optional action execution mode (e.g., "concurrent", "sequential", "dependencies"). Defaults to "concurrent".
     action_dependencies : Optional[Dict[str, List[str]]]
         Optional mapping of action dependencies.
+    mcp : Optional[dict]
+        Optional MCP configuration block.
     """
 
     version: str
@@ -88,6 +90,7 @@ class RuntimeConfig:
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    mcp: Optional[dict] = None
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
@@ -258,6 +261,8 @@ def load_config(
         ],
     }
 
+    maybe_inject_mcp_results_input(parsed_config["agent_inputs"], raw_config.get("mcp"))
+
     cortex_llm = load_llm(
         {
             **raw_config["cortex_llm"],
@@ -318,6 +323,41 @@ def add_meta(
     return config
 
 
+def maybe_inject_mcp_results_input(
+    agent_inputs: List[Sensor], mcp_config: Optional[dict]
+) -> None:
+    """
+    Inject MCP tool results input plugin if MCP is enabled.
+
+    Parameters
+    ----------
+    agent_inputs : List[Sensor]
+        Loaded sensor list to append to.
+    mcp_config : Optional[dict]
+        MCP config block from runtime config.
+    """
+    if not mcp_config:
+        return
+
+    if not mcp_config.get("inject_results_input", True):
+        return
+
+    if any(type(inp).__name__ == "MCPToolResults" for inp in agent_inputs):
+        return
+
+    try:
+        agent_inputs.append(
+            load_input(
+                {
+                    "type": "MCPToolResults",
+                    "config": mcp_config.get("results_input_config", {}) or {},
+                }
+            )
+        )
+    except Exception as e:
+        logging.warning(f"Failed to inject MCPToolResults input: {e}")
+
+
 # Dev utility to build runtime config from test case dict
 def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
     """
@@ -360,6 +400,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         )
         for inp in config.get("agent_inputs", [])
     ]
+    maybe_inject_mcp_results_input(agent_inputs, config.get("mcp"))
     simulators = [
         load_simulator(
             {
@@ -407,4 +448,5 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         simulators=simulators,
         agent_actions=agent_actions,
         backgrounds=backgrounds,
+        mcp=config.get("mcp"),
     )

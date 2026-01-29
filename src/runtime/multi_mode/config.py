@@ -21,7 +21,7 @@ from runtime.multi_mode.hook import (
     parse_lifecycle_hooks,
 )
 from runtime.robotics import load_unitree
-from runtime.single_mode.config import RuntimeConfig, add_meta
+from runtime.single_mode.config import RuntimeConfig, add_meta, maybe_inject_mcp_results_input
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
 from simulators.base import Simulator
@@ -119,6 +119,8 @@ class ModeConfig:
         Execution mode for actions (e.g., "concurrent", "sequential", "dependencies"). Defaults to concurrent.
     action_dependencies : Optional[Dict[str, List[str]]], optional
         Dependencies between actions for execution order. Defaults to None.
+    mcp : Optional[dict], optional
+        Optional MCP configuration block.
     _raw_inputs : List[Dict], optional
         Raw input configurations before loading. Defaults to empty list.
     _raw_llm : Optional[Dict], optional
@@ -197,6 +199,7 @@ class ModeConfig:
             unitree_ethernet=global_config.unitree_ethernet,
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
+            mcp=global_config.mcp,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -291,6 +294,8 @@ class ModeSystemConfig:
         Global system governance prompt.
     system_prompt_examples : str
         Global system prompt examples.
+    mcp : Optional[dict]
+        Optional MCP configuration block.
     global_cortex_llm : Optional[Dict]
         Global default LLM configuration if mode doesn't override.
     global_lifecycle_hooks : List[LifecycleHook], optional
@@ -315,6 +320,7 @@ class ModeSystemConfig:
     unitree_ethernet: Optional[str] = None
     system_governance: str = ""
     system_prompt_examples: str = ""
+    mcp: Optional[dict] = None
 
     # Default LLM settings if mode doesn't override
     global_cortex_llm: Optional[Dict] = None
@@ -434,6 +440,7 @@ def load_mode_config(
         unitree_ethernet=g_ut_eth,
         system_governance=raw_config.get("system_governance", ""),
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
+        mcp=raw_config.get("mcp"),
         global_cortex_llm=raw_config.get("cortex_llm"),
         global_lifecycle_hooks=parse_lifecycle_hooks(
             raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
@@ -517,6 +524,8 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         )
         for inp in mode_config._raw_inputs
     ]
+
+    maybe_inject_mcp_results_input(mode_config.agent_inputs, system_config.mcp)
 
     # Load simulators
     mode_config.simulators = [

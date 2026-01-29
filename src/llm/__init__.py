@@ -115,6 +115,7 @@ class LLM(T.Generic[R]):
 
         # Set up available actions for function calling
         self._available_actions = available_actions or []
+        self._extra_function_schemas: list[dict] = []
         self.function_schemas = []
         if self._available_actions:
             self.function_schemas = generate_function_schemas_from_actions(
@@ -129,6 +130,19 @@ class LLM(T.Generic[R]):
 
         # Enable state management by default
         self._skip_state_management: bool = False
+
+    def set_extra_function_schemas(self, extra_schemas: list[dict]) -> None:
+        """
+        Replace or set additional function schemas (e.g., MCP tools).
+
+        Parameters
+        ----------
+        extra_schemas : list[dict]
+            Additional OpenAI-style tool schemas to append.
+        """
+        self._extra_function_schemas = extra_schemas or []
+        base_schemas = generate_function_schemas_from_actions(self._available_actions)
+        self.function_schemas = base_schemas + self._extra_function_schemas
 
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []

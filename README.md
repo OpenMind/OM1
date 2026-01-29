@@ -183,6 +183,10 @@ docker-compose up -d om1_monitor
 
 More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).
 
+## MCP Integration
+
+Bidirectional MCP support (OM1 as MCP client + server) is documented in `MCP_README.md`.
+
 ## Contributing
 
 Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before making a pull request.

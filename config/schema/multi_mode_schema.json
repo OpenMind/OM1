@@ -17,6 +17,49 @@
         "api_key": {"type": "string", "description": "API key for the OM1 system."},
         "unitree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
         "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
+        "mcp": {
+            "type": "object",
+            "description": "MCP (Model Context Protocol) configuration block",
+            "properties": {
+                "enabled": {"type": "boolean"},
+                "tool_prefix": {"type": "string"},
+                "inject_results_input": {"type": "boolean"},
+                "results_input_config": {"type": "object"},
+                "clients": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "transport": {"type": "string"},
+                            "command": {"type": "string"},
+                            "args": {"type": "array", "items": {"type": "string"}},
+                            "env": {"type": "object"},
+                            "url": {"type": "string"},
+                            "timeout": {"type": "number"},
+                            "tool_allowlist": {"type": "array", "items": {"type": "string"}},
+                            "tool_denylist": {"type": "array", "items": {"type": "string"}}
+                        }
+                    }
+                },
+                "server": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "name": {"type": "string"},
+                        "transport": {"type": "string"},
+                        "host": {"type": "string"},
+                        "port": {"type": "integer"},
+                        "path": {"type": "string"},
+                        "stateless_http": {"type": "boolean"},
+                        "json_response": {"type": "boolean"},
+                        "allow_actions": {"type": "array", "items": {"type": "string"}},
+                        "deny_actions": {"type": "array", "items": {"type": "string"}}
+                    }
+                }
+            },
+            "additionalProperties": true
+        },
         "cortex_llm": {
             "$ref": "#/definitions/cortex_llm"
         },

@@ -151,7 +151,13 @@ def convert_function_calls_to_actions(function_calls: list[dict]) -> list[Action
             else:
                 args = function_args
 
-            if "action" in args and len(args) == 1:
+            is_mcp_tool = isinstance(function_name, str) and function_name.startswith(
+                "mcp__"
+            )
+
+            if is_mcp_tool:
+                action_value = json.dumps(args)
+            elif "action" in args and len(args) == 1:
                 action_value = args["action"]
             elif len(args) > 1:
                 action_value = json.dumps(args)
