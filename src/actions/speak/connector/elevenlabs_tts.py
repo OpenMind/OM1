@@ -110,7 +110,7 @@ class SpeakElevenLabsTTSConnector(
         self.tts_status_request_topic = "om/tts/request"
         self.tts_status_response_topic = "om/tts/response"
         self.session = None
-        self.auido_pub = None
+        self.audio_pub = None
 
         self.audio_status = AudioStatus(
             header=prepare_header(str(uuid4())),
@@ -121,7 +121,7 @@ class SpeakElevenLabsTTSConnector(
 
         try:
             self.session = open_zenoh_session()
-            self.auido_pub = self.session.declare_publisher(self.audio_topic)
+            self.audio_pub = self.session.declare_publisher(self.audio_topic)
             self.session.declare_subscriber(self.audio_topic, self.zenoh_audio_message)
             self.session.declare_subscriber(
                 self.tts_status_request_topic, self._zenoh_tts_status_request
@@ -130,8 +130,8 @@ class SpeakElevenLabsTTSConnector(
                 self.tts_status_response_topic
             )
 
-            if self.auido_pub:
-                self.auido_pub.put(self.audio_status.serialize())
+            if self.audio_pub:
+                self.audio_pub.put(self.audio_status.serialize())
 
             logging.info("Elevenlabs TTS Zenoh client opened")
         except Exception as e:
@@ -221,8 +221,8 @@ class SpeakElevenLabsTTSConnector(
             sentence_to_speak=String(json.dumps(pending_message)),
         )
 
-        if self.auido_pub:
-            self.auido_pub.put(state.serialize())
+        if self.audio_pub:
+            self.audio_pub.put(state.serialize())
             return
 
         self.tts.add_pending_message(pending_message)
