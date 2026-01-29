@@ -316,6 +316,86 @@ async def test_update_history_multiple_ticks():
 
 
 @pytest.mark.asyncio
+async def test_summarize_messages_sync_client(llm_config):
+    """Test summarize_messages with sync OpenAI client (run_in_executor path)."""
+    sync_client = MagicMock()
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = "Sync summary"
+    sync_client.chat.completions.create = MagicMock(return_value=response)
+
+    manager = LLMHistoryManager(llm_config, sync_client)
+    messages = [
+        ChatMessage(role="user", content="Test"),
+    ]
+    result = await manager.summarize_messages(messages)
+    assert result.role == "assistant"
+    assert "Previously, Sync summary" == result.content
+    sync_client.chat.completions.create.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_update_history_skip_state_management():
+    """Test update_history bypasses history when _skip_state_management is True."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "SkipBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = True
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            response = MagicMock()
+            response.actions = []
+            return response
+
+    provider = MockLLMProvider()
+    result = await provider.process("prompt", [])
+    assert result is not None
+    assert len(history_manager.history) == 0
+
+
+@pytest.mark.asyncio
+async def test_update_history_zero_history_length():
+    """Test update_history with history_length 0 passes empty messages and increments frame."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 0
+    config.agent_name = "ZeroBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            assert messages == []
+            response = MagicMock()
+            response.actions = []
+            return response
+
+    provider = MockLLMProvider()
+    await provider.process("prompt")
+    assert history_manager.frame_index == 1
+    assert len(history_manager.history) == 0
+
+
+@pytest.mark.asyncio
 async def test_update_history_tick_boundary():
     """Test input filtering at tick boundaries when inputs are updated."""
     config = MagicMock()

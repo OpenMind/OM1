@@ -650,6 +650,54 @@ class TestCortexRuntimeHotReload:
             assert runtime.config_watcher_task is not None
             runtime._check_config_changes.assert_called_once()
 
+    def test_get_file_mtime_oserror(self, mock_config, mock_dependencies):
+        """Test _get_file_mtime returns 0.0 on OSError."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+            runtime.config_path = "/nonexistent/path"
+            with patch("os.path.getmtime", side_effect=OSError("No such file")):
+                mtime = runtime._get_file_mtime()
+            assert mtime == 0.0
+
+    @pytest.mark.asyncio
+    async def test_tick_skips_during_reload(self, runtime):
+        """Test _tick returns early when _is_reloading is True."""
+        cortex_runtime, mocks = runtime
+        cortex_runtime._is_reloading = True
+        await cortex_runtime._tick()
+        mocks["action_orchestrator"].flush_promises.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_tick_exception_logged(self, runtime):
+        """Test _tick catches exception and logs (does not re-raise)."""
+        cortex_runtime, mocks = runtime
+        mocks["action_orchestrator"].flush_promises = AsyncMock(
+            side_effect=ValueError("flush error")
+        )
+        await cortex_runtime._tick()
+        mocks["action_orchestrator"].flush_promises.assert_called_once()
+
     @pytest.mark.asyncio
     async def test_cleanup_tasks_with_config_watcher(
         self, mock_config, mock_dependencies

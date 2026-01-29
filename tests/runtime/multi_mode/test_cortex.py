@@ -744,3 +744,197 @@ class TestModeCortexRuntimeHotReload:
 
                 mock_config_watcher.cancel.assert_called_once()
                 mock_gather.assert_called_once()
+
+    def test_get_mode_info(self, cortex_runtime):
+        """Test get_mode_info returns mode manager info."""
+        runtime, mocks = cortex_runtime
+        mocks["mode_manager"].get_mode_info.return_value = {
+            "current_mode": "default",
+            "transitions": [],
+        }
+        info = runtime.get_mode_info()
+        mocks["mode_manager"].get_mode_info.assert_called_once()
+        assert info["current_mode"] == "default"
+
+    def test_get_available_modes(self, cortex_runtime, mock_mode_config):
+        """Test get_available_modes returns all modes with display info."""
+        runtime, mocks = cortex_runtime
+        runtime.mode_config.modes = {
+            "default": mock_mode_config,
+            "advanced": mock_mode_config,
+        }
+        mocks["mode_manager"].current_mode_name = "default"
+        modes = runtime.get_available_modes()
+        assert "default" in modes
+        assert "advanced" in modes
+        assert modes["default"]["is_current"] is True
+        assert modes["advanced"]["is_current"] is False
+        assert modes["default"]["display_name"] == "Test Mode"
+
+    @pytest.mark.asyncio
+    async def test_request_mode_change(self, cortex_runtime):
+        """Test request_mode_change delegates to mode manager."""
+        runtime, mocks = cortex_runtime
+        mocks["mode_manager"].request_transition = AsyncMock(return_value=True)
+        result = await runtime.request_mode_change("advanced")
+        mocks["mode_manager"].request_transition.assert_called_once_with(
+            "advanced", "manual"
+        )
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_handle_mode_transitions_cancelled(self, cortex_runtime):
+        """Test _handle_mode_transitions exits on CancelledError."""
+        runtime, mocks = cortex_runtime
+
+        async def raise_cancelled():
+            await asyncio.sleep(0)
+            raise asyncio.CancelledError()
+
+        with patch.object(
+            runtime, "_mode_transition_event"
+        ) as mock_event:
+            mock_event.wait = raise_cancelled
+            await runtime._handle_mode_transitions()
+
+    @pytest.mark.asyncio
+    async def test_handle_mode_transitions_exception(self, cortex_runtime):
+        """Test _handle_mode_transitions handles exception and retries."""
+        runtime, mocks = cortex_runtime
+        call_count = 0
+
+        async def wait_then_error():
+            nonlocal call_count
+            call_count += 1
+            await asyncio.sleep(0)
+            if call_count == 1:
+                raise ValueError("transition error")
+            raise asyncio.CancelledError()
+
+        with (
+            patch.object(runtime, "_mode_transition_event") as mock_event,
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            mock_event.wait = wait_then_error
+            mock_event.clear = Mock()
+            await runtime._handle_mode_transitions()
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_run_cortex_loop_exception(self, cortex_runtime):
+        """Test _run_cortex_loop propagates unexpected exception."""
+        runtime, mocks = cortex_runtime
+        runtime.current_config = Mock()
+        runtime.current_config.hertz = 10.0
+        runtime.mode_manager.current_mode_name = "default"
+
+        with (
+            patch.object(runtime, "_tick", side_effect=RuntimeError("tick failed")),
+            patch.object(
+                runtime.sleep_ticker_provider, "sleep", new_callable=AsyncMock
+            ),
+        ):
+            with pytest.raises(RuntimeError, match="tick failed"):
+                await runtime._run_cortex_loop()
+
+    @pytest.mark.asyncio
+    async def test_tick_not_initialized(self, cortex_runtime):
+        """Test _tick skips when cortex not properly initialized."""
+        runtime, mocks = cortex_runtime
+        runtime.current_config = None
+        runtime.fuser = None
+        runtime.action_orchestrator = None
+        await runtime._tick()
+        # No exception, early return
+
+    @pytest.mark.asyncio
+    async def test_tick_skips_during_reload(self, cortex_runtime, mock_mode_config):
+        """Test _tick skips when _is_reloading is True."""
+        runtime, mocks = cortex_runtime
+        runtime.current_config = Mock()
+        runtime.fuser = Mock()
+        runtime.action_orchestrator = Mock()
+        runtime.simulator_orchestrator = Mock()
+        runtime._is_reloading = True
+        await runtime._tick()
+        runtime.action_orchestrator.flush_promises.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_tick_no_prompt_to_fuse(self, cortex_runtime, mock_mode_config):
+        """Test _tick returns early when fuser returns None."""
+        runtime, mocks = cortex_runtime
+        runtime.current_config = Mock()
+        runtime.current_config.agent_inputs = []
+        runtime.current_config.cortex_llm = Mock()
+        runtime.fuser = Mock()
+        runtime.fuser.fuse.return_value = None
+        runtime.action_orchestrator = Mock()
+        runtime.action_orchestrator.flush_promises = AsyncMock(
+            return_value=([], None)
+        )
+        runtime.io_provider = Mock()
+        runtime.io_provider.increment_tick = Mock(return_value=1)
+        runtime.io_provider.mode_transition_input = Mock(return_value=Mock(__enter__=Mock(), __exit__=Mock(return_value=False)))
+        runtime.io_provider.get_mode_transition_input = Mock(return_value=Mock())
+        runtime.mode_manager.process_tick = AsyncMock(return_value=None)
+        runtime.simulator_orchestrator = None
+        await runtime._tick()
+        runtime.current_config.cortex_llm.ask.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_tick_no_llm_output(self, cortex_runtime, mock_mode_config):
+        """Test _tick returns early when LLM returns None."""
+        runtime, mocks = cortex_runtime
+        runtime.current_config = Mock()
+        runtime.current_config.agent_inputs = []
+        runtime.current_config.cortex_llm = Mock()
+        runtime.current_config.cortex_llm.ask = AsyncMock(return_value=None)
+        runtime.fuser = Mock()
+        runtime.fuser.fuse.return_value = "prompt"
+        runtime.action_orchestrator = Mock()
+        runtime.action_orchestrator.flush_promises = AsyncMock(
+            return_value=([], None)
+        )
+        runtime.io_provider = Mock()
+        runtime.io_provider.increment_tick = Mock(return_value=1)
+        runtime.io_provider.mode_transition_input = Mock(return_value=Mock(__enter__=Mock(), __exit__=Mock(return_value=False)))
+        runtime.io_provider.get_mode_transition_input = Mock(return_value=Mock())
+        runtime.mode_manager.process_tick = AsyncMock(return_value=None)
+        runtime.simulator_orchestrator = None
+        await runtime._tick()
+        runtime.action_orchestrator.promise.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_check_config_changes_exception(self, mock_system_config):
+        """Test _check_config_changes handles exception and retries."""
+        with (
+            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.multi_mode.cortex.IOProvider"),
+            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("os.path.exists", return_value=True),
+            patch(
+                "os.path.getmtime",
+                side_effect=[1.0, OSError("read error")],
+            ),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True, check_interval=0.05
+            )
+            runtime.config_path = "/fake/path"
+            runtime.last_modified = 1.0
+            runtime._reload_config = AsyncMock()
+
+            task = asyncio.create_task(runtime._check_config_changes())
+            await asyncio.sleep(0.15)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
