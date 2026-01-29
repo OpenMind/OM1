@@ -28,12 +28,39 @@ Once the robot is powered on, it autonomously progresses through predefined oper
 
 - Guard Mode is excluded from context aware transitions and must be explicitly activated by the user via voice commands or through the OpenMind portal, as required.
 
+Example config to setup context_aware transition type for transitioning into navigation mode from slam mode.
+
+```
+    {
+      from_mode: "slam",
+      to_mode: "navigation",
+      transition_type: "context_aware",
+      context_conditions: { exploration_done: true },
+      priority: 3,
+      cooldown_seconds: 5.0,
+    }
+```
+
+```
+    {
+      from_mode: "mode_1",
+      to_mode: "mode_2",
+      transition_type: "context_aware",
+      context_conditions: { owner_identified: true, temperature: 70 },
+      priority: 2,
+      cooldown_seconds: 5.0,
+    }
+```
+
 ## Time based
+
 Time-based transitions enable the robot to automatically switch operational modes after a predefined period of elapsed time. These transitions are designed to ensure safe and secure operation without requiring continuous user input.
 
 Below is an example of configuring a time-based transition. Once configured, the system automatically transitions from the `from_mode` to the specified `to_mode` after the defined `timeout_seconds` has elapsed (300 seconds in this example).
 
 If an intervention occurs during this interval, such as user interaction or another eligible transition being triggered, the system evaluates all applicable transition rules. The transition associated with the highest priority is selected and executed.
+
+Example config to setup time based transition type for transitioning into guard mode from conversation mode.
 
 ```
    {
@@ -62,7 +89,7 @@ Step 2: Start talking to your robot dog and ask it to switch to a particular mod
     trigger_keywords: ["explore", "map", "navigate", "look around", "slam", "wander"]
 - Desired mode: **Navigation**
     trigger_keywords: ["navigate", "navigation", "go to", "take me to", "show me"]
-- Desired mode: **Guard**-+*
+- Desired mode: **Guard**
     trigger_keywords: ["guard", "security", "patrol", "keep watch"]
 
 ## Manual Trigger (via Portal)
