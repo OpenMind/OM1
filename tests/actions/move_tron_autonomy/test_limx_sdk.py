@@ -104,9 +104,7 @@ class TestMoveTronZenohConnectorInit:
     def test_initialization_zenoh_error(self):
         """Test initialization when Zenoh session fails."""
         with (
-            patch(
-                "actions.move_tron_autonomy.connector.limx_sdk.SimplePathsProvider"
-            ),
+            patch("actions.move_tron_autonomy.connector.limx_sdk.SimplePathsProvider"),
             patch("actions.move_tron_autonomy.connector.limx_sdk.TronOdomProvider"),
             patch(
                 "actions.move_tron_autonomy.connector.limx_sdk.open_zenoh_session"
