@@ -101,9 +101,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
         # fallback to the odom provider
         if not self.unitree_go2_state.state_code and self.odom.position["moving"]:
             # for example due to a teleops or game controller command
-            logging.info(
-                "Disregard new AI movement command - robot is already moving"
-            )
+            logging.info("Disregard new AI movement command - robot is already moving")
             return
 
         if self.pending_movements.qsize() > 0:
