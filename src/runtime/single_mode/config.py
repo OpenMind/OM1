@@ -1,6 +1,6 @@
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 
 import json5
@@ -88,6 +88,10 @@ class RuntimeConfig:
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+
+    def to_dict(self):
+        """Convert the RuntimeConfig dataclass to a dictionary."""
+        return asdict(self)
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":

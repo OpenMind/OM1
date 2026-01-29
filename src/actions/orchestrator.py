@@ -391,3 +391,17 @@ class ActionOrchestrator:
         Clean up the ActionOrchestrator by stopping the executor.
         """
         self.stop()
+
+    def update_config(self, new_config: RuntimeConfig):
+        """
+        Update the orchestrator's configuration, primarily the underlying config reference.
+        This replaces the internal _config with the new one.
+        It is assumed that connectors read the LLM from the agent_action, which is part of this config.
+        """
+        logging.info("ActionOrchestrator updating internal config reference...")
+        old_llm_model = getattr(self._config.cortex_llm, "model", "unknown")
+        self._config = new_config
+        new_llm_model = getattr(new_config.cortex_llm, "model", "unknown")
+        logging.info(
+            f"ActionOrchestrator config updated. LLM model changed from '{old_llm_model}' to '{new_llm_model}'."
+        )
