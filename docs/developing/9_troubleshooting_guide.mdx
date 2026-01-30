@@ -12,3 +12,24 @@ description: "Guide to troubleshoot some common issues"
 | Robot not moving        | Connection issue/Network issue            | Restart OM1/Robot and check your internet connection                                        |
 | OpenSSL certificate issue | Security certificate not found | `uv pip install certifi` `export SSL_CERT_FILE=$(python3 -m certifi)` `export REQUESTS_CA_BUNDLE=$(python3 -m certifi)` |
 | Error message during build: `fatal error: portaudio.h: No such file or directory compilation terminated. error: command '/usr/bin/gcc' failed with exit code 1` | The issue is due to python-all-dev being deprecated and unavailable in non standard Ubuntu installations. | Installing only PortAudio development headers fixes the problem: `sudo apt-get update` `sudo apt-get install portaudio19-dev`|
+
+---
+
+### Headless / VM deployments (no camera / mic / robot)
+
+OM1 can run in headless environments (servers/VMs) for development, but you should expect hardware-dependent inputs to fail unless disabled.
+
+**What usually works:**
+- Running the core agent loop with text-only inputs
+- API calls (LLMs, tools) assuming a valid OpenMind API key
+- Non-hardware “backgrounds” and integrations
+
+**What is expected to fail (by design) unless configured out:**
+- Camera/VLM inputs when no camera device is available
+- Microphone/ASR inputs when no audio device is available
+- Robot-specific connectors when no robot hardware/network is present
+
+**Recommended approach:**
+- Use a config that is **text-only** (disable camera + mic inputs).
+- If you see repeated errors from ASR/VLM, remove those inputs from `agent_inputs` in your config.
+- Make sure your OpenMind API key is set (e.g., `OM_API_KEY=om1_live_...`) so requests don’t fail due to missing auth/credits.
