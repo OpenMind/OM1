@@ -3,9 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from llm import LLMConfig
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.openai_llm import OpenAILLM
+from llm.plugins.openai_llm import OpenAIConfig, OpenAILLM
 
 
 class DummyOutputModel(BaseModel):
@@ -14,7 +13,7 @@ class DummyOutputModel(BaseModel):
 
 @pytest.fixture
 def config():
-    return LLMConfig(base_url="test_url/", api_key="test_key", model="test_model")
+    return OpenAIConfig(base_url="test_url/", api_key="test_key", model="test_model")
 
 
 @pytest.fixture
@@ -96,7 +95,7 @@ async def test_init_with_config(llm, config):
 
 @pytest.mark.asyncio
 async def test_init_empty_key():
-    config = LLMConfig(base_url="test_url")
+    config = OpenAIConfig(base_url="test_url")
     with pytest.raises(ValueError, match="config file missing api_key"):
         OpenAILLM(config, available_actions=None)
 
