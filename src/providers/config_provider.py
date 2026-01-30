@@ -189,15 +189,19 @@ class ConfigProvider:
 
         self.running = False
 
-        if self.config_request_subscriber:
-            self.config_request_subscriber.undeclare()
-            self.config_request_subscriber = None
+        try:
+            if self.config_request_subscriber:
+                self.config_request_subscriber.undeclare()
+                self.config_request_subscriber = None
 
-        if self.config_response_publisher:
-            self.config_response_publisher.undeclare()
-            self.config_response_publisher = None
+            if self.config_response_publisher:
+                self.config_response_publisher.undeclare()
+                self.config_response_publisher = None
 
-        if self.session:
-            self.session.close()
-
-        logging.info("ConfigProvider stopped and Zenoh session closed")
+            if self.session:
+                self.session.close()
+                logging.info("ConfigProvider stopped and Zenoh session closed")
+        except Exception as e:
+            logging.error(f"Error stopping ConfigProvider: {e}")
+        finally:
+            self.session = None

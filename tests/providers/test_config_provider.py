@@ -71,13 +71,44 @@ def test_initialization_failure():
 
 
 def test_stop(mock_zenoh):
-    _, mock_session_instance, _, _ = mock_zenoh
+    _, mock_session_instance, mock_publisher, mock_subscriber = mock_zenoh
     provider = ConfigProvider()
 
     provider.stop()
 
     assert not provider.running
+    assert provider.session is None
+    mock_subscriber.undeclare.assert_called_once()
+    mock_publisher.undeclare.assert_called_once()
     mock_session_instance.close.assert_called_once()
+
+
+def test_stop_with_exception(mock_zenoh):
+    """Test stopping when session.close() raises an exception."""
+    _, mock_session_instance, mock_publisher, mock_subscriber = mock_zenoh
+    provider = ConfigProvider()
+    
+    # Make close() raise an exception
+    mock_session_instance.close.side_effect = Exception("Close failed")
+    
+    # Should not raise exception, just log error
+    provider.stop()
+    
+    assert not provider.running
+    assert provider.session is None
+    mock_subscriber.undeclare.assert_called_once()
+    mock_publisher.undeclare.assert_called_once()
+    mock_session_instance.close.assert_called_once()
+
+
+def test_stop_when_not_running(mock_zenoh):
+    """Test stopping when provider is not running."""
+    provider = ConfigProvider()
+    provider.running = False
+    
+    provider.stop()
+    
+    assert not provider.running
 
 
 def test_handle_config_request(mock_zenoh):
