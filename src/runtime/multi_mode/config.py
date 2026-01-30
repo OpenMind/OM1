@@ -436,7 +436,7 @@ def load_mode_config(
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         global_cortex_llm=raw_config.get("cortex_llm"),
         global_lifecycle_hooks=parse_lifecycle_hooks(
-            raw_config.get("global_lifecycle_hooks", [])
+            raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
         ),
         _raw_global_lifecycle_hooks=raw_config.get("global_lifecycle_hooks", []),
     )
@@ -449,7 +449,9 @@ def load_mode_config(
             description=mode_data.get("description", ""),
             system_prompt_base=mode_data["system_prompt_base"],
             hertz=mode_data.get("hertz", 1.0),
-            lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", [])),
+            lifecycle_hooks=parse_lifecycle_hooks(
+                mode_data.get("lifecycle_hooks", []), api_key=g_api_key
+            ),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
             save_interactions=mode_data.get("save_interactions", False),
