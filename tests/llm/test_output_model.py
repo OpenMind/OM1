@@ -30,17 +30,17 @@ class TestAction:
 
     def test_action_required_fields(self):
         """Test that Action requires both type and value fields."""
-        # Test missing type
+        # Test missing type - create dict without type
         with pytest.raises(ValidationError):
-            Action(value="forward")
+            Action.model_validate({"value": "forward"})
 
-        # Test missing value
+        # Test missing value - create dict without value
         with pytest.raises(ValidationError):
-            Action(type="move")
+            Action.model_validate({"type": "move"})
 
-        # Test both missing - we need to pass something invalid to trigger validation
+        # Test both missing
         with pytest.raises(ValidationError):
-            Action(**{})
+            Action.model_validate({})
 
     def test_action_field_descriptions(self):
         """Test that Action fields have correct descriptions."""
@@ -102,26 +102,25 @@ class TestCortexOutputModel:
     def test_cortex_output_model_required_actions_field(self):
         """Test that CortexOutputModel requires actions field."""
         with pytest.raises(ValidationError):
-            CortexOutputModel(**{})
+            CortexOutputModel.model_validate({})
 
     def test_cortex_output_model_invalid_actions_type(self):
         """Test that CortexOutputModel validates action types in list."""
-        # Test with invalid action in list - we'll try to create with wrong type
+        # Test with invalid action in list - try to validate with wrong type
         with pytest.raises(ValidationError):
-            # Try to create with non-dict data that doesn't match Action schema
-            CortexOutputModel(actions=["invalid_action"])
+            CortexOutputModel.model_validate({"actions": ["invalid_action"]})
 
     def test_cortex_output_model_nested_validation(self):
         """Test that nested Action validation works within CortexOutputModel."""
-        # Test with invalid Action inside valid list
+        # Test with invalid Action inside valid list - missing value in nested action
         with pytest.raises(ValidationError):
-            CortexOutputModel(
-                actions=[
-                    Action(type="move", value="forward"),  # Valid
-                    {
-                        "type": "speak"
-                    },  # Invalid - missing value, will be converted to Action and fail
-                ]
+            CortexOutputModel.model_validate(
+                {
+                    "actions": [
+                        {"type": "move", "value": "forward"},  # Valid
+                        {"type": "speak"},  # Invalid - missing value
+                    ]
+                }
             )
 
     def test_cortex_output_model_multiple_valid_actions(self):
