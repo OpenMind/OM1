@@ -35,6 +35,8 @@ git clone https://github.com/OpenMind/OM1.git
 cd OM1
 git submodule update --init
 uv venv
+ source .venv/bin/activate  # On macOS/Linux
+# OR on Windows: .venv\Scripts\activate
 ```
 
 ### Install Dependencies
