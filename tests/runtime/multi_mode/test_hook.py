@@ -241,6 +241,258 @@ async def test_message_handler_empty_message():
     assert result is True
 
 
+def test_message_handler_default_tts_provider():
+    """Test that default TTS provider is elevenlabs."""
+    config = MessageHookConfig(message="test")
+    handler = MessageHookHandler(config)
+    assert handler.config.tts_provider == "elevenlabs"
+
+
+def test_message_handler_create_elevenlabs_provider():
+    """Test creating ElevenLabs TTS provider with default settings."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="elevenlabs",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            api_key=None,
+            elevenlabs_api_key=None,
+            voice_id="JBFqnCBsd6RMkjVDRZzb",
+            model_id="eleven_flash_v2_5",
+            output_format="mp3_44100_128",
+            enable_tts_interrupt=False,
+        )
+
+
+def test_message_handler_create_elevenlabs_provider_with_custom_config():
+    """Test creating ElevenLabs TTS provider with custom configuration."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="elevenlabs",
+        url="https://custom.url/tts",
+        api_key="test_api_key",
+        elevenlabs_api_key="test_elevenlabs_key",
+        voice_id="custom_voice",
+        model_id="custom_model",
+        output_format="wav_44100",
+        enable_tts_interrupt=True,
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="https://custom.url/tts",
+            api_key="test_api_key",
+            elevenlabs_api_key="test_elevenlabs_key",
+            voice_id="custom_voice",
+            model_id="custom_model",
+            output_format="wav_44100",
+            enable_tts_interrupt=True,
+        )
+
+
+def test_message_handler_create_kokoro_provider():
+    """Test creating Kokoro TTS provider with default settings."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="kokoro",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.KokoroTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://127.0.0.1:8880/v1",
+            api_key=None,
+            voice_id="af_bella",
+            model_id="kokoro",
+            output_format="pcm",
+            rate=24000,
+            enable_tts_interrupt=False,
+        )
+
+
+def test_message_handler_create_kokoro_provider_with_custom_config():
+    """Test creating Kokoro TTS provider with custom configuration."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="kokoro",
+        url="http://custom.host:8880/v1",
+        api_key="test_api_key",
+        voice_id="af_sky",
+        model_id="kokoro_v2",
+        output_format="wav",
+        rate=48000,
+        enable_tts_interrupt=True,
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.KokoroTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://custom.host:8880/v1",
+            api_key="test_api_key",
+            voice_id="af_sky",
+            model_id="kokoro_v2",
+            output_format="wav",
+            rate=48000,
+            enable_tts_interrupt=True,
+        )
+
+
+def test_message_handler_create_riva_provider():
+    """Test creating Riva TTS provider with default settings."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="riva",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.RivaTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://127.0.0.1:50051",
+            api_key=None,
+        )
+
+
+def test_message_handler_create_riva_provider_with_custom_config():
+    """Test creating Riva TTS provider with custom configuration."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="riva",
+        url="http://custom.host:50051",
+        api_key="test_api_key",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.RivaTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://custom.host:50051",
+            api_key="test_api_key",
+        )
+
+
+def test_message_handler_unsupported_provider():
+    """Test creating TTS provider with unsupported provider type."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="unsupported_provider",
+    )
+    handler = MessageHookHandler(config)
+
+    with pytest.raises(
+        ValueError, match="Unsupported TTS provider: unsupported_provider"
+    ):
+        handler._create_tts_provider()
+
+
+def test_message_handler_case_insensitive_provider():
+    """Test that provider type is case-insensitive."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="ELEVENLABS",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_with_kokoro(sample_context):
+    """Test message handler execution with Kokoro provider."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="kokoro",
+    )
+    handler = MessageHookHandler(config)
+
+    mock_tts = Mock()
+    mock_tts.start = Mock()
+    mock_tts.add_pending_message = Mock()
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.multi_mode.hook.KokoroTTSProvider", return_value=mock_tts):
+            result = await handler.execute(sample_context)
+            assert result is True
+            mock_logging.info.assert_called_once_with(
+                "Lifecycle hook message: Mode: test_mode"
+            )
+            mock_tts.start.assert_called_once()
+            mock_tts.add_pending_message.assert_called_once_with("Mode: test_mode")
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_with_riva(sample_context):
+    """Test message handler execution with Riva provider."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="riva",
+    )
+    handler = MessageHookHandler(config)
+
+    mock_tts = Mock()
+    mock_tts.start = Mock()
+    mock_tts.add_pending_message = Mock()
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.multi_mode.hook.RivaTTSProvider", return_value=mock_tts):
+            result = await handler.execute(sample_context)
+            assert result is True
+            mock_logging.info.assert_called_once_with(
+                "Lifecycle hook message: Mode: test_mode"
+            )
+            mock_tts.start.assert_called_once()
+            mock_tts.add_pending_message.assert_called_once_with("Mode: test_mode")
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_with_unsupported_provider(sample_context):
+    """Test message handler execution with unsupported provider fails gracefully."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="invalid",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        result = await handler.execute(sample_context)
+        assert result is False
+        mock_logging.error.assert_called_once()
+        error_call = mock_logging.error.call_args[0][0]
+        assert "Error adding TTS message:" in error_call
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_provider_exception(sample_context):
+    """Test message handler execution when provider initialization fails."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="elevenlabs",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch(
+            "runtime.multi_mode.hook.ElevenLabsTTSProvider",
+            side_effect=Exception("Provider init failed"),
+        ):
+            result = await handler.execute(sample_context)
+            assert result is False
+            mock_logging.error.assert_called_once()
+            error_call = mock_logging.error.call_args[0][0]
+            assert "Error adding TTS message:" in error_call
+
+
 def test_command_handler_creation():
     """Test command handler creation."""
     config = CommandHookConfig(command="echo test")
