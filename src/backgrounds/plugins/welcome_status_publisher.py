@@ -22,6 +22,7 @@ except Exception:
 
 class WelcomeStatusPublisherConfig(BackgroundConfig):
     """Configuration for welcome status publisher."""
+    
     ros2_topic: str = Field(default="om/welcome", description="ROS2 topic name to publish to (if ROS2 available)")
     zenoh_topic: str = Field(default="om/welcome", description="Zenoh topic name to publish to (fallback)")
     message: str = Field(default="welcome mode", description="Status message to publish")
