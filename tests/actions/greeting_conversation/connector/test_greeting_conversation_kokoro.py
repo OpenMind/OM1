@@ -84,6 +84,7 @@ def greeting_input_long_response():
 def test_init_with_full_config(mock_config):
     """Test initialization with full configuration."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -129,6 +130,7 @@ def test_init_with_full_config(mock_config):
 def test_init_with_minimal_config(mock_minimal_config):
     """Test initialization with minimal configuration using defaults."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -160,6 +162,7 @@ def test_init_with_minimal_config(mock_minimal_config):
 def test_init_with_tts_interrupt(mock_config_with_tts_interrupt):
     """Test initialization with TTS interrupt enabled."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -184,6 +187,7 @@ def test_init_with_tts_interrupt(mock_config_with_tts_interrupt):
 async def test_connect_basic(mock_config, greeting_input):
     """Test basic connect functionality."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -227,6 +231,7 @@ async def test_connect_basic(mock_config, greeting_input):
 async def test_connect_tts_duration_calculation(mock_config, greeting_input):
     """Test that TTS duration is calculated based on text length."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -263,6 +268,7 @@ async def test_connect_tts_duration_calculation(mock_config, greeting_input):
 async def test_connect_finished_state(mock_config, greeting_input_finished):
     """Test connect when conversation reaches FINISHED state."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -308,6 +314,7 @@ async def test_connect_with_empty_response(mock_config):
     )
 
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -343,6 +350,7 @@ async def test_connect_with_empty_response(mock_config):
 async def test_connect_with_long_response(mock_config, greeting_input_long_response):
     """Test connect with a long response to verify TTS duration calculation."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -376,6 +384,7 @@ async def test_connect_with_long_response(mock_config, greeting_input_long_respo
 async def test_connect_updates_tts_triggered_time(mock_config, greeting_input):
     """Test that connect updates tts_triggered_time."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -412,6 +421,7 @@ async def test_connect_updates_tts_triggered_time(mock_config, greeting_input):
 def test_tick_skips_during_tts_playback(mock_config):
     """Test that tick skips state update when TTS is playing."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -446,6 +456,7 @@ def test_tick_skips_during_tts_playback(mock_config):
 def test_tick_updates_state_after_tts_playback(mock_config):
     """Test that tick updates state after TTS playback finishes."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -486,6 +497,7 @@ def test_tick_updates_state_after_tts_playback(mock_config):
 def test_tick_detects_finished_state(mock_config):
     """Test that tick detects finished conversation state."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
@@ -532,6 +544,7 @@ def test_tick_detects_finished_state(mock_config):
 def test_tick_sleeps_for_10_seconds(mock_config):
     """Test that tick sleeps for 10 seconds."""
     with (
+        patch("providers.kokoro_tts_provider.AudioOutputLiveStream"),
         patch(
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_provider_class,
