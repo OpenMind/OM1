@@ -22,10 +22,17 @@ except Exception:
 
 class WelcomeStatusPublisherConfig(BackgroundConfig):
     """Configuration for welcome status publisher."""
-    
-    ros2_topic: str = Field(default="om/welcome", description="ROS2 topic name to publish to (if ROS2 available)")
-    zenoh_topic: str = Field(default="om/welcome", description="Zenoh topic name to publish to (fallback)")
-    message: str = Field(default="welcome mode", description="Status message to publish")
+
+    ros2_topic: str = Field(
+        default="om/welcome",
+        description="ROS2 topic name to publish to (if ROS2 available)",
+    )
+    zenoh_topic: str = Field(
+        default="om/welcome", description="Zenoh topic name to publish to (fallback)"
+    )
+    message: str = Field(
+        default="welcome mode", description="Status message to publish"
+    )
     interval: float = Field(default=1.0, description="Seconds between publishes")
 
 
@@ -55,16 +62,29 @@ class WelcomeStatusPublisher(Background[WelcomeStatusPublisherConfig]):
                 except Exception:
                     # start may already have been called elsewhere
                     pass
-                logging.info("WelcomeStatusPublisher: using ROS2 publisher on %s", self.config.ros2_topic)
+                logging.info(
+                    "WelcomeStatusPublisher: using ROS2 publisher on %s",
+                    self.config.ros2_topic,
+                )
             except Exception as e:
                 logging.warning("Could not initialize ROS2 publisher provider: %s", e)
 
         # If ROS2 not available or failed, try zenoh
-        if self.ros2_provider is None and zenoh is not None and open_zenoh_session is not None and String is not None:
+        if (
+            self.ros2_provider is None
+            and zenoh is not None
+            and open_zenoh_session is not None
+            and String is not None
+        ):
             try:
                 self.zenoh_session = open_zenoh_session()
-                self.zenoh_pub = self.zenoh_session.declare_publisher(self.config.zenoh_topic)
-                logging.info("WelcomeStatusPublisher: using Zenoh publisher on %s", self.config.zenoh_topic)
+                self.zenoh_pub = self.zenoh_session.declare_publisher(
+                    self.config.zenoh_topic
+                )
+                logging.info(
+                    "WelcomeStatusPublisher: using Zenoh publisher on %s",
+                    self.config.zenoh_topic,
+                )
             except Exception as e:
                 logging.warning("Could not initialize Zenoh publisher: %s", e)
 
