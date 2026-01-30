@@ -1,4 +1,5 @@
 import logging
+
 from pydantic import Field
 
 from backgrounds.base import Background, BackgroundConfig
