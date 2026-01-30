@@ -130,6 +130,7 @@ def test_stop():
         provider.stop()
 
         assert provider.running is False
+        assert provider.session is None
         mock_session.close.assert_called_once()
 
 
