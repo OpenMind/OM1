@@ -780,11 +780,36 @@ class ModeManager:
             if isinstance(context_data, dict):
                 self.update_user_context(context_data)
                 logging.info(f"Updated user context with: {context_data}")
+
+                if self._main_event_loop and self._main_event_loop.is_running():
+                    self._main_event_loop.call_soon_threadsafe(
+                        lambda: asyncio.create_task(
+                            self._check_and_apply_context_transition()
+                        )
+                    )
             else:
                 logging.warning(f"Invalid context data format: {context_data}")
 
         except (json.JSONDecodeError, Exception) as e:
             logging.error(f"Error processing context update: {e}")
+
+    async def _check_and_apply_context_transition(self):
+        """
+        Check for context-aware transitions and apply them if conditions are met.
+
+        This method is called when the user context is updated to ensure
+        that context-aware transitions can occur even when the LLM is not triggered.
+        """
+        try:
+            context_target = await self.check_context_aware_transitions()
+            if context_target:
+                logging.info(
+                    f"Context-aware transition triggered by context update: "
+                    f"{self.state.current_mode} -> {context_target}"
+                )
+                await self._execute_transition(context_target, "context_aware")
+        except Exception as e:
+            logging.error(f"Error checking context-aware transitions: {e}")
 
     async def _handle_mode_switch_request(
         self, frame_id: str, request_id: str, target_mode: str
