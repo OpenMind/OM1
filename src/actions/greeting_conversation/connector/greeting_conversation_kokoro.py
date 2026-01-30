@@ -1,17 +1,16 @@
 import logging
 import time
-from typing import Optional
 
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.greeting_conversation.interface import GreetingConversationInput
 from providers.context_provider import ContextProvider
-from providers.kokoro_tts_provider import KokoroTTSProvider
 from providers.greeting_conversation_state_provider import (
     ConversationState,
     GreetingConversationStateMachineProvider,
 )
+from providers.kokoro_tts_provider import KokoroTTSProvider
 
 
 class SpeakKokoroTTSConfig(ActionConfig):
@@ -58,7 +57,6 @@ class SpeakKokoroTTSConfig(ActionConfig):
         default=0,
         description="Number of responses to skip before speaking",
     )
-
 
 
 class GreetingConversationConnector(

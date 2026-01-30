@@ -53,7 +53,7 @@
       agent_actions: [
         {
           name: "greeting_conversation",
-          llm_label: "greeting_conversation_kokoro",
+          llm_label: "greeting_conversation",
           connector: "greeting_conversation_kokoro",
         },
       ],
