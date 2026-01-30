@@ -490,7 +490,7 @@ class WebSim(Simulator):
             logging.info("Starting WebSim server thread...")
             self.server_thread = threading.Thread(target=self._run_server, daemon=True)
             self.server_thread.start()
-            time.sleep(1)
+            self.sleep(1)
 
             if self.server_thread.is_alive():
                 logging.info(
@@ -604,7 +604,7 @@ class WebSim(Simulator):
             except Exception as e:
                 logging.error(f"Error in tick: {e}")
 
-            time.sleep(0.5)
+            self.sleep(0.5)
 
     def sim(self, actions: List[Action]) -> None:
         """
