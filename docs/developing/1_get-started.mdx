@@ -38,6 +38,15 @@ brew install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+#### Build tools (Linux / WSL)
+
+On some Linux setups (especially minimal installs and WSL), you may need build tools and Python headers for native dependencies to compile:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential python3-dev linux-headers-generic
+```
+
 #### PortAudio Library
 
 For audio functionality, install `portaudio`:
@@ -48,10 +57,10 @@ brew install portaudio
 
 # Linux
 sudo apt-get update
-sudo apt-get install portaudio19-dev
+sudo apt-get install -y portaudio19-dev
 ```
 
-Note: `python-all-dev` may also be needed.
+Note: Some older guides mention `python-all-dev`, but on newer Ubuntu releases it may be unavailable/deprecated. If you hit build errors, ensure you have `python3-dev` installed (see “Build tools” above).
 
 #### ffmpeg
 
