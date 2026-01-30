@@ -38,9 +38,9 @@ class TestAction:
         with pytest.raises(ValidationError):
             Action(type="move")
 
-        # Test both missing
+        # Test both missing - we need to pass something invalid to trigger validation
         with pytest.raises(ValidationError):
-            Action()
+            Action(**{})
 
     def test_action_field_descriptions(self):
         """Test that Action fields have correct descriptions."""
@@ -102,13 +102,14 @@ class TestCortexOutputModel:
     def test_cortex_output_model_required_actions_field(self):
         """Test that CortexOutputModel requires actions field."""
         with pytest.raises(ValidationError):
-            CortexOutputModel()
+            CortexOutputModel(**{})
 
     def test_cortex_output_model_invalid_actions_type(self):
         """Test that CortexOutputModel validates action types in list."""
-        # Test with invalid action in list
+        # Test with invalid action in list - we'll try to create with wrong type
         with pytest.raises(ValidationError):
-            CortexOutputModel(actions=[{"invalid": "data"}])
+            # Try to create with non-dict data that doesn't match Action schema
+            CortexOutputModel(actions=["invalid_action"])
 
     def test_cortex_output_model_nested_validation(self):
         """Test that nested Action validation works within CortexOutputModel."""
@@ -117,7 +118,9 @@ class TestCortexOutputModel:
             CortexOutputModel(
                 actions=[
                     Action(type="move", value="forward"),  # Valid
-                    {"type": "speak"},  # Invalid - missing value
+                    {
+                        "type": "speak"
+                    },  # Invalid - missing value, will be converted to Action and fail
                 ]
             )
 
