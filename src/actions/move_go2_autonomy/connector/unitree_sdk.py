@@ -1,7 +1,6 @@
 import logging
 import math
 import random
-import time
 from queue import Queue
 from typing import List, Optional
 
@@ -201,19 +200,19 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
 
         if self.odom is None:
             logging.info("Waiting for odom data = self.odom is None")
-            time.sleep(0.5)
+            self.sleep(0.5)
             return
 
         if self.odom.position["odom_x"] == 0.0:
             # this value is never precisely zero except while
             # booting and waiting for data to arrive
             logging.info("Waiting for odom data, x == 0.0")
-            time.sleep(0.5)
+            self.sleep(0.5)
             return
 
         if self.odom.position["body_attitude"] != RobotState.STANDING:
             logging.info("Cannot move - dog is sitting")
-            time.sleep(0.5)
+            self.sleep(0.5)
             return
 
         # if we got to this point, we have good data and we are able to
@@ -324,7 +323,7 @@ class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
                     )
                     self.clean_abort()
 
-        time.sleep(0.1)
+        self.sleep(0.1)
 
     def _process_turn_left(self):
         """

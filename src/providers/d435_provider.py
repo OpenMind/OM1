@@ -20,8 +20,8 @@ class D435Provider:
 
         Sets up the Zenoh subscriber for obstacle point cloud data and starts the provider.
         """
-        self.obstacle = []
-        self.running = False
+        self.obstacle: list[dict[str, float]] = []
+        self.running: bool = False
         self.session = None
 
         try:
