@@ -94,13 +94,30 @@ class LLMHistoryManager:
         if os.path.exists(self.history_file):
             try:
                 max_history = getattr(self.config, 'history_length', 100) or 100
-                with open(self.history_file, 'r') as f:
-                    all_lines = f.readlines()
-                    last_msg_lines = all_lines[-max_history:]
-                    for h_line in last_msg_lines:
-                        if h_line.strip():
-                            data = json.loads(h_line)
-                            self.history.append(ChatMessage(role=data['role'], content=data['content']))
-                logging.info(f"Memory-safe load: Restored {len(self.history)} messages.")
+                messages = []
+                with open(self.history_file, 'rb') as f:
+                    f.seek(0, os.SEEK_END)
+                    pointer = f.tell()
+                    buffer = b''
+                    while pointer > 0 and len(messages) < max_history:
+                        read_size = min(pointer, 4096)
+                        pointer -= read_size
+                        f.seek(pointer)
+                        chunk = f.read(read_size) + buffer
+                        raw_lines = chunk.split(b'\n')
+                        # 第一行可能是被切断的，存入buffer供下轮拼接
+                        buffer = raw_lines[0]
+                        # 后面的行是完整的，倒序解析
+                        for l in reversed(raw_lines[1:]):
+                            if l.strip():
+                                data = json.loads(l.decode('utf-8'))
+                                messages.insert(0, ChatMessage(role=data['role'], content=data['content']))
+                                if len(messages) >= max_history: break
+                # 处理文件开头剩余的部分
+                if len(messages) < max_history and buffer.strip():
+                    data = json.loads(buffer.decode('utf-8'))
+                    messages.insert(0, ChatMessage(role=data['role'], content=data['content']))
+                self.history.extend(messages)
+                logging.info(f"Robust persistence load: Restored {len(messages)} messages.")
             except Exception as e:
                 logging.error(f"Error loading history: {e}")
