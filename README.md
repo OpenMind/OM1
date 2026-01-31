@@ -21,10 +21,48 @@ Fields are categorized by their reload requirements:
 
 Unlike PR #1312 which had a bug with complex field comparison, this implementation uses proper deep equality checking:
 
+ hot-reload-issue-984
 ```python
 # This correctly detects that agent_inputs changed even though list length is same
 old = {"agent_inputs": [{"type": "VLM", "model": "gpt-4"}]}
 new = {"agent_inputs": [{"type": "VLM", "model": "gpt-4o"}]}  # Detected!
+
+### Package Management and VENV
+
+You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
+
+### Clone the Repo
+
+```bash
+git clone https://github.com/OpenMind/OM1.git
+cd OM1
+git submodule update --init
+uv venv
+```
+
+### Install Dependencies
+
+For MacOS
+```bash
+brew install portaudio ffmpeg
+```
+
+For Linux
+```bash
+sudo apt-get update
+sudo apt-get install portaudio19-dev python3-dev ffmpeg
+```
+
+### Obtain an OpenMind API Key
+
+Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp env.example .env` and add your key to the `.env`.
+
+### Launching OM1
+
+Run
+```bash
+uv run src/run.py spot
+ main
 ```
 
 ### 3. Validation Before Apply
