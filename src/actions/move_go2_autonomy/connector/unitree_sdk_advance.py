@@ -1,6 +1,7 @@
 import logging
 import math
 import random
+import time
 from queue import Queue
 from typing import List, Optional
 
@@ -256,19 +257,19 @@ class MoveUnitreeSDKAdvanceConnector(
 
         if self.odom is None:
             logging.info("Waiting for odom data = self.odom is None")
-            self.sleep(0.5)
+            time.sleep(0.5)
             return
 
         if self.odom.position["odom_x"] == 0.0:
             # this value is never precisely zero except while
             # booting and waiting for data to arrive
             logging.info("Waiting for odom data, x == 0.0")
-            self.sleep(0.5)
+            time.sleep(0.5)
             return
 
         if self.odom.position["body_attitude"] != RobotState.STANDING:
             logging.info("Cannot move - dog is sitting")
-            self.sleep(0.5)
+            time.sleep(0.5)
             return
 
         # if we got to this point, we have good data and we are able to
@@ -379,7 +380,7 @@ class MoveUnitreeSDKAdvanceConnector(
                     )
                     self.clean_abort()
 
-        self.sleep(0.1)
+        time.sleep(0.1)
 
     def _process_turn_left(self):
         """

@@ -6,7 +6,6 @@ from .teleops_status_provider import (
     TeleopsStatus,
     TeleopsStatusProvider,
 )
-from .vector_memory_provider import VectorMemoryProvider
 
 __all__ = [
     "ContextProvider",
@@ -15,5 +14,4 @@ __all__ = [
     "CommandStatus",
     "BatteryStatus",
     "TeleopsStatus",
-    "VectorMemoryProvider",
 ]

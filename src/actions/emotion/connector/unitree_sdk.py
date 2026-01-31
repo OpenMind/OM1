@@ -1,4 +1,5 @@
 import logging
+import time
 
 from pydantic import Field
 from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
@@ -92,4 +93,4 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
         """
         Periodic tick function to maintain connection.
         """
-        self.sleep(5)
+        time.sleep(5)
