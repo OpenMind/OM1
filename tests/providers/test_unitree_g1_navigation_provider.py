@@ -223,3 +223,33 @@ def test_session_none_handling(mock_dependencies):
 
         assert provider.session is None
         assert provider.ai_status_pub is None
+
+
+def test_stop(mock_dependencies):
+    """Test stopping the navigation provider."""
+    provider = UnitreeG1NavigationProvider()
+    provider.start()
+
+    provider.stop()
+
+    assert not provider.running
+    assert provider.session is None
+    mock_dependencies["publisher"].undeclare.assert_called_once()
+    mock_dependencies["session"].close.assert_called_once()
+
+
+def test_stop_with_exception(mock_dependencies):
+    """Test stopping when session.close() raises an exception."""
+    provider = UnitreeG1NavigationProvider()
+    provider.start()
+    
+    # Make close() raise an exception
+    mock_dependencies["session"].close.side_effect = Exception("Close failed")
+    
+    # Should not raise exception, just log error
+    provider.stop()
+    
+    assert not provider.running
+    assert provider.session is None
+    mock_dependencies["publisher"].undeclare.assert_called_once()
+    mock_dependencies["session"].close.assert_called_once()
