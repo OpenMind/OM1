@@ -1,5 +1,5 @@
 {
-  version: "v1.0.1",
+  version: "v1.0.2",
   hertz: 1,
   name: "turtle_explore",
   api_key: "openmind_free",

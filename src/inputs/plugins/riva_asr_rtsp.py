@@ -10,14 +10,14 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
-from providers.asr_provider import ASRProvider
+from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
 from zenoh_msgs import ASRText, open_zenoh_session, prepare_header
 
 
-class RivaASRSensorConfig(SensorConfig):
+class RivaASRRTSPSensorConfig(SensorConfig):
     """
     Configuration for Riva ASR Sensor.
 
@@ -25,39 +25,32 @@ class RivaASRSensorConfig(SensorConfig):
     ----------
     api_key : Optional[str]
         API Key.
+    rtsp_url : str
+        RTSP URL for the audio stream. Default is "rtsp://localhost:8554/audio".
     rate : int
-        Sampling rate.
-    chunk : int
-        Chunk size.
+        Sampling rate. Default is 16000.
     base_url : str
-        Base URL for the ASR service.
-    microphone_device_id : Optional[str]
-        Microphone Device ID.
-    microphone_name : Optional[str]
-        Microphone Name.
-    remote_input : bool
-        Whether to use remote input.
+        Base URL for the ASR service. Default is "wss://api-asr.openmind.org".
+    enable_tts_interrupt : bool
+        Enable TTS interrupt when ASR detects speech during playback.
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    rate: int = Field(default=48000, description="Sampling rate")
-    chunk: int = Field(default=12144, description="Chunk size")
+    rtsp_url: str = Field(
+        default="rtsp://localhost:8554/audio",
+        description="RTSP URL for the audio stream",
+    )
+    rate: int = Field(default=16000, description="Sampling rate")
     base_url: str = Field(
         default="wss://api-asr.openmind.org", description="Base URL for the ASR service"
     )
-    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
-    microphone_device_id: Optional[int] = Field(
-        default=None, description="Microphone Device ID"
-    )
-    microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
-    remote_input: bool = Field(default=False, description="Whether to use remote input")
     enable_tts_interrupt: bool = Field(
         default=False,
         description="Enable TTS interrupt (does not mute mic during TTS playback)",
     )
 
 
-class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
+class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
     """
     Automatic Speech Recognition (ASR) input handler.
 
@@ -65,13 +58,13 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
     and providing text conversion capabilities.
     """
 
-    def __init__(self, config: RivaASRSensorConfig):
+    def __init__(self, config: RivaASRRTSPSensorConfig):
         """
         Initialize RivaASRInput instance.
 
         Parameters
         ----------
-        config : RivaASRSensorConfig
+        config : RivaASRRTSPSensorConfig
             Configuration for the ASR input handler.
         """
         super().__init__(config)
@@ -88,22 +81,17 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
 
         # Initialize ASR provider
         api_key = self.config.api_key
+        rtsp_url = self.config.rtsp_url
         rate = self.config.rate
-        chunk = self.config.chunk
         base_url = self.config.base_url
 
-        microphone_device_id = self.config.microphone_device_id
-        microphone_name = self.config.microphone_name
-        remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
-        self.asr: ASRProvider = ASRProvider(
+        self.asr: ASRRTSPProvider = ASRRTSPProvider(
+            rtsp_url=rtsp_url,
             rate=rate,
-            chunk=chunk,
             ws_url=base_url,
-            device_id=microphone_device_id,
-            microphone_name=microphone_name,
-            remote_input=remote_input,
+            language_code="en-US",
             enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()
@@ -175,7 +163,7 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
 
         Returns
         -------
-        Optional[Message]
+        Optional[str]
             Processed text message or None if input is None
         """
         if raw_input is None:
@@ -195,7 +183,6 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
         pending_message = await self._raw_to_text(raw_input)
         if pending_message is None:
             if len(self.messages) != 0:
-                # Skip sleep if there's already a message in the messages buffer
                 self.global_sleep_ticker_provider.skip_sleep = True
 
         if pending_message is not None:
@@ -247,7 +234,7 @@ INPUT: {self.descriptor_for_LLM}
 
     def stop(self):
         """
-        Stop the ASR input.
+        Stop the ASR input handler and clean up resources.
         """
         if self.asr:
             self.asr.stop()

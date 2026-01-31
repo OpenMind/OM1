@@ -90,7 +90,7 @@
 #     assert connector.silence_counter == 0
 #     assert connector.audio_topic == "robot/status/audio"
 #     assert connector.session == mock_session
-#     assert connector.auido_pub == mock_pub
+#     assert connector.audio_pub == mock_pub
 
 #     connector.stop()
 
@@ -176,8 +176,8 @@
 #     """Test normal connect flow without silence rate."""
 
 #     connector = SpeakElevenLabsTTSConnector(mock_config)
-#     # Set auido_pub to None so connect goes through full flow instead of returning early
-#     connector.auido_pub = None
+#     # Set audio_pub to None so connect goes through full flow instead of returning early
+#     connector.audio_pub = None
 #     connector.tts.create_pending_message.return_value = "processed_message"
 
 #     connector.io_provider.llm_prompt = "Some prompt without voice input"
@@ -208,7 +208,7 @@
 #     mock_config.silence_rate = 2
 
 #     connector = SpeakElevenLabsTTSConnector(mock_config)
-#     connector.auido_pub = None
+#     connector.audio_pub = None
 
 #     connector.io_provider.llm_prompt = "Some prompt without voice"
 
@@ -241,7 +241,7 @@
 #     mock_config.silence_rate = 2
 
 #     connector = SpeakElevenLabsTTSConnector(mock_config)
-#     connector.auido_pub = None
+#     connector.audio_pub = None
 #     connector.tts.create_pending_message.return_value = "processed_message"
 
 #     connector.io_provider.llm_prompt = "Some prompt with INPUT: Voice data"
@@ -271,7 +271,7 @@
 #     mock_config.silence_rate = 2
 
 #     connector = SpeakElevenLabsTTSConnector(mock_config)
-#     connector.auido_pub = None
+#     connector.audio_pub = None
 #     connector.tts.create_pending_message.return_value = "processed_message"
 
 #     connector.io_provider.llm_prompt = "Some prompt without voice"
@@ -328,7 +328,7 @@
 #     mock_session.declare_subscriber.return_value = Mock()
 
 #     connector = SpeakElevenLabsTTSConnector(mock_config)
-#     connector.auido_pub = None
+#     connector.audio_pub = None
 #     connector.tts.create_pending_message.return_value = "processed_message"
 
 #     connector.io_provider.llm_prompt = "Some prompt"

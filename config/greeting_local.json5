@@ -12,11 +12,10 @@
   unitree_ethernet: "enP2p1s0",
   system_governance: "",
   cortex_llm: {
-    type: "OpenAILLM",
+    type: "QwenLLM",
     config: {
       agent_name: "Bits",
-      history_length: 10,
-      model: "gpt-4.1-mini",
+      history_length: 3,
     },
   },
 
@@ -43,8 +42,9 @@
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "GoogleASRInput",
+          type: "RivaASRInput",
           config: {
+            base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,
           },
         },
@@ -54,7 +54,7 @@
         {
           name: "greeting_conversation",
           llm_label: "greeting_conversation",
-          connector: "greeting_conversation_elevenlabs",
+          connector: "greeting_conversation_kokoro",
         },
       ],
       backgrounds: [],
@@ -63,6 +63,7 @@
           hook_type: "on_startup",
           handler_type: "message",
           handler_config: {
+            tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
           },
         },
@@ -70,6 +71,7 @@
           hook_type: "on_entry",
           handler_type: "message",
           handler_config: {
+            tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
           },
         },
@@ -77,6 +79,7 @@
           hook_type: "on_exit",
           handler_type: "message",
           handler_config: {
+            tts_provider: "kokoro",
             message: "It was great chatting with you! Have a wonderful day!",
           },
         },
