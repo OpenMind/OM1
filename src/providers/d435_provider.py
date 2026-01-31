@@ -104,7 +104,11 @@ class D435Provider:
 
         self.running = False
 
-        if self.session:
-            self.session.close()
-
-        logging.info("D435Provider stopped and Zenoh session closed")
+        try:
+            if self.session:
+                self.session.close()
+                logging.info("D435Provider stopped and Zenoh session closed")
+        except Exception as e:
+            logging.error(f"Error stopping D435Provider: {e}")
+        finally:
+            self.session = None

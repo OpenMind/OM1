@@ -243,15 +243,19 @@ class UnitreeG1NavigationProvider:
         """
         self.running = False
 
-        if self.session:
-            self.session.close()
+        try:
+            if self.session:
+                self.session.close()
+
+            if self.ai_status_pub:
+                self.ai_status_pub.undeclare()
+                self.ai_status_pub = None
+
+            logging.info("G1 Navigation Provider stopped")
+        except Exception as e:
+            logging.error(f"Error stopping G1 Navigation Provider: {e}")
+        finally:
             self.session = None
-
-        if self.ai_status_pub:
-            self.ai_status_pub.undeclare()
-            self.ai_status_pub = None
-
-        logging.info("G1 Navigation Provider stopped")
 
     @property
     def navigation_state(self) -> str:
