@@ -123,3 +123,66 @@ def test_calculate_angle_and_distance_arbitrary_point(d435_provider):
 
     assert math.isclose(angle, expected_angle, abs_tol=1e-10)
     assert math.isclose(distance, expected_distance, abs_tol=1e-10)
+
+
+def test_stop():
+    """Test stopping the D435 provider."""
+    from unittest.mock import MagicMock, patch
+
+    with patch("providers.d435_provider.open_zenoh_session") as mock_zenoh:
+        mock_session = MagicMock()
+        mock_zenoh.return_value = mock_session
+
+        # Reset singleton first
+        D435Provider.reset()  # type: ignore
+        provider = D435Provider()
+
+        provider.running = True
+        provider.session = mock_session
+
+        provider.stop()
+
+        assert not provider.running
+        assert provider.session is None
+        mock_session.close.assert_called_once()
+
+
+def test_stop_with_exception():
+    """Test stopping when session.close() raises an exception."""
+    from unittest.mock import MagicMock, patch
+
+    with patch("providers.d435_provider.open_zenoh_session") as mock_zenoh:
+        mock_session = MagicMock()
+        mock_session.close.side_effect = Exception("Close failed")
+        mock_zenoh.return_value = mock_session
+
+        # Reset singleton first
+        D435Provider.reset()  # type: ignore
+        provider = D435Provider()
+
+        provider.running = True
+        provider.session = mock_session
+
+        # Should not raise exception, just log error
+        provider.stop()
+
+        assert not provider.running
+        assert provider.session is None
+        mock_session.close.assert_called_once()
+
+
+def test_stop_when_not_running():
+    """Test stopping when provider is not running."""
+    from unittest.mock import patch
+
+    with patch("providers.d435_provider.open_zenoh_session"):
+        # Reset singleton first
+        D435Provider.reset()  # type: ignore
+        provider = D435Provider()
+
+        provider.running = False
+
+        # Should return early
+        provider.stop()
+
+        assert not provider.running
