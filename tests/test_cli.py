@@ -1,5 +1,3 @@
-"""Unit tests for cli.py"""
-
 import os
 from unittest.mock import MagicMock, mock_open, patch
 
