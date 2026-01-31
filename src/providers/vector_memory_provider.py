@@ -1,6 +1,6 @@
 """
 Vector Memory Provider for OM1
-Provides long-term conversational memory using semantic search
+Provides long-term conversational memory using semantic search.
 
 Addresses issue #856: Long-term Conversational Memory for Single-Agent Mode
 """
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ConversationTurn:
-    """Represents a single conversation turn"""
+    """Represents a single conversation turn."""
 
     user_message: str
     robot_response: str
@@ -61,7 +61,7 @@ class VectorMemoryProvider:
 
     def __init__(self, config: Dict[str, Any], agent_name: str = "Robot"):
         """
-        Initialize Vector Memory Provider
+        Initialize Vector Memory Provider.
 
         Args:
             config: Configuration dictionary
@@ -107,7 +107,7 @@ class VectorMemoryProvider:
             self.enabled = False
 
     def _ensure_collection_exists(self):
-        """Create collection if it doesn't exist"""
+        """Create collection if it doesn't exist."""
         try:
             self.client.get_collection(self.collection_name)
             logger.debug(f"Collection '{self.collection_name}' exists")
@@ -127,7 +127,7 @@ class VectorMemoryProvider:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        Store a conversation turn in vector memory
+        Store a conversation turn in vector memory.
 
         Args:
             user_message: What the user said
@@ -171,13 +171,14 @@ class VectorMemoryProvider:
         self, query: str, limit: Optional[int] = None
     ) -> List[ConversationTurn]:
         """
-        Search for relevant past conversations
+        Search for relevant past conversations.
 
         Args:
             query: Current user message
             limit: Max number of memories to return
 
-        Returns:
+        Returns
+        -------
             List of relevant past conversation turns
         """
         if not self.enabled:
@@ -221,12 +222,13 @@ class VectorMemoryProvider:
 
     def format_memories_for_context(self, memories: List[ConversationTurn]) -> str:
         """
-        Format retrieved memories for LLM context
+        Format retrieved memories for LLM context.
 
         Args:
             memories: List of conversation turns
 
-        Returns:
+        Returns
+        -------
             Formatted string for LLM prompt
         """
         if not memories:
@@ -255,12 +257,13 @@ class VectorMemoryProvider:
 
     async def get_enriched_context(self, current_user_message: str) -> str:
         """
-        Get enriched context with relevant memories
+        Get enriched context with relevant memories.
 
         Args:
             current_user_message: What user just said
 
-        Returns:
+        Returns
+        -------
             Context string to inject into prompt
         """
         if not self.enabled:

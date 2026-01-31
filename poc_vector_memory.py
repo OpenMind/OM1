@@ -1,6 +1,6 @@
 """
 POC: Vector Memory System - Standalone Test
-Tidak modify existing OM1 code, pure testing concept
+Tidak modify existing OM1 code, pure testing concept.
 """
 
 import asyncio
@@ -12,7 +12,7 @@ from sentence_transformers import SentenceTransformer
 
 
 class VectorMemoryPOC:
-    """Standalone POC untuk test vector memory concept"""
+    """Standalone POC untuk test vector memory concept."""
 
     def __init__(self):
         print("🔧 Initializing Vector Memory POC...")
@@ -34,7 +34,7 @@ class VectorMemoryPOC:
         print("✅ Ready!\n")
 
     async def store(self, content: str, metadata: dict = None):
-        """Store a memory"""
+        """Store a memory."""
         # Generate embedding
         embedding = self.embedder.encode(content).tolist()
 
@@ -54,7 +54,7 @@ class VectorMemoryPOC:
         return point_id
 
     async def search(self, query: str, limit: int = 3):
-        """Search for relevant memories"""
+        """Search for relevant memories."""
         # Generate query embedding
         query_embedding = self.embedder.encode(query).tolist()
 
@@ -78,7 +78,7 @@ class VectorMemoryPOC:
 
 
 async def demo():
-    """Demo the POC"""
+    """Demo the POC."""
     print("=" * 60)
     print("🧠 Vector Memory POC - Testing Semantic Search")
     print("=" * 60)

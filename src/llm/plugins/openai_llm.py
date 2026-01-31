@@ -202,12 +202,13 @@ class OpenAILLM(LLM[R]):
 
     def _extract_response_from_actions(self, actions: T.List) -> str:
         """
-        Extract readable response from actions for memory storage
+        Extract readable response from actions for memory storage.
 
         Args:
             actions: List of actions from LLM
 
-        Returns:
+        Returns
+        -------
             String representation of robot's response
         """
         responses = []
