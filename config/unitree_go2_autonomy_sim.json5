@@ -1,5 +1,5 @@
 {
-  version: "v1.0.2",
+  version: "v1.0.1",
   hertz: 1,
   unitree_ethernet: "lo",
   name: "bits",
@@ -24,7 +24,7 @@
       type: "GoogleASRInput",
     },
     {
-      type: "VLMVila",
+      type: "VLMVilaZenoh",
     },
     {
       type: "SimplePaths",
