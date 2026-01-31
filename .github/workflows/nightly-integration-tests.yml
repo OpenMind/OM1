@@ -32,7 +32,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y portaudio19-dev python3-pyaudio cmake
+          sudo apt-get install -y portaudio19-dev python3-pyaudio cmake ffmpeg
 
       - name: Cache CycloneDDS build
         uses: actions/cache@v4
