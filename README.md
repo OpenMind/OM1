@@ -47,7 +47,7 @@ brew install portaudio ffmpeg
 For Linux
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-dev ffmpeg
+sudo apt-get install portaudio19-dev python3-dev ffmpeg
 ```
 
 ### Obtain an OpenMind API Key
