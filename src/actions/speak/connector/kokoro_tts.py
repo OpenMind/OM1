@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from typing import Optional
 from uuid import uuid4
 
 import zenoh
@@ -9,8 +8,8 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
-from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
+from providers.kokoro_tts_provider import KokoroTTSProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
 from zenoh_msgs import (
     AudioStatus,
@@ -22,65 +21,65 @@ from zenoh_msgs import (
 )
 
 
-class SpeakElevenLabsTTSConfig(ActionConfig):
+class SpeakKokoroTTSConfig(ActionConfig):
     """
-    Configuration for ElevenLabs TTS connector.
+    Configuration for Kokoro TTS connector.
 
     Parameters
     ----------
-    elevenlabs_api_key : Optional[str]
-        ElevenLabs API key.
     voice_id : str
-        ElevenLabs voice ID.
+        Kokoro voice ID.
     model_id : str
-        ElevenLabs model ID.
+        Kokoro model ID.
     output_format : str
-        ElevenLabs output format.
+        Kokoro output format.
+    rate : int
+        Audio sample rate in Hz.
+    enable_tts_interrupt : bool
+        Enable TTS interrupt when ASR detects speech during playback.
     silence_rate : int
         Number of responses to skip before speaking.
     """
 
-    elevenlabs_api_key: Optional[str] = Field(
-        default=None,
-        description="ElevenLabs API key",
-    )
     voice_id: str = Field(
-        default="JBFqnCBsd6RMkjVDRZzb",
-        description="ElevenLabs voice ID",
+        default="af_bella",
+        description="Kokoro voice ID",
     )
     model_id: str = Field(
-        default="eleven_flash_v2_5",
-        description="ElevenLabs model ID",
+        default="kokoro",
+        description="Kokoro model ID",
     )
     output_format: str = Field(
-        default="mp3_44100_128",
-        description="ElevenLabs output format",
+        default="pcm",
+        description="Kokoro output format",
     )
-    silence_rate: int = Field(
-        default=0,
-        description="Number of responses to skip before speaking",
+    rate: int = Field(
+        default=24000,
+        description="Audio sample rate in Hz",
     )
     enable_tts_interrupt: bool = Field(
         default=False,
         description="Enable TTS interrupt when ASR detects speech during playback",
     )
+    silence_rate: int = Field(
+        default=0,
+        description="Number of responses to skip before speaking",
+    )
 
 
-class SpeakElevenLabsTTSConnector(
-    ActionConnector[SpeakElevenLabsTTSConfig, SpeakInput]
-):
+class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput]):
     """
-    A "Speak" connector that uses the ElevenLabs TTS Provider to perform Text-to-Speech.
+    A "Speak" connector that uses the Kokoro TTS Provider to perform Text-to-Speech.
     This connector is compatible with the standard SpeakInput interface.
     """
 
-    def __init__(self, config: SpeakElevenLabsTTSConfig):
+    def __init__(self, config: SpeakKokoroTTSConfig):
         """
         Initializes the connector and its underlying TTS provider.
 
         Parameters
         ----------
-        config : SpeakElevenLabsTTSConfig
+        config : SpeakKokoroTTSConfig
             Configuration for the connector.
         """
         super().__init__(config)
@@ -92,11 +91,11 @@ class SpeakElevenLabsTTSConnector(
         self.io_provider = IOProvider()
         self.last_voice_command_time = time.time()
 
-        # Eleven Labs TTS configuration
-        elevenlabs_api_key = self.config.elevenlabs_api_key
+        # Kokoro TTS configuration
         voice_id = self.config.voice_id
         model_id = self.config.model_id
         output_format = self.config.output_format
+        rate = self.config.rate
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
         # silence rate
@@ -137,26 +136,26 @@ class SpeakElevenLabsTTSConnector(
         except Exception as e:
             logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
 
-        # Initialize Eleven Labs TTS Provider
-        self.tts = ElevenLabsTTSProvider(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+        # Initialize Kokoro TTS Provider
+        self.tts = KokoroTTSProvider(
+            url="http://127.0.0.1:8880/v1",
             api_key=api_key,
-            elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
             model_id=model_id,
             output_format=output_format,
+            rate=rate,
             enable_tts_interrupt=enable_tts_interrupt,
         )
         self.tts.start()
 
-        # Configure Eleven Labs TTS Provider to ensure settings are applied
+        # Configure Kokoro TTS Provider to ensure settings are applied
         self.tts.configure(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="http://127.0.0.1:8880/v1",
             api_key=api_key,
-            elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
             model_id=model_id,
             output_format=output_format,
+            rate=rate,
             enable_tts_interrupt=enable_tts_interrupt,
         )
 
@@ -179,7 +178,7 @@ class SpeakElevenLabsTTSConnector(
 
     async def connect(self, output_interface: SpeakInput) -> None:
         """
-        Process a speak action by sending text to Elevenlabs TTS.
+        Process a speak action by sending text to Kokoro TTS.
 
         Parameters
         ----------

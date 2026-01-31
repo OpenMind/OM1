@@ -97,8 +97,8 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         # Call the provider's speak method using data from SpeakInput.
         # The text comes from the 'action' field.
         # 'interrupt' and 'timestamp' use default values since they are not in SpeakInput.
-        self.tts.speak(
-            tts=output_interface.action,
+        self.tts.adding_pending_message(
+            message=output_interface.action,
             interrupt=True,
             timestamp=int(time.time()),  # Use current time as a sensible default
         )
@@ -161,3 +161,13 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
             return self._zenoh_tts_status_response_pub.put(
                 ai_status_response.serialize()
             )
+
+    def stop(self):
+        """
+        Stop the UbTtsConnector and clean up resources.
+        """
+        if self.session:
+            self.session.close()
+            logging.info("UB TTS Zenoh client closed.")
+
+        self.tts.stop()
