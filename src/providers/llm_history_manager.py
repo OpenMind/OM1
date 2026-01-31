@@ -1,3 +1,6 @@
+import json
+import os
+import aiofiles
 import asyncio
 import functools
 import logging
@@ -87,6 +90,18 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+        self.history_file = os.path.join(os.getcwd(), "conversation_history.jsonl")
+        if os.path.exists(self.history_file):
+            try:
+                with open(self.history_file, "r") as f:
+                    for line in f:
+                        if line.strip():
+                            data = json.loads(line)
+                            self.history.append(ChatMessage(role=data['role'], content=data['content']))
+                logging.info(f"Loaded {len(self.history)} messages from {self.history_file}")
+            except Exception as e:
+                logging.error(f"Error loading history file: {e}")
+
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -268,7 +283,16 @@ class LLMHistoryManager:
             messages.pop(0) if messages else None
             messages.pop(0) if messages else None
 
-    def get_messages(self) -> List[dict]:
+    
+    async def _persist_message(self, message: ChatMessage):
+        """追加消息到磁盘，确保崩溃安全。"""
+        try:
+            data = {"role": message.role, "content": message.content}
+            async with aiofiles.open(self.history_file, mode='a') as f:
+                await f.write(json.dumps(data) + "\n")
+        except Exception as e:
+            logging.error(f"Failed to persist history: {e}")
+def get_messages(self) -> List[dict]:
         """
         Get messages in format required by OpenAI API.
 
@@ -323,7 +347,7 @@ class LLMHistoryManager:
                 inputs = ChatMessage(role="user", content=formatted_inputs)
 
                 logging.debug(f"Inputs: {inputs}")
-                self.history_manager.history.append(inputs)
+                self.history_manager.history.append(inputs)\n                asyncio.create_task(self.history_manager._persist_message(inputs))
 
                 messages = self.history_manager.get_messages()
                 logging.debug(f"messages:\n{messages}")
