@@ -19,7 +19,7 @@ class BatteryStatus:
     battery_level: float
     temperature: float
     voltage: float
-    timestamp: str
+    timestamp: float
     charging_status: bool = False
 
     def to_dict(self) -> dict:
@@ -54,7 +54,7 @@ class BatteryStatus:
             charging_status=data.get("charging_status", False),
             temperature=data.get("temperature", 0.0),
             voltage=data.get("voltage", 0.0),
-            timestamp=data.get("timestamp", str(time.time())),
+            timestamp=data.get("timestamp", time.time()),
         )
 
 
@@ -67,7 +67,7 @@ class CommandStatus:
     vx: float
     vy: float
     vyaw: float
-    timestamp: str
+    timestamp: float
 
     def to_dict(self) -> dict:
         """
@@ -158,7 +158,7 @@ class TeleopsStatus:
     Data class to represent the status of the teleops system.
     """
 
-    update_time: str
+    update_time: float
     battery_status: BatteryStatus
     action_status: ActionStatus = field(
         default_factory=lambda: ActionStatus(ActionType.AI, time.time())

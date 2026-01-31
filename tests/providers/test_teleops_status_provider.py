@@ -33,14 +33,14 @@ def test_battery_status_creation():
         battery_level=85.5,
         temperature=25.0,
         voltage=12.5,
-        timestamp="2024-01-01T00:00:00",
+        timestamp=1704067200.0,
         charging_status=True,
     )
 
     assert battery.battery_level == 85.5
     assert battery.temperature == 25.0
     assert battery.voltage == 12.5
-    assert battery.timestamp == "2024-01-01T00:00:00"
+    assert battery.timestamp == 1704067200.0
     assert battery.charging_status is True
 
 
@@ -50,7 +50,7 @@ def test_battery_status_to_dict():
         battery_level=85.5,
         temperature=25.0,
         voltage=12.5,
-        timestamp="2024-01-01T00:00:00",
+        timestamp=1704067200.0,
         charging_status=False,
     )
 
@@ -59,7 +59,7 @@ def test_battery_status_to_dict():
     assert result["battery_level"] == 85.5
     assert result["temperature"] == 25.0
     assert result["voltage"] == 12.5
-    assert result["timestamp"] == "2024-01-01T00:00:00"
+    assert result["timestamp"] == 1704067200.0
     assert result["charging_status"] is False
 
 
@@ -69,7 +69,7 @@ def test_battery_status_from_dict():
         "battery_level": 75.0,
         "temperature": 30.0,
         "voltage": 11.8,
-        "timestamp": "2024-01-01T12:00:00",
+        "timestamp": 1704110400.0,
         "charging_status": True,
     }
 
@@ -78,7 +78,7 @@ def test_battery_status_from_dict():
     assert battery.battery_level == 75.0
     assert battery.temperature == 30.0
     assert battery.voltage == 11.8
-    assert battery.timestamp == "2024-01-01T12:00:00"
+    assert battery.timestamp == 1704110400.0
     assert battery.charging_status is True
 
 
@@ -91,41 +91,41 @@ def test_battery_status_from_dict_with_defaults():
     assert battery.temperature == 0.0
     assert battery.voltage == 0.0
     assert battery.charging_status is False
-    assert isinstance(battery.timestamp, str)
+    assert isinstance(battery.timestamp, float)
 
 
 def test_command_status_creation():
     """Test CommandStatus creation."""
-    command = CommandStatus(vx=1.5, vy=0.5, vyaw=0.2, timestamp="2024-01-01T00:00:00")
+    command = CommandStatus(vx=1.5, vy=0.5, vyaw=0.2, timestamp=1704067200.0)
 
     assert command.vx == 1.5
     assert command.vy == 0.5
     assert command.vyaw == 0.2
-    assert command.timestamp == "2024-01-01T00:00:00"
+    assert command.timestamp == 1704067200.0
 
 
 def test_command_status_to_dict():
     """Test CommandStatus to_dict conversion."""
-    command = CommandStatus(vx=1.0, vy=0.0, vyaw=0.5, timestamp="2024-01-01T00:00:00")
+    command = CommandStatus(vx=1.0, vy=0.0, vyaw=0.5, timestamp=1704067200.0)
 
     result = command.to_dict()
 
     assert result["vx"] == 1.0
     assert result["vy"] == 0.0
     assert result["vyaw"] == 0.5
-    assert result["timestamp"] == "2024-01-01T00:00:00"
+    assert result["timestamp"] == 1704067200.0
 
 
 def test_command_status_from_dict():
     """Test CommandStatus from_dict creation."""
-    data = {"vx": 2.0, "vy": 1.0, "vyaw": 0.3, "timestamp": "2024-01-01T12:00:00"}
+    data = {"vx": 2.0, "vy": 1.0, "vyaw": 0.3, "timestamp": 1704110400.0}
 
     command = CommandStatus.from_dict(data)
 
     assert command.vx == 2.0
     assert command.vy == 1.0
     assert command.vyaw == 0.3
-    assert command.timestamp == "2024-01-01T12:00:00"
+    assert command.timestamp == 1704110400.0
 
 
 def test_action_type_enum():
@@ -169,20 +169,20 @@ def test_teleops_status_creation():
         battery_level=80.0,
         temperature=25.0,
         voltage=12.0,
-        timestamp="2024-01-01T00:00:00",
+        timestamp=1704067200.0,
     )
 
     action = ActionStatus(action=ActionType.AI, timestamp=1234567890.0)
 
     status = TeleopsStatus(
-        update_time="2024-01-01T00:00:00",
+        update_time=1704067200.0,
         battery_status=battery,
         action_status=action,
         machine_name="robot1",
         video_connected=True,
     )
 
-    assert status.update_time == "2024-01-01T00:00:00"
+    assert status.update_time == 1704067200.0
     assert status.battery_status == battery
     assert status.action_status == action
     assert status.machine_name == "robot1"
@@ -195,13 +195,13 @@ def test_teleops_status_to_dict():
         battery_level=80.0,
         temperature=25.0,
         voltage=12.0,
-        timestamp="2024-01-01T00:00:00",
+        timestamp=1704067200.0,
     )
 
     action = ActionStatus(action=ActionType.AI, timestamp=1234567890.0)
 
     status = TeleopsStatus(
-        update_time="2024-01-01T00:00:00",
+        update_time=1704067200.0,
         battery_status=battery,
         action_status=action,
         machine_name="robot1",
@@ -210,7 +210,7 @@ def test_teleops_status_to_dict():
 
     result = status.to_dict()
 
-    assert result["update_time"] == "2024-01-01T00:00:00"
+    assert result["update_time"] == 1704067200.0
     assert result["machine_name"] == "robot1"
     assert result["video_connected"] is False
     assert isinstance(result["battery_status"], dict)
@@ -220,14 +220,14 @@ def test_teleops_status_to_dict():
 def test_teleops_status_from_dict():
     """Test TeleopsStatus from_dict creation."""
     data = {
-        "update_time": "2024-01-01T00:00:00",
+        "update_time": 1704067200.0,
         "machine_name": "robot2",
         "video_connected": True,
         "battery_status": {
             "battery_level": 90.0,
             "temperature": 20.0,
             "voltage": 12.5,
-            "timestamp": "2024-01-01T00:00:00",
+            "timestamp": 1704067200.0,
             "charging_status": True,
         },
         "action_status": {"action": "TELEOPS", "timestamp": 1234567890.0},
@@ -235,7 +235,7 @@ def test_teleops_status_from_dict():
 
     status = TeleopsStatus.from_dict(data)
 
-    assert status.update_time == "2024-01-01T00:00:00"
+    assert status.update_time == 1704067200.0
     assert status.machine_name == "robot2"
     assert status.video_connected is True
     assert status.battery_status.battery_level == 90.0
