@@ -70,7 +70,7 @@
                                 "pages": [
                                     "full_autonomy_guidelines/om1_avatar",
                                     "full_autonomy_guidelines/om",
-                                    "full_autonomy_guidelines/unitree_sdk",
+                                    "full_autonomy_guidelines/om1_ros2_sdk",
                                     "full_autonomy_guidelines/om1_video_processor"
                                 ]
 
