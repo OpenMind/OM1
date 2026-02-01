@@ -209,38 +209,6 @@ class PrometheusMonitor:
         uptime_min = int(data["uptime"] / 60)
         uptime_sec = int(data["uptime"] % 60)
 
-        # Group providers by category
-        categories: Dict[str, list] = {}
-        for p in data["providers"]:
-            cat = p["category"]
-            if cat not in categories:
-                categories[cat] = []
-            categories[cat].append(p)
-
-        # Generate provider rows
-        provider_html = ""
-        for category in sorted(categories.keys()):
-            providers = categories[category]
-            provider_html += f"""
-            <div class="category-section">
-                <h3 class="category-title">{category.upper()}</h3>
-                <div class="provider-grid">
-            """
-            for p in providers:
-                status_class = "healthy" if p["status"] == "healthy" else "unhealthy"
-                heartbeat = f"{p['last_heartbeat']:.1f}s"
-                provider_html += f"""
-                <div class="provider-card {status_class}">
-                    <div class="provider-name">{p['name']}</div>
-                    <div class="provider-type">{p['type']}</div>
-                    <div class="provider-stats">
-                        <span class="heartbeat">Heartbeat: {heartbeat}</span>
-                        <span class="errors">Errors: {p['error_count']}</span>
-                    </div>
-                </div>
-                """
-            provider_html += "</div></div>"
-
         return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -248,109 +216,128 @@ class PrometheusMonitor:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="5">
-    <title>OM1 Health Dashboard</title>
+    <title>OM1 Health</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #eee;
-            min-height: 100vh;
-            padding: 20px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-size: 13px;
+            line-height: 1.5;
         }}
-        .container {{ max-width: 1400px; margin: 0 auto; }}
+        .container {{ max-width: 1200px; margin: 0 auto; padding: 24px; }}
         .header {{
-            text-align: center;
-            padding: 20px 0 30px;
-            border-bottom: 1px solid #333;
-            margin-bottom: 30px;
-        }}
-        .header h1 {{ font-size: 2.5rem; color: #00d9ff; margin-bottom: 10px; }}
-        .header .subtitle {{ color: #888; font-size: 1rem; }}
-        .stats-row {{
             display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin-bottom: 40px;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #21262d;
+            margin-bottom: 24px;
         }}
-        .stat-card {{
-            background: rgba(255,255,255,0.05);
+        .header h1 {{ font-size: 16px; font-weight: 600; color: #f0f6fc; }}
+        .header-stats {{ display: flex; gap: 24px; font-size: 12px; }}
+        .header-stats span {{ color: #8b949e; }}
+        .header-stats .value {{ font-weight: 600; margin-left: 4px; }}
+        .header-stats .ok {{ color: #3fb950; }}
+        .header-stats .err {{ color: #f85149; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{
+            text-align: left;
+            padding: 8px 12px;
+            color: #8b949e;
+            font-weight: 500;
+            font-size: 12px;
+            border-bottom: 1px solid #21262d;
+        }}
+        td {{
+            padding: 10px 12px;
+            border-bottom: 1px solid #21262d;
+        }}
+        tr:hover {{ background: #161b22; }}
+        .status {{
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }}
+        .status.ok {{ background: #3fb950; }}
+        .status.err {{ background: #f85149; }}
+        .name {{ color: #f0f6fc; font-weight: 500; }}
+        .type {{ color: #8b949e; }}
+        .category {{
+            display: inline-block;
+            padding: 2px 8px;
+            background: #21262d;
             border-radius: 12px;
-            padding: 20px 40px;
-            text-align: center;
+            font-size: 11px;
+            color: #8b949e;
         }}
-        .stat-value {{ font-size: 3rem; font-weight: bold; }}
-        .stat-value.healthy {{ color: #00ff88; }}
-        .stat-value.unhealthy {{ color: #ff4757; }}
-        .stat-value.uptime {{ color: #00d9ff; }}
-        .stat-label {{ color: #888; margin-top: 5px; }}
-        .category-section {{ margin-bottom: 30px; }}
-        .category-title {{
-            font-size: 1.2rem;
-            color: #00d9ff;
-            margin-bottom: 15px;
-            padding-left: 10px;
-            border-left: 3px solid #00d9ff;
-        }}
-        .provider-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
-        }}
-        .provider-card {{
-            background: rgba(255,255,255,0.05);
-            border-radius: 10px;
-            padding: 15px 20px;
-            border-left: 4px solid #00ff88;
-            transition: transform 0.2s;
-        }}
-        .provider-card:hover {{ transform: translateX(5px); }}
-        .provider-card.unhealthy {{ border-left-color: #ff4757; }}
-        .provider-name {{ font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }}
-        .provider-type {{ color: #888; font-size: 0.85rem; margin-bottom: 10px; }}
-        .provider-stats {{ display: flex; gap: 20px; font-size: 0.85rem; }}
-        .provider-stats span {{ color: #aaa; }}
+        .num {{ font-variant-numeric: tabular-nums; color: #8b949e; }}
+        .num.warn {{ color: #d29922; }}
         .footer {{
-            text-align: center;
-            padding: 30px 0;
-            color: #555;
-            font-size: 0.85rem;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #21262d;
+            font-size: 12px;
+            color: #484f58;
         }}
-        .footer a {{ color: #00d9ff; text-decoration: none; }}
+        .footer a {{ color: #58a6ff; text-decoration: none; }}
+        .footer a:hover {{ text-decoration: underline; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>OM1 Health Dashboard</h1>
-            <div class="subtitle">Real-time provider health monitoring</div>
-        </div>
-
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-value healthy">{data['healthy_count']}</div>
-                <div class="stat-label">Healthy</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value unhealthy">{data['unhealthy_count']}</div>
-                <div class="stat-label">Unhealthy</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value uptime">{uptime_min}m {uptime_sec}s</div>
-                <div class="stat-label">Uptime</div>
+            <h1>OM1 Health</h1>
+            <div class="header-stats">
+                <span>Uptime<span class="value">{uptime_min}m {uptime_sec}s</span></span>
+                <span>Healthy<span class="value ok">{data['healthy_count']}</span></span>
+                <span>Unhealthy<span class="value err">{data['unhealthy_count']}</span></span>
             </div>
         </div>
-
-        {provider_html}
-
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Provider</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Heartbeat</th>
+                    <th>Errors</th>
+                </tr>
+            </thead>
+            <tbody>
+                {self._generate_table_rows(data['providers'])}
+            </tbody>
+        </table>
         <div class="footer">
-            <a href="/metrics">View Raw Metrics</a> |
-            <a href="/api/health">Health API (JSON)</a>
+            <a href="/metrics">/metrics</a> · <a href="/api/health">/api/health</a>
         </div>
     </div>
 </body>
 </html>
 """
+
+    def _generate_table_rows(self, providers: list) -> str:
+        """Generate table rows for providers."""
+        rows = ""
+        for p in sorted(providers, key=lambda x: (x['category'], x['name'])):
+            status_class = "ok" if p["status"] == "healthy" else "err"
+            heartbeat = f"{p['last_heartbeat']:.1f}s"
+            error_class = "warn" if p["error_count"] > 0 else ""
+            rows += f"""
+                <tr>
+                    <td><span class="status {status_class}"></span></td>
+                    <td class="name">{p['name']}</td>
+                    <td class="type">{p['type']}</td>
+                    <td><span class="category">{p['category']}</span></td>
+                    <td class="num">{heartbeat}</td>
+                    <td class="num {error_class}">{p['error_count']}</td>
+                </tr>
+            """
+        return rows
 
     def stop(self) -> None:
         """Stop the health check thread."""
