@@ -38,11 +38,11 @@
     },
   },
   agent_actions: [
-    {
-      name: "move_go2_autonomy",
-      llm_label: "move",
-      connector: "unitree_sdk_advance",
-    },
+    // {
+    //   name: "move_go2_autonomy",
+    //   llm_label: "move",
+    //   connector: "unitree_sdk_advance",
+    // },
     {
       name: "speak",
       llm_label: "speak",
@@ -68,6 +68,15 @@
     },
     {
       type: "UnitreeGo2State",
+    },
+    {
+      type: "WelcomeStatusPublisher",
+      config: {
+        ros2_topic: "om/welcome",
+        zenoh_topic: "om/welcome",
+        message: "welcome mode",
+        interval: 1.0
+      }
     },
   ],
 }
