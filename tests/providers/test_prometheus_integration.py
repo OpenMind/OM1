@@ -411,7 +411,9 @@ class TestHeartbeatAndErrorReporting:
             # Verify multiple providers registered
             assert "Odom" in monitor._providers
             final_count = len(monitor._providers)
-            assert final_count >= 2, f"Expected >= 2 providers, got {final_count}: {list(monitor._providers.keys())}"
+            assert (
+                final_count >= 2
+            ), f"Expected >= 2 providers, got {final_count}: {list(monitor._providers.keys())}"
 
     def test_provider_metadata_stored(self):
         """Test that provider metadata is stored correctly."""
