@@ -4,61 +4,49 @@ import random
 from queue import Queue
 from typing import List, Optional
 
-import zenoh
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
-from providers.face_presence_provider import FacePresenceProvider
 from providers.odom_provider import OdomProvider, RobotState
-from providers.simple_paths_provider import SimplePathsProvider
+from providers.rplidar_provider import RPLidarProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
-from zenoh_msgs import (
-    AIStatusRequest,
-    AIStatusResponse,
-    String,
-    open_zenoh_session,
-    prepare_header,
-)
 
 
-class MoveUnitreeSDKAdvanceConfig(ActionConfig):
+class MoveUnitreeRPLidarSDKConfig(ActionConfig):
     """
-    Configuration for MoveUnitreeSDKAdvance connector.
+    Configuration for MoveUnitreeRPLidarSDKConfig connector.
 
     Parameters
     ----------
     unitree_ethernet : str
-        Ethernet channel for Unitree Go2 odometry data.
-    mode : Optional[str]
-        Operation mode, e.g., "guard".
+        Ethernet channel for Unitree Go2 odometry.
     """
 
     unitree_ethernet: str = Field(
         default="eth0",
-        description="Ethernet channel for Unitree Go2 odometry data.",
-    )
-    mode: Optional[str] = Field(
-        default=None,
-        description='Operation mode, e.g., "guard".',
+        description="Ethernet channel for Unitree Go2 odometry.",
     )
 
 
-class MoveUnitreeSDKAdvanceConnector(
-    ActionConnector[MoveUnitreeSDKAdvanceConfig, MoveInput]
+class MoveUnitreeRPLidarSDKConnector(
+    ActionConnector[MoveUnitreeRPLidarSDKConfig, MoveInput]
 ):
     """
-    Connector for Move Go2 Autonomy using Unitree SDK Advance.
+    Connector for moving Unitree Go2 robot using RPLidar for obstacle detection.
+
+    This plugin loads the possible paths from the RPLidarProvider and uses them to
+    safely execute movement commands received from the AI system.
     """
 
-    def __init__(self, config: MoveUnitreeSDKAdvanceConfig):
+    def __init__(self, config: MoveUnitreeRPLidarSDKConfig):
         """
-        Initialize the MoveUnitreeSDKAdvance connector.
+        Initialize the MoveUnitreeSDK connector.
 
         Parameters
         ----------
-        config : MoveUnitreeSDKAdvanceConfig
+        config : MoveUnitreeRPLidarSDKConfig
             The configuration for the action connector.
         """
         super().__init__(config)
@@ -66,7 +54,6 @@ class MoveUnitreeSDKAdvanceConnector(
         self.dog_attitude = None
 
         # Movement parameters
-        self.move_speed = 0.5
         self.turn_speed = 0.8
         self.angle_tolerance = 5.0  # degrees
         self.distance_tolerance = 0.05  # meters
@@ -75,9 +62,8 @@ class MoveUnitreeSDKAdvanceConnector(
         self.movement_attempt_limit = 15
         self.gap_previous = 0
 
-        self.path_provider = SimplePathsProvider()
+        self.lidar = RPLidarProvider()
         self.unitree_go2_state = UnitreeGo2StateProvider()
-        self.face_presence_provider = FacePresenceProvider()
 
         # create sport client
         self.sport_client = None
@@ -92,35 +78,7 @@ class MoveUnitreeSDKAdvanceConnector(
             logging.error(f"Error initializing Unitree sport client: {e}")
 
         unitree_ethernet = self.config.unitree_ethernet
-        if unitree_ethernet is None:
-            raise ValueError("unitree_ethernet must be specified in the config")
         self.odom = OdomProvider(channel=unitree_ethernet)
-
-        # Zenoh topic for AI control status
-        self.ai_status_request = "om/ai/request"
-        self.ai_status_response = "om/ai/response"
-        self.session: Optional[zenoh.Session] = None
-        self.pub = None
-
-        try:
-            self.session = open_zenoh_session()
-            self.session.declare_subscriber(
-                self.ai_status_request, self._zenoh_ai_status_request
-            )
-            self._zenoh_ai_status_response_pub = self.session.declare_publisher(
-                self.ai_status_response
-            )
-        except Exception as e:
-            logging.error(f"Error opening Zenoh client: {e}")
-            self.session = None
-            self.pub = None
-
-        # AI control status
-        self.ai_control_enabled = True
-
-        # Mode
-        self.mode = self.config.mode
-
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
@@ -132,17 +90,8 @@ class MoveUnitreeSDKAdvanceConnector(
         output_interface : MoveInput
             The output interface containing the AI movement command.
         """
+        # this is used only by the LLM
         logging.info(f"AI command.connect: {output_interface.action}")
-
-        if self.mode == "guard" and self.face_presence_provider.unknown_faces > 0:
-            logging.info(
-                "Guard mode active and unknown face detected - disregarding AI command"
-            )
-            return
-
-        if not self.ai_control_enabled:
-            logging.info("AI Control is disabled - disregarding AI command")
-            return
 
         if self.unitree_go2_state.state_code == 1002:
             if self.sport_client:
@@ -350,14 +299,14 @@ class MoveUnitreeSDKAdvanceConnector(
 
                 fb = 0
                 if goal_dx > 0:
-                    if 4 not in self.path_provider.advance:
+                    if 4 not in self.lidar.advance:
                         logging.warning("Cannot advance due to barrier")
                         self.clean_abort()
                         return
                     fb = 1
 
                 if goal_dx < 0:
-                    if not self.path_provider.retreat:
+                    if not self.lidar.retreat:
                         logging.warning("Cannot retreat due to barrier")
                         self.clean_abort()
                         return
@@ -385,12 +334,12 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Process turn left command with safety check.
         """
-        if not self.path_provider.turn_left:
+        if not self.lidar.turn_left:
             logging.warning("Cannot turn left due to barrier")
             return
 
-        path = random.choice(self.path_provider.turn_left)
-        path_angle = self.path_provider.path_angles[path]
+        path = random.choice(self.lidar.turn_left)
+        path_angle = self.lidar.path_angles[path]
 
         target_yaw = self._normalize_angle(
             -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
@@ -409,12 +358,12 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Process turn right command with safety check.
         """
-        if not self.path_provider.turn_right:
+        if not self.lidar.turn_right:
             logging.warning("Cannot turn right due to barrier")
             return
 
-        path = random.choice(self.path_provider.turn_right)
-        path_angle = self.path_provider.path_angles[path]
+        path = random.choice(self.lidar.turn_right)
+        path_angle = self.lidar.path_angles[path]
 
         target_yaw = self._normalize_angle(
             -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
@@ -433,12 +382,12 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Process move forward command with safety check.
         """
-        if not self.path_provider.advance:
+        if not self.lidar.advance:
             logging.warning("Cannot advance due to barrier")
             return
 
-        path = random.choice(self.path_provider.advance)
-        path_angle = self.path_provider.path_angles[path]
+        path = random.choice(self.lidar.advance)
+        path_angle = self.lidar.path_angles[path]
 
         target_yaw = self._normalize_angle(
             -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
@@ -457,7 +406,7 @@ class MoveUnitreeSDKAdvanceConnector(
         """
         Process move back command with safety check.
         """
-        if not self.path_provider.retreat:
+        if not self.lidar.retreat:
             logging.warning("Cannot retreat due to barrier")
             return
 
@@ -468,7 +417,7 @@ class MoveUnitreeSDKAdvanceConnector(
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
                 turn_complete=True,
-                speed=0.2,
+                speed=0.3,
             )
         )
 
@@ -530,78 +479,15 @@ class MoveUnitreeSDKAdvanceConnector(
             True if the turn was executed successfully, False if blocked by a barrier.
         """
         if gap > 0:  # Turn left
-            if not self.path_provider.turn_left:
+            if not self.lidar.turn_left:
                 logging.warning("Cannot turn left due to barrier")
                 return False
-            sharpness = min(self.path_provider.turn_left)
+            sharpness = min(self.lidar.turn_left)
             self._move_robot(sharpness * 0.15, 0, self.turn_speed)
         else:  # Turn right
-            if not self.path_provider.turn_right:
+            if not self.lidar.turn_right:
                 logging.warning("Cannot turn right due to barrier")
                 return False
-            sharpness = 8 - max(self.path_provider.turn_right)
+            sharpness = 8 - max(self.lidar.turn_right)
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
-
-    def _zenoh_ai_status_request(self, data: zenoh.Sample):
-        """
-        Process an incoming AI control status message.
-
-        Parameters
-        ----------
-        data : zenoh.Sample
-            The Zenoh sample received, which should have a 'payload' attribute.
-        """
-        ai_control_status = AIStatusRequest.deserialize(data.payload.to_bytes())
-        logging.info(f"Received AI Control Status message: {ai_control_status}")
-
-        code = ai_control_status.code
-        request_id = ai_control_status.request_id
-
-        # Read the current status
-        if code == 2:
-            ai_status_response = AIStatusResponse(
-                header=prepare_header(ai_control_status.header.frame_id),
-                request_id=request_id,
-                code=1 if self.ai_control_enabled else 0,
-                status=String(
-                    data=(
-                        "AI Control Enabled"
-                        if self.ai_control_enabled
-                        else "AI Control Disabled"
-                    )
-                ),
-            )
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
-
-        # Enable the AI control
-        if code == 1:
-            self.ai_control_enabled = True
-            logging.info("AI Control Enabled")
-
-            ai_status_response = AIStatusResponse(
-                header=prepare_header(ai_control_status.header.frame_id),
-                request_id=request_id,
-                code=1,
-                status=String(data="AI Control Enabled"),
-            )
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
-
-        # Disable the AI control
-        if code == 0:
-            self.ai_control_enabled = False
-            logging.info("AI Control Disabled")
-            ai_status_response = AIStatusResponse(
-                header=prepare_header(ai_control_status.header.frame_id),
-                request_id=request_id,
-                code=0,
-                status=String(data="AI Control Disabled"),
-            )
-
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )

@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_sdk import (
-    MoveUnitreeSDKConfig,
-    MoveUnitreeSDKConnector,
+from actions.move_go2_autonomy.connector.unitree_rplidar_sdk import (
+    MoveUnitreeRPLidarSDKConfig,
+    MoveUnitreeRPLidarSDKConnector,
 )
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 from providers.odom_provider import RobotState
@@ -72,28 +72,28 @@ def mock_dependencies():
 
 @pytest.fixture
 def connector(mock_dependencies):
-    """Create a MoveUnitreeSDKConnector instance with mocked dependencies."""
-    config = MoveUnitreeSDKConfig(unitree_ethernet="eth0")
-    connector = MoveUnitreeSDKConnector(config)
+    """Create a MoveUnitreeRPLidarSDKConnector instance with mocked dependencies."""
+    config = MoveUnitreeRPLidarSDKConfig(unitree_ethernet="eth0")
+    connector = MoveUnitreeRPLidarSDKConnector(config)
     return connector
 
 
-class TestMoveUnitreeSDKConfig:
-    """Test MoveUnitreeSDKConfig configuration."""
+class TestMoveUnitreeRPLidarSDKConfig:
+    """Test MoveUnitreeRPLidarSDKConfig configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MoveUnitreeSDKConfig()
+        config = MoveUnitreeRPLidarSDKConfig()
         assert config.unitree_ethernet == "eth0"
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = MoveUnitreeSDKConfig(unitree_ethernet="eth1")
+        config = MoveUnitreeRPLidarSDKConfig(unitree_ethernet="eth1")
         assert config.unitree_ethernet == "eth1"
 
 
-class TestMoveUnitreeSDKConnectorInit:
-    """Test MoveUnitreeSDKConnector initialization."""
+class TestMoveUnitreeRPLidarSDKConnectorInit:
+    """Test MoveUnitreeRPLidarSDKConnector initialization."""
 
     def test_initialization(self, connector, mock_dependencies):
         """Test successful initialization."""
@@ -135,8 +135,8 @@ class TestMoveUnitreeSDKConnectorInit:
         ):
             mock_sport.side_effect = Exception("Connection failed")
 
-            config = MoveUnitreeSDKConfig()
-            connector = MoveUnitreeSDKConnector(config)
+            config = MoveUnitreeRPLidarSDKConfig()
+            connector = MoveUnitreeRPLidarSDKConnector(config)
 
             assert connector.sport_client is None
             mock_logging.error.assert_called()

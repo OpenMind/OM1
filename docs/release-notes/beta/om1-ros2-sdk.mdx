@@ -9,7 +9,7 @@ Beta release for the Docker image openmindagi/unitree_sdk, which provides the fu
 
 ## Features
 
-### [v1.0.0-beta.3](https://github.com/OpenMind/unitree-sdk/releases/tag/v1.0.0-beta.3)
+### [v1.0.0-beta.3](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.0-beta.3)
 - The Docker image and repository have been renamed to unitree_sdk, reflecting the unified SDK architecture and simplifying deployment workflows.
 - Smart Auto-Charging System
   - The robot now supports AprilTag-based visual docking integrated with Nav2 navigation.
@@ -25,7 +25,7 @@ Beta release for the Docker image openmindagi/unitree_sdk, which provides the fu
 - New topics have been added for fetching, enabling, and disabling AI mode, allowing dynamic AI state management via ROS or other interfaces.
 - Agile mode of the robot is unstable due to the payload on its back. Operate in Classic Mode for optimal stability and performance is recommended.
 
-### [v1.0.0-beta.2](https://github.com/OpenMind/unitree-sdk/releases/tag/v1.0.0-beta.2)
+### [v1.0.0-beta.2](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.0-beta.2)
 - Added CRSF Protocol Support
 - Added turbo mode for the xbox controller
 - Added listening and scouting configuration to zenoh_bridge_config for disabling multicast to prevent receiving messages from other robots
@@ -34,7 +34,7 @@ Beta release for the Docker image openmindagi/unitree_sdk, which provides the fu
 - docker-compose is updated to mount a new 'locations' volume. Also extended the orchestrator API to handle 'add_location' and 'list_locations' actions.
 - Added MediaMTX watcher: MediaMTX is a zero-dependency media server and proxy used to publish, read, proxy, record, and playback live video and audio streams. It serves as a central "media router," handling multiple streaming protocols like RTSP, WebRTC, RTMP, and HLS.
 
-### [v1.0.0-beta.1](https://github.com/OpenMind/unitree-sdk/releases/tag/v1.0.0-beta.1)
+### [v1.0.0-beta.1](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.0-beta.1)
 - Real-time SLAM: Simultaneous localization and mapping using SLAM Toolbox
 - RPLiDAR Integration: Support for RPLiDAR A1/A2/A3 series sensors
 - Navigation: Integration with Nav2 for autonomous navigation
@@ -76,7 +76,7 @@ zenoh_bridge acts as a bridge between OM1 and OM1_sensor to publish and subscrib
 
 The unitree_sdk is provided as a Docker image for easy setup.
 ```bash
-git clone https://github.com/OpenMind/unitree-sdk.git
+git clone https://github.com/OpenMind/OM1-ros2-sdk.git
 ```
 ```bash
 cd unitree_sdk

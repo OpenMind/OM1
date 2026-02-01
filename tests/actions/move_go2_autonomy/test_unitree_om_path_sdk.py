@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_sdk_advance import (
-    MoveUnitreeSDKAdvanceConfig,
-    MoveUnitreeSDKAdvanceConnector,
+from actions.move_go2_autonomy.connector.unitree_om_path_sdk import (
+    MoveUnitreeOMPathSDKConfig,
+    MoveUnitreeOMPathSDKConnector,
 )
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 from providers.odom_provider import RobotState
@@ -89,9 +89,9 @@ def mock_dependencies():
 
 @pytest.fixture
 def connector(mock_dependencies):
-    """Create a MoveUnitreeSDKAdvanceConnector instance with mocked dependencies."""
-    config = MoveUnitreeSDKAdvanceConfig(unitree_ethernet="eth0")
-    connector = MoveUnitreeSDKAdvanceConnector(config)
+    """Create a MoveUnitreeOMPathSDKConnector instance with mocked dependencies."""
+    config = MoveUnitreeOMPathSDKConfig(unitree_ethernet="eth0")
+    connector = MoveUnitreeOMPathSDKConnector(config)
     return connector
 
 
@@ -100,19 +100,19 @@ class TestMoveUnitreeSDKAdvanceConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MoveUnitreeSDKAdvanceConfig()
+        config = MoveUnitreeOMPathSDKConfig()
         assert config.unitree_ethernet == "eth0"
         assert config.mode is None
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = MoveUnitreeSDKAdvanceConfig(unitree_ethernet="eth1", mode="guard")
+        config = MoveUnitreeOMPathSDKConfig(unitree_ethernet="eth1", mode="guard")
         assert config.unitree_ethernet == "eth1"
         assert config.mode == "guard"
 
 
-class TestMoveUnitreeSDKAdvanceConnectorInit:
-    """Test MoveUnitreeSDKAdvanceConnector initialization."""
+class TestMoveUnitreeOMPathSDKConnectorInit:
+    """Test MoveUnitreeOMPathSDKConnector initialization."""
 
     def test_initialization(self, connector, mock_dependencies):
         """Test successful initialization."""
@@ -171,8 +171,8 @@ class TestMoveUnitreeSDKAdvanceConnectorInit:
         ):
             mock_sport.side_effect = Exception("Connection failed")
 
-            config = MoveUnitreeSDKAdvanceConfig()
-            connector = MoveUnitreeSDKAdvanceConnector(config)
+            config = MoveUnitreeOMPathSDKConfig()
+            connector = MoveUnitreeOMPathSDKConnector(config)
 
             assert connector.sport_client is None
             mock_logging.error.assert_called()
@@ -204,8 +204,8 @@ class TestMoveUnitreeSDKAdvanceConnectorInit:
         ):
             mock_zenoh.side_effect = Exception("Zenoh connection failed")
 
-            config = MoveUnitreeSDKAdvanceConfig()
-            connector = MoveUnitreeSDKAdvanceConnector(config)
+            config = MoveUnitreeOMPathSDKConfig()
+            connector = MoveUnitreeOMPathSDKConnector(config)
 
             assert connector.session is None
             mock_logging.error.assert_called()

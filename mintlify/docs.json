@@ -186,7 +186,7 @@
                         "pages": [
                             "release-notes/beta/om",
                             "release-notes/beta/om1-avatar",
-                            "release-notes/beta/unitree-sdk",
+                            "release-notes/beta/om1-ros2-sdk",
                             "release-notes/beta/video-processor"
                         ]
                     },
@@ -196,7 +196,7 @@
                             "release-notes/v1.0.0/om1-system-setup",
                             "release-notes/v1.0.0/om",
                             "release-notes/v1.0.0/om1-avatar",
-                            "release-notes/v1.0.0/unitree-sdk",
+                            "release-notes/v1.0.0/om1-ros2-sdk",
                             "release-notes/v1.0.0/video-processor"
                         ]
                     }

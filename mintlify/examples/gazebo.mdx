@@ -151,16 +151,16 @@ sudo apt-get install python3-rosdep
 
 Once you've successfully completed above steps, follow the following steps to start the gazebo simulation, generate SLAM map of the surrounding and start navigation.
 
-Step 1: Clone the [unitree-sdk](https://github.com/OpenMind/unitree-sdk) repository:
+Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
 
     ```bash
-    git clone https://github.com/OpenMind/unitree-sdk.git
+    git clone https://github.com/OpenMind/OM1-ros2-sdk.git
     ```
 
 Step 2: Install all the necessary dependencies:
 
     ```bash
-    cd unitree-sdk
+    cd OM1-ros2-sdk
     uv venv
     sudo rosdep init
     rosdep update

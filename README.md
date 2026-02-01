@@ -119,7 +119,7 @@ We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the Bra
 
 Clone the following repositories -
 - git clone https://github.com/OpenMind/OM1.git
-- git clone https://github.com/OpenMind/unitree-sdk.git
+- git clone https://github.com/OpenMind/OM1-ros2-sdk.git
 - git clone https://github.com/OpenMind/OM1-avatar.git
 - git clone https://github.com/OpenMind/OM1-video-processor.git
 - git clone https://github.com/OpenMind/OM1-system-setup.git
