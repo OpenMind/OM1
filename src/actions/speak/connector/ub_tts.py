@@ -57,6 +57,13 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "UbTtsConnector",
+            metadata={"type": "action", "category": "communication"},
+            recovery_callback=None,
+        )
+
         base_url = self.config.base_url
 
         # Zenoh topics
@@ -102,6 +109,8 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
             interrupt=True,
             timestamp=int(time.time()),  # Use current time as a sensible default
         )
+
+        self._monitor.heartbeat("UbTtsConnector")
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
         """

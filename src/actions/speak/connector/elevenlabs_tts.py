@@ -85,6 +85,13 @@ class SpeakElevenLabsTTSConnector(
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "SpeakElevenLabsTTSConnector",
+            metadata={"type": "action", "category": "communication"},
+            recovery_callback=None,
+        )
+
         # OM API key
         api_key = getattr(self.config, "api_key", None)
 
@@ -223,9 +230,12 @@ class SpeakElevenLabsTTSConnector(
 
         if self.audio_pub:
             self.audio_pub.put(state.serialize())
+            self._monitor.heartbeat("SpeakElevenLabsTTSConnector")
             return
 
         self.tts.add_pending_message(pending_message)
+
+        self._monitor.heartbeat("SpeakElevenLabsTTSConnector")
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
         """

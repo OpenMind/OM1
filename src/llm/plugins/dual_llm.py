@@ -146,6 +146,13 @@ class DualLLM(LLM[R]):
 
         self.history_manager = LLMHistoryManager(self._config, self._eval_client)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "DualLLM",
+            metadata={"type": "llm", "provider": "dual"},
+            recovery_callback=None,
+        )
+
     async def _call_llm(
         self, llm: LLM, prompt: str, messages: T.List[T.Dict[str, T.Any]], source: str
     ) -> dict:
@@ -404,9 +411,12 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             self.io_provider.llm_end_time = time.time()
 
             if chosen and chosen["result"]:
+                self._monitor.heartbeat("DualLLM")
                 return T.cast(R, chosen["result"])
+            self._monitor.heartbeat("DualLLM")
             return None
 
         except Exception as e:
             logging.error(f"DualLLM error: {e}")
+            self._monitor.report_error("DualLLM", str(e))
             return None

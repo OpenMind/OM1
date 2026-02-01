@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Union
 import requests
 
 from .io_provider import IOProvider
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -45,6 +46,14 @@ class UnitreeG1LocationsProvider:
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
         self.io_provider = IOProvider()
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeG1LocationsProvider",
+            metadata={"type": "locations", "robot": "unitree_g1"},
+            recovery_callback=self._recover,
+        )
 
     def start(self) -> None:
         """
@@ -106,8 +115,10 @@ class UnitreeG1LocationsProvider:
                 logging.error("Unexpected format from location list API")
                 return
             self._update_locations(locations)
+            self._monitor.heartbeat("UnitreeG1LocationsProvider")
         except Exception:
             logging.exception("Error fetching locations")
+            self._monitor.report_error("UnitreeG1LocationsProvider", "Error fetching locations")
 
     def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
         """
@@ -166,3 +177,22 @@ class UnitreeG1LocationsProvider:
         key = label.strip().lower()
         with self._lock:
             return self._locations.get(key)
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Unitree G1 Locations provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeG1LocationsProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeG1LocationsProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeG1LocationsProvider: Recovery failed: {e}")
+            return False

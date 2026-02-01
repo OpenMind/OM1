@@ -21,6 +21,13 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "ARMUnitreeSDKConnector",
+            metadata={"type": "action", "category": "movement"},
+            recovery_callback=None,
+        )
+
         try:
             self.client = G1ArmActionClient()
             self.client.SetTimeout(10.0)
@@ -66,3 +73,5 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
 
         logging.info(f"Executing action with ID: {action_id}")
         self.client.ExecuteAction(action_id)
+
+        self._monitor.heartbeat("ARMUnitreeSDKConnector")

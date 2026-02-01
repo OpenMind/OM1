@@ -100,6 +100,13 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
                 f"Webcam pixel dimensions for COCO: {self.width}, {self.height}"
             )
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "VLM_COCO_Local",
+            metadata={"type": "input", "category": "vlm"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[np.ndarray]:
         """
         Poll for new image input.
@@ -248,4 +255,5 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages = []
 
+        self._monitor.heartbeat("VLM_COCO_Local")
         return result

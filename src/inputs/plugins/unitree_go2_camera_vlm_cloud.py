@@ -80,6 +80,13 @@ class UnitreeGo2CameraVLMCloud(
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "UnitreeGo2CameraVLMCloud",
+            metadata={"type": "input", "category": "vlm"},
+            recovery_callback=None,
+        )
+
     def _handle_vlm_message(self, raw_message: str):
         """
         Process incoming VLM messages.
@@ -194,4 +201,5 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages = []
 
+        self._monitor.heartbeat("UnitreeGo2CameraVLMCloud")
         return result

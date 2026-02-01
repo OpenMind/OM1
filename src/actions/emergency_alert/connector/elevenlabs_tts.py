@@ -82,6 +82,13 @@ class EmergencyAlertElevenLabsTTSConnector(
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "EmergencyAlertElevenLabsTTSConnector",
+            metadata={"type": "action", "category": "communication"},
+            recovery_callback=None,
+        )
+
         # OM API key
         api_key = getattr(self.config, "api_key", None)
 
@@ -209,10 +216,13 @@ class EmergencyAlertElevenLabsTTSConnector(
 
         if self.audio_pub:
             self.audio_pub.put(state.serialize())
+            self._monitor.heartbeat("EmergencyAlertElevenLabsTTSConnector")
             return
 
         self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
         self.tts.add_pending_message(pending_message)
+
+        self._monitor.heartbeat("EmergencyAlertElevenLabsTTSConnector")
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
         """

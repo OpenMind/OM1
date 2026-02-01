@@ -20,6 +20,13 @@ class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "MoveUnitreeSDKConnector",
+            metadata={"type": "action", "category": "movement"},
+            recovery_callback=None,
+        )
+
     async def connect(self, output_interface: MoveInput) -> None:
         """
         Connect the input protocol to the move action via Unitree SDK.
@@ -55,3 +62,5 @@ class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
             # raise ValueError(f"Unknown move type: {output_interface.action}")
 
         logging.info(f"SendThisToROS2: {new_msg}")
+
+        self._monitor.heartbeat("MoveUnitreeSDKConnector")

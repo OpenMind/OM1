@@ -9,6 +9,7 @@ import cv2
 from om1_utils import ws
 from om1_vlm import VideoStream
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 root_package_name = __name__.split(".")[0] if "." in __name__ else __name__
@@ -297,6 +298,14 @@ class UnitreeRealSenseDevVLMProvider:
             jpeg_quality=jpeg_quality,
         )
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeRealSenseDevVLMProvider",
+            metadata={"type": "vlm", "robot": "unitree", "camera": "realsense"},
+            recovery_callback=self._recover,
+        )
+
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
         Register a callback for processing VLM results.
@@ -307,7 +316,12 @@ class UnitreeRealSenseDevVLMProvider:
             The callback function to process VLM results.
         """
         if message_callback is not None:
-            self.ws_client.register_message_callback(message_callback)
+
+            def wrapper(msg: str) -> None:
+                self._monitor.heartbeat("UnitreeRealSenseDevVLMProvider")
+                message_callback(msg)
+
+            self.ws_client.register_message_callback(wrapper)
 
     def start(self):
         """
@@ -344,3 +358,22 @@ class UnitreeRealSenseDevVLMProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.stop()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Unitree RealSense Dev VLM provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeRealSenseDevVLMProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeRealSenseDevVLMProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeRealSenseDevVLMProvider: Recovery failed: {e}")
+            return False

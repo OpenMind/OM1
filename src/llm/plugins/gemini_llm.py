@@ -75,6 +75,13 @@ class GeminiLLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "GeminiLLM",
+            metadata={"type": "llm", "provider": "gemini"},
+            recovery_callback=None,
+        )
+
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
@@ -142,9 +149,12 @@ class GeminiLLM(LLM[R]):
 
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"OpenAI LLM function call output: {result}")
+                self._monitor.heartbeat("GeminiLLM")
                 return T.cast(R, result)
 
+            self._monitor.heartbeat("GeminiLLM")
             return None
         except Exception as e:
             logging.error(f"Gemini API error: {e}")
+            self._monitor.report_error("GeminiLLM", str(e))
             return None

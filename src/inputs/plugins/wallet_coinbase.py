@@ -87,6 +87,13 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
 
         logging.info("Testing: WalletCoinbase: Initialized")
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "WalletCoinbase",
+            metadata={"type": "input", "category": "external_service"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> List[float]:
         """
         Poll for Coinbase Wallet balance updates.
@@ -195,4 +202,5 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
             self.__class__.__name__, result_message.message, result_message.timestamp
         )
         self.messages = []
+        self._monitor.heartbeat("WalletCoinbase")
         return result

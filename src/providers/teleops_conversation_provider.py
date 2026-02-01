@@ -7,6 +7,7 @@ from typing import Optional
 
 import requests
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -92,6 +93,14 @@ class TeleopsConversationProvider:
         self.base_url = base_url
         self.executor = ThreadPoolExecutor(max_workers=1)
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "TeleopsConversationProvider",
+            metadata={"type": "conversation", "service": "teleops"},
+            recovery_callback=self._recover,
+        )
+
     def store_user_message(self, content: str) -> None:
         """
         Store a user message in the conversation.
@@ -153,14 +162,20 @@ class TeleopsConversationProvider:
                 logging.debug(
                     f"Successfully stored {message.message_type.value} message to conversation"
                 )
+                self._monitor.heartbeat("TeleopsConversationProvider")
             else:
                 logging.debug(
                     f"Failed to store {message.message_type.value} message: {request.status_code} - {request.text}"
+                )
+                self._monitor.report_error(
+                    "TeleopsConversationProvider",
+                    f"HTTP {request.status_code}: {request.text}",
                 )
         except Exception as e:
             logging.debug(
                 f"Error storing {message.message_type.value} conversation message: {str(e)}"
             )
+            self._monitor.report_error("TeleopsConversationProvider", str(e))
 
     def _store_message(self, message: ConversationMessage) -> None:
         """
@@ -183,3 +198,22 @@ class TeleopsConversationProvider:
             True if the API key is set, False otherwise.
         """
         return self.api_key is not None and self.api_key != ""
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Teleops conversation provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("TeleopsConversationProvider: Attempting recovery...")
+            self.executor.shutdown(wait=False)
+            self.executor = ThreadPoolExecutor(max_workers=1)
+            logging.info("TeleopsConversationProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"TeleopsConversationProvider: Recovery failed: {e}")
+            return False

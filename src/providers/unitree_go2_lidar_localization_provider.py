@@ -5,6 +5,7 @@ import zenoh
 
 from zenoh_msgs import Pose, nav_msgs
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
 
@@ -37,6 +38,14 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         self.localization_status = False
         self.quality_tolerance = quality_tolerance
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeGo2LidarLocalizationProvider",
+            metadata={"type": "localization", "robot": "unitree_go2"},
+            recovery_callback=self._recover,
+        )
+
     def lidar_localization_message_callback(self, data: zenoh.Sample):
         """
         Process an incoming lidar localization message.
@@ -55,6 +64,7 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             quality_percent = message.quality_percent
             self.localization_status = quality_percent >= self.quality_tolerance
             self.localization_pose = message.pose
+            self._monitor.heartbeat("UnitreeGo2LidarLocalizationProvider")
 
             logging.debug(
                 "Localization Status: %s, Pose: %s",
@@ -101,3 +111,24 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             The current pose if available, None otherwise.
         """
         return self.localization_pose
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Lidar Localization provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeGo2LidarLocalizationProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeGo2LidarLocalizationProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(
+                f"UnitreeGo2LidarLocalizationProvider: Recovery failed: {e}"
+            )
+            return False

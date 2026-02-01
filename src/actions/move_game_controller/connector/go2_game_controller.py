@@ -79,6 +79,13 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "Go2GameControllerConnector",
+            metadata={"type": "action", "category": "movement"},
+            recovery_callback=None,
+        )
+
         self.config = config
 
         # Movement speed m/s and rad/s
@@ -279,7 +286,7 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
         -------
         None
         """
-        pass
+        self._monitor.heartbeat("Go2GameControllerConnector")
 
     def _move_robot(self, vx, vy, vturn=0.0) -> None:
         """

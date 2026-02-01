@@ -92,6 +92,13 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
             f"every {self.poll_interval}s, re-enroll every {self.enroll_retry_interval}s when not tracking"
         )
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "PersonFollowingStatus",
+            metadata={"type": "input", "category": "navigation"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[str]:
         """
         Poll the person-following status endpoint.
@@ -306,4 +313,6 @@ INPUT: {self.descriptor_for_LLM}
             self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
         self.messages.clear()
+
+        self._monitor.heartbeat("PersonFollowingStatus")
         return result

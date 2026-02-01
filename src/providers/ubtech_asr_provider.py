@@ -6,6 +6,7 @@ from typing import Callable, Dict, Optional
 
 import requests
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -40,6 +41,14 @@ class UbtechASRProvider:
         self._message_callback: Optional[Callable] = None
         self._set_robot_language(language_code)
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UbtechASRProvider",
+            metadata={"type": "asr", "robot": "ubtech", "language": language_code},
+            recovery_callback=self._recover,
+        )
+
     def register_message_callback(self, cb: Optional[Callable]):
         """
         Register a callback to process recognized ASR messages.
@@ -49,7 +58,15 @@ class UbtechASRProvider:
         cb : Optional[callable]
             The callback function to process recognized ASR messages.
         """
-        self._message_callback = cb
+        if cb is not None:
+
+            def wrapper(msg: str) -> None:
+                self._monitor.heartbeat("UbtechASRProvider")
+                cb(msg)
+
+            self._message_callback = wrapper
+        else:
+            self._message_callback = cb
 
     def start(self):
         """
@@ -63,6 +80,7 @@ class UbtechASRProvider:
         self.running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+        self._monitor.heartbeat("UbtechASRProvider")
 
     def stop(self):
         """
@@ -402,3 +420,22 @@ class UbtechASRProvider:
             "data": None,
             "status": "error",
         }  # Default error after all retries
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Ubtech ASR provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UbtechASRProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UbtechASRProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UbtechASRProvider: Recovery failed: {e}")
+            return False

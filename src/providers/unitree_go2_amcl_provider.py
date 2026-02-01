@@ -6,6 +6,7 @@ import zenoh
 
 from zenoh_msgs import Pose, nav_msgs
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
 
@@ -42,6 +43,14 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         self.pose_tolerance = pose_tolerance
         self.yaw_tolerance = yaw_tolerance
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeGo2AMCLProvider",
+            metadata={"type": "amcl", "robot": "unitree_go2"},
+            recovery_callback=self._recover,
+        )
+
     def amcl_message_callback(self, data: zenoh.Sample):
         """
         Process an incoming AMCL message.
@@ -66,6 +75,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
                 and yaw_uncertainty < self.yaw_tolerance
             )
             self.localization_pose = message.pose
+            self._monitor.heartbeat("UnitreeGo2AMCLProvider")
             logging.info(
                 "Localization Status: %s, Pose: %s",
                 self.localization_status,
@@ -109,3 +119,22 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
             The current pose if available, None otherwise.
         """
         return self.localization_pose
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the AMCL provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeGo2AMCLProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeGo2AMCLProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeGo2AMCLProvider: Recovery failed: {e}")
+            return False

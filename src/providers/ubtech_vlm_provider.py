@@ -3,6 +3,7 @@ from typing import Callable, Optional, Tuple
 
 from om1_utils import ws
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 from .ubtech_video_stream import UbtechCameraVideoStream
 
@@ -53,6 +54,14 @@ class UbtechVLMProvider:
             robot_ip=robot_ip,
         )
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UbtechVLMProvider",
+            metadata={"type": "vlm", "robot": "ubtech"},
+            recovery_callback=self._recover,
+        )
+
     def register_message_callback(self, callback: Optional[Callable]):
         """
         Register a callback for processing VLM results.
@@ -63,7 +72,12 @@ class UbtechVLMProvider:
             The callback function to process VLM results.
         """
         if callback is not None:
-            self.ws_client.register_message_callback(callback)
+
+            def wrapper(msg: str) -> None:
+                self._monitor.heartbeat("UbtechVLMProvider")
+                callback(msg)
+
+            self.ws_client.register_message_callback(wrapper)
 
     def start(self):
         """
@@ -97,3 +111,22 @@ class UbtechVLMProvider:
             self.stream_ws_client.stop()
 
         logging.info("Ubtech VLM provider stopped")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Ubtech VLM provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UbtechVLMProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UbtechVLMProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UbtechVLMProvider: Recovery failed: {e}")
+            return False

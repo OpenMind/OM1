@@ -42,6 +42,13 @@ class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
 
         logging.info("LocalizationInput plugin initialized")
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "AMCLLocalizationInput",
+            metadata={"type": "input", "category": "navigation"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[str]:
         """
         Poll the AMCL provider for localization status.
@@ -142,4 +149,5 @@ class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
         )
         self.messages = []
 
+        self._monitor.heartbeat("AMCLLocalizationInput")
         return result

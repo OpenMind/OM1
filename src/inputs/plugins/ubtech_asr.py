@@ -83,6 +83,13 @@ class UbtechASRInput(FuserInput[UbtechASRSensorConfig, Optional[str]]):
         # Register our internal method as the callback for the provider
         self.asr.register_message_callback(self._handle_asr_message)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "UbtechASRInput",
+            metadata={"type": "input", "category": "asr"},
+            recovery_callback=None,
+        )
+
     def _handle_asr_message(self, message: Optional[str]):
         """
         Callback function to handle ASR messages from the provider.
@@ -203,4 +210,6 @@ INPUT: {self.descriptor_for_LLM}
             self.descriptor_for_LLM, self.messages[-1], time.time()
         )
         self.messages = []
+
+        self._monitor.heartbeat("UbtechASRInput")
         return result

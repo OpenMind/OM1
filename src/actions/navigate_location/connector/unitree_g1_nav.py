@@ -55,6 +55,13 @@ class UnitreeG1NavConnector(ActionConnector[UnitreeG1NavConfig, NavigateLocation
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "UnitreeG1NavConnector",
+            metadata={"type": "action", "category": "movement"},
+            recovery_callback=None,
+        )
+
         base_url = self.config.base_url
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
@@ -135,3 +142,5 @@ class UnitreeG1NavConnector(ActionConnector[UnitreeG1NavConfig, NavigateLocation
             logging.info(f"Navigation to '{label}' initiated")
         except Exception as e:
             logging.error(f"Error querying location list or publishing goal: {e}")
+
+        self._monitor.heartbeat("UnitreeG1NavConnector")

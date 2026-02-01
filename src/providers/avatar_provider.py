@@ -11,6 +11,7 @@ from zenoh_msgs import (
     prepare_header,
 )
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -34,6 +35,14 @@ class AvatarProvider:
         self.running = False
 
         self._initialize_zenoh()
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "AvatarProvider",
+            metadata={"type": "avatar", "protocol": "zenoh"},
+            recovery_callback=self._recover,
+        )
 
     def _initialize_zenoh(self):
         """
@@ -117,10 +126,12 @@ class AvatarProvider:
             )
             self.avatar_publisher.put(face_msg.serialize())
             logging.info(f"AvatarProvider sent command to Zenoh: {face_text}")
+            self._monitor.heartbeat("AvatarProvider")
             return True
 
         except Exception as e:
             logging.error(f"Failed to send avatar command via Zenoh: {e}")
+            self._monitor.report_error("AvatarProvider", str(e))
             return False
 
     def stop(self):
@@ -145,3 +156,22 @@ class AvatarProvider:
             self.session.close()
 
         logging.info("AvatarProvider stopped and Zenoh session closed")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Avatar provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("AvatarProvider: Attempting recovery...")
+            self.stop()
+            self._initialize_zenoh()
+            logging.info("AvatarProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"AvatarProvider: Recovery failed: {e}")
+            return False

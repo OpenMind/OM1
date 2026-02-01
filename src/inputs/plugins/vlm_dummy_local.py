@@ -32,6 +32,13 @@ class DummyVLMLocal(FuserInput[SensorConfig, Image.Image]):
 
         self.descriptor_for_LLM = "Vision"
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "DummyVLMLocal",
+            metadata={"type": "input", "category": "vlm"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Image.Image:
         """
         Poll for new image input.
@@ -118,4 +125,5 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages = []
 
+        self._monitor.heartbeat("DummyVLMLocal")
         return result

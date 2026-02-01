@@ -8,6 +8,7 @@ from typing import List, Optional
 
 import requests
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -205,6 +206,14 @@ class FabricDataSubmitter:
         self.max_file_size_bytes = 1024 * 1024
         self.executor = ThreadPoolExecutor(max_workers=1)
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "FabricDataSubmitter",
+            metadata={"type": "fabric", "service": "mapping"},
+            recovery_callback=self._recover,
+        )
+
     def update_filename(self):
         """
         Update the filename for local logging with a timestamp.
@@ -275,12 +284,18 @@ class FabricDataSubmitter:
 
             if request.status_code == 201:
                 logging.debug(f"Data shared: {request.json()}")
+                self._monitor.heartbeat("FabricDataSubmitter")
             else:
                 logging.error(
                     f"Failed to share data: {request.status_code} - {request.text}"
                 )
+                self._monitor.report_error(
+                    "FabricDataSubmitter",
+                    f"HTTP {request.status_code}: {request.text}",
+                )
         except Exception as e:
             logging.error(f"Error sharing data: {str(e)}")
+            self._monitor.report_error("FabricDataSubmitter", str(e))
 
     def share_data(self, data: FabricData):
         """
@@ -295,3 +310,22 @@ class FabricDataSubmitter:
         """
         logging.debug(f"share data: {data}")
         self.executor.submit(self._share_data_worker, data)
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Fabric data submitter.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("FabricDataSubmitter: Attempting recovery...")
+            self.executor.shutdown(wait=False)
+            self.executor = ThreadPoolExecutor(max_workers=1)
+            logging.info("FabricDataSubmitter: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"FabricDataSubmitter: Recovery failed: {e}")
+            return False

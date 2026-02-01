@@ -37,6 +37,13 @@ class MoveTronSDKConnector(ActionConnector[MoveTronSDKConfig, MoveInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "MoveTronSDKConnector",
+            metadata={"type": "action", "category": "movement"},
+            recovery_callback=None,
+        )
+
         self.client = ws.Client(self.config.base_url)
         self.client.start()
 
@@ -79,3 +86,5 @@ class MoveTronSDKConnector(ActionConnector[MoveTronSDKConfig, MoveInput]):
             )
         else:
             logging.error("Tron webSocket client is not connected.")
+
+        self._monitor.heartbeat("MoveTronSDKConnector")

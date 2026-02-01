@@ -9,6 +9,8 @@ import rclpy  # type: ignore
 from rclpy.node import Node  # type: ignore
 from std_msgs.msg import String  # type: ignore
 
+from .prometheus_monitor import PrometheusMonitor
+
 rclpy.init()
 
 
@@ -48,6 +50,14 @@ class ROS2PublisherProvider(Node):
         self.running: bool = False
         self._thread: Optional[threading.Thread] = None
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "ROS2PublisherProvider",
+            metadata={"type": "publisher", "protocol": "ros2"},
+            recovery_callback=self._recover,
+        )
+
     def add_pending_message(self, text: str):
         """
         Queue a message to be published.
@@ -78,8 +88,10 @@ class ROS2PublisherProvider(Node):
         try:
             self.publisher_.publish(msg)
             logging.info(f"Published message: {msg.data}")
+            self._monitor.heartbeat("ROS2PublisherProvider")
         except Exception as e:
             logging.exception(f"Error publishing message: {e}")
+            self._monitor.report_error("ROS2PublisherProvider", str(e))
         return None
 
     def start(self):
@@ -120,3 +132,22 @@ class ROS2PublisherProvider(Node):
         self.publisher_.Close()
 
         logging.info("ROS2 Publisher Provider stopped")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the ROS2 publisher provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("ROS2PublisherProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("ROS2PublisherProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"ROS2PublisherProvider: Recovery failed: {e}")
+            return False

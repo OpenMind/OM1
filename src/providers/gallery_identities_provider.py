@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Optional
 
 import requests
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -96,6 +97,14 @@ class GalleryIdentitiesProvider:
 
         self._session = requests.Session()
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "GalleryIdentitiesProvider",
+            metadata={"type": "gallery_identities", "service": "vision"},
+            recovery_callback=self._recover,
+        )
+
     def register_message_callback(self, fn: Callable[[str], None]) -> None:
         """
         Subscribe a consumer to receive each emitted gallery identities line.
@@ -158,10 +167,12 @@ class GalleryIdentitiesProvider:
             try:
                 snap = self._fetch_snapshot()
                 self._emit(snap.to_text())
+                self._monitor.heartbeat("GalleryIdentitiesProvider")
             except Exception as e:
                 logging.warning(
                     f"Failed to fetch/emit gallery identities snapshot: {e}"
                 )
+                self._monitor.report_error("GalleryIdentitiesProvider", str(e))
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -224,3 +235,23 @@ class GalleryIdentitiesProvider:
         # Use local time; server may not return one
         ts = time.time()
         return IdentitiesSnapshot(ts=ts, total=total, names=names, raw=data)
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Gallery identities provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("GalleryIdentitiesProvider: Attempting recovery...")
+            self.stop(wait=True)
+            self._session = requests.Session()
+            self.start()
+            logging.info("GalleryIdentitiesProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"GalleryIdentitiesProvider: Recovery failed: {e}")
+            return False

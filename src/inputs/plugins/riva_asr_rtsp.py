@@ -117,6 +117,13 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
             self.session = None
             self.asr_publisher = None
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "RivaASRRTSPInput",
+            metadata={"type": "input", "category": "asr"},
+            recovery_callback=None,
+        )
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages.
@@ -230,6 +237,8 @@ INPUT: {self.descriptor_for_LLM}
 
         # Reset messages buffer
         self.messages = []
+
+        self._monitor.heartbeat("RivaASRRTSPInput")
         return result
 
     def stop(self):

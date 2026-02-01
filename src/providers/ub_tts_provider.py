@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
+from .prometheus_monitor import PrometheusMonitor
+
 
 class UbTtsProvider:
     """
@@ -22,6 +24,14 @@ class UbTtsProvider:
         self.tts_url = url
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.headers = {"Content-Type": "application/json"}
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UbTtsProvider",
+            metadata={"type": "tts", "robot": "ubtech"},
+            recovery_callback=self._recover,
+        )
 
         logging.info(f"Ubtech TTS Provider initialized for URL: {self.tts_url}")
 
@@ -82,9 +92,13 @@ class UbTtsProvider:
             )
             response.raise_for_status()
             res = response.json()
-            return res.get("code") == 0
+            success = res.get("code") == 0
+            if success:
+                self._monitor.heartbeat("UbTtsProvider")
+            return success
         except requests.exceptions.RequestException as e:
             logging.error(f"Failed to send TTS command: {e}")
+            self._monitor.report_error("UbTtsProvider", str(e))
             return False
 
     def get_tts_status(self, timestamp: int) -> str:
@@ -103,3 +117,22 @@ class UbTtsProvider:
             return "error"
         except requests.exceptions.RequestException:
             return "error"
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Ubtech TTS provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UbTtsProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UbTtsProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UbTtsProvider: Recovery failed: {e}")
+            return False

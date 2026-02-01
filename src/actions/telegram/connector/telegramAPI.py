@@ -34,6 +34,13 @@ class TelegramAPIConnector(ActionConnector[TelegramAPIConfig, TelegramInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "TelegramAPIConnector",
+            metadata={"type": "action", "category": "external_service"},
+            recovery_callback=None,
+        )
+
         if not self.config.bot_token:
             logging.warning("Telegram Bot Token not provided in configuration")
         if not self.config.chat_id:
@@ -80,3 +87,5 @@ class TelegramAPIConnector(ActionConnector[TelegramAPIConfig, TelegramInput]):
         except Exception as e:
             logging.error(f"Failed to send Telegram message: {str(e)}")
             raise
+
+        self._monitor.heartbeat("TelegramAPIConnector")

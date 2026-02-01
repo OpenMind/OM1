@@ -18,6 +18,7 @@ except ImportError:
         "Unitree SDK or CycloneDDS not found. Please install the unitree_sdk2py package or CycloneDDS."
     )
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 state_machine_codes = {
@@ -176,6 +177,14 @@ class UnitreeGo2StateProvider:
         self.go2_state_code = None
         self.go2_action_progress = 0
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeGo2StateProvider",
+            metadata={"type": "state", "robot": "unitree_go2"},
+            recovery_callback=self._recover,
+        )
+
     def start(self):
         """
         Start the Unitree Go2 state provider.
@@ -234,6 +243,7 @@ class UnitreeGo2StateProvider:
                 self.go2_state = data.get("go2_state")
                 self.go2_state_code = data.get("go2_state_code")
                 self.go2_action_progress = data.get("go2_action_progress")
+                self._monitor.heartbeat("UnitreeGo2StateProvider")
 
             except Empty:
                 time.sleep(0.1)
@@ -274,3 +284,22 @@ class UnitreeGo2StateProvider:
             The current action progress of the robot, or 0 if not in the action mode.
         """
         return self.go2_action_progress
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Unitree Go2 State provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeGo2StateProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeGo2StateProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeGo2StateProvider: Recovery failed: {e}")
+            return False

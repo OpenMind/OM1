@@ -156,6 +156,13 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
             "GovernanceEthereum initialized, rules will be loaded on first poll"
         )
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "GovernanceEthereum",
+            metadata={"type": "input", "category": "external_service"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[str]:
         """
         Poll for Ethereum Governance Law Changes.
@@ -238,4 +245,5 @@ INPUT: {self.descriptor_for_LLM}
         )
         # no need to blank because we are only saving rare law changes
         # self.messages = []
+        self._monitor.heartbeat("GovernanceEthereum")
         return result

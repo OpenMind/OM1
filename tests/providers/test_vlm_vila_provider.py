@@ -74,7 +74,12 @@ def test_register_message_callback(ws_url, fps, mock_dependencies):
     callback = MagicMock()
 
     provider.register_message_callback(callback)
-    mock_ws_client_instance.register_message_callback.assert_called_once_with(callback)
+    # Callback is wrapped for heartbeat monitoring, so check it was called once
+    mock_ws_client_instance.register_message_callback.assert_called_once()
+    # Get the wrapper and verify it calls the original callback
+    wrapper = mock_ws_client_instance.register_message_callback.call_args[0][0]
+    wrapper("test_message")
+    callback.assert_called_once_with("test_message")
 
 
 def test_start(ws_url, fps, mock_dependencies):

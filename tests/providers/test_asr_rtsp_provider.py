@@ -65,9 +65,12 @@ def test_register_message_callback(ws_url, rtsp_url, mock_dependencies):
     callback = Mock()
     provider.register_message_callback(callback)
 
-    mock_ws_client.return_value.register_message_callback.assert_called_once_with(
-        callback
-    )
+    # Callback is wrapped for heartbeat monitoring, so check it was called once
+    mock_ws_client.return_value.register_message_callback.assert_called_once()
+    # Get the wrapper and verify it calls the original callback
+    wrapper = mock_ws_client.return_value.register_message_callback.call_args[0][0]
+    wrapper("test_message")
+    callback.assert_called_once_with("test_message")
 
 
 def test_register_message_callback_none(ws_url, rtsp_url, mock_dependencies):

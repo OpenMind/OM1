@@ -55,12 +55,14 @@ def test_register_message_callback(mock_requests):
     """Test registering message callback."""
     provider = UbtechASRProvider(robot_ip="192.168.1.100")
 
-    def callback(text):
-        pass
+    callback = MagicMock()
 
     provider.register_message_callback(callback)
 
-    assert provider._message_callback == callback
+    # Callback is wrapped for heartbeat monitoring, verify wrapper calls original
+    assert provider._message_callback is not None
+    provider._message_callback("test_message")
+    callback.assert_called_once_with("test_message")
 
 
 def test_start(mock_requests):

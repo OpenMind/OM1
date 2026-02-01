@@ -39,6 +39,14 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
             Configuration for the action connector.
         """
         super().__init__(config)
+
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "MoveToPeerRos2Connector",
+            metadata={"type": "action", "category": "navigation"},
+            recovery_callback=None,
+        )
+
         self.io = IOProvider()
         # defer heavy import; SportClient requires DDS initialisation
         from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
@@ -117,3 +125,5 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
 
         logging.info(f"MoveToPeer: aligned → driving forward {self.FWD_SPEED} m/s")
         self.sport_client.Move(self.FWD_SPEED, 0.0, 0.0)
+
+        self._monitor.heartbeat("MoveToPeerRos2Connector")

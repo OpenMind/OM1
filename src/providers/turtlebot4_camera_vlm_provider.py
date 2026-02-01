@@ -12,6 +12,7 @@ from om1_vlm import VideoStream
 
 from zenoh_msgs import open_zenoh_session
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -202,6 +203,14 @@ class TurtleBot4CameraVLMProvider:
             debug=debug,
         )
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "TurtleBot4CameraVLMProvider",
+            metadata={"type": "vlm", "robot": "turtlebot4"},
+            recovery_callback=self._recover,
+        )
+
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
         Register a callback for processing VLM results.
@@ -212,7 +221,12 @@ class TurtleBot4CameraVLMProvider:
             The callback function to process VLM results.
         """
         if message_callback is not None:
-            self.ws_client.register_message_callback(message_callback)
+
+            def wrapper(msg: str) -> None:
+                self._monitor.heartbeat("TurtleBot4CameraVLMProvider")
+                message_callback(msg)
+
+            self.ws_client.register_message_callback(wrapper)
 
     def start(self):
         """
@@ -249,3 +263,22 @@ class TurtleBot4CameraVLMProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.stop()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the TurtleBot4 Camera VLM provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("TurtleBot4CameraVLMProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("TurtleBot4CameraVLMProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"TurtleBot4CameraVLMProvider: Recovery failed: {e}")
+            return False

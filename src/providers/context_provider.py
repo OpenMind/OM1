@@ -6,6 +6,7 @@ import zenoh
 
 from zenoh_msgs import open_zenoh_session
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -26,6 +27,14 @@ class ContextProvider:
         self.session: Optional[zenoh.Session] = None
         self.publisher = None
         self._initialize_zenoh()
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "ContextProvider",
+            metadata={"type": "context"},
+            recovery_callback=self._recover,
+        )
 
     def _initialize_zenoh(self):
         """
@@ -56,9 +65,11 @@ class ContextProvider:
         try:
             context_json = json.dumps(context)
             self.publisher.put(context_json.encode("utf-8"))
+            self._monitor.heartbeat("ContextProvider")
             logging.debug(f"Sent context update: {context}")
         except Exception as e:
             logging.error(f"Error sending context update: {e}")
+            self._monitor.report_error("ContextProvider", str(e))
 
     def set_context_field(self, key: str, value: Any):
         """
@@ -86,3 +97,22 @@ class ContextProvider:
             finally:
                 self.session = None
                 self.publisher = None
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Context provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("ContextProvider: Attempting recovery...")
+            self.stop()
+            self._initialize_zenoh()
+            logging.info("ContextProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"ContextProvider: Recovery failed: {e}")
+            return False

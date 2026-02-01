@@ -162,6 +162,13 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         self.odom_yaw_0_360 = 0.0
         self.odom_yaw_m180_p180 = 0.0
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "VLM_Local_YOLO",
+            metadata={"type": "input", "category": "vlm"},
+            recovery_callback=None,
+        )
+
     def update_filename(self):
         """
         Create a new filename with the current timestamp.
@@ -376,4 +383,5 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         )
         self.messages = []
 
+        self._monitor.heartbeat("VLM_Local_YOLO")
         return result

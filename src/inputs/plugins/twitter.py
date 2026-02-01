@@ -54,6 +54,13 @@ class TwitterInput(FuserInput[TwitterSensorConfig, Optional[str]]):
         # Use getattr instead of .get() since config is an object, not a dict
         self.query = self.config.query
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "TwitterInput",
+            metadata={"type": "input", "category": "external_service"},
+            recovery_callback=None,
+        )
+
     async def __aenter__(self):
         """Async context manager entry."""
         await self._init_session()
@@ -169,6 +176,7 @@ TwitterInput CONTEXT
 {content}
 // END
 """
+        self._monitor.heartbeat("TwitterInput")
         return result
 
     async def initialize_with_query(self, query: str):

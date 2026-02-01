@@ -78,6 +78,13 @@ class NearAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "NearAILLM",
+            metadata={"type": "llm", "provider": "nearai"},
+            recovery_callback=None,
+        )
+
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
@@ -145,9 +152,12 @@ class NearAILLM(LLM[R]):
 
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"OpenAI LLM function call output: {result}")
+                self._monitor.heartbeat("NearAILLM")
                 return T.cast(R, result)
 
+            self._monitor.heartbeat("NearAILLM")
             return None
         except Exception as e:
             logging.error(f"NearAI API error: {e}")
+            self._monitor.report_error("NearAILLM", str(e))
             return None

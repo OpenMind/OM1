@@ -59,6 +59,13 @@ class TronOdom(FuserInput[TronOdomConfig, Optional[dict]]):
         self.odom = TronOdomProvider(topic)
         self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "TronOdom",
+            metadata={"type": "input", "category": "navigation"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[dict]:
         """
         Poll for new messages from the Tron Odom Provider.
@@ -164,4 +171,5 @@ class TronOdom(FuserInput[TronOdomConfig, Optional[dict]]):
         )
         self.messages = []
 
+        self._monitor.heartbeat("TronOdom")
         return result

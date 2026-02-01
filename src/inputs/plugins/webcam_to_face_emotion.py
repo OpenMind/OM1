@@ -73,6 +73,13 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         # Messages buffer
         self.messages: list[Message] = []
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "FaceEmotionCapture",
+            metadata={"type": "input", "category": "vision"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[cv2.typing.MatLike]:
         """
         Capture frame from webcam.
@@ -193,4 +200,5 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         )
         self.messages = []
 
+        self._monitor.heartbeat("FaceEmotionCapture")
         return result

@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Optional
 
 import requests
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -153,6 +154,14 @@ class FacePresenceProvider:
         self._session = requests.Session()
         self._unknown_faces: int = 0
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "FacePresenceProvider",
+            metadata={"type": "face_presence", "service": "vision"},
+            recovery_callback=self._recover,
+        )
+
     def set_recent_sec(self, sec: float) -> None:
         """Dynamically change the lookback window used for `/who`."""
         self.recent_sec = max(0.0, float(sec))
@@ -220,8 +229,10 @@ class FacePresenceProvider:
                 snap = self._fetch_snapshot()
                 text = snap.to_text()
                 self._emit(text)
+                self._monitor.heartbeat("FacePresenceProvider")
             except Exception as e:
                 logging.warning(f"Failed to fetch/emit face presence snapshot: {e}")
+                self._monitor.report_error("FacePresenceProvider", str(e))
 
             next_t += self.period
             if next_t < time.time() - self.period:
@@ -320,3 +331,23 @@ class FacePresenceProvider:
     def unknown_faces(self) -> int:
         """Most recent (suppressed) count of unknown faces detected in the lookback window."""
         return self._unknown_faces
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Face presence provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("FacePresenceProvider: Attempting recovery...")
+            self.stop(wait=True)
+            self._session = requests.Session()
+            self.start()
+            logging.info("FacePresenceProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"FacePresenceProvider: Recovery failed: {e}")
+            return False

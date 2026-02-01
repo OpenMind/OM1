@@ -61,6 +61,13 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "DIMOTeslaConnector",
+            metadata={"type": "action", "category": "external_service"},
+            recovery_callback=None,
+        )
+
         self.io_provider = IOProvider()
 
         self.base_url = "https://devices-api.dimo.zone/v1/vehicle"
@@ -197,3 +204,5 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                     logging.error(f"Unknown action: {output_interface.action}")
             else:
                 logging.error("No vehicle jwt")
+
+        self._monitor.heartbeat("DIMOTeslaConnector")

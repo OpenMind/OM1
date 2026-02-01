@@ -65,6 +65,13 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
         self.fabric_endpoint = self.config.fabric_endpoint
         self.mock_mode = self.config.mock_mode
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "FabricClosestPeer",
+            metadata={"type": "input", "category": "external_service"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[str]:
         """
         Poll Fabric for the closest peer based on our current GPS position.
@@ -162,6 +169,7 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
             return None
         msg = self.msg_q.get()
         self.io.add_input(self.descriptor_for_LLM, msg, time.time())
+        self._monitor.heartbeat("FabricClosestPeer")
         return f"""
 {self.descriptor_for_LLM} INPUT
 // START

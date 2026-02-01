@@ -65,6 +65,13 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Tesla Data"
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "DIMOTesla",
+            metadata={"type": "input", "category": "external_service"},
+            recovery_callback=None,
+        )
+
         # Track IO
         self.io_provider = IOProvider()
 
@@ -269,4 +276,5 @@ INPUT: {self.descriptor_for_LLM}
         self.io_provider.add_input(
             self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
+        self._monitor.heartbeat("DIMOTesla")
         return result

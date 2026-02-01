@@ -15,6 +15,7 @@ from zenoh_msgs import (
     prepare_header,
 )
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 # Nav2 Action Status Codes
@@ -100,6 +101,14 @@ class UnitreeGo2NavigationProvider:
             except Exception as e:
                 logging.error(f"Error creating AI status publisher: {e}")
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeGo2NavigationProvider",
+            metadata={"type": "navigation", "robot": "unitree_go2"},
+            recovery_callback=self._recover,
+        )
+
     def navigation_status_message_callback(self, data: zenoh.Sample):
         """
         Process an incoming navigation status message.
@@ -119,6 +128,7 @@ class UnitreeGo2NavigationProvider:
                 latest_status = status_list[-1]  # type: ignore
                 status_code = latest_status.status
                 self.navigation_status = status_map.get(status_code, "UNKNOWN")
+                self._monitor.heartbeat("UnitreeGo2NavigationProvider")
                 logging.info(
                     "Received navigation status from ROS2 topic '/navigate_to_pose/_action/status': %s (code=%d)",
                     self.navigation_status,
@@ -305,3 +315,22 @@ class UnitreeGo2NavigationProvider:
             True if navigation is in progress, False otherwise.
         """
         return self._nav_in_progress
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Unitree Go2 Navigation provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeGo2NavigationProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeGo2NavigationProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeGo2NavigationProvider: Recovery failed: {e}")
+            return False

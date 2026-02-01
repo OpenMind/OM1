@@ -20,6 +20,13 @@ class FaceRos2Connector(ActionConnector[ActionConfig, FaceInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "FaceRos2Connector",
+            metadata={"type": "action", "category": "communication"},
+            recovery_callback=None,
+        )
+
     async def connect(self, output_interface: FaceInput) -> None:
         """
         Connect to the ROS2 system and send the appropriate face command.
@@ -47,3 +54,5 @@ class FaceRos2Connector(ActionConnector[ActionConfig, FaceInput]):
             logging.info(f"Unknown face type: {output_interface.action}")
 
         logging.info(f"SendThisToROS2: {new_msg}")
+
+        self._monitor.heartbeat("FaceRos2Connector")

@@ -39,6 +39,13 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "EmotionUnitreeConnector",
+            metadata={"type": "action", "category": "communication"},
+            recovery_callback=None,
+        )
+
         logging.info(f"Emotion system config {config}")
 
         # create audio_optical client
@@ -87,6 +94,8 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
             logging.info(f"Unknown emotion: {output_interface.action}")
 
         logging.info(f"SendThisToUTClient: {output_interface.action}")
+
+        self._monitor.heartbeat("EmotionUnitreeConnector")
 
     def tick(self) -> None:
         """

@@ -15,6 +15,7 @@ from zenoh_msgs import (
     prepare_header,
 )
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 status_map = {
@@ -88,6 +89,14 @@ class UnitreeG1NavigationProvider:
             except Exception as e:
                 logging.error(f"Error declaring AI status publisher: {e}")
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeG1NavigationProvider",
+            metadata={"type": "navigation", "robot": "unitree_g1"},
+            recovery_callback=self._recover,
+        )
+
     def start(self):
         """
         Start the navigation provider by registering the message callback and starting the listener.
@@ -129,6 +138,7 @@ class UnitreeG1NavigationProvider:
                 latest_status = status_list[-1]  # type: ignore
                 status_code = latest_status.status
                 self.navigation_status = status_map.get(status_code, "UNKNOWN")
+                self._monitor.heartbeat("UnitreeG1NavigationProvider")
                 logging.info(
                     "Received navigation status from ROS2 topic '/navigate_to_pose/_action/status': %s (code=%d)",
                     self.navigation_status,
@@ -264,3 +274,22 @@ class UnitreeG1NavigationProvider:
             True if navigation is in progress, False otherwise.
         """
         return self._nav_in_progress
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Unitree G1 Navigation provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeG1NavigationProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeG1NavigationProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeG1NavigationProvider: Recovery failed: {e}")
+            return False

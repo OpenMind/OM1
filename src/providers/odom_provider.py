@@ -30,6 +30,7 @@ from zenoh_msgs import (
     open_zenoh_session,
 )
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 rad_to_deg = 57.2958
@@ -205,6 +206,14 @@ class OdomProvider:
         self.odom_rockchip_ts = 0.0
         self.odom_subscriber_ts = 0.0
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "OdomProvider",
+            metadata={"type": "odom", "use_zenoh": str(use_zenoh)},
+            recovery_callback=self._recover,
+        )
+
         self.start()
 
     def start(self) -> None:
@@ -368,6 +377,7 @@ class OdomProvider:
             # current position in world frame
             self.x = round(pose.position.x, 4)
             self.y = round(pose.position.y, 4)
+            self._monitor.heartbeat("OdomProvider")
             logging.debug(
                 f"odom: X:{self.x} Y:{self.y} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
             )
@@ -418,3 +428,22 @@ class OdomProvider:
         if self._odom_processor_thread:
             self._odom_processor_thread.join()
             logging.info("OdomProvider processor thread stopped.")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Odom provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("OdomProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("OdomProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"OdomProvider: Recovery failed: {e}")
+            return False

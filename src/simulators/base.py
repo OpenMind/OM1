@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from llm.output_model import Action
+from providers.prometheus_monitor import PrometheusMonitor
 
 
 class SimulatorConfig(BaseModel):
@@ -36,6 +37,8 @@ class Simulator:
         self.config = config
         self.name = config.name or "Simulator"
         self._stop_event: Optional[threading.Event] = None
+        # Set up Prometheus monitor for subclasses
+        self._monitor = PrometheusMonitor()
 
     def set_stop_event(self, stop_event: threading.Event) -> None:
         """

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from llm.function_schemas import generate_function_schemas_from_actions
 from providers.io_provider import IOProvider
+from providers.prometheus_monitor import PrometheusMonitor
 
 R = T.TypeVar("R")
 
@@ -129,6 +130,9 @@ class LLM(T.Generic[R]):
 
         # Enable state management by default
         self._skip_state_management: bool = False
+
+        # Set up Prometheus monitor for subclasses
+        self._monitor = PrometheusMonitor()
 
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []

@@ -46,6 +46,13 @@ class LidarLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
 
         logging.info("LocalizationInput plugin initialized")
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "LidarLocalizationInput",
+            metadata={"type": "input", "category": "navigation"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[str]:
         """
         Poll the lidar localization provider for localization status.
@@ -146,4 +153,5 @@ class LidarLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
         )
         self.messages = []
 
+        self._monitor.heartbeat("LidarLocalizationInput")
         return result

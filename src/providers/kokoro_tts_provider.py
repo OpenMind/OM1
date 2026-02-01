@@ -3,6 +3,7 @@ from typing import Callable, Optional, Union
 
 from om1_speech import AudioOutputLiveStream
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -72,6 +73,14 @@ class KokoroTTSProvider:
         self._model_id = model_id
         self._output_format = output_format
         self._enable_tts_interrupt = enable_tts_interrupt
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "KokoroTTSProvider",
+            metadata={"type": "tts", "model": model_id, "voice": voice_id},
+            recovery_callback=self._recover,
+        )
 
     def configure(
         self,
@@ -191,6 +200,7 @@ class KokoroTTSProvider:
 
         logging.info(f"Adding pending TTS message: {message}")
         self._audio_stream.add_request(message)
+        self._monitor.heartbeat("KokoroTTSProvider")
 
     def get_pending_message_count(self) -> int:
         """
@@ -219,8 +229,27 @@ class KokoroTTSProvider:
         Stop the TTS provider and cleanup resources.
         """
         if not self.running:
-            logging.warning("Eleven Labs TTS provider is not running")
+            logging.warning("Kokoro TTS provider is not running")
             return
 
         self.running = False
         self._audio_stream.stop()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Kokoro TTS provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("KokoroTTSProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("KokoroTTSProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"KokoroTTSProvider: Recovery failed: {e}")
+            return False

@@ -8,6 +8,7 @@ from typing import Optional
 import serial
 from pynmeagps import NMEAReader
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -58,6 +59,15 @@ class RtkProvider:
 
         self.running = False
         self._thread: Optional[threading.Thread] = None
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "RtkProvider",
+            metadata={"type": "rtk", "serial_port": serial_port},
+            recovery_callback=self._recover,
+        )
+
         self.start()
 
     def utc_time_obj_to_unix(self, utc_time_obj):
@@ -165,6 +175,7 @@ class RtkProvider:
             "rtk_qua": self.qua,
             "rtk_unix_ts": self.unix_ts,
         }
+        self._monitor.heartbeat("RtkProvider")
 
     def start(self):
         """
@@ -218,3 +229,22 @@ class RtkProvider:
             Dictionary containing RTK position data or None if not available
         """
         return self._rtk
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the RTK provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("RtkProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("RtkProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"RtkProvider: Recovery failed: {e}")
+            return False

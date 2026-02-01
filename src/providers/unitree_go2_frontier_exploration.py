@@ -7,6 +7,7 @@ import zenoh
 from zenoh_msgs import String
 
 from .context_provider import ContextProvider
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
 
@@ -42,6 +43,14 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
         self.context_provider = ContextProvider()
         self.context_aware_text = context_aware_text
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeGo2FrontierExplorationProvider",
+            metadata={"type": "frontier_exploration", "robot": "unitree_go2"},
+            recovery_callback=self._recover,
+        )
+
     def frontier_exploration_message_callback(self, data: zenoh.Sample):
         """
         Process an incoming frontier exploration message.
@@ -67,8 +76,13 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
                     # Trigger the context to stop SLAM
                     self.context_provider.update_context(self.context_aware_text)
 
+                self._monitor.heartbeat("UnitreeGo2FrontierExplorationProvider")
+
             except json.JSONDecodeError as e:
                 logging.error(f"Error decoding exploration message JSON: {e}")
+                self._monitor.report_error(
+                    "UnitreeGo2FrontierExplorationProvider", str(e)
+                )
 
     def start(self, message_callback: Optional[Callable] = None):
         """
@@ -104,3 +118,22 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
             The current exploration info.
         """
         return self.exploration_info
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Frontier exploration provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeGo2FrontierExplorationProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeGo2FrontierExplorationProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeGo2FrontierExplorationProvider: Recovery failed: {e}")
+            return False

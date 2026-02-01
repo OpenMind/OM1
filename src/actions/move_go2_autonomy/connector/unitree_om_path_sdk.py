@@ -67,6 +67,13 @@ class MoveUnitreeOMPathSDKConnector(
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "MoveUnitreeOMPathSDKConnector",
+            metadata={"type": "action", "category": "movement"},
+            recovery_callback=None,
+        )
+
         self.dog_attitude = None
 
         # Movement parameters
@@ -192,6 +199,8 @@ class MoveUnitreeOMPathSDKConnector(
             handler()
         else:
             logging.info(f"AI movement command unknown: {output_interface.action}")
+
+        self._monitor.heartbeat("MoveUnitreeOMPathSDKConnector")
 
         # This is a subset of Go2 movements that are
         # generally safe. Note that the "stretch" action involves

@@ -35,6 +35,13 @@ class Rtk(FuserInput[SensorConfig, Optional[dict]]):
         self.messages: list[Message] = []
         self.descriptor_for_LLM = "Precision Location"
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "Rtk",
+            metadata={"type": "input", "category": "navigation"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[dict]:
         """
         Poll for new messages from the RTK Provider.
@@ -137,4 +144,5 @@ class Rtk(FuserInput[SensorConfig, Optional[dict]]):
         )
         self.messages = []
 
+        self._monitor.heartbeat("Rtk")
         return result

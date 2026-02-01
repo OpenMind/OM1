@@ -10,6 +10,7 @@ import zenoh
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 from zenoh_msgs import open_zenoh_session, sensor_msgs
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -110,6 +111,14 @@ class SimplePathsProvider:
         self._simple_paths_derived_thread = None
         self._stop_event = threading.Event()
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "SimplePathsProvider",
+            metadata={"type": "paths"},
+            recovery_callback=self._recover,
+        )
+
     def start(self):
         """
         Start the SimplePathsProvider by opening a Zenoh session.
@@ -176,6 +185,7 @@ class SimplePathsProvider:
 
                 self._valid_paths = paths
                 self._lidar_string = self._generate_movement_string(paths)
+                self._monitor.heartbeat("SimplePathsProvider")
 
             except Empty:
                 time.sleep(0.1)
@@ -259,3 +269,22 @@ class SimplePathsProvider:
             "turn_right": self.turn_right,
             "retreat": self.retreat,
         }
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Simple Paths provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("SimplePathsProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("SimplePathsProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"SimplePathsProvider: Recovery failed: {e}")
+            return False

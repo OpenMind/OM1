@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Union
 import requests
 
 from .io_provider import IOProvider
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -42,6 +43,14 @@ class UnitreeGo2LocationsProvider:
         self._lock = threading.Lock()
 
         self.io_provider = IOProvider()
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "UnitreeGo2LocationsProvider",
+            metadata={"type": "locations", "robot": "unitree_go2"},
+            recovery_callback=self._recover,
+        )
 
     def start(self) -> None:
         """
@@ -110,9 +119,11 @@ class UnitreeGo2LocationsProvider:
                 return
 
             self._update_locations(locations)
+            self._monitor.heartbeat("UnitreeGo2LocationsProvider")
 
         except Exception:
             logging.exception("Error fetching locations")
+            self._monitor.report_error("UnitreeGo2LocationsProvider", "Error fetching locations")
 
     def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
         """
@@ -174,3 +185,22 @@ class UnitreeGo2LocationsProvider:
         key = label.strip().lower()
         with self._lock:
             return self._locations.get(key)
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Unitree Go2 Locations provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("UnitreeGo2LocationsProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("UnitreeGo2LocationsProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"UnitreeGo2LocationsProvider: Recovery failed: {e}")
+            return False

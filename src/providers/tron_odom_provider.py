@@ -16,6 +16,7 @@ from zenoh_msgs import (
     open_zenoh_session,
 )
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 rad_to_deg = 57.2958
@@ -132,6 +133,14 @@ class TronOdomProvider:
         self.odom_yaw_m180_p180 = 0.0
         self.odom_rockchip_ts = 0.0
         self.odom_subscriber_ts = 0.0
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "TronOdomProvider",
+            metadata={"type": "odom", "robot": "tron"},
+            recovery_callback=self._recover,
+        )
 
         self.start()
 
@@ -296,6 +305,7 @@ class TronOdomProvider:
             # current position in world frame
             self.x = round(pose.position.x, 4)
             self.y = round(pose.position.y, 4)
+            self._monitor.heartbeat("TronOdomProvider")
             logging.debug(
                 f"tron odom: X:{self.x} Y:{self.y} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
             )
@@ -346,3 +356,22 @@ class TronOdomProvider:
         if self._odom_processor_thread:
             self._odom_processor_thread.join()
             logging.info("TronOdomProvider processor thread stopped.")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Tron Odom provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("TronOdomProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("TronOdomProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"TronOdomProvider: Recovery failed: {e}")
+            return False

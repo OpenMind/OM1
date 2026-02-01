@@ -145,6 +145,13 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
             self.session = None
             self.asr_publisher = None
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "GoogleASRRTSPInput",
+            metadata={"type": "input", "category": "asr"},
+            recovery_callback=None,
+        )
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages from the ASR provider.
@@ -258,6 +265,8 @@ INPUT: {self.descriptor_for_LLM}
 
         # Reset messages buffer
         self.messages = []
+
+        self._monitor.heartbeat("GoogleASRRTSPInput")
         return result
 
     def stop(self):

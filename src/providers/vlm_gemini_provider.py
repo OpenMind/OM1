@@ -6,6 +6,7 @@ from om1_utils import ws
 from om1_vlm import VideoStream
 from openai import AsyncOpenAI
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -53,6 +54,14 @@ class VLMGeminiProvider:
         )
         self.message_callback: Optional[Callable] = None
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "VLMGeminiProvider",
+            metadata={"type": "vlm", "model": "gemini-2.0-flash-exp"},
+            recovery_callback=self._recover,
+        )
+
     async def _process_frame(self, frame: str):
         """
         Process a video frame using the Gemini API.
@@ -91,8 +100,10 @@ class VLMGeminiProvider:
             logging.debug(f"Gemini LLM VLM Response: {response}")
             if self.message_callback:
                 self.message_callback(response)
+            self._monitor.heartbeat("VLMGeminiProvider")
         except Exception as e:
             logging.error(f"Error processing frame: {e}")
+            self._monitor.report_error("VLMGeminiProvider", str(e))
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """
@@ -138,3 +149,22 @@ class VLMGeminiProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.stop()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the VLM Gemini provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("VLMGeminiProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("VLMGeminiProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"VLMGeminiProvider: Recovery failed: {e}")
+            return False

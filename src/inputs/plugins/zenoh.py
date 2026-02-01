@@ -69,6 +69,13 @@ class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
         # Initialize sleep ticker provider
         self.global_sleep_ticker_provider = SleepTickerProvider()
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "ZenohListener",
+            metadata={"type": "input", "category": "communication"},
+            recovery_callback=None,
+        )
+
     def _handle_zenoh_message(self, zenoh_input: zenoh.Sample):
         """
         Process an incoming Zenoh message.
@@ -167,4 +174,5 @@ class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
             self.descriptor_for_message, self.messages[-1], time.time()
         )
         self.messages = []
+        self._monitor.heartbeat("ZenohListener")
         return result

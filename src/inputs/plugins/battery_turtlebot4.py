@@ -92,6 +92,13 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
         # Simple description of sensor output to help LLM understand its importance and utility
         self.descriptor_for_LLM = "Energy Level"
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "TurtleBot4Battery",
+            metadata={"type": "input", "category": "robot_state"},
+            recovery_callback=None,
+        )
+
     def listener_battery(self, sample: zenoh.Sample):
         """
         Zenoh callback for battery state.
@@ -233,4 +240,5 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
         )
         self.messages = []
 
+        self._monitor.heartbeat("TurtleBot4Battery")
         return result

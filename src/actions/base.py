@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict
 
+from providers.prometheus_monitor import PrometheusMonitor
+
 IT = T.TypeVar("IT")
 OT = T.TypeVar("OT")
 CT = T.TypeVar("CT", bound="ActionConfig")
@@ -81,6 +83,8 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         """
         self.config: CT = config
         self._stop_event: T.Optional[threading.Event] = None
+        # Set up Prometheus monitor for subclasses
+        self._monitor = PrometheusMonitor()
 
     def set_stop_event(self, stop_event: threading.Event) -> None:
         """

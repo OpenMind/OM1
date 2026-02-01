@@ -14,6 +14,7 @@ from zenoh_msgs import (
     prepare_header,
 )
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -35,6 +36,14 @@ class ConfigProvider:
         self.config_path = self._get_runtime_config_path()
 
         self._initialize_zenoh()
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "ConfigProvider",
+            metadata={"type": "config", "protocol": "zenoh"},
+            recovery_callback=self._recover,
+        )
 
     def _initialize_zenoh(self):
         """
@@ -137,9 +146,11 @@ class ConfigProvider:
             if self.config_response_publisher:
                 self.config_response_publisher.put(response.serialize())
                 logging.info("ConfigProvider sent config response")
+                self._monitor.heartbeat("ConfigProvider")
 
         except Exception as e:
             logging.error(f"Failed to send config response: {e}")
+            self._monitor.report_error("ConfigProvider", str(e))
             self._send_error_response(request_id, str(e))
 
     def _send_error_response(self, request_id: String, error_message: str):
@@ -201,3 +212,22 @@ class ConfigProvider:
             self.session.close()
 
         logging.info("ConfigProvider stopped and Zenoh session closed")
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Config provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("ConfigProvider: Attempting recovery...")
+            self.stop()
+            self._initialize_zenoh()
+            logging.info("ConfigProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"ConfigProvider: Recovery failed: {e}")
+            return False

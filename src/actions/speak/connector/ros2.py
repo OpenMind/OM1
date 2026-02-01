@@ -21,6 +21,13 @@ class SpeakRos2Connector(ActionConnector[ActionConfig, SpeakInput]):
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "SpeakRos2Connector",
+            metadata={"type": "action", "category": "communication"},
+            recovery_callback=None,
+        )
+
     async def connect(self, output_interface: SpeakInput) -> None:
         """
         Process a speak action by sending text to ROS2.
@@ -32,3 +39,5 @@ class SpeakRos2Connector(ActionConnector[ActionConfig, SpeakInput]):
         """
         new_msg = {"speak": output_interface.action}
         logging.info(f"SendThisToROS2: {new_msg}")
+
+        self._monitor.heartbeat("SpeakRos2Connector")

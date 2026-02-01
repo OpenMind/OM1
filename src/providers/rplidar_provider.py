@@ -18,6 +18,7 @@ from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
 
 from .d435_provider import D435Provider
+from .prometheus_monitor import PrometheusMonitor
 from .rplidar_driver import RPDriver
 from .singleton import singleton
 
@@ -285,6 +286,14 @@ class RPLidarProvider:
 
         # D435 Provider
         self.d435_provider = D435Provider()
+
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "RPLidarProvider",
+            metadata={"type": "lidar", "use_zenoh": str(use_zenoh)},
+            recovery_callback=self._recover,
+        )
 
     def update_filename(self):
         """
@@ -590,6 +599,7 @@ class RPLidarProvider:
         self._raw_scan = array
         self._lidar_string = return_string
         self._valid_paths = ppl
+        self._monitor.heartbeat("RPLidarProvider")
 
         logging.debug(
             f"RPLidar Provider string: {self._lidar_string}\nValid paths: {self._valid_paths}"
@@ -843,3 +853,22 @@ class RPLidarProvider:
 
         parts.append("'stand still'}. ")
         return "".join(parts)
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the RPLidar provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("RPLidarProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("RPLidarProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"RPLidarProvider: Recovery failed: {e}")
+            return False

@@ -3,6 +3,7 @@ from typing import Callable, Optional
 
 from om1_speech import AudioOutputStream
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -37,6 +38,14 @@ class RivaTTSProvider:
             headers={"x-api-key": api_key} if api_key else None,
         )
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "RivaTTSProvider",
+            metadata={"type": "tts", "engine": "riva"},
+            recovery_callback=self._recover,
+        )
+
     def register_tts_state_callback(self, tts_state_callback: Optional[Callable]):
         """
         Register a callback for TTS state changes.
@@ -60,6 +69,7 @@ class RivaTTSProvider:
         """
         logging.info(f"audio_stream: {text}")
         self._audio_stream.add_request({"text": text})
+        self._monitor.heartbeat("RivaTTSProvider")
 
     def start(self):
         """
@@ -78,3 +88,22 @@ class RivaTTSProvider:
         """
         self.running = False
         self._audio_stream.stop()
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Riva TTS provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("RivaTTSProvider: Attempting recovery...")
+            self.stop()
+            self.start()
+            logging.info("RivaTTSProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"RivaTTSProvider: Recovery failed: {e}")
+            return False

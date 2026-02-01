@@ -7,6 +7,7 @@ from typing import Optional
 
 import requests
 
+from .prometheus_monitor import PrometheusMonitor
 from .singleton import singleton
 
 
@@ -231,6 +232,14 @@ class TeleopsStatusProvider:
         self.base_url = base_url
         self.executor = ThreadPoolExecutor(max_workers=1)
 
+        # Register with Prometheus monitor
+        self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            "TeleopsStatusProvider",
+            metadata={"type": "teleops"},
+            recovery_callback=self._recover,
+        )
+
     def get_status(self) -> dict:
         """
         Get the status of the machine.
@@ -281,12 +290,17 @@ class TeleopsStatusProvider:
 
             if request.status_code == 200:
                 logging.debug(f"Status shared successfully: {request.json()}")
+                self._monitor.heartbeat("TeleopsStatusProvider")
             else:
                 logging.error(
                     f"Failed to share status: {request.status_code} - {request.text}"
                 )
+                self._monitor.report_error(
+                    "TeleopsStatusProvider", f"Failed to share status: {request.status_code}"
+                )
         except Exception as e:
             logging.error(f"Error sharing status: {str(e)}")
+            self._monitor.report_error("TeleopsStatusProvider", str(e))
 
     def share_status(self, status: TeleopsStatus):
         """
@@ -306,3 +320,22 @@ class TeleopsStatusProvider:
         Stop the TeleopsStatusProvider and clean up resources.
         """
         self.executor.shutdown(wait=True)
+
+    def _recover(self) -> bool:
+        """
+        Attempt to recover the Teleops Status provider.
+
+        Returns
+        -------
+        bool
+            True if recovery was successful, False otherwise.
+        """
+        try:
+            logging.info("TeleopsStatusProvider: Attempting recovery...")
+            self.stop()
+            self.executor = ThreadPoolExecutor(max_workers=1)
+            logging.info("TeleopsStatusProvider: Recovery successful")
+            return True
+        except Exception as e:
+            logging.error(f"TeleopsStatusProvider: Recovery failed: {e}")
+            return False

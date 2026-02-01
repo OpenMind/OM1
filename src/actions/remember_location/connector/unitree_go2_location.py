@@ -56,6 +56,13 @@ class UnitreeGo2RememberLocationConnector(
         """
         super().__init__(config)
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "UnitreeGo2RememberLocationConnector",
+            metadata={"type": "action", "category": "navigation"},
+            recovery_callback=None,
+        )
+
         self.base_url = self.config.base_url
         self.timeout = self.config.timeout
         self.map_name = self.config.map_name
@@ -104,3 +111,5 @@ class UnitreeGo2RememberLocationConnector(
             logging.error("RememberLocationGo2 API request timed out")
         except Exception as e:
             logging.error(f"RememberLocationGo2 API request failed: {e}")
+
+        self._monitor.heartbeat("UnitreeGo2RememberLocationConnector")

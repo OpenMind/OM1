@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict
 
+from providers.prometheus_monitor import PrometheusMonitor
+
 R = T.TypeVar("R")
 ConfigType = T.TypeVar("ConfigType", bound="SensorConfig")
 
@@ -49,7 +51,8 @@ class Sensor(T.Generic[ConfigType, R]):
         Initialize an Sensor instance.
         """
         self.config = config
-        pass
+        # Set up Prometheus monitor for subclasses
+        self._monitor = PrometheusMonitor()
 
     async def _raw_to_text(self, raw_input: R) -> T.Optional[Message]:
         """

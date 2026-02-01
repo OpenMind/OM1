@@ -45,6 +45,13 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Information about objects and walls around you, to plan your movements and avoid bumping into things."
 
+        # Register with Prometheus monitor
+        self._monitor.register(
+            "SimplePaths",
+            metadata={"type": "input", "category": "navigation"},
+            recovery_callback=None,
+        )
+
     async def _poll(self) -> Optional[str]:
         """
         Poll for new messages from the SimplePaths Provider.
@@ -136,4 +143,5 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
         )
         self.messages = []
 
+        self._monitor.heartbeat("SimplePaths")
         return result
