@@ -40,7 +40,11 @@ class AvatarProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "AvatarProvider",
-            metadata={"type": "avatar", "category": "visualization", "protocol": "zenoh"},
+            metadata={
+                "type": "avatar",
+                "category": "visualization",
+                "protocol": "zenoh",
+            },
             recovery_callback=self._recover,
         )
 

@@ -77,7 +77,11 @@ class GpsProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "GpsProvider",
-            metadata={"type": "gps", "category": "navigation", "serial_port": serial_port},
+            metadata={
+                "type": "gps",
+                "category": "navigation",
+                "serial_port": serial_port,
+            },
             recovery_callback=self._recover,
         )
 

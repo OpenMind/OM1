@@ -43,7 +43,11 @@ class ZenohPublisherProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ZenohPublisherProvider",
-            metadata={"type": "zenoh_publisher", "category": "communication", "topic": topic},
+            metadata={
+                "type": "zenoh_publisher",
+                "category": "communication",
+                "topic": topic,
+            },
             recovery_callback=self._recover,
         )
 

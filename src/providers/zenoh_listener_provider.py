@@ -33,7 +33,11 @@ class ZenohListenerProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ZenohListenerProvider",
-            metadata={"type": "zenoh_listener", "category": "communication", "topic": topic},
+            metadata={
+                "type": "zenoh_listener",
+                "category": "communication",
+                "topic": topic,
+            },
             recovery_callback=self._recover,
         )
 

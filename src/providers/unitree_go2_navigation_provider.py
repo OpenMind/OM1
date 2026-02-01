@@ -105,7 +105,11 @@ class UnitreeGo2NavigationProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UnitreeGo2NavigationProvider",
-            metadata={"type": "navigation", "category": "navigation", "robot": "unitree_go2"},
+            metadata={
+                "type": "navigation",
+                "category": "navigation",
+                "robot": "unitree_go2",
+            },
             recovery_callback=self._recover,
         )
 

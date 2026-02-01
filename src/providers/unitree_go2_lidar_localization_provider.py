@@ -42,7 +42,11 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UnitreeGo2LidarLocalizationProvider",
-            metadata={"type": "localization", "category": "navigation", "robot": "unitree_go2"},
+            metadata={
+                "type": "localization",
+                "category": "navigation",
+                "robot": "unitree_go2",
+            },
             recovery_callback=self._recover,
         )
 

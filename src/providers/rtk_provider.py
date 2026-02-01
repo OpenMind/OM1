@@ -64,7 +64,11 @@ class RtkProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "RtkProvider",
-            metadata={"type": "rtk", "category": "navigation", "serial_port": serial_port},
+            metadata={
+                "type": "rtk",
+                "category": "navigation",
+                "serial_port": serial_port,
+            },
             recovery_callback=self._recover,
         )
 

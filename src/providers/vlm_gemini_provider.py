@@ -58,7 +58,11 @@ class VLMGeminiProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "VLMGeminiProvider",
-            metadata={"type": "vlm", "category": "vision", "model": "gemini-2.0-flash-exp"},
+            metadata={
+                "type": "vlm",
+                "category": "vision",
+                "model": "gemini-2.0-flash-exp",
+            },
             recovery_callback=self._recover,
         )
 

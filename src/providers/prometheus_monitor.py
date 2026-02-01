@@ -158,9 +158,7 @@ class PrometheusMonitor:
 
         @app.get("/metrics")
         async def metrics() -> Response:
-            return Response(
-                content=generate_latest(), media_type=CONTENT_TYPE_LATEST
-            )
+            return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
         @app.get("/api/health")
         async def health_api() -> dict:
@@ -184,14 +182,16 @@ class PrometheusMonitor:
         with self._lock:
             for name, provider in self._providers.items():
                 seconds_since_heartbeat = current_time - provider.last_heartbeat
-                providers_data.append({
-                    "name": name,
-                    "type": provider.metadata.get("type", "unknown"),
-                    "category": provider.metadata.get("category", "unknown"),
-                    "status": provider.status.value,
-                    "last_heartbeat": seconds_since_heartbeat,
-                    "error_count": provider.error_count,
-                })
+                providers_data.append(
+                    {
+                        "name": name,
+                        "type": provider.metadata.get("type", "unknown"),
+                        "category": provider.metadata.get("category", "unknown"),
+                        "status": provider.status.value,
+                        "last_heartbeat": seconds_since_heartbeat,
+                        "error_count": provider.error_count,
+                    }
+                )
 
         healthy = sum(1 for p in providers_data if p["status"] == "healthy")
         unhealthy = len(providers_data) - healthy
@@ -323,7 +323,7 @@ class PrometheusMonitor:
     def _generate_table_rows(self, providers: list) -> str:
         """Generate table rows for providers."""
         rows = ""
-        for p in sorted(providers, key=lambda x: (x['category'], x['name'])):
+        for p in sorted(providers, key=lambda x: (x["category"], x["name"])):
             status_class = "ok" if p["status"] == "healthy" else "err"
             heartbeat = f"{p['last_heartbeat']:.1f}s"
             error_class = "warn" if p["error_count"] > 0 else ""

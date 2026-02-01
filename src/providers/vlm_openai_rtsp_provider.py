@@ -74,7 +74,12 @@ class VLMOpenAIRTSPProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "VLMOpenAIRTSPProvider",
-            metadata={"type": "vlm", "category": "vision", "model": "gpt-4o-mini", "source": "rtsp"},
+            metadata={
+                "type": "vlm",
+                "category": "vision",
+                "model": "gpt-4o-mini",
+                "source": "rtsp",
+            },
             recovery_callback=self._recover,
         )
 

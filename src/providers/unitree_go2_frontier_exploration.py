@@ -47,7 +47,11 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UnitreeGo2FrontierExplorationProvider",
-            metadata={"type": "frontier_exploration", "category": "navigation", "robot": "unitree_go2"},
+            metadata={
+                "type": "frontier_exploration",
+                "category": "navigation",
+                "robot": "unitree_go2",
+            },
             recovery_callback=self._recover,
         )
 

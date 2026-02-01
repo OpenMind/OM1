@@ -45,7 +45,12 @@ class UbtechASRProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UbtechASRProvider",
-            metadata={"type": "asr", "category": "speech", "robot": "ubtech", "language": language_code},
+            metadata={
+                "type": "asr",
+                "category": "speech",
+                "robot": "ubtech",
+                "language": language_code,
+            },
             recovery_callback=self._recover,
         )
 
