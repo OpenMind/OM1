@@ -22,7 +22,7 @@ This plugin is an example of how to use Zenoh to send movement commands to a [Tu
 
 ## Movement (Unitree SDK)
 
-This plugin is an example of how to directly connect to the Unitree python SDK to send movement commands to a [Go2 EDU](https://github.com/OpenMind/OM1/tree/main/src/actions/move_go2_autonomy/connector/unitree_sdk.py).
+This plugin is an example of how to directly connect to the Unitree python SDK to send movement commands to a [Go2 EDU](https://github.com/OpenMind/OM1/tree/main/src/actions/move_go2_autonomy/connector/unitree_rplidar_sdk.py).
 
 
 ## Speech and TTS
@@ -42,14 +42,15 @@ Each action consists of:
 
 ```tree
 actions/
-└── move_{unique_hardware_id}/
-    ├── interface.py      # Defines MoveInput/Output
-    ├── implementation/
-    │   └── passthrough.py
-    └── connector/
-        ├── ros2.py       # Maps OM1 data/commands to hardware layers and robot middleware
-        ├── zenoh.py
-        └── unitree.py
+├── move_{unique_hardware_id}/
+│   ├── interface.py      # Defines MoveInput/Output
+│   ├── implementation/
+│   │   └── passthrough.py
+│   └── connector/
+│       ├── ros2.py       # Maps OM1 data/commands to hardware layers and robot middleware
+│       ├── zenoh.py
+│       └── unitree.py
+└── orchestrator
 ```
 
 In general, each robot will have specific capabilities, and therefore, each action will be hardware specific. For example, if you are adding support for the Unitree G1 Humanoid version 13.2b, which supports a new movement subtype such as `dance_2`, you could name the updated action `move_unitree_g1_13_2b` and select that action in your `unitree_g1.json` configuration file.

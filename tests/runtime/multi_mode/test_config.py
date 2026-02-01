@@ -365,19 +365,21 @@ class TestLoadModeConfig:
     def test_load_mode_config_env_fallback(self):
         """Test that environment variables are used as fallback."""
         config_data = {
-            "version": "v1.0.1",
-            "name": "env_test",
+            "version": "v1.0.2",
             "default_mode": "default",
-            "robot_ip": "",
             "api_key": "openmind_free",
-            "URID": "default",
+            "system_governance": "Env governance",
             "modes": {
                 "default": {
+                    "hertz": 1.0,
                     "display_name": "Default",
                     "description": "Default mode",
                     "system_prompt_base": "Test prompt",
+                    "agent_inputs": [],
+                    "agent_actions": [],
                 }
             },
+            "cortex_llm": {"type": "test_llm"},
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
@@ -403,17 +405,22 @@ class TestLoadModeConfig:
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
-            "version": "v1.0.1",
-            "name": "unitree_test",
-            "default_mode": "default",
+            "version": "v1.0.2",
             "unitree_ethernet": "eth0",
+            "default_mode": "default",
+            "api_key": "openmind_free",
+            "system_governance": "Env governance",
             "modes": {
                 "default": {
+                    "hertz": 1.0,
                     "display_name": "Default",
                     "description": "Default mode",
                     "system_prompt_base": "Test prompt",
+                    "agent_inputs": [],
+                    "agent_actions": [],
                 }
             },
+            "cortex_llm": {"type": "test_llm"},
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:

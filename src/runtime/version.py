@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-latest_runtime_version = "v1.0.1"
+latest_runtime_version = "v1.0.2"
 
 
 def get_runtime_version() -> str:

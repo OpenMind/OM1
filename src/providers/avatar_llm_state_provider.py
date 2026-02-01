@@ -12,6 +12,11 @@ T = TypeVar("T")
 class AvatarLLMState:
     """
     Singleton class to manage avatar thinking state during LLM processing.
+
+    This class implements a singleton pattern to manage avatar visual state transitions
+    during LLM (Large Language Model) processing. It coordinates between the avatar
+    provider and IO provider to display appropriate visual feedback when processing
+    voice inputs.
     """
 
     _instance = None
