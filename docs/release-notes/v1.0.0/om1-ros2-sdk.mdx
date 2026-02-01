@@ -1,5 +1,5 @@
 ---
-title: Unitree SDK Production Ready Release
+title: OM1 ROS2 SDK Production Ready Release
 description: "v1.0.0"
 ---
 
@@ -9,7 +9,7 @@ Production ready release for the Docker image openmindagi/unitree_sdk, which pro
 
 ## Features
 
-### [v1.0.0](https://github.com/OpenMind/unitree-sdk/releases/tag/v1.0.0)
+### [v1.0.0](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.0)
 
 ### Go2 LiDAR Localization
 Introduced a custom LiDAR localization node into the navigation launch pipeline, replacing the previous AMCL-based localization. Package dependencies and entry points have been updated to support the new implementation.
@@ -58,12 +58,12 @@ Added a new ROS 2 package, frontier_explorer, implementing a frontier-based expl
 
 ## Docker image
 
-The unitree_sdk is provided as a Docker image for easy setup.
+The OM1-ros2-sdk is provided as a Docker image for easy setup.
 ```bash
-git clone https://github.com/OpenMind/unitree-sdk.git
+git clone https://github.com/OpenMind/OM1-ros2-sdk.git
 ```
 ```bash
-cd unitree_sdk
+cd OM1-ros2-sdk
 docker-compose up orchestrator -d --no-build
 docker-compose up om1_sensor -d --no-build
 docker-compose up watchdog -d --no-build

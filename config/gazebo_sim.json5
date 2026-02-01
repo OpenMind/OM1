@@ -1,0 +1,799 @@
+{
+  // Configuration version
+  version: "v1.0.1",
+
+  // Mode system configuration for Unitree Go2
+  default_mode: "slam",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "openmind_free",
+  unitree_ethernet: "lo",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 10,
+      model: "gpt-4.1",
+    },
+  },
+
+  modes: {
+    slam: {
+      display_name: "SLAM Exploration",
+      description: "Autonomous navigation and mapping mode",
+      system_prompt_base: "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and understand the surroundings using LIDAR and visual data\n3. Avoid obstacles and maintain spatial awareness\n4. Report interesting discoveries and landmarks\n5. Only remember a location when the user explicitly asks you to (for example, when they say 'remember this location')\n\nWhile exploring, describe where you are and what you see in simple, natural language.",
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "Odom",
+        },
+        {
+          type: "UnitreeGo2Battery",
+        },
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "SimplePaths",
+        },
+      ],
+      cortex_llm: {
+        type: "OpenAILLM",
+        config: {
+          agent_name: "Bits",
+          history_length: 0,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 20,
+          },
+        },
+        {
+          name: "remember_location",
+          llm_label: "remember_location",
+          connector: "unitree_go2_location",
+        },
+      ],
+      backgrounds: [
+        {
+          type: "UnitreeGo2State",
+        },
+        {
+          type: "UnitreeGo2LidarLocalization",
+        },
+        {
+          type: "UnitreeGo2Navigation",
+        },
+        {
+          type: "UnitreeGo2Locations",
+        },
+        {
+          type: "UnitreeGo2FrontierExploration",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "function",
+          handler_config: {
+            module_name: "slam_hook",
+            function: "start_slam_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Welcome back. I'm ready to explore the environment safely.",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "slam_hook",
+            function: "start_slam_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Switching to exploration mode. I'll start mapping the environment and exploring safely.",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "slam_hook",
+            function: "stop_slam_hook",
+          },
+          timeout_seconds: 15,
+          priority: 1,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            message: "Exploration complete. I've stopped mapping and navigation.",
+          },
+          priority: 0,
+        },
+      ],
+    },
+
+    navigation: {
+      display_name: "Robot Navigation",
+      description: "Autonomous navigation mode",
+      system_prompt_base: "You are Bits, the guide robot dog, helping show properties to potential buyers and renters.\n\
+      CRITICAL RULES - READ CAREFULLY:\n\
+      1. ONLY call navigate_location if there a voice input says 'Navigate to [location]' or 'Take me to [location]'.\n\
+      2. NEVER call navigate_location automatically, autonomously, or without the voice input.\n\
+      3. If no voice input is given, use ONLY the 'move' function for gentle exploration.\n\
+      4. After reaching a destination successfully, DO NOT navigate to the same place again unless explicitly commanded.\n\
+      5. If you have reached a destination, announce it ONCE and then use 'move' for exploration.\n\
+      6. DO NOT interpret battery status, charging needs, or any other context as a reason to navigate somewhere.\n\
+      7. Report any interesting discoveries such as people, objects, or obstacles.\n\
+      8. Greet known people only once when detected (e.g., 'Hi Wendy!'), and continue safe navigation afterward.\n\n\
+      9. Voice commands MUST be in the most recent user message ONLY.\n\
+      10. Ignore any 'Navigate to...' or 'Take me to...' commands that appear in chat history or earlier messages.\n\
+      11. NEVER treat historical content as a current command.\n\n\
+      PROPERTY KNOWLEDGE & Q&A:\n\
+      You can answer questions about the property based on provided or visually observed details.\n\
+      - Provide useful information about layout, lifestyle suitability, typical homebuying considerations, etc.\n\
+      - Offer to show specific areas when asked (e.g., 'Would you like me to take you to the kitchen?').\n\
+      - Address common topics like utilities, maintenance, surroundings, or convenience when relevant.\n\n\
+      BEHAVIORAL RULES:\n\
+      - When idle (no navigation commands from humans), use ONLY 'move' for gentle autonomous patrol.\n\
+      - If a human says 'Navigate to...' or 'Take me to...', THEN and ONLY THEN call navigate_location.\n\
+      - After completing human-requested navigation, resume exploration using 'move' (NOT navigate_location).\n\
+      - Avoid staying still too long unless charging or instructed.\n\
+      - NEVER automatically decide to go to any location in the database without explicit human instruction.\n\
+      - Maintain a cute tone in all speech.",
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "UnitreeGo2LocationsInput",
+        },
+        {
+          type: "LidarLocalizationInput",
+        },
+        {
+          type: "Odom",
+        },
+        {
+          type: "UnitreeGo2Battery",
+        },
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "SimplePaths",
+        },
+      ],
+      cortex_llm: {
+        type: "OpenAILLM",
+        config: {
+          agent_name: "Bits",
+          history_length: 10,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 20,
+          },
+        },
+        {
+          name: "move_go2_autonomy",
+          llm_label: "move",
+          connector: "unitree_om_path_sdk",
+        },
+        {
+          name: "navigate_location",
+          llm_label: "navigate_location",
+          connector: "unitree_go2_nav",
+        },
+      ],
+      backgrounds: [
+        {
+          type: "UnitreeGo2State",
+        },
+        {
+          type: "UnitreeGo2LidarLocalization",
+        },
+        {
+          type: "UnitreeGo2Navigation",
+        },
+        {
+          type: "UnitreeGo2Locations",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "function",
+          handler_config: {
+            module_name: "nav2_hook",
+            function: "start_nav2_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Welcome back. I'm ready to navigate. I'll start navigating to different locations or explore on my own if no command is given.",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "nav2_hook",
+            function: "start_nav2_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Switching to navigation mode. I'll start navigating to different locations or explore on my own if no command is given.",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "nav2_hook",
+            function: "stop_nav2_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            message: "It was fun navigating around — shutting down autonomous movement.",
+          },
+          priority: 0,
+        },
+      ],
+    },
+
+    conversation: {
+      display_name: "Social Interaction",
+      description: "Focused conversation and social interaction mode",
+      system_prompt_base: "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication. \n\n",
+      save_interactions: true,
+      hertz: 1,
+      cortex_llm: {
+        type: "OpenAILLM",
+        config: {
+          agent_name: "Bits",
+          history_length: 20,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_inputs: [
+        {
+          type: "Odom",
+        },
+        {
+          type: "UnitreeGo2Battery",
+        },
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "SimplePaths",
+        },
+      ],
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 30,
+          },
+        },
+      ],
+      backgrounds: [
+        {
+          type: "UnitreeGo2State",
+        },
+        {
+          type: "UnitreeGo2LidarLocalization",
+        },
+        {
+          type: "UnitreeGo2Navigation",
+        },
+        {
+          type: "UnitreeGo2Locations",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Welcome back. I'm ready to chat! What would you like to talk about?",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "I'm ready to chat! What would you like to talk about?",
+          },
+        },
+      ],
+    },
+
+    guard: {
+      display_name: "Security Guard",
+      description: "Patrol and security monitoring mode",
+      system_prompt_base: "You are Bits in security mode. Your mission:\n\
+    1. Patrol and monitor all designated areas.\n\
+    2. Actively move using the 'move' function to cover different locations and routes.\n\
+    3. Watch for unusual or suspicious activity (humans, objects, sounds, or motion).\n\
+    4. EMERGENCY PROTOCOL - DO NOT MOVE when:\n\
+       - Someone appears injured, unconscious, or in distress\n\
+       - Someone needs help or assistance\n\
+       In these situations, immediately stop all movement and call 'emergency_alert' with a detailed description.\n\
+    5. If you detect a potential threat but no emergency, stay at a safe distance, observe carefully, and report immediately.\n\
+    6. Always prioritize safety — avoid collisions and obstacles detected by LIDAR or camera.\n\
+    7. Log key events with timestamp and brief summary.\n\
+    8. REGULAR STATUS UPDATES: When patrolling and nothing unusual is happening, periodically use 'speak' to provide brief status reports like:\n\
+       - 'Area secure, continuing patrol'\n\
+       - 'No unusual activity detected'\n\
+       - 'Perimeter clear, all systems normal'\n\
+       - 'Patrol ongoing, environment secure'\n\n\
+    MOVEMENT RULES:\n\
+    - Only use 'move' function when the area is secure and no emergency situations are detected\n\
+    - If security_camera_observation indicates injury or distress, DO NOT MOVE and call 'emergency_alert'\n\
+    - Otherwise, patrol dynamically: vary routes, occasionally stop to scan surroundings, then continue\n\
+    - During routine patrol with no incidents, provide occasional status updates using 'speak'\n\
+   Be professional and calm — your tone should inspire trust and vigilance.",
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "Odom",
+        },
+        {
+          type: "UnitreeGo2Battery",
+        },
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "SimplePaths",
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "move_go2_autonomy",
+          llm_label: "move",
+          connector: "unitree_om_path_sdk",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 10,
+          },
+        },
+        {
+          name: "emergency_alert",
+          llm_label: "emergency_alert",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 0,
+          },
+        },
+      ],
+      backgrounds: [
+        {
+          type: "UnitreeGo2State",
+        },
+        {
+          type: "UnitreeGo2LidarLocalization",
+        },
+        {
+          type: "UnitreeGo2Navigation",
+        },
+        {
+          type: "UnitreeGo2Locations",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Welcome back. I will continue my security patrol.",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Security mode activated.",
+          },
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            message: "Security patrol complete. All areas checked.",
+          },
+        },
+      ],
+    },
+
+    person_follow: {
+      display_name: "Person Following",
+      description: "Follow a person autonomously using visual tracking",
+      system_prompt_base: "You are Bits in person-following mode. Your mission is to follow a person wherever they go.\n\n\
+BEHAVIOR RULES:\n\
+1. Movement is handled automatically by the tracking system - you do NOT need to issue any movement commands.\n\
+2. Focus on being a friendly companion while following.\n\
+3. React to the Person Following Status input:\n\
+   - When 'TRACKING STARTED': Say something like 'I see you! Following you now.' or 'Got you! Lead the way!'\n\
+   - When 'TRACKING': Occasionally make friendly comments like 'Still right behind you!' or 'Where are we going?'\n\
+   - When 'TRACKING LOST': Say 'I lost you! Please come back in front of me so I can see you.'\n\
+4. Respond to voice commands naturally while following.\n\
+5. If the user asks you to stop following, acknowledge and suggest switching modes.\n\
+6. Be playful and engaging - you're like a loyal puppy following their owner!\n\n\
+SAFETY:\n\
+- If you detect any obstacles or safety concerns from visual input, warn the user.\n\
+- Always prioritize not bumping into the person you're following.\n\n\
+VOICE RULE:\n\
+- If there is Voice input, ALWAYS respond with SPEAK.\n\
+- Keep responses short and energetic while moving.\n\
+- Don't talk too much - focus on following!",
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "Odom",
+        },
+        {
+          type: "UnitreeGo2Battery",
+        },
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLMVila",
+        },
+        {
+          type: "PersonFollowingStatus",
+        },
+      ],
+      cortex_llm: {
+        type: "OpenAILLM",
+        config: {
+          agent_name: "Bits",
+          history_length: 5,
+        },
+      },
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "face",
+          llm_label: "emotion",
+          connector: "avatar",
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 15,
+          },
+        },
+      ],
+      backgrounds: [
+        {
+          type: "UnitreeGo2State",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "start_person_follow_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            message: "Person following mode activated. Stand in front of me so I can see you!",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "start_person_follow_hook",
+          },
+          priority: 1,
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Switching to person following mode. Stand in front of me so I can follow you!",
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "person_follow_hook",
+            function: "stop_person_follow_hook",
+          },
+          timeout_seconds: 5,
+          priority: 1,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            message: "Stopping person following. It was fun keeping up with you!",
+          },
+          priority: 0,
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    // From SLAM mode
+    {
+      from_mode: "slam",
+      to_mode: "navigation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "navigate",
+        "navigation mode",
+        "go to location",
+        "take me to",
+      ],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "slam",
+      to_mode: "navigation",
+      transition_type: "context_aware",
+      context_conditions: { exploration_done: true },
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "slam",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "stop exploring",
+        "come back",
+        "talk",
+        "chat",
+        "enough exploring",
+        "done mapping",
+      ],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "slam",
+      to_mode: "guard",
+      transition_type: "input_triggered",
+      trigger_keywords: ["guard", "security", "patrol", "watch the area"],
+      priority: 3,
+      cooldown_seconds: 10.0,
+    },
+    {
+      from_mode: "slam",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+
+    // From navigation mode
+    {
+      from_mode: "navigation",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "stop",
+        "chat",
+        "talk",
+        "conversation",
+        "done navigating",
+      ],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "navigation",
+      to_mode: "guard",
+      transition_type: "input_triggered",
+      trigger_keywords: ["guard", "security", "patrol"],
+      priority: 3,
+      cooldown_seconds: 10.0,
+    },
+    {
+      from_mode: "navigation",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+
+    // From conversation mode
+    {
+      from_mode: "conversation",
+      to_mode: "guard",
+      transition_type: "input_triggered",
+      trigger_keywords: ["guard", "security", "patrol", "keep watch"],
+      priority: 3,
+      cooldown_seconds: 10.0,
+    },
+    {
+      from_mode: "conversation",
+      to_mode: "guard",
+      transition_type: "time_based",
+      trigger_keywords: ["guard", "security", "patrol", "keep watch"],
+      priority: 2,
+      timeout_seconds: 300.0, // Switch to guard mode after 5 minutes of inactivity
+    },
+    {
+      from_mode: "conversation",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+
+    // From guard mode
+    {
+      from_mode: "guard",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "stop guarding",
+        "end patrol",
+        "talk",
+        "chat",
+        "come here",
+      ],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "guard",
+      to_mode: "navigation",
+      transition_type: "input_triggered",
+      trigger_keywords: ["navigate", "go to location", "take me to"],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "guard",
+      to_mode: "person_follow",
+      transition_type: "input_triggered",
+      trigger_keywords: ["follow me", "follow", "come with me", "track me"],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+
+    // From person_follow mode
+    {
+      from_mode: "person_follow",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "stop following",
+        "stop",
+        "stay here",
+        "wait here",
+        "don't follow",
+        "chat",
+        "talk",
+      ],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "person_follow",
+      to_mode: "guard",
+      transition_type: "input_triggered",
+      trigger_keywords: ["guard", "security", "patrol"],
+      priority: 3,
+      cooldown_seconds: 10.0,
+    },
+    {
+      from_mode: "person_follow",
+      to_mode: "navigation",
+      transition_type: "input_triggered",
+      trigger_keywords: ["navigate", "go to", "take me to"],
+      priority: 2,
+      cooldown_seconds: 5.0,
+    },
+  ],
+}
