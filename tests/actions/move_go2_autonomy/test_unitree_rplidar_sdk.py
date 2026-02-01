@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_sdk_advance import (
-    MoveUnitreeSDKAdvanceConfig,
-    MoveUnitreeSDKAdvanceConnector,
+from actions.move_go2_autonomy.connector.unitree_rplidar_sdk import (
+    MoveUnitreeRPLidarSDKConfig,
+    MoveUnitreeRPLidarSDKConnector,
 )
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 from providers.odom_provider import RobotState
@@ -17,32 +17,26 @@ def mock_dependencies():
     """Mock all external dependencies."""
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.SimplePathsProvider"
-        ) as mock_paths,
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.RPLidarProvider"
+        ) as mock_lidar,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.UnitreeGo2StateProvider"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2StateProvider"
         ) as mock_state,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.SportClient"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.SportClient"
         ) as mock_sport,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.OdomProvider"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.OdomProvider"
         ) as mock_odom,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.FacePresenceProvider"
-        ) as mock_face,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.open_zenoh_session"
-        ) as mock_zenoh_session,
     ):
         # Setup mock instances
-        mock_paths_instance = Mock()
-        mock_paths_instance.advance = [4]
-        mock_paths_instance.retreat = [1]
-        mock_paths_instance.turn_left = [2]
-        mock_paths_instance.turn_right = [6]
-        mock_paths_instance.path_angles = {1: 0, 2: 45, 4: 0, 6: -45}
-        mock_paths.return_value = mock_paths_instance
+        mock_lidar_instance = Mock()
+        mock_lidar_instance.advance = [4]
+        mock_lidar_instance.retreat = [1]
+        mock_lidar_instance.turn_left = [2]
+        mock_lidar_instance.turn_right = [6]
+        mock_lidar_instance.path_angles = {1: 0, 2: 45, 4: 0, 6: -45}
+        mock_lidar.return_value = mock_lidar_instance
 
         mock_state_instance = Mock()
         mock_state_instance.state_code = None
@@ -68,56 +62,42 @@ def mock_dependencies():
         }
         mock_odom.return_value = mock_odom_instance
 
-        mock_face_instance = Mock()
-        mock_face_instance.unknown_faces = 0
-        mock_face.return_value = mock_face_instance
-
-        mock_session_instance = Mock()
-        mock_session_instance.declare_subscriber = Mock()
-        mock_session_instance.declare_publisher = Mock(return_value=Mock())
-        mock_zenoh_session.return_value = mock_session_instance
-
         yield {
-            "paths": mock_paths_instance,
+            "lidar": mock_lidar_instance,
             "state": mock_state_instance,
             "sport": mock_sport_instance,
             "odom": mock_odom_instance,
-            "face": mock_face_instance,
-            "zenoh_session": mock_session_instance,
         }
 
 
 @pytest.fixture
 def connector(mock_dependencies):
-    """Create a MoveUnitreeSDKAdvanceConnector instance with mocked dependencies."""
-    config = MoveUnitreeSDKAdvanceConfig(unitree_ethernet="eth0")
-    connector = MoveUnitreeSDKAdvanceConnector(config)
+    """Create a MoveUnitreeRPLidarSDKConnector instance with mocked dependencies."""
+    config = MoveUnitreeRPLidarSDKConfig(unitree_ethernet="eth0")
+    connector = MoveUnitreeRPLidarSDKConnector(config)
     return connector
 
 
-class TestMoveUnitreeSDKAdvanceConfig:
-    """Test MoveUnitreeSDKAdvanceConfig configuration."""
+class TestMoveUnitreeRPLidarSDKConfig:
+    """Test MoveUnitreeRPLidarSDKConfig configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MoveUnitreeSDKAdvanceConfig()
+        config = MoveUnitreeRPLidarSDKConfig()
         assert config.unitree_ethernet == "eth0"
-        assert config.mode is None
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = MoveUnitreeSDKAdvanceConfig(unitree_ethernet="eth1", mode="guard")
+        config = MoveUnitreeRPLidarSDKConfig(unitree_ethernet="eth1")
         assert config.unitree_ethernet == "eth1"
-        assert config.mode == "guard"
 
 
-class TestMoveUnitreeSDKAdvanceConnectorInit:
-    """Test MoveUnitreeSDKAdvanceConnector initialization."""
+class TestMoveUnitreeRPLidarSDKConnectorInit:
+    """Test MoveUnitreeRPLidarSDKConnector initialization."""
 
     def test_initialization(self, connector, mock_dependencies):
         """Test successful initialization."""
         assert connector.dog_attitude is None
-        assert connector.move_speed == 0.5
         assert connector.turn_speed == 0.8
         assert connector.angle_tolerance == 5.0
         assert connector.distance_tolerance == 0.05
@@ -125,115 +105,49 @@ class TestMoveUnitreeSDKAdvanceConnectorInit:
         assert connector.movement_attempts == 0
         assert connector.movement_attempt_limit == 15
         assert connector.gap_previous == 0
-        assert connector.ai_control_enabled is True
 
-        assert connector.path_provider == mock_dependencies["paths"]
+        # Verify providers are initialized
+        assert connector.lidar == mock_dependencies["lidar"]
         assert connector.unitree_go2_state == mock_dependencies["state"]
         assert connector.sport_client == mock_dependencies["sport"]
         assert connector.odom == mock_dependencies["odom"]
-        assert connector.face_presence_provider == mock_dependencies["face"]
 
+        # Verify sport client initialization
         mock_dependencies["sport"].SetTimeout.assert_called_once_with(10.0)
         mock_dependencies["sport"].Init.assert_called_once()
         mock_dependencies["sport"].StopMove.assert_called_once()
         mock_dependencies["sport"].Move.assert_called_once_with(0.05, 0, 0)
 
-        assert connector.session is not None
-        mock_dependencies["zenoh_session"].declare_subscriber.assert_called_once()
-        mock_dependencies["zenoh_session"].declare_publisher.assert_called_once_with(
-            "om/ai/response"
-        )
-
     def test_initialization_sport_client_error(self):
         """Test initialization when sport client fails."""
         with (
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SimplePathsProvider"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.RPLidarProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.UnitreeGo2StateProvider"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2StateProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SportClient"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.SportClient"
             ) as mock_sport,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.OdomProvider"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.OdomProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.FacePresenceProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.open_zenoh_session"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.logging"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.logging"
             ) as mock_logging,
         ):
             mock_sport.side_effect = Exception("Connection failed")
 
-            config = MoveUnitreeSDKAdvanceConfig()
-            connector = MoveUnitreeSDKAdvanceConnector(config)
+            config = MoveUnitreeRPLidarSDKConfig()
+            connector = MoveUnitreeRPLidarSDKConnector(config)
 
             assert connector.sport_client is None
-            mock_logging.error.assert_called()
-
-    def test_initialization_zenoh_error(self):
-        """Test initialization when Zenoh session fails."""
-        with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SimplePathsProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.UnitreeGo2StateProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SportClient"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.OdomProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.FacePresenceProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.open_zenoh_session"
-            ) as mock_zenoh,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.logging"
-            ) as mock_logging,
-        ):
-            mock_zenoh.side_effect = Exception("Zenoh connection failed")
-
-            config = MoveUnitreeSDKAdvanceConfig()
-            connector = MoveUnitreeSDKAdvanceConnector(config)
-
-            assert connector.session is None
             mock_logging.error.assert_called()
 
 
 class TestConnect:
     """Test the connect method."""
-
-    @pytest.mark.asyncio
-    async def test_connect_guard_mode_unknown_face(self, connector, mock_dependencies):
-        """Test connect when in guard mode with unknown face detected."""
-        connector.mode = "guard"
-        mock_dependencies["face"].unknown_faces = 1
-        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
-
-        await connector.connect(move_input)
-
-        assert connector.pending_movements.qsize() == 0
-
-    @pytest.mark.asyncio
-    async def test_connect_ai_control_disabled(self, connector, mock_dependencies):
-        """Test connect when AI control is disabled."""
-        connector.ai_control_enabled = False
-        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
-
-        await connector.connect(move_input)
-
-        assert connector.pending_movements.qsize() == 0
 
     @pytest.mark.asyncio
     async def test_connect_with_joint_lock_state(self, connector, mock_dependencies):
@@ -253,12 +167,12 @@ class TestConnect:
 
         await connector.connect(move_input)
 
+        # Should return early without processing
         assert connector.pending_movements.qsize() == 0
 
     @pytest.mark.asyncio
     async def test_connect_robot_already_moving(self, connector, mock_dependencies):
         """Test connect when robot is already moving."""
-        mock_dependencies["state"].state_code = None
         mock_dependencies["odom"].position["moving"] = True
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
 
@@ -277,6 +191,7 @@ class TestConnect:
 
         await connector.connect(move_input)
 
+        # Should still have only one movement
         assert connector.pending_movements.qsize() == 1
 
     @pytest.mark.asyncio
@@ -337,7 +252,7 @@ class TestConnect:
         command = connector.pending_movements.get()
         assert command.dx == -0.5
         assert command.turn_complete is True
-        assert command.speed == 0.2
+        assert command.speed == 0.3
 
     @pytest.mark.asyncio
     async def test_connect_stand_still(self, connector, mock_dependencies):
@@ -363,7 +278,7 @@ class TestMovementProcessing:
 
     def test_process_turn_left_with_barrier(self, connector, mock_dependencies):
         """Test turn left when blocked by barrier."""
-        mock_dependencies["paths"].turn_left = []
+        mock_dependencies["lidar"].turn_left = []
 
         connector._process_turn_left()
 
@@ -377,7 +292,7 @@ class TestMovementProcessing:
 
     def test_process_turn_right_with_barrier(self, connector, mock_dependencies):
         """Test turn right when blocked by barrier."""
-        mock_dependencies["paths"].turn_right = []
+        mock_dependencies["lidar"].turn_right = []
 
         connector._process_turn_right()
 
@@ -391,7 +306,7 @@ class TestMovementProcessing:
 
     def test_process_move_forward_with_barrier(self, connector, mock_dependencies):
         """Test move forward when blocked by barrier."""
-        mock_dependencies["paths"].advance = []
+        mock_dependencies["lidar"].advance = []
 
         connector._process_move_forward()
 
@@ -403,33 +318,9 @@ class TestMovementProcessing:
 
         assert connector.pending_movements.qsize() == 1
 
-    def test_process_move_forward_angle_not_zero(self, connector, mock_dependencies):
-        """Test move forward when path angle is not zero."""
-        # Set up path with non-zero angle
-        mock_dependencies["paths"].advance = [2]
-        mock_dependencies["paths"].path_angles = {2: 30}
-
-        connector._process_move_forward()
-
-        assert connector.pending_movements.qsize() == 1
-        command = connector.pending_movements.get()
-        assert command.turn_complete is False
-
-    def test_process_move_forward_angle_zero(self, connector, mock_dependencies):
-        """Test move forward when path angle is zero."""
-        # Set up path with zero angle
-        mock_dependencies["paths"].advance = [4]
-        mock_dependencies["paths"].path_angles = {4: 0}
-
-        connector._process_move_forward()
-
-        assert connector.pending_movements.qsize() == 1
-        command = connector.pending_movements.get()
-        assert command.turn_complete is True
-
     def test_process_move_back_with_barrier(self, connector, mock_dependencies):
         """Test move back when blocked by barrier."""
-        mock_dependencies["paths"].retreat = []
+        mock_dependencies["lidar"].retreat = []
 
         connector._process_move_back()
 
@@ -483,7 +374,7 @@ class TestMoveRobot:
         mock_dependencies["sport"].Move.side_effect = Exception("Movement failed")
 
         with patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.logging"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.logging"
         ) as mock_logging:
             connector._move_robot(0.5, 0.0, 0.0)
 
@@ -554,7 +445,7 @@ class TestExecuteTurn:
 
     def test_execute_turn_left_blocked(self, connector, mock_dependencies):
         """Test execute turn left when blocked."""
-        mock_dependencies["paths"].turn_left = []
+        mock_dependencies["lidar"].turn_left = []
 
         result = connector._execute_turn(10.0)
 
@@ -562,7 +453,7 @@ class TestExecuteTurn:
 
     def test_execute_turn_left_success(self, connector, mock_dependencies):
         """Test successful turn left."""
-        mock_dependencies["paths"].turn_left = [2, 3]
+        mock_dependencies["lidar"].turn_left = [2, 3]
 
         result = connector._execute_turn(10.0)
 
@@ -571,7 +462,7 @@ class TestExecuteTurn:
 
     def test_execute_turn_right_blocked(self, connector, mock_dependencies):
         """Test execute turn right when blocked."""
-        mock_dependencies["paths"].turn_right = []
+        mock_dependencies["lidar"].turn_right = []
 
         result = connector._execute_turn(-10.0)
 
@@ -579,7 +470,7 @@ class TestExecuteTurn:
 
     def test_execute_turn_right_success(self, connector, mock_dependencies):
         """Test successful turn right."""
-        mock_dependencies["paths"].turn_right = [5, 6]
+        mock_dependencies["lidar"].turn_right = [5, 6]
 
         result = connector._execute_turn(-10.0)
 
@@ -688,8 +579,7 @@ class TestTick:
 
     def test_tick_movement_phase_forward_blocked(self, connector, mock_dependencies):
         """Test tick during movement phase when forward is blocked."""
-        mock_dependencies["paths"].advance = []
-        # odom_x must be non-zero to avoid early return in tick()
+        mock_dependencies["lidar"].advance = []
         mock_dependencies["odom"].position["odom_x"] = 1.0
         mock_dependencies["odom"].position["odom_y"] = 0.0
         connector.pending_movements.put(
@@ -703,8 +593,7 @@ class TestTick:
 
     def test_tick_movement_phase_retreat_blocked(self, connector, mock_dependencies):
         """Test tick during movement phase when retreat is blocked."""
-        mock_dependencies["paths"].retreat = []
-        # odom_x must be non-zero to avoid early return in tick()
+        mock_dependencies["lidar"].retreat = []
         mock_dependencies["odom"].position["odom_x"] = 1.0
         mock_dependencies["odom"].position["odom_y"] = 0.0
         connector.pending_movements.put(
@@ -745,114 +634,3 @@ class TestTick:
 
         assert connector.pending_movements.qsize() == 0
         assert connector.movement_attempts == 0
-
-
-class TestZenohAIStatus:
-    """Test Zenoh AI status request handler."""
-
-    def test_zenoh_ai_status_request_enable(self, connector, mock_dependencies):
-        """Test AI control enable request."""
-        # Create mock Zenoh sample
-        mock_sample = Mock()
-        mock_payload = Mock()
-        mock_payload.to_bytes.return_value = b""
-        mock_sample.payload = mock_payload
-
-        # Mock AIStatusRequest with proper header
-        with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusRequest"
-            ) as mock_request,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusResponse"
-            ) as mock_response,
-        ):
-            mock_header = Mock()
-            mock_header.frame_id = "test_frame"
-
-            mock_request_instance = Mock()
-            mock_request_instance.code = 1
-            mock_request_instance.request_id = "test-123"
-            mock_request_instance.header = mock_header
-            mock_request.deserialize.return_value = mock_request_instance
-
-            mock_response_instance = Mock()
-            mock_response_instance.serialize.return_value = b"serialized_response"
-            mock_response.return_value = mock_response_instance
-
-            connector.ai_control_enabled = False
-            connector._zenoh_ai_status_request(mock_sample)
-
-            assert connector.ai_control_enabled is True
-            connector._zenoh_ai_status_response_pub.put.assert_called_once()
-
-    def test_zenoh_ai_status_request_disable(self, connector, mock_dependencies):
-        """Test AI control disable request."""
-        # Create mock Zenoh sample
-        mock_sample = Mock()
-        mock_payload = Mock()
-        mock_payload.to_bytes.return_value = b""
-        mock_sample.payload = mock_payload
-
-        with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusRequest"
-            ) as mock_request,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusResponse"
-            ) as mock_response,
-        ):
-            mock_header = Mock()
-            mock_header.frame_id = "test_frame"
-
-            mock_request_instance = Mock()
-            mock_request_instance.code = 0
-            mock_request_instance.request_id = "test-123"
-            mock_request_instance.header = mock_header
-            mock_request.deserialize.return_value = mock_request_instance
-
-            mock_response_instance = Mock()
-            mock_response_instance.serialize.return_value = b"serialized_response"
-            mock_response.return_value = mock_response_instance
-
-            connector.ai_control_enabled = True
-            connector._zenoh_ai_status_request(mock_sample)
-
-            assert connector.ai_control_enabled is False
-            connector._zenoh_ai_status_response_pub.put.assert_called_once()
-
-    def test_zenoh_ai_status_request_read_status(self, connector, mock_dependencies):
-        """Test AI control read status request."""
-        # Create mock Zenoh sample
-        mock_sample = Mock()
-        mock_payload = Mock()
-        mock_payload.to_bytes.return_value = b""
-        mock_sample.payload = mock_payload
-
-        # Mock AIStatusRequest with proper header
-        with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusRequest"
-            ) as mock_request,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusResponse"
-            ) as mock_response,
-        ):
-            mock_header = Mock()
-            mock_header.frame_id = "test_frame"
-
-            mock_request_instance = Mock()
-            mock_request_instance.code = 2
-            mock_request_instance.request_id = "test-123"
-            mock_request_instance.header = mock_header
-            mock_request.deserialize.return_value = mock_request_instance
-
-            mock_response_instance = Mock()
-            mock_response_instance.serialize.return_value = b"serialized_response"
-            mock_response.return_value = mock_response_instance
-
-            connector.ai_control_enabled = True
-            connector._zenoh_ai_status_request(mock_sample)
-
-            assert connector._zenoh_ai_status_response_pub is not None
-            connector._zenoh_ai_status_response_pub.put.assert_called_once()
