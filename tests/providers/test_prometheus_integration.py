@@ -26,7 +26,7 @@ class TestBaseClassPrometheusIntegration:
 
     def test_sensor_base_has_monitor(self):
         """Test that Sensor base class initializes _monitor."""
-        with patch("providers.prometheus_monitor.start_http_server"):
+        with patch("uvicorn.Server.run"):
             from inputs.base import Sensor, SensorConfig
 
             class TestSensor(Sensor):
@@ -50,7 +50,7 @@ class TestBaseClassPrometheusIntegration:
 
     def test_action_connector_base_has_monitor(self):
         """Test that ActionConnector base class initializes _monitor."""
-        with patch("providers.prometheus_monitor.start_http_server"):
+        with patch("uvicorn.Server.run"):
             from actions.base import ActionConfig, ActionConnector
 
             class TestConnector(ActionConnector):
@@ -65,7 +65,7 @@ class TestBaseClassPrometheusIntegration:
 
     def test_simulator_base_has_monitor(self):
         """Test that Simulator base class initializes _monitor."""
-        with patch("providers.prometheus_monitor.start_http_server"):
+        with patch("uvicorn.Server.run"):
             from simulators.base import Simulator, SimulatorConfig
 
             config = SimulatorConfig()
@@ -89,7 +89,7 @@ class TestLLMPrometheusIntegration:
 
     def test_ollama_llm_registers_with_prometheus(self):
         """Test that OllamaLLM registers with PrometheusMonitor on init."""
-        with patch("providers.prometheus_monitor.start_http_server"):
+        with patch("uvicorn.Server.run"):
             from llm.plugins.ollama_llm import OllamaLLM, OllamaLLMConfig
             from providers.prometheus_monitor import PrometheusMonitor
 
@@ -105,7 +105,7 @@ class TestLLMPrometheusIntegration:
     def test_deepseek_llm_registers_with_prometheus(self):
         """Test that DeepSeekLLM registers with PrometheusMonitor on init."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("llm.plugins.deepseek_llm.openai.AsyncOpenAI"),
         ):
             from llm.plugins.deepseek_llm import DeepSeekConfig, DeepSeekLLM
@@ -119,7 +119,7 @@ class TestLLMPrometheusIntegration:
 
     def test_llm_has_monitor_attribute(self):
         """Test that LLM instances have _monitor attribute from base class."""
-        with patch("providers.prometheus_monitor.start_http_server"):
+        with patch("uvicorn.Server.run"):
             from llm.plugins.ollama_llm import OllamaLLM, OllamaLLMConfig
 
             config = OllamaLLMConfig(
@@ -146,7 +146,7 @@ class TestInputPluginPrometheusIntegration:
     def test_gps_input_registers(self):
         """Test that Gps input registers with Prometheus."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("inputs.plugins.gps.GpsProvider"),
             patch("inputs.plugins.gps.IOProvider"),
         ):
@@ -163,7 +163,7 @@ class TestInputPluginPrometheusIntegration:
     def test_rplidar_input_registers(self):
         """Test that RPLidar input registers with Prometheus."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("inputs.plugins.rplidar.RPLidarProvider"),
             patch("inputs.plugins.rplidar.IOProvider"),
         ):
@@ -180,7 +180,7 @@ class TestInputPluginPrometheusIntegration:
     def test_odom_input_registers(self):
         """Test that Odom input registers with Prometheus."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("inputs.plugins.odom.OdomProvider"),
             patch("inputs.plugins.odom.IOProvider"),
         ):
@@ -196,7 +196,7 @@ class TestInputPluginPrometheusIntegration:
     def test_input_heartbeat_on_formatted_buffer(self):
         """Test that input sends heartbeat when formatted_latest_buffer is called."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("inputs.plugins.gps.GpsProvider"),
             patch("inputs.plugins.gps.IOProvider"),
         ):
@@ -235,7 +235,7 @@ class TestActionConnectorPrometheusIntegration:
     def test_face_avatar_connector_registers(self):
         """Test that FaceAvatarConnector registers with Prometheus."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("actions.face.connector.avatar.AvatarProvider") as mock_provider,
         ):
             from actions.base import ActionConfig
@@ -255,7 +255,7 @@ class TestActionConnectorPrometheusIntegration:
     async def test_face_connector_heartbeat_on_connect(self):
         """Test that face connector sends heartbeat when connect() is called."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("actions.face.connector.avatar.AvatarProvider") as mock_provider,
         ):
             from actions.base import ActionConfig
@@ -298,7 +298,7 @@ class TestSimulatorPrometheusIntegration:
     def test_websim_registers(self):
         """Test that WebSim registers with Prometheus."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("simulators.plugins.WebSim.uvicorn"),
             patch("simulators.plugins.WebSim.IOProvider"),
             patch("simulators.plugins.WebSim.FastAPI"),
@@ -334,7 +334,7 @@ class TestPrometheusRecoveryIntegration:
     def test_provider_registers_with_recovery_callback(self):
         """Test that providers register recovery callbacks."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("inputs.plugins.gps.GpsProvider"),
             patch("inputs.plugins.gps.IOProvider"),
         ):
@@ -351,7 +351,7 @@ class TestPrometheusRecoveryIntegration:
 
     def test_ollama_llm_registers_with_metadata(self):
         """Test that OllamaLLM registers with proper metadata."""
-        with patch("providers.prometheus_monitor.start_http_server"):
+        with patch("uvicorn.Server.run"):
             from llm.plugins.ollama_llm import OllamaLLM, OllamaLLMConfig
             from providers.prometheus_monitor import PrometheusMonitor
 
@@ -383,7 +383,7 @@ class TestHeartbeatAndErrorReporting:
     def test_multiple_providers_register(self):
         """Test that multiple providers can register simultaneously."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("inputs.plugins.gps.GpsProvider"),
             patch("inputs.plugins.gps.IOProvider"),
             patch("inputs.plugins.odom.OdomProvider"),
@@ -418,7 +418,7 @@ class TestHeartbeatAndErrorReporting:
     def test_provider_metadata_stored(self):
         """Test that provider metadata is stored correctly."""
         with (
-            patch("providers.prometheus_monitor.start_http_server"),
+            patch("uvicorn.Server.run"),
             patch("inputs.plugins.gps.GpsProvider"),
             patch("inputs.plugins.gps.IOProvider"),
         ):
