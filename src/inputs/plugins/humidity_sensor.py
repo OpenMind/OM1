@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -16,7 +16,7 @@ class HumiditySensorConfig(SensorConfig):
     calibration_offset: float = 0.0
 
 
-class HumiditySensor(FuserInput[HumiditySensorConfig, Optional[Dict[str, Any]]):
+class HumiditySensor(FuserInput[HumiditySensorConfig, Optional[dict]]):
     """
     Humidity sensor input handler that provides real-time humidity readings.
     Supports DHT22 sensors with temperature and humidity data.
@@ -40,13 +40,13 @@ class HumiditySensor(FuserInput[HumiditySensorConfig, Optional[Dict[str, Any]]):
         """Setup DHT22 sensor."""
         try:
             import adafruit_dht
-            self.humidity_sensor = adafruit_dht.DHT22(self.pin, adafruit_dht.DHT22.DHT22传感器)
+            self.humidity_sensor = adafruit_dht.DHT22(self.pin)
             logging.info(f"DHT22 humidity sensor initialized on pin {self.pin}")
         except ImportError:
             logging.error("adafruit_dht library not available for DHT22")
             self.humidity_sensor = None
 
-    async def _poll(self) -> Optional[Dict[str, Any]]:
+    async def _poll(self) -> Optional[dict]:
         """Poll humidity sensor for new data."""
         if not self.humidity_sensor:
             return None
@@ -71,7 +71,7 @@ class HumiditySensor(FuserInput[HumiditySensorConfig, Optional[Dict[str, Any]]):
         self.last_reading_time = current_time
         return data
 
-    async def _raw_to_text(self, raw_input: Dict[str, Any]) -> Optional[Message]:
+    async def _raw_to_text(self, raw_input: dict) -> Optional[Message]:
         """Convert raw humidity data to text format."""
         if not raw_input:
             return None
@@ -94,7 +94,7 @@ class HumiditySensor(FuserInput[HumiditySensorConfig, Optional[Dict[str, Any]]):
         
         return Message(timestamp=raw_input.get('timestamp', time.time()), message=msg)
 
-    async def raw_to_text(self, raw_input: Dict[str, Any]) -> Optional[Message]:
+    async def raw_to_text(self, raw_input: dict) -> Optional[Message]:
         return await self._raw_to_text(raw_input)
 
     async def formatted_latest_buffer(self) -> str:

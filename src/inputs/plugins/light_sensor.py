@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -16,7 +16,7 @@ class LightSensorConfig(SensorConfig):
     threshold: float = 100.0
 
 
-class LightSensor(FuserInput[LightSensorConfig, Optional[Dict[str, Any]]):
+class LightSensor(FuserInput[LightSensorConfig, Optional[dict]]):
     """
     Light sensor input handler using BH1750 digital light sensor.
     Provides ambient light level measurements in lux.
@@ -41,17 +41,17 @@ class LightSensor(FuserInput[LightSensorConfig, Optional[Dict[str, Any]]):
         try:
             import board
             import adafruit_bh1750
-            self.light_sensor = adafruit_bh1750.BH1750(board.I2C())
+            i2c = board.I2C()
             if self.i2c_address:
-                self.light_sensor = adafruit_bh1750.BH1750(self.i2c_address)
+                self.light_sensor = adafruit_bh1750.BH1750(i2c, address=self.i2c_address)
             else:
-                self.light_sensor = adafruit_bh1750.BH1750(board.I2C())
+                self.light_sensor = adafruit_bh1750.BH1750(i2c)
             logging.info(f"BH1750 light sensor initialized on I2C")
         except ImportError:
             logging.error("adafruit_bh1750 library not available for BH1750")
             self.light_sensor = None
 
-    async def _poll(self) -> Optional[Dict[str, Any]]:
+    async def _poll(self) -> Optional[dict]:
         """Poll light sensor for new data."""
         if not self.light_sensor:
             return None
@@ -76,7 +76,7 @@ class LightSensor(FuserInput[LightSensorConfig, Optional[Dict[str, Any]]):
         self.last_reading_time = current_time
         return data
 
-    async def _raw_to_text(self, raw_input: Dict[str, Any]) -> Optional[Message]:
+    async def _raw_to_text(self, raw_input: dict) -> Optional[Message]:
         """Convert raw light data to text format."""
         if not raw_input:
             return None
@@ -97,7 +97,7 @@ class LightSensor(FuserInput[LightSensorConfig, Optional[Dict[str, Any]]):
         
         return Message(timestamp=raw_input.get('timestamp', time.time()), message=msg)
 
-    async def raw_to_text(self, raw_input: Dict[str, Any]) -> Optional[Message]:
+    async def raw_to_text(self, raw_input: dict) -> Optional[Message]:
         return await self._raw_to_text(raw_input)
 
     async def formatted_latest_buffer(self) -> str:
