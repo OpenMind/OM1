@@ -95,8 +95,8 @@ def connector(mock_dependencies):
     return connector
 
 
-class TestMoveUnitreeSDKAdvanceConfig:
-    """Test MoveUnitreeSDKAdvanceConfig configuration."""
+class TestMoveUnitreeOMPathSDK:
+    """Test TestMoveUnitreeOMPathSDKConfig configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""

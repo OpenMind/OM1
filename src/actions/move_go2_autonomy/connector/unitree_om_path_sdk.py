@@ -58,7 +58,7 @@ class MoveUnitreeOMPathSDKConnector(
 
     def __init__(self, config: MoveUnitreeOMPathSDKConfig):
         """
-        Initialize the MoveUnitreeSDKAdvance connector.
+        Initialize the MoveUnitreeOMPathSDKConnector connector.
 
         Parameters
         ----------

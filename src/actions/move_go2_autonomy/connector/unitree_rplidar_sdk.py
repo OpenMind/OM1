@@ -42,7 +42,7 @@ class MoveUnitreeRPLidarSDKConnector(
 
     def __init__(self, config: MoveUnitreeRPLidarSDKConfig):
         """
-        Initialize the MoveUnitreeSDK connector.
+        Initialize the MoveUnitreeRPLidarSDK connector.
 
         Parameters
         ----------
