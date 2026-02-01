@@ -58,7 +58,7 @@ class UbtechVLMProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UbtechVLMProvider",
-            metadata={"type": "vlm", "robot": "ubtech"},
+            metadata={"type": "vlm", "category": "vision", "robot": "ubtech"},
             recovery_callback=self._recover,
         )
 

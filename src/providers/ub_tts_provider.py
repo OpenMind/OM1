@@ -29,7 +29,7 @@ class UbTtsProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UbTtsProvider",
-            metadata={"type": "tts", "robot": "ubtech"},
+            metadata={"type": "tts", "category": "speech", "robot": "ubtech"},
             recovery_callback=self._recover,
         )
 

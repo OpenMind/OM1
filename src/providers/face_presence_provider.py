@@ -158,7 +158,7 @@ class FacePresenceProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "FacePresenceProvider",
-            metadata={"type": "face_presence", "service": "vision"},
+            metadata={"type": "face_presence", "category": "vision", "service": "vision"},
             recovery_callback=self._recover,
         )
 

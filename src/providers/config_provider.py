@@ -41,7 +41,7 @@ class ConfigProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ConfigProvider",
-            metadata={"type": "config", "protocol": "zenoh"},
+            metadata={"type": "config", "category": "system", "protocol": "zenoh"},
             recovery_callback=self._recover,
         )
 

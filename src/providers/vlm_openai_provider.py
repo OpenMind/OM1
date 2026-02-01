@@ -58,7 +58,7 @@ class VLMOpenAIProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "VLMOpenAIProvider",
-            metadata={"type": "vlm", "model": "gpt-4o-mini"},
+            metadata={"type": "vlm", "category": "vision", "model": "gpt-4o-mini"},
             recovery_callback=self._recover,
         )
 

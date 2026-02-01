@@ -210,7 +210,7 @@ class OdomProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "OdomProvider",
-            metadata={"type": "odom", "use_zenoh": str(use_zenoh)},
+            metadata={"type": "odom", "category": "navigation", "use_zenoh": str(use_zenoh)},
             recovery_callback=self._recover,
         )
 

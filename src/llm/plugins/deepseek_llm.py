@@ -75,7 +75,7 @@ class DeepSeekLLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "DeepSeekLLM",
-            metadata={"type": "llm", "provider": "deepseek"},
+            metadata={"type": "llm", "category": "inference", "provider": "deepseek"},
             recovery_callback=None,
         )
 

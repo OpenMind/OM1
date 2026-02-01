@@ -115,7 +115,7 @@ class SimplePathsProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "SimplePathsProvider",
-            metadata={"type": "paths"},
+            metadata={"type": "paths", "category": "navigation"},
             recovery_callback=self._recover,
         )
 

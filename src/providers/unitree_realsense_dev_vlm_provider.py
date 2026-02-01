@@ -302,7 +302,7 @@ class UnitreeRealSenseDevVLMProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UnitreeRealSenseDevVLMProvider",
-            metadata={"type": "vlm", "robot": "unitree", "camera": "realsense"},
+            metadata={"type": "vlm", "category": "vision", "robot": "unitree", "camera": "realsense"},
             recovery_callback=self._recover,
         )
 

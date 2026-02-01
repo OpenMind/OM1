@@ -77,7 +77,7 @@ class XAILLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "XAILLM",
-            metadata={"type": "llm", "provider": "xai"},
+            metadata={"type": "llm", "category": "inference", "provider": "xai"},
             recovery_callback=None,
         )
 

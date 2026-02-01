@@ -78,7 +78,7 @@ class GeminiLLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "GeminiLLM",
-            metadata={"type": "llm", "provider": "gemini"},
+            metadata={"type": "llm", "category": "inference", "provider": "gemini"},
             recovery_callback=None,
         )
 

@@ -97,7 +97,7 @@ class TeleopsConversationProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "TeleopsConversationProvider",
-            metadata={"type": "conversation", "service": "teleops"},
+            metadata={"type": "conversation", "category": "teleops", "service": "teleops"},
             recovery_callback=self._recover,
         )
 

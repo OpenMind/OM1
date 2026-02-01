@@ -119,7 +119,7 @@ class QwenLLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "QwenLLM",
-            metadata={"type": "llm", "provider": "qwen"},
+            metadata={"type": "llm", "category": "inference", "provider": "qwen"},
             recovery_callback=None,
         )
 

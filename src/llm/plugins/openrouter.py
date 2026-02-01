@@ -84,7 +84,7 @@ class OpenRouter(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "OpenRouter",
-            metadata={"type": "llm", "provider": "openrouter"},
+            metadata={"type": "llm", "category": "inference", "provider": "openrouter"},
             recovery_callback=None,
         )
 

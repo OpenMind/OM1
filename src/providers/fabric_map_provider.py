@@ -210,7 +210,7 @@ class FabricDataSubmitter:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "FabricDataSubmitter",
-            metadata={"type": "fabric", "service": "mapping"},
+            metadata={"type": "fabric", "category": "navigation", "service": "mapping"},
             recovery_callback=self._recover,
         )
 

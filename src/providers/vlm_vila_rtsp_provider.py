@@ -52,7 +52,7 @@ class VLMVilaRTSPProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "VLMVilaRTSPProvider",
-            metadata={"type": "vlm", "model": "vila", "source": "rtsp"},
+            metadata={"type": "vlm", "category": "vision", "model": "vila", "source": "rtsp"},
             recovery_callback=self._recover,
         )
 

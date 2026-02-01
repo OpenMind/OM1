@@ -181,7 +181,7 @@ class UnitreeGo2StateProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UnitreeGo2StateProvider",
-            metadata={"type": "state", "robot": "unitree_go2"},
+            metadata={"type": "state", "category": "system", "robot": "unitree_go2"},
             recovery_callback=self._recover,
         )
 

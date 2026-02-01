@@ -60,7 +60,7 @@ class ASRRTSPProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ASRRTSPProvider",
-            metadata={"type": "asr", "source": "rtsp"},
+            metadata={"type": "asr", "category": "speech", "source": "rtsp"},
             recovery_callback=self._recover,
         )
 

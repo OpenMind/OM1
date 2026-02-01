@@ -81,7 +81,7 @@ class NearAILLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "NearAILLM",
-            metadata={"type": "llm", "provider": "nearai"},
+            metadata={"type": "llm", "category": "inference", "provider": "nearai"},
             recovery_callback=None,
         )
 

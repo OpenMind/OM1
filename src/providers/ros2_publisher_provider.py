@@ -54,7 +54,7 @@ class ROS2PublisherProvider(Node):
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ROS2PublisherProvider",
-            metadata={"type": "publisher", "protocol": "ros2"},
+            metadata={"type": "publisher", "category": "communication", "protocol": "ros2"},
             recovery_callback=self._recover,
         )
 

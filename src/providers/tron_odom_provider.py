@@ -138,7 +138,7 @@ class TronOdomProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "TronOdomProvider",
-            metadata={"type": "odom", "robot": "tron"},
+            metadata={"type": "odom", "category": "navigation", "robot": "tron"},
             recovery_callback=self._recover,
         )
 

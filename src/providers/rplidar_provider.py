@@ -291,7 +291,7 @@ class RPLidarProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "RPLidarProvider",
-            metadata={"type": "lidar", "use_zenoh": str(use_zenoh)},
+            metadata={"type": "lidar", "category": "navigation", "use_zenoh": str(use_zenoh)},
             recovery_callback=self._recover,
         )
 

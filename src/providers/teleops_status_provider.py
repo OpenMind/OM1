@@ -236,7 +236,7 @@ class TeleopsStatusProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "TeleopsStatusProvider",
-            metadata={"type": "teleops"},
+            metadata={"type": "teleops", "category": "teleops"},
             recovery_callback=self._recover,
         )
 

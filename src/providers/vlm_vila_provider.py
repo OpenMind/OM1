@@ -52,7 +52,7 @@ class VLMVilaProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "VLMVilaProvider",
-            metadata={"type": "vlm", "model": "vila"},
+            metadata={"type": "vlm", "category": "vision", "model": "vila"},
             recovery_callback=self._recover,
         )
 

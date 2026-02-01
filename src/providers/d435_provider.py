@@ -29,7 +29,7 @@ class D435Provider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "D435Provider",
-            metadata={"type": "depth_camera", "source": "zenoh"},
+            metadata={"type": "depth_camera", "category": "vision", "source": "zenoh"},
             recovery_callback=self._recover,
         )
 

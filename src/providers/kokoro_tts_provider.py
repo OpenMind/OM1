@@ -78,7 +78,7 @@ class KokoroTTSProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "KokoroTTSProvider",
-            metadata={"type": "tts", "model": model_id, "voice": voice_id},
+            metadata={"type": "tts", "category": "speech", "model": model_id, "voice": voice_id},
             recovery_callback=self._recover,
         )
 

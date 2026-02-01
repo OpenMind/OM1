@@ -79,7 +79,7 @@ class ElevenLabsTTSProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ElevenLabsTTSProvider",
-            metadata={"type": "tts", "voice_id": voice_id or ""},
+            metadata={"type": "tts", "category": "speech", "voice_id": voice_id or ""},
             recovery_callback=self._recover,
         )
 

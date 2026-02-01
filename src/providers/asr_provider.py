@@ -68,7 +68,7 @@ class ASRProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ASRProvider",
-            metadata={"type": "asr", "ws_url": ws_url},
+            metadata={"type": "asr", "category": "speech", "ws_url": ws_url},
             recovery_callback=self._recover,
         )
 

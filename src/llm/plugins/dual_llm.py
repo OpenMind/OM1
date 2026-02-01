@@ -149,7 +149,7 @@ class DualLLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "DualLLM",
-            metadata={"type": "llm", "provider": "dual"},
+            metadata={"type": "llm", "category": "inference", "provider": "dual"},
             recovery_callback=None,
         )
 

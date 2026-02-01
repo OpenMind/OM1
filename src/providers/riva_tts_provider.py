@@ -42,7 +42,7 @@ class RivaTTSProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "RivaTTSProvider",
-            metadata={"type": "tts", "engine": "riva"},
+            metadata={"type": "tts", "category": "speech", "engine": "riva"},
             recovery_callback=self._recover,
         )
 

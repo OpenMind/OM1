@@ -101,7 +101,7 @@ class GalleryIdentitiesProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "GalleryIdentitiesProvider",
-            metadata={"type": "gallery_identities", "service": "vision"},
+            metadata={"type": "gallery_identities", "category": "vision", "service": "vision"},
             recovery_callback=self._recover,
         )
 

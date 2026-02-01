@@ -47,7 +47,7 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UnitreeGo2AMCLProvider",
-            metadata={"type": "amcl", "robot": "unitree_go2"},
+            metadata={"type": "amcl", "category": "navigation", "robot": "unitree_go2"},
             recovery_callback=self._recover,
         )
 

@@ -32,7 +32,7 @@ class ContextProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "ContextProvider",
-            metadata={"type": "context"},
+            metadata={"type": "context", "category": "system"},
             recovery_callback=self._recover,
         )
 

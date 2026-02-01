@@ -85,7 +85,7 @@ class OpenAILLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "OpenAILLM",
-            metadata={"type": "llm", "provider": "openai"},
+            metadata={"type": "llm", "category": "inference", "provider": "openai"},
             recovery_callback=None,
         )
 

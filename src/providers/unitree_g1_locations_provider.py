@@ -51,7 +51,7 @@ class UnitreeG1LocationsProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "UnitreeG1LocationsProvider",
-            metadata={"type": "locations", "robot": "unitree_g1"},
+            metadata={"type": "locations", "category": "navigation", "robot": "unitree_g1"},
             recovery_callback=self._recover,
         )
 

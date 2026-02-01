@@ -207,7 +207,7 @@ class TurtleBot4CameraVLMProvider:
         self._monitor = PrometheusMonitor()
         self._monitor.register(
             "TurtleBot4CameraVLMProvider",
-            metadata={"type": "vlm", "robot": "turtlebot4"},
+            metadata={"type": "vlm", "category": "vision", "robot": "turtlebot4"},
             recovery_callback=self._recover,
         )
 

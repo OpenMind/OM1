@@ -31,17 +31,17 @@ def _init_metrics() -> None:
     _status_gauge = Gauge(
         "om1_provider_status",
         "Provider health status (1=active, 0=inactive)",
-        ["provider", "status"],
+        ["provider", "type", "category", "status"],
     )
     _heartbeat_gauge = Gauge(
         "om1_provider_seconds_since_heartbeat",
         "Seconds since last heartbeat from provider",
-        ["provider"],
+        ["provider", "type", "category"],
     )
     _error_counter = Counter(
         "om1_provider_errors_total",
         "Total errors reported by provider",
-        ["provider"],
+        ["provider", "type", "category"],
     )
     _providers_total = Gauge(
         "om1_providers_total",
@@ -176,20 +176,38 @@ class PrometheusMonitor:
             if name in self._providers:
                 logging.debug(f"Provider {name} already registered, updating")
 
+            provider_metadata = metadata or {}
+            provider_type = provider_metadata.get("type", "unknown")
+            provider_category = provider_metadata.get("category", "unknown")
+
             self._providers[name] = ProviderState(
                 name=name,
-                metadata=metadata or {},
+                metadata=provider_metadata,
                 recovery_callback=recovery_callback,
                 last_heartbeat=time.time(),
                 status=HealthStatus.HEALTHY,
             )
 
-            # Initialize metrics for this provider
-            self._status_gauge.labels(provider=name, status="healthy").set(1)
-            self._status_gauge.labels(provider=name, status="unhealthy").set(0)
-            self._heartbeat_gauge.labels(provider=name).set(0)
+            # Initialize metrics for this provider with type and category labels
+            self._status_gauge.labels(
+                provider=name,
+                type=provider_type,
+                category=provider_category,
+                status="healthy",
+            ).set(1)
+            self._status_gauge.labels(
+                provider=name,
+                type=provider_type,
+                category=provider_category,
+                status="unhealthy",
+            ).set(0)
+            self._heartbeat_gauge.labels(
+                provider=name, type=provider_type, category=provider_category
+            ).set(0)
 
-            logging.info(f"Registered provider: {name}")
+            logging.info(
+                f"Registered provider: {name} (type={provider_type}, category={provider_category})"
+            )
 
     def unregister(self, name: str) -> None:
         """
@@ -238,7 +256,11 @@ class PrometheusMonitor:
             if name in self._providers:
                 provider = self._providers[name]
                 provider.error_count += 1
-                self._error_counter.labels(provider=name).inc()
+                provider_type = provider.metadata.get("type", "unknown")
+                provider_category = provider.metadata.get("category", "unknown")
+                self._error_counter.labels(
+                    provider=name, type=provider_type, category=provider_category
+                ).inc()
                 logging.warning(f"Provider {name} error: {error}")
 
     def get_status(self, name: str) -> Optional[HealthStatus]:
@@ -274,12 +296,39 @@ class PrometheusMonitor:
 
     def _update_status_metrics(self, name: str, status: HealthStatus) -> None:
         """Update Prometheus status metrics for a provider."""
+        provider = self._providers.get(name)
+        if not provider:
+            return
+
+        provider_type = provider.metadata.get("type", "unknown")
+        provider_category = provider.metadata.get("category", "unknown")
+
         if status == HealthStatus.HEALTHY:
-            self._status_gauge.labels(provider=name, status="healthy").set(1)
-            self._status_gauge.labels(provider=name, status="unhealthy").set(0)
+            self._status_gauge.labels(
+                provider=name,
+                type=provider_type,
+                category=provider_category,
+                status="healthy",
+            ).set(1)
+            self._status_gauge.labels(
+                provider=name,
+                type=provider_type,
+                category=provider_category,
+                status="unhealthy",
+            ).set(0)
         else:
-            self._status_gauge.labels(provider=name, status="healthy").set(0)
-            self._status_gauge.labels(provider=name, status="unhealthy").set(1)
+            self._status_gauge.labels(
+                provider=name,
+                type=provider_type,
+                category=provider_category,
+                status="healthy",
+            ).set(0)
+            self._status_gauge.labels(
+                provider=name,
+                type=provider_type,
+                category=provider_category,
+                status="unhealthy",
+            ).set(1)
 
     def _health_check_loop(self) -> None:
         """Background thread that checks provider health periodically."""
@@ -305,7 +354,11 @@ class PrometheusMonitor:
 
         for name, provider in providers_copy:
             seconds_since_heartbeat = current_time - provider.last_heartbeat
-            self._heartbeat_gauge.labels(provider=name).set(seconds_since_heartbeat)
+            provider_type = provider.metadata.get("type", "unknown")
+            provider_category = provider.metadata.get("category", "unknown")
+            self._heartbeat_gauge.labels(
+                provider=name, type=provider_type, category=provider_category
+            ).set(seconds_since_heartbeat)
 
             if seconds_since_heartbeat > self._heartbeat_timeout:
                 if provider.status == HealthStatus.HEALTHY:

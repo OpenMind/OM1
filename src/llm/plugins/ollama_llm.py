@@ -93,7 +93,7 @@ class OllamaLLM(LLM[R]):
         # Register with Prometheus monitor
         self._monitor.register(
             "OllamaLLM",
-            metadata={"type": "llm", "provider": "ollama"},
+            metadata={"type": "llm", "category": "inference", "provider": "ollama"},
             recovery_callback=None,
         )
 
