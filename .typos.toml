@@ -1,0 +1,16 @@
+[default]
+extend-ignore-re = [
+  "[0-9a-f]{8}:[0-9a-f]{8}:[0-9a-f]{8}:[0-9a-f]{8}",
+  "alsa_output\\.usb-[^\\s]+",
+]
+
+[default.extend-words]
+OT = "OT"
+WAAS = "WAAS"
+ser = "ser"
+
+[files]
+extend-exclude = [
+  "src/unitree/",
+  "src/ubtech/",
+]

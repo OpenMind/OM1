@@ -2,23 +2,45 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.turtlebot4_camera_vlm_provider import TurtleBot4CameraVLMProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+class TurtleBot4CameraVLMCloudConfig(SensorConfig):
+    """
+    Configuration for TurtleBot4 Camera VLM Cloud Sensor.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        API Key.
+    base_url : str
+        Base URL for the VLM service.
+    stream_base_url : Optional[str]
+        Stream Base URL.
+    URID : str
+        URID (Unitree ID).
+    """
+
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
+    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
+    URID: str = Field(default="default", description="URID (Unitree ID)")
 
 
-class TurtleBot4CameraVLMCloud(FuserInput[str]):
+class TurtleBot4CameraVLMCloud(
+    FuserInput[TurtleBot4CameraVLMCloudConfig, Optional[str]]
+):
     """
     TurtleBot4 Camera VLM bridge.
 
@@ -26,7 +48,7 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
     converts the responses to text strings, and sends them to the fuser.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: TurtleBot4CameraVLMCloudConfig):
         """
         Initialize VLM input handler.
 
@@ -47,15 +69,14 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
-        stream_base_url = getattr(
-            self.config,
-            "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}",
+        base_url = self.config.base_url
+        stream_base_url = (
+            self.config.stream_base_url
+            or f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}"
         )
-        URID = getattr(self.config, "URID", "default")
+        URID = self.config.URID
 
         self.vlm: TurtleBot4CameraVLMProvider = TurtleBot4CameraVLMProvider(
             ws_url=base_url, URID=URID, stream_url=stream_base_url
@@ -63,7 +84,7 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
-    def _handle_vlm_message(self, raw_message: str):
+    def _handle_vlm_message(self, raw_message: Optional[str]):
         """
         Process incoming VLM messages.
 
@@ -72,9 +93,12 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
 
         Parameters
         ----------
-        raw_message : str
+        raw_message : Optional[str]
             Raw JSON message received from the VLM service
         """
+        if raw_message is None:
+            return
+
         try:
             json_message: Dict = json.loads(raw_message)
             if "vlm_reply" in json_message:
@@ -103,7 +127,7 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -112,14 +136,17 @@ class TurtleBot4CameraVLMCloud(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

@@ -4,14 +4,25 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from providers.unitree_camera_vlm_provider import (
-    UnitreeCameraVideoStream,
-    UnitreeCameraVLMProvider,
-)
+# Check if VideoClient is available (might not be if Unitree SDK is not installed)
+try:
+    import providers.unitree_camera_vlm_provider as provider_module
+    from providers.unitree_camera_vlm_provider import (
+        UnitreeCameraVideoStream,
+        UnitreeCameraVLMProvider,
+    )
+
+    UNITREE_AVAILABLE = hasattr(provider_module, "VideoClient")
+except (ImportError, ModuleNotFoundError, AttributeError):
+    UNITREE_AVAILABLE = False
+    UnitreeCameraVideoStream = None
+    UnitreeCameraVLMProvider = None
 
 
 @pytest.fixture
 def mock_video_client():
+    if not UNITREE_AVAILABLE:
+        pytest.skip("Unitree SDK not available, VideoClient not found")
     with patch("providers.unitree_camera_vlm_provider.VideoClient") as mock:
         mock_instance = Mock()
         mock_instance.Init.return_value = None
@@ -32,8 +43,10 @@ def mock_ws_client():
 
 
 def test_video_stream_init(mock_video_client):
+    if not UNITREE_AVAILABLE:
+        pytest.skip("Unitree SDK not available, skipping test")
     callback = Mock()
-    stream = UnitreeCameraVideoStream(frame_callback=callback)
+    stream = UnitreeCameraVideoStream(frame_callback=callback)  # type: ignore
 
     assert len(stream.frame_callbacks) == 1
     assert stream.frame_callbacks[0] == callback
@@ -42,7 +55,9 @@ def test_video_stream_init(mock_video_client):
 
 
 def test_video_stream_start_stop(mock_video_client):
-    stream = UnitreeCameraVideoStream()
+    if not UNITREE_AVAILABLE:
+        pytest.skip("Unitree SDK not available, skipping test")
+    stream = UnitreeCameraVideoStream()  # type: ignore
     stream.start()
     assert stream.running is True
 
@@ -53,12 +68,16 @@ def test_video_stream_start_stop(mock_video_client):
 
 
 def test_vlm_provider_init(mock_ws_client, mock_video_client):
-    provider = UnitreeCameraVLMProvider("ws://test.url")
+    if not UNITREE_AVAILABLE:
+        pytest.skip("Unitree SDK not available, skipping test")
+    provider = UnitreeCameraVLMProvider("ws://test.url")  # type: ignore
     assert provider.running is False
 
 
 def test_vlm_provider_start_stop(mock_ws_client, mock_video_client):
-    provider = UnitreeCameraVLMProvider("ws://test.url")
+    if not UNITREE_AVAILABLE:
+        pytest.skip("Unitree SDK not available, skipping test")
+    provider = UnitreeCameraVLMProvider("ws://test.url")  # type: ignore
     provider.start()
     assert provider.running is True
 

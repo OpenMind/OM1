@@ -1,34 +1,16 @@
 import asyncio
 import random
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 from PIL import Image
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class DummyVLMLocal(FuserInput[Image.Image]):
+class DummyVLMLocal(FuserInput[SensorConfig, Image.Image]):
     """
     Vision Language Model input handler.
 
@@ -36,7 +18,7 @@ class DummyVLMLocal(FuserInput[Image.Image]):
     Maintains a buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize VLM input handler with empty message buffer.
         """
@@ -87,7 +69,7 @@ class DummyVLMLocal(FuserInput[Image.Image]):
             Timestamped message containing description
         """
         # You can use the `raw_input` variable for something, it is of Type Image
-        # But for simpicity let's just create a string that changes
+        # But for simplicity let's just create a string that changes
         num = random.randint(0, 100)
         message = f"DUMMY VLM - FAKE DATA - I see {num} people. Also, I see a rocket."
 
@@ -125,7 +107,7 @@ class DummyVLMLocal(FuserInput[Image.Image]):
         latest_message = self.messages[-1]
 
         result = f"""
-INPUT: {self.descriptor_for_LLM} 
+INPUT: {self.descriptor_for_LLM}
 // START
 {latest_message.message}
 // END

@@ -1,36 +1,58 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
 from openai.types.chat import ChatCompletion
+from pydantic import Field
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.vlm_openai_rtsp_provider import VLMOpenAIRTSPProvider
 
 
-@dataclass
-class Message:
+class VLMOpenAIRTSPConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for VLM OpenAI RTSP Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    api_key : Optional[str]
+        API Key.
+    base_url : str
+        Base URL for the OpenAI service.
+    rtsp_url : str
+        RTSP URL for the camera stream.
+    prompt : str
+        Prompt for the VLM.
+    fps : int
+        Frames per second to process.
+    descriptor_for_LLM : str
+        Descriptor for LLM context.
     """
 
-    timestamp: float
-    message: str
+    api_key: Optional[str] = Field(default=None, description="API Key")
+    base_url: str = Field(
+        default="https://api.openmind.org/api/core/openai",
+        description="Base URL for the OpenAI service",
+    )
+    rtsp_url: str = Field(
+        default="rtsp://localhost:8554/top_camera",
+        description="RTSP URL for the camera stream",
+    )
+    prompt: str = Field(
+        default="What is the most interesting aspect in this series of images?",
+        description="Prompt for the VLM",
+    )
+    fps: int = Field(default=15, description="Frames per second to process")
+    descriptor_for_LLM: str = Field(
+        default="Vision", description="Descriptor for LLM context"
+    )
 
 
-class VLMOpenAIRTSP(FuserInput[str]):
+class VLMOpenAIRTSP(FuserInput[VLMOpenAIRTSPConfig, Optional[str]]):
     """
     Vision Language Model input handler.
 
@@ -42,7 +64,7 @@ class VLMOpenAIRTSP(FuserInput[str]):
     and provides formatted output of the latest processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLMOpenAIRTSPConfig):
         """
         Initialize VLM input handler.
 
@@ -61,26 +83,17 @@ class VLMOpenAIRTSP(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        api_key = getattr(self.config, "api_key", None)
+        api_key = self.config.api_key
 
         if api_key is None or api_key == "":
             raise ValueError("config file missing api_key")
 
-        base_url = getattr(
-            self.config, "base_url", "https://api.openmind.org/api/core/openai"
-        )
-        rtsp_url = getattr(self.config, "rtsp_url", "rtsp://localhost:8554/top_camera")
-        prompt = getattr(
-            self.config,
-            "prompt",
-            "What is the most interesting aspect in this series of images?",
-        )
-        fps = getattr(self.config, "fps", 15)
-        self.descriptor_for_LLM = getattr(
-            self.config,
-            "descriptor_for_LLM",
-            "Vision",
-        )
+        base_url = self.config.base_url
+
+        rtsp_url = self.config.rtsp_url
+        prompt = self.config.prompt
+        fps = self.config.fps
+        self.descriptor_for_LLM = self.config.descriptor_for_LLM
 
         self.vlm: VLMOpenAIRTSPProvider = VLMOpenAIRTSPProvider(
             base_url=base_url,
@@ -128,7 +141,7 @@ class VLMOpenAIRTSP(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -137,14 +150,17 @@ class VLMOpenAIRTSP(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
