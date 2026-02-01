@@ -15,14 +15,14 @@ def reset_singleton():
 
 @pytest.fixture
 def monitor():
-    with patch("providers.prometheus_monitor.start_http_server"):
+    with patch("uvicorn.Server.run"):
         m = PrometheusMonitor(heartbeat_timeout=1.0, check_interval=0.1)
         yield m
         m.stop()
 
 
 def test_singleton_pattern():
-    with patch("providers.prometheus_monitor.start_http_server"):
+    with patch("uvicorn.Server.run"):
         m1 = PrometheusMonitor()
         m2 = PrometheusMonitor()
         assert m1 is m2
