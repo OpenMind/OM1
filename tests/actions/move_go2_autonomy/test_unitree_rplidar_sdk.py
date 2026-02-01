@@ -17,16 +17,16 @@ def mock_dependencies():
     """Mock all external dependencies."""
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.RPLidarProvider"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.RPLidarProvider"
         ) as mock_lidar,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.UnitreeGo2StateProvider"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2StateProvider"
         ) as mock_state,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.SportClient"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.SportClient"
         ) as mock_sport,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.OdomProvider"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.OdomProvider"
         ) as mock_odom,
     ):
         # Setup mock instances
@@ -121,16 +121,20 @@ class TestMoveUnitreeRPLidarSDKConnectorInit:
     def test_initialization_sport_client_error(self):
         """Test initialization when sport client fails."""
         with (
-            patch("actions.move_go2_autonomy.connector.unitree_sdk.RPLidarProvider"),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk.UnitreeGo2StateProvider"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.RPLidarProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk.SportClient"
-            ) as mock_sport,
-            patch("actions.move_go2_autonomy.connector.unitree_sdk.OdomProvider"),
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2StateProvider"
+            ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk.logging"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.SportClient"
+            ) as mock_sport,
+            patch(
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.OdomProvider"
+            ),
+            patch(
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.logging"
             ) as mock_logging,
         ):
             mock_sport.side_effect = Exception("Connection failed")
@@ -370,7 +374,7 @@ class TestMoveRobot:
         mock_dependencies["sport"].Move.side_effect = Exception("Movement failed")
 
         with patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.logging"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.logging"
         ) as mock_logging:
             connector._move_robot(0.5, 0.0, 0.0)
 
