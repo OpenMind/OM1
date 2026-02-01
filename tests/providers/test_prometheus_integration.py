@@ -386,12 +386,12 @@ class TestHeartbeatAndErrorReporting:
             patch("providers.prometheus_monitor.start_http_server"),
             patch("inputs.plugins.gps.GpsProvider"),
             patch("inputs.plugins.gps.IOProvider"),
-            patch("inputs.plugins.rplidar.RPLidarProvider"),
-            patch("inputs.plugins.rplidar.IOProvider"),
+            patch("inputs.plugins.odom.OdomProvider"),
+            patch("inputs.plugins.odom.IOProvider"),
         ):
             from inputs.base import SensorConfig
             from inputs.plugins.gps import Gps
-            from inputs.plugins.rplidar import RPLidar, RPLidarConfig
+            from inputs.plugins.odom import Odom, OdomConfig
             from providers.prometheus_monitor import PrometheusMonitor
 
             monitor = PrometheusMonitor()
@@ -405,11 +405,11 @@ class TestHeartbeatAndErrorReporting:
             count_after_gps = len(monitor._providers)
             assert count_after_gps > initial_count
 
-            rplidar_config = RPLidarConfig()
-            RPLidar(rplidar_config)  # Creates instance, registers with monitor
+            odom_config = OdomConfig()
+            Odom(odom_config)  # Creates instance, registers with monitor
 
             # Verify multiple providers registered
-            # RPLidar may register as "RPLidar" or include provider name
+            assert "Odom" in monitor._providers
             final_count = len(monitor._providers)
             assert final_count >= 2, f"Expected >= 2 providers, got {final_count}: {list(monitor._providers.keys())}"
 
