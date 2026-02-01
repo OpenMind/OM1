@@ -123,7 +123,9 @@ class UnitreeGo2LocationsProvider:
 
         except Exception:
             logging.exception("Error fetching locations")
-            self._monitor.report_error("UnitreeGo2LocationsProvider", "Error fetching locations")
+            self._monitor.report_error(
+                "UnitreeGo2LocationsProvider", "Error fetching locations"
+            )
 
     def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
         """

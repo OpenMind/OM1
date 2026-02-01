@@ -118,7 +118,9 @@ class UnitreeG1LocationsProvider:
             self._monitor.heartbeat("UnitreeG1LocationsProvider")
         except Exception:
             logging.exception("Error fetching locations")
-            self._monitor.report_error("UnitreeG1LocationsProvider", "Error fetching locations")
+            self._monitor.report_error(
+                "UnitreeG1LocationsProvider", "Error fetching locations"
+            )
 
     def _update_locations(self, locations_raw: Union[Dict, List]) -> None:
         """

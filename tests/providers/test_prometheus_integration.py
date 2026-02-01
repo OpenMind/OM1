@@ -12,11 +12,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-# =============================================================================
-# Base Class Integration Tests
-# =============================================================================
-
-
 class TestBaseClassPrometheusIntegration:
     """Test that base classes properly set up Prometheus monitor."""
 
@@ -80,11 +75,6 @@ class TestBaseClassPrometheusIntegration:
             assert simulator._monitor is not None
 
 
-# =============================================================================
-# LLM Plugin Integration Tests
-# =============================================================================
-
-
 class TestLLMPrometheusIntegration:
     """Test that LLM plugins integrate correctly with Prometheus."""
 
@@ -107,7 +97,7 @@ class TestLLMPrometheusIntegration:
             config = OllamaLLMConfig(
                 model="llama3.2", base_url="http://localhost:11434"
             )
-            llm = OllamaLLM(config=config)
+            OllamaLLM(config=config)  # Creates instance, registers with monitor
 
             assert "OllamaLLM" in monitor._providers
             assert monitor.get_status("OllamaLLM") is not None
@@ -123,7 +113,7 @@ class TestLLMPrometheusIntegration:
 
             monitor = PrometheusMonitor()
             config = DeepSeekConfig(api_key="test-key")
-            llm = DeepSeekLLM(config=config)
+            DeepSeekLLM(config=config)  # Creates instance, registers with monitor
 
             assert "DeepSeekLLM" in monitor._providers
 
@@ -139,11 +129,6 @@ class TestLLMPrometheusIntegration:
 
             assert hasattr(llm, "_monitor")
             assert llm._monitor is not None
-
-
-# =============================================================================
-# Input Plugin Integration Tests
-# =============================================================================
 
 
 class TestInputPluginPrometheusIntegration:
@@ -171,7 +156,7 @@ class TestInputPluginPrometheusIntegration:
 
             monitor = PrometheusMonitor()
             config = SensorConfig()
-            gps_input = Gps(config)
+            Gps(config)  # Creates instance, registers with monitor
 
             assert "Gps" in monitor._providers
 
@@ -187,7 +172,7 @@ class TestInputPluginPrometheusIntegration:
 
             monitor = PrometheusMonitor()
             config = RPLidarConfig()
-            rplidar = RPLidar(config)
+            RPLidar(config)  # Creates instance, registers with monitor
 
             assert "RPLidar" in monitor._providers
 
@@ -203,7 +188,7 @@ class TestInputPluginPrometheusIntegration:
 
             monitor = PrometheusMonitor()
             config = OdomConfig()
-            odom = Odom(config)
+            Odom(config)  # Creates instance, registers with monitor
 
             assert "Odom" in monitor._providers
 
@@ -234,11 +219,6 @@ class TestInputPluginPrometheusIntegration:
             assert monitor._providers["Gps"].last_heartbeat >= initial_heartbeat
 
 
-# =============================================================================
-# Action Connector Integration Tests
-# =============================================================================
-
-
 class TestActionConnectorPrometheusIntegration:
     """Test that action connectors integrate correctly with Prometheus."""
 
@@ -266,7 +246,7 @@ class TestActionConnectorPrometheusIntegration:
 
             monitor = PrometheusMonitor()
             config = ActionConfig()
-            connector = FaceAvatarConnector(config)
+            FaceAvatarConnector(config)  # Creates instance, registers with monitor
 
             assert "FaceAvatarConnector" in monitor._providers
 
@@ -289,9 +269,7 @@ class TestActionConnectorPrometheusIntegration:
             config = ActionConfig()
             connector = FaceAvatarConnector(config)
 
-            initial_heartbeat = monitor._providers[
-                "FaceAvatarConnector"
-            ].last_heartbeat
+            initial_heartbeat = monitor._providers["FaceAvatarConnector"].last_heartbeat
 
             # Call connect with proper FaceInput object
             face_input = FaceInput(action=FaceAction.HAPPY)
@@ -302,11 +280,6 @@ class TestActionConnectorPrometheusIntegration:
                 monitor._providers["FaceAvatarConnector"].last_heartbeat
                 >= initial_heartbeat
             )
-
-
-# =============================================================================
-# Simulator Integration Tests
-# =============================================================================
 
 
 class TestSimulatorPrometheusIntegration:
@@ -340,14 +313,9 @@ class TestSimulatorPrometheusIntegration:
 
             # Patch threading to avoid actual server start
             with patch("threading.Thread"):
-                websim = WebSim(config)
+                WebSim(config)  # Creates instance, registers with monitor
 
             assert "WebSim" in monitor._providers
-
-
-# =============================================================================
-# Provider Recovery Tests
-# =============================================================================
 
 
 class TestPrometheusRecoveryIntegration:
@@ -375,7 +343,7 @@ class TestPrometheusRecoveryIntegration:
 
             monitor = PrometheusMonitor()
             config = SensorConfig()
-            gps_input = Gps(config)
+            Gps(config)  # Creates instance, registers with monitor
 
             # Input plugins register with recovery_callback=None
             assert monitor._providers["Gps"].recovery_callback is None
@@ -390,18 +358,13 @@ class TestPrometheusRecoveryIntegration:
             config = OllamaLLMConfig(
                 model="llama3.2", base_url="http://localhost:11434"
             )
-            llm = OllamaLLM(config=config)
+            OllamaLLM(config=config)  # Creates instance, registers with monitor
 
             # LLM plugins register with proper metadata
             provider_state = monitor._providers["OllamaLLM"]
             assert provider_state.metadata is not None
             assert provider_state.metadata["type"] == "llm"
             assert provider_state.metadata["provider"] == "ollama"
-
-
-# =============================================================================
-# Heartbeat and Error Reporting Tests
-# =============================================================================
 
 
 class TestHeartbeatAndErrorReporting:
@@ -433,10 +396,10 @@ class TestHeartbeatAndErrorReporting:
             monitor = PrometheusMonitor()
 
             gps_config = SensorConfig()
-            gps_input = Gps(gps_config)
+            Gps(gps_config)  # Creates instance, registers with monitor
 
             rplidar_config = RPLidarConfig()
-            rplidar = RPLidar(rplidar_config)
+            RPLidar(rplidar_config)  # Creates instance, registers with monitor
 
             # Both should be registered
             assert "Gps" in monitor._providers
@@ -456,7 +419,7 @@ class TestHeartbeatAndErrorReporting:
 
             monitor = PrometheusMonitor()
             config = SensorConfig()
-            gps_input = Gps(config)
+            Gps(config)  # Creates instance, registers with monitor
 
             # Check metadata was stored
             provider_state = monitor._providers["Gps"]

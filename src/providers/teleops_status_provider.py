@@ -296,7 +296,8 @@ class TeleopsStatusProvider:
                     f"Failed to share status: {request.status_code} - {request.text}"
                 )
                 self._monitor.report_error(
-                    "TeleopsStatusProvider", f"Failed to share status: {request.status_code}"
+                    "TeleopsStatusProvider",
+                    f"Failed to share status: {request.status_code}",
                 )
         except Exception as e:
             logging.error(f"Error sharing status: {str(e)}")

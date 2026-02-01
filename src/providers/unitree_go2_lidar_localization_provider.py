@@ -128,7 +128,5 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             logging.info("UnitreeGo2LidarLocalizationProvider: Recovery successful")
             return True
         except Exception as e:
-            logging.error(
-                f"UnitreeGo2LidarLocalizationProvider: Recovery failed: {e}"
-            )
+            logging.error(f"UnitreeGo2LidarLocalizationProvider: Recovery failed: {e}")
             return False

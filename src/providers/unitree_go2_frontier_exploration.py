@@ -129,11 +129,15 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
             True if recovery was successful, False otherwise.
         """
         try:
-            logging.info("UnitreeGo2FrontierExplorationProvider: Attempting recovery...")
+            logging.info(
+                "UnitreeGo2FrontierExplorationProvider: Attempting recovery..."
+            )
             self.stop()
             self.start()
             logging.info("UnitreeGo2FrontierExplorationProvider: Recovery successful")
             return True
         except Exception as e:
-            logging.error(f"UnitreeGo2FrontierExplorationProvider: Recovery failed: {e}")
+            logging.error(
+                f"UnitreeGo2FrontierExplorationProvider: Recovery failed: {e}"
+            )
             return False
