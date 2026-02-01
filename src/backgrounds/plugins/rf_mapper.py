@@ -113,7 +113,8 @@ class RFmapper(Background[RFmapperConfig]):
 
         self.seen_devices: Dict[str, RFData] = {}
 
-        self.seen_names: List[str] = []
+        # Lock for thread-safe access to scan_results and scan_idx
+        self._scan_lock = threading.Lock()
 
         self.start()
 
@@ -229,7 +230,9 @@ class RFmapper(Background[RFmapperConfig]):
         logging.info("Starting RF scan thread...")
         self.running = True
         while self.running:
-            self.scan_results = self.loop.run_until_complete(self.scan())
+            results = self.loop.run_until_complete(self.scan())
+            with self._scan_lock:
+                self.scan_results = results
             logging.info(f"RF scan index: {self.scan_idx}")
             logging.info(f"RF scan last sent: {self.scan_last_sent}")
             time.sleep(0.5)
@@ -262,11 +265,12 @@ class RFmapper(Background[RFmapperConfig]):
                 logging.info(f"RF scan index: {self.scan_idx}")
                 logging.info(f"RF scan last sent: {self.scan_last_sent}")
                 fresh_scan_results = []
-                if self.scan_results and self.scan_idx > self.scan_last_sent:
-                    fresh_scan_results = self.scan_results
-                    self.scan_last_sent = self.scan_idx
-                    self.scan_results = []
-                    logging.info(f"RF scan sending new payload: {self.scan_last_sent}")
+                with self._scan_lock:
+                    if self.scan_results and self.scan_idx > self.scan_last_sent:
+                        fresh_scan_results = self.scan_results
+                        self.scan_last_sent = self.scan_idx
+                        self.scan_results = []
+                        logging.info(f"RF scan sending new payload: {self.scan_last_sent}")
 
                 # basic gps data and occasional scan results
                 try:
@@ -285,7 +289,7 @@ class RFmapper(Background[RFmapperConfig]):
                             self.ble_scan = g["ble_scan"]
                             logging.debug(f"RF scan results {self.ble_scan}")
                         else:
-                            logging.warn("No nRF52 scan results")
+                            logging.warning("No nRF52 scan results")
 
                 except Exception as e:
                     logging.error(f"Error parsing GPS: {e}")
@@ -347,7 +351,7 @@ class RFmapper(Background[RFmapperConfig]):
                 except Exception as e:
                     logging.error(f"Error sharing to Fabric: {e}")
 
-                self.sleep(1)  # we should send a payload every second
+                time.sleep(1)  # we should send a payload every second
 
         except KeyboardInterrupt:
             logging.info("Stopping RF scanner...")
