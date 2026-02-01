@@ -218,7 +218,7 @@ class RtkProvider:
             self._thread.join(timeout=5)
         
         if self.serial_connection and self.serial_connection.is_open:
-            port_name = getattr(self.serial_connection, 'port', 'unknown')
+            port_name = getattr(self.serial_connection, "port", "unknown")
             self.serial_connection.close()
             logging.info(f"RTK serial port {port_name} closed")
 

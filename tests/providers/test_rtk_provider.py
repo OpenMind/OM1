@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from providers.rtk_provider import RtkProvider
@@ -82,3 +84,25 @@ def test_get_latest_gngga_message_malformed_time_field(rtk_provider):
     expected = "$GNGGA,123459.000,1234.5678,N,00123.4567,E,1,8,1.0,103.0,M,47.0,M,,*67"
     result = rtk_provider.get_latest_gngga_message(nmea_data)
     assert result == expected
+
+
+@pytest.fixture
+def mock_serial():
+    """Fixture to mock serial.Serial for RtkProvider tests that need a fake port."""
+    with patch("providers.rtk_provider.serial.Serial") as mock_serial_class:
+        mock_serial_instance = MagicMock()
+        mock_serial_instance.is_open = True
+        mock_serial_instance.in_waiting = 0
+        mock_serial_class.return_value = mock_serial_instance
+        yield mock_serial_class, mock_serial_instance
+
+
+def test_stop_closes_serial(mock_serial):
+    """Test that calling stop() closes the serial connection."""
+    mock_serial_class, mock_serial_instance = mock_serial
+    RtkProvider.reset()  # type: ignore[attr-defined]
+    provider = RtkProvider("/dev/ttyUSB0")
+
+    provider.stop()
+
+    mock_serial_instance.close.assert_called_once()
