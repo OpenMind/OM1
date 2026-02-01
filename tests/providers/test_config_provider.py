@@ -47,7 +47,8 @@ def test_initialization(mock_zenoh):
     mock_session_instance.declare_subscriber.assert_called_once()
 
 
-def test_singleton_pattern():
+def test_singleton_pattern(mock_zenoh):
+    """Test that ConfigProvider follows singleton pattern."""
     provider1 = ConfigProvider()
     provider2 = ConfigProvider()
     assert provider1 is provider2
