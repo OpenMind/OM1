@@ -95,14 +95,15 @@ def test_register_message_callback(mock_dependencies):
     """Test registering message callback."""
     provider = UbtechVLMProvider(ws_url="ws://localhost:8000", robot_ip="192.168.1.100")
 
-    def callback(message):
-        pass
+    callback = MagicMock()
 
     provider.register_message_callback(callback)
 
-    mock_dependencies["ws_instance"].register_message_callback.assert_called_once_with(
-        callback
-    )
+    # Callback is wrapped for heartbeat monitoring, verify wrapper calls original
+    mock_dependencies["ws_instance"].register_message_callback.assert_called_once()
+    wrapper = mock_dependencies["ws_instance"].register_message_callback.call_args[0][0]
+    wrapper("test_message")
+    callback.assert_called_once_with("test_message")
 
 
 def test_register_message_callback_none(mock_dependencies):

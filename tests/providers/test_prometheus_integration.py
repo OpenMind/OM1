@@ -174,7 +174,8 @@ class TestInputPluginPrometheusIntegration:
             config = RPLidarConfig()
             RPLidar(config)  # Creates instance, registers with monitor
 
-            assert "RPLidar" in monitor._providers
+            # Check that RPLidar or RPLidarProvider is registered
+            assert any("RPLidar" in name for name in monitor._providers)
 
     def test_odom_input_registers(self):
         """Test that Odom input registers with Prometheus."""
@@ -403,7 +404,7 @@ class TestHeartbeatAndErrorReporting:
 
             # Both should be registered
             assert "Gps" in monitor._providers
-            assert "RPLidar" in monitor._providers
+            assert any("RPLidar" in name for name in monitor._providers)
             assert len(monitor._providers) >= 2
 
     def test_provider_metadata_stored(self):
