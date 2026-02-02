@@ -55,7 +55,7 @@ def test_same_version_with_v_prefix_is_supported():
 def test_same_major_minor_version_is_supported():
     """Test that same major.minor version with different patch is supported."""
     with patch("runtime.version.latest_runtime_version", "v1.0.0"):
-        assert is_version_supported("v1.0.1") is True
+        assert is_version_supported("v1.0.2") is True
         assert is_version_supported("1.0.2") is True
         assert is_version_supported("v1.0.999") is True
 
