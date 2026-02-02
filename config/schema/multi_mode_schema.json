@@ -38,11 +38,20 @@
                     "handler_config": {
                         "type": "object",
                         "properties": {
-                            "message": {"type": "string"},
-                            "command": {"type": "string"},
-                            "function": {"type": "string"},
-                            "action": {"type": "string"}
-                        }
+                            "message": {"type": "string", "description": "Message text for message handler. Supports {variable} formatting."},
+                            "tts_provider": {
+                                "type": "string",
+                                "enum": ["elevenlabs", "kokoro", "riva"],
+                                "default": "elevenlabs",
+                                "description": "TTS provider to use for message handler announcements."
+                            },
+                            "command": {"type": "string", "description": "Shell command to execute for command handler. Supports {variable} formatting."},
+                            "module_name": {"type": "string", "description": "Module name for function handler (without .py extension)."},
+                            "function": {"type": "string", "description": "Function name to call in the module (function handler)."},
+                            "action_type": {"type": "string", "description": "Action type/name to execute (action handler)."},
+                            "action_config": {"type": "object", "description": "Configuration for the action (action handler)."}
+                        },
+                        "additionalProperties": true
                     },
                     "priority": {"type": "integer"},
                     "async_execution": {"type": "boolean"},
@@ -97,11 +106,20 @@
                                     "handler_config": {
                                         "type": "object",
                                         "properties": {
-                                            "message": {"type": "string"},
-                                            "command": {"type": "string"},
-                                            "function": {"type": "string"},
-                                            "action": {"type": "string"}
-                                        }
+                                            "message": {"type": "string", "description": "Message text for message handler. Supports {variable} formatting."},
+                                            "tts_provider": {
+                                                "type": "string",
+                                                "enum": ["elevenlabs", "kokoro", "riva"],
+                                                "default": "elevenlabs",
+                                                "description": "TTS provider to use for message handler announcements."
+                                            },
+                                            "command": {"type": "string", "description": "Shell command to execute for command handler. Supports {variable} formatting."},
+                                            "module_name": {"type": "string", "description": "Module name for function handler (without .py extension)."},
+                                            "function": {"type": "string", "description": "Function name to call in the module (function handler)."},
+                                            "action_type": {"type": "string", "description": "Action type/name to execute (action handler)."},
+                                            "action_config": {"type": "object", "description": "Configuration for the action (action handler)."}
+                                        },
+                                        "additionalProperties": true
                                     },
                                     "priority": {"type": "integer"},
                                     "async_execution": {"type": "boolean"},

@@ -47,7 +47,7 @@ brew install portaudio ffmpeg
 For Linux
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-dev ffmpeg
+sudo apt-get install portaudio19-dev python3-dev ffmpeg
 ```
 
 ### Obtain an OpenMind API Key
@@ -112,14 +112,14 @@ Stay tuned!
 We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
 
 - **om1**
-- **unitree_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
+- **OM1-ros2-sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 - **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
 
 Clone the following repositories -
 - git clone https://github.com/OpenMind/OM1.git
-- git clone https://github.com/OpenMind/unitree-sdk.git
+- git clone https://github.com/OpenMind/OM1-ros2-sdk.git
 - git clone https://github.com/OpenMind/OM1-avatar.git
 - git clone https://github.com/OpenMind/OM1-video-processor.git
 - git clone https://github.com/OpenMind/OM1-system-setup.git
@@ -130,9 +130,9 @@ To start all services, run the following commands:
 
 Setup the API key
 
-For Bash: vim ~/.bashrc or ~/.bash_profile.
+For Bash: `vim ~/.bashrc` or `vim ~/.bash_profile`.
 
-For Zsh: vim ~/.zshrc.
+For Zsh: `vim ~/.zshrc`.
 
 Add
 
@@ -150,9 +150,9 @@ cd OM1
 docker-compose up om1 -d --no-build
 ```
 
-- For unitree_sdk
+- For OM1-ros2-sdk
 ```bash
-cd unitree_sdk
+cd OM1-ros2-sdk
 docker-compose up orchestrator -d --no-build
 docker-compose up om1_sensor -d --no-build
 docker-compose up watchdog -d --no-build
