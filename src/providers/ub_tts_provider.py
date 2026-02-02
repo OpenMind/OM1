@@ -1,5 +1,6 @@
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
@@ -8,16 +9,14 @@ class UbTtsProvider:
     """
     Provider for the Ubtech Text-to-Speech (TTS) service.
 
-    This class handles communication with the Ubtech TTS service API, providing
-    methods to send TTS commands and query the status of TTS tasks. It manages
-    HTTP requests to the TTS service endpoint and handles error responses.
-
     Attributes
     ----------
     tts_url : str
-        Base URL of the TTS service.
+        The URL of the Ubtech TTS service.
+    executor : ThreadPoolExecutor
+        Executor for async TTS processing.
     headers : dict
-        HTTP headers used for requests (e.g. Content-Type).
+        HTTP headers for requests.
     """
 
     def __init__(self, url: str):
@@ -27,41 +26,62 @@ class UbTtsProvider:
         Parameters
         ----------
         url : str
-            The base URL endpoint for the Ubtech TTS service API.
+            The URL of the Ubtech TTS service.
         """
         self.tts_url = url
+        self.executor = ThreadPoolExecutor(max_workers=1)
         self.headers = {"Content-Type": "application/json"}
+
         logging.info(f"Ubtech TTS Provider initialized for URL: {self.tts_url}")
 
-    def speak(self, tts: str, interrupt: bool = True, timestamp: int = 0) -> bool:
-        """
-        Send a text-to-speech request to the TTS service.
+    def start(self):
+        """Placeholder start method for compatibility."""
+        logging.info("Ubtech TTS Provider started.")
 
-        This method sends a PUT request to the TTS service with the specified
-        text, interrupt flag, and timestamp. The request includes a timeout
-        of 5 seconds and handles network errors gracefully.
+    def adding_pending_message(
+        self, message: str, interrupt: bool = True, timestamp: int = 0
+    ):
+        """
+        Add a pending TTS message to be processed asynchronously.
 
         Parameters
         ----------
-        tts : str
-            The text content to be converted to speech.
-        interrupt : bool, optional
-            Whether to interrupt any currently playing TTS output. Defaults to True.
-        timestamp : int, optional
-            Timestamp identifier for the TTS task. Defaults to 0.
+        message : str
+            The text message to be converted to speech.
+        interrupt : bool
+            Whether to interrupt current TTS playback.
+        timestamp : int
+            A timestamp to identify the TTS request.
+        """
+        self.executor.submit(self._speak_workder, message, interrupt, timestamp)
+
+    def stop(self):
+        """
+        Stop the TeleopsStatusProvider and clean up resources.
+        """
+        self.executor.shutdown(wait=True)
+
+    def _speak_workder(
+        self, message: str, interrupt: bool = True, timestamp: int = 0
+    ) -> bool:
+        """
+        Worker function to send TTS command to Ubtech TTS service.
+
+        Parameters
+        ----------
+        message : str
+            The text to be converted to speech.
+        interrupt : bool
+            Whether to interrupt current TTS playback.
+        timestamp : int
+            A timestamp to identify the TTS request.
 
         Returns
         -------
         bool
-            True if the TTS request was successfully sent and accepted by the service
-            (response code is 0), False otherwise.
-
-        Notes
-        -----
-        Network errors and HTTP exceptions are caught and logged, with the method
-        returning False to indicate failure.
+            True if the TTS command was successfully sent, False otherwise.
         """
-        payload = {"tts": tts, "interrupt": interrupt, "timestamp": timestamp}
+        payload = {"tts": message, "interrupt": interrupt, "timestamp": timestamp}
         try:
             response = requests.put(
                 url=self.tts_url,
@@ -78,30 +98,8 @@ class UbTtsProvider:
 
     def get_tts_status(self, timestamp: int) -> str:
         """
-        Get the current status of a specific TTS task.
-
-        This method queries the TTS service for the status of a task identified
-        by the given timestamp. The request includes a timeout of 2 seconds.
-
-        Parameters
-        ----------
-        timestamp : int
-            The timestamp identifier of the TTS task to query.
-
-        Returns
-        -------
-        str
-            The status of the TTS task. Possible values:
-            - 'build': Task is being built/prepared
-            - 'wait': Task is waiting in queue
-            - 'run': Task is currently running
-            - 'idle': Task is idle/not active
-            - 'error': An error occurred or the task was not found
-
-        Notes
-        -----
-        Network errors and HTTP exceptions are caught silently, with the method
-        returning 'error' to indicate failure.
+        Gets the status of a specific TTS task.
+        Possible statuses: 'build', 'wait', 'run', 'idle'.
         """
         try:
             params = {"timestamp": timestamp}
