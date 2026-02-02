@@ -53,7 +53,7 @@ Our boot sequence is as follows:
             </Peers>
             </Discovery>
         </Domain>
-        </CycloneDDS>
+    </CycloneDDS>
     ```
     Make sure you configure the correct IP address for control station 2. It should be the same you configure in IPv4 settings above.
 
@@ -219,7 +219,7 @@ Note: To stop the kiosk service, use sudo systemctl stop kiosk.service.
     RemainAfterExit=no
 
     [Install]
-    WantedBy=multi-user.Target
+    WantedBy=multi-user.target
 
     sudo systemctl daemon-reload
     sudo systemctl enable om1-container.service

@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,27 +15,49 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class XAIModel(str, Enum):
+    """Available XAI models."""
+
+    GROK_2_LATEST = "grok-2-latest"
+    GROK_3_BETA = "grok-3-beta"
+    GROK_4_LATEST = "grok-4-latest"
+    GROK_4 = "grok-4"
+
+
+class XAIConfig(LLMConfig):
+    """XAI-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/xai",
+        description="Base URL for the XAI API endpoint",
+    )
+    model: T.Optional[T.Union[XAIModel, str]] = Field(
+        default=XAIModel.GROK_4_LATEST,
+        description="XAI model to use",
+    )
+
+
 class XAILLM(LLM[R]):
     """
     XAI LLM implementation using OpenAI-compatible API.
 
     Handles authentication and response parsing for XAI endpoints.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: XAIConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
         Initialize the XAI LLM instance.
+
+        Parameters
+        ----------
+        config : XAIConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
@@ -93,6 +116,10 @@ class XAILLM(LLM[R]):
                 timeout=self._config.timeout,
             )
 
+            if not response.choices:
+                logging.warning("xAI API returned empty choices")
+                return None
+
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
 
@@ -103,8 +130,8 @@ class XAILLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls

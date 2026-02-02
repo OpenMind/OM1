@@ -107,7 +107,7 @@ class QwenLLM(LLM[R]):
             self._config.model = "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
 
         self._client = openai.AsyncClient(
-            base_url="http://127.0.0.1:8000/v1",
+            base_url="http://127.0.0.1:8860/v1",
             api_key="placeholder_key",
         )
 
@@ -163,6 +163,10 @@ class QwenLLM(LLM[R]):
                 request_params["tool_choice"] = "required"
 
             response = await self._client.chat.completions.create(**request_params)
+
+            if not response.choices:
+                logging.warning("Qwen API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()

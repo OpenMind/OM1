@@ -8,6 +8,14 @@ wheels/
 .ruff_cache/
 .pytest_cache/
 
+# Coverage reports
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+junit.xml
+
 # Virtual environments
 .venv
 
@@ -17,6 +25,9 @@ wheels/
 
 # IDE
 .vscode/
+
+# Claude Code
+CLAUDE.md
 
 # Debug files
 front_image.jpg

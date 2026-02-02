@@ -138,7 +138,7 @@ class DualLLM(LLM[R]):
         self._cloud_llm._skip_state_management = True
 
         self._eval_client = openai.AsyncClient(
-            base_url="http://127.0.0.1:8000/v1", api_key="local"
+            base_url="http://127.0.0.1:8860/v1", api_key="local"
         )
         self._eval_model = local_cfg.get(
             "model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
@@ -251,9 +251,14 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
 
+            if not response.choices:
+                logging.warning("LLM evaluation returned empty choices")
+                return "local"
+
             content = response.choices[0].message.content
             if content is None:
                 return "local"
+
             result = content.strip().upper()
             return "local" if "A" in result else "cloud"
         except Exception as e:
