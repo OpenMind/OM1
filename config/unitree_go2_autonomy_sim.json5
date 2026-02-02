@@ -75,8 +75,8 @@
         ros2_topic: "om/welcome",
         zenoh_topic: "om/welcome",
         message: "welcome mode",
-        interval: 1.0
-      }
+        interval: 1.0,
+      },
     },
   ],
 }
