@@ -11,6 +11,7 @@ from runtime.multi_mode.config import (
     TransitionType,
     _load_mode_components,
     load_mode_config,
+    mode_config_to_dict,
 )
 from runtime.single_mode.config import RuntimeConfig
 
@@ -75,6 +76,7 @@ def sample_mode_config():
 def sample_system_config():
     """Sample system configuration for testing."""
     return ModeSystemConfig(
+        version="v1.0.2",
         name="test_system",
         default_mode="default",
         config_name="test_config",
@@ -234,6 +236,7 @@ class TestModeSystemConfig:
     def test_system_config_creation(self, sample_system_config):
         """Test basic system config creation."""
         config = sample_system_config
+        assert config.version == "v1.0.2"
         assert config.name == "test_system"
         assert config.default_mode == "default"
         assert config.config_name == "test_config"
@@ -249,9 +252,11 @@ class TestModeSystemConfig:
     def test_system_config_defaults(self):
         """Test system config with default values."""
         config = ModeSystemConfig(
+            version="v1.0.2",
             name="minimal_system",
             default_mode="default",
         )
+        assert config.version == "v1.0.2"
         assert config.config_name == ""
         assert config.allow_manual_switching is True
         assert config.mode_memory_enabled is True
@@ -471,3 +476,47 @@ class TestLoadModeConfig:
 
         finally:
             os.unlink(temp_file)
+
+
+class TestModeConfigToDict:
+    """Test cases for mode_config_to_dict function."""
+
+    def test_mode_config_to_dict_includes_version(self, sample_system_config):
+        """Test that mode_config_to_dict includes the version field."""
+        result = mode_config_to_dict(sample_system_config)
+
+        assert "version" in result
+        assert result["version"] == "v1.0.2"
+
+    def test_mode_config_to_dict_all_fields(self, sample_system_config):
+        """Test that mode_config_to_dict includes all expected fields."""
+        result = mode_config_to_dict(sample_system_config)
+
+        # Verify all top-level fields are present
+        expected_fields = [
+            "version",
+            "name",
+            "default_mode",
+            "allow_manual_switching",
+            "mode_memory_enabled",
+            "api_key",
+            "robot_ip",
+            "URID",
+            "unitree_ethernet",
+            "system_governance",
+            "system_prompt_examples",
+            "cortex_llm",
+            "global_lifecycle_hooks",
+            "modes",
+            "transition_rules",
+        ]
+
+        for field in expected_fields:
+            assert field in result, f"Missing field: {field}"
+
+        # Verify field values
+        assert result["version"] == sample_system_config.version
+        assert result["name"] == sample_system_config.name
+        assert result["default_mode"] == sample_system_config.default_mode
+        assert result["api_key"] == sample_system_config.api_key
+        assert result["robot_ip"] == sample_system_config.robot_ip
