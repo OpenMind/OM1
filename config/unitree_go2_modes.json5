@@ -1,6 +1,6 @@
 {
   // Configuration version
-  version: "v1.0.1",
+  version: "v1.0.2",
 
   // Mode system configuration for Unitree Go2
   default_mode: "welcome",
@@ -71,7 +71,7 @@
         {
           name: "move_go2_action",
           llm_label: "unitree_go2_action",
-          connector: "unitree_sdk",
+          connector: "unitree_rplidar_sdk",
         },
         {
           name: "selfie",
@@ -311,7 +311,7 @@
         {
           name: "move_go2_autonomy",
           llm_label: "move",
-          connector: "unitree_sdk_advance",
+          connector: "unitree_om_path_sdk",
         },
         {
           name: "navigate_location",
@@ -537,7 +537,7 @@
         {
           name: "move_go2_autonomy",
           llm_label: "move",
-          connector: "unitree_sdk_advance",
+          connector: "unitree_om_path_sdk",
         },
         {
           name: "speak",

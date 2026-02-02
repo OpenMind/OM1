@@ -365,7 +365,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_env_fallback(self):
         """Test that environment variables are used as fallback."""
         config_data = {
-            "version": "v1.0.1",
+            "version": "v1.0.2",
             "default_mode": "default",
             "api_key": "openmind_free",
             "system_governance": "Env governance",
@@ -405,7 +405,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
-            "version": "v1.0.1",
+            "version": "v1.0.2",
             "unitree_ethernet": "eth0",
             "default_mode": "default",
             "api_key": "openmind_free",

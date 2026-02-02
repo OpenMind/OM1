@@ -14,9 +14,9 @@ from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
-class MoveUnitreeSDKConfig(ActionConfig):
+class MoveUnitreeRPLidarSDKConfig(ActionConfig):
     """
-    Configuration for MoveUnitreeSDK connector.
+    Configuration for MoveUnitreeRPLidarSDKConfig connector.
 
     Parameters
     ----------
@@ -30,18 +30,23 @@ class MoveUnitreeSDKConfig(ActionConfig):
     )
 
 
-class MoveUnitreeSDKConnector(ActionConnector[MoveUnitreeSDKConfig, MoveInput]):
+class MoveUnitreeRPLidarSDKConnector(
+    ActionConnector[MoveUnitreeRPLidarSDKConfig, MoveInput]
+):
     """
-    Unitree SDK connector for the Move Go2 autonomy action.
+    Connector for moving Unitree Go2 robot using RPLidar for obstacle detection.
+
+    This plugin loads the possible paths from the RPLidarProvider and uses them to
+    safely execute movement commands received from the AI system.
     """
 
-    def __init__(self, config: MoveUnitreeSDKConfig):
+    def __init__(self, config: MoveUnitreeRPLidarSDKConfig):
         """
-        Initialize the MoveUnitreeSDK connector.
+        Initialize the MoveUnitreeRPLidarSDK connector.
 
         Parameters
         ----------
-        config : MoveUnitreeSDKConfig
+        config : MoveUnitreeRPLidarSDKConfig
             The configuration for the action connector.
         """
         super().__init__(config)
