@@ -72,7 +72,22 @@ async def test_poll_returns_mocked_peer_when_mock_mode_enabled(
 
 @pytest.mark.asyncio
 async def test_poll_returns_none_if_requests_is_none_and_mock_disabled(caplog):
-    pass
+    """Test that poll returns None when requests is unavailable and mock is disabled."""
+    config = FabricClosestPeerConfig(mock_mode=False)
+
+    mock_io = Mock()
+    mock_io.get_dynamic_variable.side_effect = lambda x: {
+        "latitude": -33.868820,
+        "longitude": 151.209295,
+    }.get(x)
+
+    with (
+        patch("inputs.plugins.fabric_closest_peer.requests", None),
+        patch("inputs.plugins.fabric_closest_peer.IOProvider", return_value=mock_io),
+    ):
+        instance = FabricClosestPeer(config=config)
+        result = await instance._poll()
+        assert result is None
 
 
 @pytest.mark.asyncio
