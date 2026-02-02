@@ -1,6 +1,6 @@
 import pytest
 
-from src.providers.rtk_provider import RtkProvider
+from providers.rtk_provider import RtkProvider
 
 
 @pytest.fixture
@@ -63,8 +63,6 @@ def test_get_latest_gngga_message_empty_string(rtk_provider):
 
 def test_get_latest_gngga_message_invalid_checksums(rtk_provider):
     """Test with messages having invalid checksums, should still find the latest valid-looking one."""
-    # Note: These checksums are intentionally incorrect for the data.
-    # The regex doesn't validate checksums, only structure.
     nmea_data = (
         "$GNGGA,123454.000,1234.5678,N,00123.4567,E,1,8,1.0,99.0,M,47.0,M,,*FF\n"  # Earlier time
         "$GNGGA,123458.000,1234.5678,N,00123.4567,E,1,8,1.0,102.0,M,47.0,M,,*AA\n"  # Later time

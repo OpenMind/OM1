@@ -45,7 +45,6 @@ class ROS2PublisherProvider(Node):
 
         # Pending message queue and threading constructs
         self._pending_messages = Queue()
-        self._lock = threading.Lock()
         self.running: bool = False
         self._thread: Optional[threading.Thread] = None
 
@@ -114,7 +113,10 @@ class ROS2PublisherProvider(Node):
         Stop the publisher provider and clean up resources.
         """
         self.running = False
+
         if self._thread:
             self._thread.join(timeout=5)
-        self._publisher.Close()
+
+        self.publisher_.Close()
+
         logging.info("ROS2 Publisher Provider stopped")

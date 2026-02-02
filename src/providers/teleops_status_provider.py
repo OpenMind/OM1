@@ -216,9 +216,12 @@ class TeleopsStatusProvider:
         """
         Initialize the TeleopsStatusProvider.
 
+        Sets up the teleops status provider with API authentication and base URL.
+        Initializes a thread pool executor for asynchronous status sharing operations.
+
         Parameters
         ----------
-        api_key : str
+        api_key : Optional[str]
             API key for authentication. Default is None.
         base_url : str
             Base URL for the teleops status API. Default is
@@ -297,3 +300,9 @@ class TeleopsStatusProvider:
             The status of the machine to be shared.
         """
         self.executor.submit(self._share_status_worker, status)
+
+    def stop(self):
+        """
+        Stop the TeleopsStatusProvider and clean up resources.
+        """
+        self.executor.shutdown(wait=True)
