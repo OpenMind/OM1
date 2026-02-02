@@ -6,6 +6,24 @@
 <a href="https://x.com/openmind_agi">X</a>
 </p>
 
+
+## What is OM1?
+
+OM1 is an open-source modular AI runtime for building multimodal AI agents
+that can operate both in digital environments and on physical robots.
+
+It connects sensors, language models, vision models, and robot hardware
+through a plugin-based architecture, allowing developers to rapidly design,
+test, and deploy intelligent agents without building robotics infrastructure
+from scratch.
+
+OM1 is designed to be:
+- Modular and extensible
+- Hardware-agnostic via plugins and ROS2/Zenoh/CycloneDDS
+- Easy to debug through WebSim
+- Ready to integrate with modern LLMs, VLMs, and TTS systems
+
+
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
 ## Capabilities of OM1
