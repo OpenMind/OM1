@@ -11,6 +11,13 @@ class UbTtsProvider:
     This class handles communication with the Ubtech TTS service API, providing
     methods to send TTS commands and query the status of TTS tasks. It manages
     HTTP requests to the TTS service endpoint and handles error responses.
+
+    Attributes
+    ----------
+    tts_url : str
+        Base URL of the TTS service.
+    headers : dict
+        HTTP headers used for requests (e.g. Content-Type).
     """
 
     def __init__(self, url: str):
