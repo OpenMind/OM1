@@ -1,5 +1,3 @@
-# src/providers/gallery_identities_provider.py
-
 import logging
 import threading
 import time
