@@ -15,20 +15,29 @@ from .singleton import singleton
 @singleton
 class GpsProvider:
     """
-    GPS Provider.
+    GPS Provider for managing GPS, magnetometer, and BLE data from serial connection.
 
-    This class implements a singleton pattern to manage:
-        * GPS data from serial
+    This class implements a singleton pattern to manage GPS data acquisition from a serial
+    port connection (typically connected to an Arduino-based GPS module). It handles:
+        * GPS position data (latitude, longitude, altitude)
+        * Satellite information and fix quality
+        * Magnetometer heading data
+        * BLE (Bluetooth Low Energy) scan data for triangulation
+        * Real-time data processing in a background thread
 
-    Parameters
-    ----------
-    serial_port: str = ""
-        The Serial port the Arduino is connected to
+    The provider automatically starts a background thread upon initialization to continuously
+    read and process incoming serial data. GPS data is updated in real-time and can be accessed
+    through the `data` property.
     """
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration.
+        Initialize the GPS Provider with serial port connection.
+
+        Parameters
+        ----------
+        serial_port : str
+            The serial port to connect to (e.g., '/dev/ttyUSB0' or 'COM3').
         """
         logging.info(f"GPS_Provider booting GPS Provider at serial: {serial_port}")
 

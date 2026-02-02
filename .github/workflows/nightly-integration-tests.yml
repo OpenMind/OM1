@@ -123,7 +123,7 @@ jobs:
           EOF
 
       - name: Notify Slack on failure
-        if: failure() && github.event_name == 'schedule'
+        if: failure() && github.event_name == 'schedule' && github.event.pull_request.head.repo.fork != true
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data "{
@@ -136,7 +136,7 @@ jobs:
             ${{ secrets.ONCALL_SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack on success
-        if: success() && github.event_name == 'schedule'
+        if: success() && github.event_name == 'schedule' && github.event.pull_request.head.repo.fork != true
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data "{

@@ -1,7 +1,6 @@
 import concurrent.futures
 import logging
 import threading
-import time
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
@@ -319,4 +318,4 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
         """
         Periodic tick function to maintain connection.
         """
-        time.sleep(0.1)
+        self.sleep(0.1)
