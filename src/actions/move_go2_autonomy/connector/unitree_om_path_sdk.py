@@ -23,9 +23,9 @@ from zenoh_msgs import (
 )
 
 
-class MoveUnitreeSDKAdvanceConfig(ActionConfig):
+class MoveUnitreeOMPathSDKConfig(ActionConfig):
     """
-    Configuration for MoveUnitreeSDKAdvance connector.
+    Configuration for MoveUnitreeOMPathSDKConfig connector.
 
     Parameters
     ----------
@@ -45,20 +45,24 @@ class MoveUnitreeSDKAdvanceConfig(ActionConfig):
     )
 
 
-class MoveUnitreeSDKAdvanceConnector(
-    ActionConnector[MoveUnitreeSDKAdvanceConfig, MoveInput]
+class MoveUnitreeOMPathSDKConnector(
+    ActionConnector[MoveUnitreeOMPathSDKConfig, MoveInput]
 ):
     """
-    Connector for Move Go2 Autonomy using Unitree SDK Advance.
+    Connector for moving Unitree Go2 robot using OM Path SDK for obstacle detection.
+
+    This plugin loads the possible paths from the SimplePathsProvider and uses them to
+    safely execute movement commands received from the AI system. The SimplePathsProvider
+    includes both obstacle detection and slope detection for safer navigation.
     """
 
-    def __init__(self, config: MoveUnitreeSDKAdvanceConfig):
+    def __init__(self, config: MoveUnitreeOMPathSDKConfig):
         """
-        Initialize the MoveUnitreeSDKAdvance connector.
+        Initialize the MoveUnitreeOMPathSDKConnector connector.
 
         Parameters
         ----------
-        config : MoveUnitreeSDKAdvanceConfig
+        config : MoveUnitreeOMPathSDKConfig
             The configuration for the action connector.
         """
         super().__init__(config)
