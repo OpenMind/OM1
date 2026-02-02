@@ -6,6 +6,20 @@
 <a href="https://x.com/openmind_agi">X</a>
 </p>
 
+## Who is OM1 for?
+
+OM1 is designed for:
+
+- Robotics developers who want to connect AI agents to real-world hardware
+- AI/ML developers who want to experiment with multimodal agents beyond chat interfaces
+- Researchers working on autonomy, perception, and embodied AI
+- Builders who want to prototype intelligent robots without writing low-level robotics code
+
+If you are coming from a pure software background, OM1 helps you bridge into robotics.
+If you are coming from robotics, OM1 helps you plug into modern AI models quickly.
+
+
+
 **OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
 ## Capabilities of OM1
