@@ -26,6 +26,7 @@ class VLMGeminiProvider:
         fps: int = 10,
         stream_url: Optional[str] = None,
         camera_index: int = 0,
+        model: str = "gemini-3-flash-preview",
     ):
         """
         Initialize the VLM Provider.
@@ -42,8 +43,11 @@ class VLMGeminiProvider:
             The URL for the video stream. If not provided, defaults to None.
         camera_index : int
             The camera index for the video stream device. Defaults to 0.
+        model : str
+            The Gemini model to use. Defaults to "gemini-3-flash-preview".
         """
         self.running: bool = False
+        self.model: str = model
         self.api_client: AsyncOpenAI = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self.stream_ws_client: Optional[ws.Client] = (
             ws.Client(url=stream_url) if stream_url else None
@@ -65,7 +69,7 @@ class VLMGeminiProvider:
         processing_start = time.perf_counter()
         try:
             response = await self.api_client.chat.completions.create(
-                model="gemini-2.0-flash-exp",
+                model=self.model,
                 messages=[
                     {
                         "role": "user",

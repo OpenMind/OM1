@@ -27,6 +27,8 @@ class VLMGeminiConfig(SensorConfig):
         Stream Base URL.
     camera_index : int
         Index of the camera device.
+    model : str
+        The Gemini model to use.
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
@@ -36,6 +38,10 @@ class VLMGeminiConfig(SensorConfig):
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     camera_index: int = Field(default=0, description="Index of the camera device")
+    model: str = Field(
+        default="gemini-3-flash-preview",
+        description="The Gemini model to use",
+    )
 
 
 class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
@@ -86,6 +92,7 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
             api_key=api_key,
             stream_url=stream_base_url,
             camera_index=camera_index,
+            model=self.config.model,
         )
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
