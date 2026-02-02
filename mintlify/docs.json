@@ -70,7 +70,7 @@
                                 "pages": [
                                     "full_autonomy_guidelines/om1_avatar",
                                     "full_autonomy_guidelines/om",
-                                    "full_autonomy_guidelines/unitree_sdk",
+                                    "full_autonomy_guidelines/om1_ros2_sdk",
                                     "full_autonomy_guidelines/om1_video_processor"
                                 ]
 
@@ -89,6 +89,12 @@
             {
                 "tab": "Developer Cookbook",
                 "groups": [
+                    {
+                        "group": "Introduction",
+                        "pages": [
+                            "developer_cookbook/introduction"
+                        ]
+                    },
                     {
                         "group": "Input Plugins",
                         "pages": [
@@ -135,8 +141,6 @@
                     {
                         "group": "Recipes",
                         "pages": [
-
-                            "developer_cookbook/introduction",
                             "developer_cookbook/config",
                             "developer_cookbook/input",
                             "developer_cookbook/new_mode"
@@ -150,7 +154,8 @@
                     {
                         "group": "API Reference",
                         "pages": [
-                            "api-reference/introduction"
+                            "api-reference/introduction",
+                            "api-reference/api_pricing"
                         ]
                     },
                     {
@@ -181,7 +186,7 @@
                         "pages": [
                             "release-notes/beta/om",
                             "release-notes/beta/om1-avatar",
-                            "release-notes/beta/unitree-sdk",
+                            "release-notes/beta/om1-ros2-sdk",
                             "release-notes/beta/video-processor"
                         ]
                     },
@@ -191,7 +196,7 @@
                             "release-notes/v1.0.0/om1-system-setup",
                             "release-notes/v1.0.0/om",
                             "release-notes/v1.0.0/om1-avatar",
-                            "release-notes/v1.0.0/unitree-sdk",
+                            "release-notes/v1.0.0/om1-ros2-sdk",
                             "release-notes/v1.0.0/video-processor"
                         ]
                     }

@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,6 +15,32 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class OpenAIModel(str, Enum):
+    """Available OpenAI models."""
+
+    GPT_4_O = "gpt-4o"
+    GPT_4_O_MINI = "gpt-4o-mini"
+    GPT_4_1 = "gpt-4.1"
+    GPT_4_1_MINI = "gpt-4.1-mini"
+    GPT_4_1_NANO = "gpt-4.1-nano"
+    GPT_5 = "gpt-5"
+    GPT_5_MINI = "gpt-5-mini"
+    GPT_5_NANO = "gpt-5-nano"
+
+
+class OpenAIConfig(LLMConfig):
+    """OpenAI-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/openai",
+        description="Base URL for the OpenAI API endpoint",
+    )
+    model: T.Optional[T.Union[OpenAIModel, str]] = Field(
+        default=OpenAIModel.GPT_4_1_MINI,
+        description="OpenAI model to use",
+    )
+
+
 class OpenAILLM(LLM[R]):
     """
     An OpenAI-based Language Learning Model implementation with function call support.
@@ -21,19 +48,11 @@ class OpenAILLM(LLM[R]):
     This class implements the LLM interface for OpenAI's GPT models, handling
     configuration, authentication, and async API communication. It supports both
     traditional JSON structured output and function calling.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided,
-        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: OpenAIConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
