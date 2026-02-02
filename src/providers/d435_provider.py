@@ -1,5 +1,6 @@
 import logging
 import math
+import threading
 
 import zenoh
 
@@ -12,15 +13,31 @@ from .singleton import singleton
 class D435Provider:
     """
     Provider for D435 camera data using Zenoh.
+
+    This class provides thread-safe access to obstacle point cloud data
+    from a D435 depth camera via Zenoh messaging. The obstacle data is
+    updated asynchronously through a callback mechanism and can be safely
+    accessed from multiple threads.
     """
 
     def __init__(self):
         """
-        Initialize the D435Provider instance.
+        Initialize the D435Provider with Zenoh session and thread lock.
 
-        Sets up the Zenoh subscriber for obstacle point cloud data and starts the provider.
+        This method sets up the Zenoh subscriber for obstacle point cloud data
+        and initializes thread-safe storage for obstacle information. The provider
+        automatically starts after successful initialization.
+
+        Notes
+        -----
+        - If Zenoh session initialization fails, the provider will still be
+          created but will not receive obstacle data until the session is
+          successfully established.
+        - The provider uses a thread lock to ensure safe concurrent access
+          to the obstacle data from multiple threads.
         """
-        self.obstacle: list[dict[str, float]] = []
+        self._lock = threading.Lock()
+        self._obstacle: list[dict[str, float]] = []
         self.running: bool = False
         self.session = None
 
@@ -32,7 +49,10 @@ class D435Provider:
             )
             logging.info("Zenoh is open for D435Provider")
         except Exception as e:
-            logging.error(f"Error opening Zenoh client: {e}")
+            logging.error(
+                f"Error opening Zenoh client for D435Provider: {e}",
+                exc_info=True,
+            )
 
         self.start()
 
@@ -63,10 +83,22 @@ class D435Provider:
         """
         Callback function to process the obstacle point cloud data.
 
+        This method is called asynchronously by the Zenoh subscriber when new
+        obstacle point cloud data is received. It processes the point cloud,
+        calculates angles and distances, and updates the obstacle list in a
+        thread-safe manner.
+
         Parameters
         ----------
         sample : zenoh.Sample
             The sample containing the point cloud data.
+
+        Notes
+        -----
+        - This callback runs in a separate thread, so all updates to shared
+          state (self.obstacle) are protected by a thread lock.
+        - If deserialization or processing fails, an error is logged with
+          full exception context for debugging.
         """
         try:
             points = sensor_msgs.PointCloud.deserialize(sample.payload.to_bytes())
@@ -80,9 +112,27 @@ class D435Provider:
                 obstacles.append(
                     {"x": x, "y": y, "z": z, "angle": angle, "distance": distance}
                 )
-            self.obstacle = obstacles
+            with self._lock:
+                self._obstacle = obstacles
         except Exception as e:
-            logging.error(f"Error processing obstacle info: {e}")
+            logging.error(
+                f"Error processing obstacle point cloud data in D435Provider: {e}",
+                exc_info=True,
+            )
+
+    @property
+    def obstacle(self):
+        """
+        Get the current obstacle point cloud data in a thread-safe manner.
+
+        Returns
+        -------
+        list
+            A list of dictionaries, each containing obstacle point information
+            with keys: 'x', 'y', 'z', 'angle', 'distance'.
+        """
+        with self._lock:
+            return list(self._obstacle)
 
     def start(self):
         """
