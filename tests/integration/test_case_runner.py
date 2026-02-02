@@ -365,7 +365,9 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Mock LLM ask method to capture raw response
     original_llm_ask = cortex.config.cortex_llm.ask
 
-    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
         logging.info(
             f"Generated prompt: {prompt[:200]}..."
         )  # Log first 200 chars of prompt
