@@ -96,24 +96,24 @@ def test_battery_status_from_dict_with_defaults():
 
 def test_command_status_creation():
     """Test CommandStatus creation."""
-    command = CommandStatus(vx=1.5, vy=0.5, vyaw=0.2, timestamp="2024-01-01T00:00:00")
+    command = CommandStatus(vx=1.5, vy=0.5, vyaw=0.2, timestamp=1704067200.0)
 
     assert command.vx == 1.5
     assert command.vy == 0.5
     assert command.vyaw == 0.2
-    assert command.timestamp == "2024-01-01T00:00:00"
+    assert command.timestamp == 1704067200.0
 
 
 def test_command_status_to_dict():
     """Test CommandStatus to_dict conversion."""
-    command = CommandStatus(vx=1.0, vy=0.0, vyaw=0.5, timestamp="2024-01-01T00:00:00")
+    command = CommandStatus(vx=1.0, vy=0.0, vyaw=0.5, timestamp=1704067200.0)
 
     result = command.to_dict()
 
     assert result["vx"] == 1.0
     assert result["vy"] == 0.0
     assert result["vyaw"] == 0.5
-    assert result["timestamp"] == "2024-01-01T00:00:00"
+    assert result["timestamp"] == 1704067200.0
 
 
 def test_command_status_from_dict():
