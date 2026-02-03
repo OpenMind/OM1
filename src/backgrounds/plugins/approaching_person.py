@@ -80,15 +80,23 @@ class ApproachingPerson(Background[BackgroundConfig]):
         with self._lock:
             if self._is_person_approached:
                 logging.debug("Skipping SWITCH status - person already approached.")
-                self.sleep(5)
-                return
+                pass
+
+        if self._is_person_approached:
+            self.sleep(5)
+            return
+
+        if not self.session:
+            logging.warning("No Zenoh session available in ApproachingPerson.")
+            self.sleep(5)
+            return
 
         request_id = str(uuid4())
 
         self.session.put(
             self.person_greeting_topic,
             PersonGreetingStatus(
-                header=prepare_header(str(uuid4())),
+                header=prepare_header(request_id),
                 request_id=String(data=request_id),
                 status=PersonGreetingStatus.STATUS.SWITCH.value,
             ).serialize(),
