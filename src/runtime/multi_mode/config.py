@@ -269,6 +269,8 @@ class ModeSystemConfig:
 
     Parameters
     ----------
+    version : str
+        Version of the mode system configuration.
     name : str
         Name of the mode system.
     default_mode : str
@@ -302,6 +304,7 @@ class ModeSystemConfig:
     """
 
     # Global settings
+    version: str
     name: str
     default_mode: str
     config_name: str = ""
@@ -423,6 +426,7 @@ def load_mode_config(
         load_unitree(g_ut_eth)
 
     mode_system_config = ModeSystemConfig(
+        version=config_version,
         name=raw_config.get("name", "mode_system"),
         default_mode=raw_config["default_mode"],
         config_name=config_name,
@@ -643,6 +647,7 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
             )
 
         return {
+            "version": config.version,
             "name": config.name,
             "default_mode": config.default_mode,
             "allow_manual_switching": config.allow_manual_switching,
