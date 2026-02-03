@@ -247,7 +247,7 @@ class LLMHistoryManager:
                             f"Summarization failed: {summary_message.content}"
                         )
                         target_length = self.config.history_length
-                        if len(messages) > target_length:
+                        if target_length is not None and len(messages) > target_length:
                             excess = len(messages) - target_length
                             del messages[:excess]
                             logging.warning(
@@ -260,7 +260,7 @@ class LLMHistoryManager:
                         f"Error in summary task callback: {type(e).__name__}: {e}"
                     )
                     target_length = self.config.history_length
-                    if len(messages) > target_length:
+                    if target_length is not None and len(messages) > target_length:
                         excess = len(messages) - target_length
                         del messages[:excess]
                         logging.warning(
