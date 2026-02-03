@@ -118,14 +118,14 @@ def test_command_status_to_dict():
 
 def test_command_status_from_dict():
     """Test CommandStatus from_dict creation."""
-    data = {"vx": 2.0, "vy": 1.0, "vyaw": 0.3, "timestamp": "2024-01-01T12:00:00"}
+    data = {"vx": 2.0, "vy": 1.0, "vyaw": 0.3, "timestamp": 1704110400.0}
 
     command = CommandStatus.from_dict(data)
 
     assert command.vx == 2.0
     assert command.vy == 1.0
     assert command.vyaw == 0.3
-    assert command.timestamp == "2024-01-01T12:00:00"
+    assert command.timestamp == 1704110400.0
 
 
 def test_action_type_enum():
