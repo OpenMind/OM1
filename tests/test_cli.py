@@ -1,454 +1,497 @@
-"""
-Unit tests for the CLI module (src/cli.py).
-Tests the Typer commands and helper functions directly.
-"""
-
-import ast
-import sys
-from pathlib import Path
+import os
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
+import typer
 
-# Setup path *before* importing from src
-current_file_dir = Path(__file__).resolve().parent
-project_root = current_file_dir.parent
-src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
-
-from src.cli import (  # noqa: E402 (Import after path setup)
+from cli import (
     _check_action_exists,
     _check_api_key,
+    _check_background_exists,
+    _check_class_in_dir,
     _check_input_exists,
     _check_llm_exists,
+    _check_simulator_exists,
     _print_config_summary,
     _resolve_config_path,
     _validate_components,
+    _validate_mode_components,
     list_configs,
     modes,
     validate_config,
 )
 
 
-class TestCLICommands:
-
-    def test_modes_command_success(self):
-        config_name = "test_multi"
-
-        mock_mode_config = MagicMock()
-        mock_mode_config.name = "Test Multi Config"
-        mock_mode_config.default_mode = "mode1"
-        mock_mode_config.allow_manual_switching = True
-        mock_mode_config.mode_memory_enabled = False
-        mock_mode_config.global_lifecycle_hooks = ["hook1"]
-        mock_mode_config.modes = {
-            "mode1": MagicMock(
-                display_name="Mode One",
-                description="First mode",
-                hertz=10.0,
-                timeout_seconds=30,
-                _raw_inputs=["inp1"],
-                _raw_actions=["act1"],
-                lifecycle_hooks=["lh1"],
-            ),
-        }
-        mock_mode_config.transition_rules = [
-            MagicMock(
-                from_mode="*",
-                to_mode="mode1",
-                transition_type=MagicMock(value="keyword"),
-                trigger_keywords=["hello"],
-                priority=1,
-                cooldown_seconds=5,
-            )
-        ]
-
-        with patch(
-            "src.cli.load_mode_config", return_value=mock_mode_config
-        ) as mock_load_func:
-            captured_output = []
-
-            def mock_print(*args, **kwargs):
-                captured_output.append(" ".join(map(str, args)))
-
-            with patch("builtins.print", side_effect=mock_print):
-                modes(config_name)
-
-            mock_load_func.assert_called_once_with(config_name)
-
-    def test_modes_command_file_not_found(self):
-        config_name = "nonexistent"
-
-        with patch("src.cli.load_mode_config", side_effect=FileNotFoundError()):
-            with patch("logging.error") as mock_log_error:
-                with patch("typer.Exit") as MockExit:
-                    MockExit.side_effect = SystemExit(1)
-
-                    with pytest.raises(SystemExit):
-                        modes(config_name)
-
-                    mock_log_error.assert_called_once_with(
-                        f"Configuration file not found: {config_name}.json5"
-                    )
-                    MockExit.assert_called_once_with(1)
-
-    def test_list_configs_directory_not_found(self):
-        with patch("os.path.exists", return_value=False):
-            captured_output = []
-
-            def mock_print(*args, **kwargs):
-                captured_output.append(" ".join(map(str, args)))
-
-            with patch("builtins.print", side_effect=mock_print):
-                list_configs()
-
-            assert "Configuration directory not found" in captured_output
-
-    def test_list_configs_success(self):
-        config_dir = "/fake/config/dir"
-        with patch("os.path.join", return_value=config_dir):
-            with patch("os.path.exists", side_effect=lambda x: x == config_dir):
-                with patch("os.listdir", return_value=["test.json5"]):
-                    with patch(
-                        "builtins.open",
-                        mock_open(
-                            read_data='{"name": "Test Config", "modes": {}, "default_mode": "default"}'
-                        ),
-                    ):
-                        with patch(
-                            "src.cli.json5.load",
-                            return_value={
-                                "name": "Test Config",
-                                "modes": {},
-                                "default_mode": "default",
-                            },
-                        ):
-                            captured_output = []
-
-                            def mock_print(*args, **kwargs):
-                                captured_output.append(" ".join(map(str, args)))
-
-                            with patch("builtins.print", side_effect=mock_print):
-                                list_configs()
-
-                            # Should contain mode-aware config
-                            assert any(
-                                "Mode-Aware Configurations:" in out
-                                for out in captured_output
-                            )
-
-    def test_validate_config_success(self):
-        config_name = "valid_config"
-        config_path = f"/fake/path/{config_name}.json5"
-
-        with patch("src.cli._resolve_config_path", return_value=config_path):
-            with patch(
-                "builtins.open", mock_open(read_data='{"name": "Valid", "hertz": 10}')
-            ):
-                with patch(
-                    "src.cli.json5.load", return_value={"name": "Valid", "hertz": 10}
-                ):
-                    with patch("os.path.join") as mock_join:
-                        schema_path = "/fake/schema/single_mode_schema.json"
-                        mock_join.return_value = schema_path
-                        with patch("builtins.open", mock_open(read_data="{}")):
-                            with patch("json.load", return_value={}):
-                                with patch("src.cli.validate") as mock_validate:
-                                    with patch("builtins.print") as mock_print:
-                                        validate_config(
-                                            config_name,
-                                            verbose=False,
-                                            check_components=False,
-                                        )
-
-                                        # Verify core calls
-                                        mock_validate.assert_called_once()
-                                        # Verify success message was printed
-                                        success_calls = [
-                                            call
-                                            for call in mock_print.call_args_list
-                                            if "Configuration is valid!" in str(call)
-                                        ]
-                                        assert len(success_calls) > 0
-
-    def test_validate_config_file_not_found(self):
-        config_name = "invalid_config"
-        with patch("src.cli._resolve_config_path", side_effect=FileNotFoundError()):
-            with patch("typer.Exit") as MockExit:
-                MockExit.side_effect = SystemExit(1)
-                with pytest.raises(SystemExit):
-                    validate_config(config_name, verbose=False, check_components=False)
-
-                MockExit.assert_called_once_with(1)
-
-    def test_validate_config_invalid_json5(self):
-        config_name = "invalid_json"
-        config_path = f"/fake/path/{config_name}.json5"
-
-        with patch("src.cli._resolve_config_path", return_value=config_path):
-            with patch("builtins.open", mock_open(read_data="{ invalid json }")):
-                with patch(
-                    "src.cli.json5.load", side_effect=ValueError("Invalid JSON")
-                ):
-                    with patch("typer.Exit") as MockExit:
-                        MockExit.side_effect = SystemExit(1)
-                        with pytest.raises(SystemExit):
-                            validate_config(
-                                config_name, verbose=False, check_components=False
-                            )
-
-                        MockExit.assert_called_once_with(1)
-
-    def test_validate_config_schema_validation_error(self):
-        config_name = "schema_fail"
-        config_path = f"/fake/path/{config_name}.json5"
-
-        with patch("src.cli._resolve_config_path", return_value=config_path):
-            with patch("builtins.open", mock_open(read_data='{"bad_field": true}')):
-                with patch("src.cli.json5.load", return_value={"bad_field": True}):
-                    with patch("os.path.join") as mock_join:
-                        schema_path = "/fake/schema/single_mode_schema.json"
-                        mock_join.return_value = schema_path
-                        with patch("builtins.open", mock_open(read_data="{}")):
-                            with patch("json.load", return_value={}):
-                                from jsonschema import ValidationError
-
-                                with patch(
-                                    "src.cli.validate",
-                                    side_effect=ValidationError(
-                                        "Required field missing"
-                                    ),
-                                ):
-                                    with patch("typer.Exit") as MockExit:
-                                        MockExit.side_effect = SystemExit(1)
-                                        with pytest.raises(SystemExit):
-                                            validate_config(
-                                                config_name,
-                                                verbose=True,
-                                                check_components=False,
-                                            )
-                                        MockExit.assert_called_once_with(1)
+def test_resolve_existing_absolute_path(tmp_path):
+    """Test resolving an existing absolute path."""
+    config_file = tmp_path / "test.json5"
+    config_file.write_text("{}")
+    result = _resolve_config_path(str(config_file))
+    assert result == str(config_file.absolute())
 
 
-class TestCLIFunctions:
+def test_resolve_existing_path_with_extension(tmp_path):
+    """Test resolving a path with .json5 extension."""
+    config_file = tmp_path / "test.json5"
+    config_file.write_text("{}")
+    result = _resolve_config_path(str(tmp_path / "test"))
+    assert result == str(config_file.absolute())
 
-    def test_resolve_config_path_by_name(self):
-        config_name = "test_config"
-        cli_file_dir = "/path/to/src"
-        config_dir = "/path/to/config"
-        config_path_json5 = f"{config_dir}/{config_name}.json5"
-        expected_abs_path = f"/abs/{config_path_json5}"
 
-        with patch("os.path.dirname", return_value=cli_file_dir):
-            with patch(
-                "os.path.join",
-                side_effect=lambda x, y: (
-                    config_dir if x == cli_file_dir and y == "../config" else f"{x}/{y}"
-                ),
-            ):
-                with patch(
-                    "os.path.exists", side_effect=lambda path: path == config_path_json5
-                ):
-                    with patch(
-                        "os.path.abspath",
-                        side_effect=lambda x: (
-                            expected_abs_path if x == config_path_json5 else x
-                        ),
-                    ):
-                        resolved = _resolve_config_path(config_name)
-                        assert resolved == expected_abs_path
+def test_resolve_config_in_config_dir(tmp_path):
+    """Test resolving config from config directory."""
+    with patch("os.path.dirname", return_value=str(tmp_path)):
+        config_dir = tmp_path / ".." / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        config_file = config_dir / "test.json5"
+        config_file.write_text("{}")
 
-    def test_resolve_config_path_by_path(self):
-        config_path = "/some/absolute/path/test.json5"
+        result = _resolve_config_path("test")
+        assert result.endswith("test.json5")
 
-        with patch("os.path.exists", side_effect=lambda x: x == config_path):
-            with patch("os.path.abspath", side_effect=lambda x: x):
-                resolved = _resolve_config_path(config_path)
-                assert resolved == config_path
 
-    def test_resolve_config_path_not_found(self):
-        config_name = "missing_config"
-        cli_file_dir = "/path/to/src"
-        config_dir = "/path/to/config"
-        path1, path2, path3, path4 = (
-            config_name,
-            config_name + ".json5",
-            f"{config_dir}/{config_name}",
-            f"{config_dir}/{config_name}.json5",
-        )
+def test_resolve_nonexistent_config_raises_error():
+    """Test that nonexistent config raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError) as exc_info:
+        _resolve_config_path("nonexistent_config_that_does_not_exist")
+    assert "Configuration 'nonexistent_config_that_does_not_exist' not found" in str(
+        exc_info.value
+    )
 
-        with patch("os.path.dirname", return_value=cli_file_dir):
-            with patch(
-                "os.path.join",
-                side_effect=lambda x, y: (
-                    config_dir if x == cli_file_dir and y == "../config" else f"{x}/{y}"
-                ),
-            ):
-                with patch("os.path.exists", return_value=False):
-                    with pytest.raises(FileNotFoundError) as exc_info:
-                        _resolve_config_path(config_name)
-                    err_msg = str(exc_info.value)
-                    for p in [path1, path2, path3, path4]:
-                        assert p in err_msg
 
-    def test_check_input_exists_true(self):
-        input_type = "MockInput"
-        plugin_dir = "/fake/src/inputs/plugins"
-        plugin_filename = f"{input_type.lower()}.py"
-        mock_file_content = f"class {input_type}:\n    pass\n"
-        parsed_ast = ast.parse(mock_file_content)
+def test_class_exists_in_directory(tmp_path):
+    """Test finding a class in a directory."""
+    test_file = tmp_path / "test_module.py"
+    test_file.write_text("class TestClass:\n    pass\n")
+    assert _check_class_in_dir(str(tmp_path), "TestClass") is True
 
-        with patch("os.path.dirname", return_value="/fake/src"):
-            with patch("os.path.join", return_value=plugin_dir):
-                with patch("os.path.exists", return_value=True):
-                    with patch("os.listdir", return_value=[plugin_filename]):
-                        with patch(
-                            "builtins.open", mock_open(read_data=mock_file_content)
-                        ):
-                            with patch("ast.parse", return_value=parsed_ast):
-                                result = _check_input_exists(input_type)
-                                assert result is True
 
-    def test_check_input_exists_false(self):
-        input_type = "NonExistentInput"
-        plugin_dir = "/fake/src/inputs/plugins"
+def test_class_not_exists_in_directory(tmp_path):
+    """Test when class doesn't exist in directory."""
+    test_file = tmp_path / "test_module.py"
+    test_file.write_text("class OtherClass:\n    pass\n")
+    assert _check_class_in_dir(str(tmp_path), "TestClass") is False
 
-        with patch("os.path.dirname", return_value="/fake/src"):
-            with patch("os.path.join", return_value=plugin_dir):
-                with patch("os.path.exists", return_value=True):
-                    with patch("os.listdir", return_value=[]):
-                        result = _check_input_exists(input_type)
-                        assert result is False
 
-    def test_check_llm_exists_true(self):
-        llm_type = "MockLLM"
-        plugin_dir = "/fake/src/llm/plugins"
-        plugin_filename = f"{llm_type.lower()}.py"
-        mock_file_content = f"class {llm_type}:\n    pass\n"
-        parsed_ast = ast.parse(mock_file_content)
+def test_directory_not_exists():
+    """Test when directory doesn't exist."""
+    assert _check_class_in_dir("/nonexistent/directory/path", "TestClass") is False
 
-        with patch("os.path.dirname", return_value="/fake/src"):
-            with patch("os.path.join", return_value=plugin_dir):
-                with patch("os.path.exists", return_value=True):
-                    with patch("os.listdir", return_value=[plugin_filename]):
-                        with patch(
-                            "builtins.open", mock_open(read_data=mock_file_content)
-                        ):
-                            with patch("ast.parse", return_value=parsed_ast):
-                                result = _check_llm_exists(llm_type)
-                                assert result is True
 
-    def test_check_action_exists_true(self):
-        action_name = "test_action"
-        interface_path = f"/fake/src/actions/{action_name}/interface.py"
+def test_skip_init_file(tmp_path):
+    """Test that __init__.py files are skipped."""
+    init_file = tmp_path / "__init__.py"
+    init_file.write_text("class TestClass:\n    pass\n")
+    assert _check_class_in_dir(str(tmp_path), "TestClass") is False
 
-        with patch("os.path.dirname", return_value="/fake/src"):
-            with patch("os.path.join", return_value=interface_path):
-                with patch("os.path.exists", return_value=True):
-                    result = _check_action_exists(action_name)
-                    assert result is True
 
-    def test_check_action_exists_false(self):
-        action_name = "missing_action"
-        interface_path = f"/fake/src/actions/{action_name}/interface.py"
+def test_handles_syntax_errors_gracefully(tmp_path):
+    """Test that syntax errors in files are handled gracefully."""
+    test_file = tmp_path / "broken.py"
+    test_file.write_text("class BrokenClass\n    # Missing colon\n")
+    assert _check_class_in_dir(str(tmp_path), "BrokenClass") is False
 
-        with patch("os.path.dirname", return_value="/fake/src"):
-            with patch("os.path.join", return_value=interface_path):
-                with patch("os.path.exists", return_value=False):
-                    result = _check_action_exists(action_name)
-                    assert result is False
 
-    def test_check_api_key_no_key_warning(self):
-        raw_config = {}
-        captured_output = []
+def test_check_input_exists():
+    """Test checking if input type exists."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = True
+        assert _check_input_exists("TestInput") is True
+        mock_check_class.assert_called_once()
 
-        def mock_print(*args, **kwargs):
-            captured_output.append(" ".join(map(str, args)))
 
-        with patch("os.environ.get", return_value=""):
-            with patch("builtins.print", side_effect=mock_print):
-                _check_api_key(raw_config, verbose=False)
-        assert any("Warning: No API key configured" in out for out in captured_output)
+def test_check_input_not_exists():
+    """Test checking if input type doesn't exist."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = False
+        assert _check_input_exists("NonexistentInput") is False
 
-    def test_check_api_key_env_key_present(self):
+
+def test_check_llm_exists():
+    """Test checking if LLM type exists."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = True
+        assert _check_llm_exists("TestLLM") is True
+
+
+def test_check_llm_not_exists():
+    """Test checking if LLM type doesn't exist."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = False
+        assert _check_llm_exists("NonexistentLLM") is False
+
+
+def test_check_simulator_exists():
+    """Test checking if simulator type exists."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = True
+        assert _check_simulator_exists("TestSimulator") is True
+
+
+def test_check_simulator_not_exists():
+    """Test checking if simulator type doesn't exist."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = False
+        assert _check_simulator_exists("NonexistentSimulator") is False
+
+
+def test_check_action_exists():
+    """Test checking if action exists."""
+    with patch("os.path.exists") as mock_exists:
+        mock_exists.return_value = True
+        assert _check_action_exists("test_action") is True
+
+
+def test_check_action_not_exists():
+    """Test checking if action doesn't exist."""
+    with patch("os.path.exists") as mock_exists:
+        mock_exists.return_value = False
+        assert _check_action_exists("nonexistent_action") is False
+
+
+def test_check_background_exists():
+    """Test checking if background type exists."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = True
+        assert _check_background_exists("TestBackground") is True
+
+
+def test_check_background_not_exists():
+    """Test checking if background type doesn't exist."""
+    with patch("cli._check_class_in_dir") as mock_check_class:
+        mock_check_class.return_value = False
+        assert _check_background_exists("NonexistentBackground") is False
+
+
+def test_check_api_key_no_key_warning(capsys):
+    """Test warning when no API key is configured."""
+    with patch.dict(os.environ, {}, clear=True):
+        raw_config = {"api_key": ""}
+        _check_api_key(raw_config, verbose=False)
+        captured = capsys.readouterr()
+        assert "Warning: No API key configured" in captured.out
+
+
+def test_check_api_key_env_verbose(capsys):
+    """Test API key from environment with verbose mode."""
+    with patch.dict(os.environ, {"OM_API_KEY": "test_key"}, clear=True):
+        raw_config = {"api_key": ""}
+        _check_api_key(raw_config, verbose=True)
+        captured = capsys.readouterr()
+        assert "API key configured (from environment)" in captured.out
+
+
+def test_check_api_key_config_verbose(capsys):
+    """Test API key from config with verbose mode."""
+    with patch.dict(os.environ, {}, clear=True):
+        raw_config = {"api_key": "config_key"}
+        _check_api_key(raw_config, verbose=True)
+        captured = capsys.readouterr()
+        assert "API key configured" in captured.out
+
+
+def test_check_api_key_openmind_free_shows_warning(capsys):
+    """Test warning with openmind_free key."""
+    with patch.dict(os.environ, {}, clear=True):
         raw_config = {"api_key": "openmind_free"}
-        captured_output = []
+        _check_api_key(raw_config, verbose=False)
+        captured = capsys.readouterr()
+        assert "Warning: No API key configured" in captured.out
 
-        def mock_print(*args, **kwargs):
-            captured_output.append(" ".join(map(str, args)))
 
-        with patch("os.environ.get", return_value="secret_key_from_env"):
-            with patch("builtins.print", side_effect=mock_print):
-                _check_api_key(raw_config, verbose=True)
-        assert any(
-            "API key configured (from environment)" in out for out in captured_output
-        )
+def test_print_config_summary_single_mode(capsys):
+    """Test printing summary for single-mode config."""
+    raw_config = {
+        "name": "Test Config",
+        "hertz": 10.0,
+        "agent_inputs": [{"type": "input1"}],
+        "agent_actions": [{"name": "action1"}],
+    }
+    _print_config_summary(raw_config, is_multi_mode=False)
+    captured = capsys.readouterr()
+    assert "Type: Single-mode" in captured.out
+    assert "Test Config" in captured.out
+    assert "10.0 Hz" in captured.out
 
-    def test_print_config_summary_single_mode(self):
-        raw_config = {
-            "name": "Test Config",
-            "hertz": 10,
-            "agent_inputs": ["inp1"],
-            "agent_actions": ["act1"],
-        }
-        captured_output = []
 
-        def mock_print(*args, **kwargs):
-            captured_output.append(" ".join(map(str, args)))
+def test_print_config_summary_multi_mode(capsys):
+    """Test printing summary for multi-mode config."""
+    raw_config = {
+        "name": "Multi Mode Config",
+        "default_mode": "mode1",
+        "modes": {"mode1": {}, "mode2": {}},
+        "transition_rules": [{"from": "mode1", "to": "mode2"}],
+    }
+    _print_config_summary(raw_config, is_multi_mode=True)
+    captured = capsys.readouterr()
+    assert "Type: Multi-mode" in captured.out
+    assert "Multi Mode Config" in captured.out
+    assert "Default Mode: mode1" in captured.out
+    assert "Modes: 2" in captured.out
 
-        with patch("builtins.print", side_effect=mock_print):
-            _print_config_summary(raw_config, is_multi_mode=False)
-        assert any("Type: Single-mode" in out for out in captured_output)
 
-    def test_print_config_summary_multi_mode(self):
-        raw_config = {
-            "name": "Test Multi Config",
-            "default_mode": "default",
-            "modes": {"mode1": {}},
-            "transition_rules": [{"rule": 1}],
-        }
-        captured_output = []
+def test_validate_mode_components_valid():
+    """Test validating mode with all valid components."""
+    with (
+        patch("cli._check_input_exists") as mock_input,
+        patch("cli._check_llm_exists") as mock_llm,
+        patch("cli._check_action_exists") as mock_action,
+    ):
 
-        def mock_print(*args, **kwargs):
-            captured_output.append(" ".join(map(str, args)))
+        mock_input.return_value = True
+        mock_llm.return_value = True
+        mock_action.return_value = True
 
-        with patch("builtins.print", side_effect=mock_print):
-            _print_config_summary(raw_config, is_multi_mode=True)
-        assert any("Type: Multi-mode" in out for out in captured_output)
-
-    def test_validate_components_success(self):
-        raw_config = {
-            "name": "Test",
-            "agent_inputs": [{"type": "MockInput"}],
+        mode_data = {
+            "agent_inputs": [{"type": "TestInput"}],
+            "cortex_llm": {"type": "TestLLM"},
             "agent_actions": [{"name": "test_action"}],
-            "cortex_llm": {"type": "MockLLM"},
         }
-        with patch("src.cli._check_input_exists", return_value=True):
-            with patch("src.cli._check_action_exists", return_value=True):
-                with patch("src.cli._check_llm_exists", return_value=True):
-                    _validate_components(raw_config, is_multi_mode=False, verbose=False)
 
-    def test_validate_components_failure(self):
-        raw_config = {
-            "name": "Test",
+        errors, warnings = _validate_mode_components(
+            "test_mode", mode_data, verbose=False
+        )
+        assert errors == []
+        assert warnings == []
+
+
+def test_validate_mode_components_missing_input():
+    """Test that missing input creates error."""
+    with patch("cli._check_input_exists") as mock_input:
+        mock_input.return_value = False
+
+        mode_data = {
             "agent_inputs": [{"type": "MissingInput"}],
         }
-        with patch("src.cli._check_input_exists", return_value=False):
-            with pytest.raises(ValueError, match="Component validation failed"):
-                _validate_components(
-                    raw_config, is_multi_mode=False, verbose=False, allow_missing=False
-                )
 
-    def test_validate_components_allow_missing(self):
-        raw_config = {
-            "name": "Test",
+        errors, warnings = _validate_mode_components(
+            "test_mode", mode_data, verbose=False, allow_missing=False
+        )
+        assert len(errors) == 1
+        assert "MissingInput" in errors[0]
+
+
+def test_validate_mode_components_missing_input_allowed():
+    """Test that missing input creates warning when allowed."""
+    with patch("cli._check_input_exists") as mock_input:
+        mock_input.return_value = False
+
+        mode_data = {
             "agent_inputs": [{"type": "MissingInput"}],
         }
-        with patch("src.cli._check_input_exists", return_value=False):
-            with patch("builtins.print") as mock_print:
-                _validate_components(
-                    raw_config, is_multi_mode=False, verbose=False, allow_missing=True
-                )
-                assert any(
-                    "warnings:" in str(call) for call in mock_print.call_args_list
-                )
+
+        errors, warnings = _validate_mode_components(
+            "test_mode", mode_data, verbose=False, allow_missing=True
+        )
+        assert len(errors) == 0
+        assert len(warnings) == 1
+        assert "MissingInput" in warnings[0]
+
+
+def test_validate_mode_components_skip_inputs():
+    """Test skipping input validation."""
+    mode_data = {
+        "agent_inputs": [{"type": "AnyInput"}],
+    }
+
+    errors, warnings = _validate_mode_components(
+        "test_mode", mode_data, verbose=False, skip_inputs=True
+    )
+    assert errors == []
+    assert warnings == []
+
+
+def test_validate_mode_components_simulators():
+    """Test simulator validation."""
+    with patch("cli._check_simulator_exists") as mock_simulator:
+        mock_simulator.return_value = True
+
+        mode_data = {
+            "simulators": [{"type": "TestSimulator"}],
+        }
+
+        errors, warnings = _validate_mode_components(
+            "test_mode", mode_data, verbose=False
+        )
+        assert errors == []
+        mock_simulator.assert_called_once_with("TestSimulator")
+
+
+def test_validate_mode_components_backgrounds():
+    """Test background validation."""
+    with patch("cli._check_background_exists") as mock_background:
+        mock_background.return_value = True
+
+        mode_data = {
+            "backgrounds": [{"type": "TestBackground"}],
+        }
+
+        errors, warnings = _validate_mode_components(
+            "test_mode", mode_data, verbose=False
+        )
+        assert errors == []
+        mock_background.assert_called_once_with("TestBackground")
+
+
+def test_validate_components_single_mode():
+    """Test validating single-mode configuration."""
+    with patch("cli._validate_mode_components") as mock_validate_mode:
+        mock_validate_mode.return_value = ([], [])
+
+        raw_config = {
+            "agent_inputs": [],
+            "agent_actions": [],
+        }
+
+        _validate_components(raw_config, is_multi_mode=False, verbose=False)
+        mock_validate_mode.assert_called_once()
+
+
+def test_validate_components_multi_mode():
+    """Test validating multi-mode configuration."""
+    with (
+        patch("cli._validate_mode_components") as mock_validate_mode,
+        patch("cli._check_llm_exists") as mock_llm,
+    ):
+
+        mock_llm.return_value = True
+        mock_validate_mode.return_value = ([], [])
+
+        raw_config = {
+            "cortex_llm": {"type": "GlobalLLM"},
+            "modes": {
+                "mode1": {"agent_inputs": []},
+                "mode2": {"agent_inputs": []},
+            },
+        }
+
+        _validate_components(raw_config, is_multi_mode=True, verbose=False)
+        assert mock_validate_mode.call_count == 2
+
+
+def test_validate_components_with_errors():
+    """Test that errors raise ValueError."""
+    with patch("cli._validate_mode_components") as mock_validate_mode:
+        mock_validate_mode.return_value = (["Error 1", "Error 2"], [])
+
+        raw_config = {"modes": {"mode1": {}}}
+
+        with pytest.raises(ValueError, match="Component validation failed"):
+            _validate_components(raw_config, is_multi_mode=True, verbose=False)
+
+
+def test_validate_components_with_warnings(capsys):
+    """Test that warnings are printed but no exception raised."""
+    with patch("cli._validate_mode_components") as mock_validate_mode:
+        mock_validate_mode.return_value = ([], ["Warning 1"])
+
+        raw_config = {"modes": {"mode1": {}}}
+
+        _validate_components(raw_config, is_multi_mode=True, verbose=False)
+        captured = capsys.readouterr()
+        assert "Warning 1" in captured.out
+
+
+def test_list_configs_categorizes_correctly(capsys):
+    """Test that configs are categorized correctly."""
+    with (
+        patch("os.listdir") as mock_listdir,
+        patch("os.path.exists") as mock_exists,
+        patch("builtins.open", new_callable=mock_open) as mock_file,
+    ):
+
+        mock_exists.return_value = True
+        mock_listdir.return_value = ["mode_config.json5", "single_config.json5"]
+
+        # Create a side effect to return different content
+        def open_side_effect(path, mode):
+            if "mode_config" in str(path):
+                return mock_open(
+                    read_data='{"modes": {}, "default_mode": "test"}'
+                ).return_value
+            else:
+                return mock_open(read_data='{"name": "single"}').return_value
+
+        mock_file.side_effect = open_side_effect
+
+        list_configs()
+        captured = capsys.readouterr()
+        assert "Mode-Aware Configurations:" in captured.out
+        assert "Standard Configurations:" in captured.out
+
+
+def test_modes_displays_config_info(capsys):
+    """Test that modes command displays configuration info."""
+    with patch("cli.load_mode_config") as mock_load_config:
+        mock_config = MagicMock()
+        mock_config.name = "Test Config"
+        mock_config.default_mode = "mode1"
+        mock_config.allow_manual_switching = True
+        mock_config.mode_memory_enabled = True
+        mock_config.global_lifecycle_hooks = []
+        mock_config.modes = {
+            "mode1": MagicMock(
+                display_name="Mode 1",
+                description="Test mode",
+                hertz=10.0,
+                timeout_seconds=None,
+                _raw_inputs=[],
+                _raw_actions=[],
+                lifecycle_hooks=[],
+            )
+        }
+        mock_config.transition_rules = []
+        mock_load_config.return_value = mock_config
+
+        modes("test_config")
+        captured = capsys.readouterr()
+        assert "Test Config" in captured.out
+        assert "Default Mode: mode1" in captured.out
+
+
+def test_modes_handles_file_not_found():
+    """Test that modes command handles FileNotFoundError."""
+    with patch("cli.load_mode_config") as mock_load_config:
+        mock_load_config.side_effect = FileNotFoundError()
+
+        with pytest.raises(typer.Exit):
+            modes("nonexistent_config")
+
+
+def test_validate_config_success(capsys):
+    """Test successful config validation."""
+    with (
+        patch("cli._resolve_config_path") as mock_resolve,
+        patch("builtins.open", new_callable=mock_open, read_data='{"name": "test"}'),
+        patch("cli.validate"),
+        patch("cli._validate_components"),
+        patch("cli._check_api_key"),
+    ):
+
+        mock_resolve.return_value = "/path/to/config.json5"
+
+        validate_config("test", verbose=False, check_components=False)
+        captured = capsys.readouterr()
+        assert "Configuration is valid!" in captured.out
+
+
+def test_validate_config_invalid_json():
+    """Test validation with invalid JSON."""
+    with (
+        patch("cli._resolve_config_path") as mock_resolve,
+        patch("builtins.open", new_callable=mock_open, read_data="invalid json{"),
+    ):
+
+        mock_resolve.return_value = "/path/to/config.json5"
+
+        with pytest.raises(typer.Exit):
+            validate_config("test")
+
+
+def test_validate_config_file_not_found():
+    """Test validation with missing file."""
+    with patch("cli._resolve_config_path") as mock_resolve:
+        mock_resolve.side_effect = FileNotFoundError()
+
+        with pytest.raises(typer.Exit):
+            validate_config("test")
