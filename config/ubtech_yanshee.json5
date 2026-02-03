@@ -1,5 +1,5 @@
 {
-  version: "v1.0.1",
+  version: "v1.0.2",
   hertz: 0.01,
   name: "spot_speak",
   api_key: "openmind_free",
