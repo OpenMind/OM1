@@ -1,5 +1,5 @@
 {
-  version: "v1.0.1",
+  version: "v1.0.2",
   hertz: 1,
   name: "bits_mapper",
   api_key: "openmind_free",
@@ -61,7 +61,7 @@
     //{
     //  "name": "move_go2_autonomy",
     //  "llm_label": "move",
-    //  "connector": "unitree_sdk"
+    //  "connector": "unitree_rplidar_sdk"
     //},
     //{
     // "name": "speak",

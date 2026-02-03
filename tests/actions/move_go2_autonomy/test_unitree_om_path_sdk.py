@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_sdk_advance import (
-    MoveUnitreeSDKAdvanceConfig,
-    MoveUnitreeSDKAdvanceConnector,
+from actions.move_go2_autonomy.connector.unitree_om_path_sdk import (
+    MoveUnitreeOMPathSDKConfig,
+    MoveUnitreeOMPathSDKConnector,
 )
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 from providers.odom_provider import RobotState
@@ -17,22 +17,22 @@ def mock_dependencies():
     """Mock all external dependencies."""
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.SimplePathsProvider"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"
         ) as mock_paths,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.UnitreeGo2StateProvider"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"
         ) as mock_state,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.SportClient"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
         ) as mock_sport,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.OdomProvider"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.OdomProvider"
         ) as mock_odom,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.FacePresenceProvider"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
         ) as mock_face,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.open_zenoh_session"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"
         ) as mock_zenoh_session,
     ):
         # Setup mock instances
@@ -89,30 +89,30 @@ def mock_dependencies():
 
 @pytest.fixture
 def connector(mock_dependencies):
-    """Create a MoveUnitreeSDKAdvanceConnector instance with mocked dependencies."""
-    config = MoveUnitreeSDKAdvanceConfig(unitree_ethernet="eth0")
-    connector = MoveUnitreeSDKAdvanceConnector(config)
+    """Create a MoveUnitreeOMPathSDKConnector instance with mocked dependencies."""
+    config = MoveUnitreeOMPathSDKConfig(unitree_ethernet="eth0")
+    connector = MoveUnitreeOMPathSDKConnector(config)
     return connector
 
 
-class TestMoveUnitreeSDKAdvanceConfig:
-    """Test MoveUnitreeSDKAdvanceConfig configuration."""
+class TestMoveUnitreeOMPathSDK:
+    """Test TestMoveUnitreeOMPathSDKConfig configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MoveUnitreeSDKAdvanceConfig()
+        config = MoveUnitreeOMPathSDKConfig()
         assert config.unitree_ethernet == "eth0"
         assert config.mode is None
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = MoveUnitreeSDKAdvanceConfig(unitree_ethernet="eth1", mode="guard")
+        config = MoveUnitreeOMPathSDKConfig(unitree_ethernet="eth1", mode="guard")
         assert config.unitree_ethernet == "eth1"
         assert config.mode == "guard"
 
 
-class TestMoveUnitreeSDKAdvanceConnectorInit:
-    """Test MoveUnitreeSDKAdvanceConnector initialization."""
+class TestMoveUnitreeOMPathSDKConnectorInit:
+    """Test MoveUnitreeOMPathSDKConnector initialization."""
 
     def test_initialization(self, connector, mock_dependencies):
         """Test successful initialization."""
@@ -148,31 +148,31 @@ class TestMoveUnitreeSDKAdvanceConnectorInit:
         """Test initialization when sport client fails."""
         with (
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SimplePathsProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.UnitreeGo2StateProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SportClient"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
             ) as mock_sport,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.OdomProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.OdomProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.FacePresenceProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.open_zenoh_session"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.logging"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging"
             ) as mock_logging,
         ):
             mock_sport.side_effect = Exception("Connection failed")
 
-            config = MoveUnitreeSDKAdvanceConfig()
-            connector = MoveUnitreeSDKAdvanceConnector(config)
+            config = MoveUnitreeOMPathSDKConfig()
+            connector = MoveUnitreeOMPathSDKConnector(config)
 
             assert connector.sport_client is None
             mock_logging.error.assert_called()
@@ -181,31 +181,31 @@ class TestMoveUnitreeSDKAdvanceConnectorInit:
         """Test initialization when Zenoh session fails."""
         with (
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SimplePathsProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.UnitreeGo2StateProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.SportClient"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.OdomProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.OdomProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.FacePresenceProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.open_zenoh_session"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"
             ) as mock_zenoh,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.logging"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging"
             ) as mock_logging,
         ):
             mock_zenoh.side_effect = Exception("Zenoh connection failed")
 
-            config = MoveUnitreeSDKAdvanceConfig()
-            connector = MoveUnitreeSDKAdvanceConnector(config)
+            config = MoveUnitreeOMPathSDKConfig()
+            connector = MoveUnitreeOMPathSDKConnector(config)
 
             assert connector.session is None
             mock_logging.error.assert_called()
@@ -483,7 +483,7 @@ class TestMoveRobot:
         mock_dependencies["sport"].Move.side_effect = Exception("Movement failed")
 
         with patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk_advance.logging"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging"
         ) as mock_logging:
             connector._move_robot(0.5, 0.0, 0.0)
 
@@ -761,10 +761,10 @@ class TestZenohAIStatus:
         # Mock AIStatusRequest with proper header
         with (
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusRequest"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest"
             ) as mock_request,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusResponse"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse"
             ) as mock_response,
         ):
             mock_header = Mock()
@@ -796,10 +796,10 @@ class TestZenohAIStatus:
 
         with (
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusRequest"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest"
             ) as mock_request,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusResponse"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse"
             ) as mock_response,
         ):
             mock_header = Mock()
@@ -832,10 +832,10 @@ class TestZenohAIStatus:
         # Mock AIStatusRequest with proper header
         with (
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusRequest"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest"
             ) as mock_request,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk_advance.AIStatusResponse"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse"
             ) as mock_response,
         ):
             mock_header = Mock()

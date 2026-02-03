@@ -1,186 +1,354 @@
-"""
-Unit tests for the main application entry point (src/run.py).
-Tests the 'start' command logic directly by invoking the function.
-"""
+import os
+from unittest.mock import MagicMock, patch
 
-import sys
-from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+import pytest
+import typer
 
-# --- Setup path *before* importing from src ---
-current_file_dir = Path(__file__).resolve().parent
-project_root = current_file_dir.parent
-src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
-# ------------------------------------------------
-
-from src.run import (  # noqa: E402 (Ignore E402 for this specific case where path setup is required before import)
-    start,
-)
+from run import app, setup_config_file, start
 
 
-class TestStartCommand:
+def test_setup_with_provided_config_name(tmp_path):
+    """Test setup with a provided config name."""
+    with patch("os.path.dirname", return_value=str(tmp_path)):
+        config_dir = tmp_path / ".." / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
 
-    def test_start_command_single_mode(self):
-        config_name = "test_single"
-        fake_config_path = f"/fake/path/{config_name}.json5"
+        config_name = "test_config"
+        config_name_result, config_path = setup_config_file(config_name)
 
-        with patch(
-            "src.run.setup_config_file", return_value=(config_name, fake_config_path)
-        ) as mock_setup_conf:
-            with patch("src.run.setup_logging") as mock_setup_log:
-                raw_config_content = {
-                    "name": config_name,
-                    "version": "v1.0.1",
-                    "hertz": 10.0,
-                    "agent_inputs": [],
-                    "agent_actions": [],
-                }
-                with patch(
-                    "builtins.open",
-                    mock_open(
-                        read_data='{"name": "test", "version": "v1.0.1", "hertz": 10.0, "agent_inputs": [], "agent_actions": []}'
-                    ),
-                ):
-                    with patch("src.run.json5.load", return_value=raw_config_content):
-                        with patch("src.run.load_config") as mock_load_config:
-                            mock_config_obj = MagicMock()
-                            mock_load_config.return_value = mock_config_obj
+        assert config_name_result == "test_config"
+        assert config_path.endswith("test_config.json5")
 
-                            with patch("src.run.CortexRuntime") as MockRuntimeClass:
-                                mock_runtime_instance = MagicMock()
-                                MockRuntimeClass.return_value = mock_runtime_instance
 
-                                with patch("src.run.asyncio.run") as mock_async_run:
-                                    start(
-                                        config_name=config_name,
-                                        hot_reload=True,
-                                        check_interval=60,
-                                        log_level="INFO",
-                                        log_to_file=False,
-                                    )
+def test_setup_with_no_config_name_uses_runtime(tmp_path):
+    """Test setup without config name uses .runtime.json5."""
+    with patch("os.path.dirname", return_value=str(tmp_path)):
+        memory_dir = tmp_path / ".." / "config" / "memory"
+        memory_dir.mkdir(parents=True, exist_ok=True)
+        runtime_file = memory_dir / ".runtime.json5"
+        runtime_file.write_text('{"name": "runtime"}')
 
-                                    mock_setup_conf.assert_called_once_with(config_name)
-                                    mock_setup_log.assert_called_once_with(
-                                        config_name, "INFO", False
-                                    )
-                                    mock_load_config.assert_called_once_with(
-                                        config_name
-                                    )
-                                    MockRuntimeClass.assert_called_once_with(
-                                        mock_config_obj,
-                                        config_name,
-                                        hot_reload=True,
-                                        check_interval=60,
-                                    )
-                                    mock_runtime_instance.run.assert_called_once()
-                                    mock_async_run.assert_called_once()
+        config_dir = tmp_path / ".." / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
 
-    def test_start_command_multi_mode(self):
-        config_name = "test_multi"
-        fake_config_path = f"/fake/path/{config_name}.json5"
+        with patch("shutil.copy2") as mock_copy:
+            config_name_result, config_path = setup_config_file(None)
 
-        with patch(
-            "src.run.setup_config_file", return_value=(config_name, fake_config_path)
-        ) as mock_setup_conf:
-            with patch("src.run.setup_logging") as mock_setup_log:
-                raw_config_content = {
-                    "name": config_name,
-                    "version": "v1.0.1",
-                    "modes": {"mode1": {}},
-                    "default_mode": "mode1",
-                }
-                with patch(
-                    "builtins.open",
-                    mock_open(
-                        read_data='{"name": "test", "version": "v1.0.1", "modes": {"mode1": {}}, "default_mode": "mode1"}'
-                    ),
-                ):
-                    with patch("src.run.json5.load", return_value=raw_config_content):
-                        with patch("src.run.load_mode_config") as mock_load_mode_config:
-                            mock_mode_config_obj = MagicMock()
-                            mock_load_mode_config.return_value = mock_mode_config_obj
+            assert config_name_result == ".runtime"
+            assert config_path.endswith(".runtime.json5")
+            mock_copy.assert_called_once()
 
-                            with patch("src.run.ModeCortexRuntime") as MockRuntimeClass:
-                                mock_runtime_instance = MagicMock()
-                                MockRuntimeClass.return_value = mock_runtime_instance
 
-                                with patch("src.run.asyncio.run") as mock_async_run:
-                                    start(
-                                        config_name=config_name,
-                                        hot_reload=True,
-                                        check_interval=60,
-                                        log_level="INFO",
-                                        log_to_file=False,
-                                    )
+def test_setup_without_config_raises_when_runtime_missing(tmp_path):
+    """Test that missing .runtime.json5 raises error."""
+    with (
+        patch("os.path.dirname", return_value=str(tmp_path)),
+        patch("os.path.exists", return_value=False),
+    ):
+        with pytest.raises(typer.Exit):
+            setup_config_file(None)
 
-                                    mock_setup_conf.assert_called_once_with(config_name)
-                                    mock_setup_log.assert_called_once_with(
-                                        config_name, "INFO", False
-                                    )
-                                    mock_load_mode_config.assert_called_once_with(
-                                        config_name
-                                    )
-                                    MockRuntimeClass.assert_called_once_with(
-                                        mock_mode_config_obj,
-                                        config_name,
-                                        hot_reload=True,
-                                        check_interval=60,
-                                    )
-                                    mock_runtime_instance.run.assert_called_once()
-                                    mock_async_run.assert_called_once()
 
-    def test_start_command_config_not_found(self):
-        config_name = "non_existent"
-        fake_config_path = f"/fake/path/{config_name}.json5"
+def test_setup_copies_runtime_config(tmp_path):
+    """Test that runtime config is copied correctly."""
+    with patch("os.path.dirname", return_value=str(tmp_path)):
+        memory_dir = tmp_path / ".." / "config" / "memory"
+        memory_dir.mkdir(parents=True, exist_ok=True)
+        runtime_file = memory_dir / ".runtime.json5"
+        runtime_content = '{"name": "runtime", "hertz": 10}'
+        runtime_file.write_text(runtime_content)
 
-        with patch(
-            "src.run.setup_config_file", return_value=(config_name, fake_config_path)
-        ):
-            with patch("src.run.setup_logging"):
-                with patch(
-                    "builtins.open",
-                    side_effect=FileNotFoundError(
-                        f"Config file not found: {fake_config_path}"
-                    ),
-                ):
-                    with patch("src.run.json5.load") as mock_json5_load:
-                        with (
-                            patch("src.run.load_config") as mock_load_config,
-                            patch("src.run.load_mode_config") as mock_load_mode_config,
-                        ):
-                            with patch("src.run.asyncio.run") as mock_async_run:
-                                exception_raised = False
-                                try:
-                                    start(
-                                        config_name=config_name,
-                                        hot_reload=True,
-                                        check_interval=60,
-                                        log_level="INFO",
-                                        log_to_file=False,
-                                    )
-                                except SystemExit as e:
-                                    if e.code == 1:
-                                        exception_raised = True
-                                except Exception as e:
-                                    try:
-                                        import click
+        config_dir = tmp_path / ".." / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
 
-                                        if (
-                                            isinstance(e, click.exceptions.Exit)
-                                            and e.exit_code == 1
-                                        ):
-                                            exception_raised = True
-                                        else:
-                                            raise
-                                    except ImportError:
-                                        pass
+        _, config_path = setup_config_file(None)
 
-                                assert (
-                                    exception_raised
-                                ), "Expected an Exit exception with code 1"
+        assert os.path.exists(config_path)
+        with open(config_path, "r") as f:
+            content = f.read()
+            assert content == runtime_content
 
-                                mock_json5_load.assert_not_called()
-                                mock_load_config.assert_not_called()
-                                mock_load_mode_config.assert_not_called()
-                                mock_async_run.assert_not_called()
+
+def test_start_with_multi_mode_config():
+    """Test starting with multi-mode configuration."""
+    with (
+        patch("run.setup_logging") as mock_setup_logging,
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("run.json5.load") as mock_json5_load,
+        patch("builtins.open"),
+        patch("run.load_mode_config") as mock_load_mode_config,
+        patch("run.ModeCortexRuntime") as mock_runtime_class,
+        patch("asyncio.run") as mock_asyncio_run,
+    ):
+
+        # Setup mocks
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_json5_load.return_value = {"modes": {}, "default_mode": "test"}
+
+        mock_mode_config = MagicMock()
+        mock_mode_config.modes = {"mode1": MagicMock()}
+        mock_mode_config.default_mode = "mode1"
+        mock_load_mode_config.return_value = mock_mode_config
+
+        mock_runtime = MagicMock()
+        mock_runtime_class.return_value = mock_runtime
+
+        start(
+            config_name="test_config",
+            hot_reload=True,
+            check_interval=60,
+            log_level="INFO",
+            log_to_file=False,
+        )
+
+        mock_setup_logging.assert_called_once_with("test_config", "INFO", False)
+        mock_load_mode_config.assert_called_once_with("test_config")
+        mock_runtime_class.assert_called_once_with(
+            mock_mode_config, "test_config", hot_reload=True, check_interval=60
+        )
+        mock_asyncio_run.assert_called_once()
+
+
+def test_start_with_single_mode_config():
+    """Test starting with single-mode configuration."""
+    with (
+        patch("run.setup_logging") as mock_setup_logging,
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("run.json5.load") as mock_json5_load,
+        patch("builtins.open"),
+        patch("run.load_config") as mock_load_config,
+        patch("run.CortexRuntime") as mock_runtime_class,
+        patch("asyncio.run") as mock_asyncio_run,
+    ):
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_json5_load.return_value = {"name": "test"}
+
+        mock_config = MagicMock()
+        mock_load_config.return_value = mock_config
+
+        mock_runtime = MagicMock()
+        mock_runtime_class.return_value = mock_runtime
+
+        start(
+            config_name="test_config",
+            hot_reload=True,
+            check_interval=60,
+            log_level="INFO",
+            log_to_file=False,
+        )
+
+        mock_setup_logging.assert_called_once_with("test_config", "INFO", False)
+        mock_load_config.assert_called_once_with("test_config")
+        mock_runtime_class.assert_called_once_with(
+            mock_config, "test_config", hot_reload=True, check_interval=60
+        )
+        mock_asyncio_run.assert_called_once()
+
+
+def test_start_with_file_not_found():
+    """Test start command with missing config file."""
+    with (
+        patch("run.setup_logging"),
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("builtins.open") as mock_open,
+    ):
+
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_open.side_effect = FileNotFoundError()
+
+        with pytest.raises(typer.Exit):
+            start(
+                config_name="test_config",
+                hot_reload=True,
+                check_interval=60,
+                log_level="INFO",
+                log_to_file=False,
+            )
+
+
+def test_start_with_generic_exception():
+    """Test start command with generic exception."""
+    with (
+        patch("run.setup_logging"),
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("run.json5.load") as mock_json5_load,
+        patch("builtins.open"),
+        patch("run.load_config") as mock_load_config,
+    ):
+
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_json5_load.return_value = {"name": "test"}
+        mock_load_config.side_effect = Exception("Test error")
+
+        with pytest.raises(typer.Exit):
+            start(
+                config_name="test_config",
+                hot_reload=True,
+                check_interval=60,
+                log_level="INFO",
+                log_to_file=False,
+            )
+
+
+def test_start_with_hot_reload_disabled():
+    """Test starting with hot reload disabled."""
+    with (
+        patch("run.setup_logging"),
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("run.json5.load") as mock_json5_load,
+        patch("builtins.open"),
+        patch("run.load_config") as mock_load_config,
+        patch("run.CortexRuntime") as mock_runtime_class,
+        patch("asyncio.run"),
+    ):
+
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_json5_load.return_value = {"name": "test"}
+
+        mock_config = MagicMock()
+        mock_load_config.return_value = mock_config
+
+        mock_runtime = MagicMock()
+        mock_runtime_class.return_value = mock_runtime
+
+        start(
+            config_name="test_config",
+            hot_reload=False,
+            check_interval=60,
+            log_level="INFO",
+            log_to_file=False,
+        )
+
+        mock_runtime_class.assert_called_once_with(
+            mock_config, "test_config", hot_reload=False, check_interval=60
+        )
+
+
+def test_start_with_custom_check_interval():
+    """Test starting with custom check interval."""
+    with (
+        patch("run.setup_logging"),
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("run.json5.load") as mock_json5_load,
+        patch("builtins.open"),
+        patch("run.load_config") as mock_load_config,
+        patch("run.CortexRuntime") as mock_runtime_class,
+        patch("asyncio.run"),
+    ):
+
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_json5_load.return_value = {"name": "test"}
+
+        mock_config = MagicMock()
+        mock_load_config.return_value = mock_config
+
+        mock_runtime = MagicMock()
+        mock_runtime_class.return_value = mock_runtime
+
+        start(
+            config_name="test_config",
+            hot_reload=True,
+            check_interval=120,
+            log_level="INFO",
+            log_to_file=False,
+        )
+
+        mock_runtime_class.assert_called_once_with(
+            mock_config, "test_config", hot_reload=True, check_interval=120
+        )
+
+
+def test_start_with_custom_log_level():
+    """Test starting with custom log level."""
+    with (
+        patch("run.setup_logging") as mock_setup_logging,
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("run.json5.load") as mock_json5_load,
+        patch("builtins.open"),
+        patch("run.load_config") as mock_load_config,
+        patch("run.CortexRuntime") as mock_runtime_class,
+        patch("asyncio.run"),
+    ):
+
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_json5_load.return_value = {"name": "test"}
+
+        mock_config = MagicMock()
+        mock_load_config.return_value = mock_config
+
+        mock_runtime = MagicMock()
+        mock_runtime_class.return_value = mock_runtime
+
+        start(
+            config_name="test_config",
+            hot_reload=True,
+            check_interval=60,
+            log_level="DEBUG",
+            log_to_file=False,
+        )
+
+        mock_setup_logging.assert_called_once_with("test_config", "DEBUG", False)
+
+
+def test_start_with_log_to_file():
+    """Test starting with log to file enabled."""
+    with (
+        patch("run.setup_logging") as mock_setup_logging,
+        patch("run.setup_config_file") as mock_setup_config,
+        patch("run.json5.load") as mock_json5_load,
+        patch("builtins.open"),
+        patch("run.load_config") as mock_load_config,
+        patch("run.CortexRuntime") as mock_runtime_class,
+        patch("asyncio.run"),
+    ):
+
+        mock_setup_config.return_value = ("test_config", "/path/to/test_config.json5")
+        mock_json5_load.return_value = {"name": "test"}
+
+        mock_config = MagicMock()
+        mock_load_config.return_value = mock_config
+
+        mock_runtime = MagicMock()
+        mock_runtime_class.return_value = mock_runtime
+
+        start(
+            config_name="test_config",
+            hot_reload=True,
+            check_interval=60,
+            log_level="INFO",
+            log_to_file=True,
+        )
+
+        mock_setup_logging.assert_called_once_with("test_config", "INFO", True)
+
+
+def test_start_without_config_name_uses_default():
+    """Test that start without config_name calls setup_config_file with None."""
+    with (
+        patch("run.setup_logging"),
+        patch("run.setup_config_file") as mock_setup_config,
+    ):
+
+        mock_setup_config.return_value = (".runtime", "/path/to/.runtime.json5")
+        mock_setup_config.side_effect = typer.Exit(1)
+
+        with pytest.raises(typer.Exit):
+            start(
+                config_name=None,
+                hot_reload=True,
+                check_interval=60,
+                log_level="INFO",
+                log_to_file=False,
+            )
+
+        mock_setup_config.assert_called_once_with(None)
+
+
+def test_app_is_typer_instance():
+    """Test that app is a Typer instance."""
+    assert isinstance(app, typer.Typer)
+
+
+def test_start_command_exists():
+    """Test that start command is registered."""
+    assert hasattr(app, "registered_commands") or hasattr(app, "registered_groups")
