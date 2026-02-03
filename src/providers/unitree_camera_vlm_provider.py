@@ -11,7 +11,7 @@ from om1_vlm import VideoStream
 from .singleton import singleton
 
 try:
-    from unitree.unitree_sdk2py.go2.video.video_client import VideoClient
+    from unitree_sdk2py.go2.video.video_client import VideoClient
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."

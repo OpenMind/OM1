@@ -12,11 +12,11 @@ from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 
 try:
     # Needed for Unitree but not TurtleBot4
-    from unitree.unitree_sdk2py.core.channel import (
+    from unitree_sdk2py.core.channel import (
         ChannelFactoryInitialize,
         ChannelSubscriber,
     )
-    from unitree.unitree_sdk2py.idl.geometry_msgs.msg.dds_ import PoseStamped_
+    from unitree_sdk2py.idl.geometry_msgs.msg.dds_ import PoseStamped_
 except ImportError:
     logging.warning(
         "Unitree SDK or CycloneDDS not found. You do not need this unless you are connecting to a Unitree robot."

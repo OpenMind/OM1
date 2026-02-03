@@ -10,7 +10,7 @@ from actions.move_go2_action.interface import ActionInput
 from providers.odom_provider import OdomProvider
 from providers.rplidar_provider import RPLidarProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+from unitree_sdk2py.go2.sport.sport_client import SportClient
 
 
 class ActionUnitreeSDKConfig(ActionConfig):

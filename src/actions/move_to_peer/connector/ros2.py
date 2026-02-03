@@ -41,7 +41,7 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
         super().__init__(config)
         self.io = IOProvider()
         # defer heavy import; SportClient requires DDS initialisation
-        from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+        from unitree_sdk2py.go2.sport.sport_client import SportClient
 
         self.sport_client = SportClient()
         self.sport_client.SetTimeout(10.0)

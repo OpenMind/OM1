@@ -8,11 +8,11 @@ from typing import Optional
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
 
 try:
-    from unitree.unitree_sdk2py.core.channel import (
+    from unitree_sdk2py.core.channel import (
         ChannelFactoryInitialize,
         ChannelSubscriber,
     )
-    from unitree.unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_
+    from unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_
 except ImportError:
     logging.error(
         "Unitree SDK or CycloneDDS not found. Please install the unitree_sdk2py package or CycloneDDS."

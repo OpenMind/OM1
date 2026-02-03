@@ -2,7 +2,7 @@ import logging
 
 from actions.arm_g1.interface import ArmInput
 from actions.base import ActionConfig, ActionConnector
-from unitree.unitree_sdk2py.g1.arm.g1_arm_action_client import G1ArmActionClient
+from unitree_sdk2py.g1.arm.g1_arm_action_client import G1ArmActionClient
 
 
 class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
