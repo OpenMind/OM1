@@ -31,7 +31,7 @@ The central intelligence of the system, responsible for:
 - Task planning and execution monitoring
 - Integration with external AI services
 
-### 2. Unitree SDK (`unitree_sdk`)
+### 2. OM1 ROS2 SDK (`om1-ros2-sdk`)
 The robotics middleware that provides:
 - Sensor data acquisition and processing
 - SLAM (Simultaneous Localization and Mapping)
@@ -57,7 +57,7 @@ Media handling subsystem:
 We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 
 ## System Architecture
-1. **Sensor Data Collection** - The unitree_sdk gathers data from sensors such as LiDAR and cameras, publishing ROS2 topics for localization and mapping.
+1. **Sensor Data Collection** - The OM1-ros2-sdk gathers data from sensors such as LiDAR and cameras, publishing ROS2 topics for localization and mapping.
 
 2. **Autonomous Decision-Making** - The om1 agent receives processed sensor data, user and system prompts, system governance and issues commands for navigation, exploration, and interaction, enabling the robot to operate independently.
 
@@ -87,7 +87,7 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 1. Clone all required repositories:
    ```bash
    git clone https://github.com/OpenMind/OM1.git
-   git clone https://github.com/OpenMind/unitree-sdk.git
+   git clone https://github.com/OpenMind/OM1-ros2-sdk.git
    git clone https://github.com/OpenMind/OM1-avatar.git
    git clone https://github.com/OpenMind/OM1-video-processor.git
    ```
@@ -99,7 +99,7 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
    docker-compose up om1 -d --no-build
 
    # Start ROS2 SDK components
-   cd ../unitree_sdk
+   cd ../OM1-ros2-sdk
    docker-compose up orchestrator om1_sensor watchdog zenoh_bridge -d --no-build
 
    # Start Avatar frontend
