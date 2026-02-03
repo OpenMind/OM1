@@ -71,7 +71,7 @@
         {
           name: "move_go2_action",
           llm_label: "unitree_go2_action",
-          connector: "unitree_rplidar_sdk",
+          connector: "unitree_sdk",
         },
         {
           name: "selfie",
