@@ -587,6 +587,11 @@ class TestCortexRuntimeHotReload:
 
                 await runtime._stop_current_orchestrators()
 
+                # Verify orchestrators are stopped to release resources
+                mock_dependencies["background_orchestrator"].stop.assert_called_once()
+                mock_dependencies["simulator_orchestrator"].stop.assert_called_once()
+                mock_dependencies["action_orchestrator"].stop.assert_called_once()
+
                 mock_input_task.cancel.assert_called_once()
                 mock_simulator_task.cancel.assert_called_once()
                 mock_action_task.cancel.assert_called_once()
@@ -687,6 +692,11 @@ class TestCortexRuntimeHotReload:
 
             with patch("asyncio.gather", new_callable=AsyncMock) as mock_gather:
                 await runtime._cleanup_tasks()
+
+                # Verify orchestrators are stopped to release resources
+                mock_dependencies["background_orchestrator"].stop.assert_called_once()
+                mock_dependencies["simulator_orchestrator"].stop.assert_called_once()
+                mock_dependencies["action_orchestrator"].stop.assert_called_once()
 
                 mock_config_watcher.cancel.assert_called_once()
                 mock_gather.assert_called_once()

@@ -442,3 +442,16 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
             sharpness = 8 - max(self.lidar.turn_right)
             self.move(sharpness * 0.15, -self.turn_speed)
         return True
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Closes the TurtleBot4 Move Zenoh session.
+        """
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("TurtleBot4 Move Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing TurtleBot4 Move Zenoh session: {e}")

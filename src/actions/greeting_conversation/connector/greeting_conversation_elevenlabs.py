@@ -170,3 +170,18 @@ class GreetingConversationConnector(
             f"Confidence: {state_update.get('confidence', {}).get('overall', 0):.2f}, "
             f"Silence: {state_update.get('silence_duration', 0):.1f}s"
         )
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Stops the ElevenLabs TTS provider.
+        """
+        if self.tts is not None:
+            try:
+                self.tts.stop()
+                logging.info("Greeting Conversation ElevenLabs TTS provider stopped")
+            except Exception as e:
+                logging.error(
+                    f"Error stopping Greeting Conversation ElevenLabs TTS provider: {e}"
+                )

@@ -118,3 +118,16 @@ class MoveGo2RemoteConnector(ActionConnector[MoveGo2RemoteConfig, MoveInput]):
             The output interface for the action.
         """
         pass
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Closes the WebSocket connection and releases the Go2 Remote resources.
+        """
+        if self.ws_client is not None:
+            try:
+                self.ws_client.stop()
+                logging.info("Go2 Remote WebSocket client closed")
+            except Exception as e:
+                logging.error(f"Error closing Go2 Remote WebSocket client: {e}")

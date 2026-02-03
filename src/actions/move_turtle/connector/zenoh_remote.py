@@ -106,3 +106,21 @@ class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]
             The output interface for the action.
         """
         pass
+
+    def close(self) -> None:
+        """
+        Close the Zenoh session and WebSocket connection.
+        """
+        if self.ws_client is not None:
+            try:
+                self.ws_client.stop()
+                logging.info("TurtleBot4 Remote WebSocket client closed")
+            except Exception as e:
+                logging.error(f"Error closing TurtleBot4 Remote WebSocket client: {e}")
+
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("TurtleBot4 Remote Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing TurtleBot4 Remote Zenoh session: {e}")

@@ -86,3 +86,16 @@ class MoveSerialConnector(ActionConnector[MoveSerialConfig, MoveInput]):
         Periodic tick function to maintain connection.
         """
         self.sleep(0.1)
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Closes the serial port connection to the Arduino.
+        """
+        if self.ser is not None and self.ser.is_open:
+            try:
+                self.ser.close()
+                logging.info(f"Serial port {self.port} closed")
+            except Exception as e:
+                logging.error(f"Error closing serial port {self.port}: {e}")

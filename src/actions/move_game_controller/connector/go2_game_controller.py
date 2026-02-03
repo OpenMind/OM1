@@ -544,3 +544,16 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
 
             # update the value of button_previous
             self.button_previous = self.button_value
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Closes the Zenoh session used for game controller communication.
+        """
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("Game Controller Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing Game Controller Zenoh session: {e}")

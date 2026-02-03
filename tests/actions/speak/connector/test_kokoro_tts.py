@@ -528,7 +528,7 @@ class TestSpeakKokoroTTSConnector:
     @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
     @patch("actions.speak.connector.kokoro_tts.IOProvider")
     @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
-    def test_stop(
+    def test_close(
         self,
         mock_conversation_provider,
         mock_io_provider,
@@ -537,14 +537,14 @@ class TestSpeakKokoroTTSConnector:
         default_config,
         mock_zenoh_session,
     ):
-        """Test stopping the connector."""
+        """Test closing the connector."""
         mock_open_zenoh_session.return_value = mock_zenoh_session
         mock_tts_instance = Mock()
         mock_tts_provider.return_value = mock_tts_instance
 
         connector = SpeakKokoroTTSConnector(default_config)
 
-        connector.stop()
+        connector.close()
 
         mock_zenoh_session.close.assert_called_once()
         mock_tts_instance.stop.assert_called_once()
@@ -553,7 +553,7 @@ class TestSpeakKokoroTTSConnector:
     @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
     @patch("actions.speak.connector.kokoro_tts.IOProvider")
     @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
-    def test_stop_no_session(
+    def test_close_no_session(
         self,
         mock_conversation_provider,
         mock_io_provider,
@@ -561,13 +561,13 @@ class TestSpeakKokoroTTSConnector:
         mock_open_zenoh_session,
         default_config,
     ):
-        """Test stopping the connector when session is None."""
+        """Test closing the connector when session is None."""
         mock_open_zenoh_session.side_effect = Exception("Failed to open session")
         mock_tts_instance = Mock()
         mock_tts_provider.return_value = mock_tts_instance
 
         connector = SpeakKokoroTTSConnector(default_config)
-        connector.stop()
+        connector.close()
 
         mock_tts_instance.stop.assert_called_once()
 
@@ -575,7 +575,7 @@ class TestSpeakKokoroTTSConnector:
     @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
     @patch("actions.speak.connector.kokoro_tts.IOProvider")
     @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
-    def test_stop_no_tts(
+    def test_close_no_tts(
         self,
         mock_conversation_provider,
         mock_io_provider,
@@ -584,7 +584,7 @@ class TestSpeakKokoroTTSConnector:
         default_config,
         mock_zenoh_session,
     ):
-        """Test stopping the connector when TTS is None."""
+        """Test closing the connector when TTS is None."""
         mock_open_zenoh_session.return_value = mock_zenoh_session
         mock_tts_instance = Mock()
         mock_tts_provider.return_value = mock_tts_instance
@@ -592,9 +592,42 @@ class TestSpeakKokoroTTSConnector:
         connector = SpeakKokoroTTSConnector(default_config)
         connector.tts = None  # type: ignore
 
-        connector.stop()
+        connector.close()
 
         mock_zenoh_session.close.assert_called_once()
+
+    @patch("actions.speak.connector.kokoro_tts.open_zenoh_session")
+    @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
+    @patch("actions.speak.connector.kokoro_tts.IOProvider")
+    @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
+    def test_close_order(
+        self,
+        mock_conversation_provider,
+        mock_io_provider,
+        mock_tts_provider,
+        mock_open_zenoh_session,
+        default_config,
+        mock_zenoh_session,
+    ):
+        """Test that TTS is stopped before session is closed."""
+        mock_open_zenoh_session.return_value = mock_zenoh_session
+        mock_tts_instance = Mock()
+        mock_tts_provider.return_value = mock_tts_instance
+
+        # Track call order
+        call_order = []
+        mock_tts_instance.stop.side_effect = lambda: call_order.append("tts_stop")
+        mock_zenoh_session.close.side_effect = lambda: call_order.append(
+            "session_close"
+        )
+
+        connector = SpeakKokoroTTSConnector(default_config)
+        connector.close()
+
+        assert call_order == [
+            "tts_stop",
+            "session_close",
+        ], f"Expected TTS to stop before session closes, but got: {call_order}"
 
     @patch("actions.speak.connector.kokoro_tts.open_zenoh_session")
     @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")

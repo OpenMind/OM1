@@ -144,6 +144,18 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         """
         self.sleep(60)
 
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Override this method in subclasses to release resources such as
+        serial ports, network connections, file handles, etc.
+
+        This method is called by the ActionOrchestrator when stopping
+        to ensure proper resource cleanup during shutdown or mode transitions.
+        """
+        pass
+
 
 @dataclass
 class AgentAction:

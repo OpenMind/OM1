@@ -117,3 +117,16 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
 
         logging.info(f"MoveToPeer: aligned → driving forward {self.FWD_SPEED} m/s")
         self.sport_client.Move(self.FWD_SPEED, 0.0, 0.0)
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Stops robot movement.
+        """
+        if self.sport_client is not None:
+            try:
+                self.sport_client.StopMove()
+                logging.info("MoveToPeer sport client stopped")
+            except Exception as e:
+                logging.error(f"Error stopping MoveToPeer sport client: {e}")

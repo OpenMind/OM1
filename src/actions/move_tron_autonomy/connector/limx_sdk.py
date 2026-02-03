@@ -451,3 +451,16 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
             sharpness = 8 - max(self.path_provider.turn_right)
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Closes the Zenoh session used for Tron autonomy communication.
+        """
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("Tron Autonomy Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing Tron Autonomy Zenoh session: {e}")

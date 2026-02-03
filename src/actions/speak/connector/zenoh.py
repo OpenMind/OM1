@@ -45,3 +45,16 @@ class SpeakZenohConnector(ActionConnector[ActionConfig, SpeakInput]):
             The speak input containing the message (action) to be published.
         """
         self.publisher.add_pending_message(output_interface.action)
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Stops the Zenoh publisher provider and releases resources.
+        """
+        if self.publisher is not None:
+            try:
+                self.publisher.stop()
+                logging.info("Speak Zenoh publisher stopped")
+            except Exception as e:
+                logging.error(f"Error stopping Speak Zenoh publisher: {e}")

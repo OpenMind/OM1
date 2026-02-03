@@ -571,3 +571,37 @@ class TestTick:
 
         assert connector.pending_movements.qsize() == 0
         assert connector.movement_attempts == 0
+
+
+class TestClose:
+    """Test close method."""
+
+    def test_close(self, connector, mock_dependencies):
+        """Test closing the connector."""
+        connector.close()
+
+        mock_dependencies["session"].close.assert_called_once()
+
+    def test_close_no_session(self, mock_dependencies):
+        """Test closing when session is None."""
+        with (
+            patch("actions.move_tron_autonomy.connector.limx_sdk.SimplePathsProvider"),
+            patch("actions.move_tron_autonomy.connector.limx_sdk.TronOdomProvider"),
+            patch(
+                "actions.move_tron_autonomy.connector.limx_sdk.open_zenoh_session"
+            ) as mock_zenoh,
+        ):
+            mock_zenoh.side_effect = Exception("Connection failed")
+
+            config = MoveTronZenohConfig()
+            connector = MoveTronZenohConnector(config)
+
+            # Should not raise exception
+            connector.close()
+
+    def test_close_session_error(self, connector, mock_dependencies):
+        """Test closing when session.close raises error."""
+        mock_dependencies["session"].close.side_effect = Exception("Close failed")
+
+        # Should not raise exception
+        connector.close()

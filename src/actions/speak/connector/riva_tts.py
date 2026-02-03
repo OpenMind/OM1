@@ -182,3 +182,23 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
             return self._zenoh_tts_status_response_pub.put(
                 ai_status_response.serialize()
             )
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Stops the Riva TTS provider and closes the Zenoh session.
+        """
+        if self.tts is not None:
+            try:
+                self.tts.stop()
+                logging.info("Riva TTS provider stopped")
+            except Exception as e:
+                logging.error(f"Error stopping Riva TTS provider: {e}")
+
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("Riva TTS Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing Riva TTS Zenoh session: {e}")

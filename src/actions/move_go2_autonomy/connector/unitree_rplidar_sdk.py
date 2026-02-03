@@ -491,3 +491,23 @@ class MoveUnitreeRPLidarSDKConnector(
             sharpness = 8 - max(self.lidar.turn_right)
             self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Stops robot movement and releases lidar resources.
+        """
+        if self.sport_client is not None:
+            try:
+                self.sport_client.StopMove()
+                logging.info("Unitree RPLidar sport client stopped")
+            except Exception as e:
+                logging.error(f"Error stopping Unitree RPLidar sport client: {e}")
+
+        if self.lidar is not None:
+            try:
+                self.lidar.stop()
+                logging.info("RPLidar provider stopped")
+            except Exception as e:
+                logging.error(f"Error stopping RPLidar provider: {e}")

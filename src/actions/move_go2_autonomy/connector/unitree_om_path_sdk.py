@@ -609,3 +609,16 @@ class MoveUnitreeOMPathSDKConnector(
             return self._zenoh_ai_status_response_pub.put(
                 ai_status_response.serialize()
             )
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Closes the Zenoh session used for autonomy communication.
+        """
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("Unitree OM Path SDK Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing Unitree OM Path SDK Zenoh session: {e}")

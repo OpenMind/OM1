@@ -286,13 +286,22 @@ class SpeakElevenLabsTTSConnector(
                 ai_status_response.serialize()
             )
 
-    def stop(self) -> None:
+    def close(self) -> None:
         """
-        Stop the Elevenlabs TTS connector and cleanup resources.
-        """
-        if self.session:
-            self.session.close()
-            logging.info("Elevenlabs TTS Zenoh client closed")
+        Clean up resources held by this connector.
 
-        if self.tts:
-            self.tts.stop()
+        Stops the ElevenLabs TTS provider and closes the Zenoh session.
+        """
+        if self.tts is not None:
+            try:
+                self.tts.stop()
+                logging.info("Elevenlabs TTS provider stopped")
+            except Exception as e:
+                logging.error(f"Error stopping Elevenlabs TTS provider: {e}")
+
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("Elevenlabs TTS Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing Elevenlabs TTS Zenoh session: {e}")

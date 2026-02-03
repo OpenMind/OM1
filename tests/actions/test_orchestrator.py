@@ -31,17 +31,20 @@ class MockInterface(Interface[MockInput, MockOutput]):
 
 class MockConnector(ActionConnector[ActionConfig, MockInput]):
     """
-    Mock connector that tracks execution order and timing.
+    Mock connector that tracks execution order, timing, and close() calls.
     """
 
     execution_order: List[str] = []
     execution_times: Dict[str, float] = {}
+    close_call_order: List[str] = []
 
     def __init__(self, config: ActionConfig, action_name: str):
         super().__init__(config)
         self.action_name = action_name
         self.connected_values: List[str] = []
         self.tick_count = 0
+        self.close_called = False
+        self.close_call_count = 0
 
     async def connect(self, output_interface: MockInput) -> None:
         """Record when this action executes."""
@@ -57,12 +60,21 @@ class MockConnector(ActionConnector[ActionConfig, MockInput]):
     def tick(self):
         """Background connector tick."""
         self.tick_count += 1
+        if self._stop_event:
+            self._stop_event.wait(timeout=0.01)
+
+    def close(self):
+        """Track close() calls."""
+        self.close_called = True
+        self.close_call_count += 1
+        MockConnector.close_call_order.append(self.action_name)
 
     @classmethod
     def reset(cls):
         """Reset class-level tracking."""
         cls.execution_order = []
         cls.execution_times = {}
+        cls.close_call_order = []
 
 
 @pytest.fixture
@@ -458,13 +470,72 @@ class TestActionOrchestratorEdgeCases:
         assert len(done) == 3
         assert len(pending) == 0
 
-    def test_orchestrator_stop(self, mock_runtime_config):
-        """Test that orchestrator stops cleanly."""
+    def test_orchestrator_stop(self, mock_runtime_config, create_agent_action):
+        """Test that orchestrator stops cleanly and calls close() on connectors."""
+        action1 = create_agent_action("action1", "action1")
+        action2 = create_agent_action("action2", "action2")
+
+        mock_runtime_config.agent_actions = [action1, action2]
         orchestrator = ActionOrchestrator(mock_runtime_config)
         orchestrator.start()
+
+        import time
+
+        time.sleep(0.05)
+
         orchestrator.stop()
 
         assert orchestrator._stop_event.is_set()
+        assert action1.connector.close_called is True
+        assert action2.connector.close_called is True
+
+    def test_orchestrator_stop_is_idempotent(
+        self, mock_runtime_config, create_agent_action
+    ):
+        """Test that calling stop() multiple times is safe."""
+        action = create_agent_action("action1", "action1")
+        mock_runtime_config.agent_actions = [action]
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+        orchestrator.start()
+
+        import time
+
+        time.sleep(0.05)
+
+        orchestrator.stop()
+        orchestrator.stop()
+        orchestrator.stop()
+
+        # close() should only be called once due to idempotency
+        assert action.connector.close_call_count == 1
+
+    def test_orchestrator_stop_continues_after_close_error(
+        self, mock_runtime_config, create_agent_action
+    ):
+        """Test that one connector's close() error doesn't prevent others."""
+        action1 = create_agent_action("action1", "action1")
+        action2 = create_agent_action("action2", "action2")
+
+        # Make first connector raise error on close
+        def raise_error():
+            raise Exception("Simulated close error")
+
+        action1.connector.close = raise_error
+
+        mock_runtime_config.agent_actions = [action1, action2]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+        orchestrator.start()
+
+        import time
+
+        time.sleep(0.05)
+
+        # Should not raise despite error in one connector
+        orchestrator.stop()
+
+        # Second connector should still have close() called
+        assert action2.connector.close_called is True
 
 
 class TestActionOrchestratorModeComparison:

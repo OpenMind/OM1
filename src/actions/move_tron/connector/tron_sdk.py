@@ -79,3 +79,16 @@ class MoveTronSDKConnector(ActionConnector[MoveTronSDKConfig, MoveInput]):
             )
         else:
             logging.error("Tron webSocket client is not connected.")
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Closes the WebSocket connection to Tron SDK.
+        """
+        if self.client is not None:
+            try:
+                self.client.stop()
+                logging.info("Tron SDK WebSocket client closed")
+            except Exception as e:
+                logging.error(f"Error closing Tron SDK WebSocket client: {e}")

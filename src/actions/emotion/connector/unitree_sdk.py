@@ -93,3 +93,18 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
         Periodic tick function to maintain connection.
         """
         self.sleep(5)
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Releases the Unitree AudioClient resources.
+        """
+        if self.ao_client is not None:
+            try:
+                # Reset LED to default state before closing
+                self.ao_client.LedControlNoReply(0, 0, 0)
+                logging.info("Unitree AudioClient released")
+            except Exception as e:
+                logging.error(f"Error releasing Unitree AudioClient: {e}")
+            self.ao_client = None

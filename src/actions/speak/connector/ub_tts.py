@@ -81,6 +81,9 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         # Instantiate the provider with the correct URL
         self.tts = UbTtsProvider(url=f"{base_url}voice/tts")
 
+        # TTS status
+        self.tts_enabled = True
+
     async def connect(self, output_interface: SpeakInput) -> None:
         """
         Handles the incoming action by passing it to the TTS provider.
@@ -162,12 +165,22 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
                 ai_status_response.serialize()
             )
 
-    def stop(self):
+    def close(self) -> None:
         """
-        Stop the UbTtsConnector and clean up resources.
-        """
-        if self.session:
-            self.session.close()
-            logging.info("UB TTS Zenoh client closed.")
+        Clean up resources held by this connector.
 
-        self.tts.stop()
+        Stops the UB TTS provider and closes the Zenoh session.
+        """
+        if self.tts is not None:
+            try:
+                self.tts.stop()
+                logging.info("UB TTS provider stopped")
+            except Exception as e:
+                logging.error(f"Error stopping UB TTS provider: {e}")
+
+        if self.session is not None:
+            try:
+                self.session.close()
+                logging.info("UB TTS Zenoh session closed")
+            except Exception as e:
+                logging.error(f"Error closing UB TTS Zenoh session: {e}")

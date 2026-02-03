@@ -64,5 +64,20 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
             logging.warning(f"Unknown action: {output_interface.action}")
             return
 
+        if self.client is None:
+            logging.error("G1 Arm Action Client not initialized")
+            return
+
         logging.info(f"Executing action with ID: {action_id}")
         self.client.ExecuteAction(action_id)
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Releases G1 Arm Action Client resources.
+        """
+        # G1ArmActionClient does not have an explicit close/stop method
+        if self.client is not None:
+            logging.info("G1 Arm Action Client released")
+            self.client = None

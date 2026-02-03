@@ -131,3 +131,16 @@ class ActionUnitreeSDKConnector(ActionConnector[ActionUnitreeSDKConfig, ActionIn
                 )
         else:
             logging.warning(f"Action '{action}' not recognized or not implemented.")
+
+    def close(self) -> None:
+        """
+        Clean up resources held by this connector.
+
+        Stops robot movement by calling StopMove on the sport client.
+        """
+        if self.sport_client is not None:
+            try:
+                self.sport_client.StopMove()
+                logging.info("Unitree sport client stopped")
+            except Exception as e:
+                logging.error(f"Error stopping Unitree sport client: {e}")

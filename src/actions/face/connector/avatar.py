@@ -49,9 +49,15 @@ class FaceAvatarConnector(ActionConnector[ActionConfig, FaceInput]):
 
         logging.info(f"Avatar face command sent: {output_interface.action}")
 
-    def stop(self):
+    def close(self) -> None:
         """
-        Stop and cleanup AvatarProvider.
+        Clean up resources held by this connector.
+
+        Stops the AvatarProvider and releases resources.
         """
-        self.avatar_provider.stop()
-        logging.info("AvatarProvider stopped")
+        if self.avatar_provider is not None:
+            try:
+                self.avatar_provider.stop()
+                logging.info("AvatarProvider stopped")
+            except Exception as e:
+                logging.error(f"Error stopping AvatarProvider: {e}")

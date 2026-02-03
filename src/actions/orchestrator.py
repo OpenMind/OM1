@@ -382,9 +382,25 @@ class ActionOrchestrator:
     def stop(self):
         """
         Stop the action executor and wait for all tasks to complete.
+
+        This method signals all connector threads to stop, waits for the
+        thread pool to shut down, and then calls close() on each connector
+        to release any held resources (serial ports, network connections, etc.).
+
+        This method is idempotent - calling it multiple times is safe.
         """
+        if self._stop_event.is_set():
+            return
+
         self._stop_event.set()
         self._connector_executor.shutdown(wait=True)
+
+        for agent_action in self._config.agent_actions:
+            try:
+                agent_action.connector.close()
+                logging.debug(f"Closed connector: {agent_action.llm_label}")
+            except Exception as e:
+                logging.error(f"Error closing connector {agent_action.llm_label}: {e}")
 
     def __del__(self):
         """

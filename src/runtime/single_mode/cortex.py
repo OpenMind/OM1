@@ -288,6 +288,19 @@ class CortexRuntime:
 
         self.sleep_ticker_provider.skip_sleep = True
 
+        # Stop orchestrators to release resources (serial ports, network connections, etc.)
+        if self.background_orchestrator:
+            logging.debug("Stopping background orchestrator for reload")
+            self.background_orchestrator.stop()
+
+        if self.simulator_orchestrator:
+            logging.debug("Stopping simulator orchestrator for reload")
+            self.simulator_orchestrator.stop()
+
+        if self.action_orchestrator:
+            logging.debug("Stopping action orchestrator for reload")
+            self.action_orchestrator.stop()
+
         tasks_to_cancel = {}
 
         if self.cortex_loop_task and not self.cortex_loop_task.done():
@@ -386,7 +399,24 @@ class CortexRuntime:
     async def _cleanup_tasks(self) -> None:
         """
         Cleanup all running tasks gracefully.
+
+        Stops all orchestrators to release resources (serial ports, network
+        connections, etc.) and cancels all async tasks.
         """
+        # Stop orchestrators first to release resources
+        if self.background_orchestrator:
+            logging.debug("Stopping background orchestrator")
+            self.background_orchestrator.stop()
+
+        if self.simulator_orchestrator:
+            logging.debug("Stopping simulator orchestrator")
+            self.simulator_orchestrator.stop()
+
+        if self.action_orchestrator:
+            logging.debug("Stopping action orchestrator")
+            self.action_orchestrator.stop()
+
+        # Collect tasks to cancel
         tasks_to_cancel = []
 
         if self.config_watcher_task and not self.config_watcher_task.done():
