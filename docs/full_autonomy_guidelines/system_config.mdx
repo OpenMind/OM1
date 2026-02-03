@@ -70,7 +70,7 @@ sudo systemctl enable kiosk.service
 sudo systemctl start kiosk.service
 ```
 
-**Note: To stop the kiosk service, use sudo systemctl stop kiosk.service.**
+>**Note:** To stop the kiosk service, use `sudo systemctl stop kiosk.service`.
 
 ### AEC Service
 
@@ -210,7 +210,7 @@ sudo vim ~/.config/systemd/user/audio-defaults.service
 
 Add the following content:
 
-``bash
+```bash
 [Unit]
 Description=Set Default Audio Devices
 After=pulseaudio.service
