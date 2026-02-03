@@ -107,7 +107,7 @@ class QwenLLM(LLM[R]):
             self._config.model = "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
 
         self._client = openai.AsyncClient(
-            base_url="http://127.0.0.1:8000/v1",
+            base_url="http://127.0.0.1:8860/v1",
             api_key="placeholder_key",
         )
 
