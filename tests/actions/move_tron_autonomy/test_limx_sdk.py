@@ -4,12 +4,12 @@ from unittest.mock import Mock, patch
 import pytest
 
 from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_sdk import (
-    MoveUnitreeSDKConfig,
-    MoveUnitreeSDKConnector,
+from actions.move_tron_autonomy.connector.limx_sdk import (
+    MoveTronZenohConfig,
+    MoveTronZenohConnector,
 )
-from actions.move_go2_autonomy.interface import MoveInput, MovementAction
-from providers.odom_provider import RobotState
+from actions.move_tron_autonomy.interface import MoveInput, MovementAction
+from providers.tron_odom_provider import RobotState
 
 
 @pytest.fixture
@@ -17,40 +17,23 @@ def mock_dependencies():
     """Mock all external dependencies."""
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.RPLidarProvider"
-        ) as mock_lidar,
+            "actions.move_tron_autonomy.connector.limx_sdk.SimplePathsProvider"
+        ) as mock_paths,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.UnitreeGo2StateProvider"
-        ) as mock_state,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.SportClient"
-        ) as mock_sport,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.OdomProvider"
+            "actions.move_tron_autonomy.connector.limx_sdk.TronOdomProvider"
         ) as mock_odom,
+        patch(
+            "actions.move_tron_autonomy.connector.limx_sdk.open_zenoh_session"
+        ) as mock_zenoh,
     ):
         # Setup mock instances
-        mock_lidar_instance = Mock()
-        mock_lidar_instance.advance = [4]
-        mock_lidar_instance.retreat = [1]
-        mock_lidar_instance.turn_left = [2]
-        mock_lidar_instance.turn_right = [6]
-        mock_lidar_instance.path_angles = {1: 0, 2: 45, 4: 0, 6: -45}
-        mock_lidar.return_value = mock_lidar_instance
-
-        mock_state_instance = Mock()
-        mock_state_instance.state_code = None
-        mock_state_instance.state = "standing"
-        mock_state_instance.action_progress = 0
-        mock_state.return_value = mock_state_instance
-
-        mock_sport_instance = Mock()
-        mock_sport_instance.SetTimeout = Mock()
-        mock_sport_instance.Init = Mock()
-        mock_sport_instance.StopMove = Mock()
-        mock_sport_instance.Move = Mock()
-        mock_sport_instance.BalanceStand = Mock()
-        mock_sport.return_value = mock_sport_instance
+        mock_paths_instance = Mock()
+        mock_paths_instance.advance = [4]
+        mock_paths_instance.retreat = [1]
+        mock_paths_instance.turn_left = [2]
+        mock_paths_instance.turn_right = [6]
+        mock_paths_instance.path_angles = {1: 0, 2: 45, 4: 0, 6: -45}
+        mock_paths.return_value = mock_paths_instance
 
         mock_odom_instance = Mock()
         mock_odom_instance.position = {
@@ -62,43 +45,50 @@ def mock_dependencies():
         }
         mock_odom.return_value = mock_odom_instance
 
+        mock_session = Mock()
+        mock_session.put = Mock()
+        mock_zenoh.return_value = mock_session
+
         yield {
-            "lidar": mock_lidar_instance,
-            "state": mock_state_instance,
-            "sport": mock_sport_instance,
+            "paths": mock_paths_instance,
             "odom": mock_odom_instance,
+            "session": mock_session,
         }
 
 
 @pytest.fixture
 def connector(mock_dependencies):
-    """Create a MoveUnitreeSDKConnector instance with mocked dependencies."""
-    config = MoveUnitreeSDKConfig(unitree_ethernet="eth0")
-    connector = MoveUnitreeSDKConnector(config)
+    """Create a MoveTronZenohConnector instance with mocked dependencies."""
+    config = MoveTronZenohConfig()
+    connector = MoveTronZenohConnector(config)
     return connector
 
 
-class TestMoveUnitreeSDKConfig:
-    """Test MoveUnitreeSDKConfig configuration."""
+class TestMoveTronZenohConfig:
+    """Test MoveTronZenohConfig configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MoveUnitreeSDKConfig()
-        assert config.unitree_ethernet == "eth0"
+        config = MoveTronZenohConfig()
+        assert config.odom_topic == "odom"
+        assert config.cmd_vel_topic == "cmd_vel"
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = MoveUnitreeSDKConfig(unitree_ethernet="eth1")
-        assert config.unitree_ethernet == "eth1"
+        config = MoveTronZenohConfig(
+            odom_topic="custom_odom", cmd_vel_topic="custom_cmd_vel"
+        )
+        assert config.odom_topic == "custom_odom"
+        assert config.cmd_vel_topic == "custom_cmd_vel"
 
 
-class TestMoveUnitreeSDKConnectorInit:
-    """Test MoveUnitreeSDKConnector initialization."""
+class TestMoveTronZenohConnectorInit:
+    """Test MoveTronZenohConnector initialization."""
 
     def test_initialization(self, connector, mock_dependencies):
         """Test successful initialization."""
-        assert connector.dog_attitude is None
-        assert connector.turn_speed == 0.8
+        assert connector.move_speed == 0.25
+        assert connector.turn_speed == 0.35
         assert connector.angle_tolerance == 5.0
         assert connector.distance_tolerance == 0.05
         assert isinstance(connector.pending_movements, Queue)
@@ -107,64 +97,33 @@ class TestMoveUnitreeSDKConnectorInit:
         assert connector.gap_previous == 0
 
         # Verify providers are initialized
-        assert connector.lidar == mock_dependencies["lidar"]
-        assert connector.unitree_go2_state == mock_dependencies["state"]
-        assert connector.sport_client == mock_dependencies["sport"]
+        assert connector.path_provider == mock_dependencies["paths"]
         assert connector.odom == mock_dependencies["odom"]
+        assert connector.session == mock_dependencies["session"]
 
-        # Verify sport client initialization
-        mock_dependencies["sport"].SetTimeout.assert_called_once_with(10.0)
-        mock_dependencies["sport"].Init.assert_called_once()
-        mock_dependencies["sport"].StopMove.assert_called_once()
-        mock_dependencies["sport"].Move.assert_called_once_with(0.05, 0, 0)
-
-    def test_initialization_sport_client_error(self):
-        """Test initialization when sport client fails."""
+    def test_initialization_zenoh_error(self):
+        """Test initialization when Zenoh session fails."""
         with (
-            patch("actions.move_go2_autonomy.connector.unitree_sdk.RPLidarProvider"),
+            patch("actions.move_tron_autonomy.connector.limx_sdk.SimplePathsProvider"),
+            patch("actions.move_tron_autonomy.connector.limx_sdk.TronOdomProvider"),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk.UnitreeGo2StateProvider"
-            ),
+                "actions.move_tron_autonomy.connector.limx_sdk.open_zenoh_session"
+            ) as mock_zenoh,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk.SportClient"
-            ) as mock_sport,
-            patch("actions.move_go2_autonomy.connector.unitree_sdk.OdomProvider"),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_sdk.logging"
+                "actions.move_tron_autonomy.connector.limx_sdk.logging"
             ) as mock_logging,
         ):
-            mock_sport.side_effect = Exception("Connection failed")
+            mock_zenoh.side_effect = Exception("Connection failed")
 
-            config = MoveUnitreeSDKConfig()
-            connector = MoveUnitreeSDKConnector(config)
+            config = MoveTronZenohConfig()
+            connector = MoveTronZenohConnector(config)
 
-            assert connector.sport_client is None
+            assert connector.session is None
             mock_logging.error.assert_called()
 
 
 class TestConnect:
     """Test the connect method."""
-
-    @pytest.mark.asyncio
-    async def test_connect_with_joint_lock_state(self, connector, mock_dependencies):
-        """Test connect when robot is in jointLock state."""
-        mock_dependencies["state"].state_code = 1002
-        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
-
-        await connector.connect(move_input)
-
-        mock_dependencies["sport"].BalanceStand.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_connect_with_action_in_progress(self, connector, mock_dependencies):
-        """Test connect when action is in progress."""
-        mock_dependencies["state"].action_progress = 50
-        move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
-
-        await connector.connect(move_input)
-
-        # Should return early without processing
-        assert connector.pending_movements.qsize() == 0
 
     @pytest.mark.asyncio
     async def test_connect_robot_already_moving(self, connector, mock_dependencies):
@@ -248,7 +207,7 @@ class TestConnect:
         command = connector.pending_movements.get()
         assert command.dx == -0.5
         assert command.turn_complete is True
-        assert command.speed == 0.3
+        assert command.speed == 0.25
 
     @pytest.mark.asyncio
     async def test_connect_stand_still(self, connector, mock_dependencies):
@@ -274,7 +233,7 @@ class TestMovementProcessing:
 
     def test_process_turn_left_with_barrier(self, connector, mock_dependencies):
         """Test turn left when blocked by barrier."""
-        mock_dependencies["lidar"].turn_left = []
+        mock_dependencies["paths"].turn_left = []
 
         connector._process_turn_left()
 
@@ -288,7 +247,7 @@ class TestMovementProcessing:
 
     def test_process_turn_right_with_barrier(self, connector, mock_dependencies):
         """Test turn right when blocked by barrier."""
-        mock_dependencies["lidar"].turn_right = []
+        mock_dependencies["paths"].turn_right = []
 
         connector._process_turn_right()
 
@@ -302,7 +261,7 @@ class TestMovementProcessing:
 
     def test_process_move_forward_with_barrier(self, connector, mock_dependencies):
         """Test move forward when blocked by barrier."""
-        mock_dependencies["lidar"].advance = []
+        mock_dependencies["paths"].advance = []
 
         connector._process_move_forward()
 
@@ -316,7 +275,7 @@ class TestMovementProcessing:
 
     def test_process_move_back_with_barrier(self, connector, mock_dependencies):
         """Test move back when blocked by barrier."""
-        mock_dependencies["lidar"].retreat = []
+        mock_dependencies["paths"].retreat = []
 
         connector._process_move_back()
 
@@ -334,9 +293,9 @@ class TestMovementProcessing:
 class TestMoveRobot:
     """Test _move_robot method."""
 
-    def test_move_robot_no_sport_client(self, connector, mock_dependencies):
-        """Test move robot when sport client is None."""
-        connector.sport_client = None
+    def test_move_robot_no_session(self, connector, mock_dependencies):
+        """Test move robot when session is None."""
+        connector.session = None
 
         connector._move_robot(0.5, 0.0, 0.0)
 
@@ -345,36 +304,18 @@ class TestMoveRobot:
     def test_move_robot_not_standing(self, connector, mock_dependencies):
         """Test move robot when robot is not standing."""
         mock_dependencies["odom"].position["body_attitude"] = RobotState.SITTING
-        mock_dependencies["sport"].Move.reset_mock()
-
-        connector._move_robot(0.5, 0.0, 0.0)
-        mock_dependencies["sport"].Move.assert_not_called()
-
-    def test_move_robot_joint_lock_state(self, connector, mock_dependencies):
-        """Test move robot when in joint lock state."""
-        mock_dependencies["state"].state = "jointLock"
 
         connector._move_robot(0.5, 0.0, 0.0)
 
-        mock_dependencies["sport"].BalanceStand.assert_called_once()
-        mock_dependencies["sport"].Move.assert_called_with(0.5, 0.0, 0.0)
+        mock_dependencies["session"].put.assert_not_called()
 
     def test_move_robot_success(self, connector, mock_dependencies):
         """Test successful robot movement."""
         connector._move_robot(0.5, 0.0, 0.3)
 
-        mock_dependencies["sport"].Move.assert_called_with(0.5, 0.0, 0.3)
-
-    def test_move_robot_error(self, connector, mock_dependencies):
-        """Test move robot when exception occurs."""
-        mock_dependencies["sport"].Move.side_effect = Exception("Movement failed")
-
-        with patch(
-            "actions.move_go2_autonomy.connector.unitree_sdk.logging"
-        ) as mock_logging:
-            connector._move_robot(0.5, 0.0, 0.0)
-
-            mock_logging.error.assert_called()
+        mock_dependencies["session"].put.assert_called_once()
+        call_args = mock_dependencies["session"].put.call_args
+        assert call_args[0][0] == "cmd_vel"
 
 
 class TestCleanAbort:
@@ -441,7 +382,7 @@ class TestExecuteTurn:
 
     def test_execute_turn_left_blocked(self, connector, mock_dependencies):
         """Test execute turn left when blocked."""
-        mock_dependencies["lidar"].turn_left = []
+        mock_dependencies["paths"].turn_left = []
 
         result = connector._execute_turn(10.0)
 
@@ -449,16 +390,16 @@ class TestExecuteTurn:
 
     def test_execute_turn_left_success(self, connector, mock_dependencies):
         """Test successful turn left."""
-        mock_dependencies["lidar"].turn_left = [2, 3]
+        mock_dependencies["paths"].turn_left = [2, 3]
 
         result = connector._execute_turn(10.0)
 
         assert result is True
-        mock_dependencies["sport"].Move.assert_called()
+        mock_dependencies["session"].put.assert_called()
 
     def test_execute_turn_right_blocked(self, connector, mock_dependencies):
         """Test execute turn right when blocked."""
-        mock_dependencies["lidar"].turn_right = []
+        mock_dependencies["paths"].turn_right = []
 
         result = connector._execute_turn(-10.0)
 
@@ -466,12 +407,12 @@ class TestExecuteTurn:
 
     def test_execute_turn_right_success(self, connector, mock_dependencies):
         """Test successful turn right."""
-        mock_dependencies["lidar"].turn_right = [5, 6]
+        mock_dependencies["paths"].turn_right = [5, 6]
 
         result = connector._execute_turn(-10.0)
 
         assert result is True
-        mock_dependencies["sport"].Move.assert_called()
+        mock_dependencies["session"].put.assert_called()
 
 
 class TestTick:
@@ -493,8 +434,8 @@ class TestTick:
             connector.tick()
             mock_sleep.assert_called_once_with(0.5)
 
-    def test_tick_dog_sitting(self, connector, mock_dependencies):
-        """Test tick when dog is sitting."""
+    def test_tick_robot_sitting(self, connector, mock_dependencies):
+        """Test tick when robot is sitting."""
         mock_dependencies["odom"].position["body_attitude"] = RobotState.SITTING
 
         with patch.object(connector, "sleep") as mock_sleep:
@@ -547,7 +488,7 @@ class TestTick:
             connector.tick()
 
         assert connector.movement_attempts == 1
-        mock_dependencies["sport"].Move.assert_called()
+        mock_dependencies["session"].put.assert_called()
 
     def test_tick_turn_complete(self, connector, mock_dependencies):
         """Test tick when turn is complete."""
@@ -575,7 +516,7 @@ class TestTick:
 
     def test_tick_movement_phase_forward_blocked(self, connector, mock_dependencies):
         """Test tick during movement phase when forward is blocked."""
-        mock_dependencies["lidar"].advance = []
+        mock_dependencies["paths"].advance = []
         mock_dependencies["odom"].position["odom_x"] = 1.0
         mock_dependencies["odom"].position["odom_y"] = 0.0
         connector.pending_movements.put(
@@ -589,7 +530,7 @@ class TestTick:
 
     def test_tick_movement_phase_retreat_blocked(self, connector, mock_dependencies):
         """Test tick during movement phase when retreat is blocked."""
-        mock_dependencies["lidar"].retreat = []
+        mock_dependencies["paths"].retreat = []
         mock_dependencies["odom"].position["odom_x"] = 1.0
         mock_dependencies["odom"].position["odom_y"] = 0.0
         connector.pending_movements.put(
@@ -613,7 +554,7 @@ class TestTick:
             connector.tick()
 
         assert connector.movement_attempts == 1
-        mock_dependencies["sport"].Move.assert_called()
+        mock_dependencies["session"].put.assert_called()
 
     def test_tick_movement_phase_complete(self, connector, mock_dependencies):
         """Test tick when movement is complete."""

@@ -18,7 +18,7 @@ from simulators.base import Simulator, SimulatorConfig
 @pytest.fixture
 def mock_config_data():
     return {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "test_config",
         "api_key": "global_test_api_key",
@@ -92,7 +92,7 @@ def mock_dependencies():
 @pytest.fixture
 def mock_empty_config_data():
     return {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "empty_config",
         "system_prompt_base": "",
@@ -108,7 +108,7 @@ def mock_empty_config_data():
 @pytest.fixture
 def mock_multiple_components_config():
     return {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 20.0,
         "name": "multiple_components",
         "system_prompt_base": "system prompt base",
@@ -247,7 +247,7 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
 
 def test_load_config_missing_required_fields():
     invalid_config = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "name": "invalid_config",
     }
 
@@ -277,7 +277,7 @@ def test_load_config_invalid_version():
 
 def test_load_config_invalid_hertz():
     invalid_config = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": -1.0,
         "name": "invalid_hertz",
         "system_prompt_base": "system prompt base",
@@ -307,7 +307,7 @@ def test_load_config_invalid_json():
 
 def test_load_config_invalid_component_type():
     invalid_config = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "invalid_component",
         "system_prompt_base": "system prompt base",
@@ -347,7 +347,7 @@ def temp_env(key: str, value: Optional[str]):
 def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
     """Test that missing OM_API_KEY logs warning but doesn't raise."""
     config_data = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "test_missing_key",
         "api_key": "",  # Empty key should trigger env check
@@ -382,7 +382,7 @@ def test_load_config_empty_api_key_falls_back_to_env(caplog, mock_dependencies):
     caplog.set_level(logging.INFO)
 
     config_data = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "test_env_key",
         "api_key": "openmind_free",
