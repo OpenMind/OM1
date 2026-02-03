@@ -67,7 +67,7 @@ class CommandStatus:
     vx: float
     vy: float
     vyaw: float
-    timestamp: str
+    timestamp: float
 
     def to_dict(self) -> dict:
         """
