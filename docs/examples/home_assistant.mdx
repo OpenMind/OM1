@@ -1,0 +1,66 @@
+---
+title: "Home Assistant (Smart Devices)"
+---
+
+# Home Assistant (Smart Devices)
+
+This guide shows how to control basic IoT devices (lights/switches/thermostats) through **Home Assistant**.
+
+## 1) Create a Home Assistant Long-Lived Access Token
+
+In Home Assistant:
+- Profile → **Long-Lived Access Tokens** → create a token
+- Export it as an environment variable:
+
+```bash
+export HOME_ASSISTANT_TOKEN="<your_token>"
+```
+
+## 2) Add the action to your OM1 config
+
+Add an action entry like this (example):
+
+```json5
+{
+  name: "home_assistant",
+  llm_label: "home_assistant",
+  connector: "homeAssistantAPI",
+  config: {
+    base_url: "http://homeassistant.local:8123",
+    token_env: "HOME_ASSISTANT_TOKEN",
+    verify_ssl: true,
+    devices: {
+      lamp: "light.living_room",
+      bedroom_switch: "switch.bedroom"
+    }
+  }
+}
+```
+
+## 3) How to call it (JSON action value)
+
+OM1 actions pass a single string value. For structured arguments, provide JSON:
+
+- Turn on a light:
+
+```json
+{"device": "lamp", "command": "on"}
+```
+
+- Turn off a switch:
+
+```json
+{"device": "bedroom_switch", "command": "off"}
+```
+
+- Set brightness (percentage) for lights:
+
+```json
+{"device": "lamp", "command": "set", "value": 50}
+```
+
+## Notes
+
+- The connector uses Home Assistant REST API:
+  `POST /api/services/<domain>/<service>`
+- Device aliases are required (mapped to `entity_id` in config). This avoids the LLM guessing entity IDs.
