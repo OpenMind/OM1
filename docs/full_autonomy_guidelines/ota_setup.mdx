@@ -47,7 +47,15 @@ Reload your Bash profile:
 source ~/.bashrc
 ```
 
-### Step 5: Setup OTA Update Services
+### Step 5: Set the robot type that you are using
+
+```bash
+vim ~/.bashrc
+
+export ROBOT_TYPE="go2"  # or "go1", "tron"
+```
+
+### Setup OTA Update Services
 
 To enable the Over-The-Air (OTA) update service for Docker containers, you need to set up two docker services: `ota_agent` and `ota_updater`. These services will allow you to manage and update your Docker containers remotely via the OpenMind Portal.
 
