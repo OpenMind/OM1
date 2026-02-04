@@ -41,7 +41,7 @@
     {
       name: "move_go2_autonomy",
       llm_label: "move",
-      connector: "unitree_sdk_advance",
+      connector: "unitree_om_path_sdk",
     },
     {
       name: "speak",

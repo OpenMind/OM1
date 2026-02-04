@@ -43,4 +43,4 @@ services:
       - apparmor:unconfined
     group_add:
       - audio
-    command: ["unitree_go2_modes"]
+    command: ["${OM1_COMMAND:-unitree_go2_modes}"]
