@@ -7,10 +7,12 @@ except ImportError:
     zenoh = None
     logging.error("Zenoh library not found. Please install it via 'pip install zenoh'.")
 
-from src.actions.manage_resources.interface import ManageResourcesInterface
+from actions.base import ActionConnector
+from actions.manage_resources.interface import ManageResourcesInterface
+from inputs.base import Message
 
 
-class ZenohResourceManager(ManageResourcesInterface):
+class ZenohResourceManager(ActionConnector):
     """Manages resources using Zenoh."""
 
     def __init__(self, config: Dict[str, Any]):
@@ -20,7 +22,8 @@ class ZenohResourceManager(ManageResourcesInterface):
             None  # Use object as fallback for pyright
         )
         self.qos_profiles: Dict[str, Dict[str, Any]] = self._define_qos_profiles()
-        pass
+        # Create interface instance for actual execution logic
+        self.interface = ManageResourcesInterface(config)
 
     def _define_qos_profiles(self) -> Dict[str, Dict[str, Any]]:
         profiles = {
@@ -154,3 +157,7 @@ class ZenohResourceManager(ManageResourcesInterface):
             f"--- SIMULATION: Would attempt to adjust CPU priority for {task_name} to {priority} (OS-specific) ---"
         )
         return True
+
+    async def execute(self, message: Message) -> bool:
+        """Execute resource management command via interface."""
+        return await self.interface.execute(message)

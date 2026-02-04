@@ -11,7 +11,6 @@ from providers import BatteryStatus, IOProvider, TeleopsStatus, TeleopsStatusPro
 
 try:
     from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
-    from unitree.unitree_sdk2py.idl.unitree_hg.msg import dds_  # type: ignore
 except ImportError:
     logging.warning(
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
@@ -136,7 +135,7 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         self.g1_lowbatt_percent = 20.0  # percent
         self.descriptor_for_LLM = "Energy Level"
 
-    def BMSStateHandler(self, msg: dds_.BmsState_):  # type: ignore
+    def BMSStateHandler(self, msg):  # type: ignore
         """
         Handle incoming BmsState messages from the Unitree robot.
 
@@ -153,7 +152,7 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         self.battery_percentage = float(msg.soc)  # type: ignore
         self.battery_temperature = float(msg.temperature[0])  # type: ignore
 
-    def LowStateHandler(self, msg: dds_.LowState_):  # type: ignore
+    def LowStateHandler(self, msg):  # type: ignore
         """
         Handle incoming LowState messages from the Unitree robot.
 
