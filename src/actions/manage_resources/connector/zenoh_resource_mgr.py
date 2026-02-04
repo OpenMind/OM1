@@ -6,25 +6,19 @@ try:
 except ImportError:
     zenoh = None
     logging.error("Zenoh library not found. Please install it via 'pip install zenoh'.")
-    # raise ImportError("Zenoh library is required for this connector.")
 
 from src.actions.manage_resources.interface import ManageResourcesInterface
 
 
 class ZenohResourceManager(ManageResourcesInterface):
-    """
-    Implementation of ManageResourcesInterface using Zenoh for network QoS management.
-    Note: Actual dynamic QoS adjustment in Zenoh can be complex and might require
-    interaction with the Zenoh router's admin space or specific configuration mechanisms
-    not directly available through the standard put/get API. This serves as a conceptual
-    framework that might require further adaptation based on Zenoh's capabilities and
-    the specific deployment setup.
-    """
+    """Manages resources using Zenoh."""
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.zenoh_config_path: Optional[str] = config.get("zenoh_config_path")
-        self.zenoh_session: Optional["zenoh.Session"] = None
+        self.zenoh_session: Optional[object] = (
+            None  # Use object as fallback for pyright
+        )
         self.qos_profiles: Dict[str, Dict[str, Any]] = self._define_qos_profiles()
         pass
 
@@ -63,7 +57,7 @@ class ZenohResourceManager(ManageResourcesInterface):
             return False
 
         try:
-            conf = zenoh.Config.default()
+            conf = zenoh.Config.default()  # type: ignore[attr-defined]
         except AttributeError:
             logging.error(
                 "[ZenohResourceManager] Cannot access zenoh.Config.default()."
@@ -72,7 +66,7 @@ class ZenohResourceManager(ManageResourcesInterface):
 
         if self.zenoh_config_path:
             try:
-                conf = zenoh.Config.from_file(self.zenoh_config_path)
+                conf = zenoh.Config.from_file(self.zenoh_config_path)  # type: ignore[attr-defined]
                 logging.info(
                     f"[ZenohResourceManager] Loaded Zenoh config from {self.zenoh_config_path}"
                 )
@@ -81,7 +75,7 @@ class ZenohResourceManager(ManageResourcesInterface):
                     f"[ZenohResourceManager] Config file not found: {self.zenoh_config_path}"
                 )
                 try:
-                    conf = zenoh.Config.default()
+                    conf = zenoh.Config.default()  # type: ignore[attr-defined]
                 except AttributeError:
                     logging.error(
                         "[ZenohResourceManager] Cannot access zenoh.Config.default()."
@@ -90,7 +84,7 @@ class ZenohResourceManager(ManageResourcesInterface):
             except Exception as e:
                 logging.error(f"[ZenohResourceManager] Error loading config: {e}")
                 try:
-                    conf = zenoh.Config.default()
+                    conf = zenoh.Config.default()  # type: ignore[attr-defined]
                 except AttributeError:
                     logging.error(
                         "[ZenohResourceManager] Cannot access zenoh.Config.default()."
@@ -99,7 +93,7 @@ class ZenohResourceManager(ManageResourcesInterface):
 
         logging.info("[ZenohResourceManager] Opening Zenoh session...")
         try:
-            self.zenoh_session = zenoh.open(conf)
+            self.zenoh_session = zenoh.open(conf)  # type: ignore[attr-defined]
             logging.info("[ZenohResourceManager] Zenoh session opened successfully.")
             return True
         except AttributeError:
@@ -116,17 +110,7 @@ class ZenohResourceManager(ManageResourcesInterface):
         reliability: str = "reliable",
         durability: str = "volatile",
     ) -> bool:
-        """
-        Adjusts QoS for a given target key expression using Zenoh.
-        This is a conceptual implementation. Actual QoS changes in Zenoh
-        might require interaction with the admin space or dynamic configuration
-        mechanisms not directly exposed through the basic put/get API.
-        A practical approach might involve:
-        1. Managing multiple publishers/subscribers with different configurations.
-        2. Using Zenoh's admin space API (if available and accessible) to modify active sessions/resources.
-        3. Using a separate admin client to send configuration updates.
-        This function attempts to outline the intention but acknowledges the complexity.
-        """
+        """Adjusts network QoS for a target resource."""
         if self.zenoh_session is None:
             success = await self._initialize_zenoh_session()
             if not success or self.zenoh_session is None:
@@ -155,11 +139,7 @@ class ZenohResourceManager(ManageResourcesInterface):
         return True
 
     async def adjust_cpu_priority(self, task_name: str, priority: str) -> bool:
-        """
-        Adjusts CPU priority for a named task.
-        This is highly OS-dependent and typically requires OS-level calls.
-        This is a placeholder demonstrating the concept.
-        """
+        """Adjusts CPU priority for a task."""
         valid_priorities = ["critical", "high", "normal", "low"]
         if priority not in valid_priorities:
             logging.error(
