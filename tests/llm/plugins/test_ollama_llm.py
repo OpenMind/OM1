@@ -179,3 +179,107 @@ async def test_close(llm):
     with patch.object(llm._client, "aclose", AsyncMock()) as mock_close:
         await llm.close()
         mock_close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_ask_with_conversation_history(llm, mock_response):
+    """Test API request with conversation history"""
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+    mock_http_response = MagicMock()
+    mock_http_response.status_code = 200
+    mock_http_response.json.return_value = mock_response
+
+    with patch.object(
+        llm._client, "post", AsyncMock(return_value=mock_http_response)
+    ) as mock_post:
+        await llm.ask("How are you?", messages=messages)
+
+        call_args = mock_post.call_args
+        payload = call_args[1]["json"]
+        assert len(payload["messages"]) == 3
+        assert payload["messages"][0]["content"] == "Hello"
+        assert payload["messages"][1]["content"] == "Hi there!"
+        assert payload["messages"][2]["content"] == "How are you?"
+
+
+@pytest.mark.asyncio
+async def test_ask_with_multiple_tool_calls(llm):
+    """Test handling multiple tool calls in one response"""
+    mock_response = {
+        "message": {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"function": {"name": "function1", "arguments": {"arg1": "value1"}}},
+                {"function": {"name": "function2", "arguments": {"arg2": "value2"}}},
+            ],
+        }
+    }
+
+    mock_http_response = MagicMock()
+    mock_http_response.status_code = 200
+    mock_http_response.json.return_value = mock_response
+
+    with patch.object(llm._client, "post", AsyncMock(return_value=mock_http_response)):
+        result = await llm.ask("test prompt")
+        assert isinstance(result, CortexOutputModel)
+        assert len(result.actions) == 2
+        assert result.actions[0].type == "function1"
+        assert result.actions[1].type == "function2"
+
+
+@pytest.mark.asyncio
+async def test_ask_request_payload_structure(llm, mock_response):
+    """Test that request payload is correctly structured"""
+    mock_http_response = MagicMock()
+    mock_http_response.status_code = 200
+    mock_http_response.json.return_value = mock_response
+
+    with patch.object(
+        llm._client, "post", AsyncMock(return_value=mock_http_response)
+    ) as mock_post:
+        await llm.ask("test prompt", messages=[{"role": "user", "content": "hi"}])
+
+        call_args = mock_post.call_args
+        payload = call_args[1]["json"]
+
+        assert payload["model"] == "llama3.2"
+        assert payload["stream"] is False
+        assert payload["options"]["temperature"] == 0.7
+        assert payload["options"]["num_ctx"] == 4096
+        assert len(payload["messages"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_convert_tools_with_actions():
+    """Test tool schema conversion with available actions"""
+    config = OllamaLLMConfig()
+
+    mock_action = MagicMock()
+    mock_action.to_function_call_schema.return_value = {
+        "type": "function",
+        "function": {
+            "name": "search",
+            "description": "Search for information",
+            "parameters": {
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+                "required": ["query"],
+            },
+        },
+    }
+
+    llm = OllamaLLM(config, available_actions=[mock_action])
+    tools = llm._convert_tools_to_ollama_format()
+
+    assert len(tools) == 1
+    assert tools[0]["type"] == "function"
+    assert tools[0]["function"]["name"] == "search"
+    assert tools[0]["function"]["description"] == "Search for information"
+    assert "parameters" in tools[0]["function"]
+
+    await llm.close()
