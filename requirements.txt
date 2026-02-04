@@ -1,0 +1,2 @@
+eth-abi>=4.0.0
+eth-utils>=2.0.0

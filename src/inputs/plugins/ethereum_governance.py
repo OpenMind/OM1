@@ -1,51 +1,35 @@
-import asyncio
 import logging
-import time
+import aiohttp
 from typing import Optional
 
-import aiohttp
+# PR #2069: Use strict decoding library instead of manual slicing
+from eth_abi import decode
+from eth_utils import to_bytes
+from eth_abi.exceptions import DecodingError
 
-from inputs.base import Message, SensorConfig
+from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
-from providers.io_provider import IOProvider
 
-# RULES are stored on the ETHEREUM HOLESKY testnet
-# "GovernanceContract": "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
-# https://holesky.etherscan.io/address/0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695
-# Note: Etherscan.io does not handle bytes[]/json well. See below for ways to
-# interact with HOLESKY and decode the data, generating an ASCII string.
-
+logger = logging.getLogger(__name__)
 
 class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
     """
-    Ethereum ERC-7777 reader that tracks governance rules.
-
-    Queries the Ethereum blockchain for relevant governance rules.
-
-    Raises
-    ------
-    Exception
-        If connection to Ethereum network fails
+    Ethereum governance reader implementing strict ABI validation.
+    Aligned with PR #2069 standards for data integrity.
     """
 
     async def load_rules_from_blockchain(self) -> Optional[str]:
         """
-        Load governance rules from the Ethereum blockchain.
-
-        Returns
-        -------
-        Optional[str]
-            Decoded governance rules string, or None on error.
+        Fetches and decodes governance rules from the Ethereum blockchain.
         """
-        logging.info("Loading rules from Ethereum blockchain")
+        logger.info("Governance: Fetching rules from Ethereum...")
 
         payload = {
             "jsonrpc": "2.0",
-            "id": 636815446436324,
+            "id": 1,
             "method": "eth_call",
             "params": [
                 {
-                    "from": "0x0000000000000000000000000000000000000000",
                     "to": self.contract_address,
                     "data": f"{self.function_selector}{self.function_argument}",
                 },
@@ -61,181 +45,73 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
                     headers={"Content-Type": "application/json"},
                     timeout=aiohttp.ClientTimeout(total=10),
                 ) as response:
-                    logging.debug(f"Blockchain response status: {response.status}")
+                    if response.status != 200:
+                        logger.error(f"Governance: RPC request failed. Status: {response.status}")
+                        return None
 
-                    if response.status == 200:
-                        result = await response.json()
-                        if "result" in result and result["result"]:
-                            hex_response = result["result"]
-                            logging.debug(f"Raw blockchain response: {hex_response}")
+                    result = await response.json()
+                    
+                    # Validate RPC structure
+                    if "result" not in result:
+                        logger.error("Governance: Malformed RPC response (missing 'result').")
+                        return None
+                        
+                    hex_response = result["result"]
+                    return self.decode_eth_response(hex_response)
 
-                            decoded_data = self.decode_eth_response(hex_response)
-                            logging.debug(f"Decoded blockchain data: {decoded_data}")
-                            return decoded_data
-                        else:
-                            logging.error(
-                                "Error: No valid result in blockchain response"
-                            )
-                    else:
-                        logging.error(
-                            f"Error: Blockchain request failed with status {response.status}"
-                        )
         except Exception as e:
-            logging.error(f"Error loading rules from blockchain: {e}")
+            logger.error(f"Governance: Network/RPC error: {e}")
+            return None
 
-        return None
-
-    def decode_eth_response(self, hex_response: str) -> Optional[str]:
+    def decode_eth_response(self, hex_response: Optional[str]) -> str:
         """
-        Decodes an Ethereum eth_call response.
-
-        Parameters
-        ----------
-        hex_response : str
-            Hexadecimal string response from Ethereum eth_call.
-
-        Returns
-        -------
-        Optional[str]
-            Decoded string, or None on error.
+        Decodes Ethereum RPC response using strict validation (eth-abi).
+        
+        Ref: Fixes Issue #1824 & Aligns with PR #2069 standards.
+        
+        Args:
+            hex_response: The raw hex string from the RPC node.
+            
+        Returns:
+            str: Decoded string if valid, empty string otherwise.
         """
-        if hex_response.startswith("0x"):
-            hex_response = hex_response[2:]
+        # SCENARIO B: Network Error / Null Response
+        if hex_response is None:
+            logger.warning("Governance: Received None response from RPC.")
+            return ""
+
+        # Validation: Ensure it is a string
+        if not isinstance(hex_response, str):
+            logger.warning(f"Governance: Invalid type received: {type(hex_response)}")
+            return ""
+
+        # SCENARIO A: Valid Empty Response (0x)
+        # This explicitly means the contract returned empty data.
+        if hex_response == "0x":
+            logger.debug("Governance: Received valid empty '0x' response.")
+            return ""
 
         try:
-            response_bytes = bytes.fromhex(hex_response)
+            # Normalize hex string
+            if hex_response.startswith("0x"):
+                hex_response = hex_response[2:]
+                
+            byte_data = to_bytes(hexstr=hex_response)
 
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
-            string_length = int.from_bytes(response_bytes[96:128], "big")
+            # SCENARIO C: Strict Decoding
+            # eth-abi raises DecodingError if data is truncated or malformed.
+            # decode() returns a tuple, so we extract the first element.
+            decoded_tuple = decode(['string'], byte_data)
+            
+            result_string = decoded_tuple[0]
+            logger.debug(f"Governance: Successfully decoded rules (Length: {len(result_string)})")
+            return result_string
 
-            # Extract and decode string
-            string_bytes = response_bytes[128 : 128 + string_length]
-            decoded_string = string_bytes.decode("utf-8")
-
-            # Remove unexpected control characters (like \x19)
-            cleaned_string = "".join(ch for ch in decoded_string if ch.isprintable())
-
-            return cleaned_string
-
+        except DecodingError as e:
+            # Critical: Log explicitly to prevent silent failures on corruption.
+            logger.error(f"Governance: ABI Decoding Failed (Corrupted Data): {e}")
+            return ""
+            
         except Exception as e:
-            logging.error(f"Decoding error: {e}")
-            return None
-
-    def __init__(self, config: SensorConfig):
-        """
-        Initialize GovernanceEthereum instance.
-
-        Parameters
-        ----------
-        config : SensorConfig
-            Configuration settings for the sensor input.
-        """
-        super().__init__(config)
-
-        self.descriptor_for_LLM = "Universal Laws"
-
-        self.io_provider = IOProvider()
-        self.POLL_INTERVAL = 5.0  # seconds
-        self.rpc_url = "https://holesky.drpc.org"  # Ethereum RPC URL
-
-        # The smart contract address of the ERC-7777 Governance Smart Contract
-        self.contract_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
-
-        # getRuleSet() Function selector (first 4 bytes of Keccak hash).
-        self.function_selector = "0x1db3d5ff"
-
-        # The current rule set can be obtained from
-        # getLatestRuleSetVersion(0x254e2f1e)
-        # It's currently = 2
-        self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
-        self.universal_rule: Optional[str] = None
-        self.messages: list[Message] = []
-
-        logging.info(
-            "GovernanceEthereum initialized, rules will be loaded on first poll"
-        )
-
-    async def _poll(self) -> Optional[str]:
-        """
-        Poll for Ethereum Governance Law Changes.
-
-        Returns
-        -------
-        Optional[str]
-            Latest governance rules as a string, or None on error
-        """
-        await asyncio.sleep(self.POLL_INTERVAL)
-
-        try:
-            rules = await self.load_rules_from_blockchain()
-            logging.debug(f"7777 rules: {rules}")
-            return rules
-        except Exception as e:
-            logging.error(f"Error fetching blockchain data: {e}")
-            return None
-
-    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
-        """
-        Convert self.universal_rule to a human-readable Message.
-
-        Parameters
-        ----------
-        raw_input : Optional[str]
-            Raw input string to be processed
-
-        Returns
-        -------
-        Optional[Message]
-            Timestamped status or transaction notification
-        """
-        if raw_input is None:
-            return None
-
-        return Message(timestamp=time.time(), message=raw_input)
-
-    async def raw_to_text(self, raw_input: Optional[str]):
-        """
-        Process governance rule message buffer.
-
-        Parameters
-        ----------
-        raw_input : Optional[str]
-            Raw input string to be processed
-        """
-        pending_message = await self._raw_to_text(raw_input)
-
-        if pending_message is not None:
-            if len(self.messages) == 0:
-                self.messages.append(pending_message)
-            # only update if there has been a change
-            elif self.messages[-1].message != pending_message.message:
-                self.messages.append(pending_message)
-
-    def formatted_latest_buffer(self) -> Optional[str]:
-        """
-        Format and clear the latest buffer contents.
-
-        Returns
-        -------
-        Optional[str]
-            Formatted string of buffer contents or None if buffer is empty
-        """
-        if len(self.messages) == 0:
-            return None
-
-        latest_message = self.messages[-1]
-
-        result = f"""
-INPUT: {self.descriptor_for_LLM}
-// START
-{latest_message.message}
-// END
-"""
-
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
-        # no need to blank because we are only saving rare law changes
-        # self.messages = []
-        return result
+            logger.error(f"Governance: Unexpected error during decoding: {e}")
+            return ""
