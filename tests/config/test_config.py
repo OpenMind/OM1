@@ -80,17 +80,50 @@ def assert_action_classes_exist(action_config):
         assert (
             connector is not None
         ), f"No connector found for action {action_config['name']}"
-    except (ImportError, ModuleNotFoundError):
-        assert False, f"Connector module not found for action {action_config['name']}"
+    except ModuleNotFoundError as e:
+        # Check if it's an optional hardware dependency
+        error_msg = str(e)
+        optional_deps = ["unitree", "ubtech", "ubtechapi"]
+
+        if any(dep in error_msg for dep in optional_deps):
+            # Log warning but don't fail test for optional dependencies
+            import warnings
+
+            warnings.warn(
+                f"Skipping connector check for {action_config['name']}: "
+                f"optional dependency not installed ({error_msg})"
+            )
+            return
+        else:
+            # Re-raise for real missing modules
+            assert (
+                False
+            ), f"Connector module not found for action {action_config['name']}: {error_msg}"
 
 
-def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:
-    """Find a subclass of parent_class in the given module."""
-    for _, obj in module.__dict__.items():
+def find_subclass_in_module(module, base_class: Type) -> Optional[Type]:
+    """
+    Find a subclass of base_class in the given module.
+
+    Parameters
+    ----------
+    module : module
+        The module to search in
+    base_class : Type
+        The base class to search for subclasses of
+
+    Returns
+    -------
+    Type or None
+        The first subclass found, or None if no subclass is found
+    """
+    import inspect
+
+    for name, obj in inspect.getmembers(module):
         if (
-            isinstance(obj, type)
-            and issubclass(obj, parent_class)
-            and obj != parent_class
+            inspect.isclass(obj)
+            and issubclass(obj, base_class)
+            and obj is not base_class
         ):
             return obj
     return None

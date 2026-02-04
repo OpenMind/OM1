@@ -4,9 +4,21 @@
     "**/system_hw_test",
     "**/__pycache__",
     "**/unitree",
-    "**/ubtech"
+    "**/ubtech",
+    "**/node_modules",
+    ".venv",
+    "venv",
+    "zenoh-python"
   ],
   "typeCheckingMode": "standard",
   "reportMissingImports": "warning",
-  "pythonVersion": "3.10"
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "reportGeneralTypeIssues": false,
+  "pythonVersion": "3.10",
+  "pythonPlatform": "Linux",
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": ["src"]
 }

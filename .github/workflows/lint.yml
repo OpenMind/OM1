@@ -71,6 +71,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-uv-
 
+      - name: Set PYTHONPATH
+        run: |
+          echo "PYTHONPATH=${{ github.workspace }}/src" >> $GITHUB_ENV
+
       - name: Run ruff
         run: uv run ruff check .
 
@@ -81,7 +85,9 @@ jobs:
         run: uv run isort --check-only .
 
       - name: Run pyright
-        run: uv run pyright --project ./pyrightconfig.json
+        run: |
+          export PYTHONPATH=${{ github.workspace }}/src
+          uv run pyright --project ./pyrightconfig.json
 
       - name: Run vulture
         run: uv run vulture src/
