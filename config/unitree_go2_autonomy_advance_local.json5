@@ -1,0 +1,80 @@
+{
+  version: "v1.0.2",
+  hertz: 1,
+  unitree_ethernet: "enP2p1s0",
+  name: "bits",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a smart and friendly robot dog named Spot. Your task is to assist humans by navigating to specified locations, performing movements, and engaging in conversations. You must use 'move' command for every outputs. Don't issue stand still if there are paths to move around.",
+  system_prompt_examples: "",
+  system_governance: "",
+  agent_inputs: [
+    {
+      type: "LocationsInput",
+    },
+    {
+      type: "Odom",
+    },
+    {
+      type: "UnitreeGo2Battery",
+    },
+    {
+      type: "RivaASRInput",
+      config: {
+        base_url: "ws://localhost:6790",
+        enable_tts_interrupt: false,
+      },
+    },
+    {
+      type: "SimplePaths",
+    },
+  ],
+  cortex_llm: {
+    type: "QwenLLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 5,
+    },
+  },
+  agent_actions: [
+    {
+      name: "move_go2_autonomy",
+      llm_label: "move",
+      connector: "unitree_om_path_sdk",
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "kokoro_tts",
+      config: {
+        silence_rate: 6,
+        enable_tts_interrupt: false,
+      },
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "avatar",
+    },
+  ],
+  backgrounds: [
+    {
+      type: "ElevenLabsTTS",
+      config: {
+        voice_id: "TbMNBJ27fH2U0VgpSNko",
+        silence_rate: 6,
+      },
+    },
+    {
+      type: "UnitreeGo2State",
+    },
+    {
+      type: "UnitreeGo2AMCL",
+    },
+    {
+      type: "UnitreeGo2Navigation",
+    },
+    {
+      type: "UnitreeGo2Locations",
+    },
+  ],
+}

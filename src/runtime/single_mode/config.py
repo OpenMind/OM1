@@ -396,7 +396,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         available_actions=agent_actions,
     )
     return RuntimeConfig(
-        version=config.get("version", "v1.0.1"),
+        version=config.get("version", "v1.0.2"),
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
         system_prompt_base=config.get("system_prompt_base", ""),
