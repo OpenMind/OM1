@@ -1,13 +1,15 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any, Dict
 
+from actions.base import Interface
 from inputs.base import Message
 from providers.io_provider import IOProvider
 
 
-class ManageResourcesInterface(ABC):
+class ManageResourcesInterface(Interface):
     """
     Interface for managing system resources dynamically based on runtime needs.
+
     This could involve adjusting network QoS, CPU scheduling priorities, etc.
     Currently focused on Zenoh-based network resource management.
     """
@@ -19,7 +21,7 @@ class ManageResourcesInterface(ABC):
     @abstractmethod
     async def adjust_network_qos(self, target: str, priority: str) -> bool:
         """
-        Adjusts Quality of Service parameters for a specific target/resource over the network.
+        Adjust Quality of Service parameters for a specific target/resource over the network.
 
         Args:
             target (str): The Zenoh key expression or resource identifier to apply QoS to.
@@ -31,13 +33,12 @@ class ManageResourcesInterface(ABC):
             bool: True if adjustment was successful, False otherwise.
 
         """
-        # Abstract method should only have pass
         pass
 
     @abstractmethod
     async def adjust_cpu_priority(self, task_name: str, priority: str) -> bool:
         """
-        Adjusts the CPU scheduling priority for a specific task/service.
+        Adjust the CPU scheduling priority for a specific task/service.
 
         Args:
             task_name (str): Name or identifier of the task/service.
@@ -48,12 +49,11 @@ class ManageResourcesInterface(ABC):
             bool: True if adjustment was successful, False otherwise.
 
         """
-        # Abstract method should only have pass
         pass
 
     async def execute(self, message: Message) -> bool:
         """
-        Parses the message to determine the desired resource adjustment and executes it.
+        Parse the message to determine the desired resource adjustment and execute it.
 
         Args:
             message (Message): The message containing resource adjustment command.
