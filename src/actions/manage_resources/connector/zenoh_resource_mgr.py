@@ -107,8 +107,8 @@ class ZenohResourceManager(ManageResourcesInterface):
         self,
         target: str,
         priority: str,
-        reliability: str = "reliable",
-        durability: str = "volatile",
+        _reliability: str = "reliable",
+        _durability: str = "volatile",
     ) -> bool:
         """Adjusts network QoS for a target resource."""
         if self.zenoh_session is None:

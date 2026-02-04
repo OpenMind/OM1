@@ -17,13 +17,7 @@ class ManageResourcesInterface(ABC):
         self.io_provider = IOProvider()
 
     @abstractmethod
-    async def adjust_network_qos(
-        self,
-        target: str,
-        priority: str,
-        reliability: str = "reliable",
-        durability: str = "volatile",
-    ) -> bool:
+    async def adjust_network_qos(self, target: str, priority: str) -> bool:
         """
         Adjusts Quality of Service parameters for a specific target/resource over the network.
 
@@ -31,14 +25,13 @@ class ManageResourcesInterface(ABC):
             target (str): The Zenoh key expression or resource identifier to apply QoS to.
                           Example: "sensor/lidar/data", "actuator/arm/command"
             priority (str): Priority level. Options: "realtime", "high", "medium", "low".
-            reliability (str): Reliability level. Options: "reliable", "best_effort". Default: "reliable".
-            durability (str): Durability level. Options: "volatile", "transient". Default: "volatile".
 
         Returns
         -------
             bool: True if adjustment was successful, False otherwise.
 
         """
+        # Abstract method should only have pass
         pass
 
     @abstractmethod
@@ -55,6 +48,7 @@ class ManageResourcesInterface(ABC):
             bool: True if adjustment was successful, False otherwise.
 
         """
+        # Abstract method should only have pass
         pass
 
     async def execute(self, message: Message) -> bool:
