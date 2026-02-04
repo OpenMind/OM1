@@ -25,6 +25,22 @@ class ZenohResourceManager(ActionConnector):
         # Create interface instance for actual execution logic
         self.interface = ManageResourcesInterface(config)
 
+    async def connect(self, output_interface) -> None:
+        """
+        Connect and initialize the resource manager.
+
+        Parameters
+        ----------
+        output_interface
+            The output interface (not used for resource management).
+        """
+        # Initialize Zenoh session if needed
+        if self.zenoh_session is None:
+            await self._initialize_zenoh_session()
+
+        # Delegate to interface for any additional setup
+        pass
+
     def _define_qos_profiles(self) -> Dict[str, Dict[str, Any]]:
         profiles = {
             "realtime": {
