@@ -1,15 +1,17 @@
 # Documentation
 
+{% tabs %}
+
 {% tab title="Getting started" %}
-{% include "./developing/1_get_started.md" %}
+{% include "developing/1_get_started.md" %}
 {% endtab %}
 
-{% tabs %}
 {% tab title="Developer CookBook" %}
-{% include "./developer-cookbook/introduction.md" %}
+{% include "developer-cookbook/introduction.md" %}
 {% endtab %}
 
 {% tab title="API References" %}
-{% include "./api-references/introduction.md" %}
-{% include "./api-references/api-pricing.md" %}
+{% include "api-references/introduction.md" %}
+{% include "api-references/api-pricing.md" %}
 {% endtab %}
+{% endtabs %}

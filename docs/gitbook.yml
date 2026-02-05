@@ -1,0 +1,9 @@
+# gitbook.yml
+title: OpenMind
+description: Full documentation
+
+# Main navigation
+pages:
+
+  - title: Documentation
+    path: gitbook.md
