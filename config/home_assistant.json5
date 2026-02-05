@@ -85,7 +85,9 @@
         base_url: "http://homeassistant.local:8123",
         // Replace with your long-lived access token
         access_token: "",
-        verify_ssl: false,
+        // WARNING: Only set verify_ssl to false in trusted local networks.
+        // Disabling SSL verification exposes traffic to MITM attacks.
+        verify_ssl: true,
         timeout: 10
       }
     },

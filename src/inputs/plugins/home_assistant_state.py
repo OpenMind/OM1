@@ -16,6 +16,7 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
+from providers.io_provider import IOProvider
 
 
 class HomeAssistantInputConfig(SensorConfig):
@@ -124,10 +125,18 @@ class HomeAssistantStateInput(FuserInput[HomeAssistantInputConfig, Optional[str]
         self.report_all_states = config.report_all_states
         self.descriptor_for_LLM = config.input_name
 
+        self.io_provider = IOProvider()
         self._session: Optional[aiohttp.ClientSession] = None
         self._previous_states: Dict[str, str] = {}
         self._last_poll_time: float = 0
         self.messages: List[Message] = []
+
+        if not self.access_token:
+            logging.warning(
+                "HomeAssistant state input: access_token is empty. "
+                "API requests will fail. Set a long-lived access token "
+                "from your Home Assistant instance."
+            )
 
         logging.info(
             f"HomeAssistant state input initialized for {self.base_url} "
@@ -303,6 +312,11 @@ class HomeAssistantStateInput(FuserInput[HomeAssistantInputConfig, Optional[str]
         """
         Filter states to only include those that have changed.
 
+        Note: This compares only the primary state string (e.g., 'on'/'off'),
+        not device attributes (brightness, temperature, etc.). Attribute-only
+        changes (e.g., brightness change while state remains 'on') will not
+        be detected as changes.
+
         Parameters
         ----------
         current_states : List[DeviceState]
@@ -334,7 +348,8 @@ class HomeAssistantStateInput(FuserInput[HomeAssistantInputConfig, Optional[str]
 
         # Respect poll interval
         if current_time - self._last_poll_time < self.poll_interval:
-            await asyncio.sleep(self.poll_interval / 2)
+            remaining = self.poll_interval - (current_time - self._last_poll_time)
+            await asyncio.sleep(remaining)
             return None
 
         self._last_poll_time = current_time
@@ -383,39 +398,47 @@ class HomeAssistantStateInput(FuserInput[HomeAssistantInputConfig, Optional[str]
             message=raw_input,
         )
 
-    async def raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
-        Convert raw input to a Message object.
+        Update message buffer.
 
         Parameters
         ----------
         raw_input : Optional[str]
             Raw state information.
-
-        Returns
-        -------
-        Optional[Message]
-            Message object or None.
         """
         message = await self._raw_to_text(raw_input)
-        if message:
+        if message is not None:
             self.messages.append(message)
-        return message
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """
-        Get the most recent device state as a formatted prompt string.
+        Format and clear the latest buffer contents.
+
+        Formats the most recent message with the standard OM1 input format,
+        adds it to the IO provider, then clears the buffer.
 
         Returns
         -------
         Optional[str]
-            The formatted buffer string if available, None otherwise.
+            Formatted string of buffer contents or None if buffer is empty.
         """
         if not self.messages:
             return None
 
         latest = self.messages[-1]
-        return f"[{self.descriptor_for_LLM}]: {latest.message}"
+
+        result = (
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
+            f"{latest.message}\n// END\n"
+        )
+
+        self.io_provider.add_input(
+            self.__class__.__name__, latest.message, latest.timestamp
+        )
+        self.messages = []
+
+        return result
 
     async def close(self) -> None:
         """Close the aiohttp session."""

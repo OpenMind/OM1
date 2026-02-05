@@ -7,7 +7,9 @@ input plugin, testing device state polling and formatting.
 
 import pytest
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
+
+import aiohttp
 
 from inputs.plugins.home_assistant_state import (
     HomeAssistantInputConfig,
@@ -336,16 +338,22 @@ class TestHomeAssistantStateInput:
         assert message is None
 
     def test_formatted_latest_buffer(self, state_input):
-        """Test getting formatted latest buffer."""
+        """Test getting formatted latest buffer matches OM1 convention."""
         state_input.messages = [
             Message(timestamp=time.time(), message="Test state info"),
         ]
 
-        formatted = state_input.formatted_latest_buffer()
+        # Mock IOProvider to avoid singleton issues in tests
+        with patch.object(state_input, "io_provider") as mock_io:
+            formatted = state_input.formatted_latest_buffer()
 
-        assert formatted is not None
-        assert "[Test Smart Home]" in formatted
-        assert "Test state info" in formatted
+            assert formatted is not None
+            assert "\nINPUT: Test Smart Home\n// START\n" in formatted
+            assert "Test state info" in formatted
+            assert "\n// END\n" in formatted
+            mock_io.add_input.assert_called_once()
+            # Buffer should be cleared after formatting
+            assert state_input.messages == []
 
     def test_formatted_latest_buffer_empty(self, state_input):
         """Test getting formatted buffer when empty."""
@@ -365,4 +373,76 @@ class TestHomeAssistantStateInput:
 
             # Should return None without calling _get_all_states
             # because interval hasn't passed
+            assert result is None
             mock_get.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_poll_executes_after_interval(self, state_input):
+        """Test that polling executes after the interval has passed."""
+        # Set last poll time far enough in the past
+        state_input._last_poll_time = time.time() - state_input.poll_interval - 1
+
+        mock_states = [
+            DeviceState(
+                entity_id="light.test",
+                state="on",
+                friendly_name="Test Light",
+                attributes={"brightness": 255},
+                last_changed="",
+            ),
+        ]
+
+        with patch.object(
+            state_input, "_get_all_states", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.return_value = mock_states
+            result = await state_input._poll()
+
+            mock_get.assert_called_once()
+            assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_poll_handles_network_error(self, state_input):
+        """Test that polling handles network errors gracefully."""
+        state_input._last_poll_time = 0
+
+        with patch.object(
+            state_input, "_get_all_states", new_callable=AsyncMock
+        ) as mock_get:
+            mock_get.side_effect = Exception("Network unreachable")
+            result = await state_input._poll()
+
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_entity_state_http_error(self, state_input):
+        """Test handling of HTTP errors when getting entity state."""
+        mock_response = AsyncMock()
+        mock_response.status = 401
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=False)
+
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_response
+
+        with patch.object(
+            state_input, "_get_session", new_callable=AsyncMock
+        ) as mock_get_session:
+            mock_get_session.return_value = mock_session
+            result = await state_input._get_entity_state("light.test")
+
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_entity_state_connection_error(self, state_input):
+        """Test handling of connection errors when getting entity state."""
+        mock_session = AsyncMock()
+        mock_session.get.side_effect = aiohttp.ClientError("Connection refused")
+
+        with patch.object(
+            state_input, "_get_session", new_callable=AsyncMock
+        ) as mock_get_session:
+            mock_get_session.return_value = mock_session
+            result = await state_input._get_entity_state("light.test")
+
+            assert result is None

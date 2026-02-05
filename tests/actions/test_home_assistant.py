@@ -6,14 +6,15 @@ testing light control, switch control, and thermostat control functionality.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
+
+import aiohttp
 
 from actions.home_assistant.interface import (
     HomeAssistantInput,
     HomeAssistantOutput,
     DeviceType,
     LightAction,
-    SwitchAction,
     ThermostatAction,
 )
 from actions.home_assistant.connector.rest_api import (
@@ -387,7 +388,6 @@ class TestHomeAssistantInterface:
         assert DeviceType.THERMOSTAT.value == "climate"
         assert DeviceType.COVER.value == "cover"
         assert DeviceType.FAN.value == "fan"
-
     def test_light_action_enum(self):
         """Test LightAction enum values."""
         assert LightAction.ON.value == "turn_on"
@@ -401,3 +401,89 @@ class TestHomeAssistantInterface:
         assert ThermostatAction.SET_TEMPERATURE.value == "set_temperature"
         assert ThermostatAction.SET_HVAC_MODE.value == "set_hvac_mode"
         assert ThermostatAction.SET_FAN_MODE.value == "set_fan_mode"
+
+
+class TestHomeAssistantNetworkErrors:
+    """Tests for network error handling."""
+
+    @pytest.fixture
+    def connector(self):
+        """Create a test connector instance."""
+        config = HomeAssistantConfig(
+            base_url="http://localhost:8123",
+            access_token="test_token_12345",
+            verify_ssl=False,
+            timeout=5,
+        )
+        return HomeAssistantRESTConnector(config)
+
+    @pytest.mark.asyncio
+    async def test_call_service_connection_error(self, connector):
+        """Test _call_service handles aiohttp.ClientError gracefully."""
+        mock_session = AsyncMock()
+        mock_session.post.side_effect = aiohttp.ClientError("Connection refused")
+
+        with patch.object(
+            connector, "_get_session", new_callable=AsyncMock
+        ) as mock_get_session:
+            mock_get_session.return_value = mock_session
+            result = await connector._call_service(
+                "light", "turn_on", {"entity_id": "light.test"}
+            )
+
+            assert result["success"] is False
+            assert "Connection refused" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_call_service_timeout_error(self, connector):
+        """Test _call_service handles timeout errors gracefully."""
+        mock_session = AsyncMock()
+        mock_session.post.side_effect = aiohttp.ClientError("Connection timeout")
+
+        with patch.object(
+            connector, "_get_session", new_callable=AsyncMock
+        ) as mock_get_session:
+            mock_get_session.return_value = mock_session
+            result = await connector._call_service(
+                "switch", "turn_on", {"entity_id": "switch.test"}
+            )
+
+            assert result["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_control_light_rgb_out_of_range(self, connector):
+        """Test that RGB values outside 0-255 are rejected."""
+        result = await connector._control_light(
+            entity_id="light.test",
+            action="color",
+            color_rgb="300,-1,256",
+        )
+
+        assert result.success is False
+        assert "out of range" in result.message
+
+    @pytest.mark.asyncio
+    async def test_get_entity_state_connection_error(self, connector):
+        """Test _get_entity_state handles connection errors."""
+        mock_session = AsyncMock()
+        mock_session.get.side_effect = aiohttp.ClientError("Connection refused")
+
+        with patch.object(
+            connector, "_get_session", new_callable=AsyncMock
+        ) as mock_get_session:
+            mock_get_session.return_value = mock_session
+            result = await connector._get_entity_state("light.test")
+
+            assert result is None
+
+    def test_empty_access_token_warning(self):
+        """Test that empty access_token logs a warning."""
+        import logging
+
+        with patch.object(logging, "warning") as mock_warn:
+            config = HomeAssistantConfig(
+                base_url="http://localhost:8123",
+                access_token="",
+            )
+            HomeAssistantRESTConnector(config)
+            mock_warn.assert_called()

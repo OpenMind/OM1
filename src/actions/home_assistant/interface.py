@@ -20,7 +20,6 @@ class DeviceType(Enum):
     THERMOSTAT = "climate"
     COVER = "cover"
     FAN = "fan"
-    MEDIA_PLAYER = "media_player"
 
 
 class LightAction(Enum):

@@ -6,7 +6,6 @@ the REST API. It supports lights, switches, thermostats, and other smart
 home devices.
 """
 
-import asyncio
 import logging
 import time
 from typing import Any, Dict, Optional
@@ -67,7 +66,6 @@ class HomeAssistantRESTConnector(
     - Thermostats: temperature setting, HVAC mode
     - Covers: open/close
     - Fans: on/off, speed
-    - Media players: play/pause/stop
     """
 
     def __init__(self, config: HomeAssistantConfig):
@@ -86,6 +84,13 @@ class HomeAssistantRESTConnector(
         self.timeout = config.timeout
         self._session: Optional[aiohttp.ClientSession] = None
         self._last_result: Optional[HomeAssistantOutput] = None
+
+        if not self.access_token:
+            logging.warning(
+                "HomeAssistant REST connector: access_token is empty. "
+                "API requests will fail. Set a long-lived access token "
+                "from your Home Assistant instance."
+            )
 
         logging.info(
             f"HomeAssistant REST connector initialized for {self.base_url}"
@@ -203,7 +208,12 @@ class HomeAssistantRESTConnector(
                 try:
                     rgb = [int(x.strip()) for x in color_rgb.split(",")]
                     if len(rgb) == 3:
-                        service_data["rgb_color"] = rgb
+                        if all(0 <= v <= 255 for v in rgb):
+                            service_data["rgb_color"] = rgb
+                        else:
+                            logging.warning(
+                                f"RGB values out of range (0-255): {color_rgb}"
+                            )
                 except ValueError:
                     logging.warning(f"Invalid RGB color format: {color_rgb}")
         elif action in ("turn_off", "off"):
@@ -218,7 +228,14 @@ class HomeAssistantRESTConnector(
             try:
                 rgb = [int(x.strip()) for x in color_rgb.split(",")]
                 if len(rgb) == 3:
-                    service_data["rgb_color"] = rgb
+                    if all(0 <= v <= 255 for v in rgb):
+                        service_data["rgb_color"] = rgb
+                    else:
+                        return HomeAssistantOutput(
+                            success=False,
+                            message=f"RGB values out of range (0-255): {color_rgb}",
+                            entity_id=entity_id,
+                        )
             except ValueError:
                 return HomeAssistantOutput(
                     success=False,

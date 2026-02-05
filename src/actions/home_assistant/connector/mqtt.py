@@ -6,7 +6,6 @@ MQTT protocol. It supports lights, switches, and other smart home devices
 that are exposed via MQTT in Home Assistant.
 """
 
-import asyncio
 import json
 import logging
 import time
@@ -111,6 +110,7 @@ class HomeAssistantMQTTConnector(
         self.mqtt_password = config.mqtt_password
         self.topic_prefix = config.topic_prefix
         self._last_result: Optional[HomeAssistantOutput] = None
+        self._client: Optional[aiomqtt.Client] = None
 
         logging.info(
             f"HomeAssistant MQTT connector initialized for {self.mqtt_host}:{self.mqtt_port}"
@@ -119,6 +119,12 @@ class HomeAssistantMQTTConnector(
     def _get_entity_topic(self, entity_id: str, action_type: str = "set") -> str:
         """
         Generate MQTT topic for an entity.
+
+        Uses the Home Assistant MQTT discovery topic format:
+        ``{topic_prefix}/{domain}/{object_id}/{action_type}``
+
+        For example, entity_id ``light.living_room`` with action_type ``set``
+        becomes ``homeassistant/light/living_room/set``.
 
         Parameters
         ----------
@@ -136,13 +142,36 @@ class HomeAssistantMQTTConnector(
         domain, name = entity_id.split(".", 1)
         return f"{self.topic_prefix}/{domain}/{name}/{action_type}"
 
+    async def _get_client(self) -> aiomqtt.Client:
+        """
+        Get or create a persistent MQTT client connection.
+
+        Returns
+        -------
+        aiomqtt.Client
+            Connected MQTT client.
+        """
+        if self._client is None:
+            self._client = aiomqtt.Client(
+                hostname=self.mqtt_host,
+                port=self.mqtt_port,
+                username=self.mqtt_username,
+                password=self.mqtt_password,
+            )
+            await self._client.__aenter__()
+            logging.info(
+                f"MQTT persistent connection established to "
+                f"{self.mqtt_host}:{self.mqtt_port}"
+            )
+        return self._client
+
     async def _publish_message(
         self,
         topic: str,
         payload: Dict[str, Any],
     ) -> bool:
         """
-        Publish a message to MQTT broker.
+        Publish a message to MQTT broker using a persistent connection.
 
         Parameters
         ----------
@@ -157,21 +186,18 @@ class HomeAssistantMQTTConnector(
             True if publish was successful.
         """
         try:
-            async with aiomqtt.Client(
-                hostname=self.mqtt_host,
-                port=self.mqtt_port,
-                username=self.mqtt_username,
-                password=self.mqtt_password,
-            ) as client:
-                await client.publish(
-                    topic,
-                    payload=json.dumps(payload),
-                    qos=1,
-                )
-                logging.info(f"Published to {topic}: {payload}")
-                return True
+            client = await self._get_client()
+            await client.publish(
+                topic,
+                payload=json.dumps(payload),
+                qos=1,
+            )
+            logging.info(f"Published to {topic}: {payload}")
+            return True
         except Exception as e:
             logging.error(f"MQTT publish error: {e}")
+            # Reset client on error so next call reconnects
+            self._client = None
             return False
 
     async def _control_light(
@@ -193,7 +219,12 @@ class HomeAssistantMQTTConnector(
                 try:
                     rgb = [int(x.strip()) for x in color_rgb.split(",")]
                     if len(rgb) == 3:
-                        payload["color"] = {"r": rgb[0], "g": rgb[1], "b": rgb[2]}
+                        if all(0 <= v <= 255 for v in rgb):
+                            payload["color"] = {"r": rgb[0], "g": rgb[1], "b": rgb[2]}
+                        else:
+                            logging.warning(
+                                f"RGB values out of range (0-255): {color_rgb}"
+                            )
                 except ValueError:
                     logging.warning(f"Invalid RGB color format: {color_rgb}")
         elif action in ("turn_off", "off"):
@@ -206,7 +237,14 @@ class HomeAssistantMQTTConnector(
             try:
                 rgb = [int(x.strip()) for x in color_rgb.split(",")]
                 if len(rgb) == 3:
-                    payload["color"] = {"r": rgb[0], "g": rgb[1], "b": rgb[2]}
+                    if all(0 <= v <= 255 for v in rgb):
+                        payload["color"] = {"r": rgb[0], "g": rgb[1], "b": rgb[2]}
+                    else:
+                        return HomeAssistantOutput(
+                            success=False,
+                            message=f"RGB values out of range (0-255): {color_rgb}",
+                            entity_id=entity_id,
+                        )
             except ValueError:
                 return HomeAssistantOutput(
                     success=False,
@@ -347,3 +385,14 @@ class HomeAssistantMQTTConnector(
         Tick method for periodic updates.
         """
         time.sleep(60)
+
+    async def close(self) -> None:
+        """Close the persistent MQTT client connection."""
+        if self._client is not None:
+            try:
+                await self._client.__aexit__(None, None, None)
+                logging.info("MQTT persistent connection closed")
+            except Exception as e:
+                logging.error(f"Error closing MQTT connection: {e}")
+            finally:
+                self._client = None
