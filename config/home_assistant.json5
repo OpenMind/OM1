@@ -1,0 +1,100 @@
+{
+  // OM1 Configuration for Home Assistant Smart Home Control
+  // This configuration enables OM1 to control and monitor smart home devices
+  // via Home Assistant integration.
+  //
+  // Prerequisites:
+  // 1. Home Assistant running and accessible
+  // 2. Long-lived access token from Home Assistant
+  // 3. Set HASS_TOKEN and HASS_URL environment variables
+  //
+  // Usage: uv run main.py --config config/home_assistant.json5
+
+  version: "v1.0.1",
+  hertz: 1,
+  name: "smart_home_assistant",
+  api_key: "openmind_free",
+
+  system_prompt_base: "You are a helpful smart home assistant robot. You can control and monitor smart home devices including lights, switches, and thermostats. When someone asks you to control a device, use the smart_home action. When you notice device state changes, inform the user naturally. Be helpful, friendly, and proactive about home automation.",
+
+  system_governance: "Here are the laws that govern your actions:\n1. Only control devices when explicitly requested by the user.\n2. Always confirm actions before executing potentially disruptive changes.\n3. Respect user privacy - do not share device states with unauthorized parties.\n4. Prioritize safety - do not control devices in ways that could harm occupants.",
+
+  system_prompt_examples: "Examples of interactions:\n\n1. User: 'Turn on the living room light'\n   smart_home: {device_type: 'light', entity_id: 'light.living_room', action: 'turn_on'}\n   speak: {sentence: 'I turned on the living room light for you.'}\n\n2. User: 'Make the bedroom warmer'\n   smart_home: {device_type: 'climate', entity_id: 'climate.bedroom', action: 'set_temperature', temperature: 22}\n   speak: {sentence: 'I set the bedroom thermostat to 22 degrees.'}\n\n3. User: 'Dim the lights to 50%'\n   smart_home: {device_type: 'light', entity_id: 'light.living_room', action: 'brightness', brightness: 128}\n   speak: {sentence: 'Done! The lights are now at 50% brightness.'}\n\n4. User: 'Turn everything off'\n   smart_home: {device_type: 'light', entity_id: 'light.living_room', action: 'turn_off'}\n   smart_home: {device_type: 'switch', entity_id: 'switch.coffee_maker', action: 'turn_off'}\n   speak: {sentence: 'I turned off the lights and the coffee maker.'}\n\n5. [Smart Home]: Living Room Light changed to OFF\n   speak: {sentence: 'I noticed the living room light just turned off.'}",
+
+  agent_inputs: [
+    {
+      // Vision input for face/presence detection
+      type: "VLMOpenAI",
+    },
+    {
+      // Home Assistant device state monitoring
+      type: "HomeAssistantStateInput",
+      config: {
+        // Replace with your Home Assistant URL
+        base_url: "http://homeassistant.local:8123",
+        // Replace with your long-lived access token
+        access_token: "",
+        // List of entities to monitor - customize for your setup
+        entity_ids: [
+          "light.living_room",
+          "light.bedroom",
+          "switch.coffee_maker",
+          "climate.bedroom",
+          "sensor.living_room_temperature"
+        ],
+        // How often to check device states (seconds)
+        poll_interval: 5.0,
+        // Only report when states change (false) or always (true)
+        report_all_states: false,
+        // Name shown in LLM prompt
+        input_name: "Smart Home"
+      }
+    }
+  ],
+
+  simulators: [
+    {
+      // Web simulator for testing without real robot
+      type: "WebSim",
+      config: {
+        host: "0.0.0.0",
+        port: 8000,
+        tick_rate: 100,
+        auto_reconnect: true,
+        debug_mode: false,
+      },
+    },
+  ],
+
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "HomeBot",
+      history_length: 10,
+    },
+  },
+
+  agent_actions: [
+    {
+      // Home Assistant device control action
+      name: "home_assistant",
+      llm_label: "smart_home",
+      connector: "rest_api",
+      config: {
+        // Replace with your Home Assistant URL
+        base_url: "http://homeassistant.local:8123",
+        // Replace with your long-lived access token
+        access_token: "",
+        verify_ssl: false,
+        timeout: 10
+      }
+    },
+    {
+      // Speech output
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+  ],
+}
