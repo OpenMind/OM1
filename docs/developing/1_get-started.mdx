@@ -9,6 +9,7 @@ description: "Learn how to install, set up and configure OM1."
 
 - Linux (Ubuntu 20, 22, 24)
 - MacOS 12.0+
+- Windows 10/11 (experimental)
 
 ### Hardware
 
@@ -36,6 +37,9 @@ brew install uv
 
 # Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 #### PortAudio Library
@@ -49,6 +53,12 @@ brew install portaudio
 # Linux
 sudo apt-get update
 sudo apt-get install portaudio19-dev
+
+# Windows (using Chocolatey)
+choco install portaudio
+
+# Windows (using vcpkg)
+vcpkg install portaudio
 ```
 
 #### Install python3-dev
@@ -70,6 +80,12 @@ brew install ffmpeg
 # Linux
 sudo apt-get update
 sudo apt-get install ffmpeg
+
+# Windows (using Chocolatey)
+choco install ffmpeg
+
+# Windows (using winget)
+winget install ffmpeg
 ```
 ## CLI
 

@@ -38,7 +38,7 @@ Immediately after a frontal (or side) collision, the TB4 will back off about 10c
 
 2. TB4 Enhanced Collision Avoidance
 
-Beyond the immediate 10cm rewards motion, OM1 uses the TB4's collision switches to invoke an enhanced object avoidance behavior, which consists of turning 100 deg left or right, depending on which switch of several side or frontal collision switches were triggered. This "turning to face away" from the object is handled directly inside the `action` driver to ensure prompt responses to physical collisions:
+Beyond the immediate 10cm backwards motion, OM1 uses the TB4's collision switches to invoke an enhanced object avoidance behavior, which consists of turning 100 deg left or right, depending on which switch of several side or frontal collision switches were triggered. This "turning to face away" from the object is handled directly inside the `action` driver to ensure prompt responses to physical collisions:
 
 ```py
 # /actions/move_turtle/connector/zenoh.py

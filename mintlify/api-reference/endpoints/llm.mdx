@@ -498,9 +498,10 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 |------|-------------|
 | 200 | Success - Completion generated successfully |
 | 400 | Bad Request - Invalid JSON or malformed request |
+| 401 | Unauthorized - Missing or invalid API key |
 | 404 | Not Found - Unsupported provider or model |
-| 503 | Service Unavailable - Provider API unavailable or not configured |
 | 500 | Internal Server Error - Server-side processing error |
+| 503 | Service Unavailable - Provider API unavailable or not configured |
 
 ### Error Response Format
 
