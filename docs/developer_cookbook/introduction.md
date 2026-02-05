@@ -11,7 +11,7 @@ Here's what you can do with OM1
 2. Introduce a new mode
 3. Configure a new Input Plugin
 
-Before building with OM1, make sure you've completed the [Getting Started](../developing/1_get-started) guide and have OM1 installed. Understand the important concepts and components that are part of OM1.
+Before building with OM1, make sure you've completed the [Getting Started](developing/1_get-started) guide and have OM1 installed. Understand the important concepts and components that are part of OM1.
 
 Then dive into any recipe that interests you!
 
