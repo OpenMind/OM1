@@ -45,7 +45,7 @@ COINBASE_API_SECRET="-----BEGIN EC PRIVATE KEY-----\nyour-api-key-private-key\n-
 
 ## Coinbase Hackathon Quadruped Configuration
 
-Follow the instructions in `/robotics/unitree_go2_quadruped.mdx`. Then, run
+Follow the instructions in `/robotics/unitree_go2_quadruped.md`. Then, run
 
 ```bash
 uv run src/run.py cb_hackathon

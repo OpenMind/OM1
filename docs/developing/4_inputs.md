@@ -25,4 +25,4 @@ Here are a few examples for you to reuse and build on:
 - [VLM_Vila](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/vlm_vila.py)
 - [Arduino GPS](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/gps.py)
 
-Learn how to build a new input plugin [here](../developer_cookbook/input.mdx)
+Learn how to build a new input plugin [here](../developer_cookbook/input.md)

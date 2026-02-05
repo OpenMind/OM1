@@ -135,7 +135,7 @@ The `agent_inputs` section defines the inputs for the agent. Inputs might includ
 * GovernanceEthereum
 * more being added continuously...
 
-You can implement your own inputs by following the [Input Plugin Guide](4_inputs.mdx). The `agent_inputs` config section is specific to each input type. For example, the `VLM_COCO_Local` input accepts a `camera_index` parameter.
+You can implement your own inputs by following the [Input Plugin Guide](4_inputs.md). The `agent_inputs` config section is specific to each input type. For example, the `VLM_COCO_Local` input accepts a `camera_index` parameter.
 
 ## Cortex LLM (`cortex_llm`)
 
@@ -166,7 +166,7 @@ You can directly access other OpenAI style endpoints by specifying a custom API 
 * https://api.deepseek.com/v1
 * http://localhost:11434 (Ollama - local inference, no API key required)
 
-You can implement your own LLM endpoints or use more sophisticated approaches such as multiLLM robotics-focused endpoints by following the [LLM Guide](5_llms.mdx).
+You can implement your own LLM endpoints or use more sophisticated approaches such as multiLLM robotics-focused endpoints by following the [LLM Guide](5_llms.md).
 
 ## Simulators (`simulators`)
 
@@ -208,6 +208,6 @@ Defines the agent's available capabilities, including action names, their implem
   ]
 ```
 
-You can customize the actions following the [Action Plugin Guide](6_actions.mdx)
+You can customize the actions following the [Action Plugin Guide](6_actions.md)
 
 To introduce multimode config, refer [introduce new mode](https://docs.openmind.org/developer_cookbook/new_mode)

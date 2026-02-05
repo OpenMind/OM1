@@ -66,7 +66,7 @@ You can run the usual Ubuntu software updater without hosing the install.
 
 ## OM1
 
-Then, install OM1 on the Nvidia Thor from its command line, following the [standard instructions](../developing/1_get-started.mdx).
+Then, install OM1 on the Nvidia Thor from its command line, following the [standard instructions](../developing/1_get-started.md).
 
 ## RealSense Depth Camera
 

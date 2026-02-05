@@ -13,7 +13,7 @@ uv run src/run.py turtlebot4_lidar
 
 ### TB4 RPLIDAR Laserscan Data
 
-OM1 uses the TB4's RPLIDAR to tell the core LLMs about nearby objects. This information flows to the core LLMs from `/input/plugins/rplidar.py`. The RPLIDAR data are also used in the action driver to check for viable paths right before motions are executed. See the [RPLidar setup documentation](motion_planning_lidarA1M8.mdx) for more information.
+OM1 uses the TB4's RPLIDAR to tell the core LLMs about nearby objects. This information flows to the core LLMs from `/input/plugins/rplidar.py`. The RPLIDAR data are also used in the action driver to check for viable paths right before motions are executed. See the [RPLidar setup documentation](motion_planning_lidarA1M8.md) for more information.
 
 ### Core LLM Directed Motion
 

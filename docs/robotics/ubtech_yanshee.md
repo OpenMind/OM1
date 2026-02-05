@@ -19,7 +19,7 @@ description: "UbTech Yanshee Setup (Mini Humanoid)"
 
 ### Installation
 
-First, install the Yanshee mobile app on your phone. This will allow you to retrieve robot's IP address. Then, install OM1 on your laptop or PC, following the [standard instructions](../developing/1_get-started.mdx).
+First, install the Yanshee mobile app on your phone. This will allow you to retrieve robot's IP address. Then, install OM1 on your laptop or PC, following the [standard instructions](../developing/1_get-started.md).
 
 ### Connecting to the Robot
 

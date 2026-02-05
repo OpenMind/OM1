@@ -235,4 +235,4 @@ systemctl --user enable audio-defaults.service
 systemctl --user start audio-defaults.service
 ```
 
-Once you're done with above steps, you can proceed with OTA setup [here](./ota_setup)
+Once you're done with above steps, you can proceed with OTA setup [here](./ota_setup.md)

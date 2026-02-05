@@ -217,7 +217,7 @@ Press:
 * B to sit down
 * The D-pad allows you to steer the quadruped.
 
-See the [Quadruped Configurations](unitree_go2_quadruped_configurations.mdx) for additional configurations.
+See the [Quadruped Configurations](unitree_go2_quadruped_configurations.md) for additional configurations.
 
 ## Unitree Go2 EDU Common Problems
 

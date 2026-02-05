@@ -205,4 +205,4 @@ sudo apt install v4l-utils
 
 For next steps, you will need the BrainPack. If you don't have the BrainPack yet, you can skip this.
 
-Follow the guide [here](./system_config), to proceed.
+Follow the guide [here](./system_config.md), to proceed.

@@ -12,7 +12,7 @@ Make sure you have the following before installation:
 - Storage: At least 16GB free
 - Network: Internet access
 
-Then, install OM1 on the Raspberry Pi from its command line, following the [standard instructions](../developing/1_get-started.mdx).
+Then, install OM1 on the Raspberry Pi from its command line, following the [standard instructions](../developing/1_get-started.md).
 
 ## Done
 

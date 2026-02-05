@@ -112,7 +112,7 @@ You can install and run OM1
 
 ### Running OM1 on the Internal RPi4
 
-For fully autonomous use, install OM1 on the TurtleBot4's Raspberry Pi. On the RPi terminal command line, follow these [instructions](raspberrypi.mdx). When you see all the right topics listed in `ros2 topic list`, your TurtleBot4 is set up and you are ready to install OM1.
+For fully autonomous use, install OM1 on the TurtleBot4's Raspberry Pi. On the RPi terminal command line, follow these [instructions](raspberrypi.md). When you see all the right topics listed in `ros2 topic list`, your TurtleBot4 is set up and you are ready to install OM1.
 
 Install `uv` - Python package manager:
 ```bash
@@ -154,7 +154,7 @@ On the RPi4, there will be a lengthy delay before OM1 runs the first time you in
 
 ### Running OM1 on your Laptop
 
-Install OM1 and Zenoh on your laptop, following [Install OM1 on your laptop](../developing/1_get-started.mdx) and [Installing the Zenoh router](https://zenoh.io/docs/getting-started/installation/).
+Install OM1 and Zenoh on your laptop, following [Install OM1 on your laptop](../developing/1_get-started.md) and [Installing the Zenoh router](https://zenoh.io/docs/getting-started/installation/).
 
 Then, run OM1:
 
