@@ -33,37 +33,75 @@ For developer walkthrough and support reach out to: support@openmind.org
 
 ### LLM Models
 
+#### OpenAI
+
+| Model Name   | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
+| ------------ | --------------------------- | ---------------------------- |
+| gpt-4o       | 42500 OMCU                  | 170000 OMCU                  |
+| gpt-4o-mini  | 7000 OMCU                   | 28000 OMCU                   |
+| gpt-4.1      | 35000 OMCU                  | 140000 OMCU                  |
+| gpt-4.1-mini | 7000 OMCU                   | 28000 OMCU                   |
+| gpt-4.1-nano | 2000 OMCU                   | 8000 OMCU                    |
+| gpt-5        | 25000 OMCU                  | 200000 OMCU                  |
+| gpt-5-mini   | 4500 OMCU                   | 36000 OMCU                   |
+| gpt-5-nano   | 500 OMCU                    | 4000 OMCU                    |
+| gpt-5.1      | 25000 OMCU                  | 200000 OMCU                  |
+| gpt-5.2      | 35000 OMCU                  | 280000 OMCU                  |
+
+#### Gemini
+
 | Service                               | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
 |---------------------------------------|-----------------------------|------------------------------|
-| OpenAI GPT-4o                         | 8333 OMCU                   | 33333 OMCU                   |
-| OpenAI GPT-4o-mini                    | 500 OMCU                    | 2000 OMCU                    |
-| OpenAI GPT-4.1                        | 6667 OMCU                   | 26667 OMCU                   |
-| OpenAI GPT-4.1-mini                   | 1333 OMCU                   | 5333 OMCU                    |
-| OpenAI GPT-4.1-nano                   | 333 OMCU                    | 1333 OMCU                    |
-| OpenAI GPT-5                          | 4167 OMCU                   | 33333 OMCU                   |
-| OpenAI GPT-5-mini                     | 833 OMCU                    | 3333 OMCU                    |
-| OpenAI GPT-5-nano                     | 167 OMCU                    | 667 OMCU                     |
-| DeepSeek Chat                         | 467 OMCU                    | 933 OMCU                     |
-| Gemini 2.5 Flash                      | 1000 OMCU                   | 8333 OMCU                    |
-| Gemini 2.5 Flash Lite                 | 333 OMCU                    | 1333 OMCU                    |
-| Gemini 2.5 Pro                        | 8333 OMCU                   | 50K OMCU                     |
-| Gemini 3 Pro                          | 13333 OMCU                  | 60K OMCU                     |
-| Gemini 3 Flash                        | 3333 OMCU                   | 10K OMCU                     |
-| grok-2-latest                         | 6667 OMCU                   | 33333 OMCU                   |
-| grok-3-beta                           | 10k OMCU                    | 50k OMCU                     |
-| grok-4-latest                         | 10k OMCU                    | 50k OMCU                     |
-| grok-4                                | 10k OMCU                    | 50k OMCU                     |
-| qwen3-30b-a3b-instruct-2507 (Near AI) | 500 OMCU                    | 1500 OMCU                    |
-| qwen-2.5-7b-instruct (Near AI)        | 133 OMCU                    | 333 OMCU                     |
-| qwen2.5-vl-72b-instruct (Near AI)     | 1967 OMCU                   | 1967 OMCU                    |
-| llama-3.1-70b-instruct (Meta Llama)   | 333 OMCU                    | 933 OMCU                     |
-| llama-3.3-70b-instruct (Meta Llama)   | 3K OMCU                     | 3K OMCU                      |
-| anthropic/claude-sonnet-4.5           | 10K OMCU                    | 50K OMCU                     |
-| anthropic/claude-opus-4.1             | 50K OMCU                    | 250K OMCU                    |
+| Gemini 2.5 Flash                      | 3000 OMCU                   | 25000 OMCU                   |
+| Gemini 2.5 Flash Lite                 | 1000 OMCU                   | 4000 OMCU                    |
+| Gemini 2.5 Pro                        | 25000 OMCU                  | 150000 OMCU                  |
+| Gemini 3 Pro                          | 40000 OMCU                  | 180000 OMCU                  |
+| Gemini 3 Flash                        | 10000 OMCU                  | 30000 OMCU                   |
+
+#### DeepSeek
+
+| Service                               | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
+|---------------------------------------|-----------------------------|------------------------------|
+| DeepSeek Chat                         | 1400 OMCU                   | 2800 OMCU                    |
+
+
+#### X.AI Grok
+
+| Service                               | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
+|---------------------------------------|-----------------------------|------------------------------|
+| grok-2-latest                         | 20000 OMCU                  | 100000 OMCU                  |
+| grok-3-beta                           | 30000 OMCU                  | 150000 OMCU                  |
+| grok-4-latest                         | 30000 OMCU                  | 150000 OMCU                  |
+| grok-4                                | 30000 OMCU                  | 150000 OMCU                  |
+
+#### Near AI
+
+| Service                               | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
+|---------------------------------------|-----------------------------|------------------------------|
+| Qwen/Qwen3-30B-A3B-Instruct-2507      | 1500 OMCU                   | 5500 OMCU                    |
+| deepseek-ai/DeepSeek-V3.1             | 10500 OMCU                  | 31000 OMCU                   |
+| openai/gpt-oss-120b                   | 1500 OMCU                   | 5500 OMCU                    |
+| openai/gpt-5.2                        | 18000 OMCU                  | 155000 OMCU                  |
+| zai-org/GLM-4.7                       | 8500 OMCU                   | 33000 OMCU                   |
+| anthropic/claude-sonnet-4-5           | 30000 OMCU                  | 155000 OMCU                  |
+| google/gemini-3-pro                   | 12500 OMCU                  | 150000 OMCU                  |
+
+
+#### Open Router
+
+| Service                               | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
+|---------------------------------------|-----------------------------|------------------------------|
+| deepseek/deepseek-v3.2                | 2500 OMCU                   | 3800 OMCU                    |
+| anthropic/claude-sonnet-4.5           | 30000 OMCU                  | 150000 OMCU                  |
+| anthropic/claude-opus-4.5             | 50000 OMCU                  | 250000 OMCU                  |
+| anthropic/claude-haiku-4.5            | 10000 OMCU                  | 50000 OMCU                   |
+| moonshotai/kimi-k2.5                  | 4500 OMCU                   | 25000 OMCU                   |
+| minimax/minimax-m2.1                  | 2700 OMCU                   | 9500 OMCU                    |
+| z-ai/glm-4.7                          | 4000 OMCU                   | 15000 OMCU                   |
+| x-ai/grok-4-fast                      | 2000 OMCU                   | 5000 OMCU                    |
+| meta-llama/llama-3.3-70b-instruct     | 9000 OMCU                   | 9000 OMCU                    |
 
 <Note>
-Near AI models are hosted and served by [Near AI](https://cloud.near.ai).
-Meta Llama and Anthropic models are hosted and served by [Openrouter](https://openrouter.ai/).
 For free local inference, [Ollama](https://ollama.ai) supports models like llama3.2, mistral, and phi3 with no API costs.
 </Note>
 
@@ -71,8 +109,8 @@ For free local inference, [Ollama](https://ollama.ai) supports models like llama
 
 | Service              | Price (per 1M characters) |
 |----------------------|---------------------------|
-| Eleven Labs          | 10k OMCU                  |
-| Riva                 | 3333 OMCU                 |
+| Eleven Labs          | 30k OMCU                  |
+| Riva                 | 10K OMCU                 |
 
 We will support more models in the future. Contact us if you have any questions or need a custom solution.
 
@@ -80,4 +118,4 @@ We will support more models in the future. Contact us if you have any questions 
 
 | Service              | Price (per 1 minute) |
 |----------------------|----------------------|
-| Google ASR           | 17 OMCU              |
+| Google ASR           | 50 OMCU              |
