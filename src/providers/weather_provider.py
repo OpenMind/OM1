@@ -199,7 +199,7 @@ class WeatherProvider:
         Exception
             If weather data cannot be fetched.
         """
-        if not force_refresh and self._is_cache_valid():
+        if not force_refresh and self._is_cache_valid() and self._cache is not None:
             logging.debug("Returning cached weather data")
             return self._cache
 
