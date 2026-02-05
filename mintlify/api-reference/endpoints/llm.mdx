@@ -10,3 +10,25 @@ For testing and introductory educational purposes, we integrate with multiple la
 # Multi-Agent LLM Integration
 
 The Multi-Agent robotics endpoint (accessed via `post /api/core/agent`) accepts fused data and routes them to a collaborative multi-agent system, providing a powerful way to solve more complex robotics tasks. For more information, see [developing/llms](../../developing/5_llms).
+
+## cURL commands
+
+```bash
+curl --location 'https://api.openmind.org/api/core/openrouter/chat/completions' \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer <YOUR_KEY>' \
+--data '{
+    "model": "anthropic/claude-opus-4.1",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Hello, how are you?"
+        }
+    ]
+}'
+```
+
+Replace **YOUR_KEY** with your api-key from the [portal](https://portal.openmind.org/).
+
+You can update the model name as per your preference. Get the list of supported models from [here](../../developing/5_llms)
