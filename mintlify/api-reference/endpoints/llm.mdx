@@ -15,22 +15,6 @@ The OpenMind LLM API provides unified access to multiple leading large language 
 |--------|----------|-------------|
 | POST | `/api/core/{provider}/chat/completions` | Send chat completion requests to the specified LLM provider |
 
-<<<<<<< Updated upstream
-```bash
-curl --location 'https://api.openmind.org/api/core/openrouter/chat/completions' \
---header 'Accept: application/json' \
---header 'Content-Type: application/json' \
---header 'Authorization: Bearer <YOUR_KEY>' \
---data '{
-    "model": "anthropic/claude-opus-4.1",
-    "messages": [
-        {
-            "role": "user",
-            "content": "Hello, how are you?"
-        }
-    ]
-}'
-=======
 ## Supported Providers
 
 OpenMind supports the following LLM providers:
@@ -57,7 +41,6 @@ gpt-4.1-nano
 gpt-5
 gpt-5-mini
 gpt-5-nano
->>>>>>> Stashed changes
 ```
 
 ### DeepSeek Models
