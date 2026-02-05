@@ -95,7 +95,7 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
 
         try:
             response = requests.post(
-                f"{self.fabric_endpoint}",
+                self.fabric_endpoint,
                 json={
                     "method": "omp2p_shareStatus",
                     "params": [
