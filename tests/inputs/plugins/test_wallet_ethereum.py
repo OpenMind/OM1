@@ -70,9 +70,7 @@ async def test_poll_success():
         sensor = WalletEthereum(config=SensorConfig())
         sensor.ETH_balance_previous = 1.0
 
-        with (
-            patch("inputs.plugins.wallet_ethereum.asyncio.sleep", new=AsyncMock()),
-        ):
+        with patch("inputs.plugins.wallet_ethereum.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
             assert result is not None
