@@ -1,5 +1,6 @@
 import json
 import logging
+import queue
 import threading
 from typing import Callable, Optional
 
@@ -92,6 +93,9 @@ class WhisperASRProvider:
         self._device_index = self._resolve_device(device_id, microphone_name)
         self._stream: Optional[pyaudio.Stream] = None
         self._audio_thread: Optional[threading.Thread] = None
+
+        self._transcription_queue: queue.Queue[Optional[bytes]] = queue.Queue()
+        self._transcription_thread: Optional[threading.Thread] = None
 
     def _resolve_device(
         self, device_id: Optional[int], microphone_name: Optional[str]
@@ -203,12 +207,26 @@ class WhisperASRProvider:
                 self._silent_chunks = 0
                 self._has_speech = False
 
-                # Run transcription in a separate thread
-                threading.Thread(
-                    target=self._transcribe,
-                    args=(audio_to_transcribe,),
-                    daemon=True,
-                ).start()
+                self._transcription_queue.put(audio_to_transcribe)
+
+    def _transcription_worker(self) -> None:
+        """
+        Dedicated worker loop that processes transcription requests sequentially.
+
+        Runs in a single thread, pulling audio data from the queue and
+        transcribing one at a time. This serializes model access and prevents
+        unbounded thread spawning.
+        """
+        while self.running:
+            try:
+                audio_data = self._transcription_queue.get(timeout=0.5)
+                if audio_data is None:
+                    break
+                self._transcribe(audio_data)
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logging.error(f"[Whisper] Transcription worker error: {e}")
 
     def _transcribe(self, audio_data: bytes) -> None:
         """
@@ -278,18 +296,36 @@ class WhisperASRProvider:
             target=self._audio_capture_loop, daemon=True
         )
         self._audio_thread.start()
+
+        self._transcription_thread = threading.Thread(
+            target=self._transcription_worker, daemon=True
+        )
+        self._transcription_thread.start()
+
         logging.info("Whisper ASR provider started")
 
     def stop(self) -> None:
         """
         Stop the Whisper ASR provider.
 
-        Stops audio capture and clears the audio buffer.
+        Stops audio capture, transcription worker, and releases PyAudio resources.
         """
         self.running = False
+
+        self._transcription_queue.put(None)
+
         if self._audio_thread:
             self._audio_thread.join(timeout=2.0)
             self._audio_thread = None
+
+        if self._transcription_thread:
+            self._transcription_thread.join(timeout=2.0)
+            self._transcription_thread = None
+
         with self._buffer_lock:
             self._audio_buffer.clear()
+
+        if self._pa:
+            self._pa.terminate()
+
         logging.info("Whisper ASR provider stopped")
