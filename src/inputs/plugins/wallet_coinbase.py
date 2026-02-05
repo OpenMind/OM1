@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from cdp import Cdp, Wallet
+from cdp import Cdp, Wallet, WalletData
 from pydantic import Field
 
 from inputs.base import Message, SensorConfig
@@ -34,7 +34,12 @@ class WalletCoinbaseConfig(SensorConfig):
     asset_id: str = Field(default="eth", description="Asset ID to query")
     network_id: str = Field(
         default="base-sepolia",
-        description="Network ID for wallet creation (e.g., base-sepolia, base-mainnet)",
+        description=(
+            "Network ID for wallet creation. Supported networks include: "
+            "base-sepolia (testnet), base-mainnet, ethereum-mainnet, ethereum-sepolia, "
+            "polygon-mainnet, arbitrum-mainnet. See CDP SDK docs for full list: "
+            "https://docs.cdp.coinbase.com/wallet-api/docs/networks"
+        ),
     )
     wallet_seed_file: str = Field(
         default=DEFAULT_WALLET_SEED_FILE,
@@ -149,7 +154,11 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
 
     def _load_wallet_from_seed_file(self) -> Optional[Wallet]:
         """
-        Load wallet from saved seed file.
+        Load wallet from saved seed file using Wallet.import_data.
+
+        This method properly restores the wallet with signing capabilities
+        by using WalletData, which handles cases where the wallet may have
+        been deleted from the server.
 
         Returns
         -------
@@ -161,54 +170,138 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
                 return None
 
             with open(self.wallet_seed_file, "r") as f:
-                wallet_data = json.load(f)
+                saved_data = json.load(f)
 
-            wallet_id = wallet_data.get("wallet_id")
-            seed = wallet_data.get("seed")
+            wallet_id = saved_data.get("wallet_id")
+            seed = saved_data.get("seed")
+            network_id = saved_data.get("network_id")
 
-            if not wallet_id:
-                logging.warning("Wallet seed file exists but missing wallet_id")
+            if not wallet_id or not seed:
+                logging.warning(
+                    "Wallet seed file exists but missing wallet_id or seed"
+                )
                 return None
 
-            wallet = Wallet.fetch(wallet_id)
+            # Use WalletData to properly restore wallet with signing capabilities
+            wallet_data = WalletData(
+                wallet_id=wallet_id,
+                seed=seed,
+                network_id=network_id,
+            )
 
-            # Load seed for signing capabilities
-            if seed:
-                wallet.load_seed(self.wallet_seed_file)
-                logging.info(f"Loaded wallet with signing capabilities: {wallet.id}")
-            else:
-                logging.info(f"Loaded wallet (view-only): {wallet.id}")
+            try:
+                # import_data handles wallet restoration properly
+                wallet = Wallet.import_data(wallet_data)
+                logging.info(
+                    f"Loaded wallet with signing capabilities: {wallet.id}"
+                )
+                return wallet
+            except Exception as fetch_error:
+                # Wallet may have been deleted from server
+                # Try to recreate with the same seed to preserve the address
+                logging.warning(
+                    f"Wallet {wallet_id} not found on server, attempting to recreate: {fetch_error}"
+                )
+                return self._recreate_wallet_from_seed(seed, network_id)
 
-            return wallet
+        except json.JSONDecodeError as e:
+            logging.warning(f"Wallet seed file is malformed: {e}")
+            return None
         except Exception as e:
             logging.warning(f"Could not load wallet from seed file: {e}")
             return None
 
-    def _load_wallet_seed(self, wallet: Wallet) -> None:
+    def _recreate_wallet_from_seed(self, seed: str, network_id: Optional[str]) -> Optional[Wallet]:
+        """
+        Recreate a wallet from seed when the original wallet was deleted.
+
+        This preserves the wallet addresses derived from the seed.
+
+        Parameters
+        ----------
+        seed : str
+            The wallet seed hex string.
+        network_id : Optional[str]
+            The network ID for the wallet.
+
+        Returns
+        -------
+        Optional[Wallet]
+            The recreated wallet, or None if recreation failed.
+        """
+        try:
+            target_network = network_id or self.network_id
+            logging.info(f"Recreating wallet on network: {target_network}")
+
+            # Create new wallet with the existing seed
+            wallet = Wallet.create_with_seed(
+                seed=seed,
+                network_id=target_network,
+            )
+
+            # Update saved data with new wallet ID
+            self._save_wallet_seed(wallet)
+
+            logging.info(
+                f"Wallet recreated with new ID: {wallet.id}, "
+                f"preserving original addresses"
+            )
+            return wallet
+        except Exception as e:
+            logging.error(f"Failed to recreate wallet from seed: {e}")
+            return None
+
+    def _load_wallet_seed(self, wallet: Wallet) -> bool:
         """
         Attempt to load seed for an existing wallet to enable signing.
+
+        Uses load_seed_from_file (the non-deprecated API) to restore
+        signing capabilities for a fetched wallet.
 
         Parameters
         ----------
         wallet : Wallet
             The wallet to load seed for.
+
+        Returns
+        -------
+        bool
+            True if seed was loaded successfully, False otherwise.
         """
         try:
-            if os.path.exists(self.wallet_seed_file):
-                with open(self.wallet_seed_file, "r") as f:
-                    wallet_data = json.load(f)
+            if not os.path.exists(self.wallet_seed_file):
+                return False
 
-                if wallet_data.get("wallet_id") == wallet.id and wallet_data.get(
-                    "seed"
-                ):
-                    wallet.load_seed(self.wallet_seed_file)
-                    logging.info(f"Loaded seed for wallet: {wallet.id}")
+            with open(self.wallet_seed_file, "r") as f:
+                saved_data = json.load(f)
+
+            if saved_data.get("wallet_id") != wallet.id:
+                logging.debug(
+                    f"Seed file wallet ID ({saved_data.get('wallet_id')}) "
+                    f"does not match current wallet ({wallet.id})"
+                )
+                return False
+
+            if not saved_data.get("seed"):
+                logging.debug("Seed file exists but seed is empty")
+                return False
+
+            # Use the non-deprecated API
+            wallet.load_seed_from_file(self.wallet_seed_file)
+            logging.info(f"Loaded seed for wallet: {wallet.id}")
+            return True
+
         except Exception as e:
             logging.debug(f"Could not load seed for wallet: {e}")
+            return False
 
     def _create_new_wallet(self) -> Optional[Wallet]:
         """
         Create a new wallet and save its seed for future use.
+
+        If seed saving fails, the wallet is still returned but a critical
+        warning is logged. The wallet ID is set in the environment so the
+        current session can continue working.
 
         Returns
         -------
@@ -220,12 +313,18 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
             wallet = Wallet.create(network_id=self.network_id)
 
             # Save wallet data for future use
-            self._save_wallet_seed(wallet)
+            seed_saved = self._save_wallet_seed(wallet)
 
             logging.info(f"Created new wallet: {wallet.id}")
             logging.info(
                 f"Default address: {wallet.default_address.address_id if wallet.default_address else 'N/A'}"
             )
+
+            if not seed_saved:
+                logging.warning(
+                    f"Wallet {wallet.id} created but seed was not persisted. "
+                    f"This wallet may not be recoverable after restart."
+                )
 
             # Set environment variable for current session
             os.environ["COINBASE_WALLET_ID"] = wallet.id
@@ -235,19 +334,30 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
             logging.error(f"Failed to create new wallet: {e}")
             return None
 
-    def _save_wallet_seed(self, wallet: Wallet) -> None:
+    def _save_wallet_seed(self, wallet: Wallet) -> bool:
         """
         Save wallet seed to file for future use.
+
+        The seed file is saved with restrictive permissions (0600) for security.
+        If saving fails, a warning is logged with the wallet ID so users can
+        manually save it.
 
         Parameters
         ----------
         wallet : Wallet
             The wallet to save.
+
+        Returns
+        -------
+        bool
+            True if seed was saved successfully, False otherwise.
         """
         try:
             # Ensure directory exists
+            # Note: os.path.dirname returns empty string for files in current directory,
+            # which is acceptable since current directory always exists
             seed_dir = os.path.dirname(self.wallet_seed_file)
-            if seed_dir:
+            if seed_dir:  # Only create if there's a directory component
                 Path(seed_dir).mkdir(parents=True, exist_ok=True)
 
             # Export and save wallet data
@@ -265,8 +375,16 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
             os.chmod(self.wallet_seed_file, 0o600)
 
             logging.info(f"Wallet seed saved to: {self.wallet_seed_file}")
+            return True
+
         except Exception as e:
-            logging.error(f"Failed to save wallet seed: {e}")
+            # Log critical warning with wallet ID so user can manually save
+            logging.error(
+                f"CRITICAL: Failed to save wallet seed for wallet {wallet.id}: {e}. "
+                f"Please manually save this wallet ID to avoid losing access. "
+                f"Set COINBASE_WALLET_ID={wallet.id} in your environment."
+            )
+            return False
 
     async def _poll(self) -> List[float]:
         """
