@@ -62,19 +62,10 @@
                         "pages": [
                             "full_autonomy_guidelines/brainpack_introduction",
                             "full_autonomy_guidelines/architecture_overview",
-                            "full_autonomy_guidelines/om1_system_setup",
-                            "full_autonomy_guidelines/pre_config",
-                            "robotics/nvidia_thor",
-                            {
-                                "group": "Full Autonomy Components",
-                                "pages": [
-                                    "full_autonomy_guidelines/om1_avatar",
-                                    "full_autonomy_guidelines/om",
-                                    "full_autonomy_guidelines/om1_ros2_sdk",
-                                    "full_autonomy_guidelines/om1_video_processor"
-                                ]
-
-                            }
+                            "full_autonomy_guidelines/setup_system",
+                            "full_autonomy_guidelines/system_config",
+                            "full_autonomy_guidelines/ota_setup",
+                            "robotics/nvidia_thor"
                         ]
                     },
                     {
