@@ -72,7 +72,6 @@ async def test_poll_success():
 
         with (
             patch("inputs.plugins.wallet_ethereum.asyncio.sleep", new=AsyncMock()),
-            patch("inputs.plugins.wallet_ethereum.random.randint", return_value=5),
         ):
             result = await sensor._poll()
 
