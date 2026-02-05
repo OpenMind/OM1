@@ -251,6 +251,28 @@ The RAG agent will:
 - Provide context-aware responses based on your uploaded content
 - Access and search through your user-uploaded documents and files
 
+#### Supported File Types
+
+The following file formats are supported for document upload:
+- **Documents**: PDF, TXT, MD, DOCX
+- **Code**: PY, JS, TS, JSON, YAML
+- **Data**: CSV, XLSX
+
+#### Troubleshooting Upload Issues
+
+If you encounter errors when uploading documents:
+
+| Error | Possible Cause | Solution |
+|-------|---------------|----------|
+| "Error uploading file" | File size exceeds limit | Ensure file is under 10MB |
+| "Error uploading file" | Unsupported file format | Check supported file types above |
+| "Error uploading file" | Authentication issue | Verify your API key is valid and not expired |
+| HTTP 500 error | Server-side issue | Wait a few minutes and retry, or [report an issue](https://github.com/OpenMind/OM1/issues) |
+
+<Tip>
+If upload issues persist, please [open a GitHub issue](https://github.com/OpenMind/OM1/issues/new?template=%F0%9F%90%9B-bug-report.md) with details about the file type, size, and error message.
+</Tip>
+
 ## Examples
 
 ### A Smart Dog
