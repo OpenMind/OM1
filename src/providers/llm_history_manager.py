@@ -112,17 +112,12 @@ class LLMHistoryManager:
         """
         custom_path = getattr(self.config, "history_storage_path", None)
         if custom_path:
-            path = Path(custom_path)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            return path
-
-        base_dir = Path.home() / ".om1" / "history"
-        base_dir.mkdir(parents=True, exist_ok=True)
+            return Path(custom_path)
 
         safe_agent_name = "".join(
             c if c.isalnum() or c in "-_" else "_" for c in (self.agent_name or "agent")
         )
-        return base_dir / f"{safe_agent_name}.json"
+        return Path.home() / ".om1" / "history" / f"{safe_agent_name}.json"
 
     def _save_history(self) -> None:
         """
@@ -142,18 +137,22 @@ class LLMHistoryManager:
                 "history": [asdict(msg) for msg in self.history],
             }
 
-            # Atomic write: write to temp file, then rename
             dir_path = self._history_storage_path.parent
+            dir_path.mkdir(parents=True, exist_ok=True)
+
             fd, temp_path = tempfile.mkstemp(
                 suffix=".tmp", prefix="history_", dir=str(dir_path)
             )
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
 
-                # Atomic rename (POSIX) / replace (Windows)
                 os.replace(temp_path, self._history_storage_path)
-                logging.debug(f"Saved conversation history to {self._history_storage_path}")
+                logging.debug(
+                    f"Saved conversation history to {self._history_storage_path}"
+                )
             except Exception:
                 # Clean up temp file on error
                 if os.path.exists(temp_path):
@@ -196,7 +195,9 @@ class LLMHistoryManager:
             # Restore history
             history_data = data.get("history", [])
             self.history = [
-                ChatMessage(role=msg.get("role", "user"), content=msg.get("content", ""))
+                ChatMessage(
+                    role=msg.get("role", "user"), content=msg.get("content", "")
+                )
                 for msg in history_data
                 if isinstance(msg, dict)
             ]

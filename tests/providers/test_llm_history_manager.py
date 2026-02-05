@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import openai
 import pytest
@@ -709,21 +709,26 @@ def test_load_history_handles_corrupted_file(persist_config, temp_history_dir):
     assert manager.frame_index == 0
 
 
-def test_persistence_disabled_does_not_save(no_persist_config, tmp_path):
-    """Test that persistence is disabled when persist_history is False."""
-    client = AsyncMock()
-    manager = LLMHistoryManager(no_persist_config, client)
+def test_persistence_disabled_does_not_save(tmp_path):
+    """Test that persist_history=False creates no files or directories."""
+    target_dir = tmp_path / "should_not_exist"
 
-    # Add some history
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+    config.persist_history = False
+    config.history_storage_path = str(target_dir / "history.json")
+
+    client = AsyncMock()
+    manager = LLMHistoryManager(config, client)
+
     manager.history = [
         ChatMessage(role="user", content="Test message"),
     ]
-
-    # Save should be no-op
     manager._save_history()
 
-    # Verify no file was created at the storage path
-    # (persistence is disabled so _save_history returns early)
+    assert not target_dir.exists()
 
 
 def test_clear_history_resets_state(persist_config, temp_history_dir):
@@ -766,27 +771,34 @@ def test_clear_history_deletes_file(persist_config, temp_history_dir):
     assert not Path(persist_config.history_storage_path).exists()
 
 
-def test_atomic_write_survives_interruption(persist_config, temp_history_dir):
-    """Test that atomic write doesn't corrupt existing file on error."""
+def test_atomic_write_preserves_original_on_error(persist_config, temp_history_dir):
+    """Test that a failed write doesn't corrupt the existing history file."""
     import json
 
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
 
-    # Save initial history
     manager.history = [
         ChatMessage(role="user", content="Original message"),
     ]
     manager._save_history()
 
-    # Verify initial save
     history_file = Path(persist_config.history_storage_path)
     with open(history_file) as f:
         data = json.load(f)
     assert data["history"][0]["content"] == "Original message"
 
-    # The atomic write uses temp file + rename, so even if there's an error
-    # during write, the original file should remain intact
+    manager.history = [
+        ChatMessage(role="user", content="New message that should not persist"),
+    ]
+    with patch(
+        "providers.llm_history_manager.json.dump", side_effect=OSError("Disk full")
+    ):
+        manager._save_history()
+
+    with open(history_file) as f:
+        data = json.load(f)
+    assert data["history"][0]["content"] == "Original message"
 
 
 def test_get_history_storage_path_sanitizes_agent_name(no_persist_config):
@@ -851,3 +863,84 @@ def test_version_compatibility_warning(persist_config, temp_history_dir, caplog)
 
     # But should still load the data
     assert len(manager.history) == 1
+
+
+def test_save_load_round_trip(persist_config, temp_history_dir):
+    """Test full save → restart → load cycle preserves identical state."""
+    client = AsyncMock()
+
+    manager1 = LLMHistoryManager(persist_config, client)
+    manager1.history = [
+        ChatMessage(role="user", content="Hello robot"),
+        ChatMessage(role="assistant", content="Hello human!"),
+        ChatMessage(role="user", content="How are you?"),
+    ]
+    manager1.frame_index = 7
+    manager1._save_history()
+
+    manager2 = LLMHistoryManager.__new__(LLMHistoryManager)
+    manager2.config = persist_config
+    manager2.agent_name = persist_config.agent_name
+    manager2.frame_index = 0
+    manager2.history = []
+    manager2._persist_history = True
+    manager2._history_storage_path = Path(persist_config.history_storage_path)
+    manager2._load_history()
+
+    assert len(manager2.history) == 3
+    assert manager2.history[0].role == "user"
+    assert manager2.history[0].content == "Hello robot"
+    assert manager2.history[1].role == "assistant"
+    assert manager2.history[1].content == "Hello human!"
+    assert manager2.history[2].role == "user"
+    assert manager2.history[2].content == "How are you?"
+    assert manager2.frame_index == 7
+
+
+@pytest.mark.asyncio
+async def test_update_history_decorator_persists_to_disk(tmp_path):
+    """Test that update_history decorator writes history to disk after each frame."""
+    history_file = tmp_path / "decorator_test.json"
+
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 10
+    config.agent_name = "TestBot"
+    config.persist_history = True
+    config.history_storage_path = str(history_file)
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Hello")]
+            return response
+
+    provider = MockLLMProvider()
+    provider.io_provider.add_input("audio", "Test input", 1234.0)
+
+    assert not history_file.exists()
+
+    await provider.process("test prompt")
+
+    assert history_file.exists()
+
+    import json
+
+    with open(history_file) as f:
+        data = json.load(f)
+
+    assert len(data["history"]) == 2
+    assert data["history"][0]["role"] == "user"
+    assert data["history"][1]["role"] == "assistant"
+    assert data["frame_index"] == 1
