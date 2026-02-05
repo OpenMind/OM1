@@ -93,7 +93,7 @@ class LLMHistoryManager:
         self.io_provider = IOProvider()
 
         # persistence settings
-        self._persist_history = getattr(config, "persist_history", False)
+        self._persist_history = getattr(config, "persist_history", False) is True
         self._history_storage_path = self._get_history_storage_path()
 
         # load existing history from disk if persistence is enabled
@@ -111,7 +111,7 @@ class LLMHistoryManager:
             otherwise defaults to ~/.om1/history/{agent_name}.json
         """
         custom_path = getattr(self.config, "history_storage_path", None)
-        if custom_path:
+        if isinstance(custom_path, str):
             return Path(custom_path)
 
         safe_agent_name = "".join(
