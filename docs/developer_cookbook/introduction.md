@@ -12,7 +12,7 @@ Here's what you can do with OM1
 3. Configure a new Input Plugin
 
 Before building with OM1, make sure you've completed the [Getting Started](developing/1_get-started) guide and have OM1 installed. Understand the important concepts and components that are part of OM1.
-
+[zenoh](../robotics/zenoh.md)
 Then dive into any recipe that interests you!
 
 ## Development workflow
