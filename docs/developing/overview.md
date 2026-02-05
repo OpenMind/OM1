@@ -1,29 +1,25 @@
-<table data-view="cards">
-  <thead>
-    <tr>
-      <th></th>
-      <th></th>
-      <th data-hidden data-card-target data-type="content-ref"></th>
-      <th data-hidden data-card-cover data-type="files"></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Quick Start</strong></td>
-      <td>Get started with OM  1</td>
-      <td><a href="https://docs.openmind.org/developing/0_introduction">here</a></td>
-      <i class="fa-solid fa-check"></i>
-    </tr>
-    <tr>
-      <td><strong>Quick Start</strong></td>
-      <td>Get started with OM  1</td>
-      <td><a href="https://docs.openmind.org/developing/0_introduction">here</a></td>
-      <td><a href="https://example.com/image1.svg">example_image1.svg</a></td>
-    </tr>
-    <tr>
-      <td><strong>Quick Start</strong></td>
-      <td>Get started with OM  1</td>
-      <td><a href="https://docs.openmind.org/developing/0_introduction">here</a></td>
-      <td><a href="https://example.com/image1.svg">example_image1.svg</a></td>
-  </tbody>
-</table>
+<div className="hero">
+<h1 className="hero-header">Welcome to OpenMind's OM1</h1>
+<p className="hero-p">Explore our topics to get started</p>
+</div>
+
+<Columns cols={2} className="hero-cards">
+  <Card title="Get started " icon="check" href="./developing/0_introduction">
+    [with OpenMind's OM1](./developing/0_introduction)
+  </Card>
+  <Card title="OM1 API Reference" icon="link" href="./api-reference/introduction">
+    [Our APIs](./api-reference/introduction)
+  </Card>
+  <Card title="Run OM1" icon="dog" href="./robotics/unitree_go2_quadruped">
+    [on a Unitree Go2 EDU Quadruped](./robotics/unitree_go2_quadruped)
+  </Card>
+  <Card title="Run OM1" icon="robot" href="./robotics/unitree_g1_humanoid">
+    [on a Unitree G1 EDU Humanoid](./robotics/unitree_g1_humanoid)
+  </Card>
+  <Card title="Full Autonomy" icon="chart-diagram" href="./full_autonomy_guidelines/architecture_overview">
+    [Full Autonomy Software Stack](./full_autonomy_guidelines/architecture_overview)
+  </Card>
+  <Card title="BrainPack" icon="brain" href="./full_autonomy_guidelines/brainpack_introduction">
+    [Introduction to the BrainPack](./full_autonomy_guidelines/brainpack_introduction)
+  </Card>
+</Columns>
