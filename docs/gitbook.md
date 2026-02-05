@@ -1,4 +1,3 @@
-# OpenMind
+# Overview
 
-Overview
 {% include "./developing/overview.md" %}
