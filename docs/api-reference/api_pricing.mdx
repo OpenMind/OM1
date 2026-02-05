@@ -22,7 +22,9 @@ $5 per month
 
 Unlimited API key
 
-Low rate limits (5 requests/ per second)
+5 requests / second
+
+Session memory (short-term)
 
 Short-term memory
 
@@ -34,17 +36,15 @@ $25 per month
 
 Higher rate limits
 
-50 requests/per second
+20 requests/per second
 
 priority queue
 
-Long-term memory (available March 2026)
+Long-term memory (ships March)
 
 Email Support
 
 App Store publishing
-
-Limited apps can be downloaded every month
 
 15K OMCU
 </Card>
@@ -52,11 +52,9 @@ Limited apps can be downloaded every month
 <Card title="Pro" icon="coin">
 $99 per month
 
-200 requests/per second
+40 requests/per second
 
-Unlimited long-term memory
-
-Unlimited app store review
+Advanced memory controls (ships June)
 
 Slack/Private support channel
 
@@ -66,15 +64,13 @@ Slack/Private support channel
 <Card title="Enterprise" icon="coin">
 $999 per month
 
-Dedicated capacity/GPU pools
+100 requests/per second
 
-Custom memory backend
+Dedicated capacity / GPU pools (ships later this year)
 
-Private model access (available Q4 2026)
+Custom integration support
 
-Unlimited app store review
-
-Slack/Private support channel
+Private model access (ships later this year)
 
 1.5M OMCU
 </Card>
