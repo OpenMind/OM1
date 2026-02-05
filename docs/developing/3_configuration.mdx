@@ -95,9 +95,13 @@ The runtime/version.py module handles:
 
     Initial stable configuration version.
 
-  - `v1.0.2` (latest)
+  - `v1.0.2`
 
     Adds support for context-aware mode for full autonomy.
+
+  - `v1.0.3` (latest)
+
+    Adds support for multiple TTS.
 
 Note: Always use the latest supported version in your configuration files unless you have a specific reason to pin an older version.
 
