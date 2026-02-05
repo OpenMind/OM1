@@ -1,5 +1,5 @@
 {
-  version: "v1.0.1",
+  version: "v1.0.2",
   hertz: 1,
   unitree_ethernet: "lo",
   name: "bits",
@@ -41,7 +41,7 @@
     {
       name: "move_go2_autonomy",
       llm_label: "move",
-      connector: "unitree_sdk_advance",
+      connector: "unitree_om_path_sdk",
     },
     {
       name: "speak",
