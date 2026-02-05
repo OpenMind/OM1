@@ -134,12 +134,12 @@ The request body follows the OpenAI Chat Completions API format:
 ### Basic Request Example
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
-  -H "Authorization: Bearer om1_live_your_api_key" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "model": "gpt-4o",
+curl --location 'https://api.openmind.org/api/core/openrouter/chat/completions' \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer <YOUR_KEY>' \
+--data '{
+    "model": "anthropic/claude-sonnet-4.5",
     "messages": [
       {
         "role": "user",
