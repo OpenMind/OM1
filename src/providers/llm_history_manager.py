@@ -111,7 +111,7 @@ class LLMHistoryManager:
             otherwise defaults to ~/.om1/history/{agent_name}.json
         """
         custom_path = getattr(self.config, "history_storage_path", None)
-        if isinstance(custom_path, str):
+        if isinstance(custom_path, str) and custom_path:
             return Path(custom_path)
 
         safe_agent_name = "".join(
@@ -414,6 +414,8 @@ class LLMHistoryManager:
                         logging.warning(
                             f"Truncated {excess} oldest messages after exception"
                         )
+                finally:
+                    self._save_history()
 
             self._summary_task.add_done_callback(callback)
 
