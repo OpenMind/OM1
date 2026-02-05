@@ -24,6 +24,11 @@ class MockAction:
     exclude_from_prompt: bool = False
 
 
+@dataclass
+class MockActionResult:
+    action: str
+
+
 def create_mock_config(
     agent_actions: Optional[List[MockAction]] = None,
 ) -> RuntimeConfig:
@@ -94,3 +99,92 @@ def test_fuser_with_inputs_and_actions(mock_describe):
             io_provider.fuser_available_actions
             == "AVAILABLE ACTIONS:\naction description\n\naction description\n\n\n\nWhat will you do? Actions:"
         )
+
+
+def test_fuser_with_empty_finished_promises():
+    """Test that empty finished_promises produces no extra section in prompt."""
+    config = create_mock_config()
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse([], [])
+
+        assert "PREVIOUS ACTION RESULTS" not in result
+
+
+def test_fuser_with_finished_promises():
+    """Test that finished_promises are included in the fused prompt."""
+    config = create_mock_config()
+    io_provider = IOProvider()
+    promises = [
+        MockActionResult(action="forward"),
+        MockActionResult(action="hello world"),
+    ]
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse([], promises)
+
+        assert "PREVIOUS ACTION RESULTS" in result
+        assert "action=forward" in result
+        assert "action=hello world" in result
+
+
+@patch("fuser.describe_action")
+def test_fuser_action_feedback_placement(mock_describe):
+    """Test that action feedback appears between inputs and available actions."""
+    mock_describe.return_value = "action description"
+    config = create_mock_config(agent_actions=[MockAction("move")])
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
+    io_provider = IOProvider()
+    promises = [MockActionResult(action="forward")]
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, promises)
+
+        inputs_pos = result.index("AVAILABLE INPUTS:")
+        feedback_pos = result.index("PREVIOUS ACTION RESULTS:")
+        actions_pos = result.index("AVAILABLE ACTIONS:")
+
+        assert inputs_pos < feedback_pos < actions_pos
+
+
+def test_format_action_feedback_empty():
+    """Test _format_action_feedback with empty list."""
+    config = create_mock_config()
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser._format_action_feedback([])
+
+        assert result == ""
+
+
+def test_format_action_feedback_with_results():
+    """Test _format_action_feedback formats dataclass results correctly."""
+    config = create_mock_config()
+    io_provider = IOProvider()
+    promises = [MockActionResult(action="turn left")]
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser._format_action_feedback(promises)
+
+        assert "PREVIOUS ACTION RESULTS:" in result
+        assert "- action=turn left" in result
+
+
+def test_format_action_feedback_with_non_dataclass():
+    """Test _format_action_feedback handles objects without __dict__."""
+    config = create_mock_config()
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser._format_action_feedback(["plain string result"])
+
+        assert "PREVIOUS ACTION RESULTS:" in result
+        assert "- plain string result" in result

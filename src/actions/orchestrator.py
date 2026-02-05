@@ -106,12 +106,13 @@ class ActionOrchestrator:
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
         Flushes the promise queue by waiting for all tasks to complete.
-        Returns the completed promises and any remaining pending promises.
+        Returns the completed promise results and any remaining pending promises.
 
         Returns
         -------
         tuple[list[T.Any], list[asyncio.Task[T.Any]]]
-            A tuple containing a list of completed promise results and a list of pending promise tasks.
+            A tuple containing a list of completed promise results (extracted
+            from finished tasks) and a list of pending promise tasks.
         """
         if not self.promise_queue:
             return [], []
@@ -122,7 +123,16 @@ class ActionOrchestrator:
 
         self.promise_queue = []
 
-        return list(done), list(pending)
+        results = []
+        for task in done:
+            try:
+                result = task.result()
+                if result is not None:
+                    results.append(result)
+            except Exception as e:
+                logging.error(f"Error retrieving action result: {e}")
+
+        return results, list(pending)
 
     async def promise(self, actions: list[Action]) -> None:
         """

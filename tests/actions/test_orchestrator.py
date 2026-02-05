@@ -458,6 +458,58 @@ class TestActionOrchestratorEdgeCases:
         assert len(done) == 3
         assert len(pending) == 0
 
+    @pytest.mark.asyncio
+    async def test_flush_promises_returns_results_not_tasks(
+        self, mock_runtime_config, create_agent_action
+    ):
+        """Test that flush_promises returns actual action results, not Task objects."""
+        action = create_agent_action("move", "move")
+        mock_runtime_config.agent_actions = [action]
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [Action(type="move", value="forward")]
+        await orchestrator.promise(actions)
+
+        done, pending = await orchestrator.flush_promises()
+        assert len(done) == 1
+        assert not isinstance(done[0], asyncio.Task)
+        assert hasattr(done[0], "action")
+        assert done[0].action == "forward"
+
+    @pytest.mark.asyncio
+    async def test_flush_promises_empty_queue(self, mock_runtime_config):
+        """Test that flush_promises with empty queue returns empty lists."""
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        done, pending = await orchestrator.flush_promises()
+        assert done == []
+        assert pending == []
+
+    @pytest.mark.asyncio
+    async def test_flush_promises_multiple_results(
+        self, mock_runtime_config, create_agent_action
+    ):
+        """Test that flush_promises returns all action results from multiple actions."""
+        action_move = create_agent_action("move", "move")
+        action_speak = create_agent_action("speak", "speak")
+        mock_runtime_config.agent_actions = [action_move, action_speak]
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [
+            Action(type="move", value="forward"),
+            Action(type="speak", value="hello"),
+        ]
+        await orchestrator.promise(actions)
+
+        done, pending = await orchestrator.flush_promises()
+        assert len(done) == 2
+        assert len(pending) == 0
+
+        action_values = {result.action for result in done}
+        assert action_values == {"forward", "hello"}
+
     def test_orchestrator_stop(self, mock_runtime_config):
         """Test that orchestrator stops cleanly."""
         orchestrator = ActionOrchestrator(mock_runtime_config)

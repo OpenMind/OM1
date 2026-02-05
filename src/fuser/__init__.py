@@ -40,19 +40,55 @@ class Fuser:
         self.config = config
         self.io_provider = IOProvider()
 
+    def _format_action_feedback(self, finished_promises: list[T.Any]) -> str:
+        """
+        Format completed action results into a feedback string for the LLM.
+
+        Parameters
+        ----------
+        finished_promises : list[Any]
+            List of completed action input interfaces from previous tick.
+
+        Returns
+        -------
+        str
+            Formatted feedback string, or empty string if no results.
+        """
+        if not finished_promises:
+            return ""
+
+        feedback_lines = []
+        for result in finished_promises:
+            try:
+                fields = vars(result) if hasattr(result, "__dict__") else {}
+                if fields:
+                    parts = [f"{k}={v}" for k, v in fields.items()]
+                    feedback_lines.append(", ".join(parts))
+                else:
+                    feedback_lines.append(str(result))
+            except Exception as e:
+                logging.debug(f"Could not format action result: {e}")
+
+        if not feedback_lines:
+            return ""
+
+        feedback = "\n".join(f"- {line}" for line in feedback_lines)
+        return f"\nPREVIOUS ACTION RESULTS:\n{feedback}\n"
+
     def fuse(self, inputs: list[Sensor], finished_promises: list[T.Any]) -> str:
         """
         Combine all inputs into a single formatted prompt string.
 
-        Integrates system prompts, input buffers, action descriptions, and
-        command prompts into a structured format for LLM processing.
+        Integrates system prompts, input buffers, action descriptions,
+        previous action feedback, and command prompts into a structured
+        format for LLM processing.
 
         Parameters
         ----------
         inputs : list[Sensor]
             List of agent input objects containing latest input buffers.
         finished_promises : list[Any]
-            List of completed promises from previous actions.
+            List of completed action results from previous tick.
 
         Returns
         -------
@@ -89,14 +125,18 @@ class Fuser:
             if desc:
                 actions_fused += desc + "\n\n"
 
+        # Format feedback from previously completed actions
+        action_feedback = self._format_action_feedback(finished_promises)
+
         question_prompt = "What will you do? Actions:"
 
         # this is the final prompt:
         # (1) a (typically) fixed overall system prompt with the agents, name, rules, and examples
         # (2) all the inputs (vision, sound, etc.)
-        # (3) a (typically) fixed list of available actions
-        # (4) a (typically) fixed system prompt requesting commands to be generated
-        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
+        # (3) feedback from previously executed actions
+        # (4) a (typically) fixed list of available actions
+        # (5) a (typically) fixed system prompt requesting commands to be generated
+        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}{action_feedback}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
 
         logging.debug(f"FINAL PROMPT: {fused_prompt}")
 
