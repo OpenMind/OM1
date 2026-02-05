@@ -1,15 +1,15 @@
 """Tests for the Face Avatar connector."""
 
 import sys
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Mock modules at module load time BEFORE any other imports
-sys.modules["zenoh"] = MagicMock()
-sys.modules["zenoh_msgs"] = MagicMock()
-
-from unittest.mock import patch  # noqa: E402
-
-import pytest  # noqa: E402
+mock_zenoh = MagicMock()
+mock_zenoh_msgs = MagicMock()
+sys.modules["zenoh"] = mock_zenoh
+sys.modules["zenoh_msgs"] = mock_zenoh_msgs
 
 from actions.base import ActionConfig  # noqa: E402
 from actions.face.connector.avatar import FaceAvatarConnector  # noqa: E402
@@ -56,6 +56,14 @@ def face_input_think():
 def face_input_excited():
     """Create a FaceInput instance with excited action."""
     return FaceInput(action=FaceAction.EXCITED)
+
+
+@pytest.fixture(autouse=True)
+def reset_mocks():
+    """Reset all mock objects between tests."""
+    mock_zenoh.reset_mock()
+    mock_zenoh_msgs.reset_mock()
+    yield
 
 
 class TestFaceAvatarConnector:
