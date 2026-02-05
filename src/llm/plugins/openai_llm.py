@@ -27,7 +27,7 @@ class OpenAIModel(str, Enum):
     GPT_5_MINI = "gpt-5-mini"
     GPT_5_NANO = "gpt-5-nano"
     GTP_5_1 = "gpt-5.1"
-    GPT_5_2 = "gpt-5.2"
+    GPT_5_1 = "gpt-5.2"
 
 
 class OpenAIConfig(LLMConfig):
