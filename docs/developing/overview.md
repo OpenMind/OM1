@@ -16,17 +16,17 @@
     <tr>
       <td><strong>Get Started</strong></td>
       <td>with OpenMind's OM1</td>
-      <td><a href="./developing/0_introduction", icon="check">https://example.com</a></td>
+      <td><a href="./developing/0_introduction.md", icon="check">https://example.com</a></td>
     </tr>
     <tr>
       <td><strong>OM1 API Reference</strong></td>
       <td>Example description 2.</td>
-      <td><a href="./api-reference/introduction", icon="link"></a></td>
+      <td><a href="./api-reference/introduction.md", icon="link"></a></td>
     </tr>
     <tr>
       <td><strong>Full Autonomy</strong></td>
       <td>Example description 3.</td>
-      <td><a href="./full_autonomy_guidelines/architecture_overview", icon="chart-diagram"></a></td>
+      <td><a href="./full_autonomy_guidelines/architecture_overview.md", icon="chart-diagram"></a></td>
     </tr>
   </tbody>
 </table>
