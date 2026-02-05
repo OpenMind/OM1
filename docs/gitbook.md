@@ -3,7 +3,8 @@
 {% tabs %}
 
 {% tab title="Getting started" %}
-{% include "developing/1_get_started.md" %}
+{% include "./developing/1_get_started.md" %}
+###ABC
 {% endtab %}
 
 {% tab title="Developer CookBook" %}

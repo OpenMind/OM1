@@ -7,3 +7,13 @@ pages:
 
   - title: Documentation
     path: gitbook.md
+
+  - title: Getting Started
+    path: developing/1_get_started.md
+    visible: false
+  - title: Developer CookBook
+    path: developer-cookbook/introduction.md
+    visible: false
+  - title: API References
+    path: api-references/introduction.md
+    visible: false
