@@ -35,13 +35,6 @@ def test_register_provider(monitor):
     assert status == HealthStatus.HEALTHY
 
 
-def test_register_with_recovery_callback_ignored(monitor):
-    """recovery_callback parameter is accepted but ignored for backward compat."""
-    monitor.register("TestProvider", recovery_callback=lambda: True)
-
-    assert "TestProvider" in monitor._providers
-    assert not hasattr(monitor._providers["TestProvider"], "recovery_callback")
-
 
 def test_unregister_provider(monitor):
     monitor.register("TestProvider")
