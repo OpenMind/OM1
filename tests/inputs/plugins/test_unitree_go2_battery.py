@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from inputs.base import Message
-from inputs.plugins.battery_unitree_go2 import (
+from inputs.plugins.unitree_go2_battery import (
     UnitreeGo2Battery,
     UnitreeGo2BatteryConfig,
 )
@@ -12,9 +12,9 @@ from inputs.plugins.battery_unitree_go2 import (
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig()
         sensor = UnitreeGo2Battery(config=config)
@@ -28,9 +28,9 @@ def test_initialization():
 def test_initialization_with_api_key():
     """Test initialization with API key."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig(api_key="test_key")
         sensor = UnitreeGo2Battery(config=config)
@@ -42,9 +42,9 @@ def test_initialization_with_api_key():
 async def test_poll():
     """Test _poll method."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig()
         sensor = UnitreeGo2Battery(config=config)
@@ -52,7 +52,7 @@ async def test_poll():
         sensor.battery_voltage = 24.5
         sensor.battery_amperes = 2.5
 
-        with patch("inputs.plugins.battery_unitree_go2.asyncio.sleep", new=AsyncMock()):
+        with patch("inputs.plugins.unitree_go2_battery.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result is not None
@@ -66,14 +66,14 @@ async def test_poll():
 async def test_raw_to_text_with_low_battery():
     """Test _raw_to_text with low battery (warning level)."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig()
         sensor = UnitreeGo2Battery(config=config)
 
-        with patch("inputs.plugins.battery_unitree_go2.time.time", return_value=1234.0):
+        with patch("inputs.plugins.unitree_go2_battery.time.time", return_value=1234.0):
             result = await sensor._raw_to_text([10.0, 25.0, 3.0])
 
         assert result is not None
@@ -85,14 +85,14 @@ async def test_raw_to_text_with_low_battery():
 async def test_raw_to_text_with_critical_battery():
     """Test _raw_to_text with critical battery level."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig()
         sensor = UnitreeGo2Battery(config=config)
 
-        with patch("inputs.plugins.battery_unitree_go2.time.time", return_value=1234.0):
+        with patch("inputs.plugins.unitree_go2_battery.time.time", return_value=1234.0):
             result = await sensor._raw_to_text([5.0, 25.0, 3.0])
 
         assert result is not None
@@ -104,14 +104,14 @@ async def test_raw_to_text_with_critical_battery():
 async def test_raw_to_text_with_normal_battery():
     """Test _raw_to_text with normal battery level (no message)."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig()
         sensor = UnitreeGo2Battery(config=config)
 
-        with patch("inputs.plugins.battery_unitree_go2.time.time", return_value=1234.0):
+        with patch("inputs.plugins.unitree_go2_battery.time.time", return_value=1234.0):
             result = await sensor._raw_to_text([85.0, 25.0, 3.0])
 
         assert result is None
@@ -120,9 +120,9 @@ async def test_raw_to_text_with_normal_battery():
 def test_formatted_latest_buffer_with_messages():
     """Test formatted_latest_buffer with messages."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig()
         sensor = UnitreeGo2Battery(config=config)
@@ -142,9 +142,9 @@ def test_formatted_latest_buffer_with_messages():
 def test_formatted_latest_buffer_empty():
     """Test formatted_latest_buffer with empty buffer."""
     with (
-        patch("inputs.plugins.battery_unitree_go2.ChannelSubscriber"),
-        patch("inputs.plugins.battery_unitree_go2.IOProvider"),
-        patch("inputs.plugins.battery_unitree_go2.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_go2_battery.ChannelSubscriber"),
+        patch("inputs.plugins.unitree_go2_battery.IOProvider"),
+        patch("inputs.plugins.unitree_go2_battery.TeleopsStatusProvider"),
     ):
         config = UnitreeGo2BatteryConfig()
         sensor = UnitreeGo2Battery(config=config)

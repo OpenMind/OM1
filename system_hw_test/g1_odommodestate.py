@@ -1,7 +1,6 @@
 import sys
 import time
 
-
 sys.path.insert(0, "../src")
 
 try:
@@ -13,6 +12,7 @@ from unitree.unitree_sdk2py.core.channel import (
     ChannelFactoryInitialize,
     ChannelSubscriber,
 )
+
 
 class Custom:
     def __init__(self):
@@ -28,7 +28,7 @@ class Custom:
         print("Press Ctrl+C to exit")
 
     def MessageHandler(self, msg: SportModeState_):
-        print(f"\n[Message Received]")
+        print("\n[Message Received]")
         print(f"message info: {msg}")
         print(f"Timestamp: {time.time()}\n")
 
@@ -51,4 +51,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nExiting...")
         sys.exit(0)
-
