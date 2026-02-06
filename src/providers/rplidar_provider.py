@@ -450,11 +450,15 @@ class RPLidarProvider:
             # convert the angle from [0 to 360] to [-180 to +180] range
             angle = angle - 180.0
 
+            blanked = False
             for b in self.angles_blanked:
                 if angle >= b[0] and angle <= b[1]:
                     # this is a permanent robot reflection
                     # disregard
-                    continue
+                    blanked = True
+                    break
+            if blanked:
+                continue
 
             # Convert angle to radians for trigonometric calculations
             # Note: angle is adjusted back to [0, 360] range
