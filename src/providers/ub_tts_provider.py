@@ -116,4 +116,3 @@ class UbTtsProvider:
             return "error"
         except requests.exceptions.RequestException:
             return "error"
-

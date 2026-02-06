@@ -147,4 +147,3 @@ class VLMOpenAIProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.stop()
-

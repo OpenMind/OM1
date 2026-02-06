@@ -110,4 +110,3 @@ class UbtechVLMProvider:
             self.stream_ws_client.stop()
 
         logging.info("Ubtech VLM provider stopped")
-

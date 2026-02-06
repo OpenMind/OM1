@@ -110,4 +110,3 @@ class VLMVilaZenohProvider:
 
         self.video_stream.stop()
         self.ws_client.stop()
-

@@ -118,4 +118,3 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
             The current pose if available, None otherwise.
         """
         return self.localization_pose
-

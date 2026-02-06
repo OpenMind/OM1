@@ -182,4 +182,3 @@ class UnitreeG1LocationsProvider:
         key = label.strip().lower()
         with self._lock:
             return self._locations.get(key)
-

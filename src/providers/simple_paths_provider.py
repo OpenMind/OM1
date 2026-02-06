@@ -268,4 +268,3 @@ class SimplePathsProvider:
             "turn_right": self.turn_right,
             "retreat": self.retreat,
         }
-

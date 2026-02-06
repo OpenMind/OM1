@@ -134,9 +134,7 @@ class LLM(T.Generic[R]):
 
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
-        self._monitor.register(
-            self.__class__.__name__, metadata={"type": "llm"}
-        )
+        self._monitor.register(self.__class__.__name__, metadata={"type": "llm"})
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
         """Auto-wrap ask with heartbeat and error reporting."""
@@ -152,9 +150,7 @@ class LLM(T.Generic[R]):
                         self._monitor.heartbeat(self.__class__.__name__)
                         return result
                     except Exception as e:
-                        self._monitor.report_error(
-                            self.__class__.__name__, str(e)
-                        )
+                        self._monitor.report_error(self.__class__.__name__, str(e))
                         raise
 
                 cls.ask = async_wrapped  # type: ignore
@@ -167,9 +163,7 @@ class LLM(T.Generic[R]):
                         self._monitor.heartbeat(self.__class__.__name__)
                         return result
                     except Exception as e:
-                        self._monitor.report_error(
-                            self.__class__.__name__, str(e)
-                        )
+                        self._monitor.report_error(self.__class__.__name__, str(e))
                         raise
 
                 cls.ask = sync_wrapped  # type: ignore

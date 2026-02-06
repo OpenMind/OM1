@@ -309,4 +309,3 @@ class FabricDataSubmitter:
         """
         logging.debug(f"share data: {data}")
         self.executor.submit(self._share_data_worker, data)
-

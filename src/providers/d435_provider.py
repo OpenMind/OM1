@@ -119,4 +119,3 @@ class D435Provider:
             self.session.close()
 
         logging.info("D435Provider stopped and Zenoh session closed")
-

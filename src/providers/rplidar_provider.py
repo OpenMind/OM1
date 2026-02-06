@@ -856,4 +856,3 @@ class RPLidarProvider:
 
         parts.append("'stand still'}. ")
         return "".join(parts)
-

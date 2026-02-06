@@ -201,4 +201,3 @@ class TeleopsConversationProvider:
             True if the API key is set, False otherwise.
         """
         return self.api_key is not None and self.api_key != ""
-

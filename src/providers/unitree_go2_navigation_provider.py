@@ -318,4 +318,3 @@ class UnitreeGo2NavigationProvider:
             True if navigation is in progress, False otherwise.
         """
         return self._nav_in_progress
-

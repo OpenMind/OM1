@@ -121,4 +121,3 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
             The current exploration info.
         """
         return self.exploration_info
-

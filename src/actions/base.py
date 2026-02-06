@@ -87,9 +87,7 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         self._stop_event: T.Optional[threading.Event] = None
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
-        self._monitor.register(
-            self.__class__.__name__, metadata={"type": "action"}
-        )
+        self._monitor.register(self.__class__.__name__, metadata={"type": "action"})
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
         """Auto-wrap connect with heartbeat reporting."""

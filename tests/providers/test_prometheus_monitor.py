@@ -53,9 +53,7 @@ def test_unregister_provider(monitor):
 
 def test_unregister_cleans_metrics(monitor):
     """Unregister should zero out Prometheus metric labels."""
-    monitor.register(
-        "TestProvider", metadata={"type": "test", "category": "unit"}
-    )
+    monitor.register("TestProvider", metadata={"type": "test", "category": "unit"})
     monitor.unregister("TestProvider")
 
     assert "TestProvider" not in monitor._providers

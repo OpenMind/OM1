@@ -54,9 +54,7 @@ class Sensor(T.Generic[ConfigType, R]):
         self.config = config
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
-        self._monitor.register(
-            self.__class__.__name__, metadata={"type": "input"}
-        )
+        self._monitor.register(self.__class__.__name__, metadata={"type": "input"})
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
         """Auto-wrap formatted_latest_buffer with heartbeat reporting."""

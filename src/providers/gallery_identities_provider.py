@@ -238,4 +238,3 @@ class GalleryIdentitiesProvider:
         # Use local time; server may not return one
         ts = time.time()
         return IdentitiesSnapshot(ts=ts, total=total, names=names, raw=data)
-

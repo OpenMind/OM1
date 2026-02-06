@@ -283,4 +283,3 @@ class UnitreeGo2StateProvider:
             The current action progress of the robot, or 0 if not in the action mode.
         """
         return self.go2_action_progress
-

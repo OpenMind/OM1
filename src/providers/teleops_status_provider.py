@@ -320,4 +320,3 @@ class TeleopsStatusProvider:
         Stop the TeleopsStatusProvider and clean up resources.
         """
         self.executor.shutdown(wait=True)
-

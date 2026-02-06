@@ -159,4 +159,3 @@ class AvatarProvider:
             self.session.close()
 
         logging.info("AvatarProvider stopped and Zenoh session closed")
-

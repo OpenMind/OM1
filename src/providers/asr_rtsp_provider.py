@@ -111,4 +111,3 @@ class ASRRTSPProvider:
         self.running = False
         self.audio_stream.stop()
         self.ws_client.stop()
-

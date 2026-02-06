@@ -600,4 +600,3 @@ class PrometheusMonitor:
         # Update totals
         self._providers_total.labels(status="healthy").set(healthy_count)
         self._providers_total.labels(status="unhealthy").set(unhealthy_count)
-

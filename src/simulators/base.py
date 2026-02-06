@@ -41,9 +41,7 @@ class Simulator:
         self._stop_event: Optional[threading.Event] = None
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
-        self._monitor.register(
-            self.__class__.__name__, metadata={"type": "simulator"}
-        )
+        self._monitor.register(self.__class__.__name__, metadata={"type": "simulator"})
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
         """Auto-wrap sim with heartbeat reporting."""

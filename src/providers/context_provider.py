@@ -96,4 +96,3 @@ class ContextProvider:
             finally:
                 self.session = None
                 self.publisher = None
-

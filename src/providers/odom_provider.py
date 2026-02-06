@@ -431,4 +431,3 @@ class OdomProvider:
         if self._odom_processor_thread:
             self._odom_processor_thread.join()
             logging.info("OdomProvider processor thread stopped.")
-

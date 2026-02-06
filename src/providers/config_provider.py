@@ -211,4 +211,3 @@ class ConfigProvider:
             self.session.close()
 
         logging.info("ConfigProvider stopped and Zenoh session closed")
-

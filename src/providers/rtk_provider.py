@@ -232,4 +232,3 @@ class RtkProvider:
             Dictionary containing RTK position data or None if not available
         """
         return self._rtk
-

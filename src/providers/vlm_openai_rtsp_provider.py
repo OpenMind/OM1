@@ -212,4 +212,3 @@ class VLMOpenAIRTSPProvider:
         self.frame_queue.clear()
 
         logging.info("OpenAI VLM RTSP provider stopped")
-

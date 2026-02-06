@@ -334,4 +334,3 @@ class FacePresenceProvider:
     def unknown_faces(self) -> int:
         """Most recent (suppressed) count of unknown faces detected in the lookback window."""
         return self._unknown_faces
-

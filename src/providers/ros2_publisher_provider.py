@@ -135,4 +135,3 @@ class ROS2PublisherProvider(Node):
         self.publisher_.Close()
 
         logging.info("ROS2 Publisher Provider stopped")
-

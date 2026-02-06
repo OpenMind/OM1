@@ -114,4 +114,3 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
             The current pose if available, None otherwise.
         """
         return self.localization_pose
-

@@ -233,4 +233,3 @@ class ElevenLabsTTSProvider:
 
         self.running = False
         self._audio_stream.stop()
-

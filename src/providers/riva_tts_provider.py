@@ -87,4 +87,3 @@ class RivaTTSProvider:
         """
         self.running = False
         self._audio_stream.stop()
-

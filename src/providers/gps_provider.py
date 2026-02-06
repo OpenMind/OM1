@@ -318,4 +318,3 @@ class GpsProvider:
             The current GPS data dictionary or None if no data is available.
         """
         return self._gps
-

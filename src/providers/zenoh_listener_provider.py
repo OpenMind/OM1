@@ -95,4 +95,3 @@ class ZenohListenerProvider:
 
         if self.session is not None:
             self.session.close()
-

@@ -127,4 +127,3 @@ class ZenohPublisherProvider:
         if self.session is not None:
             self.session.close()
         logging.info("Zenoh Publisher Provider stopped")
-

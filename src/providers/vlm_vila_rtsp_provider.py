@@ -116,4 +116,3 @@ class VLMVilaRTSPProvider:
 
         self.video_stream.stop()
         self.ws_client.stop()
-
