@@ -396,6 +396,42 @@ class TestSpeakKokoroTTSConnector:
     @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
     @patch("actions.speak.connector.kokoro_tts.IOProvider")
     @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
+    def test_zenoh_audio_message_error_handling(
+        self,
+        mock_conversation_provider,
+        mock_io_provider,
+        mock_tts_provider,
+        mock_open_zenoh_session,
+        default_config,
+        mock_zenoh_session,
+    ):
+        """Test error handling in zenoh_audio_message."""
+        mock_open_zenoh_session.return_value = mock_zenoh_session
+        mock_tts_provider.return_value = Mock()
+
+        connector = SpeakKokoroTTSConnector(default_config)
+        original_audio_status = connector.audio_status
+
+        mock_sample = Mock()
+        mock_sample.payload.to_bytes.return_value = b"invalid_data"
+
+        with patch(
+            "actions.speak.connector.kokoro_tts.AudioStatus"
+        ) as mock_audio_status_class:
+            mock_audio_status_class.deserialize.side_effect = Exception(
+                "Deserialization error"
+            )
+
+            # Should not raise exception
+            connector.zenoh_audio_message(mock_sample)
+
+            # Audio status should remain unchanged
+            assert connector.audio_status == original_audio_status
+
+    @patch("actions.speak.connector.kokoro_tts.open_zenoh_session")
+    @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
+    @patch("actions.speak.connector.kokoro_tts.IOProvider")
+    @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
     def test_zenoh_tts_status_request_enable(
         self,
         mock_conversation_provider,
@@ -528,6 +564,84 @@ class TestSpeakKokoroTTSConnector:
     @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
     @patch("actions.speak.connector.kokoro_tts.IOProvider")
     @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
+    def test_zenoh_tts_status_request_null_publisher(
+        self,
+        mock_conversation_provider,
+        mock_io_provider,
+        mock_tts_provider,
+        mock_open_zenoh_session,
+        default_config,
+        mock_zenoh_session,
+    ):
+        """Test TTS status request when response publisher is None."""
+        mock_open_zenoh_session.return_value = mock_zenoh_session
+        mock_tts_provider.return_value = Mock()
+
+        connector = SpeakKokoroTTSConnector(default_config)
+        connector._zenoh_tts_status_response_pub = None
+
+        mock_sample = Mock()
+        mock_sample.payload.to_bytes.return_value = b"test_data"
+
+        mock_header = Mock()
+        mock_header.frame_id = "test_frame"
+
+        mock_tts_status = Mock()
+        mock_tts_status.code = 1  # Enable TTS
+        mock_tts_status.request_id = String("test_request_id")
+        mock_tts_status.header = mock_header
+
+        with patch(
+            "actions.speak.connector.kokoro_tts.TTSStatusRequest"
+        ) as mock_request_class:
+            with patch("actions.speak.connector.kokoro_tts.TTSStatusResponse"):
+                mock_request_class.deserialize.return_value = mock_tts_status
+
+                # Should not raise exception even when publisher is None
+                connector._zenoh_tts_status_request(mock_sample)
+
+                assert connector.tts_enabled is True
+
+    @patch("actions.speak.connector.kokoro_tts.open_zenoh_session")
+    @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
+    @patch("actions.speak.connector.kokoro_tts.IOProvider")
+    @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
+    def test_zenoh_tts_status_request_error_handling(
+        self,
+        mock_conversation_provider,
+        mock_io_provider,
+        mock_tts_provider,
+        mock_open_zenoh_session,
+        default_config,
+        mock_zenoh_session,
+    ):
+        """Test error handling in _zenoh_tts_status_request."""
+        mock_open_zenoh_session.return_value = mock_zenoh_session
+        mock_tts_provider.return_value = Mock()
+
+        connector = SpeakKokoroTTSConnector(default_config)
+        original_tts_enabled = connector.tts_enabled
+
+        mock_sample = Mock()
+        mock_sample.payload.to_bytes.return_value = b"invalid_data"
+
+        with patch(
+            "actions.speak.connector.kokoro_tts.TTSStatusRequest"
+        ) as mock_request_class:
+            mock_request_class.deserialize.side_effect = Exception(
+                "Deserialization error"
+            )
+
+            # Should not raise exception
+            connector._zenoh_tts_status_request(mock_sample)
+
+            # TTS enabled status should remain unchanged
+            assert connector.tts_enabled == original_tts_enabled
+
+    @patch("actions.speak.connector.kokoro_tts.open_zenoh_session")
+    @patch("actions.speak.connector.kokoro_tts.KokoroTTSProvider")
+    @patch("actions.speak.connector.kokoro_tts.IOProvider")
+    @patch("actions.speak.connector.kokoro_tts.TeleopsConversationProvider")
     def test_stop(
         self,
         mock_conversation_provider,
@@ -652,7 +766,3 @@ class TestSpeakKokoroTTSConnector:
                 == AudioStatus.STATUS_SPEAKER.READY.value
             )
             mock_prepare_header.assert_called_with("test-uuid")
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
