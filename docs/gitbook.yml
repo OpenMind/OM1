@@ -4,24 +4,21 @@ structure:
   readme: overview.md
 
 summary:
-  - title: Documentation
-    children:
+    - title: Get started
+      children:
+        - title: Introduction
+          path: developing/0_introduction.md
 
-      - title: Get started
-        children:
-          - title: Introduction
-            path: developing/0_introduction.md
+        - title: Quick Start
+          path: developing/1_get_started.md
 
-          - title: Quick Start
-            path: developing/1_get_started.md
+        - title: Architecture
+          path: developing/2_architecture.md
 
-          - title: Architecture
-            path: developing/2_architecture.md
+    - title: API Reference
+      children:
+        - title: Introduction
+          path: api-reference/introduction.md
 
-      - title: API Reference
-        children:
-          - title: Introduction
-            path: api-reference/introduction.md
-
-          - title: OM1 documentation
-            path: api-reference/api_pricing.md
+        - title: OM1 documentation
+          path: api-reference/api_pricing.md
