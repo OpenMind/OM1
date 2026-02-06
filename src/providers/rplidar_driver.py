@@ -248,10 +248,24 @@ class RPDriver(object):
         is_single = _b2i(descriptor[-2]) == 0
         return _b2i(descriptor[2]), is_single, _b2i(descriptor[-1])
 
-    def _read_response(self, dsize):
+    def _read_response(self, dsize, timeout=5.0):
         """Reads response packet with length of `dsize` bytes."""
         self.logger.debug("Trying to read response: %d bytes", dsize)
-        while self._serial.inWaiting() < dsize:
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                waiting = self._serial.inWaiting()
+            except OSError as e:
+                raise RPLidarException(
+                    "Serial device disconnected: %s" % e
+                )
+            if waiting >= dsize:
+                break
+            if time.monotonic() > deadline:
+                raise RPLidarException(
+                    "Timeout waiting for response: expected %d bytes, "
+                    "got %d" % (dsize, waiting)
+                )
             time.sleep(0.001)
         data = self._serial.read(dsize)
         self.logger.debug("Received data: %s", _showhex(data))
