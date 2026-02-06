@@ -79,7 +79,6 @@ class GalleryIdentities(FuserInput[GalleryIdentitiesConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Gallery Identities"
 
-
     def _handle_gallery_message(self, text_line: str) -> None:
         """
         Provider callback to enqueue one formatted gallery line.
@@ -184,5 +183,4 @@ INPUT: {self.descriptor_for_LLM}
         )
 
         self.messages.clear()
-
         return result

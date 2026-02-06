@@ -87,7 +87,6 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
 
         logging.info("Testing: WalletCoinbase: Initialized")
 
-
     async def _poll(self) -> List[float]:
         """
         Poll for Coinbase Wallet balance updates.

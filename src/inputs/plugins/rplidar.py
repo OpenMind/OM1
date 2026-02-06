@@ -95,7 +95,6 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Information about objects and walls around you, to plan your movements and avoid bumping into things."
 
-
     async def _poll(self) -> Optional[str]:
         """
         Poll for new messages from the RPLidar Provider.
@@ -186,6 +185,7 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
             self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
         self.messages = []
+
         return result
 
     def _extract_lidar_config(self, config: RPLidarConfig) -> dict:

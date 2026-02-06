@@ -39,7 +39,6 @@ class MoveToPeerRos2Connector(ActionConnector[ActionConfig, MoveToPeerInput]):
             Configuration for the action connector.
         """
         super().__init__(config)
-
         self.io = IOProvider()
         # defer heavy import; SportClient requires DDS initialisation
         from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient

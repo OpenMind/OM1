@@ -80,7 +80,6 @@ class UnitreeGo2CameraVLMCloud(
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
-
     def _handle_vlm_message(self, raw_message: str):
         """
         Process incoming VLM messages.

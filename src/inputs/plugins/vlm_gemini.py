@@ -92,7 +92,6 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Vision"
 
-
     def _handle_vlm_message(self, raw_message: ChatCompletion):
         """
         Process incoming VLM messages.
@@ -204,6 +203,7 @@ INPUT: {self.descriptor_for_LLM}
             self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
         self.messages = []
+
         return result
 
     def stop(self):

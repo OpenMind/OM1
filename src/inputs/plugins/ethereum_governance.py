@@ -156,7 +156,6 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
             "GovernanceEthereum initialized, rules will be loaded on first poll"
         )
 
-
     async def _poll(self) -> Optional[str]:
         """
         Poll for Ethereum Governance Law Changes.

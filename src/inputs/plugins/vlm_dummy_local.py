@@ -32,7 +32,6 @@ class DummyVLMLocal(FuserInput[SensorConfig, Image.Image]):
 
         self.descriptor_for_LLM = "Vision"
 
-
     async def _poll(self) -> Image.Image:
         """
         Poll for new image input.

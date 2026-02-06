@@ -31,7 +31,6 @@ class Gps(FuserInput[SensorConfig, Optional[dict]]):
         self.messages: list[Message] = []
         self.descriptor_for_LLM = "GPS Location"
 
-
     async def _poll(self) -> Optional[dict]:
         """
         Poll for new messages from the GPS Provider.
@@ -138,4 +137,5 @@ class Gps(FuserInput[SensorConfig, Optional[dict]]):
             self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
         self.messages = []
+
         return result

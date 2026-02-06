@@ -73,7 +73,6 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         # Messages buffer
         self.messages: list[Message] = []
 
-
     async def _poll(self) -> Optional[cv2.typing.MatLike]:
         """
         Capture frame from webcam.

@@ -103,7 +103,6 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         # Simple description of sensor output to help LLM understand its importance and utility
         self.descriptor_for_LLM = "Energy Levels"
 
-
     def LowStateMessageHandler(self, msg: LowState_):
         """
         Handle incoming LowState messages from Unitree Go2.

@@ -146,7 +146,6 @@ class DualLLM(LLM[R]):
 
         self.history_manager = LLMHistoryManager(self._config, self._eval_client)
 
-
     async def _call_llm(
         self, llm: LLM, prompt: str, messages: T.List[T.Dict[str, T.Any]], source: str
     ) -> dict:

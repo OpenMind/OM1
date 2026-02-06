@@ -72,7 +72,6 @@ class Odom(FuserInput[OdomConfig, Optional[dict]]):
         self.odom = OdomProvider(self.URID, use_zenoh, unitree_ethernet)
         self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
 
-
     async def _poll(self) -> Optional[dict]:
         """
         Poll for new messages from the Odom Provider.
@@ -177,4 +176,5 @@ class Odom(FuserInput[OdomConfig, Optional[dict]]):
             self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
         self.messages = []
+
         return result

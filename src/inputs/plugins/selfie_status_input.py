@@ -40,7 +40,6 @@ class SelfieStatus(FuserInput[SensorConfig, Optional[str]]):
         self._last_ts_seen: float = 0.0
         self.descriptor_for_LLM = "SelfieStatus"
 
-
     async def _poll(self) -> Optional[str]:
         """
         Poll for new SelfieStatus messages from the IOProvider.
@@ -114,5 +113,4 @@ class SelfieStatus(FuserInput[SensorConfig, Optional[str]]):
 {latest.message}
 // END"""
         self.messages.clear()
-
         return block

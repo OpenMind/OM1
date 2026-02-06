@@ -65,7 +65,6 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
         self.fabric_endpoint = self.config.fabric_endpoint
         self.mock_mode = self.config.mock_mode
 
-
     async def _poll(self) -> Optional[str]:
         """
         Poll Fabric for the closest peer based on our current GPS position.

@@ -83,7 +83,6 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Face Presence Sensor"
 
-
     def _handle_face_message(self, text_line: str) -> None:
         """
         Provider callback: push a new line into the bounded queue.
@@ -195,5 +194,4 @@ INPUT: {self.descriptor_for_LLM}
             self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
         self.messages.clear()
-
         return result

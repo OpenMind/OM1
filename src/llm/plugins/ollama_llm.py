@@ -90,7 +90,6 @@ class OllamaLLM(LLM[R]):
         logging.info(f"OllamaLLM initialized with model: {config.model}")
         logging.info(f"Ollama endpoint: {self._chat_url}")
 
-
     def _convert_tools_to_ollama_format(self) -> T.List[T.Dict]:
         """
         Convert function schemas to Ollama's tool format.

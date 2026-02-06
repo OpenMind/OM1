@@ -64,7 +64,6 @@ class UnitreeG1LocationsInput(
         self.messages: List[Message] = []
         self.descriptor_for_LLM = "These are the saved locations you can navigate to."
 
-
     async def _poll(self) -> Optional[str]:
         """
         Poll the UnitreeG1LocationsProvider for the latest locations.
@@ -152,5 +151,4 @@ INPUT: {self.descriptor_for_LLM}
 
         # Reset messages buffer
         self.messages = []
-
         return result

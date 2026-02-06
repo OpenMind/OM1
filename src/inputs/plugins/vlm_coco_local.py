@@ -100,7 +100,6 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
                 f"Webcam pixel dimensions for COCO: {self.width}, {self.height}"
             )
 
-
     async def _poll(self) -> Optional[np.ndarray]:
         """
         Poll for new image input.

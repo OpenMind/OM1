@@ -46,7 +46,6 @@ class LidarLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
 
         logging.info("LocalizationInput plugin initialized")
 
-
     async def _poll(self) -> Optional[str]:
         """
         Poll the lidar localization provider for localization status.

@@ -69,7 +69,6 @@ class ZenohListener(FuserInput[ZenohListenerConfig, Optional[str]]):
         # Initialize sleep ticker provider
         self.global_sleep_ticker_provider = SleepTickerProvider()
 
-
     def _handle_zenoh_message(self, zenoh_input: zenoh.Sample):
         """
         Process an incoming Zenoh message.

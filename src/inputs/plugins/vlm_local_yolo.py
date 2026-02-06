@@ -162,7 +162,6 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         self.odom_yaw_0_360 = 0.0
         self.odom_yaw_m180_p180 = 0.0
 
-
     def update_filename(self):
         """
         Create a new filename with the current timestamp.

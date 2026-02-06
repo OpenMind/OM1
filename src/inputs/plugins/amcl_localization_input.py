@@ -42,7 +42,6 @@ class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
 
         logging.info("LocalizationInput plugin initialized")
 
-
     async def _poll(self) -> Optional[str]:
         """
         Poll the AMCL provider for localization status.

@@ -85,7 +85,6 @@ class VLMVila(FuserInput[VLMVilaConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Vision"
 
-
     def _handle_vlm_message(self, raw_message: str):
         """
         Process incoming VLM messages.

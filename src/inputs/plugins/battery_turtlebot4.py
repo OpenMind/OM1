@@ -92,7 +92,6 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
         # Simple description of sensor output to help LLM understand its importance and utility
         self.descriptor_for_LLM = "Energy Level"
 
-
     def listener_battery(self, sample: zenoh.Sample):
         """
         Zenoh callback for battery state.

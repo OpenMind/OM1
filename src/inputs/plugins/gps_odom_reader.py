@@ -81,7 +81,6 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Mapper Odom Provider: {self.odom}")
 
-
     @staticmethod
     def _wrap_angle(a: float) -> float:
         return (a + math.pi) % (2 * math.pi) - math.pi
@@ -144,7 +143,6 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
         self.io_provider.add_input(
             self.__class__.__name__, message.message, message.timestamp
         )
-
         return f"""
 {self.descriptor_for_LLM} INPUT
 // START

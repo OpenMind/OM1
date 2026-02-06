@@ -116,7 +116,6 @@ class QwenLLM(LLM[R]):
 
         self._skip_state_management = False
 
-
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(

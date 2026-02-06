@@ -163,7 +163,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             self.session = None
             self.asr_publisher = None
 
-
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages.

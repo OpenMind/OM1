@@ -55,7 +55,6 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
         if not self.web3.is_connected():
             raise Exception("Failed to connect to Ethereum")
 
-
     async def _poll(self) -> List[float]:
         """
         Poll for Ethereum balance updates.
