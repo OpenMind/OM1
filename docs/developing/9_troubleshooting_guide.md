@@ -7,7 +7,7 @@ icon: wrench
 ### Common Issues & Quick Fixes
 
 | Issue                   | Likely Cause                | Quick Fix                                                                 |
-|-------------------------|-----------------------------|---------------------------------------------------------------------------| 
+|-------------------------|-----------------------------|---------------------------------------------------------------------------
 | No Speech               | Permission issues           | Check the settings                                                        |
 | No speech recognition   | Microphone not configured   | Check audio input settings                                                |
 | Robot not moving        | Connection issue/Network issue            | Restart OM1/Robot and check your internet connection                                        |
@@ -59,4 +59,3 @@ To suppress warnings, disable unused features in your config:
   ]
 }
 ```
-
