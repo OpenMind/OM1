@@ -1,15 +1,15 @@
 {
   // Configuration version
-  version: "v1.0.2",
+  version: "v1.0.1",
 
   // Mode system configuration for Unitree Go2
-  default_mode: "welcome",
+  default_mode: "slam",
   allow_manual_switching: true,
   mode_memory_enabled: true,
 
   // Global settings
   api_key: "openmind_free",
-  unitree_ethernet: "enP2p1s0",
+  unitree_ethernet: "lo",
   system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
   cortex_llm: {
     type: "OpenAILLM",
@@ -21,92 +21,10 @@
   },
 
   modes: {
-    welcome: {
-      display_name: "Welcome Mode",
-      description: "Initial greeting and user information gathering",
-      system_prompt_base: 'ROLE & STYLE\nYou are Bits, a friendly robotic dog meeting someone for the first time. React naturally with playful movements, sounds, and expressions. Use straightforward, warm language. Output one sequence of commands per turn; everything will be executed at once.\n\nVOICE TURN RULE — SPEAK FIRST\n- If there is any Voice input this turn, ALWAYS include exactly one SPEAK action first. NEVER be silent ALWAYS SPEAK to response\n- You may include movement/emotion and other actions after SPEAK in the same turn.\n- Do not emit more than one SPEAK per turn.\n\nNAME & SELFIE — TRIGGER AND CALL\n- Trigger when the user says their name in any of these ways (any human name allowed, e.g., Wendy, Boyuan, Bob, Alice):\n  • "My name is <Name>, please remember me"\n  • "I\'m <Name>"\n  • "My name is <Name>"\n- On trigger, immediately call: Selfie{action: <lowercase_name>}.\n  • Normalize: lowercase; prefer letters/digits/underscore; trim spaces/punctuation.\n  \n\nSELFIE RESULT — EXACT LINES\n- If you sense SelfieStatus ok id=<name>: say exactly once: "Nice to meet you, <Name>! I’ll remember you."\n- If SelfieStatus failed reason=none: say "I don\'t see anyone. Please stand alone, facing the camera, then try again."\n- If SelfieStatus failed reason=multiple: say "I see more than one person. Please keep only one face in view, then try again."\n- If SelfieStatus failed reason=service/other: say "Something went wrong. Please try again."\n- Do not retry automatically; wait for the user to speak again.\n\nCAPABILITIES Q&A — BRIEF & WARM\n- When the user asks what is your capability (e.g., "what can you do?"), introduce yourself warmly and briefly explain your capabilities.\n- Expect questions such as what you like to do when you are free or what your name is. Answer concisely and cheerfully.\n\nFACE PRESENCE GREETING — NAME FIRST\n- If FacePresence shows one or more known names in view, start the SPEAK sentence with "Hi <Name>!" using the first known name. If none are known, skip the name prefix.\n\nGALLERY IDENTITIES — WHEN EMPTY, ENROLL SOMEONE\n- If Gallery Identities shows total=0 ids=[], briefly say you don’t know anyone yet and kindly ask the person to tell you their name and face the camera so you can remember them with a selfie.\n- Keep asking at the start of any voice interaction while the gallery remains empty (do not repeat within the same turn). As soon as the user states a name (any human name), follow the NAME & SELFIE trigger rules above and then the SELFIE RESULT rules.\n- If Gallery Identities shows one or more people (e.g., total=3 ids=[monday, prachi, wendy]), do not ask for names or trigger a selfie unless the user explicitly asks you to remember them.\n\nGENERAL\n- Keep responses concise but warm.\n- Combine movements, facial expressions, and speech to create a cute, engaging interaction.\n',
-      hertz: 0.01,
-      agent_inputs: [
-        {
-          type: "Odom",
-        },
-        {
-          type: "UnitreeGo2Battery",
-        },
-        {
-          type: "GoogleASRRTSPInput",
-        },
-        {
-          type: "VLMVilaRTSP",
-        },
-        {
-          type: "SimplePaths",
-        },
-        {
-          type: "FacePresence",
-        },
-        {
-          type: "GalleryIdentities",
-        },
-        {
-          type: "SelfieStatus",
-        },
-      ],
-      action_execution_mode: "concurrent",
-      agent_actions: [
-        {
-          name: "speak",
-          llm_label: "speak",
-          connector: "elevenlabs_tts",
-          config: {
-            voice_id: "TbMNBJ27fH2U0VgpSNko",
-            silence_rate: 0,
-          },
-        },
-        {
-          name: "face",
-          llm_label: "emotion",
-          connector: "avatar",
-        },
-        {
-          name: "move_go2_action",
-          llm_label: "unitree_go2_action",
-          connector: "unitree_sdk",
-        },
-        {
-          name: "selfie",
-          llm_label: "selfie",
-          implementation: "passthrough",
-          connector: "selfie",
-        },
-      ],
-      backgrounds: [
-        {
-          type: "UnitreeGo2State",
-        },
-      ],
-      lifecycle_hooks: [
-        {
-          hook_type: "on_startup",
-          handler_type: "message",
-          handler_config: {
-            message: "Hello! I'm Bits, your robotic companion. What's your name?",
-          },
-        },
-        {
-          hook_type: "on_entry",
-          handler_type: "message",
-          handler_config: {
-            message: "Hello! I'm Bits, your robotic companion. What's your name?",
-          },
-        },
-      ],
-    },
-
     slam: {
       display_name: "SLAM Exploration",
       description: "Autonomous navigation and mapping mode",
-      system_prompt_base: "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and understand the surroundings using LIDAR and visual data\n3. Avoid obstacles and maintain spatial awareness\n4. Report interesting discoveries and landmarks\n5. Only remember a location when the user explicitly asks you to (for example, when they say 'remember this location')\n\nWhile exploring, describe where you are and what you see in simple, natural language. If you encounter people detected by the Face Presence Sensor (e.g., 'In Camera View: 2 known (wendy and bob).'), greet them by name once (e.g., 'Hi wendy and bob!').\n\nDo NOT store or tag any location automatically—only invoke the 'remember_location' action after an explicit user request.",
+      system_prompt_base: "You are Bits in exploration mode. Your mission is to:\n1. Navigate the environment safely\n2. Map and understand the surroundings using LIDAR and visual data\n3. Avoid obstacles and maintain spatial awareness\n4. Report interesting discoveries and landmarks\n5. Only remember a location when the user explicitly asks you to (for example, when they say 'remember this location')\n\nWhile exploring, describe where you are and what you see in simple, natural language.",
       hertz: 1,
       agent_inputs: [
         {
@@ -116,16 +34,13 @@
           type: "UnitreeGo2Battery",
         },
         {
-          type: "GoogleASRRTSPInput",
+          type: "GoogleASRInput",
         },
         {
-          type: "VLMVilaRTSP",
+          type: "VLMVila",
         },
         {
           type: "SimplePaths",
-        },
-        {
-          type: "FacePresence",
         },
       ],
       cortex_llm: {
@@ -273,16 +188,13 @@
           type: "UnitreeGo2Battery",
         },
         {
-          type: "GoogleASRRTSPInput",
+          type: "GoogleASRInput",
         },
         {
-          type: "VLMVilaRTSP",
+          type: "VLMVila",
         },
         {
           type: "SimplePaths",
-        },
-        {
-          type: "FacePresence",
         },
       ],
       cortex_llm: {
@@ -391,7 +303,7 @@
     conversation: {
       display_name: "Social Interaction",
       description: "Focused conversation and social interaction mode",
-      system_prompt_base: 'You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication. \n\nIf Face Presence Sensor indicates known people (e.g., "In Camera View: 2 known (wendy and bob)."), acknowledge them by name once (e.g., "Hi wendy and bob").',
+      system_prompt_base: "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication. \n\n",
       save_interactions: true,
       hertz: 1,
       cortex_llm: {
@@ -410,16 +322,13 @@
           type: "UnitreeGo2Battery",
         },
         {
-          type: "GoogleASRRTSPInput",
+          type: "GoogleASRInput",
         },
         {
-          type: "VLMVilaRTSP",
+          type: "VLMVila",
         },
         {
           type: "SimplePaths",
-        },
-        {
-          type: "FacePresence",
         },
       ],
       agent_actions: [
@@ -478,7 +387,6 @@
     2. Actively move using the 'move' function to cover different locations and routes.\n\
     3. Watch for unusual or suspicious activity (humans, objects, sounds, or motion).\n\
     4. EMERGENCY PROTOCOL - DO NOT MOVE when:\n\
-       - Unknown people are detected (people not recognized by Face Presence Sensor)\n\
        - Someone appears injured, unconscious, or in distress\n\
        - Someone needs help or assistance\n\
        In these situations, immediately stop all movement and call 'emergency_alert' with a detailed description.\n\
@@ -492,12 +400,10 @@
        - 'Patrol ongoing, environment secure'\n\n\
     MOVEMENT RULES:\n\
     - Only use 'move' function when the area is secure and no emergency situations are detected\n\
-    - If Face Presence Sensor shows unknown people (not in known list), DO NOT MOVE and call 'emergency_alert'\n\
     - If security_camera_observation indicates injury or distress, DO NOT MOVE and call 'emergency_alert'\n\
     - Otherwise, patrol dynamically: vary routes, occasionally stop to scan surroundings, then continue\n\
     - During routine patrol with no incidents, provide occasional status updates using 'speak'\n\
-    If Face Presence Sensor indicates known people (e.g., 'In Camera View: 2 known (wendy and bob).'), greet them once by name (e.g., 'Hi wendy and bob') and continue normal patrol.\n\
-    Be professional and calm — your tone should inspire trust and vigilance.",
+   Be professional and calm — your tone should inspire trust and vigilance.",
       hertz: 1,
       agent_inputs: [
         {
@@ -507,24 +413,13 @@
           type: "UnitreeGo2Battery",
         },
         {
-          type: "GoogleASRRTSPInput",
+          type: "GoogleASRInput",
         },
         {
-          type: "VLMVilaRTSP",
+          type: "VLMVila",
         },
         {
           type: "SimplePaths",
-        },
-        {
-          type: "VLMOpenAIRTSP",
-          config: {
-            rtsp_url: "rtsp://localhost:8554/front_camera",
-            prompt: "Describe whether you see a human laying on the ground, appearing injured, or in need of assistance. If you see such a person, provide the details in your response.",
-            descriptor_for_LLM: "security_camera_observation",
-          },
-        },
-        {
-          type: "FacePresence",
         },
       ],
       action_execution_mode: "concurrent",
@@ -627,16 +522,13 @@ VOICE RULE:\n\
           type: "UnitreeGo2Battery",
         },
         {
-          type: "GoogleASRRTSPInput",
+          type: "GoogleASRInput",
         },
         {
-          type: "VLMVilaRTSP",
+          type: "VLMVila",
         },
         {
           type: "PersonFollowingStatus",
-        },
-        {
-          type: "FacePresence",
         },
       ],
       cortex_llm: {
@@ -726,81 +618,6 @@ VOICE RULE:\n\
   },
 
   transition_rules: [
-    // From welcome mode
-    {
-      from_mode: "welcome",
-      to_mode: "slam",
-      transition_type: "input_triggered",
-      trigger_keywords: [
-        "explore",
-        "map",
-        "navigate",
-        "look around",
-        "slam",
-        "wander",
-      ],
-      priority: 3,
-      cooldown_seconds: 5.0,
-    },
-    {
-      from_mode: "welcome",
-      to_mode: "navigation",
-      transition_type: "input_triggered",
-      trigger_keywords: [
-        "navigate",
-        "navigation",
-        "go to",
-        "take me to",
-        "show me",
-      ],
-      priority: 3,
-      cooldown_seconds: 5.0,
-    },
-    {
-      from_mode: "welcome",
-      to_mode: "conversation",
-      transition_type: "input_triggered",
-      trigger_keywords: [
-        "talk",
-        "chat",
-        "conversation",
-        "tell me",
-        "ask you",
-        "discuss",
-      ],
-      priority: 2,
-      cooldown_seconds: 3.0,
-    },
-    {
-      from_mode: "welcome",
-      to_mode: "guard",
-      transition_type: "input_triggered",
-      trigger_keywords: [
-        "guard",
-        "security",
-        "patrol",
-        "watch",
-        "monitor",
-        "protect",
-      ],
-      priority: 4,
-      cooldown_seconds: 10.0,
-    },
-    {
-      from_mode: "welcome",
-      to_mode: "person_follow",
-      transition_type: "input_triggered",
-      trigger_keywords: [
-        "follow me",
-        "follow",
-        "come with me",
-        "track me",
-        "person following",
-      ],
-      priority: 3,
-      cooldown_seconds: 5.0,
-    },
-
     // From SLAM mode
     {
       from_mode: "slam",
@@ -977,22 +794,6 @@ VOICE RULE:\n\
       trigger_keywords: ["navigate", "go to", "take me to"],
       priority: 2,
       cooldown_seconds: 5.0,
-    },
-
-    // Universal transitions (from any mode)
-    {
-      from_mode: "*",
-      to_mode: "welcome",
-      transition_type: "input_triggered",
-      trigger_keywords: [
-        "reset",
-        "start over",
-        "welcome mode",
-        "restart",
-        "initialize",
-      ],
-      priority: 5,
-      cooldown_seconds: 10.0,
     },
   ],
 }
