@@ -27,15 +27,6 @@ Additionally, you can manually trigger all checks by running
 pre-commit run --all-files
 ```
 
-### Updating the Docs
-
-After you have updated the core documentation, make sure to run:
-
-```bash
-chmod +x scripts/mintlify.sh # first time only
-./scripts/mintlify.sh
-```
-
 to also update secondary documentation systems like mintlify.
 
 ### Unit Testing
