@@ -54,6 +54,47 @@ class MockRuntimeConfig:
             self.cortex_llm = MagicMock()
 
 
+BASE_RAW_CONFIG = {
+    "version": "1.0.0",
+    "hertz": 1.0,
+    "name": "test",
+    "system_prompt_base": "You are a helpful robot.",
+    "system_governance": "Be safe and ethical.",
+    "system_prompt_examples": "Example: Hello!",
+    "agent_inputs": [],
+    "cortex_llm": {"type": "OpenAILLM"},
+    "simulators": [],
+    "agent_actions": [],
+    "backgrounds": [],
+}
+
+
+@pytest.fixture
+def mock_cortex_deps():
+    """Mock all CortexRuntime dependencies."""
+    with (
+        patch("runtime.single_mode.cortex.Fuser"),
+        patch("runtime.single_mode.cortex.ActionOrchestrator"),
+        patch("runtime.single_mode.cortex.SimulatorOrchestrator"),
+        patch("runtime.single_mode.cortex.BackgroundOrchestrator"),
+        patch("runtime.single_mode.cortex.IOProvider"),
+        patch("runtime.single_mode.cortex.ConfigProvider"),
+        patch("runtime.single_mode.cortex.SleepTickerProvider"),
+    ):
+        yield
+
+
+def _make_runtime(mock_cortex_deps, **config_overrides):
+    """Helper to create a CortexRuntime with mock config."""
+    config = MockRuntimeConfig(**config_overrides)
+    rt = CortexRuntime(
+        config=config,  # type: ignore[arg-type]
+        config_name="test",
+        hot_reload=False,
+    )
+    return rt
+
+
 class TestHotReloadSafeFields:
     """Tests for HOT_RELOAD_SAFE_FIELDS constant."""
 
@@ -74,256 +115,198 @@ class TestHotReloadSafeFields:
 
 
 class TestDetectConfigChanges:
-    """Tests for _detect_config_changes method."""
+    """Tests for _detect_config_changes method using raw JSON dicts."""
 
     @pytest.fixture
-    def runtime(self):
+    def runtime(self, mock_cortex_deps):
         """Create a CortexRuntime instance for testing."""
-        with patch("runtime.single_mode.cortex.Fuser"):
-            with patch("runtime.single_mode.cortex.ActionOrchestrator"):
-                with patch("runtime.single_mode.cortex.SimulatorOrchestrator"):
-                    with patch("runtime.single_mode.cortex.BackgroundOrchestrator"):
-                        with patch("runtime.single_mode.cortex.IOProvider"):
-                            with patch("runtime.single_mode.cortex.ConfigProvider"):
-                                with patch(
-                                    "runtime.single_mode.cortex.SleepTickerProvider"
-                                ):
-                                    config = MockRuntimeConfig()
-                                    rt = CortexRuntime(
-                                        config=config,
-                                        config_name="test",
-                                        hot_reload=False,
-                                    )
-                                    return rt
+        return _make_runtime(mock_cortex_deps)
 
     def test_no_changes_returns_empty_set(self, runtime):
-        """Test that identical configs return empty set."""
-        llm = MagicMock()
-        old_config = MockRuntimeConfig(cortex_llm=llm)
-        new_config = MockRuntimeConfig(cortex_llm=llm)
+        """Test that identical raw configs return empty set."""
+        old_raw = {**BASE_RAW_CONFIG}
+        new_raw = {**BASE_RAW_CONFIG}
 
-        changed = runtime._detect_config_changes(old_config, new_config)
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
         assert changed == set()
 
     def test_detects_system_prompt_base_change(self, runtime):
         """Test detection of system_prompt_base change."""
-        old_config = MockRuntimeConfig(system_prompt_base="Old prompt")
-        new_config = MockRuntimeConfig(system_prompt_base="New prompt")
+        old_raw = {**BASE_RAW_CONFIG}
+        new_raw = {**BASE_RAW_CONFIG, "system_prompt_base": "New prompt"}
 
-        changed = runtime._detect_config_changes(old_config, new_config)
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
         assert "system_prompt_base" in changed
 
     def test_detects_system_governance_change(self, runtime):
         """Test detection of system_governance change."""
-        old_config = MockRuntimeConfig(system_governance="Old rules")
-        new_config = MockRuntimeConfig(system_governance="New rules")
+        old_raw = {**BASE_RAW_CONFIG}
+        new_raw = {**BASE_RAW_CONFIG, "system_governance": "New rules"}
 
-        changed = runtime._detect_config_changes(old_config, new_config)
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
         assert "system_governance" in changed
 
     def test_detects_hertz_change(self, runtime):
         """Test detection of hertz change."""
-        old_config = MockRuntimeConfig(hertz=1.0)
-        new_config = MockRuntimeConfig(hertz=2.0)
+        old_raw = {**BASE_RAW_CONFIG}
+        new_raw = {**BASE_RAW_CONFIG, "hertz": 2.0}
 
-        changed = runtime._detect_config_changes(old_config, new_config)
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
         assert "hertz" in changed
 
     def test_detects_multiple_safe_field_changes(self, runtime):
         """Test detection of multiple safe field changes."""
-        old_config = MockRuntimeConfig(
-            system_prompt_base="Old",
-            hertz=1.0,
-        )
-        new_config = MockRuntimeConfig(
-            system_prompt_base="New",
-            hertz=2.0,
-        )
+        old_raw = {**BASE_RAW_CONFIG}
+        new_raw = {**BASE_RAW_CONFIG, "system_prompt_base": "New", "hertz": 2.0}
 
-        changed = runtime._detect_config_changes(old_config, new_config)
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
         assert "system_prompt_base" in changed
         assert "hertz" in changed
 
-    def test_detects_agent_inputs_length_change(self, runtime):
-        """Test detection of agent_inputs length change."""
-        old_config = MockRuntimeConfig(agent_inputs=[])
-        new_config = MockRuntimeConfig(agent_inputs=[MagicMock()])
+    def test_detects_agent_inputs_change(self, runtime):
+        """Test detection of agent_inputs change."""
+        old_raw = {**BASE_RAW_CONFIG, "agent_inputs": []}
+        new_raw = {**BASE_RAW_CONFIG, "agent_inputs": [{"type": "NewInput"}]}
 
-        changed = runtime._detect_config_changes(old_config, new_config)
+        changed = runtime._detect_config_changes(old_raw, new_raw)
+
+        assert "agent_inputs" in changed
+
+    def test_detects_agent_inputs_content_change_same_length(self, runtime):
+        """Test detection when agent_inputs content changes but length stays same."""
+        old_raw = {**BASE_RAW_CONFIG, "agent_inputs": [{"type": "InputA"}]}
+        new_raw = {**BASE_RAW_CONFIG, "agent_inputs": [{"type": "InputB"}]}
+
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
         assert "agent_inputs" in changed
 
     def test_detects_cortex_llm_change(self, runtime):
-        """Test detection of cortex_llm instance change."""
-        llm1 = MagicMock()
-        llm2 = MagicMock()
-        old_config = MockRuntimeConfig(cortex_llm=llm1)
-        new_config = MockRuntimeConfig(cortex_llm=llm2)
+        """Test detection of cortex_llm config change."""
+        old_raw = {**BASE_RAW_CONFIG, "cortex_llm": {"type": "OpenAILLM"}}
+        new_raw = {**BASE_RAW_CONFIG, "cortex_llm": {"type": "GeminiLLM"}}
 
-        changed = runtime._detect_config_changes(old_config, new_config)
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
         assert "cortex_llm" in changed
 
+    def test_detects_new_field_added(self, runtime):
+        """Test detection when a new field is added to config."""
+        old_raw = {**BASE_RAW_CONFIG}
+        new_raw = {**BASE_RAW_CONFIG, "new_field": "value"}
 
-class TestApplySafeConfigUpdates:
-    """Tests for _apply_safe_config_updates method."""
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
-    @pytest.fixture
-    def runtime(self):
-        """Create a CortexRuntime instance for testing."""
-        with patch("runtime.single_mode.cortex.Fuser"):
-            with patch("runtime.single_mode.cortex.ActionOrchestrator"):
-                with patch("runtime.single_mode.cortex.SimulatorOrchestrator"):
-                    with patch("runtime.single_mode.cortex.BackgroundOrchestrator"):
-                        with patch("runtime.single_mode.cortex.IOProvider"):
-                            with patch("runtime.single_mode.cortex.ConfigProvider"):
-                                with patch(
-                                    "runtime.single_mode.cortex.SleepTickerProvider"
-                                ):
-                                    config = MockRuntimeConfig(
-                                        system_prompt_base="Old prompt",
-                                        hertz=1.0,
-                                    )
-                                    rt = CortexRuntime(
-                                        config=config,
-                                        config_name="test",
-                                        hot_reload=False,
-                                    )
-                                    return rt
+        assert "new_field" in changed
 
-    def test_updates_system_prompt_base(self, runtime):
-        """Test that system_prompt_base is updated correctly."""
-        new_config = MockRuntimeConfig(system_prompt_base="New prompt")
+    def test_detects_field_removed(self, runtime):
+        """Test detection when a field is removed from config."""
+        old_raw = {**BASE_RAW_CONFIG, "extra_field": "value"}
+        new_raw = {**BASE_RAW_CONFIG}
 
-        runtime._apply_safe_config_updates(new_config, {"system_prompt_base"})
+        changed = runtime._detect_config_changes(old_raw, new_raw)
 
-        assert runtime.config.system_prompt_base == "New prompt"
-
-    def test_updates_hertz(self, runtime):
-        """Test that hertz is updated correctly."""
-        new_config = MockRuntimeConfig(hertz=5.0)
-
-        runtime._apply_safe_config_updates(new_config, {"hertz"})
-
-        assert runtime.config.hertz == 5.0
-
-    def test_updates_multiple_safe_fields(self, runtime):
-        """Test updating multiple safe fields at once."""
-        new_config = MockRuntimeConfig(
-            system_prompt_base="New prompt",
-            system_governance="New rules",
-            hertz=3.0,
-        )
-
-        runtime._apply_safe_config_updates(
-            new_config, {"system_prompt_base", "system_governance", "hertz"}
-        )
-
-        assert runtime.config.system_prompt_base == "New prompt"
-        assert runtime.config.system_governance == "New rules"
-        assert runtime.config.hertz == 3.0
-
-    def test_ignores_unsafe_fields(self, runtime):
-        """Test that unsafe fields are not updated."""
-        original_inputs = runtime.config.agent_inputs
-        new_config = MockRuntimeConfig(agent_inputs=[MagicMock()])
-
-        # Try to update agent_inputs (should be ignored)
-        runtime._apply_safe_config_updates(new_config, {"agent_inputs"})
-
-        # agent_inputs should not be changed because it's not in HOT_RELOAD_SAFE_FIELDS
-        assert runtime.config.agent_inputs is original_inputs
+        assert "extra_field" in changed
 
 
 class TestReloadConfig:
     """Tests for _reload_config method behavior."""
 
     @pytest.fixture
-    def runtime(self):
+    def runtime(self, mock_cortex_deps):
         """Create a CortexRuntime instance for testing."""
-        with patch("runtime.single_mode.cortex.Fuser"):
-            with patch("runtime.single_mode.cortex.ActionOrchestrator"):
-                with patch("runtime.single_mode.cortex.SimulatorOrchestrator"):
-                    with patch("runtime.single_mode.cortex.BackgroundOrchestrator"):
-                        with patch("runtime.single_mode.cortex.IOProvider"):
-                            with patch("runtime.single_mode.cortex.ConfigProvider"):
-                                with patch(
-                                    "runtime.single_mode.cortex.SleepTickerProvider"
-                                ):
-                                    config = MockRuntimeConfig(
-                                        system_prompt_base="Old prompt"
-                                    )
-                                    rt = CortexRuntime(
-                                        config=config,
-                                        config_name="test",
-                                        hot_reload=False,
-                                    )
-                                    # Set config_path manually since hot_reload is False
-                                    rt.config_path = "/tmp/test_config.json5"
-                                    rt._full_reload = AsyncMock()
-                                    return rt
+        rt = _make_runtime(mock_cortex_deps, system_prompt_base="Old prompt")
+        rt.config_path = "/tmp/test_config.json5"
+        rt._raw_config = {**BASE_RAW_CONFIG, "system_prompt_base": "Old prompt"}
+        rt._full_reload = AsyncMock()  # type: ignore[method-assign]
+        return rt
 
     @pytest.mark.asyncio
     async def test_safe_changes_do_not_trigger_full_reload(self, runtime):
         """Test that safe field changes don't trigger full reload."""
-        # Use same LLM to avoid cortex_llm change detection
-        new_config = MockRuntimeConfig(
-            system_prompt_base="New prompt",
-            cortex_llm=runtime.config.cortex_llm,
-        )
+        new_raw = {**BASE_RAW_CONFIG, "system_prompt_base": "New prompt"}
 
-        with patch("runtime.single_mode.cortex.load_config", return_value=new_config):
+        with patch.object(runtime, "_read_raw_config", return_value=new_raw):
             await runtime._reload_config()
 
-        # Full reload should NOT be called
         runtime._full_reload.assert_not_called()
-        # Config should be updated
         assert runtime.config.system_prompt_base == "New prompt"
 
     @pytest.mark.asyncio
     async def test_unsafe_changes_trigger_full_reload(self, runtime):
         """Test that unsafe field changes trigger full reload."""
-        new_config = MockRuntimeConfig(
-            agent_inputs=[MagicMock()],
-            cortex_llm=runtime.config.cortex_llm,
-        )
+        new_raw = {
+            **BASE_RAW_CONFIG,
+            "system_prompt_base": "Old prompt",
+            "agent_inputs": [{"type": "NewInput"}],
+        }
 
-        with patch("runtime.single_mode.cortex.load_config", return_value=new_config):
+        with (
+            patch.object(runtime, "_read_raw_config", return_value=new_raw),
+            patch("runtime.single_mode.cortex.load_config") as mock_load,
+        ):
+            mock_load.return_value = MockRuntimeConfig()
             await runtime._reload_config()
 
-        # Full reload SHOULD be called
         runtime._full_reload.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_mixed_changes_trigger_full_reload(self, runtime):
         """Test that mixed safe/unsafe changes trigger full reload."""
-        new_config = MockRuntimeConfig(
-            system_prompt_base="New prompt",  # safe
-            agent_inputs=[MagicMock()],  # unsafe
-            cortex_llm=runtime.config.cortex_llm,
-        )
+        new_raw = {
+            **BASE_RAW_CONFIG,
+            "system_prompt_base": "New prompt",
+            "agent_inputs": [{"type": "NewInput"}],
+        }
 
-        with patch("runtime.single_mode.cortex.load_config", return_value=new_config):
+        with (
+            patch.object(runtime, "_read_raw_config", return_value=new_raw),
+            patch("runtime.single_mode.cortex.load_config") as mock_load,
+        ):
+            mock_load.return_value = MockRuntimeConfig()
             await runtime._reload_config()
 
-        # Full reload SHOULD be called because of unsafe field
         runtime._full_reload.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_no_changes_does_nothing(self, runtime):
         """Test that no changes result in no action."""
-        # Same config with same LLM instance
-        new_config = MockRuntimeConfig(
-            system_prompt_base="Old prompt",
-            cortex_llm=runtime.config.cortex_llm,
-        )
+        new_raw = {**BASE_RAW_CONFIG, "system_prompt_base": "Old prompt"}
 
-        with patch("runtime.single_mode.cortex.load_config", return_value=new_config):
+        with patch.object(runtime, "_read_raw_config", return_value=new_raw):
             await runtime._reload_config()
 
         runtime._full_reload.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_raw_config_updated_after_safe_reload(self, runtime):
+        """Test that _raw_config is updated after a safe field change."""
+        new_raw = {**BASE_RAW_CONFIG, "system_prompt_base": "New prompt"}
+
+        with patch.object(runtime, "_read_raw_config", return_value=new_raw):
+            await runtime._reload_config()
+
+        assert runtime._raw_config["system_prompt_base"] == "New prompt"
+
+    @pytest.mark.asyncio
+    async def test_raw_config_updated_after_full_reload(self, runtime):
+        """Test that _raw_config is updated after a full reload."""
+        new_raw = {
+            **BASE_RAW_CONFIG,
+            "system_prompt_base": "Old prompt",
+            "agent_inputs": [{"type": "NewInput"}],
+        }
+
+        with (
+            patch.object(runtime, "_read_raw_config", return_value=new_raw),
+            patch("runtime.single_mode.cortex.load_config") as mock_load,
+        ):
+            mock_load.return_value = MockRuntimeConfig()
+            await runtime._reload_config()
+
+        assert runtime._raw_config["agent_inputs"] == [{"type": "NewInput"}]

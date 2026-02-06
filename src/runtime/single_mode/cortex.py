@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import json5
 
@@ -92,10 +92,12 @@ class CortexRuntime:
         self.cortex_loop_task: Optional[asyncio.Task] = None
 
         self._is_reloading = False
+        self._raw_config: Dict[str, Any] = {}
 
         if self.hot_reload:
             self.config_path = self._create_runtime_config_file()
             self.last_modified = self._get_file_mtime()
+            self._raw_config = self._read_raw_config()
             logging.info(
                 f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
             )
@@ -252,18 +254,37 @@ class CortexRuntime:
                 logging.error(f"Error checking config changes: {e}")
                 await asyncio.sleep(5)
 
+    def _read_raw_config(self) -> Dict[str, Any]:
+        """
+        Read the raw JSON5 configuration file.
+
+        Returns
+        -------
+        Dict[str, Any]
+            The raw configuration dictionary.
+        """
+        try:
+            with open(self.config_path, "r") as f:
+                return json5.load(f)
+        except Exception as e:
+            logging.error(f"Failed to read raw config: {e}")
+            return {}
+
     def _detect_config_changes(
-        self, old_config: RuntimeConfig, new_config: RuntimeConfig
+        self, old_raw: Dict[str, Any], new_raw: Dict[str, Any]
     ) -> Set[str]:
         """
-        Detect which configuration fields have changed.
+        Detect which configuration fields have changed by comparing raw JSON configs.
+
+        Compares raw JSON dictionaries instead of instantiated objects to reliably
+        detect changes in complex fields (agent_inputs, agent_actions, etc.).
 
         Parameters
         ----------
-        old_config : RuntimeConfig
-            The current configuration.
-        new_config : RuntimeConfig
-            The new configuration to compare against.
+        old_raw : Dict[str, Any]
+            The current raw configuration dictionary.
+        new_raw : Dict[str, Any]
+            The new raw configuration dictionary to compare against.
 
         Returns
         -------
@@ -271,100 +292,16 @@ class CortexRuntime:
             Set of field names that have changed.
         """
         changed_fields: Set[str] = set()
+        all_keys = set(old_raw.keys()) | set(new_raw.keys())
 
-        # Check simple fields that can be compared directly
-        simple_fields = [
-            "system_prompt_base",
-            "system_governance",
-            "system_prompt_examples",
-            "hertz",
-            "name",
-            "version",
-            "mode",
-            "api_key",
-            "robot_ip",
-            "URID",
-            "unitree_ethernet",
-            "action_execution_mode",
-        ]
-
-        for field in simple_fields:
-            old_value = getattr(old_config, field, None)
-            new_value = getattr(new_config, field, None)
+        for key in all_keys:
+            old_value = old_raw.get(key)
+            new_value = new_raw.get(key)
             if old_value != new_value:
-                changed_fields.add(field)
-                logging.debug(f"Config field '{field}' changed")
-
-        # Check complex fields (these require full reload if changed)
-        # We compare by checking if the serialized form would differ
-        complex_fields = [
-            "agent_inputs",
-            "agent_actions",
-            "simulators",
-            "backgrounds",
-            "action_dependencies",
-        ]
-
-        for field in complex_fields:
-            old_value = getattr(old_config, field, None)
-            new_value = getattr(new_config, field, None)
-            try:
-                # Simple length check first
-                if old_value is None and new_value is not None:
-                    changed_fields.add(field)
-                elif old_value is not None and new_value is None:
-                    changed_fields.add(field)
-                elif old_value is not None and new_value is not None:
-                    # Check if both are lists and compare lengths
-                    if hasattr(old_value, "__len__") and hasattr(new_value, "__len__"):
-                        if len(old_value) != len(new_value):
-                            changed_fields.add(field)
-                            logging.debug(
-                                f"Config field '{field}' changed (length differs)"
-                            )
-                    elif old_value is not new_value:
-                        # Different objects, assume changed
-                        changed_fields.add(field)
-            except (TypeError, AttributeError):
-                # If comparison fails, assume it changed to be safe
-                changed_fields.add(field)
-                logging.debug(
-                    f"Config field '{field}' comparison failed, assuming changed"
-                )
-
-        # LLM config is special - check if model or settings changed
-        try:
-            old_llm = getattr(old_config, "cortex_llm", None)
-            new_llm = getattr(new_config, "cortex_llm", None)
-            if old_llm is not new_llm:
-                # Different instances, assume changed
-                changed_fields.add("cortex_llm")
-                logging.debug("Config field 'cortex_llm' changed")
-        except AttributeError:
-            # If comparison fails, assume changed to trigger full reload
-            changed_fields.add("cortex_llm")
+                changed_fields.add(key)
+                logging.debug(f"Config field '{key}' changed")
 
         return changed_fields
-
-    def _apply_safe_config_updates(
-        self, new_config: RuntimeConfig, changed_fields: Set[str]
-    ) -> None:
-        """
-        Apply configuration updates for safe fields without restart.
-
-        Parameters
-        ----------
-        new_config : RuntimeConfig
-            The new configuration with updated values.
-        changed_fields : Set[str]
-            Set of field names that have changed.
-        """
-        for field in changed_fields:
-            if field in HOT_RELOAD_SAFE_FIELDS:
-                old_value = getattr(self.config, field, None)
-                new_value = getattr(new_config, field, None)
-                setattr(self.config, field, new_value)
-                logging.info(f"Hot-updated '{field}': {old_value!r} -> {new_value!r}")
 
     async def _reload_config(self) -> None:
         """
@@ -382,12 +319,13 @@ class CortexRuntime:
                 logging.error("No config name available for reload")
                 return
 
-            new_config = load_config(
-                self.config_name, config_source_path=self.config_path
-            )
+            # Read raw config first to detect changes before instantiating
+            new_raw = self._read_raw_config()
+            if not new_raw:
+                logging.error("Failed to read new configuration")
+                return
 
-            # Detect what changed
-            changed_fields = self._detect_config_changes(self.config, new_config)
+            changed_fields = self._detect_config_changes(self._raw_config, new_raw)
 
             if not changed_fields:
                 logging.info("No configuration changes detected")
@@ -397,8 +335,16 @@ class CortexRuntime:
 
             # Check if all changes are safe (no restart needed)
             if changed_fields.issubset(HOT_RELOAD_SAFE_FIELDS):
-                # Safe update - just update the config values
-                self._apply_safe_config_updates(new_config, changed_fields)
+                # Safe update - just update the config values in-place
+                for field in changed_fields:
+                    if field in HOT_RELOAD_SAFE_FIELDS:
+                        new_value = new_raw.get(field)
+                        old_value = getattr(self.config, field, None)
+                        setattr(self.config, field, new_value)
+                        logging.info(
+                            f"Hot-updated '{field}': {old_value!r} -> {new_value!r}"
+                        )
+                self._raw_config = new_raw
                 logging.info(
                     "Configuration hot-updated successfully (no restart required)"
                 )
@@ -408,7 +354,11 @@ class CortexRuntime:
                 logging.info(
                     f"Full restart required due to changes in: {unsafe_fields}"
                 )
+                new_config = load_config(
+                    self.config_name, config_source_path=self.config_path
+                )
                 await self._full_reload(new_config)
+                self._raw_config = new_raw
 
         except Exception as e:
             logging.error(f"Failed to reload configuration: {e}")
