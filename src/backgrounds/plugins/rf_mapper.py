@@ -267,7 +267,6 @@ class RFmapper(Background[RFmapperConfig]):
                 with self.scan_lock:
                     scan_idx = self.scan_idx
                     scan_last_sent = self.scan_last_sent
-                    scan_results = list(self.scan_results)
 
                 logging.info(f"RF scan index: {scan_idx}")
                 logging.info(f"RF scan last sent: {scan_last_sent}")
