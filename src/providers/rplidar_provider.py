@@ -61,8 +61,8 @@ def rplidar_processor(
         Queue for sending control commands.
     serial_port : str
         The name of the serial port in use by the RPLidar sensor.
-    config : Dict
-        Configuration dictionary containing parameters for the RPLidar.
+    rplidar_config : RPLidarConfig
+        Configuration for the RPLidar sensor.
     logging_config : Optional[LoggingConfig]
         Optional logging configuration. If provided, it will override the default logging settings.
     """
