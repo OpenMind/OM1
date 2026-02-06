@@ -217,15 +217,15 @@ class OllamaLLM(LLM[R]):
             )
             logging.error("Start Ollama with: ollama serve")
             logging.error(f"Error: {e}")
-            return None
+            raise
         except httpx.TimeoutException as e:
             logging.error(f"Ollama request timed out after {self._config.timeout}s")
             logging.error("Try increasing timeout or using a smaller model")
             logging.error(f"Error: {e}")
-            return None
+            raise
         except Exception as e:
             logging.error(f"Ollama API error: {e}")
-            return None
+            raise
 
     async def close(self):
         """Close the HTTP client."""

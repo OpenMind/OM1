@@ -20,6 +20,10 @@ class TestAutoRegistrationSensor:
 
         PrometheusMonitor.reset()  # type: ignore
         yield
+        try:
+            PrometheusMonitor().stop()
+        except Exception:
+            pass
         PrometheusMonitor.reset()  # type: ignore
 
     def test_sensor_auto_registers_on_init(self):
@@ -116,6 +120,10 @@ class TestAutoRegistrationAction:
 
         PrometheusMonitor.reset()  # type: ignore
         yield
+        try:
+            PrometheusMonitor().stop()
+        except Exception:
+            pass
         PrometheusMonitor.reset()  # type: ignore
 
     def test_action_connector_auto_registers_on_init(self):
@@ -166,6 +174,10 @@ class TestAutoRegistrationLLM:
 
         PrometheusMonitor.reset()  # type: ignore
         yield
+        try:
+            PrometheusMonitor().stop()
+        except Exception:
+            pass
         PrometheusMonitor.reset()  # type: ignore
 
     def test_llm_auto_registers_on_init(self):
@@ -236,6 +248,10 @@ class TestAutoRegistrationSimulator:
 
         PrometheusMonitor.reset()  # type: ignore
         yield
+        try:
+            PrometheusMonitor().stop()
+        except Exception:
+            pass
         PrometheusMonitor.reset()  # type: ignore
 
     def test_simulator_auto_registers_on_init(self):
@@ -285,6 +301,10 @@ class TestBaseClassPrometheusIntegration:
 
         PrometheusMonitor.reset()  # type: ignore
         yield
+        try:
+            PrometheusMonitor().stop()
+        except Exception:
+            pass
         PrometheusMonitor.reset()  # type: ignore
 
     def test_sensor_base_has_monitor(self):

@@ -111,6 +111,8 @@ class PrometheusMonitor:
         self._check_interval = check_interval
         self._running = False
         self._check_thread: Optional[threading.Thread] = None
+        self._server: Optional[uvicorn.Server] = None
+        self._server_thread: Optional[threading.Thread] = None
         self._server_started = False
 
         # Reference module-level metrics (guaranteed non-None after _init_metrics)
@@ -170,9 +172,9 @@ class PrometheusMonitor:
             port=port,
             log_level="error",
         )
-        server = uvicorn.Server(config)
-        server_thread = threading.Thread(target=server.run, daemon=True)
-        server_thread.start()
+        self._server = uvicorn.Server(config)
+        self._server_thread = threading.Thread(target=self._server.run, daemon=True)
+        self._server_thread.start()
 
     def _get_health_data(self) -> dict:
         """Get health data for API endpoint."""
@@ -345,12 +347,19 @@ class PrometheusMonitor:
         return rows
 
     def stop(self) -> None:
-        """Stop the health check thread."""
+        """Stop the health check thread and uvicorn server."""
         with self._lock:
             self._running = False
             if self._check_thread:
                 self._check_thread.join(timeout=5.0)
                 self._check_thread = None
+            if self._server:
+                self._server.should_exit = True
+            if self._server_thread:
+                self._server_thread.join(timeout=5.0)
+                self._server_thread = None
+            self._server = None
+            self._server_started = False
         logging.info("PrometheusMonitor stopped")
 
     def register(

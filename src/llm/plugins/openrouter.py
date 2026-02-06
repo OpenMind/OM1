@@ -154,4 +154,4 @@ class OpenRouter(LLM[R]):
 
         except Exception as e:
             logging.error(f"OpenRouter API error: {e}")
-            return None
+            raise

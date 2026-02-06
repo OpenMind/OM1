@@ -154,4 +154,4 @@ class OpenAILLM(LLM[R]):
 
         except Exception as e:
             logging.error(f"OpenAI API error: {e}")
-            return None
+            raise

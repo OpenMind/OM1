@@ -150,4 +150,4 @@ class NearAILLM(LLM[R]):
             return None
         except Exception as e:
             logging.error(f"NearAI API error: {e}")
-            return None
+            raise
