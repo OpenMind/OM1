@@ -62,19 +62,10 @@
                         "pages": [
                             "full_autonomy_guidelines/brainpack_introduction",
                             "full_autonomy_guidelines/architecture_overview",
-                            "full_autonomy_guidelines/om1_system_setup",
-                            "full_autonomy_guidelines/pre_config",
-                            "robotics/nvidia_thor",
-                            {
-                                "group": "Full Autonomy Components",
-                                "pages": [
-                                    "full_autonomy_guidelines/om1_avatar",
-                                    "full_autonomy_guidelines/om",
-                                    "full_autonomy_guidelines/unitree_sdk",
-                                    "full_autonomy_guidelines/om1_video_processor"
-                                ]
-
-                            }
+                            "full_autonomy_guidelines/setup_system",
+                            "full_autonomy_guidelines/system_config",
+                            "full_autonomy_guidelines/ota_setup",
+                            "robotics/nvidia_thor"
                         ]
                     },
                     {
@@ -154,7 +145,8 @@
                     {
                         "group": "API Reference",
                         "pages": [
-                            "api-reference/introduction"
+                            "api-reference/introduction",
+                            "api-reference/api_pricing"
                         ]
                     },
                     {
@@ -185,7 +177,7 @@
                         "pages": [
                             "release-notes/beta/om",
                             "release-notes/beta/om1-avatar",
-                            "release-notes/beta/unitree-sdk",
+                            "release-notes/beta/om1-ros2-sdk",
                             "release-notes/beta/video-processor"
                         ]
                     },
@@ -195,7 +187,7 @@
                             "release-notes/v1.0.0/om1-system-setup",
                             "release-notes/v1.0.0/om",
                             "release-notes/v1.0.0/om1-avatar",
-                            "release-notes/v1.0.0/unitree-sdk",
+                            "release-notes/v1.0.0/om1-ros2-sdk",
                             "release-notes/v1.0.0/video-processor"
                         ]
                     }
