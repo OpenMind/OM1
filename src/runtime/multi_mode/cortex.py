@@ -2,7 +2,9 @@ import asyncio
 import logging
 import os
 import time
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union
+
+import json5
 
 from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
@@ -19,6 +21,20 @@ from runtime.multi_mode.config import (
 )
 from runtime.multi_mode.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+
+# Fields that can be hot-reloaded without restarting orchestrators in multi-mode.
+# Global-level safe fields: system_governance, system_prompt_examples
+# Mode-level safe fields: system_prompt_base, hertz (inside each mode definition)
+MODE_HOT_RELOAD_SAFE_FIELDS: Set[str] = {
+    "system_governance",
+    "system_prompt_examples",
+}
+
+# Fields within a mode definition that are safe to update without restart
+MODE_LEVEL_SAFE_FIELDS: Set[str] = {
+    "system_prompt_base",
+    "hertz",
+}
 
 
 class ModeCortexRuntime:
@@ -79,6 +95,7 @@ class ModeCortexRuntime:
         if self.hot_reload:
             self.config_path = self.mode_manager._get_runtime_config_path()
             self.last_modified = self._get_file_mtime()
+            self._raw_config = self._read_raw_config()
             logging.info(
                 f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
             )
@@ -107,6 +124,7 @@ class ModeCortexRuntime:
 
         # Flag to track if a reload is in progress
         self._is_reloading = False
+        self._raw_config: Dict[str, Any] = {}
 
         # Event for handling mode transitions
         self._mode_transition_event = asyncio.Event()
@@ -647,12 +665,97 @@ class ModeCortexRuntime:
                 logging.error(f"Error checking config changes: {e}")
                 await asyncio.sleep(10)  # Wait before retrying
 
+    def _read_raw_config(self) -> Dict[str, Any]:
+        """
+        Read the raw JSON5 configuration file.
+
+        Returns
+        -------
+        Dict[str, Any]
+            The raw configuration dictionary.
+        """
+        try:
+            with open(self.config_path, "r") as f:
+                return json5.load(f)
+        except Exception as e:
+            logging.error(f"Failed to read raw config: {e}")
+            return {}
+
+    def _detect_config_changes(
+        self, old_raw: Dict[str, Any], new_raw: Dict[str, Any]
+    ) -> Set[str]:
+        """
+        Detect which configuration fields have changed by comparing raw JSON configs.
+
+        Compares raw JSON dictionaries instead of instantiated objects to reliably
+        detect changes in complex fields (modes, inputs, actions, etc.).
+
+        Parameters
+        ----------
+        old_raw : Dict[str, Any]
+            The current raw configuration dictionary.
+        new_raw : Dict[str, Any]
+            The new raw configuration dictionary to compare against.
+
+        Returns
+        -------
+        Set[str]
+            Set of field names that have changed.
+        """
+        changed_fields: Set[str] = set()
+        all_keys = set(old_raw.keys()) | set(new_raw.keys())
+
+        for key in all_keys:
+            old_value = old_raw.get(key)
+            new_value = new_raw.get(key)
+            if old_value != new_value:
+                changed_fields.add(key)
+                logging.debug(f"Config field '{key}' changed")
+
+        return changed_fields
+
+    def _are_mode_changes_safe(
+        self, old_raw: Dict[str, Any], new_raw: Dict[str, Any]
+    ) -> bool:
+        """
+        Check if changes within modes are limited to safe fields only.
+
+        Parameters
+        ----------
+        old_raw : Dict[str, Any]
+            The current raw configuration dictionary.
+        new_raw : Dict[str, Any]
+            The new raw configuration dictionary.
+
+        Returns
+        -------
+        bool
+            True if all mode-level changes are safe (only prompt/hertz changes).
+        """
+        old_modes = old_raw.get("modes", {})
+        new_modes = new_raw.get("modes", {})
+
+        # If mode keys changed (added/removed), not safe
+        if set(old_modes.keys()) != set(new_modes.keys()):
+            return False
+
+        for mode_name in old_modes:
+            old_mode = old_modes[mode_name]
+            new_mode = new_modes[mode_name]
+
+            mode_changes = self._detect_config_changes(old_mode, new_mode)
+            if not mode_changes.issubset(MODE_LEVEL_SAFE_FIELDS):
+                return False
+
+        return True
+
     async def _reload_config(self) -> None:
         """
-        Reload the mode configuration when runtime config file changes.
+        Reload the mode configuration with selective restart based on changed fields.
 
-        The runtime config file serves as a trigger - when it changes, we reload
-        from the original configuration source and then regenerate the runtime config.
+        If only safe fields changed (system prompts, hertz), updates them without
+        restarting orchestrators. If unsafe fields changed (inputs, actions, LLM,
+        modes structure), performs a full restart.
         """
         try:
             logging.info(
@@ -661,39 +764,79 @@ class ModeCortexRuntime:
 
             self._is_reloading = True
 
-            current_mode = self.mode_manager.current_mode_name
+            # Read raw config first to detect changes before instantiating
+            new_raw = self._read_raw_config()
+            if not new_raw:
+                logging.error("Failed to read new configuration")
+                return
 
-            await self._stop_current_orchestrators()
+            changed_fields = self._detect_config_changes(self._raw_config, new_raw)
 
-            logging.info("Loading configuration from the new runtime file")
-            new_mode_config = load_mode_config(
-                self.mode_config_name,
-                mode_source_path=self.mode_manager._get_runtime_config_path(),
-            )
+            if not changed_fields:
+                logging.info("No configuration changes detected")
+                return
 
-            self.mode_config = new_mode_config
-            self.mode_manager.config = new_mode_config
+            logging.info(f"Changed fields: {changed_fields}")
 
-            if current_mode not in new_mode_config.modes:
-                logging.warning(
-                    f"Current mode '{current_mode}' not found in reloaded config, switching to default mode '{new_mode_config.default_mode}'"
+            # Check if all changes are safe (no restart needed)
+            non_mode_changes = changed_fields - {"modes"}
+            is_safe = non_mode_changes.issubset(MODE_HOT_RELOAD_SAFE_FIELDS)
+
+            # If modes changed, check if mode-level changes are also safe
+            if "modes" in changed_fields:
+                is_safe = is_safe and self._are_mode_changes_safe(
+                    self._raw_config, new_raw
                 )
-                current_mode = new_mode_config.default_mode
 
-            self.mode_manager.state.current_mode = current_mode
-            self.mode_manager.state.mode_start_time = time.time()
-            self.mode_manager.state.last_transition_time = time.time()
-            self.mode_manager.state.transition_history.append(
-                f"config_reload->{current_mode}:hot_reload"
-            )
+            if is_safe:
+                # Safe update - update config values in-place
+                current_mode = self.mode_manager.current_mode_name
 
-            await self._initialize_mode(current_mode)
+                for field in non_mode_changes:
+                    if field in MODE_HOT_RELOAD_SAFE_FIELDS:
+                        new_value = new_raw.get(field)
+                        old_value = getattr(self.mode_config, field, None)
+                        setattr(self.mode_config, field, new_value)
+                        if self.current_config:
+                            setattr(self.current_config, field, new_value)
+                        logging.info(
+                            f"Hot-updated global '{field}': {old_value!r} -> {new_value!r}"
+                        )
 
-            await self._start_orchestrators()
+                # Update mode-level safe fields for current mode
+                if "modes" in changed_fields:
+                    new_modes = new_raw.get("modes", {})
+                    if current_mode in new_modes:
+                        new_mode_data = new_modes[current_mode]
+                        old_modes = self._raw_config.get("modes", {})
+                        old_mode_data = old_modes.get(current_mode, {})
 
-            logging.info(
-                f"Mode configuration reloaded successfully, active mode: {current_mode}"
-            )
+                        mode_changes = self._detect_config_changes(
+                            old_mode_data, new_mode_data
+                        )
+                        mode_obj = self.mode_config.modes.get(current_mode)
+                        for field in mode_changes:
+                            if field in MODE_LEVEL_SAFE_FIELDS:
+                                new_value = new_mode_data.get(field)
+                                old_value = getattr(mode_obj, field, None)
+                                setattr(mode_obj, field, new_value)
+                                if self.current_config:
+                                    setattr(self.current_config, field, new_value)
+                                logging.info(
+                                    f"Hot-updated mode '{current_mode}.{field}': {old_value!r} -> {new_value!r}"
+                                )
+
+                self._raw_config = new_raw
+                logging.info(
+                    "Configuration hot-updated successfully (no restart required)"
+                )
+            else:
+                # Unsafe fields changed - full restart required
+                unsafe_fields = changed_fields - MODE_HOT_RELOAD_SAFE_FIELDS - {"modes"}
+                logging.info(
+                    f"Full restart required due to changes in: {unsafe_fields or changed_fields}"
+                )
+                await self._full_reload(new_raw)
 
         except Exception as e:
             logging.error(f"Failed to reload mode configuration: {e}")
@@ -701,3 +844,47 @@ class ModeCortexRuntime:
 
         finally:
             self._is_reloading = False
+
+    async def _full_reload(self, new_raw: Dict[str, Any]) -> None:
+        """
+        Perform a full configuration reload with orchestrator restart.
+
+        Parameters
+        ----------
+        new_raw : Dict[str, Any]
+            The new raw configuration dictionary.
+        """
+        current_mode = self.mode_manager.current_mode_name
+
+        await self._stop_current_orchestrators()
+
+        logging.info("Loading configuration from the new runtime file")
+        new_mode_config = load_mode_config(
+            self.mode_config_name,
+            mode_source_path=self.mode_manager._get_runtime_config_path(),
+        )
+
+        self.mode_config = new_mode_config
+        self.mode_manager.config = new_mode_config
+
+        if current_mode not in new_mode_config.modes:
+            logging.warning(
+                f"Current mode '{current_mode}' not found in reloaded config, switching to default mode '{new_mode_config.default_mode}'"
+            )
+            current_mode = new_mode_config.default_mode
+
+        self.mode_manager.state.current_mode = current_mode
+        self.mode_manager.state.mode_start_time = time.time()
+        self.mode_manager.state.last_transition_time = time.time()
+        self.mode_manager.state.transition_history.append(
+            f"config_reload->{current_mode}:hot_reload"
+        )
+
+        await self._initialize_mode(current_mode)
+
+        await self._start_orchestrators()
+
+        self._raw_config = new_raw
+        logging.info(
+            f"Mode configuration fully reloaded with orchestrator restart, active mode: {current_mode}"
+        )
