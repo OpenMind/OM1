@@ -15,7 +15,7 @@ from tests.integration.mock_inputs.data_providers.mock_lidar_scan_provider impor
 )
 
 
-class MockRPLidar(UnitreeGo2RPLidar):
+class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
     """
     Mock implementation of RPLidar that uses mock lidar data.
 
