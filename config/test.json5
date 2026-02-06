@@ -46,7 +46,7 @@
     //{
     //  "name": "move_go2_autonomy",
     //  "llm_label": "move",
-    //  "connector": "unitree_sdk"
+    //  "connector": "unitree_rplidar_sdk"
     //},
     //{
     // "name": "speak",
