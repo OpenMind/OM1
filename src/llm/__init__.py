@@ -139,6 +139,7 @@ class LLM(T.Generic[R]):
         )
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        """Auto-wrap ask with heartbeat and error reporting."""
         super().__init_subclass__(**kwargs)
         if "ask" in cls.__dict__:
             original = cls.__dict__["ask"]

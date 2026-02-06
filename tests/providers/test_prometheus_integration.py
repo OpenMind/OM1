@@ -290,7 +290,6 @@ class TestMultiModePrometheusIntegration:
     def test_multi_mode_runtime_has_prometheus(self):
         """ModeCortexRuntime should have prometheus_monitor attribute."""
         with patch("uvicorn.Server.run"):
-            from providers.prometheus_monitor import PrometheusMonitor
             from runtime.multi_mode.config import ModeSystemConfig
 
             mock_config = MagicMock(spec=ModeSystemConfig)

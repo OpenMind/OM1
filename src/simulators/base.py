@@ -1,5 +1,4 @@
 import functools
-import inspect
 import threading
 import time
 import typing as T
@@ -47,6 +46,7 @@ class Simulator:
         )
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        """Auto-wrap sim with heartbeat reporting."""
         super().__init_subclass__(**kwargs)
         if "sim" in cls.__dict__:
             original = cls.__dict__["sim"]

@@ -92,6 +92,7 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         )
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        """Auto-wrap connect with heartbeat reporting."""
         super().__init_subclass__(**kwargs)
         if "connect" in cls.__dict__:
             original = cls.__dict__["connect"]

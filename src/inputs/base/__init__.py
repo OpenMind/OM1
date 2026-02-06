@@ -1,5 +1,4 @@
 import functools
-import inspect
 import typing as T
 from dataclasses import dataclass
 
@@ -60,6 +59,7 @@ class Sensor(T.Generic[ConfigType, R]):
         )
 
     def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        """Auto-wrap formatted_latest_buffer with heartbeat reporting."""
         super().__init_subclass__(**kwargs)
         if "formatted_latest_buffer" in cls.__dict__:
             original = cls.__dict__["formatted_latest_buffer"]
