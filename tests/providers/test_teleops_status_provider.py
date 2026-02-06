@@ -96,36 +96,45 @@ def test_battery_status_from_dict_with_defaults():
 
 def test_command_status_creation():
     """Test CommandStatus creation."""
-    command = CommandStatus(vx=1.5, vy=0.5, vyaw=0.2, timestamp="2024-01-01T00:00:00")
+    command = CommandStatus(vx=1.5, vy=0.5, vyaw=0.2, timestamp=1704067200.0)
 
     assert command.vx == 1.5
     assert command.vy == 0.5
     assert command.vyaw == 0.2
-    assert command.timestamp == "2024-01-01T00:00:00"
+    assert command.timestamp == 1704067200.0
 
 
 def test_command_status_to_dict():
     """Test CommandStatus to_dict conversion."""
-    command = CommandStatus(vx=1.0, vy=0.0, vyaw=0.5, timestamp="2024-01-01T00:00:00")
+    command = CommandStatus(vx=1.0, vy=0.0, vyaw=0.5, timestamp=1704067200.0)
 
     result = command.to_dict()
 
     assert result["vx"] == 1.0
     assert result["vy"] == 0.0
     assert result["vyaw"] == 0.5
-    assert result["timestamp"] == "2024-01-01T00:00:00"
+    assert result["timestamp"] == 1704067200.0
 
 
 def test_command_status_from_dict():
     """Test CommandStatus from_dict creation."""
-    data = {"vx": 2.0, "vy": 1.0, "vyaw": 0.3, "timestamp": "2024-01-01T12:00:00"}
+    data = {"vx": 2.0, "vy": 1.0, "vyaw": 0.3, "timestamp": 1704110400.0}
 
     command = CommandStatus.from_dict(data)
 
     assert command.vx == 2.0
     assert command.vy == 1.0
     assert command.vyaw == 0.3
-    assert command.timestamp == "2024-01-01T12:00:00"
+    assert command.timestamp == 1704110400.0
+
+
+def test_command_status_from_dict_with_defaults():
+    """Test CommandStatus from_dict default timestamp is a float."""
+    data = {"vx": 1.0, "vy": 0.0, "vyaw": 0.0}
+
+    command = CommandStatus.from_dict(data)
+
+    assert isinstance(command.timestamp, float)
 
 
 def test_action_type_enum():
@@ -240,6 +249,24 @@ def test_teleops_status_from_dict():
     assert status.video_connected is True
     assert status.battery_status.battery_level == 90.0
     assert status.action_status.action == ActionType.TELEOPS
+
+
+def test_teleops_status_from_dict_with_defaults():
+    """Test TeleopsStatus from_dict default update_time is a string."""
+    data = {
+        "battery_status": {
+            "battery_level": 50.0,
+            "temperature": 22.0,
+            "voltage": 11.0,
+            "timestamp": "1704067200.0",
+        },
+    }
+
+    status = TeleopsStatus.from_dict(data)
+
+    assert isinstance(status.update_time, str)
+    assert status.machine_name == "unknown"
+    assert status.video_connected is False
 
 
 @pytest.fixture

@@ -67,7 +67,7 @@ class CommandStatus:
     vx: float
     vy: float
     vyaw: float
-    timestamp: str
+    timestamp: float
 
     def to_dict(self) -> dict:
         """
@@ -194,7 +194,7 @@ class TeleopsStatus:
             Dictionary containing teleops status information.
         """
         return cls(
-            update_time=data.get("update_time", time.time()),
+            update_time=data.get("update_time", str(time.time())),
             battery_status=BatteryStatus.from_dict(data.get("battery_status", {})),
             action_status=ActionStatus.from_dict(data.get("action_status", {})),
             machine_name=data.get("machine_name", "unknown"),
