@@ -12,7 +12,7 @@
       type: "LocationsInput",
     },
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
     },
     {
       type: "UnitreeGo2Battery",

@@ -4,7 +4,10 @@ from unittest.mock import Mock, patch
 import pytest
 
 from inputs.base import Message
-from inputs.plugins.gps_odom_reader import GPSOdomReader, GPSOdomReaderConfig
+from inputs.plugins.unitree_go2_gps_odom_reader import (
+    UnitreeGo2GPSOdomReader,
+    UnitreeGo2GPSOdomReaderConfig,
+)
 
 
 @pytest.fixture
@@ -24,14 +27,14 @@ def mock_odom_provider():
 
 
 def test_initialization_sets_defaults_and_raises_on_missing_config():
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=1.0, origin_lon=2.0, origin_yaw_deg=90.0, unitree_ethernet="eth0"
     )
     with (
         patch("inputs.plugins.gps_odom_reader.IOProvider") as _,
         patch("inputs.plugins.gps_odom_reader.OdomProvider") as mock_odom,
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     assert instance.lat0 == 1.0
     assert instance.lon0 == 2.0
@@ -46,7 +49,7 @@ def test_initialization_sets_defaults_and_raises_on_missing_config():
 
 
 def test_initialization_raises_on_missing_origin_coordinates():
-    config = GPSOdomReaderConfig(origin_lat=1.0)  # Missing lon and yaw
+    config = UnitreeGo2GPSOdomReaderConfig(origin_lat=1.0)  # Missing lon and yaw
     with (
         patch("inputs.plugins.gps_odom_reader.IOProvider"),
         patch("inputs.plugins.gps_odom_reader.OdomProvider"),
@@ -54,14 +57,14 @@ def test_initialization_raises_on_missing_origin_coordinates():
         with pytest.raises(
             ValueError, match="Missing origin coordinates or yaw in config."
         ):
-            GPSOdomReader(config=config)
+            UnitreeGo2GPSOdomReader(config=config)
 
 
 @pytest.mark.asyncio
 async def test_update_pose_updates_internal_state_and_io_provider(
     mock_io_provider, mock_odom_provider
 ):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -73,7 +76,7 @@ async def test_update_pose_updates_internal_state_and_io_provider(
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     mock_odom_provider.x = 10.0
     mock_odom_provider.y = 20.0
@@ -102,7 +105,7 @@ async def test_update_pose_updates_internal_state_and_io_provider(
 async def test_poll_calls_update_pose_and_returns_none(
     mock_io_provider, mock_odom_provider
 ):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -114,7 +117,7 @@ async def test_poll_calls_update_pose_and_returns_none(
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     with patch.object(instance, "_update_pose") as mock_update:
         with patch("asyncio.sleep"):
@@ -128,7 +131,7 @@ async def test_poll_calls_update_pose_and_returns_none(
 async def test_raw_to_text_adds_message_to_buffer_and_calls_io_provider(
     mock_io_provider, mock_odom_provider
 ):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -140,7 +143,7 @@ async def test_raw_to_text_adds_message_to_buffer_and_calls_io_provider(
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     test_input = "Test GPS message"
     initial_len = len(instance.buf)
@@ -160,7 +163,7 @@ async def test_raw_to_text_adds_message_to_buffer_and_calls_io_provider(
 async def test_raw_to_text_does_nothing_if_input_none_or_empty(
     mock_io_provider, mock_odom_provider
 ):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -172,7 +175,7 @@ async def test_raw_to_text_does_nothing_if_input_none_or_empty(
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     initial_len = len(instance.buf)
 
@@ -191,7 +194,7 @@ async def test_raw_to_text_does_nothing_if_input_none_or_empty(
 def test_formatted_latest_buffer_empty_returns_none(
     mock_io_provider, mock_odom_provider
 ):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -203,7 +206,7 @@ def test_formatted_latest_buffer_empty_returns_none(
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     result = instance.formatted_latest_buffer()
     assert result is None
@@ -212,7 +215,7 @@ def test_formatted_latest_buffer_empty_returns_none(
 def test_formatted_latest_buffer_formats_and_clears_latest_message(
     mock_io_provider, mock_odom_provider
 ):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -224,7 +227,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     msg = Message(timestamp=1234.0, message="Formatted GPS data")
     instance.buf = [msg]
@@ -241,7 +244,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
 
 
 def test_xy_to_latlon_conversion(mock_io_provider, mock_odom_provider):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -253,7 +256,7 @@ def test_xy_to_latlon_conversion(mock_io_provider, mock_odom_provider):
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     dx = 100.0
     dy = 200.0
@@ -276,7 +279,7 @@ def test_xy_to_latlon_conversion(mock_io_provider, mock_odom_provider):
 
 
 def test_wrap_angle_function(mock_io_provider, mock_odom_provider):
-    config = GPSOdomReaderConfig(
+    config = UnitreeGo2GPSOdomReaderConfig(
         origin_lat=-33.868820, origin_lon=151.209295, origin_yaw_deg=45.0
     )
     with (
@@ -288,7 +291,7 @@ def test_wrap_angle_function(mock_io_provider, mock_odom_provider):
             return_value=mock_odom_provider,
         ),
     ):
-        instance = GPSOdomReader(config=config)
+        instance = UnitreeGo2GPSOdomReader(config=config)
 
     assert abs(instance._wrap_angle(0.0) - 0.0) < 1e-9
     assert abs(instance._wrap_angle(math.pi) - (-math.pi)) < 1e-9

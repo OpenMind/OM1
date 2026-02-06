@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from inputs.base import Message
-from inputs.plugins.rplidar import RPLidar, RPLidarConfig
+from inputs.plugins.unitree_go2_rplidar import RPLidarConfig, UnitreeGo2RPLidar
 
 
 def test_initialization():
@@ -13,7 +13,7 @@ def test_initialization():
         patch("inputs.plugins.rplidar.RPLidarProvider"),
     ):
         config = RPLidarConfig()
-        sensor = RPLidar(config=config)
+        sensor = UnitreeGo2RPLidar(config=config)
 
         assert hasattr(sensor, "messages")
 
@@ -30,7 +30,7 @@ async def test_poll():
             "Hello from RPLidar: objects and walls detected."
         )
         config = RPLidarConfig()
-        sensor = RPLidar(config=config)
+        sensor = UnitreeGo2RPLidar(config=config)
 
         result = await sensor._poll()
         assert result == "Hello from RPLidar: objects and walls detected."
@@ -43,7 +43,7 @@ def test_formatted_latest_buffer():
         patch("inputs.plugins.rplidar.RPLidarProvider"),
     ):
         config = RPLidarConfig()
-        sensor = RPLidar(config=config)
+        sensor = UnitreeGo2RPLidar(config=config)
 
         result = sensor.formatted_latest_buffer()
         assert result is None

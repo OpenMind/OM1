@@ -28,7 +28,7 @@
       hertz: 0.01,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -110,7 +110,7 @@
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -267,7 +267,7 @@
           type: "LidarLocalizationInput",
         },
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -404,7 +404,7 @@
       action_execution_mode: "concurrent",
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -501,7 +501,7 @@
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -621,7 +621,7 @@ VOICE RULE:\n\
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",

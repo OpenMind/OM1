@@ -4,10 +4,10 @@ from typing import List, Optional
 from pydantic import Field
 
 from backgrounds.base import Background, BackgroundConfig
-from providers.rplidar_provider import RPLidarProvider
+from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
 
 
-class RPLidarConfig(BackgroundConfig):
+class UnitreeGo2RPLidarConfig(BackgroundConfig):
     """
     Configuration for RPLidar Background.
 
@@ -59,7 +59,7 @@ class RPLidarConfig(BackgroundConfig):
     log_file: bool = Field(default=False, description="Whether to log to file")
 
 
-class RPLidar(Background[RPLidarConfig]):
+class UnitreeGo2RPLidar(Background[UnitreeGo2RPLidarConfig]):
     """
     Background task for reading laser scan data from RPLidar device.
 
@@ -73,7 +73,7 @@ class RPLidar(Background[RPLidarConfig]):
     obstacle avoidance, and path planning in robotic applications.
     """
 
-    def __init__(self, config: RPLidarConfig):
+    def __init__(self, config: UnitreeGo2RPLidarConfig):
         """
         Initialize RPLidar background task with configuration.
 
@@ -99,6 +99,6 @@ class RPLidar(Background[RPLidarConfig]):
             "log_file": self.config.log_file,
         }
 
-        self.lidar_provider = RPLidarProvider(**lidar_config)
+        self.lidar_provider = UnitreeGo2RPLidarProvider(**lidar_config)
         self.lidar_provider.start()
         logging.info("Initiated RPLidar Provider in background")

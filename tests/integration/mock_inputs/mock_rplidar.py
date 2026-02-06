@@ -6,20 +6,20 @@ from typing import List, Optional
 
 from inputs.base import SensorConfig
 from inputs.base.loop import FuserInput
-from inputs.plugins.rplidar import Message, RPLidar, RPLidarConfig
+from inputs.plugins.unitree_go2_rplidar import Message, RPLidarConfig, UnitreeGo2RPLidar
 from providers.io_provider import IOProvider
-from providers.rplidar_provider import RPLidarProvider
+from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
 from tests.integration.mock_inputs.data_providers.mock_lidar_scan_provider import (
     get_lidar_provider,
     get_next_lidar_scan,
 )
 
 
-class MockRPLidar(RPLidar):
+class MockRPLidar(UnitreeGo2RPLidar):
     """
     Mock implementation of RPLidar that uses mock lidar data.
 
-    This class reuses the real RPLidarProvider and its path processing logic,
+    This class reuses the real UnitreeGo2RPLidarProvider and its path processing logic,
     but overrides the hardware interface to inject mock data instead of
     connecting to real hardware.
     """
@@ -52,7 +52,9 @@ class MockRPLidar(RPLidar):
         lidar_config = self._extract_lidar_config(config)
 
         # Create real RPLidarProvider but prevent hardware connections
-        self.lidar: RPLidarProvider = self._create_mock_lidar_provider(**lidar_config)
+        self.lidar: UnitreeGo2RPLidarProvider = self._create_mock_lidar_provider(
+            **lidar_config
+        )
 
         # Store the last processed time to rate-limit our mock data
         self.last_processed_time = 0
@@ -84,7 +86,7 @@ class MockRPLidar(RPLidar):
         """
         self.cortex_runtime = cortex
 
-    def _create_mock_lidar_provider(self, **lidar_config) -> RPLidarProvider:
+    def _create_mock_lidar_provider(self, **lidar_config) -> UnitreeGo2RPLidarProvider:
         """
         Create a RPLidarProvider instance but override its start method to prevent hardware connections.
 
@@ -94,7 +96,7 @@ class MockRPLidar(RPLidar):
             A configured RPLidarProvider instance that won't try to connect to hardware
         """
         # Create the real provider with configuration
-        provider = RPLidarProvider(**lidar_config)
+        provider = UnitreeGo2RPLidarProvider(**lidar_config)
 
         def mock_start():
             """Mock start method that doesn't try to connect to hardware."""
