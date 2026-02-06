@@ -189,4 +189,3 @@ def test_read_response_negative_timeout():
 
         with pytest.raises(RPLidarException, match="Timeout waiting for response"):
             driver._read_response(10, timeout=-1.0)
-
