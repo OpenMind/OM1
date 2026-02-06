@@ -100,6 +100,7 @@ async def test_poll_with_exception():
             result = await sensor._poll()
 
         assert result is not None
+        assert isinstance(result, str)
 
 
 @pytest.mark.asyncio

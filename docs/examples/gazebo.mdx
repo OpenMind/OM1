@@ -149,22 +149,30 @@ sudo apt-get update
 sudo apt-get install python3-rosdep
 ```
 
-Once you've successfully completed above steps, follow the following steps to start the gazebo simulation and run OM1 with it.
+Once you've successfully completed above steps, follow the following steps to start the gazebo simulation, generate SLAM map of the surrounding and start navigation.
 
-Step 1: Clone the [unitree-sdk](https://github.com/OpenMind/unitree-sdk) repository:
+Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
 
     ```bash
-    git clone https://github.com/OpenMind/unitree-sdk.git
+    git clone https://github.com/OpenMind/OM1-ros2-sdk.git
     ```
 
 Step 2: Install all the necessary dependencies:
 
     ```bash
-    cd unitree-sdk
+    cd OM1-ros2-sdk
+    uv venv
     sudo rosdep init
     rosdep update
     rosdep install --from-paths . --ignore-src -r -y
-    uv pip install -r pyproject.toml
+    source .venv/bin/activate
+    uv pip install .
+    ```
+
+    Export the python path to your virtual environment
+
+    ```bash
+    export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
     ```
 
 Step 3: Build all the packages:
@@ -201,32 +209,16 @@ Step 6: Run Zenoh Ros2 Bridge
     zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
     ```
 
-Step 7: Start OM1
-
-    Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
-
-    Then add the optional Python CycloneDDS module to OM1, run
-
-    ```bash
-    uv pip install -r pyproject.toml --extra dds
-    ```
-
-    Setup your API key and run your simulation agent:
-
-    ```bash
-    uv run src/run.py unitree_go2_autonomy_sim
-    ```
-
-Step 8: Start SLAM mode
+Step 7: Start SLAM mode
 
     Open a new terminal and run the following to start the SLAM mode for the robot to start mapping the area. Our Gazebo setup includes auto mapping feature, this will let the robot to generate a 2D map for the area which can then be utilised at later stage to make the robot move from point A to point B.
 
     ```bash
     source install/setup.bash
-    launch go2_sdk slam_launch.py use_sim:=true
+    ros2 launch go2_sdk slam_launch.py use_sim:=true
     ```
 
-Step 9: Save the map
+Step 8: Save the map
 
     After the SLAM mode is complete, you can save the map by using the following command. Replace `<my_map>` with the name you prefer for saving the map.
 
@@ -235,7 +227,7 @@ Step 9: Save the map
     ros2 run nav2_map_server map_saver_cli -f my_map
     ```
 
-Step 10: Navigate the robot across the map
+Step 9: Navigate the robot across the map
 
     Once you successfully save the map, you can run the following command in a new terminal to enable navigation. After running the command, simply head over to RViz window and press **2D goal pose**. Now click at any new location on the map to make the robot start navigating towards it.
 
@@ -246,7 +238,7 @@ Step 10: Navigate the robot across the map
     ros2 launch go2_sdk nav2_launch.py use_sim:=true map_yaml_file:=my_map.yaml
     ```
 
-Step 11: Teleoperate the robot in simulation
+Step 10: Teleoperate the robot in simulation
 
     You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
 
