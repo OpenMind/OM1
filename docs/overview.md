@@ -21,7 +21,7 @@ Explore our topics to get started
     <tr>
       <td><strong>OM1 API Reference</strong></td>
       <td>Our APIs</td>
-      <td><a href="api-reference/introduction.md"></a></td>
+      <td><a href="api-reference/introduction"></a></td>
       <td>link</td>
     </tr>
     <tr>
