@@ -232,7 +232,6 @@ class TestTurtleBot4RPLidarProvider:
         mocks["zenoh"].assert_called_once()
         assert provider.zen == mocks["zenoh_instance"]
 
-        # Verify subscriber was declared
         mocks["zenoh_instance"].declare_subscriber.assert_called_once_with(
             "test_robot/pi/scan", provider.listen_scan
         )
@@ -290,9 +289,7 @@ class TestTurtleBot4RPLidarProvider:
         with patch.object(provider, "_path_processor") as mock_path_processor:
             provider._zenoh_processor(mock_scan)
 
-            # Should have called _path_processor
             mock_path_processor.assert_called_once()
-            # Angles should be initialized
             assert provider.angles is not None
             assert provider.angles_final is not None
 
