@@ -1,0 +1,6 @@
+redirects:
+  developing/overview: README.md
+  developing/get_started: developing/0_get_started.md
+  developing/architecture: developing/2_architecture.md
+  api-reference/introduction: api-reference/introduction.md
+  api-reference/api_pricing: api-reference/api_pricing.md
