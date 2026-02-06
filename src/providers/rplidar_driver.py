@@ -256,9 +256,7 @@ class RPDriver(object):
             try:
                 waiting = self._serial.inWaiting()
             except OSError as e:
-                raise RPLidarException(
-                    "Serial device disconnected: %s" % e
-                )
+                raise RPLidarException("Serial device disconnected: %s" % e)
             if waiting >= dsize:
                 break
             if time.monotonic() > deadline:
