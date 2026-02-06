@@ -15,7 +15,7 @@ Explore our topics to get started
     <tr>
       <td><strong>Get started</strong></td>
       <td>with OpenMind’s OM1</td>
-      <td><a href="developing/0_introduction.md"></a></td>
+      <td><a href="./docs/developing/0_introduction.md"></a></td>
       <td>check</td>
     </tr>
     <tr>
