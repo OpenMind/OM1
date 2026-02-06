@@ -9,8 +9,8 @@ from inputs.plugins.unitree_go2_rplidar import RPLidarConfig, UnitreeGo2RPLidar
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.rplidar.IOProvider"),
-        patch("inputs.plugins.rplidar.RPLidarProvider"),
+        patch("inputs.plugins.unitree_go2_rplidar.IOProvider"),
+        patch("inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"),
     ):
         config = RPLidarConfig()
         sensor = UnitreeGo2RPLidar(config=config)
@@ -22,9 +22,11 @@ def test_initialization():
 async def test_poll():
     """Test _poll method."""
     with (
-        patch("inputs.plugins.rplidar.IOProvider"),
-        patch("inputs.plugins.rplidar.RPLidarProvider") as mock_rplidar,
-        patch("inputs.plugins.rplidar.asyncio.sleep", new=AsyncMock()),
+        patch("inputs.plugins.unitree_go2_rplidar.IOProvider"),
+        patch(
+            "inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
+        ) as mock_rplidar,
+        patch("inputs.plugins.unitree_go2_rplidar.asyncio.sleep", new=AsyncMock()),
     ):
         mock_rplidar.return_value.lidar_string = (
             "Hello from RPLidar: objects and walls detected."
@@ -39,8 +41,8 @@ async def test_poll():
 def test_formatted_latest_buffer():
     """Test formatted_latest_buffer."""
     with (
-        patch("inputs.plugins.rplidar.IOProvider"),
-        patch("inputs.plugins.rplidar.RPLidarProvider"),
+        patch("inputs.plugins.unitree_go2_rplidar.IOProvider"),
+        patch("inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"),
     ):
         config = RPLidarConfig()
         sensor = UnitreeGo2RPLidar(config=config)

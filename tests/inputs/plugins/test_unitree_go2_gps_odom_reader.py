@@ -12,7 +12,7 @@ from inputs.plugins.unitree_go2_gps_odom_reader import (
 
 @pytest.fixture
 def mock_io_provider():
-    with patch("inputs.plugins.gps_odom_reader.IOProvider") as mock_class:
+    with patch("inputs.plugins.unitree_go2_gps_odom_reader.IOProvider") as mock_class:
         mock_instance = Mock()
         mock_class.return_value = mock_instance
         yield mock_instance
@@ -20,7 +20,7 @@ def mock_io_provider():
 
 @pytest.fixture
 def mock_odom_provider():
-    with patch("inputs.plugins.gps_odom_reader.OdomProvider") as mock_class:
+    with patch("inputs.plugins.unitree_go2_gps_odom_reader.IOProvider") as mock_class:
         mock_instance = Mock()
         mock_class.return_value = mock_instance
         yield mock_instance
@@ -31,8 +31,10 @@ def test_initialization_sets_defaults_and_raises_on_missing_config():
         origin_lat=1.0, origin_lon=2.0, origin_yaw_deg=90.0, unitree_ethernet="eth0"
     )
     with (
-        patch("inputs.plugins.gps_odom_reader.IOProvider") as _,
-        patch("inputs.plugins.gps_odom_reader.OdomProvider") as mock_odom,
+        patch("inputs.plugins.unitree_go2_gps_odom_reader.IOProvider") as _,
+        patch(
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider"
+        ) as mock_odom,
     ):
         instance = UnitreeGo2GPSOdomReader(config=config)
 
@@ -51,8 +53,8 @@ def test_initialization_sets_defaults_and_raises_on_missing_config():
 def test_initialization_raises_on_missing_origin_coordinates():
     config = UnitreeGo2GPSOdomReaderConfig(origin_lat=1.0)  # Missing lon and yaw
     with (
-        patch("inputs.plugins.gps_odom_reader.IOProvider"),
-        patch("inputs.plugins.gps_odom_reader.OdomProvider"),
+        patch("inputs.plugins.unitree_go2_gps_odom_reader.IOProvider"),
+        patch("inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider"),
     ):
         with pytest.raises(
             ValueError, match="Missing origin coordinates or yaw in config."
@@ -69,10 +71,11 @@ async def test_update_pose_updates_internal_state_and_io_provider(
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):
@@ -110,10 +113,11 @@ async def test_poll_calls_update_pose_and_returns_none(
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):
@@ -136,10 +140,11 @@ async def test_raw_to_text_adds_message_to_buffer_and_calls_io_provider(
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):
@@ -155,7 +160,7 @@ async def test_raw_to_text_adds_message_to_buffer_and_calls_io_provider(
     assert instance.buf[-1].message == test_input
     assert instance.buf[-1].timestamp == 1234.0
     mock_io_provider.add_input.assert_called_once_with(
-        "GPSOdomReader", test_input, 1234.0
+        "UnitreeGo2GPSOdomReader", test_input, 1234.0
     )
 
 
@@ -168,10 +173,11 @@ async def test_raw_to_text_does_nothing_if_input_none_or_empty(
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):
@@ -187,7 +193,7 @@ async def test_raw_to_text_does_nothing_if_input_none_or_empty(
     assert len(instance.buf) == initial_len + 1
     assert instance.buf[-1].message == ""
     mock_io_provider.add_input.assert_called_once_with(
-        "GPSOdomReader", "", instance.buf[-1].timestamp
+        "UnitreeGo2GPSOdomReader", "", instance.buf[-1].timestamp
     )
 
 
@@ -199,10 +205,11 @@ def test_formatted_latest_buffer_empty_returns_none(
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):
@@ -220,10 +227,11 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):
@@ -239,7 +247,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     assert "Formatted GPS data" in result
     assert len(instance.buf) == 0
     mock_io_provider.add_input.assert_called_once_with(
-        "GPSOdomReader", "Formatted GPS data", 1234.0
+        "UnitreeGo2GPSOdomReader", "Formatted GPS data", 1234.0
     )
 
 
@@ -249,10 +257,11 @@ def test_xy_to_latlon_conversion(mock_io_provider, mock_odom_provider):
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):
@@ -284,10 +293,11 @@ def test_wrap_angle_function(mock_io_provider, mock_odom_provider):
     )
     with (
         patch(
-            "inputs.plugins.gps_odom_reader.IOProvider", return_value=mock_io_provider
+            "inputs.plugins.unitree_go2_gps_odom_reader.IOProvider",
+            return_value=mock_io_provider,
         ),
         patch(
-            "inputs.plugins.gps_odom_reader.OdomProvider",
+            "inputs.plugins.unitree_go2_gps_odom_reader.UnitreeGo2OdomProvider",
             return_value=mock_odom_provider,
         ),
     ):

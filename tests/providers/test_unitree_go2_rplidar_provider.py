@@ -45,10 +45,12 @@ def reset_singleton():
 def mock_rplidar_dependencies():
     """Mock all external dependencies for UnitreeGo2RPLidarProvider."""
     with (
-        patch("providers.rplidar_provider.UnitreeGo2Odom") as mock_odom,
-        patch("providers.rplidar_provider.D435Provider") as mock_d435,
-        patch("providers.rplidar_provider.mp.Queue") as mock_queue,
-        patch("providers.rplidar_provider.mp.Process") as mock_process,
+        patch(
+            "providers.unitree_go2_rplidar_provider.UnitreeGo2OdomProvider"
+        ) as mock_odom,
+        patch("providers.unitree_go2_rplidar_provider.D435Provider") as mock_d435,
+        patch("providers.unitree_go2_rplidar_provider.mp.Queue") as mock_queue,
+        patch("providers.unitree_go2_rplidar_provider.mp.Process") as mock_process,
     ):
 
         mock_odom_instance = MagicMock()
@@ -142,7 +144,7 @@ def test_angles_blanked_custom(mock_rplidar_dependencies):
 
 def test_log_file_initialization(mock_rplidar_dependencies):
     """Test log file initialization."""
-    with patch("providers.rplidar_provider.time.time") as mock_time:
+    with patch("providers.unitree_go2_rplidar_provider.time.time") as mock_time:
         mock_time.return_value = 1234567890.123456
         provider = UnitreeGo2RPLidarProvider(log_file=True)
 

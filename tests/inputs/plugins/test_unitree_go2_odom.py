@@ -10,8 +10,8 @@ from providers.unitree_go2_odom_provider import RobotState
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.odom.OdomProvider"),
-        patch("inputs.plugins.odom.IOProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
         sensor = UnitreeGo2Odom(config=config)
@@ -26,21 +26,25 @@ def test_initialization():
 def test_initialization_with_unitree_ethernet():
     """Test initialization with Unitree ethernet channel."""
     with (
-        patch("inputs.plugins.odom.OdomProvider") as mock_provider,
-        patch("inputs.plugins.odom.IOProvider"),
+        patch(
+            "inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
+        ) as mock_provider,
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig(unitree_ethernet="eth0")
         UnitreeGo2Odom(config=config)
 
-        mock_provider.assert_called_once_with("", False, "eth0")
+        mock_provider.assert_called_once_with("eth0")
 
 
 @pytest.mark.asyncio
 async def test_poll_with_position_data():
     """Test _poll with position data available."""
     with (
-        patch("inputs.plugins.odom.OdomProvider") as mock_provider_class,
-        patch("inputs.plugins.odom.IOProvider"),
+        patch(
+            "inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
+        ) as mock_provider_class,
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
         mock_provider.position = {"x": 1.0, "y": 2.0, "z": 0.0}
@@ -49,7 +53,7 @@ async def test_poll_with_position_data():
         config = UnitreeGo2OdomConfig()
         sensor = UnitreeGo2Odom(config=config)
 
-        with patch("inputs.plugins.odom.asyncio.sleep", new=AsyncMock()):
+        with patch("inputs.plugins.unitree_go2_odom.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result == {"x": 1.0, "y": 2.0, "z": 0.0}
@@ -59,8 +63,10 @@ async def test_poll_with_position_data():
 async def test_poll_with_no_data():
     """Test _poll when no position data available."""
     with (
-        patch("inputs.plugins.odom.OdomProvider") as mock_provider_class,
-        patch("inputs.plugins.odom.IOProvider"),
+        patch(
+            "inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
+        ) as mock_provider_class,
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
         mock_provider.position = None
@@ -69,7 +75,7 @@ async def test_poll_with_no_data():
         config = UnitreeGo2OdomConfig()
         sensor = UnitreeGo2Odom(config=config)
 
-        with patch("inputs.plugins.odom.asyncio.sleep", new=AsyncMock()):
+        with patch("inputs.plugins.unitree_go2_odom.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result is None
@@ -79,15 +85,15 @@ async def test_poll_with_no_data():
 async def test_raw_to_text_with_valid_input():
     """Test _raw_to_text with valid position data."""
     with (
-        patch("inputs.plugins.odom.OdomProvider"),
-        patch("inputs.plugins.odom.IOProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
         sensor = UnitreeGo2Odom(config=config)
 
         position_data = {"moving": False, "body_attitude": RobotState.STANDING}
 
-        with patch("inputs.plugins.odom.time.time", return_value=1234.0):
+        with patch("inputs.plugins.unitree_go2_odom.time.time", return_value=1234.0):
             result = await sensor._raw_to_text(position_data)
 
         assert result is not None
@@ -102,8 +108,8 @@ async def test_raw_to_text_with_valid_input():
 async def test_raw_to_text_with_none():
     """Test _raw_to_text with None input."""
     with (
-        patch("inputs.plugins.odom.OdomProvider"),
-        patch("inputs.plugins.odom.IOProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
 
         config = UnitreeGo2OdomConfig()
@@ -116,8 +122,8 @@ async def test_raw_to_text_with_none():
 def test_formatted_latest_buffer_with_messages():
     """Test formatted_latest_buffer with messages."""
     with (
-        patch("inputs.plugins.odom.OdomProvider"),
-        patch("inputs.plugins.odom.IOProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
         sensor = UnitreeGo2Odom(config=config)
@@ -138,8 +144,8 @@ def test_formatted_latest_buffer_with_messages():
 def test_formatted_latest_buffer_empty():
     """Test formatted_latest_buffer with empty buffer."""
     with (
-        patch("inputs.plugins.odom.OdomProvider"),
-        patch("inputs.plugins.odom.IOProvider"),
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"),
+        patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig()
         sensor = UnitreeGo2Odom(config=config)

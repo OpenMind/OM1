@@ -16,10 +16,10 @@ def reset_singleton():
 @pytest.fixture
 def mock_multiprocessing():
     with (
-        patch("providers.odom_provider.mp.Queue") as mock_queue,
-        patch("providers.odom_provider.mp.Process") as mock_process,
-        patch("providers.odom_provider.threading.Thread") as mock_thread,
-        patch("providers.odom_provider.threading.Event") as mock_event,
+        patch("providers.unitree_go2_odom_provider.mp.Queue") as mock_queue,
+        patch("providers.unitree_go2_odom_provider.mp.Process") as mock_process,
+        patch("providers.unitree_go2_odom_provider.threading.Thread") as mock_thread,
+        patch("providers.unitree_go2_odom_provider.threading.Event") as mock_event,
     ):
         mock_queue_instance = MagicMock()
         mock_process_instance = MagicMock()
