@@ -412,7 +412,7 @@ class TestCortexRuntimeHotReload:
 
     @pytest.mark.asyncio
     async def test_reload_config_success(self, mock_config, mock_dependencies):
-        """Test successful config reload."""
+        """Test successful config reload with unsafe field change."""
         with (
             patch(
                 "runtime.single_mode.cortex.Fuser",
@@ -441,6 +441,12 @@ class TestCortexRuntimeHotReload:
             mock_load_config.return_value = new_mock_config
 
             runtime = CortexRuntime(mock_config, "test_config", hot_reload=True)
+
+            # Set up raw configs with an unsafe field change to trigger full reload
+            runtime._raw_config = {"agent_inputs": []}
+            runtime._read_raw_config = Mock(
+                return_value={"agent_inputs": [{"type": "NewInput"}]}
+            )
 
             runtime._stop_current_orchestrators = AsyncMock()
             runtime._start_orchestrators = AsyncMock()
