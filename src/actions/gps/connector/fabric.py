@@ -120,9 +120,7 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
             try:
                 response_data = response.json()
             except requests.exceptions.JSONDecodeError as e:
-                logging.error(
-                    f"GPSFabricConnector: Failed to parse JSON response: {e}"
-                )
+                logging.error(f"GPSFabricConnector: Failed to parse JSON response: {e}")
                 return False
 
             # FIX: Added JSON-RPC error field check
