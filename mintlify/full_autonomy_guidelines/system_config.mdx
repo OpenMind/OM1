@@ -34,10 +34,15 @@ done
 # Launch with autoplay permissions
 exec chromium \
   --kiosk http://$HOST:$PORT \
+  --start-fullscreen \
   --disable-infobars \
   --noerrdialogs \
   --autoplay-policy=no-user-gesture-required \
-  --disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies
+  --disable-features=PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies \
+  --no-first-run \
+  --disable-session-crashed-bubble \
+  --disable-translate \
+  --window-position=0,0
 ```
 
 Make it executable:

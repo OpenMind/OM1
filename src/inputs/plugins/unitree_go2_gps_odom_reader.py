@@ -9,14 +9,14 @@ from pydantic import Field
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.odom_provider import OdomProvider
+from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
 
 R_EARTH = 6_371_000.0  # mean Earth radius (m)
 
 
-class GPSOdomReaderConfig(SensorConfig):
+class UnitreeGo2GPSOdomReaderConfig(SensorConfig):
     """
-    Configuration for GPS Odom Reader Sensor.
+    Configuration for GPS and Unitree Go2 Odom Reader Sensor.
 
     Parameters
     ----------
@@ -40,12 +40,12 @@ class GPSOdomReaderConfig(SensorConfig):
     )
 
 
-class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
+class UnitreeGo2GPSOdomReader(FuserInput[UnitreeGo2GPSOdomReaderConfig, Optional[str]]):
     """
-    Maintains global pose (lat, lon, yaw) from Unitree Sport-mode state.
+    GPS Odom Reader input handler for reading Unitree Go2 odometry data and converting it to GPS coordinates.
     """
 
-    def __init__(self, config: GPSOdomReaderConfig):
+    def __init__(self, config: UnitreeGo2GPSOdomReaderConfig):
         """
         Initialize the GPSOdomReader input handler.
 
@@ -78,7 +78,7 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
         self.descriptor_for_LLM = "Latitude, Longitude, and Yaw"
 
         unitree_ethernet = self.config.unitree_ethernet
-        self.odom = OdomProvider(channel=unitree_ethernet)
+        self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
         logging.info(f"Mapper Odom Provider: {self.odom}")
 
     @staticmethod
