@@ -58,13 +58,6 @@
   ],
   backgrounds: [
     {
-      type: "ElevenLabsTTS",
-      config: {
-        voice_id: "TbMNBJ27fH2U0VgpSNko",
-        silence_rate: 6,
-      },
-    },
-    {
       type: "UnitreeGo2State",
     },
     {

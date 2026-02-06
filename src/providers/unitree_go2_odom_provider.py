@@ -139,9 +139,9 @@ def odom_processor(
 
 
 @singleton
-class OdomProvider:
+class UnitreeGo2OdomProvider:
     """
-    Odom Provider.
+    Unitree Go2 Odom Provider.
 
     This class implements a singleton pattern to manage:
         * Odom and pose data using either Zenoh or CycloneDDS
