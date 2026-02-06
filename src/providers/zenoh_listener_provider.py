@@ -38,7 +38,6 @@ class ZenohListenerProvider:
                 "category": "communication",
                 "topic": topic,
             },
-            recovery_callback=self._recover,
         )
 
         try:
@@ -97,21 +96,3 @@ class ZenohListenerProvider:
         if self.session is not None:
             self.session.close()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Zenoh listener provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("ZenohListenerProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("ZenohListenerProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"ZenohListenerProvider: Recovery failed: {e}")
-            return False

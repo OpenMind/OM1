@@ -46,13 +46,6 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "MoveZenohConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         self.turn_speed = 0.8
         self.angle_tolerance = 5.0
         self.distance_tolerance = 0.05  # m
@@ -223,8 +216,6 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
             # do nothing
         else:
             logging.info(f"AI movement command unknown: {output_interface.action}")
-
-        self._monitor.heartbeat("MoveZenohConnector")
 
     def _calculate_angle_gap(self, current: float, target: float) -> float:
         """

@@ -77,13 +77,6 @@ class GreetingConversationConnector(
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "GreetingConversationConnector",
-            metadata={"type": "action", "category": "communication"},
-            recovery_callback=None,
-        )
-
         self.greeting_state_provider = GreetingConversationStateMachineProvider()
         self.context_provider = ContextProvider()
 
@@ -151,8 +144,6 @@ class GreetingConversationConnector(
             self.context_provider.update_context(
                 {"greeting_conversation_finished": True}
             )
-
-        self._monitor.heartbeat("GreetingConversationConnector")
 
     def tick(self) -> None:
         """

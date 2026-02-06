@@ -24,13 +24,6 @@ class SpeakZenohConnector(ActionConnector[ActionConfig, SpeakInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "SpeakZenohConnector",
-            metadata={"type": "action", "category": "communication"},
-            recovery_callback=None,
-        )
-
         # Determine topic for speech; default to "speech" if not provided.
         speak_topic = getattr(self.config, "speak_topic", None)
         if speak_topic is None:
@@ -52,5 +45,3 @@ class SpeakZenohConnector(ActionConnector[ActionConfig, SpeakInput]):
             The speak input containing the message (action) to be published.
         """
         self.publisher.add_pending_message(output_interface.action)
-
-        self._monitor.heartbeat("SpeakZenohConnector")

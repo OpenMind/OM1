@@ -296,7 +296,6 @@ class RPLidarProvider:
                 "category": "navigation",
                 "use_zenoh": str(use_zenoh),
             },
-            recovery_callback=self._recover,
         )
 
     def update_filename(self):
@@ -858,21 +857,3 @@ class RPLidarProvider:
         parts.append("'stand still'}. ")
         return "".join(parts)
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the RPLidar provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("RPLidarProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("RPLidarProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"RPLidarProvider: Recovery failed: {e}")
-            return False

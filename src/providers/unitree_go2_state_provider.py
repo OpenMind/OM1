@@ -182,7 +182,6 @@ class UnitreeGo2StateProvider:
         self._monitor.register(
             "UnitreeGo2StateProvider",
             metadata={"type": "state", "category": "system", "robot": "unitree_go2"},
-            recovery_callback=self._recover,
         )
 
     def start(self):
@@ -285,21 +284,3 @@ class UnitreeGo2StateProvider:
         """
         return self.go2_action_progress
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Unitree Go2 State provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UnitreeGo2StateProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UnitreeGo2StateProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UnitreeGo2StateProvider: Recovery failed: {e}")
-            return False

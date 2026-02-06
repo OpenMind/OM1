@@ -54,13 +54,6 @@ class WebSim(Simulator):
         self.messages: list[str] = []
         self.io_provider = IOProvider()
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "WebSim",
-            metadata={"type": "simulator", "category": "visualization"},
-            recovery_callback=None,
-        )
-
         self._initialized = False
         self._lock = threading.Lock()
         self._last_tick = time.time()
@@ -698,11 +691,8 @@ class WebSim(Simulator):
                 self._last_tick = 0
                 self.tick()
 
-            self._monitor.heartbeat("WebSim")
-
         except Exception as e:
             logging.error(f"Error in sim update: {e}")
-            self._monitor.report_error("WebSim", str(e))
 
     async def cleanup(self):
         """

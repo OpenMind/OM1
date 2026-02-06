@@ -40,13 +40,6 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "GPSFabricConnector",
-            metadata={"type": "action", "category": "navigation"},
-            recovery_callback=None,
-        )
-
         # Set IO Provider
         self.io_provider = IOProvider()
 
@@ -67,8 +60,6 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
         if output_interface.action == GPSAction.SHARE_LOCATION:
             # Send GPS coordinates to the Fabric network
             self.send_coordinates()
-
-        self._monitor.heartbeat("GPSFabricConnector")
 
     def send_coordinates(self) -> None:
         """

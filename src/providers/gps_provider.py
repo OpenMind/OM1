@@ -82,7 +82,6 @@ class GpsProvider:
                 "category": "navigation",
                 "serial_port": serial_port,
             },
-            recovery_callback=self._recover,
         )
 
         self.start()
@@ -320,21 +319,3 @@ class GpsProvider:
         """
         return self._gps
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the GPS provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("GpsProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("GpsProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"GpsProvider: Recovery failed: {e}")
-            return False

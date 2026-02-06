@@ -50,13 +50,6 @@ class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "MoveZenohRemoteConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         api_key = self.config.api_key
         URID = self.config.URID
         self.cmd_vel = f"{URID}/c3/cmd_vel"
@@ -112,4 +105,4 @@ class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]
         output_interface : MoveInput
             The output interface for the action.
         """
-        self._monitor.heartbeat("MoveZenohRemoteConnector")
+        pass

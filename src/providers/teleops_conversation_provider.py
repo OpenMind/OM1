@@ -102,7 +102,6 @@ class TeleopsConversationProvider:
                 "category": "teleops",
                 "service": "teleops",
             },
-            recovery_callback=self._recover,
         )
 
     def store_user_message(self, content: str) -> None:
@@ -203,21 +202,3 @@ class TeleopsConversationProvider:
         """
         return self.api_key is not None and self.api_key != ""
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Teleops conversation provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("TeleopsConversationProvider: Attempting recovery...")
-            self.executor.shutdown(wait=False)
-            self.executor = ThreadPoolExecutor(max_workers=1)
-            logging.info("TeleopsConversationProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"TeleopsConversationProvider: Recovery failed: {e}")
-            return False

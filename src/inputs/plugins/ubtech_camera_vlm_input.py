@@ -68,12 +68,6 @@ class UbtechCameraVLMInput(FuserInput[UbtechCameraVLMSensorConfig, Optional[str]
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "UbtechCameraVLMInput",
-            metadata={"type": "input", "category": "vlm"},
-            recovery_callback=None,
-        )
 
     def _handle_vlm_message(self, raw_message: str):
         """
@@ -189,5 +183,4 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages = []
 
-        self._monitor.heartbeat("UbtechCameraVLMInput")
         return result

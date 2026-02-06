@@ -56,7 +56,6 @@ class UnitreeG1LocationsProvider:
                 "category": "navigation",
                 "robot": "unitree_g1",
             },
-            recovery_callback=self._recover,
         )
 
     def start(self) -> None:
@@ -184,21 +183,3 @@ class UnitreeG1LocationsProvider:
         with self._lock:
             return self._locations.get(key)
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Unitree G1 Locations provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UnitreeG1LocationsProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UnitreeG1LocationsProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UnitreeG1LocationsProvider: Recovery failed: {e}")
-            return False

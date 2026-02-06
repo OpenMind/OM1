@@ -110,7 +110,6 @@ class UnitreeGo2NavigationProvider:
                 "category": "navigation",
                 "robot": "unitree_go2",
             },
-            recovery_callback=self._recover,
         )
 
     def navigation_status_message_callback(self, data: zenoh.Sample):
@@ -320,21 +319,3 @@ class UnitreeGo2NavigationProvider:
         """
         return self._nav_in_progress
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Unitree Go2 Navigation provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UnitreeGo2NavigationProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UnitreeGo2NavigationProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UnitreeGo2NavigationProvider: Recovery failed: {e}")
-            return False

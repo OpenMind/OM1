@@ -211,7 +211,6 @@ class FabricDataSubmitter:
         self._monitor.register(
             "FabricDataSubmitter",
             metadata={"type": "fabric", "category": "navigation", "service": "mapping"},
-            recovery_callback=self._recover,
         )
 
     def update_filename(self):
@@ -311,21 +310,3 @@ class FabricDataSubmitter:
         logging.debug(f"share data: {data}")
         self.executor.submit(self._share_data_worker, data)
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Fabric data submitter.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("FabricDataSubmitter: Attempting recovery...")
-            self.executor.shutdown(wait=False)
-            self.executor = ThreadPoolExecutor(max_workers=1)
-            logging.info("FabricDataSubmitter: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"FabricDataSubmitter: Recovery failed: {e}")
-            return False

@@ -61,7 +61,6 @@ class ASRRTSPProvider:
         self._monitor.register(
             "ASRRTSPProvider",
             metadata={"type": "asr", "category": "speech", "source": "rtsp"},
-            recovery_callback=self._recover,
         )
 
     def register_message_callback(self, message_callback: Optional[Callable]):
@@ -113,21 +112,3 @@ class ASRRTSPProvider:
         self.audio_stream.stop()
         self.ws_client.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the ASR RTSP provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("ASRRTSPProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("ASRRTSPProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"ASRRTSPProvider: Recovery failed: {e}")
-            return False

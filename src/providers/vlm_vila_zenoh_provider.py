@@ -52,7 +52,6 @@ class VLMVilaZenohProvider:
                 "model": "vila",
                 "source": "zenoh",
             },
-            recovery_callback=self._recover,
         )
 
     def register_frame_callback(self, video_callback: Optional[Callable]):
@@ -112,21 +111,3 @@ class VLMVilaZenohProvider:
         self.video_stream.stop()
         self.ws_client.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the VLM Vila Zenoh provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("VLMVilaZenohProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("VLMVilaZenohProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"VLMVilaZenohProvider: Recovery failed: {e}")
-            return False

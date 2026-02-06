@@ -20,13 +20,6 @@ class IDELEConnector(ActionConnector[ActionConfig, MoveInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "IDELEConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
     async def connect(self, output_interface: MoveInput) -> None:
         """
         IDLE connector that performs no action.
@@ -42,5 +35,4 @@ class IDELEConnector(ActionConnector[ActionConfig, MoveInput]):
             This connector does not return any output.
         """
         logging.info("IDLE connector called, doing nothing.")
-        self._monitor.heartbeat("IDELEConnector")
         return

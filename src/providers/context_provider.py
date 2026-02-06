@@ -33,7 +33,6 @@ class ContextProvider:
         self._monitor.register(
             "ContextProvider",
             metadata={"type": "context", "category": "system"},
-            recovery_callback=self._recover,
         )
 
     def _initialize_zenoh(self):
@@ -98,21 +97,3 @@ class ContextProvider:
                 self.session = None
                 self.publisher = None
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Context provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("ContextProvider: Attempting recovery...")
-            self.stop()
-            self._initialize_zenoh()
-            logging.info("ContextProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"ContextProvider: Recovery failed: {e}")
-            return False

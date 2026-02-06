@@ -80,7 +80,6 @@ class VLMOpenAIRTSPProvider:
                 "model": "gpt-4o-mini",
                 "source": "rtsp",
             },
-            recovery_callback=self._recover,
         )
 
     def _queue_frame(self, frame_data: str):
@@ -214,21 +213,3 @@ class VLMOpenAIRTSPProvider:
 
         logging.info("OpenAI VLM RTSP provider stopped")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the VLM OpenAI RTSP provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("VLMOpenAIRTSPProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("VLMOpenAIRTSPProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"VLMOpenAIRTSPProvider: Recovery failed: {e}")
-            return False

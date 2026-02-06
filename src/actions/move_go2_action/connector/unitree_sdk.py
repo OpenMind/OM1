@@ -45,13 +45,6 @@ class ActionUnitreeSDKConnector(ActionConnector[ActionUnitreeSDKConfig, ActionIn
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "ActionUnitreeSDKConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         self.dog_attitude = None
 
         # Movement parameters
@@ -138,5 +131,3 @@ class ActionUnitreeSDKConnector(ActionConnector[ActionUnitreeSDKConfig, ActionIn
                 )
         else:
             logging.warning(f"Action '{action}' not recognized or not implemented.")
-
-        self._monitor.heartbeat("ActionUnitreeSDKConnector")

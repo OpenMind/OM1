@@ -51,13 +51,6 @@ class MoveUnitreeRPLidarSDKConnector(
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "MoveUnitreeRPLidarSDKConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         self.dog_attitude = None
 
         # Movement parameters
@@ -144,8 +137,6 @@ class MoveUnitreeRPLidarSDKConnector(
             handler()
         else:
             logging.info(f"AI movement command unknown: {output_interface.action}")
-
-        self._monitor.heartbeat("MoveUnitreeRPLidarSDKConnector")
 
         # This is a subset of Go2 movements that are
         # generally safe. Note that the "stretch" action involves

@@ -163,7 +163,6 @@ class FacePresenceProvider:
                 "category": "vision",
                 "service": "vision",
             },
-            recovery_callback=self._recover,
         )
 
     def set_recent_sec(self, sec: float) -> None:
@@ -336,22 +335,3 @@ class FacePresenceProvider:
         """Most recent (suppressed) count of unknown faces detected in the lookback window."""
         return self._unknown_faces
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Face presence provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("FacePresenceProvider: Attempting recovery...")
-            self.stop(wait=True)
-            self._session = requests.Session()
-            self.start()
-            logging.info("FacePresenceProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"FacePresenceProvider: Recovery failed: {e}")
-            return False

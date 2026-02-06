@@ -237,7 +237,6 @@ class TeleopsStatusProvider:
         self._monitor.register(
             "TeleopsStatusProvider",
             metadata={"type": "teleops", "category": "teleops"},
-            recovery_callback=self._recover,
         )
 
     def get_status(self) -> dict:
@@ -322,21 +321,3 @@ class TeleopsStatusProvider:
         """
         self.executor.shutdown(wait=True)
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Teleops Status provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("TeleopsStatusProvider: Attempting recovery...")
-            self.stop()
-            self.executor = ThreadPoolExecutor(max_workers=1)
-            logging.info("TeleopsStatusProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"TeleopsStatusProvider: Recovery failed: {e}")
-            return False

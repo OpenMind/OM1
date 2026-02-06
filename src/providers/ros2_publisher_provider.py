@@ -59,7 +59,6 @@ class ROS2PublisherProvider(Node):
                 "category": "communication",
                 "protocol": "ros2",
             },
-            recovery_callback=self._recover,
         )
 
     def add_pending_message(self, text: str):
@@ -137,21 +136,3 @@ class ROS2PublisherProvider(Node):
 
         logging.info("ROS2 Publisher Provider stopped")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the ROS2 publisher provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("ROS2PublisherProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("ROS2PublisherProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"ROS2PublisherProvider: Recovery failed: {e}")
-            return False

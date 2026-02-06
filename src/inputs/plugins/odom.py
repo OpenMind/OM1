@@ -72,12 +72,6 @@ class Odom(FuserInput[OdomConfig, Optional[dict]]):
         self.odom = OdomProvider(self.URID, use_zenoh, unitree_ethernet)
         self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "Odom",
-            metadata={"type": "input", "category": "navigation"},
-            recovery_callback=None,
-        )
 
     async def _poll(self) -> Optional[dict]:
         """
@@ -183,6 +177,4 @@ class Odom(FuserInput[OdomConfig, Optional[dict]]):
             self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
         self.messages = []
-        self._monitor.heartbeat("Odom")
-
         return result

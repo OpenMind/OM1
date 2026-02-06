@@ -43,13 +43,6 @@ class MoveSerialConnector(ActionConnector[MoveSerialConfig, MoveInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "MoveSerialConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         self.port = self.config.port
         self.ser = None
         if self.port:
@@ -87,8 +80,6 @@ class MoveSerialConnector(ActionConnector[MoveSerialConfig, MoveInput]):
             self.ser.write(byte_data)
         else:
             logging.info(f"SerialNotOpen - Simulating transmit: {message}")
-
-        self._monitor.heartbeat("MoveSerialConnector")
 
     def tick(self) -> None:
         """

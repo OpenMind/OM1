@@ -116,7 +116,6 @@ class SimplePathsProvider:
         self._monitor.register(
             "SimplePathsProvider",
             metadata={"type": "paths", "category": "navigation"},
-            recovery_callback=self._recover,
         )
 
     def start(self):
@@ -270,21 +269,3 @@ class SimplePathsProvider:
             "retreat": self.retreat,
         }
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Simple Paths provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("SimplePathsProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("SimplePathsProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"SimplePathsProvider: Recovery failed: {e}")
-            return False

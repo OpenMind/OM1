@@ -74,12 +74,6 @@ class XAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "XAILLM",
-            metadata={"type": "llm", "category": "inference", "provider": "xai"},
-            recovery_callback=None,
-        )
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
@@ -148,12 +142,9 @@ class XAILLM(LLM[R]):
 
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"XAI LLM function call output: {result}")
-                self._monitor.heartbeat("XAILLM")
                 return T.cast(R, result)
 
-            self._monitor.heartbeat("XAILLM")
             return None
         except Exception as e:
             logging.error(f"XAI API error: {e}")
-            self._monitor.report_error("XAILLM", str(e))
             return None

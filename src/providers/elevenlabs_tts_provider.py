@@ -80,7 +80,6 @@ class ElevenLabsTTSProvider:
         self._monitor.register(
             "ElevenLabsTTSProvider",
             metadata={"type": "tts", "category": "speech", "voice_id": voice_id or ""},
-            recovery_callback=self._recover,
         )
 
     def configure(
@@ -235,21 +234,3 @@ class ElevenLabsTTSProvider:
         self.running = False
         self._audio_stream.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the TTS provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("ElevenLabsTTSProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("ElevenLabsTTSProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"ElevenLabsTTSProvider: Recovery failed: {e}")
-            return False

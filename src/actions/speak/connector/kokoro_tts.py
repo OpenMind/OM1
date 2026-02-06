@@ -84,13 +84,6 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "SpeakKokoroTTSConnector",
-            metadata={"type": "action", "category": "communication"},
-            recovery_callback=None,
-        )
-
         # OM API key
         api_key = getattr(self.config, "api_key", None)
 
@@ -229,12 +222,9 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
 
         if self.audio_pub:
             self.audio_pub.put(state.serialize())
-            self._monitor.heartbeat("SpeakKokoroTTSConnector")
             return
 
         self.tts.add_pending_message(pending_message)
-
-        self._monitor.heartbeat("SpeakKokoroTTSConnector")
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
         """

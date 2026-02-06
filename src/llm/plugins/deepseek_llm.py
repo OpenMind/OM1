@@ -72,12 +72,6 @@ class DeepSeekLLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "DeepSeekLLM",
-            metadata={"type": "llm", "category": "inference", "provider": "deepseek"},
-            recovery_callback=None,
-        )
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
@@ -146,12 +140,9 @@ class DeepSeekLLM(LLM[R]):
 
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"DeepSeek LLM function call output: {result}")
-                self._monitor.heartbeat("DeepSeekLLM")
                 return T.cast(R, result)
 
-            self._monitor.heartbeat("DeepSeekLLM")
             return None
         except Exception as e:
             logging.error(f"DeepSeek API error: {e}")
-            self._monitor.report_error("DeepSeekLLM", str(e))
             return None

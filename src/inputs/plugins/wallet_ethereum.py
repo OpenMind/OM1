@@ -55,12 +55,6 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
         if not self.web3.is_connected():
             raise Exception("Failed to connect to Ethereum")
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "WalletEthereum",
-            metadata={"type": "input", "category": "external_service"},
-            recovery_callback=None,
-        )
 
     async def _poll(self) -> List[float]:
         """
@@ -173,5 +167,4 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
             self.__class__.__name__, latest_message.message, latest_message.timestamp
         )
         self.messages = []
-        self._monitor.heartbeat("WalletEthereum")
         return result

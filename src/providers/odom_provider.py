@@ -215,7 +215,6 @@ class OdomProvider:
                 "category": "navigation",
                 "use_zenoh": str(use_zenoh),
             },
-            recovery_callback=self._recover,
         )
 
         self.start()
@@ -433,21 +432,3 @@ class OdomProvider:
             self._odom_processor_thread.join()
             logging.info("OdomProvider processor thread stopped.")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Odom provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("OdomProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("OdomProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"OdomProvider: Recovery failed: {e}")
-            return False

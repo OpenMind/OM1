@@ -26,13 +26,6 @@ class TweetAPIConnector(ActionConnector[ActionConfig, TweetInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "TweetAPIConnector",
-            metadata={"type": "action", "category": "external_service"},
-            recovery_callback=None,
-        )
-
         load_dotenv()
 
         # Suppress tweepy warnings
@@ -72,5 +65,3 @@ class TweetAPIConnector(ActionConnector[ActionConfig, TweetInput]):
         except Exception as e:
             logging.error(f"Failed to send tweet: {str(e)}")
             raise
-
-        self._monitor.heartbeat("TweetAPIConnector")

@@ -116,12 +116,6 @@ class QwenLLM(LLM[R]):
 
         self._skip_state_management = False
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "QwenLLM",
-            metadata={"type": "llm", "category": "inference", "provider": "qwen"},
-            recovery_callback=None,
-        )
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
@@ -209,12 +203,9 @@ class QwenLLM(LLM[R]):
                 ]
                 actions = convert_function_calls_to_actions(function_call_data)
                 result = CortexOutputModel(actions=actions)
-                self._monitor.heartbeat("QwenLLM")
                 return T.cast(R, result)
 
-            self._monitor.heartbeat("QwenLLM")
             return None
         except Exception as e:
             logging.error(f"Qwen LLM error: {e}")
-            self._monitor.report_error("QwenLLM", str(e))
             return None

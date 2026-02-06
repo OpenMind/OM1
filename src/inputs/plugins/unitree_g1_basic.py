@@ -136,12 +136,6 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         self.g1_lowbatt_percent = 20.0  # percent
         self.descriptor_for_LLM = "Energy Level"
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "UnitreeG1Basic",
-            metadata={"type": "input", "category": "robot_state"},
-            recovery_callback=None,
-        )
 
     def BMSStateHandler(self, msg: dds_.BmsState_):  # type: ignore
         """
@@ -274,6 +268,4 @@ INPUT: {self.descriptor_for_LLM}
             self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
         self.messages = []
-        self._monitor.heartbeat("UnitreeG1Basic")
-
         return result

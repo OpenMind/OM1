@@ -90,12 +90,6 @@ class OllamaLLM(LLM[R]):
         logging.info(f"OllamaLLM initialized with model: {config.model}")
         logging.info(f"Ollama endpoint: {self._chat_url}")
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "OllamaLLM",
-            metadata={"type": "llm", "category": "inference", "provider": "ollama"},
-            recovery_callback=None,
-        )
 
     def _convert_tools_to_ollama_format(self) -> T.List[T.Dict]:
         """
@@ -214,10 +208,8 @@ class OllamaLLM(LLM[R]):
 
                 actions = convert_function_calls_to_actions(function_call_data)
                 result_model = CortexOutputModel(actions=actions)
-                self._monitor.heartbeat("OllamaLLM")
                 return T.cast(R, result_model)
 
-            self._monitor.heartbeat("OllamaLLM")
             return None
 
         except httpx.ConnectError as e:
@@ -226,17 +218,14 @@ class OllamaLLM(LLM[R]):
             )
             logging.error("Start Ollama with: ollama serve")
             logging.error(f"Error: {e}")
-            self._monitor.report_error("OllamaLLM", f"Connection error: {e}")
             return None
         except httpx.TimeoutException as e:
             logging.error(f"Ollama request timed out after {self._config.timeout}s")
             logging.error("Try increasing timeout or using a smaller model")
             logging.error(f"Error: {e}")
-            self._monitor.report_error("OllamaLLM", f"Timeout: {e}")
             return None
         except Exception as e:
             logging.error(f"Ollama API error: {e}")
-            self._monitor.report_error("OllamaLLM", str(e))
             return None
 
     async def close(self):

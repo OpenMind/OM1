@@ -63,7 +63,6 @@ class VLMGeminiProvider:
                 "category": "vision",
                 "model": "gemini-2.0-flash-exp",
             },
-            recovery_callback=self._recover,
         )
 
     async def _process_frame(self, frame: str):
@@ -154,21 +153,3 @@ class VLMGeminiProvider:
         if self.stream_ws_client:
             self.stream_ws_client.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the VLM Gemini provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("VLMGeminiProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("VLMGeminiProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"VLMGeminiProvider: Recovery failed: {e}")
-            return False

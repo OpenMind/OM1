@@ -1,5 +1,6 @@
 """Prometheus-based health monitoring for OM1 providers."""
 
+import html
 import logging
 import threading
 import time
@@ -72,7 +73,6 @@ class ProviderState:
 
     name: str
     metadata: Dict[str, str] = field(default_factory=dict)
-    recovery_callback: Optional[Callable[[], bool]] = None
     last_heartbeat: float = 0.0
     error_count: int = 0
     status: HealthStatus = HealthStatus.UNKNOWN
@@ -83,8 +83,8 @@ class PrometheusMonitor:
     """
     Prometheus-based health monitoring singleton for OM1 providers.
 
-    Provides metrics collection, heartbeat tracking, error counting,
-    and automatic recovery for registered providers.
+    Provides metrics collection, heartbeat tracking, and error counting
+    for registered providers.
 
     Parameters
     ----------
@@ -194,12 +194,14 @@ class PrometheusMonitor:
                 )
 
         healthy = sum(1 for p in providers_data if p["status"] == "healthy")
-        unhealthy = len(providers_data) - healthy
+        unhealthy = sum(1 for p in providers_data if p["status"] == "unhealthy")
+        unknown = sum(1 for p in providers_data if p["status"] == "unknown")
 
         return {
             "uptime": current_time - self._start_time,
             "healthy_count": healthy,
             "unhealthy_count": unhealthy,
+            "unknown_count": unknown,
             "providers": providers_data,
         }
 
@@ -327,12 +329,15 @@ class PrometheusMonitor:
             status_class = "ok" if p["status"] == "healthy" else "err"
             heartbeat = f"{p['last_heartbeat']:.1f}s"
             error_class = "warn" if p["error_count"] > 0 else ""
+            name = html.escape(str(p["name"]))
+            ptype = html.escape(str(p["type"]))
+            category = html.escape(str(p["category"]))
             rows += f"""
                 <tr>
                     <td><span class="status {status_class}"></span></td>
-                    <td class="name">{p['name']}</td>
-                    <td class="type">{p['type']}</td>
-                    <td><span class="category">{p['category']}</span></td>
+                    <td class="name">{name}</td>
+                    <td class="type">{ptype}</td>
+                    <td><span class="category">{category}</span></td>
                     <td class="num">{heartbeat}</td>
                     <td class="num {error_class}">{p['error_count']}</td>
                 </tr>
@@ -364,7 +369,7 @@ class PrometheusMonitor:
         metadata : dict, optional
             Additional metadata about the provider.
         recovery_callback : callable, optional
-            Function to call when attempting recovery. Should return True on success.
+            Deprecated. Kept for backward compatibility, ignored.
         """
         with self._lock:
             if name in self._providers:
@@ -377,7 +382,6 @@ class PrometheusMonitor:
             self._providers[name] = ProviderState(
                 name=name,
                 metadata=provider_metadata,
-                recovery_callback=recovery_callback,
                 last_heartbeat=time.time(),
                 status=HealthStatus.HEALTHY,
             )
@@ -414,6 +418,31 @@ class PrometheusMonitor:
         """
         with self._lock:
             if name in self._providers:
+                provider = self._providers[name]
+                provider_type = provider.metadata.get("type", "unknown")
+                provider_category = provider.metadata.get("category", "unknown")
+
+                try:
+                    self._status_gauge.labels(
+                        provider=name,
+                        type=provider_type,
+                        category=provider_category,
+                        status="healthy",
+                    ).set(0)
+                    self._status_gauge.labels(
+                        provider=name,
+                        type=provider_type,
+                        category=provider_category,
+                        status="unhealthy",
+                    ).set(0)
+                    self._heartbeat_gauge.labels(
+                        provider=name,
+                        type=provider_type,
+                        category=provider_category,
+                    ).set(0)
+                except Exception as e:
+                    logging.debug(f"Error cleaning up metrics for {name}: {e}")
+
                 del self._providers[name]
                 logging.info(f"Unregistered provider: {name}")
 
@@ -564,9 +593,6 @@ class PrometheusMonitor:
                         if name in self._providers:
                             self._providers[name].status = HealthStatus.UNHEALTHY
                             self._update_status_metrics(name, HealthStatus.UNHEALTHY)
-
-                    # Attempt recovery
-                    self._attempt_recovery(name, provider)
                 unhealthy_count += 1
             else:
                 healthy_count += 1
@@ -575,31 +601,3 @@ class PrometheusMonitor:
         self._providers_total.labels(status="healthy").set(healthy_count)
         self._providers_total.labels(status="unhealthy").set(unhealthy_count)
 
-    def _attempt_recovery(self, name: str, provider: ProviderState) -> None:
-        """
-        Attempt to recover an unhealthy provider.
-
-        Parameters
-        ----------
-        name : str
-            Name of the provider.
-        provider : ProviderState
-            Provider state object.
-        """
-        if provider.recovery_callback is None:
-            return
-
-        logging.info(f"Attempting recovery for provider: {name}")
-        try:
-            success = provider.recovery_callback()
-            if success:
-                with self._lock:
-                    if name in self._providers:
-                        self._providers[name].status = HealthStatus.HEALTHY
-                        self._providers[name].last_heartbeat = time.time()
-                        self._update_status_metrics(name, HealthStatus.HEALTHY)
-                logging.info(f"Recovery successful for provider: {name}")
-            else:
-                logging.error(f"Recovery failed for provider: {name}")
-        except Exception as e:
-            logging.error(f"Recovery exception for provider {name}: {e}")

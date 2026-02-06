@@ -21,13 +21,6 @@ class FaceAvatarConnector(ActionConnector[ActionConfig, FaceInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "FaceAvatarConnector",
-            metadata={"type": "action", "category": "communication"},
-            recovery_callback=None,
-        )
-
         self.avatar_provider = AvatarProvider()
         logging.info("Face system initiated with AvatarProvider")
 
@@ -55,8 +48,6 @@ class FaceAvatarConnector(ActionConnector[ActionConfig, FaceInput]):
             logging.warning("Failed to send avatar face command")
 
         logging.info(f"Avatar face command sent: {output_interface.action}")
-
-        self._monitor.heartbeat("FaceAvatarConnector")
 
     def stop(self):
         """

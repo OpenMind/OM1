@@ -69,7 +69,6 @@ class RtkProvider:
                 "category": "navigation",
                 "serial_port": serial_port,
             },
-            recovery_callback=self._recover,
         )
 
         self.start()
@@ -234,21 +233,3 @@ class RtkProvider:
         """
         return self._rtk
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the RTK provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("RtkProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("RtkProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"RtkProvider: Recovery failed: {e}")
-            return False

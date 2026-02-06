@@ -113,13 +113,6 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "MoveYansheeConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         self.joysticks = []
 
         self.vendor_id = ""
@@ -320,8 +313,6 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
             logging.info(f"Unknown move type: {output_interface.action}")
 
         logging.info(f"SendThisToUB: {output_interface.action}")
-
-        self._monitor.heartbeat("MoveYansheeConnector")
 
     def tick(self) -> None:
         """

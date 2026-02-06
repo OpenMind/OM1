@@ -47,7 +47,6 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
                 "category": "navigation",
                 "robot": "unitree_go2",
             },
-            recovery_callback=self._recover,
         )
 
     def lidar_localization_message_callback(self, data: zenoh.Sample):
@@ -116,21 +115,3 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         """
         return self.localization_pose
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Lidar Localization provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UnitreeGo2LidarLocalizationProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UnitreeGo2LidarLocalizationProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UnitreeGo2LidarLocalizationProvider: Recovery failed: {e}")
-            return False

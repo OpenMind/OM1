@@ -83,12 +83,6 @@ class VLMVilaRTSP(FuserInput[VLMVilaRTSPConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Vision"
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "VLMVilaRTSP",
-            metadata={"type": "input", "category": "vlm"},
-            recovery_callback=None,
-        )
 
     def _handle_vlm_message(self, raw_message: str):
         """
@@ -204,5 +198,4 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages = []
 
-        self._monitor.heartbeat("VLMVilaRTSP")
         return result

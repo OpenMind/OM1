@@ -139,7 +139,6 @@ class TronOdomProvider:
         self._monitor.register(
             "TronOdomProvider",
             metadata={"type": "odom", "category": "navigation", "robot": "tron"},
-            recovery_callback=self._recover,
         )
 
         self.start()
@@ -357,21 +356,3 @@ class TronOdomProvider:
             self._odom_processor_thread.join()
             logging.info("TronOdomProvider processor thread stopped.")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Tron Odom provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("TronOdomProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("TronOdomProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"TronOdomProvider: Recovery failed: {e}")
-            return False

@@ -68,13 +68,6 @@ class SelfieConnector(ActionConnector[SelfieConfig, SelfieInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "SelfieConnector",
-            metadata={"type": "action", "category": "external_service"},
-            recovery_callback=None,
-        )
-
         self.base_url: str = self.config.face_http_base_url
 
         self.recent_sec = self.config.face_recent_sec
@@ -254,5 +247,3 @@ class SelfieConnector(ActionConnector[SelfieConfig, SelfieInput]):
 
         finally:
             await loop.run_in_executor(None, self._set_blur, orig_blur)
-
-        self._monitor.heartbeat("SelfieConnector")

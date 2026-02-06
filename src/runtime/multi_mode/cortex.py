@@ -10,6 +10,7 @@ from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
+from providers.prometheus_monitor import PrometheusMonitor
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.multi_mode.config import (
     LifecycleHookType,
@@ -68,6 +69,7 @@ class ModeCortexRuntime:
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
+        self.prometheus_monitor = PrometheusMonitor()
 
         # Hot-reload configuration
         self.hot_reload = hot_reload
@@ -381,6 +383,9 @@ class ModeCortexRuntime:
         # Stop ConfigProvider
         self.config_provider.stop()
 
+        # Stop Prometheus monitor
+        self.prometheus_monitor.stop()
+
         logging.debug("Tasks cleaned up successfully")
 
     async def run(self) -> None:
@@ -388,6 +393,7 @@ class ModeCortexRuntime:
         Start the mode-aware runtime's main execution loop.
         """
         try:
+            self.prometheus_monitor.start(port=9090)
             self.mode_manager.set_event_loop(asyncio.get_event_loop())
 
             if not self._mode_initialized:

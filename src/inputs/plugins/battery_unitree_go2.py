@@ -103,12 +103,6 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         # Simple description of sensor output to help LLM understand its importance and utility
         self.descriptor_for_LLM = "Energy Levels"
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "UnitreeGo2Battery",
-            metadata={"type": "input", "category": "robot_state"},
-            recovery_callback=None,
-        )
 
     def LowStateMessageHandler(self, msg: LowState_):
         """
@@ -237,5 +231,4 @@ class UnitreeGo2Battery(FuserInput[UnitreeGo2BatteryConfig, List[float]]):
         )
         self.messages = []
 
-        self._monitor.heartbeat("UnitreeGo2Battery")
         return result

@@ -52,13 +52,6 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "MoveTronZenohConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         # Movement parameters
         self.move_speed = 0.25
         self.turn_speed = 0.35
@@ -155,8 +148,6 @@ class MoveTronZenohConnector(ActionConnector[MoveTronZenohConfig, MoveInput]):
             handler()
         else:
             logging.info(f"AI movement command unknown: {output_interface.action}")
-
-        self._monitor.heartbeat("MoveTronZenohConnector")
 
     def clean_abort(self) -> None:
         """

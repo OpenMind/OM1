@@ -95,12 +95,6 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Information about objects and walls around you, to plan your movements and avoid bumping into things."
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "RPLidar",
-            metadata={"type": "input", "category": "navigation"},
-            recovery_callback=None,
-        )
 
     async def _poll(self) -> Optional[str]:
         """
@@ -192,8 +186,6 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
             self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
         self.messages = []
-        self._monitor.heartbeat("RPLidar")
-
         return result
 
     def _extract_lidar_config(self, config: RPLidarConfig) -> dict:

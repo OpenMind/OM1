@@ -48,7 +48,6 @@ class ZenohPublisherProvider:
                 "category": "communication",
                 "topic": topic,
             },
-            recovery_callback=self._recover,
         )
 
         try:
@@ -129,21 +128,3 @@ class ZenohPublisherProvider:
             self.session.close()
         logging.info("Zenoh Publisher Provider stopped")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Zenoh publisher provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("ZenohPublisherProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("ZenohPublisherProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"ZenohPublisherProvider: Recovery failed: {e}")
-            return False

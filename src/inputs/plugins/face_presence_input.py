@@ -83,12 +83,6 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
 
         self.descriptor_for_LLM = "Face Presence Sensor"
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "FacePresence",
-            metadata={"type": "input", "category": "vision"},
-            recovery_callback=None,
-        )
 
     def _handle_face_message(self, text_line: str) -> None:
         """
@@ -202,5 +196,4 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages.clear()
 
-        self._monitor.heartbeat("FacePresence")
         return result

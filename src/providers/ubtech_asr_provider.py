@@ -51,7 +51,6 @@ class UbtechASRProvider:
                 "robot": "ubtech",
                 "language": language_code,
             },
-            recovery_callback=self._recover,
         )
 
     def register_message_callback(self, cb: Optional[Callable]):
@@ -426,21 +425,3 @@ class UbtechASRProvider:
             "status": "error",
         }  # Default error after all retries
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Ubtech ASR provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UbtechASRProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UbtechASRProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UbtechASRProvider: Recovery failed: {e}")
-            return False

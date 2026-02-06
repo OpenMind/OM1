@@ -81,12 +81,6 @@ class OpenRouter(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "OpenRouter",
-            metadata={"type": "llm", "category": "inference", "provider": "openrouter"},
-            recovery_callback=None,
-        )
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
@@ -155,13 +149,10 @@ class OpenRouter(LLM[R]):
 
                 result = CortexOutputModel(actions=actions)
                 logging.info(f"OpenRouter function call output: {result}")
-                self._monitor.heartbeat("OpenRouter")
                 return T.cast(R, result)
 
-            self._monitor.heartbeat("OpenRouter")
             return None
 
         except Exception as e:
             logging.error(f"OpenRouter API error: {e}")
-            self._monitor.report_error("OpenRouter", str(e))
             return None

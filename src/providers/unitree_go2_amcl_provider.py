@@ -48,7 +48,6 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         self._monitor.register(
             "UnitreeGo2AMCLProvider",
             metadata={"type": "amcl", "category": "navigation", "robot": "unitree_go2"},
-            recovery_callback=self._recover,
         )
 
     def amcl_message_callback(self, data: zenoh.Sample):
@@ -120,21 +119,3 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
         """
         return self.localization_pose
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the AMCL provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UnitreeGo2AMCLProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UnitreeGo2AMCLProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UnitreeGo2AMCLProvider: Recovery failed: {e}")
-            return False

@@ -1,9 +1,8 @@
 """
 Integration tests for Prometheus monitoring across components.
 
-These tests verify that providers, inputs, actions, and LLM plugins
-correctly integrate with PrometheusMonitor by calling register(),
-heartbeat(), and report_error() at appropriate times.
+These tests verify that base classes automatically register providers
+and send heartbeats via __init_subclass__ wrapping.
 """
 
 import time
@@ -12,12 +11,312 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+class TestAutoRegistrationSensor:
+    """Test that Sensor subclasses auto-register with PrometheusMonitor."""
+
+    @pytest.fixture(autouse=True)
+    def reset_singletons(self):
+        from providers.prometheus_monitor import PrometheusMonitor
+
+        PrometheusMonitor.reset()  # type: ignore
+        yield
+        PrometheusMonitor.reset()  # type: ignore
+
+    def test_sensor_auto_registers_on_init(self):
+        """Sensor subclass should auto-register with its class name."""
+        with patch("uvicorn.Server.run"):
+            from inputs.base import Sensor, SensorConfig
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class MySensor(Sensor):
+                def __init__(self, config):
+                    super().__init__(config)
+
+                async def _raw_to_text(self, raw_input):
+                    return None
+
+                async def raw_to_text(self, raw_input):
+                    pass
+
+                def formatted_latest_buffer(self):
+                    return None
+
+            monitor = PrometheusMonitor()
+            config = SensorConfig()
+            MySensor(config)
+
+            assert "MySensor" in monitor._providers
+            assert monitor._providers["MySensor"].metadata["type"] == "input"
+
+    def test_sensor_auto_heartbeat_on_formatted_latest_buffer(self):
+        """formatted_latest_buffer returning non-None should trigger heartbeat."""
+        with patch("uvicorn.Server.run"):
+            from inputs.base import Sensor, SensorConfig
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class HeartbeatSensor(Sensor):
+                def __init__(self, config):
+                    super().__init__(config)
+
+                async def _raw_to_text(self, raw_input):
+                    return None
+
+                async def raw_to_text(self, raw_input):
+                    pass
+
+                def formatted_latest_buffer(self):
+                    return "some data"
+
+            monitor = PrometheusMonitor()
+            config = SensorConfig()
+            sensor = HeartbeatSensor(config)
+
+            initial_hb = monitor._providers["HeartbeatSensor"].last_heartbeat
+            time.sleep(0.01)
+            sensor.formatted_latest_buffer()
+
+            assert monitor._providers["HeartbeatSensor"].last_heartbeat > initial_hb
+
+    def test_sensor_no_heartbeat_on_none_result(self):
+        """formatted_latest_buffer returning None should NOT trigger heartbeat."""
+        with patch("uvicorn.Server.run"):
+            from inputs.base import Sensor, SensorConfig
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class NullSensor(Sensor):
+                def __init__(self, config):
+                    super().__init__(config)
+
+                async def _raw_to_text(self, raw_input):
+                    return None
+
+                async def raw_to_text(self, raw_input):
+                    pass
+
+                def formatted_latest_buffer(self):
+                    return None
+
+            monitor = PrometheusMonitor()
+            config = SensorConfig()
+            sensor = NullSensor(config)
+
+            initial_hb = monitor._providers["NullSensor"].last_heartbeat
+            time.sleep(0.01)
+            sensor.formatted_latest_buffer()
+
+            assert monitor._providers["NullSensor"].last_heartbeat == initial_hb
+
+
+class TestAutoRegistrationAction:
+    """Test that ActionConnector subclasses auto-register."""
+
+    @pytest.fixture(autouse=True)
+    def reset_singletons(self):
+        from providers.prometheus_monitor import PrometheusMonitor
+
+        PrometheusMonitor.reset()  # type: ignore
+        yield
+        PrometheusMonitor.reset()  # type: ignore
+
+    def test_action_connector_auto_registers_on_init(self):
+        """ActionConnector subclass should auto-register."""
+        with patch("uvicorn.Server.run"):
+            from actions.base import ActionConfig, ActionConnector
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class MyConnector(ActionConnector):
+                async def connect(self, output_interface):
+                    pass
+
+            monitor = PrometheusMonitor()
+            config = ActionConfig()
+            MyConnector(config)
+
+            assert "MyConnector" in monitor._providers
+            assert monitor._providers["MyConnector"].metadata["type"] == "action"
+
+    @pytest.mark.asyncio
+    async def test_action_connector_auto_heartbeat_on_connect(self):
+        """connect() should auto-send heartbeat after successful return."""
+        with patch("uvicorn.Server.run"):
+            from actions.base import ActionConfig, ActionConnector
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class HBConnector(ActionConnector):
+                async def connect(self, output_interface):
+                    pass
+
+            monitor = PrometheusMonitor()
+            config = ActionConfig()
+            connector = HBConnector(config)
+
+            initial_hb = monitor._providers["HBConnector"].last_heartbeat
+            time.sleep(0.01)
+            await connector.connect("dummy")
+
+            assert monitor._providers["HBConnector"].last_heartbeat > initial_hb
+
+
+class TestAutoRegistrationLLM:
+    """Test that LLM subclasses auto-register."""
+
+    @pytest.fixture(autouse=True)
+    def reset_singletons(self):
+        from providers.prometheus_monitor import PrometheusMonitor
+
+        PrometheusMonitor.reset()  # type: ignore
+        yield
+        PrometheusMonitor.reset()  # type: ignore
+
+    def test_llm_auto_registers_on_init(self):
+        """LLM subclass should auto-register with its class name."""
+        with patch("uvicorn.Server.run"):
+            from llm import LLM, LLMConfig
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class MyLLM(LLM):
+                async def ask(self, prompt, messages=[]):
+                    return None
+
+            monitor = PrometheusMonitor()
+            config = LLMConfig()
+            MyLLM(config=config)
+
+            assert "MyLLM" in monitor._providers
+            assert monitor._providers["MyLLM"].metadata["type"] == "llm"
+
+    @pytest.mark.asyncio
+    async def test_llm_auto_heartbeat_on_ask_success(self):
+        """ask() returning successfully should trigger heartbeat."""
+        with patch("uvicorn.Server.run"):
+            from llm import LLM, LLMConfig
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class SuccessLLM(LLM):
+                async def ask(self, prompt, messages=[]):
+                    return None
+
+            monitor = PrometheusMonitor()
+            config = LLMConfig()
+            llm = SuccessLLM(config=config)
+
+            initial_hb = monitor._providers["SuccessLLM"].last_heartbeat
+            time.sleep(0.01)
+            await llm.ask("hello")
+
+            assert monitor._providers["SuccessLLM"].last_heartbeat > initial_hb
+
+    @pytest.mark.asyncio
+    async def test_llm_auto_error_report_on_ask_exception(self):
+        """ask() raising exception should report error and re-raise."""
+        with patch("uvicorn.Server.run"):
+            from llm import LLM, LLMConfig
+            from providers.prometheus_monitor import PrometheusMonitor
+
+            class FailLLM(LLM):
+                async def ask(self, prompt, messages=[]):
+                    raise ValueError("LLM failed")
+
+            monitor = PrometheusMonitor()
+            config = LLMConfig()
+            llm = FailLLM(config=config)
+
+            with pytest.raises(ValueError, match="LLM failed"):
+                await llm.ask("hello")
+
+            assert monitor._providers["FailLLM"].error_count == 1
+
+
+class TestAutoRegistrationSimulator:
+    """Test that Simulator subclasses auto-register."""
+
+    @pytest.fixture(autouse=True)
+    def reset_singletons(self):
+        from providers.prometheus_monitor import PrometheusMonitor
+
+        PrometheusMonitor.reset()  # type: ignore
+        yield
+        PrometheusMonitor.reset()  # type: ignore
+
+    def test_simulator_auto_registers_on_init(self):
+        """Simulator subclass should auto-register."""
+        with patch("uvicorn.Server.run"):
+            from providers.prometheus_monitor import PrometheusMonitor
+            from simulators.base import Simulator, SimulatorConfig
+
+            class MySim(Simulator):
+                def sim(self, actions):
+                    pass
+
+            monitor = PrometheusMonitor()
+            config = SimulatorConfig()
+            MySim(config)
+
+            assert "MySim" in monitor._providers
+            assert monitor._providers["MySim"].metadata["type"] == "simulator"
+
+    def test_simulator_auto_heartbeat_on_sim(self):
+        """sim() should auto-send heartbeat after call."""
+        with patch("uvicorn.Server.run"):
+            from providers.prometheus_monitor import PrometheusMonitor
+            from simulators.base import Simulator, SimulatorConfig
+
+            class HBSim(Simulator):
+                def sim(self, actions):
+                    pass
+
+            monitor = PrometheusMonitor()
+            config = SimulatorConfig()
+            sim = HBSim(config)
+
+            initial_hb = monitor._providers["HBSim"].last_heartbeat
+            time.sleep(0.01)
+            sim.sim([])
+
+            assert monitor._providers["HBSim"].last_heartbeat > initial_hb
+
+
+class TestMultiModePrometheusIntegration:
+    """Test that multi-mode runtime integrates PrometheusMonitor."""
+
+    @pytest.fixture(autouse=True)
+    def reset_singletons(self):
+        from providers.prometheus_monitor import PrometheusMonitor
+
+        PrometheusMonitor.reset()  # type: ignore
+        yield
+        PrometheusMonitor.reset()  # type: ignore
+
+    def test_multi_mode_runtime_has_prometheus(self):
+        """ModeCortexRuntime should have prometheus_monitor attribute."""
+        with patch("uvicorn.Server.run"):
+            from providers.prometheus_monitor import PrometheusMonitor
+            from runtime.multi_mode.config import ModeSystemConfig
+
+            mock_config = MagicMock(spec=ModeSystemConfig)
+            mock_config.modes = {"default": MagicMock()}
+            mock_config.default_mode = "default"
+            mock_config.name = "test"
+            mock_config.transitions = []
+            mock_config.global_lifecycle_hooks = []
+
+            from runtime.multi_mode.cortex import ModeCortexRuntime
+
+            runtime = ModeCortexRuntime(
+                mode_config=mock_config,
+                mode_config_name="test",
+                hot_reload=False,
+            )
+
+            assert hasattr(runtime, "prometheus_monitor")
+            assert runtime.prometheus_monitor is not None
+
+
 class TestBaseClassPrometheusIntegration:
     """Test that base classes properly set up Prometheus monitor."""
 
     @pytest.fixture(autouse=True)
     def reset_singletons(self):
-        """Reset singleton instances between tests."""
         from providers.prometheus_monitor import PrometheusMonitor
 
         PrometheusMonitor.reset()  # type: ignore
@@ -73,365 +372,3 @@ class TestBaseClassPrometheusIntegration:
 
             assert hasattr(simulator, "_monitor")
             assert simulator._monitor is not None
-
-
-class TestLLMPrometheusIntegration:
-    """Test that LLM plugins integrate correctly with Prometheus."""
-
-    @pytest.fixture(autouse=True)
-    def reset_singletons(self):
-        """Reset singleton instances between tests."""
-        from providers.prometheus_monitor import PrometheusMonitor
-
-        PrometheusMonitor.reset()  # type: ignore
-        yield
-        PrometheusMonitor.reset()  # type: ignore
-
-    def test_ollama_llm_registers_with_prometheus(self):
-        """Test that OllamaLLM registers with PrometheusMonitor on init."""
-        with patch("uvicorn.Server.run"):
-            from llm.plugins.ollama_llm import OllamaLLM, OllamaLLMConfig
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = OllamaLLMConfig(
-                model="llama3.2", base_url="http://localhost:11434"
-            )
-            OllamaLLM(config=config)  # Creates instance, registers with monitor
-
-            assert "OllamaLLM" in monitor._providers
-            assert monitor.get_status("OllamaLLM") is not None
-
-    def test_deepseek_llm_registers_with_prometheus(self):
-        """Test that DeepSeekLLM registers with PrometheusMonitor on init."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("llm.plugins.deepseek_llm.openai.AsyncOpenAI"),
-        ):
-            from llm.plugins.deepseek_llm import DeepSeekConfig, DeepSeekLLM
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = DeepSeekConfig(api_key="test-key")
-            DeepSeekLLM(config=config)  # Creates instance, registers with monitor
-
-            assert "DeepSeekLLM" in monitor._providers
-
-    def test_llm_has_monitor_attribute(self):
-        """Test that LLM instances have _monitor attribute from base class."""
-        with patch("uvicorn.Server.run"):
-            from llm.plugins.ollama_llm import OllamaLLM, OllamaLLMConfig
-
-            config = OllamaLLMConfig(
-                model="llama3.2", base_url="http://localhost:11434"
-            )
-            llm = OllamaLLM(config=config)
-
-            assert hasattr(llm, "_monitor")
-            assert llm._monitor is not None
-
-
-class TestInputPluginPrometheusIntegration:
-    """Test that input plugins integrate correctly with Prometheus."""
-
-    @pytest.fixture(autouse=True)
-    def reset_singletons(self):
-        """Reset singleton instances between tests."""
-        from providers.prometheus_monitor import PrometheusMonitor
-
-        PrometheusMonitor.reset()  # type: ignore
-        yield
-        PrometheusMonitor.reset()  # type: ignore
-
-    def test_gps_input_registers(self):
-        """Test that Gps input registers with Prometheus."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("inputs.plugins.gps.GpsProvider"),
-            patch("inputs.plugins.gps.IOProvider"),
-        ):
-            from inputs.base import SensorConfig
-            from inputs.plugins.gps import Gps
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = SensorConfig()
-            Gps(config)  # Creates instance, registers with monitor
-
-            assert "Gps" in monitor._providers
-
-    def test_rplidar_input_registers(self):
-        """Test that RPLidar input registers with Prometheus."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("inputs.plugins.rplidar.RPLidarProvider"),
-            patch("inputs.plugins.rplidar.IOProvider"),
-        ):
-            from inputs.plugins.rplidar import RPLidar, RPLidarConfig
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = RPLidarConfig()
-            RPLidar(config)  # Creates instance, registers with monitor
-
-            # Check that RPLidar or RPLidarProvider is registered
-            assert any("RPLidar" in name for name in monitor._providers)
-
-    def test_odom_input_registers(self):
-        """Test that Odom input registers with Prometheus."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("inputs.plugins.odom.OdomProvider"),
-            patch("inputs.plugins.odom.IOProvider"),
-        ):
-            from inputs.plugins.odom import Odom, OdomConfig
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = OdomConfig()
-            Odom(config)  # Creates instance, registers with monitor
-
-            assert "Odom" in monitor._providers
-
-    def test_input_heartbeat_on_formatted_buffer(self):
-        """Test that input sends heartbeat when formatted_latest_buffer is called."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("inputs.plugins.gps.GpsProvider"),
-            patch("inputs.plugins.gps.IOProvider"),
-        ):
-            from inputs.base import Message, SensorConfig
-            from inputs.plugins.gps import Gps
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = SensorConfig()
-            gps_input = Gps(config)
-
-            # Add a message to buffer
-            gps_input.messages = [Message(timestamp=time.time(), message="test")]
-
-            initial_heartbeat = monitor._providers["Gps"].last_heartbeat
-
-            # Call formatted_latest_buffer
-            gps_input.formatted_latest_buffer()
-
-            # Heartbeat should be updated
-            assert monitor._providers["Gps"].last_heartbeat >= initial_heartbeat
-
-
-class TestActionConnectorPrometheusIntegration:
-    """Test that action connectors integrate correctly with Prometheus."""
-
-    @pytest.fixture(autouse=True)
-    def reset_singletons(self):
-        """Reset singleton instances between tests."""
-        from providers.prometheus_monitor import PrometheusMonitor
-
-        PrometheusMonitor.reset()  # type: ignore
-        yield
-        PrometheusMonitor.reset()  # type: ignore
-
-    def test_face_avatar_connector_registers(self):
-        """Test that FaceAvatarConnector registers with Prometheus."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("actions.face.connector.avatar.AvatarProvider") as mock_provider,
-        ):
-            from actions.base import ActionConfig
-            from actions.face.connector.avatar import FaceAvatarConnector
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            mock_provider_instance = MagicMock()
-            mock_provider.return_value = mock_provider_instance
-
-            monitor = PrometheusMonitor()
-            config = ActionConfig()
-            FaceAvatarConnector(config)  # Creates instance, registers with monitor
-
-            assert "FaceAvatarConnector" in monitor._providers
-
-    @pytest.mark.asyncio
-    async def test_face_connector_heartbeat_on_connect(self):
-        """Test that face connector sends heartbeat when connect() is called."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("actions.face.connector.avatar.AvatarProvider") as mock_provider,
-        ):
-            from actions.base import ActionConfig
-            from actions.face.connector.avatar import FaceAvatarConnector
-            from actions.face.interface import FaceAction, FaceInput
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            mock_provider_instance = MagicMock()
-            mock_provider.return_value = mock_provider_instance
-
-            monitor = PrometheusMonitor()
-            config = ActionConfig()
-            connector = FaceAvatarConnector(config)
-
-            initial_heartbeat = monitor._providers["FaceAvatarConnector"].last_heartbeat
-
-            # Call connect with proper FaceInput object
-            face_input = FaceInput(action=FaceAction.HAPPY)
-            await connector.connect(face_input)
-
-            # Heartbeat should be updated
-            assert (
-                monitor._providers["FaceAvatarConnector"].last_heartbeat
-                >= initial_heartbeat
-            )
-
-
-class TestSimulatorPrometheusIntegration:
-    """Test that simulators integrate correctly with Prometheus."""
-
-    @pytest.fixture(autouse=True)
-    def reset_singletons(self):
-        """Reset singleton instances between tests."""
-        from providers.prometheus_monitor import PrometheusMonitor
-
-        PrometheusMonitor.reset()  # type: ignore
-        yield
-        PrometheusMonitor.reset()  # type: ignore
-
-    def test_websim_registers(self):
-        """Test that WebSim registers with Prometheus."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("simulators.plugins.WebSim.uvicorn"),
-            patch("simulators.plugins.WebSim.IOProvider"),
-            patch("simulators.plugins.WebSim.FastAPI"),
-            patch("simulators.plugins.WebSim.StaticFiles"),
-            patch("os.path.exists", return_value=True),
-        ):
-            from providers.prometheus_monitor import PrometheusMonitor
-            from simulators.base import SimulatorConfig
-            from simulators.plugins.WebSim import WebSim
-
-            monitor = PrometheusMonitor()
-            config = SimulatorConfig(name="TestWebSim")
-
-            # Patch threading to avoid actual server start
-            with patch("threading.Thread"):
-                WebSim(config)  # Creates instance, registers with monitor
-
-            assert "WebSim" in monitor._providers
-
-
-class TestPrometheusRecoveryIntegration:
-    """Test that providers with recovery callbacks work correctly."""
-
-    @pytest.fixture(autouse=True)
-    def reset_singletons(self):
-        """Reset singleton instances between tests."""
-        from providers.prometheus_monitor import PrometheusMonitor
-
-        PrometheusMonitor.reset()  # type: ignore
-        yield
-        PrometheusMonitor.reset()  # type: ignore
-
-    def test_provider_registers_with_recovery_callback(self):
-        """Test that providers register recovery callbacks."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("inputs.plugins.gps.GpsProvider"),
-            patch("inputs.plugins.gps.IOProvider"),
-        ):
-            from inputs.base import SensorConfig
-            from inputs.plugins.gps import Gps
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = SensorConfig()
-            Gps(config)  # Creates instance, registers with monitor
-
-            # Input plugins register with recovery_callback=None
-            assert monitor._providers["Gps"].recovery_callback is None
-
-    def test_ollama_llm_registers_with_metadata(self):
-        """Test that OllamaLLM registers with proper metadata."""
-        with patch("uvicorn.Server.run"):
-            from llm.plugins.ollama_llm import OllamaLLM, OllamaLLMConfig
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = OllamaLLMConfig(
-                model="llama3.2", base_url="http://localhost:11434"
-            )
-            OllamaLLM(config=config)  # Creates instance, registers with monitor
-
-            # LLM plugins register with proper metadata
-            provider_state = monitor._providers["OllamaLLM"]
-            assert provider_state.metadata is not None
-            assert provider_state.metadata["type"] == "llm"
-            assert provider_state.metadata["provider"] == "ollama"
-
-
-class TestHeartbeatAndErrorReporting:
-    """Test heartbeat and error reporting integration."""
-
-    @pytest.fixture(autouse=True)
-    def reset_singletons(self):
-        """Reset singleton instances between tests."""
-        from providers.prometheus_monitor import PrometheusMonitor
-
-        PrometheusMonitor.reset()  # type: ignore
-        yield
-        PrometheusMonitor.reset()  # type: ignore
-
-    def test_multiple_providers_register(self):
-        """Test that multiple providers can register simultaneously."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("inputs.plugins.gps.GpsProvider"),
-            patch("inputs.plugins.gps.IOProvider"),
-            patch("inputs.plugins.odom.OdomProvider"),
-            patch("inputs.plugins.odom.IOProvider"),
-        ):
-            from inputs.base import SensorConfig
-            from inputs.plugins.gps import Gps
-            from inputs.plugins.odom import Odom, OdomConfig
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            initial_count = len(monitor._providers)
-
-            gps_config = SensorConfig()
-            Gps(gps_config)  # Creates instance, registers with monitor
-
-            # Verify Gps registered
-            assert "Gps" in monitor._providers
-            count_after_gps = len(monitor._providers)
-            assert count_after_gps > initial_count
-
-            odom_config = OdomConfig()
-            Odom(odom_config)  # Creates instance, registers with monitor
-
-            # Verify multiple providers registered
-            assert "Odom" in monitor._providers
-            final_count = len(monitor._providers)
-            assert (
-                final_count >= 2
-            ), f"Expected >= 2 providers, got {final_count}: {list(monitor._providers.keys())}"
-
-    def test_provider_metadata_stored(self):
-        """Test that provider metadata is stored correctly."""
-        with (
-            patch("uvicorn.Server.run"),
-            patch("inputs.plugins.gps.GpsProvider"),
-            patch("inputs.plugins.gps.IOProvider"),
-        ):
-            from inputs.base import SensorConfig
-            from inputs.plugins.gps import Gps
-            from providers.prometheus_monitor import PrometheusMonitor
-
-            monitor = PrometheusMonitor()
-            config = SensorConfig()
-            Gps(config)  # Creates instance, registers with monitor
-
-            # Check metadata was stored
-            provider_state = monitor._providers["Gps"]
-            assert provider_state.metadata is not None
-            assert "type" in provider_state.metadata
-            assert provider_state.metadata["type"] == "input"

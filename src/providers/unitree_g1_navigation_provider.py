@@ -98,7 +98,6 @@ class UnitreeG1NavigationProvider:
                 "category": "navigation",
                 "robot": "unitree_g1",
             },
-            recovery_callback=self._recover,
         )
 
     def start(self):
@@ -279,21 +278,3 @@ class UnitreeG1NavigationProvider:
         """
         return self._nav_in_progress
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Unitree G1 Navigation provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UnitreeG1NavigationProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UnitreeG1NavigationProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UnitreeG1NavigationProvider: Recovery failed: {e}")
-            return False

@@ -45,7 +45,6 @@ class AvatarProvider:
                 "category": "visualization",
                 "protocol": "zenoh",
             },
-            recovery_callback=self._recover,
         )
 
     def _initialize_zenoh(self):
@@ -161,21 +160,3 @@ class AvatarProvider:
 
         logging.info("AvatarProvider stopped and Zenoh session closed")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Avatar provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("AvatarProvider: Attempting recovery...")
-            self.stop()
-            self._initialize_zenoh()
-            logging.info("AvatarProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"AvatarProvider: Recovery failed: {e}")
-            return False

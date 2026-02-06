@@ -56,13 +56,6 @@ class MoveGo2RemoteConnector(ActionConnector[MoveGo2RemoteConfig, MoveInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "MoveGo2RemoteConnector",
-            metadata={"type": "action", "category": "movement"},
-            recovery_callback=None,
-        )
-
         api_key = self.config.api_key
 
         self.sport_client = None
@@ -124,4 +117,4 @@ class MoveGo2RemoteConnector(ActionConnector[MoveGo2RemoteConfig, MoveInput]):
         output_interface : MoveInput
             The output interface for the action.
         """
-        self._monitor.heartbeat("MoveGo2RemoteConnector")
+        pass

@@ -53,7 +53,6 @@ class VLMVilaProvider:
         self._monitor.register(
             "VLMVilaProvider",
             metadata={"type": "vlm", "category": "vision", "model": "vila"},
-            recovery_callback=self._recover,
         )
 
     def register_frame_callback(self, video_callback: Optional[Callable]):
@@ -122,21 +121,3 @@ class VLMVilaProvider:
         if self.stream_ws_client:
             self.stream_ws_client.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the VLM Vila provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("VLMVilaProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("VLMVilaProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"VLMVilaProvider: Recovery failed: {e}")
-            return False

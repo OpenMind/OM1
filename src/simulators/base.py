@@ -1,5 +1,8 @@
+import functools
+import inspect
 import threading
 import time
+import typing as T
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -39,6 +42,22 @@ class Simulator:
         self._stop_event: Optional[threading.Event] = None
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            self.__class__.__name__, metadata={"type": "simulator"}
+        )
+
+    def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "sim" in cls.__dict__:
+            original = cls.__dict__["sim"]
+
+            @functools.wraps(original)
+            def wrapped(self: "Simulator", *args: T.Any, **kw: T.Any) -> T.Any:  # type: ignore
+                result = original(self, *args, **kw)
+                self._monitor.heartbeat(self.__class__.__name__)
+                return result
+
+            cls.sim = wrapped  # type: ignore
 
     def set_stop_event(self, stop_event: threading.Event) -> None:
         """

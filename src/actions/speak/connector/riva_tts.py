@@ -62,13 +62,6 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
         """
         super().__init__(config)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "SpeakRivaTTSConnector",
-            metadata={"type": "action", "category": "communication"},
-            recovery_callback=None,
-        )
-
         # Get microphone and speaker device IDs and names
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
@@ -130,8 +123,6 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
         self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
         # Add pending message to TTS
         self.tts.add_pending_message(output_interface.action)
-
-        self._monitor.heartbeat("SpeakRivaTTSConnector")
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
         """

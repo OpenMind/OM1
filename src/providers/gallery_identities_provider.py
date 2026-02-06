@@ -106,7 +106,6 @@ class GalleryIdentitiesProvider:
                 "category": "vision",
                 "service": "vision",
             },
-            recovery_callback=self._recover,
         )
 
     def register_message_callback(self, fn: Callable[[str], None]) -> None:
@@ -240,22 +239,3 @@ class GalleryIdentitiesProvider:
         ts = time.time()
         return IdentitiesSnapshot(ts=ts, total=total, names=names, raw=data)
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Gallery identities provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("GalleryIdentitiesProvider: Attempting recovery...")
-            self.stop(wait=True)
-            self._session = requests.Session()
-            self.start()
-            logging.info("GalleryIdentitiesProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"GalleryIdentitiesProvider: Recovery failed: {e}")
-            return False

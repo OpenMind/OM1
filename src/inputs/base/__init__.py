@@ -1,3 +1,5 @@
+import functools
+import inspect
 import typing as T
 from dataclasses import dataclass
 
@@ -53,6 +55,23 @@ class Sensor(T.Generic[ConfigType, R]):
         self.config = config
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            self.__class__.__name__, metadata={"type": "input"}
+        )
+
+    def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "formatted_latest_buffer" in cls.__dict__:
+            original = cls.__dict__["formatted_latest_buffer"]
+
+            @functools.wraps(original)
+            def wrapped(self: "Sensor", *args: T.Any, **kw: T.Any) -> T.Any:  # type: ignore
+                result = original(self, *args, **kw)
+                if result is not None:
+                    self._monitor.heartbeat(self.__class__.__name__)
+                return result
+
+            cls.formatted_latest_buffer = wrapped  # type: ignore
 
     async def _raw_to_text(self, raw_input: R) -> T.Optional[Message]:
         """

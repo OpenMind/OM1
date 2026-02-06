@@ -42,7 +42,6 @@ class ConfigProvider:
         self._monitor.register(
             "ConfigProvider",
             metadata={"type": "config", "category": "system", "protocol": "zenoh"},
-            recovery_callback=self._recover,
         )
 
     def _initialize_zenoh(self):
@@ -213,21 +212,3 @@ class ConfigProvider:
 
         logging.info("ConfigProvider stopped and Zenoh session closed")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Config provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("ConfigProvider: Attempting recovery...")
-            self.stop()
-            self._initialize_zenoh()
-            logging.info("ConfigProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"ConfigProvider: Recovery failed: {e}")
-            return False

@@ -64,12 +64,6 @@ class UnitreeG1LocationsInput(
         self.messages: List[Message] = []
         self.descriptor_for_LLM = "These are the saved locations you can navigate to."
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "UnitreeG1LocationsInput",
-            metadata={"type": "input", "category": "navigation"},
-            recovery_callback=None,
-        )
 
     async def _poll(self) -> Optional[str]:
         """
@@ -159,5 +153,4 @@ INPUT: {self.descriptor_for_LLM}
         # Reset messages buffer
         self.messages = []
 
-        self._monitor.heartbeat("UnitreeG1LocationsInput")
         return result

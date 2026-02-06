@@ -82,12 +82,6 @@ class OpenAILLM(LLM[R]):
         # Initialize history manager
         self.history_manager = LLMHistoryManager(self._config, self._client)
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "OpenAILLM",
-            metadata={"type": "llm", "category": "inference", "provider": "openai"},
-            recovery_callback=None,
-        )
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
@@ -155,13 +149,10 @@ class OpenAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                self._monitor.heartbeat("OpenAILLM")
                 return T.cast(R, result)
 
-            self._monitor.heartbeat("OpenAILLM")
             return None
 
         except Exception as e:
             logging.error(f"OpenAI API error: {e}")
-            self._monitor.report_error("OpenAILLM", str(e))
             return None

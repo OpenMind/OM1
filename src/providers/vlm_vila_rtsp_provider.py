@@ -58,7 +58,6 @@ class VLMVilaRTSPProvider:
                 "model": "vila",
                 "source": "rtsp",
             },
-            recovery_callback=self._recover,
         )
 
     def register_frame_callback(self, video_callback: Optional[Callable]):
@@ -118,21 +117,3 @@ class VLMVilaRTSPProvider:
         self.video_stream.stop()
         self.ws_client.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the VLM Vila RTSP provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("VLMVilaRTSPProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("VLMVilaRTSPProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"VLMVilaRTSPProvider: Recovery failed: {e}")
-            return False

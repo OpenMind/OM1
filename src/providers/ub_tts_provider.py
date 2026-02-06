@@ -30,7 +30,6 @@ class UbTtsProvider:
         self._monitor.register(
             "UbTtsProvider",
             metadata={"type": "tts", "category": "speech", "robot": "ubtech"},
-            recovery_callback=self._recover,
         )
 
         logging.info(f"Ubtech TTS Provider initialized for URL: {self.tts_url}")
@@ -118,21 +117,3 @@ class UbTtsProvider:
         except requests.exceptions.RequestException:
             return "error"
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Ubtech TTS provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UbTtsProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UbTtsProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UbTtsProvider: Recovery failed: {e}")
-            return False

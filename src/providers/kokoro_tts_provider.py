@@ -84,7 +84,6 @@ class KokoroTTSProvider:
                 "model": model_id,
                 "voice": voice_id,
             },
-            recovery_callback=self._recover,
         )
 
     def configure(
@@ -240,21 +239,3 @@ class KokoroTTSProvider:
         self.running = False
         self._audio_stream.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Kokoro TTS provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("KokoroTTSProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("KokoroTTSProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"KokoroTTSProvider: Recovery failed: {e}")
-            return False

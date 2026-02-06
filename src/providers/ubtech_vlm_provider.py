@@ -59,7 +59,6 @@ class UbtechVLMProvider:
         self._monitor.register(
             "UbtechVLMProvider",
             metadata={"type": "vlm", "category": "vision", "robot": "ubtech"},
-            recovery_callback=self._recover,
         )
 
     def register_message_callback(self, callback: Optional[Callable]):
@@ -112,21 +111,3 @@ class UbtechVLMProvider:
 
         logging.info("Ubtech VLM provider stopped")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Ubtech VLM provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("UbtechVLMProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("UbtechVLMProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"UbtechVLMProvider: Recovery failed: {e}")
-            return False

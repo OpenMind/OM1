@@ -1,5 +1,5 @@
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -35,11 +35,12 @@ def test_register_provider(monitor):
     assert status == HealthStatus.HEALTHY
 
 
-def test_register_with_recovery_callback(monitor):
-    callback = MagicMock(return_value=True)
-    monitor.register("TestProvider", recovery_callback=callback)
+def test_register_with_recovery_callback_ignored(monitor):
+    """recovery_callback parameter is accepted but ignored for backward compat."""
+    monitor.register("TestProvider", recovery_callback=lambda: True)
 
-    assert monitor._providers["TestProvider"].recovery_callback == callback
+    assert "TestProvider" in monitor._providers
+    assert not hasattr(monitor._providers["TestProvider"], "recovery_callback")
 
 
 def test_unregister_provider(monitor):
@@ -48,6 +49,16 @@ def test_unregister_provider(monitor):
 
     monitor.unregister("TestProvider")
     assert monitor.get_status("TestProvider") is None
+
+
+def test_unregister_cleans_metrics(monitor):
+    """Unregister should zero out Prometheus metric labels."""
+    monitor.register(
+        "TestProvider", metadata={"type": "test", "category": "unit"}
+    )
+    monitor.unregister("TestProvider")
+
+    assert "TestProvider" not in monitor._providers
 
 
 def test_heartbeat_updates_timestamp(monitor):
@@ -111,48 +122,9 @@ def test_provider_becomes_unhealthy_without_heartbeat(monitor):
     assert monitor._providers["TestProvider"].status == HealthStatus.UNHEALTHY
 
 
-def test_recovery_callback_called_on_unhealthy(monitor):
-    callback = MagicMock(return_value=True)
-    monitor.register("TestProvider", recovery_callback=callback)
-
-    with monitor._lock:
-        monitor._providers["TestProvider"].last_heartbeat = time.time() - 10
-        monitor._providers["TestProvider"].status = HealthStatus.HEALTHY
-
-    monitor._perform_health_check()
-
-    callback.assert_called_once()
-
-
-def test_recovery_callback_success_restores_health(monitor):
-    callback = MagicMock(return_value=True)
-    monitor.register("TestProvider", recovery_callback=callback)
-
-    with monitor._lock:
-        monitor._providers["TestProvider"].last_heartbeat = time.time() - 10
-        monitor._providers["TestProvider"].status = HealthStatus.HEALTHY
-
-    monitor._perform_health_check()
-
-    assert monitor._providers["TestProvider"].status == HealthStatus.HEALTHY
-
-
-def test_recovery_callback_failure_keeps_unhealthy(monitor):
-    callback = MagicMock(return_value=False)
-    monitor.register("TestProvider", recovery_callback=callback)
-
-    with monitor._lock:
-        monitor._providers["TestProvider"].last_heartbeat = time.time() - 10
-        monitor._providers["TestProvider"].status = HealthStatus.HEALTHY
-
-    monitor._perform_health_check()
-
-    assert monitor._providers["TestProvider"].status == HealthStatus.UNHEALTHY
-
-
-def test_recovery_callback_exception_handled(monitor):
-    callback = MagicMock(side_effect=Exception("Recovery failed"))
-    monitor.register("TestProvider", recovery_callback=callback)
+def test_no_recovery_on_unhealthy(monitor):
+    """After removing recovery logic, unhealthy providers stay unhealthy."""
+    monitor.register("TestProvider")
 
     with monitor._lock:
         monitor._providers["TestProvider"].last_heartbeat = time.time() - 10
@@ -178,19 +150,16 @@ def test_stop_terminates_check_thread(monitor):
     monitor.stop()
 
     assert monitor._running is False
-    # Give extra time for thread to terminate
     thread.join(timeout=1.0)
     assert not thread.is_alive()
 
 
 def test_heartbeat_for_unregistered_provider(monitor):
     monitor.heartbeat("UnknownProvider")
-    # Should not raise exception
 
 
 def test_report_error_for_unregistered_provider(monitor):
     monitor.report_error("UnknownProvider", "Error")
-    # Should not raise exception
 
 
 def test_uptime_metric_updated(monitor):
@@ -199,7 +168,6 @@ def test_uptime_metric_updated(monitor):
     time.sleep(0.1)
     monitor._perform_health_check()
 
-    # Uptime should have increased
     assert monitor._uptime_gauge._value.get() > initial_uptime
 
 
@@ -208,7 +176,6 @@ def test_provider_state_dataclass():
 
     assert state.name == "Test"
     assert state.metadata == {}
-    assert state.recovery_callback is None
     assert state.last_heartbeat == 0.0
     assert state.error_count == 0
     assert state.status == HealthStatus.UNKNOWN
@@ -221,13 +188,10 @@ def test_health_status_enum():
 
 
 def test_register_updates_existing_provider(monitor):
-    callback1 = MagicMock()
-    callback2 = MagicMock()
+    monitor.register("TestProvider", metadata={"type": "a"})
+    monitor.register("TestProvider", metadata={"type": "b"})
 
-    monitor.register("TestProvider", recovery_callback=callback1)
-    monitor.register("TestProvider", recovery_callback=callback2)
-
-    assert monitor._providers["TestProvider"].recovery_callback == callback2
+    assert monitor._providers["TestProvider"].metadata["type"] == "b"
 
 
 def test_concurrent_heartbeats(monitor):
@@ -245,5 +209,48 @@ def test_concurrent_heartbeats(monitor):
     for t in threads:
         t.join()
 
-    # Should complete without errors
     assert monitor._providers["TestProvider"].status == HealthStatus.HEALTHY
+
+
+def test_unknown_count_in_health_data(monitor):
+    """UNKNOWN status providers should be counted separately from unhealthy."""
+    monitor.register("Provider1")
+    monitor.register("Provider2")
+
+    with monitor._lock:
+        monitor._providers["Provider2"].status = HealthStatus.UNKNOWN
+
+    data = monitor._get_health_data()
+
+    assert data["healthy_count"] == 1
+    assert data["unhealthy_count"] == 0
+    assert data["unknown_count"] == 1
+
+
+def test_xss_escape_in_table_rows(monitor):
+    """Provider names with HTML should be escaped in dashboard."""
+    monitor.register(
+        '<script>alert("xss")</script>',
+        metadata={"type": "<b>bold</b>", "category": "<i>italic</i>"},
+    )
+
+    data = monitor._get_health_data()
+    rows = monitor._generate_table_rows(data["providers"])
+
+    assert "<script>" not in rows
+    assert "&lt;script&gt;" in rows
+    assert "<b>" not in rows
+    assert "&lt;b&gt;" in rows
+
+
+def test_stale_metrics_cleaned_on_unregister(monitor):
+    """After unregister, provider should not appear in health data."""
+    monitor.register("StaleProvider", metadata={"type": "test"})
+    assert "StaleProvider" in monitor._providers
+
+    monitor.unregister("StaleProvider")
+    assert "StaleProvider" not in monitor._providers
+
+    data = monitor._get_health_data()
+    provider_names = [p["name"] for p in data["providers"]]
+    assert "StaleProvider" not in provider_names

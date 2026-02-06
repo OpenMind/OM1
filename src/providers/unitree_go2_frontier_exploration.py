@@ -52,7 +52,6 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
                 "category": "navigation",
                 "robot": "unitree_go2",
             },
-            recovery_callback=self._recover,
         )
 
     def frontier_exploration_message_callback(self, data: zenoh.Sample):
@@ -123,25 +122,3 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
         """
         return self.exploration_info
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Frontier exploration provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info(
-                "UnitreeGo2FrontierExplorationProvider: Attempting recovery..."
-            )
-            self.stop()
-            self.start()
-            logging.info("UnitreeGo2FrontierExplorationProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(
-                f"UnitreeGo2FrontierExplorationProvider: Recovery failed: {e}"
-            )
-            return False

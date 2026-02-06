@@ -81,12 +81,6 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
         self.odom = OdomProvider(channel=unitree_ethernet)
         logging.info(f"Mapper Odom Provider: {self.odom}")
 
-        # Register with Prometheus monitor
-        self._monitor.register(
-            "GPSOdomReader",
-            metadata={"type": "input", "category": "navigation"},
-            recovery_callback=None,
-        )
 
     @staticmethod
     def _wrap_angle(a: float) -> float:
@@ -151,7 +145,6 @@ class GPSOdomReader(FuserInput[GPSOdomReaderConfig, Optional[str]]):
             self.__class__.__name__, message.message, message.timestamp
         )
 
-        self._monitor.heartbeat("GPSOdomReader")
         return f"""
 {self.descriptor_for_LLM} INPUT
 // START

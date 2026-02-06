@@ -43,7 +43,6 @@ class RivaTTSProvider:
         self._monitor.register(
             "RivaTTSProvider",
             metadata={"type": "tts", "category": "speech", "engine": "riva"},
-            recovery_callback=self._recover,
         )
 
     def register_tts_state_callback(self, tts_state_callback: Optional[Callable]):
@@ -89,21 +88,3 @@ class RivaTTSProvider:
         self.running = False
         self._audio_stream.stop()
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the Riva TTS provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("RivaTTSProvider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("RivaTTSProvider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"RivaTTSProvider: Recovery failed: {e}")
-            return False

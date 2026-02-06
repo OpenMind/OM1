@@ -1,3 +1,5 @@
+import functools
+import inspect
 import threading
 import time
 import typing as T
@@ -85,6 +87,32 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         self._stop_event: T.Optional[threading.Event] = None
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            self.__class__.__name__, metadata={"type": "action"}
+        )
+
+    def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "connect" in cls.__dict__:
+            original = cls.__dict__["connect"]
+            if inspect.iscoroutinefunction(original):
+
+                @functools.wraps(original)
+                async def async_wrapped(self: "ActionConnector", *args: T.Any, **kw: T.Any) -> T.Any:  # type: ignore
+                    result = await original(self, *args, **kw)
+                    self._monitor.heartbeat(self.__class__.__name__)
+                    return result
+
+                cls.connect = async_wrapped  # type: ignore
+            else:
+
+                @functools.wraps(original)
+                def sync_wrapped(self: "ActionConnector", *args: T.Any, **kw: T.Any) -> T.Any:  # type: ignore
+                    result = original(self, *args, **kw)
+                    self._monitor.heartbeat(self.__class__.__name__)
+                    return result
+
+                cls.connect = sync_wrapped  # type: ignore
 
     def set_stop_event(self, stop_event: threading.Event) -> None:
         """

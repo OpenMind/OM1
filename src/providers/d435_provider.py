@@ -30,7 +30,6 @@ class D435Provider:
         self._monitor.register(
             "D435Provider",
             metadata={"type": "depth_camera", "category": "vision", "source": "zenoh"},
-            recovery_callback=self._recover,
         )
 
         try:
@@ -121,21 +120,3 @@ class D435Provider:
 
         logging.info("D435Provider stopped and Zenoh session closed")
 
-    def _recover(self) -> bool:
-        """
-        Attempt to recover the D435 provider.
-
-        Returns
-        -------
-        bool
-            True if recovery was successful, False otherwise.
-        """
-        try:
-            logging.info("D435Provider: Attempting recovery...")
-            self.stop()
-            self.start()
-            logging.info("D435Provider: Recovery successful")
-            return True
-        except Exception as e:
-            logging.error(f"D435Provider: Recovery failed: {e}")
-            return False

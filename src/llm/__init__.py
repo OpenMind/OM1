@@ -1,3 +1,4 @@
+import functools
 import importlib
 import inspect
 import logging
@@ -133,6 +134,44 @@ class LLM(T.Generic[R]):
 
         # Set up Prometheus monitor for subclasses
         self._monitor = PrometheusMonitor()
+        self._monitor.register(
+            self.__class__.__name__, metadata={"type": "llm"}
+        )
+
+    def __init_subclass__(cls, **kwargs: T.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "ask" in cls.__dict__:
+            original = cls.__dict__["ask"]
+            if inspect.iscoroutinefunction(original):
+
+                @functools.wraps(original)
+                async def async_wrapped(self: "LLM", *args: T.Any, **kw: T.Any) -> T.Any:  # type: ignore
+                    try:
+                        result = await original(self, *args, **kw)
+                        self._monitor.heartbeat(self.__class__.__name__)
+                        return result
+                    except Exception as e:
+                        self._monitor.report_error(
+                            self.__class__.__name__, str(e)
+                        )
+                        raise
+
+                cls.ask = async_wrapped  # type: ignore
+            else:
+
+                @functools.wraps(original)
+                def sync_wrapped(self: "LLM", *args: T.Any, **kw: T.Any) -> T.Any:  # type: ignore
+                    try:
+                        result = original(self, *args, **kw)
+                        self._monitor.heartbeat(self.__class__.__name__)
+                        return result
+                    except Exception as e:
+                        self._monitor.report_error(
+                            self.__class__.__name__, str(e)
+                        )
+                        raise
+
+                cls.ask = sync_wrapped  # type: ignore
 
     async def ask(
         self, prompt: str, messages: T.List[T.Dict[str, str]] = []
