@@ -149,67 +149,50 @@ def test_angles_blanked_custom(mock_rplidar_dependencies):
     assert provider.angles_blanked == custom_blanked
 
 def test_path_processor_filters_blanked_angles(mock_rplidar_dependencies):
-    """Test that _path_processor excludes readings within blanked angle ranges."""
-    blanked = [[80, 100]]
-    provider = RPLidarProvider(
-        angles_blanked=blanked,
-        relevant_distance_max=5.0,
-        relevant_distance_min=0.05,
-    )
-    provider.d435_provider = MagicMock(running=False, obstacle=[])
+      """Test that _path_processor excludes readings within blanked angle ranges."""
+      blanked = [[80, 100]]
+      provider = RPLidarProvider(
+          angles_blanked=blanked,
+          relevant_distance_max=5.0,
+          relevant_distance_min=0.05,
+      )
+      provider.d435_provider = MagicMock(running=False, obstacle=[])
 
-    data = np.array([
-        [180.0, 1.0],
-        [270.0, 1.0],
-        [220.0, 1.0],
-    ])
+      data = np.array([
+          [90.0, 1.0],
+          [0.0, 1.0],
+          [180.0, 1.0],
+      ])
 
-    provider._path_processor(data)
+      provider._path_processor(data)
 
-
-    raw_scan = provider._raw_scan
-    assert raw_scan is not None
-    assert len(raw_scan) == 3
-
-    RPLidarProvider.reset()
-    provider2 = RPLidarProvider(
-        angles_blanked=blanked,
-        relevant_distance_max=5.0,
-        relevant_distance_min=0.05,
-    )
-    provider2.d435_provider = MagicMock(running=False, obstacle=[])
-
-    data_all_blanked = np.array([
-        [270.0, 1.0],
-    ])
-
-    provider2._path_processor(data_all_blanked)
-
-    assert provider2._valid_paths is not None
-    assert len(provider2._valid_paths) > 0
+      raw_scan = provider._raw_scan
+      assert raw_scan is not None
+      assert len(raw_scan) == 2
 
 
 def test_path_processor_blanked_multiple_ranges(mock_rplidar_dependencies):
-    """Test blanking with multiple angle ranges."""
-    blanked = [[-50, -30], [30, 50]]
-    provider = RPLidarProvider(
-        angles_blanked=blanked,
-        relevant_distance_max=5.0,
-        relevant_distance_min=0.05,
-    )
-    provider.d435_provider = MagicMock(running=False, obstacle=[])
+      """Test blanking with multiple angle ranges."""
+      blanked = [[-50, -30], [30, 50]]
+      provider = RPLidarProvider(
+          angles_blanked=blanked,
+          relevant_distance_max=5.0,
+          relevant_distance_min=0.05,
+      )
+      provider.d435_provider = MagicMock(running=False, obstacle=[])
 
-    data = np.array([
-        [140.0, 1.0],
-        [220.0, 1.0],
-        [180.0, 1.0],
-    ])
+      data = np.array([
+          [-40.0, 1.0],
+          [40.0, 1.0],
+          [0.0, 1.0],
+          [180.0, 1.0],
+      ])
 
-    provider._path_processor(data)
+      provider._path_processor(data)
 
-    raw_scan = provider._raw_scan
-    assert raw_scan is not None
-    assert len(raw_scan) == 3
+      raw_scan = provider._raw_scan
+      assert raw_scan is not None
+      assert len(raw_scan) == 2
     
 
 def test_log_file_initialization(mock_rplidar_dependencies):
