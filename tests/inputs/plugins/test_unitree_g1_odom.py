@@ -262,9 +262,8 @@ def test_formatted_latest_buffer_clears_messages():
 
         result = sensor.formatted_latest_buffer()
 
-        # Should return the latest message
+        assert result is not None
         assert "Message 3" in result
-        # Should clear all messages
         assert len(sensor.messages) == 0
 
 
@@ -285,6 +284,7 @@ def test_formatted_latest_buffer_returns_latest():
 
         result = sensor.formatted_latest_buffer()
 
+        assert result is not None
         assert "Latest message" in result
         assert "Old message" not in result
 
