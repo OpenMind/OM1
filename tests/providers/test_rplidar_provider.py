@@ -16,8 +16,8 @@ def reset_singleton():
         # Get the singleton instance if it exists
         if (
             hasattr(RPLidarProvider, "_singleton_instance")
-            and RPLidarProvider._singleton_instance is not None
-        ):  # type: ignore
+            and RPLidarProvider._singleton_instance is not None  # type: ignore[attr-defined]
+        ):
             provider = RPLidarProvider._singleton_instance  # type: ignore
             if hasattr(provider, "running"):
                 provider.running = False
