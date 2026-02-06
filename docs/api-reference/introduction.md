@@ -1,6 +1,7 @@
 ---
 title: Introduction
 description: "Welcome to the OpenMind API Reference"
+icon: link
 ---
 
 OpenMind integrates with multiple LLM providers to offer a diverse range of features. This API reference provides details on endpoints, parameters, and responses, enabling efficient interaction with the OpenMind API.
