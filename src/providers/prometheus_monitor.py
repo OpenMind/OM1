@@ -6,7 +6,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Dict, Optional, cast
+from typing import Dict, Optional, cast
 
 import uvicorn
 from fastapi import FastAPI, Response
@@ -357,7 +357,6 @@ class PrometheusMonitor:
         self,
         name: str,
         metadata: Optional[Dict[str, str]] = None,
-        recovery_callback: Optional[Callable[[], bool]] = None,
     ) -> None:
         """
         Register a provider for health monitoring.
@@ -368,8 +367,6 @@ class PrometheusMonitor:
             Unique name for the provider.
         metadata : dict, optional
             Additional metadata about the provider.
-        recovery_callback : callable, optional
-            Deprecated. Kept for backward compatibility, ignored.
         """
         with self._lock:
             if name in self._providers:
