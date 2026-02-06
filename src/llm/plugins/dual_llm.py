@@ -409,4 +409,4 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
         except Exception as e:
             logging.error(f"DualLLM error: {e}")
-            raise
+            return None

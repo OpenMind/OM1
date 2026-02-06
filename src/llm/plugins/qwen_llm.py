@@ -207,4 +207,4 @@ class QwenLLM(LLM[R]):
             return None
         except Exception as e:
             logging.error(f"Qwen LLM error: {e}")
-            raise
+            return None

@@ -144,4 +144,4 @@ class DeepSeekLLM(LLM[R]):
             return None
         except Exception as e:
             logging.error(f"DeepSeek API error: {e}")
-            raise
+            return None

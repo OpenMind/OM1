@@ -146,4 +146,4 @@ class XAILLM(LLM[R]):
             return None
         except Exception as e:
             logging.error(f"XAI API error: {e}")
-            raise
+            return None
