@@ -29,8 +29,6 @@ class RPLidarConfig(SensorConfig):
         Mounting angle of the sensor.
     URID : str
         The URID of the robot, used for Zenoh communication.
-    simple_paths : bool
-        Whether to use simple paths for path planning.
     log_file : bool
         Whether to log to a file.
     """
@@ -50,9 +48,6 @@ class RPLidarConfig(SensorConfig):
     )
     URID: str = Field(
         default="", description="URID of the robot for Zenoh communication"
-    )
-    simple_paths: bool = Field(
-        default=False, description="Whether to use simple paths for path planning"
     )
     log_file: bool = Field(default=False, description="Whether to log to a file")
 
@@ -211,7 +206,6 @@ class TurtleBot4RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
             "relevant_distance_min": config.relevant_distance_min,
             "sensor_mounting_angle": config.sensor_mounting_angle,
             "URID": config.URID,
-            "simple_paths": config.simple_paths,
             "log_file": config.log_file,
         }
 

@@ -148,7 +148,6 @@ class UnitreeGo2RPLidarProvider:
         relevant_distance_max: float = DEFAULT_RELEVANT_DISTANCE_MAX,
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
-        simple_paths: bool = False,
         rplidar_config: RPLidarConfig = RPLidarConfig(),
         log_file: bool = False,
     ):
@@ -169,8 +168,6 @@ class UnitreeGo2RPLidarProvider:
             Only consider barriers above this range, in m
         sensor_mounting_angle: float = 180.0
             The angle of the sensor zero relative to the way in which it's mounted
-        simple_paths: bool = False
-            Whether to use simple paths for path planning
         rplidar_config: RPLidarConfig = RPLidarConfig()
             Configuration for the RPLidar sensor
         log_file: bool = False
@@ -184,7 +181,6 @@ class UnitreeGo2RPLidarProvider:
         self.relevant_distance_max = relevant_distance_max
         self.relevant_distance_min = relevant_distance_min
         self.sensor_mounting_angle = sensor_mounting_angle
-        self.simple_paths = simple_paths
         self.rplidar_config = rplidar_config
         self.log_file = log_file
 
@@ -419,10 +415,6 @@ class UnitreeGo2RPLidarProvider:
         Determine set of possible paths
         """
         possible_paths = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        if self.simple_paths:
-            # for the turtlebot - it can always turn in place,
-            # only question is whether it can advance
-            possible_paths = np.array([4])
 
         if array.ndim > 1:
             # we have valid LIDAR returns

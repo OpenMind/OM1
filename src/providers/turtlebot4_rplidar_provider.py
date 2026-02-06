@@ -61,7 +61,6 @@ class TurtleBot4RPLidarProvider:
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
         URID: str = "",
-        simple_paths: bool = False,
         rplidar_config: RPLidarConfig = RPLidarConfig(),
         log_file: bool = False,
     ):
@@ -82,8 +81,6 @@ class TurtleBot4RPLidarProvider:
             The angle of the sensor zero relative to the way in which it's mounted
         URID: str = ""
             The URID of the robot, used for Zenoh communication
-        simple_paths: bool = False
-            Whether to use simple paths for path planning
         rplidar_config: RPLidarConfig = RPLidarConfig()
             Configuration for the RPLidar sensor
         log_file: bool = False
@@ -97,7 +94,6 @@ class TurtleBot4RPLidarProvider:
         self.relevant_distance_min = relevant_distance_min
         self.sensor_mounting_angle = sensor_mounting_angle
         self.URID = URID
-        self.simple_paths = simple_paths
         self.rplidar_config = rplidar_config
         self.log_file = log_file
 
@@ -347,11 +343,7 @@ class TurtleBot4RPLidarProvider:
         """
         Determine set of possible paths
         """
-        possible_paths = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        if self.simple_paths:
-            # for the turtlebot - it can always turn in place,
-            # only question is whether it can advance
-            possible_paths = np.array([4])
+        possible_paths = np.array([4])
 
         if array.ndim > 1:
             # we have valid LIDAR returns

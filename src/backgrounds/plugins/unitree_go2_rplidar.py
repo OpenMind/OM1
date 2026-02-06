@@ -38,7 +38,6 @@ class UnitreeGo2RPLidarConfig(BackgroundConfig):
     serial_port: Optional[str] = Field(
         default=None, description="Serial port for the RPLidar device"
     )
-    use_zenoh: bool = Field(default=False, description="Whether to use Zenoh")
     half_width_robot: float = Field(
         default=0.20, description="Half width of the robot in meters"
     )
@@ -54,8 +53,6 @@ class UnitreeGo2RPLidarConfig(BackgroundConfig):
     sensor_mounting_angle: float = Field(
         default=180.0, description="Sensor mounting angle in degrees"
     )
-    URID: str = Field(default="", description="Unique Robot ID")
-    machine_type: str = Field(default="go2", description="Type of machine")
     log_file: bool = Field(default=False, description="Whether to log to file")
 
 
@@ -88,14 +85,11 @@ class UnitreeGo2RPLidar(Background[UnitreeGo2RPLidarConfig]):
 
         lidar_config = {
             "serial_port": self.config.serial_port,
-            "use_zenoh": self.config.use_zenoh,
             "half_width_robot": self.config.half_width_robot,
             "angles_blanked": self.config.angles_blanked,
             "relevant_distance_max": self.config.relevant_distance_max,
             "relevant_distance_min": self.config.relevant_distance_min,
             "sensor_mounting_angle": self.config.sensor_mounting_angle,
-            "URID": self.config.URID,
-            "machine_type": self.config.machine_type,
             "log_file": self.config.log_file,
         }
 

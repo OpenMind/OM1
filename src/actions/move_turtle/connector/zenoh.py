@@ -10,7 +10,7 @@ from pydantic import Field
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_turtle.interface import MoveInput
 from providers.turtlebot4_odom_provider import TurtleBot4OdomProvider
-from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
+from providers.turtlebot4_rplidar_provider import TurtleBot4RPLidarProvider
 from zenoh_msgs import geometry_msgs, open_zenoh_session, sensor_msgs
 
 
@@ -77,7 +77,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
 
-        self.lidar = UnitreeGo2RPLidarProvider()
+        self.lidar = TurtleBot4RPLidarProvider()
         self.odom = TurtleBot4OdomProvider(URID=URID)
 
     def listen_hazard(self, data: zenoh.Sample) -> None:
