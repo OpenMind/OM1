@@ -35,7 +35,6 @@ def test_register_provider(monitor):
     assert status == HealthStatus.HEALTHY
 
 
-
 def test_unregister_provider(monitor):
     monitor.register("TestProvider")
     assert monitor.get_status("TestProvider") is not None

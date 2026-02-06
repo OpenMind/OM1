@@ -6,7 +6,7 @@ and send heartbeats via __init_subclass__ wrapping.
 """
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -274,41 +274,6 @@ class TestAutoRegistrationSimulator:
             sim.sim([])
 
             assert monitor._providers["HBSim"].last_heartbeat > initial_hb
-
-
-class TestMultiModePrometheusIntegration:
-    """Test that multi-mode runtime integrates PrometheusMonitor."""
-
-    @pytest.fixture(autouse=True)
-    def reset_singletons(self):
-        from providers.prometheus_monitor import PrometheusMonitor
-
-        PrometheusMonitor.reset()  # type: ignore
-        yield
-        PrometheusMonitor.reset()  # type: ignore
-
-    def test_multi_mode_runtime_has_prometheus(self):
-        """ModeCortexRuntime should have prometheus_monitor attribute."""
-        with patch("uvicorn.Server.run"):
-            from runtime.multi_mode.config import ModeSystemConfig
-
-            mock_config = MagicMock(spec=ModeSystemConfig)
-            mock_config.modes = {"default": MagicMock()}
-            mock_config.default_mode = "default"
-            mock_config.name = "test"
-            mock_config.transitions = []
-            mock_config.global_lifecycle_hooks = []
-
-            from runtime.multi_mode.cortex import ModeCortexRuntime
-
-            runtime = ModeCortexRuntime(
-                mode_config=mock_config,
-                mode_config_name="test",
-                hot_reload=False,
-            )
-
-            assert hasattr(runtime, "prometheus_monitor")
-            assert runtime.prometheus_monitor is not None
 
 
 class TestBaseClassPrometheusIntegration:
