@@ -1,6 +1,7 @@
 ---
 title: Subscription Plans
 description: "API Pricing"
+icon: bolt
 ---
 
 The APIs now support a new unit for billing, **OMCU (OpenMind Computational Unit)**. See details below for our free, standard, builder, pro, and enterprise plans.

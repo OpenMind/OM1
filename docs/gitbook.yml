@@ -1,19 +1,27 @@
-# gitbook.yml
-title: OpenMind
-description: Full documentation
+root: ./docs
 
-# Main navigation
-pages:
+structure:
+  readme: overview.md
 
+summary:
   - title: Documentation
-    path: gitbook.md
+    children:
 
-  - title: Getting Started
-    path: developing/1_get_started.md
-    visible: false
-  - title: Developer CookBook
-    path: developer-cookbook/introduction.md
-    visible: false
-  - title: API References
-    path: api-references/introduction.md
-    visible: false
+      - title: Get started
+        children:
+          - title: Introduction
+            path: developing/0_introduction.md
+
+          - title: Quick Start
+            path: developing/1_get_started.md
+
+          - title: Architecture
+            path: developing/2_architecture.md
+
+      - title: API Reference
+        children:
+          - title: Introduction
+            path: api-reference/introduction.md
+
+          - title: OM1 documentation
+            path: api-reference/api_pricing.md
