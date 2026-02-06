@@ -1,4 +1,4 @@
-# Summary
+# Table of contents
 
 ## Getting Started
 * [Introduction](developing/0_introduction.md)
