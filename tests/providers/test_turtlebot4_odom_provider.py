@@ -203,7 +203,7 @@ class TestTurtleBot4OdomProvider:
         self, mock_get_logging_config, mock_multiprocessing
     ):
         """Test that start passes logging config to the processor."""
-        _, _, _, mock_process, _, _ = mock_multiprocessing
+        _, _, mock_process, _, _, _ = mock_multiprocessing
 
         mock_logging_config = MagicMock()
         mock_get_logging_config.return_value = mock_logging_config
