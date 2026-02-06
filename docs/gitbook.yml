@@ -2,23 +2,4 @@ root: ./docs
 
 structure:
   readme: overview.md
-
-summary:
-    - title: Get started
-      children:
-        - title: Introduction
-          path: developing/0_introduction.md
-
-        - title: Quick Start
-          path: developing/1_get_started.md
-
-        - title: Architecture
-          path: developing/2_architecture.md
-
-    - title: API Reference
-      children:
-        - title: Introduction
-          path: api-reference/introduction.md
-
-        - title: OM1 documentation
-          path: api-reference/api_pricing.md
+  summary: summary.md
