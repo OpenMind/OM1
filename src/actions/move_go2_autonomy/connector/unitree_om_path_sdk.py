@@ -10,8 +10,8 @@ from pydantic import Field
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
 from providers.face_presence_provider import FacePresenceProvider
-from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
+from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
@@ -98,7 +98,7 @@ class MoveUnitreeOMPathSDKConnector(
         unitree_ethernet = self.config.unitree_ethernet
         if unitree_ethernet is None:
             raise ValueError("unitree_ethernet must be specified in the config")
-        self.odom = OdomProvider(channel=unitree_ethernet)
+        self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
 
         # Zenoh topic for AI control status
         self.ai_status_request = "om/ai/request"
