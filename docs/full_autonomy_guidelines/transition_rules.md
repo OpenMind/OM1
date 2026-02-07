@@ -1,6 +1,7 @@
 ---
 title: Transition Rules
 description: "Introduction to transition rules"
+icon: swap
 ---
 
 Transition rules define how and when the robot switches between operational modes. Each rule specifies a source mode, a target mode, a trigger mechanism, and an execution priority. The system continuously evaluates these rules and executes the most appropriate transition based on current inputs, elapsed time, and contextual conditions.

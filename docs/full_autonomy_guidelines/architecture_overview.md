@@ -1,6 +1,7 @@
 ---
 title: Full Autonomy
 description: "Full autonomy architecture and introduction"
+icon: sitemap
 ---
 
 OM1 supports Full Autonomy Mode on both Nvidia AGX and Thor platforms, enabling advanced perception, mapping, navigation, and interaction capabilities with minimal human input.

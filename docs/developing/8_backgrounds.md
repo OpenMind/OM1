@@ -1,6 +1,7 @@
 ---
 title: Backgrounds
 description: "Backgrounds"
+icon: gear
 ---
 
 ### Background Tasks

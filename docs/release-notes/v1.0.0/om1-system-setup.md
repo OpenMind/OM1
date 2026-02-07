@@ -1,6 +1,7 @@
 ---
 title: OM1 System Setup Production Ready Release
 description: "v1.0.0"
+icon: tarp
 ---
 
 ## What's included

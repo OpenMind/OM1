@@ -1,6 +1,7 @@
 ---
 title: Troubleshooting Guide
 description: "Guide to troubleshoot some common issues"
+icon: wrench
 ---
 
 ### Common Issues & Quick Fixes

@@ -1,6 +1,7 @@
 ---
 title: OM1-avatar Beta Release
 description: "v1.0.0-beta.3"
+icon: rectangle-beta
 ---
 
 Beta release for the Docker image openmindagi/om1-avatar, which provides face display module for OM1

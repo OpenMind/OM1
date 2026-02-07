@@ -1,6 +1,7 @@
 ---
 title: Video Processor Production Ready Release
 description: "v1.0.0-beta.1"
+icon: tarp
 ---
 
 ## What's included

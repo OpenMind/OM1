@@ -1,6 +1,7 @@
 ---
 title: BrainPack
 description: "Introduction to the BrainPack"
+icon: backpack
 ---
 
 ## Basic Introduction

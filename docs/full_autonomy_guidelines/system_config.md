@@ -1,6 +1,7 @@
 ---
 title: Configure System
 description: "System Configuration"
+icon: gear
 ---
 
 ## System Services

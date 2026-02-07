@@ -1,6 +1,7 @@
 ---
 title: System Setup
 description: "System Setup"
+icon: gear
 ---
 
 This guide walks you through setting up a fresh Nvidia Thor system running JetPack 7.0, to run OM1. Follow each section in order and verify installations as you go.

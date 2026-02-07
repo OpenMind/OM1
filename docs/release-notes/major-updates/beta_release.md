@@ -1,6 +1,7 @@
 ---
 title: Software Stack Release
 description: "First Beta Release of our software stack"
+icon: rectangle-beta
 ---
 
 We're excited to announce the first beta release of our complete software stack, an open-source, modular, agentic and hardware agnostic OS for robots.

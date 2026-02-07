@@ -1,6 +1,7 @@
 ---
 title: OM1 ROS2 SDK Beta Release
 description: "v1.0.1-beta.1"
+icon: rectangle-beta
 ---
 
 ## What's included

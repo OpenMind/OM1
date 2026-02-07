@@ -1,6 +1,7 @@
 ---
 title: OM1-avatar Production Ready Release
 description: "v1.0.0"
+icon: tarp
 ---
 
 Production ready release for the Docker image openmindagi/om1-avatar, which provides face display module for OM1

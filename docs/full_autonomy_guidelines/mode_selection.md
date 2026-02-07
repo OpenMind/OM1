@@ -1,6 +1,7 @@
 ---
 title: Switch Modes
 description: "Different ways to switch between modes"
+icon: gamepad-modern
 ---
 
 Once your Go2 is setup to run in full autonomy, you can get started with exploring different modes offered via OM1 and explore the functionalities.

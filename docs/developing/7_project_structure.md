@@ -1,6 +1,7 @@
 ---
 title: Project Structure
 description: "Project structure and flow diagram"
+icon: diagram-project
 ---
 
 ## Project Structure

@@ -1,6 +1,7 @@
 ---
 title: Video Processor Beta Release
 description: "v1.0.0-beta.1"
+icon: rectangle-beta
 ---
 
 ## What's included

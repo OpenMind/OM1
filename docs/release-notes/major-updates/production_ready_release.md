@@ -1,6 +1,7 @@
 ---
 title: Production Ready Release
 description: "First Production Ready Release of our software stack"
+icon: tarp
 ---
 
 ## Summary

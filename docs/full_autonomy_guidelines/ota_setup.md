@@ -1,6 +1,7 @@
 ---
 title: OTA Setup
 description: "Setup OTA"
+icon: rotate
 ---
 
 ## Cloud Docker Management Service
