@@ -28,8 +28,6 @@ Additionally, you can manually trigger all checks by running
 pre-commit run --all-files
 ```
 
-to also update secondary documentation systems like mintlify.
-
 ### Unit Testing
 
 To unit test the system, run:
