@@ -12,22 +12,17 @@ import pytest
 def setup_mock_modules():
     """Setup mock modules before each test."""
     module_name = "src.actions.move_game_controller.connector.go2_game_controller"
-
-    # Clean up module if already imported
     if module_name in sys.modules:
         del sys.modules[module_name]
 
-    # Mock all external dependencies
     sys.modules["unitree.unitree_sdk2py.go2.sport.sport_client"] = Mock()
     sys.modules["hid"] = Mock()
     sys.modules["zenoh"] = Mock()
     sys.modules["zenoh_msgs"] = Mock()
-    sys.modules["providers.odom_provider"] = Mock()
+    sys.modules["providers.unitree_go2_odom_provider"] = Mock()
     sys.modules["providers.unitree_go2_state_provider"] = Mock()
 
     yield
-
-    # Cleanup after test (optional)
 
 
 @pytest.fixture
@@ -40,33 +35,21 @@ def mock_hid_no_controllers():
 
 
 @pytest.fixture
-def mock_patches():
-    """Provide common patches for connector tests."""
-    with (
-        patch(
-            "src.actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"
-        ) as mock_zenoh,
-        patch(
-            "src.actions.move_game_controller.connector.go2_game_controller.OdomProvider"
-        ) as mock_odom,
-        patch(
-            "src.actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"
-        ) as mock_state,
-        patch(
-            "src.actions.move_game_controller.connector.go2_game_controller.SportClient"
-        ) as mock_sport,
-    ):
+def module_patches():
+    """Context manager for patching Go2GameController dependencies."""
+    module_name = "src.actions.move_game_controller.connector.go2_game_controller"
 
-        yield {
-            "zenoh_session": mock_zenoh,
-            "odom_provider": mock_odom,
-            "state_provider": mock_state,
-            "sport_client": mock_sport,
-        }
+    with (
+        patch(f"{module_name}.open_zenoh_session"),
+        patch(f"{module_name}.UnitreeGo2OdomProvider"),
+        patch(f"{module_name}.UnitreeGo2StateProvider"),
+        patch(f"{module_name}.SportClient"),
+    ):
+        yield
 
 
 @pytest.fixture
-def default_config():
+def default_config(module_patches):
     """Create default config for testing."""
     from src.actions.move_game_controller.connector.go2_game_controller import (
         Go2GameControllerConfig,
@@ -76,7 +59,7 @@ def default_config():
 
 
 @pytest.fixture
-def custom_config():
+def custom_config(module_patches):
     """Create custom config for testing."""
     from src.actions.move_game_controller.connector.go2_game_controller import (
         Go2GameControllerConfig,
@@ -124,7 +107,7 @@ class TestGo2GameControllerConnector:
     """Test the Go2 Game Controller connector."""
 
     def test_initialization_with_mocks(
-        self, mock_hid_no_controllers, mock_patches, custom_config
+        self, mock_hid_no_controllers, module_patches, custom_config
     ):
         """Test connector initialization with custom configuration."""
         from src.actions.move_game_controller.connector.go2_game_controller import (
@@ -142,7 +125,7 @@ class TestGo2GameControllerConnector:
         assert connector.sony_edge is False
 
     def test_init_controller_no_controllers(
-        self, mock_hid_no_controllers, mock_patches, mock_config
+        self, mock_hid_no_controllers, module_patches, mock_config
     ):
         """Test _init_controller when no controllers are found."""
         from src.actions.move_game_controller.connector.go2_game_controller import (
@@ -159,7 +142,7 @@ class TestGo2GameControllerConnector:
 
     @patch("time.sleep", return_value=None)
     def test_tick_method(
-        self, mock_sleep, mock_hid_no_controllers, mock_patches, mock_config
+        self, mock_sleep, mock_hid_no_controllers, module_patches, mock_config
     ):
         """Test tick method."""
         from src.actions.move_game_controller.connector.go2_game_controller import (
@@ -171,7 +154,7 @@ class TestGo2GameControllerConnector:
 
     @pytest.mark.asyncio
     async def test_connect_method(
-        self, mock_hid_no_controllers, mock_patches, mock_config
+        self, mock_hid_no_controllers, module_patches, mock_config
     ):
         """Test connect method."""
         from src.actions.move_game_controller.connector.go2_game_controller import (
