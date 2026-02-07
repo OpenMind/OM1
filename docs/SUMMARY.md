@@ -3,16 +3,25 @@
 ## Get Started <a href="#developing" id="developing"></a>
 
 * [OM1](README.md)
-* [Introduction](developing/0_introduction.md)
-* [Quick Start](developing/1_get-started.md)
-* [Architecture](developing/2_architecture.md)
-* [Configuration](developing/3_configuration.md)
-* [Inputs](developing/4_inputs.md)
-* [LLMs](developing/5_llms.md)
-* [Actions](developing/6_actions.md)
-* [Project Structure](developing/7_project_structure.md)
-* [Backgrounds](developing/8_backgrounds.md)
+* [Get Started](developing/0_introduction.md)
+    * [Introduction](developing/0_introduction.md)
+    * [Quick Start](developing/1_get-started.md)
+    * [Architecture](developing/2_architecture.md)
+* [Understanding Core Concepts](concepts.md)
+    * [Configuration](developing/3_configuration.md)
+    * [Inputs](developing/4_inputs.md)
+    * [LLMs](developing/5_llms.md)
+    * [Actions](developing/6_actions.md)
+    * [Project Structure](developing/7_project_structure.md)
+    * [Backgrounds](developing/8_backgrounds.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
+
+## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
+
+* [Introduction](developer_cookbook/introduction.md)
+* [Configuration](developer_cookbook/config.md)
+* [Input](developer_cookbook/input.md)
+* [New Mode](developer_cookbook/new_mode.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
 
@@ -24,13 +33,6 @@
 * [LLM](api-reference/endpoints/llm.md)
 * [Riva](api-reference/endpoints/riva.md)
 * [ViLA VLM](api-reference/endpoints/vila_vlm.md)
-
-## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
-
-* [Introduction](developer_cookbook/introduction.md)
-* [Configuration](developer_cookbook/config.md)
-* [Input](developer_cookbook/input.md)
-* [New Mode](developer_cookbook/new_mode.md)
 
 ## Examples <a href="#examples" id="examples"></a>
 

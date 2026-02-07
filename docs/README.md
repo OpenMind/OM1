@@ -23,14 +23,14 @@ icon: book-open
     <tr>
       <td><strong>Get started</strong></td>
       <td>with OpenMind’s OM1</td>
-      <td><a href="assets/favicon.png">quick_start_dark.png</a></td>
+      <td><a href="assets/favicon.png">favicon.png</a></td>
       <td><a href="developing/0_introduction.md">0_introduction.md</a></td>
       <td><a href=".gitbook/assets/quick_start_light.png">quick_start_light.png</a></td>
     </tr>
     <tr>
       <td><strong>OM1 API Reference</strong></td>
       <td>Our technical APIs</td>
-      <td><a href="assets/favicon.png">api_dark.png</a></td>
+      <td><a href="assets/favicon.png">favicon.png</a></td>
       <td><a href="api-reference/introduction.md">introduction.md</a></td>
       <td><a href=".gitbook/assets/api_light.png">api_light.png</a></td>
     </tr>
