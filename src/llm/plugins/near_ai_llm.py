@@ -18,9 +18,13 @@ R = T.TypeVar("R", bound=BaseModel)
 class NearAIModel(str, Enum):
     """Available NearAI models."""
 
-    QWEN_30B_A3B_INSTRUCT_2507 = "qwen3-30b-a3b-instruct-2507"
-    QWEN_2_5_VL_72B_INSTRUCT = "qwen2.5-vl-72b-instruct"
-    QWEN_2_5_7B_INSTRUCT = "qwen2.5-7b-instruct"
+    QWEN_30B_A3B_INSTRUCT_2507 = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+    DEEPSEEK_V3_1 = "deepseek-ai/DeepSeek-V3.1"
+    GPT_OSS_120B = "openai/gpt-oss-120b"
+    GPT_5_2 = "openai/gpt-5.2"
+    GLM_4_7 = "zai-org/GLM-4.7"
+    CLAUDE_SONNET_4_5 = "anthropic/claude-sonnet-4-5"
+    GEMINI_3_PRO = "google/gemini-3-pro"
 
 
 class NearAIConfig(LLMConfig):
@@ -31,7 +35,7 @@ class NearAIConfig(LLMConfig):
         description="Base URL for the NearAI API endpoint",
     )
     model: T.Optional[T.Union[NearAIModel, str]] = Field(
-        default=NearAIModel.QWEN_30B_A3B_INSTRUCT_2507,
+        default=NearAIModel.GPT_OSS_120B,
         description="NearAI model to use",
     )
 
@@ -64,7 +68,7 @@ class NearAILLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "qwen3-30b-a3b-instruct-2507"
+            self._config.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
         self._client = openai.AsyncClient(
             base_url=config.base_url or "https://api.openmind.org/api/core/nearai",
@@ -109,7 +113,7 @@ class NearAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.beta.chat.completions.parse(
-                model=self._config.model or "qwen3-30b-a3b-instruct-2507",
+                model=self._config.model or "Qwen/Qwen3-30B-A3B-Instruct-2507",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",

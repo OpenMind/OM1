@@ -76,40 +76,7 @@ We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
         - Precise approach - It approaches the dock using the tag's position and orientation data
         - Physical docking - The robot positions itself so its charging contacts align with the charging pad's contact points
 
-## Getting Started
-
-### Prerequisites
-- Docker and docker compose installed (Makes sure the Docker Compose version is v2.32.4)
-- Access to all required repositories
-- Proper hardware setup
-
-### Quick Start
-1. Clone all required repositories:
-   ```bash
-   git clone https://github.com/OpenMind/OM1.git
-   git clone https://github.com/OpenMind/OM1-ros2-sdk.git
-   git clone https://github.com/OpenMind/OM1-avatar.git
-   git clone https://github.com/OpenMind/OM1-video-processor.git
-   ```
-
-2. Start the core services:
-   ```bash
-   # Start OM1
-   cd OM1
-   docker-compose up om1 -d --no-build
-
-   # Start ROS2 SDK components
-   cd ../OM1-ros2-sdk
-   docker-compose up orchestrator om1_sensor watchdog zenoh_bridge -d --no-build
-
-   # Start Avatar frontend
-   cd ../OM1-avatar
-   docker-compose up -d --no-build
-
-   # Start Video Processor
-   cd ../OM1-video-processor
-   docker-compose up -d --no-build
-   ```
+   Currently, auto-charging is only supported for Go2.
 
 ## What Happens Next
 
