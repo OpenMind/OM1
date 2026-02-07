@@ -1,6 +1,7 @@
 ---
 title: ElevenLabs TTS
 description: "ElevenLabs Text to Speech (TTS)"
+icon: webhook
 ---
 
 The ElevenLabs TTS API converts text into natural-sounding speech using ElevenLabs' advanced text-to-speech models. This endpoint provides high-quality voice synthesis with customizable voice selection, speech speed, and output formats.

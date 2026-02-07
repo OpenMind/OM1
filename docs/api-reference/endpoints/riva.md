@@ -1,6 +1,7 @@
 ---
 title: Riva Speech
 description: "Riva Speech Recognition (ASR) and Text-to-Speech (TTS)"
+icon: webhook
 ---
 
 # Riva Speech

@@ -1,6 +1,7 @@
 ---
 title: Google Speech Recognition
 description: "Google Speech Recognition (ASR) API Reference"
+icon: webhook
 ---
 
 The Google ASR API provides real-time speech-to-text transcription using Google Cloud Speech-to-Text. This WebSocket-based endpoint enables low-latency streaming recognition for live audio processing.

@@ -1,6 +1,7 @@
 ---
 title: New Mode
 description: "Add a new mode"
+icon: gamepad-modern
 ---
 
 This guide walks you through creating a new mode for your robot system.

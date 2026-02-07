@@ -1,6 +1,7 @@
 ---
 title: LLM Chat Completions
 description: "Multi-Provider Large Language Model API"
+icon: webhook
 ---
 
 The OpenMind LLM API provides unified access to multiple leading large language model providers through a single, consistent interface. This endpoint enables chat completions across OpenAI, Anthropic (via OpenRouter), Google Gemini, X.AI, DeepSeek, NEAR.AI, and more.

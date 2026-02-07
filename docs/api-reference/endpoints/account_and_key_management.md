@@ -1,6 +1,7 @@
 ---
 title: Manage Account and Keys
 description: "Managing your OpenMind Account and API Keys"
+icon: webhook
 ---
 
 Your OpenMind account and API keys are used for authentication and authorization in your applications. You can manage your account and keys via the [OpenMind portal](https://portal.openmind.org) or directly via an API. The API provides access to the full set of operations (generate, delete, account balance, and key listing).

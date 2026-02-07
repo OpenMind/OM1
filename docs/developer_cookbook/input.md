@@ -1,6 +1,7 @@
 ---
 title: New Input Plugin
 description: "Build a new input plugin"
+icon: pen
 ---
 
 ## Overview

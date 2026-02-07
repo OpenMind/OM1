@@ -66,22 +66,6 @@
     * [Lifecycle](full_autonomy_guidelines/lifecycle.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
 
-## Robotics <a href="#robotics" id="robotics"></a>
-
-* [Asimov Governance](robotics/asimov_governance.md)
-* [Coinbase Hackathon](robotics/coinbase_hackathon.md)
-* [Coinbase X402](robotics/coinbase-x402.md)
-* [CRSF Long Range Control](robotics/crsf_long_range_control.md)
-* [GPS Compass](robotics/gps_compass.md)
-* [Mac](robotics/mac.md)
-* [Media Server](robotics/Media_server.md)
-* [Motion Planning LiDAR A1M8](robotics/motion_planning_lidarA1M8.md)
-* [Motion Planning TurtleBot4](robotics/motion_planning_turtlebot4.md)
-* [Motion Planning Unitree Go2](robotics/motion_planning_unitree_go2.md)
-* [RF Mapping](robotics/rf_mapping.md)
-* [Unitree Go2 Quadruped Configurations](robotics/unitree_go2_quadruped_configurations.md)
-* [Zenoh](robotics/zenoh.md)
-
 ## Release Notes <a href="#release-notes" id="release-notes"></a>
 
 * [Beta](release-notes/beta/om.md)
@@ -98,3 +82,20 @@
   * [OM1 ROS2 SDK](release-notes/v1.0.0/om1-ros2-sdk.md)
   * [OM1 System Setup](release-notes/v1.0.0/om1-system-setup.md)
   * [Video Processor](release-notes/v1.0.0/video-processor.md)
+
+## Robotics <a href="#robotics" id="robotics"></a>
+
+* [Asimov Governance](robotics/asimov_governance.md)
+* [Coinbase Hackathon](robotics/coinbase_hackathon.md)
+* [Good to know concepts](robotics/coinbase-x402.md)
+    * [Coinbase X402](robotics/coinbase-x402.md)
+    * [CRSF Long Range Control](robotics/crsf_long_range_control.md)
+    * [GPS Compass](robotics/gps_compass.md)
+    * [Mac](robotics/mac.md)
+    * [Media Server](robotics/Media_server.md)
+    * [Motion Planning LiDAR A1M8](robotics/motion_planning_lidarA1M8.md)
+    * [Motion Planning TurtleBot4](robotics/motion_planning_turtlebot4.md)
+    * [Motion Planning Unitree Go2](robotics/motion_planning_unitree_go2.md)
+    * [RF Mapping](robotics/rf_mapping.md)
+    * [Unitree Go2 Quadruped Configurations](robotics/unitree_go2_quadruped_configurations.md)
+    * [Zenoh](robotics/zenoh.md)

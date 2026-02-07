@@ -1,6 +1,7 @@
 ---
 title: Build a fresh config file
 description: "Config"
+icon: gear
 ---
 
 The config file defines the agent that runs on your machine.

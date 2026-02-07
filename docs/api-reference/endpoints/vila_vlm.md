@@ -1,6 +1,7 @@
 ---
 title: VILA VLM
 description: "VILA Vision-Language Model API Reference"
+icon: webhook
 ---
 
 The VILA VLM API provides real-time vision-language model analysis of video streams. This WebSocket-based endpoint enables low-latency streaming of video frames and receiving intelligent visual descriptions and analysis.

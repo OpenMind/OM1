@@ -1,6 +1,7 @@
 ---
 title: Development Guide
 description: "Introduction"
+icon: brain
 ---
 
 The Developer Cookbook is a collection of practical, high-impact recipes designed to help you extend, customize, and build on top of the OpenMind platform.
