@@ -15,7 +15,7 @@
       type: "UnitreeG1LocationsInput",
     },
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
     },
     {
       type: "UnitreeG1Basic",

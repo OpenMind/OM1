@@ -10,12 +10,10 @@ from queue import Empty, Full
 from typing import Dict, List, Optional, Union
 
 import numpy as np
-import zenoh
 from numpy.typing import NDArray
 
-from providers.odom_provider import OdomProvider
+from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
 
 from .d435_provider import D435Provider
 from .rplidar_driver import RPDriver
@@ -125,11 +123,11 @@ def rplidar_processor(
 
 
 @singleton
-class RPLidarProvider:
+class UnitreeGo2RPLidarProvider:
     """
-    RPLidar Provider.
+    Unitree Go2 RPLidar Provider using serial communication.
 
-    This class implements a singleton pattern to manage RPLidar data streaming.
+    This class implements a singleton pattern to manage RPLidar data streaming via serial port.
     """
 
     # Constants
@@ -150,15 +148,11 @@ class RPLidarProvider:
         relevant_distance_max: float = DEFAULT_RELEVANT_DISTANCE_MAX,
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
-        URID: str = "",
-        machine_type: str = "go2",
-        use_zenoh: bool = False,
-        simple_paths: bool = False,
         rplidar_config: RPLidarConfig = RPLidarConfig(),
         log_file: bool = False,
     ):
         """
-        Initialize the RPLidar Provider with robot and sensor configuration.
+        Initialize the Unitree Go2 RPLidar Provider with robot and sensor configuration.
 
         Parameters
         ----------
@@ -174,20 +168,12 @@ class RPLidarProvider:
             Only consider barriers above this range, in m
         sensor_mounting_angle: float = 180.0
             The angle of the sensor zero relative to the way in which it's mounted
-        URID: str = ""
-            The URID of the robot, used for Zenoh communication
-        machine_type: str = "go2"
-            The type of the robot, e.g., "go2" or "tb4"
-        use_zenoh: bool = False
-            Whether to use Zenoh for communication
-        simple_paths: bool = False
-            Whether to use simple paths for path planning
         rplidar_config: RPLidarConfig = RPLidarConfig()
             Configuration for the RPLidar sensor
         log_file: bool = False
             Whether to log data to a local file
         """
-        logging.info("Booting RPLidar")
+        logging.info("Booting Unitree Go2 RPLidar (Serial)")
 
         self.serial_port = serial_port
         self.half_width_robot = half_width_robot
@@ -195,17 +181,11 @@ class RPLidarProvider:
         self.relevant_distance_max = relevant_distance_max
         self.relevant_distance_min = relevant_distance_min
         self.sensor_mounting_angle = sensor_mounting_angle
-        self.URID = URID
-        self.machine_type = machine_type
-        self.use_zenoh = use_zenoh
-        self.simple_paths = simple_paths
         self.rplidar_config = rplidar_config
         self.log_file = log_file
 
         self.running: bool = False
         self.lidar = None
-        self.zen = None
-        self.scans = None
 
         self._raw_scan: Optional[NDArray] = None
         self._valid_paths: Optional[list] = None
@@ -220,7 +200,7 @@ class RPLidarProvider:
         self.odom_y = 0.0
         self.odom_yaw_m180_p180 = 0.0
         self.odom_yaw_0_360 = 0.0
-        self.odom = OdomProvider()
+        self.odom = UnitreeGo2OdomProvider()
         logging.info(f"Mapper Odom Provider: {self.odom}")
 
         self.write_to_local_file = False
@@ -256,32 +236,6 @@ class RPLidarProvider:
         self._rplidar_processor_thread: Optional[mp.Process] = None
 
         self._serial_processor_thread: Optional[threading.Thread] = None
-
-        if self.use_zenoh:
-            logging.info("Connecting to the RPLIDAR via Zenoh")
-            try:
-                self.zen = open_zenoh_session()
-                logging.info(f"Zenoh move client opened {self.zen}")
-
-                if self.machine_type == "tb4":
-                    logging.info(
-                        f"{self.machine_type} RPLIDAR listener starting with URID: {self.URID}"
-                    )
-                    self.zen.declare_subscriber(
-                        f"{self.URID}/pi/scan", self.listen_scan
-                    )
-
-                if self.machine_type == "go2":
-                    logging.info(f"{self.machine_type} RPLIDAR listener starting")
-                    self.zen.declare_subscriber("scan", self.listen_scan)
-
-                if self.machine_type != "tb4" and self.machine_type != "go2":
-                    raise ValueError(
-                        f"Unsupported machine type: {self.machine_type}. Supported types are 'tb4' and 'go2'."
-                    )
-
-            except Exception as e:
-                logging.error(f"Error opening Zenoh client: {e}")
 
         # D435 Provider
         self.d435_provider = D435Provider()
@@ -322,30 +276,12 @@ class RPLidarProvider:
                 f.write(json_line + "\n")
                 f.flush()
 
-    def listen_scan(self, data: zenoh.Sample):
-        """
-        Zenoh scan handler.
-
-        Parameters
-        ----------
-        data : zenoh.Sample
-            The Zenoh sample containing the scan data.
-        """
-        self.scans = sensor_msgs.LaserScan.deserialize(data.payload.to_bytes())
-        logging.debug(f"Zenoh Laserscan data: {self.scans}")
-
-        self._zenoh_processor(self.scans)
-
     def start(self):
         """
         Start the RPLidar provider.
         This method initializes the RPLidar processing thread and the serial data processing thread.
         """
         self.running = True
-
-        if self.use_zenoh:
-            logging.info("RPLidar using Zenoh, no serial port required")
-            return
 
         if (
             not self._rplidar_processor_thread
@@ -373,42 +309,6 @@ class RPLidarProvider:
             )
             self._serial_processor_thread.start()
             logging.info("RPLidar processing thread started")
-
-    def _zenoh_processor(self, scan: Optional[LaserScan]):
-        """
-        Preprocess Zenoh LaserScan data.
-
-        Parameters
-        ----------
-        scan : Optional[LaserScan]
-            The Zenoh LaserScan data to preprocess.
-            If None, it indicates no data is available.
-        """
-        if scan is None:
-            logging.info("Waiting for Zenoh Laserscan data...")
-            self._raw_scan = None
-            self._lidar_string = "You might be surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
-            self._valid_paths = []
-        else:
-            # logging.debug(f"_preprocess_zenoh: {scan}")
-            # angle_min=-3.1241390705108643, angle_max=3.1415927410125732
-
-            if not self.angles:
-                self.angles = list(
-                    map(
-                        lambda x: 360.0 * (x + math.pi) / (2 * math.pi),
-                        np.arange(scan.angle_min, scan.angle_max, scan.angle_increment),
-                    )
-                )
-                self.angles_final = np.flip(np.array(self.angles))
-
-            # angles now run from 360.0 to 0 degrees
-            if self.angles_final is not None:
-                data = list(zip(self.angles_final, scan.ranges))
-            else:
-                data = []
-            array_ready = np.array(data)
-            self._path_processor(array_ready)
 
     def _path_processor(self, data: NDArray):
         """
@@ -515,10 +415,6 @@ class RPLidarProvider:
         Determine set of possible paths
         """
         possible_paths = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        if self.simple_paths:
-            # for the turtlebot - it can always turn in place,
-            # only question is whether it can advance
-            possible_paths = np.array([4])
 
         if array.ndim > 1:
             # we have valid LIDAR returns
@@ -648,9 +544,8 @@ class RPLidarProvider:
 
         if self._rplidar_processor_thread:
             logging.info("Stopping RPLidar processor thread")
-            if not self.use_zenoh:
-                self.control_queue.put("STOP")
-                time.sleep(0.5)
+            self.control_queue.put("STOP")
+            time.sleep(0.5)
             self._rplidar_processor_thread.join(timeout=5)
 
         if self._serial_processor_thread:
@@ -827,19 +722,14 @@ class RPLidarProvider:
 
         parts = ["The safe movement directions are: {"]
 
-        if self.use_zenoh and self.machine_type == "tb4":  # TurtleBot4 control
-            parts.append("'turn left', 'turn right', ")
-            if self.advance:
-                parts.append("'move forwards', ")
-        else:
-            if self.turn_left:
-                parts.append("'turn left', ")
-            if self.advance:
-                parts.append("'move forwards', ")
-            if self.turn_right:
-                parts.append("'turn right', ")
-            if self.retreat:
-                parts.append("'move back', ")
+        if self.turn_left:
+            parts.append("'turn left', ")
+        if self.advance:
+            parts.append("'move forwards', ")
+        if self.turn_right:
+            parts.append("'turn right', ")
+        if self.retreat:
+            parts.append("'move back', ")
 
         parts.append("'stand still'}. ")
         return "".join(parts)

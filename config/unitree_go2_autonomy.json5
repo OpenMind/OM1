@@ -15,14 +15,14 @@
   6. If you sense something on your right, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning left to avoid the object on my right'}}",
   agent_inputs: [
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
       config: {
         use_zenoh: false,
         URID: "", // only needed for Zenoh
       },
     },
     {
-      type: "RPLidar",
+      type: "UnitreeGo2RPLidar",
       config: {
         serial_port: "/dev/cu.usbserial-0001",
         half_width_robot: 0.21,
