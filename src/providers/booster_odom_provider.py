@@ -1,4 +1,5 @@
 import logging
+import math
 import multiprocessing as mp
 import threading
 import time
@@ -7,15 +8,12 @@ from typing import Optional
 import zenoh
 
 from runtime.logging import LoggingConfig, get_logging_config, setup_logging
-from zenoh_msgs import (
-    Odometry,
-    PoseWithCovarianceStamped,
-    nav_msgs,
-    open_zenoh_session,
-)
+from zenoh_msgs import Odometer, open_zenoh_session
 
 from .odom_provider_base import OdomProviderBase, RobotState
 from .singleton import singleton
+
+rad_to_deg = 57.2958
 
 
 def booster_odom_processor(
@@ -33,7 +31,7 @@ def booster_odom_processor(
     topic : str
         The Zenoh topic to subscribe to for odometry data.
     data_queue : mp.Queue
-        Queue for sending the retrieved odometry and pose data.
+        Queue for sending the retrieved odometry data.
     logging_config : LoggingConfig, optional
         Optional logging configuration. If provided, it will override the default logging settings.
     """
@@ -48,12 +46,23 @@ def booster_odom_processor(
         data : zenoh.Sample
             The Zenoh sample containing the odometry data.
         """
-        odom: Odometry = nav_msgs.Odometry.deserialize(data.payload.to_bytes())
-        logging.debug(f"Booster Zenoh odom handler: {odom}")
+        try:
+            odom: Odometer = Odometer.deserialize(data.payload.to_bytes())
+            logging.debug(
+                f"Booster Zenoh odom handler: x={odom.x}, y={odom.y}, theta={odom.theta}"
+            )
 
-        data_queue.put(
-            PoseWithCovarianceStamped(header=odom.header, pose=odom.pose)  # type: ignore
-        )
+            # Put the odometer data directly in the queue
+            data_queue.put(
+                {
+                    "x": odom.x,
+                    "y": odom.y,
+                    "theta": odom.theta,
+                    "timestamp": time.time(),
+                }
+            )
+        except Exception as e:
+            logging.error(f"Error deserializing Booster odometry data: {e}")
 
     try:
         session = open_zenoh_session()
@@ -141,12 +150,82 @@ class BoosterOdomProvider(OdomProviderBase):
         pose : Pose
             The pose data containing position and orientation.
         """
-        # Body height detection for Booster robot
-        # Based on observed data (adjust these values based on actual Booster robot measurements):
-        # - Sitting: z ≈ 0.50m (50cm)
-        # - Standing: z ≈ 0.70m (70cm)
-        self.body_height_cm = round(pose.position.z * 100.0)
-        if self.body_height_cm > 60:
-            self.body_attitude = RobotState.STANDING
-        elif self.body_height_cm > 3:
-            self.body_attitude = RobotState.SITTING
+        # For Booster robot, we don't have z position data from the simple Odometer message
+        # Assume robot is always standing when we receive odometry data
+        self.body_attitude = RobotState.STANDING
+        self.body_height_cm = 70  # Default standing height
+
+    def process_odom(self):
+        """
+        Process the odom data from Booster's custom Odometer message.
+        This method runs in a separate thread and continuously processes
+        odometry data from the queue.
+        """
+        while not self._stop_event.is_set():
+            try:
+                odom_data = self.data_queue.get(timeout=1)
+            except Exception:
+                # Queue timeout or other errors
+                continue
+
+            if not isinstance(odom_data, dict):
+                logging.warning(f"Unexpected odom data type: {type(odom_data)}")
+                continue
+
+            # Extract data from custom Odometer message
+            x = odom_data.get("x", 0.0)
+            y = odom_data.get("y", 0.0)
+            theta = odom_data.get("theta", 0.0)  # theta is in radians
+
+            # Update timestamp
+            self.odom_subscriber_ts = time.time()
+            self.odom_rockchip_ts = odom_data.get("timestamp", self.odom_subscriber_ts)
+
+            # Calculate movement delta
+            dx = (x - self.previous_x) ** 2
+            dy = (y - self.previous_y) ** 2
+
+            self.previous_x = x
+            self.previous_y = y
+
+            delta = math.sqrt(dx + dy)
+
+            # Moving? Use a decay kernel
+            self.move_history = 0.7 * delta + 0.3 * self.move_history
+
+            if delta > 0.01 or self.move_history > 0.01:
+                self.moving = True
+                logging.info(
+                    f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
+                )
+            else:
+                self.moving = False
+
+            # Convert theta (radians) to degrees
+            # theta is already in standard robot convention where positive is counter-clockwise
+            self.odom_yaw_m180_p180 = round(theta * rad_to_deg, 4)
+
+            # Normalize to [-180, 180] range
+            while self.odom_yaw_m180_p180 > 180.0:
+                self.odom_yaw_m180_p180 -= 360.0
+            while self.odom_yaw_m180_p180 < -180.0:
+                self.odom_yaw_m180_p180 += 360.0
+
+            # Provide alternate representation [0, 360] with clockwise positive
+            flip = -1.0 * self.odom_yaw_m180_p180
+            if flip < 0.0:
+                flip = flip + 360.0
+
+            self.odom_yaw_0_360 = round(flip, 4)
+
+            # Current position in world frame
+            self.x = round(x, 4)
+            self.y = round(y, 4)
+
+            # Update body state
+            self._update_body_state(None)
+
+            logging.debug(
+                f"booster odom: X:{self.x} Y:{self.y} Theta:{round(theta, 4)} "
+                f"Yaw_m180_p180:{self.odom_yaw_m180_p180} Yaw_0_360:{self.odom_yaw_0_360}"
+            )

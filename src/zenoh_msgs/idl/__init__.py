@@ -1,4 +1,4 @@
-from .booster_interface import RemoteControllerState
+from .booster_interface import Odometer, RemoteControllerState
 from .geographic_msgs import GeoPoint, GeoPointStamped
 from .geometry_msgs import (
     Accel,
@@ -61,6 +61,7 @@ __all__ = [
     "String",
     "prepare_header",
     # booster_interface
+    "Odometer",
     "RemoteControllerState",
     # status_msgs
     "AudioStatus",

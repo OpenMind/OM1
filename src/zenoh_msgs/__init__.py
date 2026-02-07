@@ -35,6 +35,7 @@ from .idl import (
     Nav2Status,
     NavSatFix,
     NavSatStatus,
+    Odometer,
     Odometry,
     Paths,
     Point,
@@ -76,6 +77,7 @@ __all__ = [
     "String",
     "prepare_header",
     # booster_interface
+    "Odometer",
     "RemoteControllerState",
     # status_msgs
     "AudioStatus",

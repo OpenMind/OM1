@@ -3,7 +3,20 @@
 from dataclasses import dataclass
 
 from pycdr2 import IdlStruct
-from pycdr2.types import float64, int16, int32
+from pycdr2.types import float32, float64, int16, int32
+
+
+@dataclass
+class Odometer(IdlStruct, typename="Odometer"):
+    """
+    Odometer message for Booster robot odometry data.
+
+    Simple odometry message containing position and orientation.
+    """
+
+    x: float32 = 0.0
+    y: float32 = 0.0
+    theta: float32 = 0.0
 
 
 @dataclass
