@@ -8,19 +8,15 @@ from pydantic import Field
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.rplidar_provider import RPLidarProvider
+from providers.turtlebot4_rplidar_provider import TurtleBot4RPLidarProvider
 
 
 class RPLidarConfig(SensorConfig):
     """
-    Configuration for RPLidar Sensor.
+    Configuration for TurtleBot4 RPLidar Sensor.
 
     Parameters
     ----------
-    serial_port : Optional[str]
-        Serial Port to connect to.
-    use_zenoh : bool
-        Whether to use Zenoh.
     half_width_robot : float
         Half width of the robot.
     angles_blanked : List[float]
@@ -32,17 +28,11 @@ class RPLidarConfig(SensorConfig):
     sensor_mounting_angle : float
         Mounting angle of the sensor.
     URID : str
-        Unique Robot ID.
-    machine_type : str
-        Type of the machine.
+        The URID of the robot, used for Zenoh communication.
     log_file : bool
         Whether to log to a file.
     """
 
-    serial_port: Optional[str] = Field(
-        default=None, description="Serial Port to connect to"
-    )
-    use_zenoh: bool = Field(default=False, description="Use Zenoh")
     half_width_robot: float = Field(default=0.20, description="Half width of the robot")
     angles_blanked: List[float] = Field(
         default_factory=list, description="List of angles to blank out"
@@ -56,24 +46,25 @@ class RPLidarConfig(SensorConfig):
     sensor_mounting_angle: float = Field(
         default=180.0, description="Mounting angle of the sensor"
     )
-    URID: str = Field(default="", description="Unique Robot ID")
-    machine_type: str = Field(default="go2", description="Type of the machine")
+    URID: str = Field(
+        default="", description="URID of the robot for Zenoh communication"
+    )
     log_file: bool = Field(default=False, description="Whether to log to a file")
 
 
-class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
+class TurtleBot4RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
     """
-    RPLidar input handler for processing laser range finder data.
+    TurtleBot4 RPLidar input handler for processing laser range finder data via Zenoh.
     """
 
     def __init__(self, config: RPLidarConfig):
         """
-        Initialize the RPLidar input handler.
+        Initialize the TurtleBot4 RPLidar input handler.
 
         Parameters
         ----------
         config : RPLidarConfig
-            Configuration for the RPLidar input handler.
+            Configuration for the TurtleBot4 RPLidar input handler.
         """
         super().__init__(config)
 
@@ -89,15 +80,17 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
         # Build lidar configuration from config
         lidar_config = self._extract_lidar_config(config)
 
-        # Initialize RPLidar Provider
-        self.lidar: RPLidarProvider = RPLidarProvider(**lidar_config)
+        # Initialize TurtleBot4 RPLidar Provider
+        self.lidar: TurtleBot4RPLidarProvider = TurtleBot4RPLidarProvider(
+            **lidar_config
+        )
         self.lidar.start()
 
         self.descriptor_for_LLM = "Information about objects and walls around you, to plan your movements and avoid bumping into things."
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for new messages from the RPLidar Provider.
+        Poll for new messages from the TurtleBot4 RPLidar Provider.
 
         Checks the message buffer for new messages with a brief delay
         to prevent excessive CPU usage.
@@ -193,7 +186,7 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
         Extract lidar configuration parameters from sensor config.
 
         Converts the RPLidarConfig Pydantic model into a dictionary format
-        suitable for passing to the RPLidarProvider constructor.
+        suitable for passing to the TurtleBot4RPLidarProvider constructor.
 
         Parameters
         ----------
@@ -207,15 +200,12 @@ class RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
             corresponding field names and values.
         """
         lidar_config = {
-            "serial_port": config.serial_port,
-            "use_zenoh": config.use_zenoh,
             "half_width_robot": config.half_width_robot,
             "angles_blanked": config.angles_blanked,
             "relevant_distance_max": config.relevant_distance_max,
             "relevant_distance_min": config.relevant_distance_min,
             "sensor_mounting_angle": config.sensor_mounting_angle,
             "URID": config.URID,
-            "machine_type": config.machine_type,
             "log_file": config.log_file,
         }
 

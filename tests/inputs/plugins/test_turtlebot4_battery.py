@@ -6,11 +6,11 @@ import pytest
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.battery_turtlebot4.open_zenoh_session"),
-        patch("inputs.plugins.battery_turtlebot4.IOProvider"),
-        patch("inputs.plugins.battery_turtlebot4.TeleopsStatusProvider"),
+        patch("inputs.plugins.turtlebot4_battery.open_zenoh_session"),
+        patch("inputs.plugins.turtlebot4_battery.IOProvider"),
+        patch("inputs.plugins.turtlebot4_battery.TeleopsStatusProvider"),
     ):
-        from inputs.plugins.battery_turtlebot4 import (
+        from inputs.plugins.turtlebot4_battery import (
             TurtleBot4Battery,
             TurtleBot4BatteryConfig,
         )
@@ -27,11 +27,11 @@ def test_initialization():
 def test_initialization_with_custom_urid():
     """Test initialization with custom URID."""
     with (
-        patch("inputs.plugins.battery_turtlebot4.open_zenoh_session"),
-        patch("inputs.plugins.battery_turtlebot4.IOProvider"),
-        patch("inputs.plugins.battery_turtlebot4.TeleopsStatusProvider"),
+        patch("inputs.plugins.turtlebot4_battery.open_zenoh_session"),
+        patch("inputs.plugins.turtlebot4_battery.IOProvider"),
+        patch("inputs.plugins.turtlebot4_battery.TeleopsStatusProvider"),
     ):
-        from inputs.plugins.battery_turtlebot4 import (
+        from inputs.plugins.turtlebot4_battery import (
             TurtleBot4Battery,
             TurtleBot4BatteryConfig,
         )
@@ -45,11 +45,11 @@ def test_initialization_with_custom_urid():
 def test_listener_battery():
     """Test battery listener callback."""
     with (
-        patch("inputs.plugins.battery_turtlebot4.open_zenoh_session"),
-        patch("inputs.plugins.battery_turtlebot4.IOProvider"),
-        patch("inputs.plugins.battery_turtlebot4.TeleopsStatusProvider"),
+        patch("inputs.plugins.turtlebot4_battery.open_zenoh_session"),
+        patch("inputs.plugins.turtlebot4_battery.IOProvider"),
+        patch("inputs.plugins.turtlebot4_battery.TeleopsStatusProvider"),
     ):
-        from inputs.plugins.battery_turtlebot4 import (
+        from inputs.plugins.turtlebot4_battery import (
             TurtleBot4Battery,
             TurtleBot4BatteryConfig,
         )
@@ -64,7 +64,7 @@ def test_listener_battery():
         mock_msg.temperature = 25.7
         mock_msg.header.stamp.sec = 1000
 
-        with patch("inputs.plugins.battery_turtlebot4.sensor_msgs") as mock_sensor:
+        with patch("inputs.plugins.turtlebot4_battery.sensor_msgs") as mock_sensor:
             mock_sensor.BatteryState.deserialize.return_value = mock_msg
             sensor.listener_battery(mock_sample)
 
@@ -77,11 +77,11 @@ def test_listener_battery():
 async def test_poll():
     """Test _poll method."""
     with (
-        patch("inputs.plugins.battery_turtlebot4.open_zenoh_session"),
-        patch("inputs.plugins.battery_turtlebot4.IOProvider"),
-        patch("inputs.plugins.battery_turtlebot4.TeleopsStatusProvider"),
+        patch("inputs.plugins.turtlebot4_battery.open_zenoh_session"),
+        patch("inputs.plugins.turtlebot4_battery.IOProvider"),
+        patch("inputs.plugins.turtlebot4_battery.TeleopsStatusProvider"),
     ):
-        from inputs.plugins.battery_turtlebot4 import (
+        from inputs.plugins.turtlebot4_battery import (
             TurtleBot4Battery,
             TurtleBot4BatteryConfig,
         )
@@ -93,7 +93,7 @@ async def test_poll():
         sensor.is_docked = True
         sensor.battery_status = "IMPORTANT: your battery is low. Consider finding your charging station and recharging."
 
-        with patch("inputs.plugins.battery_turtlebot4.asyncio.sleep", new=AsyncMock()):
+        with patch("inputs.plugins.turtlebot4_battery.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result is not None
@@ -105,11 +105,11 @@ async def test_poll():
 async def test_raw_to_text_with_valid_data():
     """Test _raw_to_text with valid data."""
     with (
-        patch("inputs.plugins.battery_turtlebot4.open_zenoh_session"),
-        patch("inputs.plugins.battery_turtlebot4.IOProvider"),
-        patch("inputs.plugins.battery_turtlebot4.TeleopsStatusProvider"),
+        patch("inputs.plugins.turtlebot4_battery.open_zenoh_session"),
+        patch("inputs.plugins.turtlebot4_battery.IOProvider"),
+        patch("inputs.plugins.turtlebot4_battery.TeleopsStatusProvider"),
     ):
-        from inputs.plugins.battery_turtlebot4 import (
+        from inputs.plugins.turtlebot4_battery import (
             TurtleBot4Battery,
             TurtleBot4BatteryConfig,
         )
@@ -117,7 +117,7 @@ async def test_raw_to_text_with_valid_data():
         config = TurtleBot4BatteryConfig()
         sensor = TurtleBot4Battery(config=config)
 
-        with patch("inputs.plugins.battery_turtlebot4.time.time", return_value=1234.0):
+        with patch("inputs.plugins.turtlebot4_battery.time.time", return_value=1234.0):
             result = await sensor._raw_to_text(["75.5", "12.0", "True"])
 
         assert result is not None
@@ -128,12 +128,12 @@ async def test_raw_to_text_with_valid_data():
 def test_formatted_latest_buffer_with_messages():
     """Test formatted_latest_buffer with messages."""
     with (
-        patch("inputs.plugins.battery_turtlebot4.open_zenoh_session"),
-        patch("inputs.plugins.battery_turtlebot4.IOProvider"),
-        patch("inputs.plugins.battery_turtlebot4.TeleopsStatusProvider"),
+        patch("inputs.plugins.turtlebot4_battery.open_zenoh_session"),
+        patch("inputs.plugins.turtlebot4_battery.IOProvider"),
+        patch("inputs.plugins.turtlebot4_battery.TeleopsStatusProvider"),
     ):
         from inputs.base import Message
-        from inputs.plugins.battery_turtlebot4 import (
+        from inputs.plugins.turtlebot4_battery import (
             TurtleBot4Battery,
             TurtleBot4BatteryConfig,
         )
@@ -157,11 +157,11 @@ def test_formatted_latest_buffer_with_messages():
 def test_formatted_latest_buffer_empty():
     """Test formatted_latest_buffer with empty buffer."""
     with (
-        patch("inputs.plugins.battery_turtlebot4.open_zenoh_session"),
-        patch("inputs.plugins.battery_turtlebot4.IOProvider"),
-        patch("inputs.plugins.battery_turtlebot4.TeleopsStatusProvider"),
+        patch("inputs.plugins.turtlebot4_battery.open_zenoh_session"),
+        patch("inputs.plugins.turtlebot4_battery.IOProvider"),
+        patch("inputs.plugins.turtlebot4_battery.TeleopsStatusProvider"),
     ):
-        from inputs.plugins.battery_turtlebot4 import (
+        from inputs.plugins.turtlebot4_battery import (
             TurtleBot4Battery,
             TurtleBot4BatteryConfig,
         )

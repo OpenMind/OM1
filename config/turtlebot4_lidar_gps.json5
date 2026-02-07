@@ -9,10 +9,9 @@
   system_prompt_examples: "",
   agent_inputs: [
     {
-      type: "RPLidar",
+      type: "TurtleBot4RPLidar",
       config: {
         half_width_robot: 0.21,
-        use_zenoh: true,
         simple_paths: true, // to cut down on unnecessary compute
         relevant_distance_max: 1.1,
         sensor_mounting_angle: 270.0,
@@ -23,10 +22,7 @@
       },
     },
     {
-      type: "Odom",
-      config: {
-        use_zenoh: true,
-      },
+      type: "Turtlebot4Odom",
     },
     {
       type: "VLMVila",
