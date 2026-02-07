@@ -15,7 +15,7 @@
   6. If you sense something on your right, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning left to avoid the object on my right'}}",
   agent_inputs: [
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
     },
     {
       type: "UnitreeGo2Battery",
