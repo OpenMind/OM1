@@ -1,44 +1,38 @@
 ---
 description: >-
-  Welcome to OpenMind's OM1
+  Welcome to OpenMind's OM1. GitBook gives you intelligent tools to build
+  product guides, API references, and documentation that improves over time.
 icon: book-open
 ---
 
-## Explore our topics to get started
+# 🚀 Welcome to OpenMind
 
-<table data-view="cards">
+### Explore our topics to get started
+
+<table data-card-size="large" data-view="cards">
   <thead>
     <tr>
       <th></th>
       <th></th>
-      <th data-hidden data-card-target></th>
-      <th data-hidden data-card-icon></th>
+      <th data-hidden data-type="image">Cover image (dark)</th>
+      <th data-hidden data-card-target data-type="content-ref"></th>
+      <th data-hidden data-card-cover data-type="image">Cover image</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><strong>Get started</strong></td>
       <td>with OpenMind’s OM1</td>
-      <td><a href="./docs/developing/0_introduction.md"></a></td>
-      <td>check</td>
+      <td><a href="assets/favicon.png">quick_start_dark.png</a></td>
+      <td><a href="developing/0_introduction.md">0_introduction.md</a></td>
+      <td><a href=".gitbook/assets/quick_start_light.png">quick_start_light.png</a></td>
     </tr>
     <tr>
       <td><strong>OM1 API Reference</strong></td>
-      <td>Our APIs</td>
-      <td><a href="api-reference/introduction"></a></td>
-      <td>link</td>
-    </tr>
-    <tr>
-      <td><strong>Full Autonomy</strong></td>
-      <td>Full Autonomy Software Stack</td>
-      <td><a href="full_autonomy_guidelines/architecture_overview.md"></a></td>
-      <td>diagram</td>
-    </tr>
-    <tr>
-      <td><strong>BrainPack</strong></td>
-      <td>Introduction to the BrainPack</td>
-      <td><a href="brainpack/introduction.md"></a></td>
-      <td>brain</td>
+      <td>Our technical APIs</td>
+      <td><a href="assets/favicon.png">api_dark.png</a></td>
+      <td><a href="api-reference/introduction.md">introduction.md</a></td>
+      <td><a href=".gitbook/assets/api_light.png">api_light.png</a></td>
     </tr>
   </tbody>
 </table>
