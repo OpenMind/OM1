@@ -1,6 +1,10 @@
-# Welcome to OpenMind’s OM1
+---
+description: >-
+  Welcome to OpenMind's OM1
+icon: book-open
+---
 
-Explore our topics to get started
+## Explore our topics to get started
 
 <table data-view="cards">
   <thead>
