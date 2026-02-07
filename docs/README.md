@@ -1,6 +1,7 @@
 ---
 description: >-
-  Welcome to OpenMind. We design and run the software that makes robots useful.
+  Welcome to OpenMind.
+  We design and run the software that makes robots useful.
 icon: book-open
 ---
 
