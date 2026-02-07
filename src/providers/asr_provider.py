@@ -20,7 +20,6 @@ class ASRProvider:
     def __init__(
         self,
         ws_url: str,
-        stream_url: Optional[str] = None,
         device_id: Optional[int] = None,
         microphone_name: Optional[str] = None,
         rate: Optional[int] = None,
@@ -53,9 +52,6 @@ class ASRProvider:
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
-        self.stream_ws_client: Optional[ws.Client] = (
-            ws.Client(url=stream_url) if stream_url else None
-        )
         self.audio_stream: AudioInputStream = AudioInputStream(
             rate=rate,
             chunk=chunk,
@@ -94,17 +90,6 @@ class ASRProvider:
         self.ws_client.start()
         self.audio_stream.start()
 
-        if self.stream_ws_client:
-            self.stream_ws_client.start()
-            self.audio_stream.register_audio_data_callback(
-                self.stream_ws_client.send_message
-            )
-            # Register the audio stream to fill the buffer for remote input
-            if self.audio_stream.remote_input:
-                self.stream_ws_client.register_message_callback(
-                    self.audio_stream.fill_buffer_remote
-                )
-
         logging.info("ASR provider started")
 
     def stop(self):
@@ -116,6 +101,3 @@ class ASRProvider:
         self.running = False
         self.audio_stream.stop()
         self.ws_client.stop()
-
-        if self.stream_ws_client:
-            self.stream_ws_client.stop()

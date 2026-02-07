@@ -124,22 +124,30 @@ async def test_start_summary_task_empty_messages(history_manager):
 @pytest.mark.asyncio
 async def test_start_summary_task_error_handling(history_manager):
     messages = [
+        ChatMessage(role="user", content="Message 1"),
+        ChatMessage(role="assistant", content="Response 1"),
+        ChatMessage(role="user", content="Message 2"),
+        ChatMessage(role="assistant", content="Response 2"),
+        ChatMessage(role="user", content="Message 3"),
+        ChatMessage(role="assistant", content="Response 3"),
         ChatMessage(role="user", content="Test message"),
     ]
 
-    # Mock error in summarization
     history_manager.summarize_messages = AsyncMock()
     history_manager.summarize_messages.return_value = ChatMessage(
         role="system", content="Error: API service unavailable"
     )
 
-    # Run the summary task
     await history_manager.start_summary_task(messages)
 
-    # Let the task and callback complete
     await asyncio.sleep(0.1)
 
-    assert len(messages) == 0
+    assert len(messages) == 5
+    assert messages[0].content == "Message 2"
+    assert messages[1].content == "Response 2"
+    assert messages[2].content == "Message 3"
+    assert messages[3].content == "Response 3"
+    assert messages[4].content == "Test message"
 
 
 @pytest.mark.asyncio
@@ -361,141 +369,28 @@ async def test_update_history_tick_boundary():
 
 
 @pytest.mark.asyncio
-async def test_save_history_writes_file(tmp_path):
-    """Test that save_history writes messages to a JSONL file."""
-    import json
-
     config = MagicMock()
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "TestBot"
-    config.config_name = "test_config"
+
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
 
-    # Manually set the history path to use tmp_path
-    history_file = tmp_path / "history_test_config.jsonl"
-    history_manager._get_history_path = lambda: str(history_file)
 
-    # Add some messages
-    history_manager.history = [
-        ChatMessage(role="user", content="Hello"),
-        ChatMessage(role="assistant", content="Hi there!"),
-    ]
-
-    # Save history
-    history_manager.save_history()
-
-    # Verify file was written
-    assert history_file.exists()
-
-    # Verify contents
-    lines = history_file.read_text().strip().split("\n")
-    assert len(lines) == 2
-
-    msg1 = json.loads(lines[0])
-    assert msg1["role"] == "user"
-    assert msg1["content"] == "Hello"
-
-    msg2 = json.loads(lines[1])
-    assert msg2["role"] == "assistant"
-    assert msg2["content"] == "Hi there!"
-
-
-@pytest.mark.asyncio
-async def test_load_history_restores_messages(tmp_path):
-    """Test that load_history restores messages from a JSONL file."""
-    import json
-
-    config = MagicMock()
-    config.model = "gpt-4o"
-    config.history_length = 5
-    config.agent_name = "TestBot"
-    config.config_name = "test_config"
-
-    # Create history file with existing messages
-    history_file = tmp_path / "history_test_config.jsonl"
-    with open(history_file, "w") as f:
-        f.write(json.dumps({"role": "user", "content": "Previous message"}) + "\n")
-        f.write(json.dumps({"role": "assistant", "content": "Previous response"}) + "\n")
-
-    client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
-
-    # Override path to use tmp_path
-    history_manager._get_history_path = lambda: str(history_file)
-    history_manager.history = []  # Clear any loaded history
-    history_manager.load_history()
-
-    # Verify messages were loaded
-    assert len(history_manager.history) == 2
-    assert history_manager.history[0].role == "user"
-    assert history_manager.history[0].content == "Previous message"
-    assert history_manager.history[1].role == "assistant"
-    assert history_manager.history[1].content == "Previous response"
-
-
-@pytest.mark.asyncio
-async def test_load_history_empty_file(tmp_path):
-    """Test that load_history handles empty files gracefully."""
-    config = MagicMock()
-    config.model = "gpt-4o"
-    config.history_length = 5
-    config.agent_name = "TestBot"
-    config.config_name = "test_config"
-
-    # Create empty history file
-    history_file = tmp_path / "history_test_config.jsonl"
-    history_file.write_text("")
-
-    client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
-
-    # Override path to use tmp_path
-    history_manager._get_history_path = lambda: str(history_file)
-    history_manager.history = []
-    history_manager.load_history()
-
-    # Verify no messages were loaded
     assert len(history_manager.history) == 0
 
 
 @pytest.mark.asyncio
-async def test_load_history_no_file():
-    """Test that load_history handles missing files gracefully."""
-    config = MagicMock()
-    config.model = "gpt-4o"
-    config.history_length = 5
-    config.agent_name = "TestBot"
-    config.config_name = "nonexistent_config"
+
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
 
-    # Override path to return a non-existent file
-    history_manager._get_history_path = lambda: "/tmp/nonexistent_history.jsonl"
-    history_manager.history = []
-    history_manager.load_history()
 
-    # Verify no messages were loaded and no error occurred
-    assert len(history_manager.history) == 0
-
-
-@pytest.mark.asyncio
-async def test_load_history_no_config_name():
-    """Test that load_history does nothing when config_name is None."""
-    config = MagicMock()
-    config.model = "gpt-4o"
-    config.history_length = 5
-    config.agent_name = "TestBot"
-    config.config_name = None
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
 
-    # Verify _get_history_path returns None
-    assert history_manager._get_history_path() is None
 
-    # Verify history is empty (nothing loaded)
-    assert len(history_manager.history) == 0

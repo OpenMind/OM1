@@ -12,7 +12,7 @@ from runtime.multi_mode.cortex import ModeCortexRuntime
 @pytest.fixture
 def sample_mode_config():
     mode_config = ModeConfig(
-        version="v1.0.1",
+        version="v1.0.2",
         name="test_mode",
         display_name="Test Mode",
         description="A test mode",

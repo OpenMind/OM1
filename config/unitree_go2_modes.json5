@@ -1,6 +1,6 @@
 {
   // Configuration version
-  version: "v1.0.1",
+  version: "v1.0.2",
 
   // Mode system configuration for Unitree Go2
   default_mode: "welcome",
@@ -28,7 +28,7 @@
       hertz: 0.01,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -110,7 +110,7 @@
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -267,7 +267,7 @@
           type: "LidarLocalizationInput",
         },
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -311,7 +311,7 @@
         {
           name: "move_go2_autonomy",
           llm_label: "move",
-          connector: "unitree_sdk_advance",
+          connector: "unitree_om_path_sdk",
         },
         {
           name: "navigate_location",
@@ -404,7 +404,7 @@
       action_execution_mode: "concurrent",
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -501,7 +501,7 @@
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -537,7 +537,7 @@
         {
           name: "move_go2_autonomy",
           llm_label: "move",
-          connector: "unitree_sdk_advance",
+          connector: "unitree_om_path_sdk",
         },
         {
           name: "speak",
@@ -621,7 +621,7 @@ VOICE RULE:\n\
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
