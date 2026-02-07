@@ -55,7 +55,7 @@
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
 * [Architecture Overview](full_autonomy_guidelines/architecture_overview.md)
-    * [Setup BrainPack]((full_autonomy_guidelines/setup_system.md))
+    * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
     * [Setup System](full_autonomy_guidelines/setup_system.md)
     * [System Config](full_autonomy_guidelines/system_config.md)
     * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
