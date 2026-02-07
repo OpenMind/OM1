@@ -1,6 +1,7 @@
 ---
 title: Gazebo Simulator
 description: "Quadruped Simulation and Control"
+icon: robot
 ---
 
 ## Minimum System Requirements

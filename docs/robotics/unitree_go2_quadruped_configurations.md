@@ -1,6 +1,7 @@
 ---
 title: Unitree Go2 Quadruped
 description: "Unitree Go2 EDU Quadruped Configurations"
+icon: robot
 ---
 
 ## Manual Movement Control

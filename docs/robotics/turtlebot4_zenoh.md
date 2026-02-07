@@ -1,6 +1,7 @@
 ---
 title: TurtleBot4
 description: "TurtleBot4 Basic Setup"
+icon: robot
 ---
 
 ## Establishing Basic Networking and Connectivity

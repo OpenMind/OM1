@@ -1,6 +1,7 @@
 ---
 title: Nvidia Thor Dev Kit
 description: "Getting Started with OM1 on Nvidia Thor Dev Kit"
+icon: computer
 ---
 
 ## Basics

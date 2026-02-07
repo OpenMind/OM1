@@ -1,6 +1,7 @@
 ---
 title: Raspberry Pi
 description: "Getting Started with OM1 on Raspberry Pi"
+icon: computer
 ---
 
 ## Basics
