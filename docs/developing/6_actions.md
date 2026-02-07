@@ -28,7 +28,7 @@ This plugin is an example of how to directly connect to the Unitree python SDK t
 
 ## Speech and TTS
 
-The Speech and TTS action plugin allows agents to speak using with a text-to-speech (TTS) system.
+The Speech and TTS action plugin allows agents to speak using a text-to-speech (TTS) system.
 
 [**Code**](https://github.com/OpenMind/OM1/blob/main/src/actions/speak/connector/elevenlabs_tts.py)
 

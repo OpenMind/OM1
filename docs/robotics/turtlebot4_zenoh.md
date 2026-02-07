@@ -84,7 +84,7 @@ Once the reboot is complete (wait for chime, 1 min), access the Create3's App co
 ```
 ROS 2 Domain ID (default 0): 1
 ROS 2 Namespace: /_your_robot_URID_/c3 # example: /OM742d35Cc6634/c3
-RMW_IMPLEMENTATION: rmv_cyclonedds_cpp
+RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
 ```
 
 Basically, you are using the "/c3" prefix to create a unique namespace for the c3. Click `Save` and _Restart Application_. Do not forget to click _Restart Application_, otherwise the changes will not be applied. Wait for chime (1 min) indicating Create3 reboot.
@@ -123,7 +123,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Install `portaudio`, `ffmpeg` and other dependencies:
 
 ```bash
-sudo apt install pulseaudio pulseaudio-utils ffmpeg portaudio19-dev python-all-dev
+sudo apt install pulseaudio pulseaudio-utils ffmpeg portaudio19-dev python3-dev
 ```
 
 Then, connect a Logitech 270 Webcam (or equivalent). Unplug the standard TurtleBot4 Depth Camera. Connect a speaker to RPi with a 3.5 mm audio patch cable (or use bluetooth, depending on your pain threshold and patience with debugging bluetooth issues).

@@ -174,7 +174,7 @@ On Linux, install `hidapi` like this:
 
 ```bash
 sudo apt-get update
-sudo apt-get install python-dev libusb-1.0-0-dev libudev-dev libhidapi-dev
+sudo apt-get install python3-dev libusb-1.0-0-dev libudev-dev libhidapi-dev
 ```
 
 ## Accessing Unitree Data
