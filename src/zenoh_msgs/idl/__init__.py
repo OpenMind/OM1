@@ -1,3 +1,4 @@
+from .booster_interface import RemoteControllerState
 from .geographic_msgs import GeoPoint, GeoPointStamped
 from .geometry_msgs import (
     Accel,
@@ -59,6 +60,8 @@ __all__ = [
     "ColorRGBA",
     "String",
     "prepare_header",
+    # booster_interface
+    "RemoteControllerState",
     # status_msgs
     "AudioStatus",
     "CameraStatus",

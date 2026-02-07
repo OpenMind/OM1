@@ -48,6 +48,7 @@ from .idl import (
     PoseWithCovarianceStamped,
     Quaternion,
     RegionOfInterest,
+    RemoteControllerState,
     String,
     Time,
     TTSStatusRequest,
@@ -74,6 +75,8 @@ __all__ = [
     "ColorRGBA",
     "String",
     "prepare_header",
+    # booster_interface
+    "RemoteControllerState",
     # status_msgs
     "AudioStatus",
     "CameraStatus",
