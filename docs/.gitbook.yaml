@@ -1,6 +1,8 @@
 redirects:
   developing/overview: README.md
-  developing/get_started: developing/0_get_started.md
-  developing/architecture: developing/2_architecture.md
+  developing/0_introduction: developing/0_introduction.md
+  developing/1_get_started: developing/1_get-started.md
+  developing/2_architecture: developing/2_architecture.md
   api-reference/introduction: api-reference/introduction.md
   api-reference/api_pricing: api-reference/api_pricing.md
+  api-reference/endpoints/google-asr: api-reference/endpoints/google_asr.md

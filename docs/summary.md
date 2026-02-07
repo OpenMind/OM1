@@ -2,7 +2,7 @@
 
 ## Get Started <a href="#developing" id="developing"></a>
 * [Introduction](developing/0_introduction.md)
-* [Quick Start](developing/1_get_started.md)
+* [Quick Start](developing/1_get-started.md)
 * [Architecture](developing/2_architecture.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
