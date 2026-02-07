@@ -2,24 +2,24 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from providers.odom_provider import OdomProvider, RobotState
+from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
 
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Reset singleton instances between tests."""
-    OdomProvider.reset()  # type: ignore
+    UnitreeGo2OdomProvider.reset()  # type: ignore
     yield
-    OdomProvider.reset()  # type: ignore
+    UnitreeGo2OdomProvider.reset()  # type: ignore
 
 
 @pytest.fixture
 def mock_multiprocessing():
     with (
-        patch("providers.odom_provider.mp.Queue") as mock_queue,
-        patch("providers.odom_provider.mp.Process") as mock_process,
-        patch("providers.odom_provider.threading.Thread") as mock_thread,
-        patch("providers.odom_provider.threading.Event") as mock_event,
+        patch("providers.unitree_go2_odom_provider.mp.Queue") as mock_queue,
+        patch("providers.unitree_go2_odom_provider.mp.Process") as mock_process,
+        patch("providers.unitree_go2_odom_provider.threading.Thread") as mock_thread,
+        patch("providers.unitree_go2_odom_provider.threading.Event") as mock_event,
     ):
         mock_queue_instance = MagicMock()
         mock_process_instance = MagicMock()
@@ -38,35 +38,22 @@ def mock_multiprocessing():
         yield mock_queue, mock_queue_instance, mock_process, mock_process_instance, mock_thread, mock_thread_instance
 
 
-def test_initialization_zenoh(mock_multiprocessing):
-    mock_queue, _, _, _, _, _ = mock_multiprocessing
-
-    provider = OdomProvider(channel="test", use_zenoh=True)
-
-    assert provider.channel == "test"
-    assert provider.use_zenoh is True
-    assert provider.URID == ""
-    mock_queue.assert_called_once()
-
-
 def test_initialization_cyclonedds(mock_multiprocessing):
-    provider = OdomProvider(channel="test", use_zenoh=False)
+    provider = UnitreeGo2OdomProvider(channel="test")
 
     assert provider.channel == "test"
-    assert provider.use_zenoh is False
-    assert provider.URID == ""
 
 
 def test_singleton_pattern(mock_multiprocessing):
-    provider1 = OdomProvider(channel="test")
-    provider2 = OdomProvider(channel="test2")
+    provider1 = UnitreeGo2OdomProvider(channel="test")
+    provider2 = UnitreeGo2OdomProvider(channel="test2")
     assert provider1 is provider2
 
 
 def test_start(mock_multiprocessing):
     _, _, _, mock_process_instance, _, mock_thread_instance = mock_multiprocessing
 
-    OdomProvider(channel="test")
+    UnitreeGo2OdomProvider(channel="test")
 
     assert mock_process_instance.start.call_count >= 1
     assert mock_thread_instance.start.call_count >= 1
@@ -75,7 +62,7 @@ def test_start(mock_multiprocessing):
 def test_start_already_running(mock_multiprocessing):
     _, _, _, mock_process_instance, _, mock_thread_instance = mock_multiprocessing
 
-    provider = OdomProvider(channel="test")
+    provider = UnitreeGo2OdomProvider(channel="test")
 
     mock_process_instance.is_alive.return_value = True
     mock_thread_instance.is_alive.return_value = True
@@ -92,7 +79,7 @@ def test_start_already_running(mock_multiprocessing):
 def test_stop(mock_multiprocessing):
     _, _, _, mock_process_instance, _, mock_thread_instance = mock_multiprocessing
 
-    provider = OdomProvider(channel="test")
+    provider = UnitreeGo2OdomProvider(channel="test")
     provider.stop()
 
     assert provider._stop_event.set.called  # type: ignore
@@ -107,7 +94,7 @@ def test_robot_state_enum():
 
 
 def test_position_property(mock_multiprocessing):
-    provider = OdomProvider(channel="test")
+    provider = UnitreeGo2OdomProvider(channel="test")
 
     position = provider.position
 
