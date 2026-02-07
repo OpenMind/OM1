@@ -1,8 +1,3 @@
-root: docs/
-structure:
-  readme: README.md
-  summary: summary.md
-
 redirects:
   developing/overview: README.md
   developing/0_introduction: developing/0_introduction.md
@@ -56,3 +51,19 @@ redirects:
   robotics/unitree-g1-humanoid: robotics/unitree_g1_humanoid.md
   robotics/unitree-go2-quadruped-configurations: robotics/unitree_go2_quadruped_configurations.md
   robotics/unitree-go2-quadruped: robotics/unitree_go2_quadruped.md
+  robotics/mac: robotics/mac.md
+  robotics/media-server: robotics/Media_server.md
+  robotics/nvidia-thor: robotics/nvidia_thor.md
+  robotics/raspberrypi: robotics/raspberrypi.md
+  robotics/zenoh: robotics/zenoh.md
+  release-notes/beta/om: release-notes/beta/om.md
+  release-notes/beta/om1-avatar: release-notes/beta/om1-avatar.md
+  release-notes/beta/om1-ros2-sdk: release-notes/beta/om1-ros2-sdk.md
+  release-notes/beta/video-processor: release-notes/beta/video-processor.md
+  release-notes/major-updates/beta-release: release-notes/major-updates/beta_release.md
+  release-notes/major-updates/production-ready-release: release-notes/major-updates/production_ready_release.md
+  release-notes/v1.0.0/om: release-notes/v1.0.0/om.md
+  release-notes/v1.0.0/om1-avatar: release-notes/v1.0.0/om1-avatar.md
+  release-notes/v1.0.0/om1-ros2-sdk: release-notes/v1.0.0/om1-ros2-sdk.md
+  release-notes/v1.0.0/om1-system-setup: release-notes/v1.0.0/om1-system-setup.md
+  release-notes/v1.0.0/video-processor: release-notes/v1.0.0/video-processor.md
