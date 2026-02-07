@@ -9,7 +9,7 @@ from actions.move_go2_autonomy.connector.unitree_rplidar_sdk import (
     MoveUnitreeRPLidarSDKConnector,
 )
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
-from providers.odom_provider import RobotState
+from providers.unitree_go2_odom_provider import RobotState
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def mock_dependencies():
     """Mock all external dependencies."""
     with (
         patch(
-            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.RPLidarProvider"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2RPLidarProvider"
         ) as mock_lidar,
         patch(
             "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2StateProvider"
@@ -26,7 +26,7 @@ def mock_dependencies():
             "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.SportClient"
         ) as mock_sport,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.OdomProvider"
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2OdomProvider"
         ) as mock_odom,
     ):
         # Setup mock instances
@@ -122,7 +122,7 @@ class TestMoveUnitreeRPLidarSDKConnectorInit:
         """Test initialization when sport client fails."""
         with (
             patch(
-                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.RPLidarProvider"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2RPLidarProvider"
             ),
             patch(
                 "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2StateProvider"
@@ -131,7 +131,7 @@ class TestMoveUnitreeRPLidarSDKConnectorInit:
                 "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.SportClient"
             ) as mock_sport,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.OdomProvider"
+                "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2OdomProvider"
             ),
             patch(
                 "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.logging"
