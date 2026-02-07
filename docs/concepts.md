@@ -1,4 +1,7 @@
-# Understanding Core Concepts
+---
+title: Understanding Core Concepts
+icon: circle
+---
 
 Welcome to the Core Concepts section. This guide introduces the fundamental principles and architecture patterns that power OM1.
 

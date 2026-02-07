@@ -1,6 +1,7 @@
 ---
 title: Actions
 description: "Actions"
+icon: location-arrow
 ---
 
 ## Action Plugins
