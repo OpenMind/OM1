@@ -1,6 +1,7 @@
 ---
 title: Configuration
 description: "Configuration"
+icon: gear
 ---
 
 ## Configuration

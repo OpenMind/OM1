@@ -1,6 +1,7 @@
 ---
 title: Inputs
 description: "Input Plugin Overview"
+icon: pen
 ---
 
 "Input Plugins" provide the sensory capabilities that allow robots to perceive their environment. These plugins capture, process, and format various types of input data, making them available to the robot's core runtime for decision-making.

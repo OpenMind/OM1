@@ -1,6 +1,7 @@
 ---
 title: Core Architecture
 description: "Core Architecture and Runtime Flow"
+icon: sitemap
 ---
 
 ## Architecture Overview

@@ -1,6 +1,7 @@
 ---
 title: Installation Guide
 description: "Learn how to install, set up and configure OM1."
+icon: play
 ---
 
 ## System Requirements
