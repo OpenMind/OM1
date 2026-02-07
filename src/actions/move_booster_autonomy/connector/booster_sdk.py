@@ -10,7 +10,7 @@ from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_booster_autonomy.interface import MoveInput
 from providers.booster_odom_provider import BoosterOdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
-from zenoh_msgs import geometry_msgs, open_zenoh_session
+from zenoh_msgs import RemoteControllerState, open_zenoh_session
 
 
 class MoveBoosterZenohConfig(ActionConfig):
@@ -30,7 +30,7 @@ class MoveBoosterZenohConfig(ActionConfig):
         description="Zenoh topic for odometry data.",
     )
     cmd_vel_topic: str = Field(
-        default="daemon_locomotionReq",
+        default="remote_controller_state",
         description="Zenoh topic for velocity commands.",
     )
 
@@ -81,7 +81,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
     def _move_robot(self, vx: float, vy: float, vyaw: float) -> None:
         """
-        Generate movement commands via Zenoh cmd_vel topic.
+        Generate movement commands via Zenoh remote_controller_state topic.
 
         Parameters
         ----------
@@ -102,12 +102,25 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             logging.info("Cannot move - robot is not standing")
             return
 
-        logging.debug(f"Pub twist: vx={vx}, vy={vy}, vyaw={vyaw}")
-        t = geometry_msgs.Twist(
-            linear=geometry_msgs.Vector3(x=float(vx), y=float(vy), z=0.0),
-            angular=geometry_msgs.Vector3(x=0.0, y=0.0, z=float(vyaw)),
+        logging.debug(f"Pub RemoteControllerState: vx={vx}, vy={vy}, vyaw={vyaw}")
+
+        # For Booster robot:
+        # - ly controls forward/backward (negative is forward)
+        # - lx controls left/right strafe
+        # - rx controls rotation
+        # All values must be clamped to [-1, 1]
+        lx_val = max(-1.0, min(1.0, float(vy)))
+        ly_val = max(-1.0, min(1.0, float(-vx)))
+        rx_val = max(-1.0, min(1.0, float(vyaw)))
+
+        msg = RemoteControllerState(
+            event=1536,
+            lx=lx_val,  # lateral movement
+            ly=ly_val,  # forward/backward (negated)
+            rx=rx_val,  # rotation
+            ry=0.0,
         )
-        self.session.put(self.cmd_vel_topic, t.serialize())
+        self.session.put(self.cmd_vel_topic, msg.serialize())
 
     async def connect(self, output_interface: MoveInput) -> None:
         """
