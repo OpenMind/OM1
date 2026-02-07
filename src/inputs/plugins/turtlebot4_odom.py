@@ -9,38 +9,31 @@ from pydantic import Field
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.odom_provider import OdomProvider, RobotState
+from providers.turtlebot4_odom_provider import TurtleBot4OdomProvider
 
 
-class OdomConfig(SensorConfig):
+class Turtlebot4OdomConfig(SensorConfig):
     """
-    Configuration for Odom Sensor.
+    Configuration for Turtlebot4 Odom Sensor.
 
     Parameters
     ----------
-    use_zenoh : bool
-        Whether to use Zenoh for odometry.
     URID : str
-        URID (Unitree ID).
-    unitree_ethernet : Optional[str]
-        Ethernet channel for Unitree odometry.
+        URID Unique Robot ID, used to connect to the correct Zenoh publisher in the local network.
     """
 
-    use_zenoh: bool = Field(
-        default=False, description="Whether to use Zenoh for odometry"
-    )
-    URID: str = Field(default="", description="URID (Unitree ID)")
-    unitree_ethernet: Optional[str] = Field(
-        default=None, description="Ethernet channel for Unitree odometry"
+    URID: Optional[str] = Field(
+        default=None,
+        description="URID Unique Robot ID, used to connect to the correct Zenoh publisher in the local network",
     )
 
 
-class Odom(FuserInput[OdomConfig, Optional[dict]]):
+class Turtlebot4Odom(FuserInput[Turtlebot4OdomConfig, Optional[dict]]):
     """
-    Odometry input processor for robot position and movement state tracking.
+    Odom input handler for reading Turtlebot4 odometry data.
     """
 
-    def __init__(self, config: OdomConfig):
+    def __init__(self, config: Turtlebot4OdomConfig):
         """
         Initialize the Odom input processor.
 
@@ -62,14 +55,9 @@ class Odom(FuserInput[OdomConfig, Optional[dict]]):
 
         logging.info(f"Config: {self.config}")
 
-        use_zenoh = self.config.use_zenoh
-        self.URID = self.config.URID
-        unitree_ethernet = self.config.unitree_ethernet
-        if use_zenoh:
-            # probably a turtlebot
-            logging.info(f"Odom using Zenoh and URID: {self.URID}")
+        URID = self.config.URID
 
-        self.odom = OdomProvider(self.URID, use_zenoh, unitree_ethernet)
+        self.odom = TurtleBot4OdomProvider(URID)
         self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
 
     async def _poll(self) -> Optional[dict]:
@@ -115,12 +103,8 @@ class Odom(FuserInput[OdomConfig, Optional[dict]]):
 
         res = ""
         moving = raw_input["moving"]
-        attitude = raw_input["body_attitude"]
 
-        if attitude is RobotState.SITTING:
-            res = "You are sitting down - do not generate new movement commands. "
-        elif moving:
-            # already moving
+        if moving:
             res = "You are moving - do not generate new movement commands. "
         else:
             res = "You are standing still - you can move if you want to. "
