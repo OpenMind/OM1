@@ -1,7 +1,6 @@
 ---
 description: >-
-  Welcome to OpenMind's OM1. GitBook gives you intelligent tools to build
-  product guides, API references, and documentation that improves over time.
+  Welcome to OpenMind. We design and run the software that makes robots useful.
 icon: book-open
 ---
 
