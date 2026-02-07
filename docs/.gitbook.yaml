@@ -1,3 +1,5 @@
+root: ./
+
 redirects:
   developing/overview: README.md
   developing/0_introduction: developing/0_introduction.md
