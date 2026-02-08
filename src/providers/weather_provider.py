@@ -244,45 +244,6 @@ class WeatherProvider:
             logging.error(f"Error generating weather summary: {e}")
             return "I'm unable to get the current weather information."
 
-    def is_good_weather(self) -> bool:
-        """
-        Determine if current weather is suitable for outdoor activities.
-
-        Returns
-        -------
-        bool
-            True if weather is good, False otherwise.
-        """
-        try:
-            weather = self.get_weather()
-            bad_conditions = [
-                "rain",
-                "storm",
-                "snow",
-                "sleet",
-                "hail",
-                "thunder",
-                "blizzard",
-                "hurricane",
-                "tornado",
-            ]
-            condition_lower = weather["condition"].lower()
-
-            for bad in bad_conditions:
-                if bad in condition_lower:
-                    return False
-
-            if weather["temperature_c"] < 5 or weather["temperature_c"] > 35:
-                return False
-
-            if weather["precipitation_mm"] > 1:
-                return False
-
-            return True
-
-        except Exception:
-            return True
-
     @property
     def current_temperature_c(self) -> int:
         """Get current temperature in Celsius."""
