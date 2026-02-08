@@ -35,7 +35,7 @@ def test_initialization_custom_config(mock_io_provider, mock_flask):
     with patch("inputs.plugins.x402_input.threading.Thread") as mock_thread:
         mock_thread.return_value = MagicMock()
 
-        config = SensorConfig(input_name="Custom Input", fee="0.05")
+        config = SensorConfig(**{"input_name": "Custom Input", "fee": "0.05"})
         sensor = X402Input(config=config)
 
         assert sensor.descriptor_for_LLM == "Custom Input"

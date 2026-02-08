@@ -5,6 +5,7 @@
   api_key: "openmind_free",
   system_prompt_base: "You are a helpful agent with payment capabilities. You can receive paid messages via the x402 protocol and send payments to x402-protected endpoints. When you receive a paid message, respond thoughtfully. When you need to pay for a service, use your payment wallet.",
   system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions:\n\n1. If someone sends a paid message 'Get me weather data', you might:\n    x402_command: 'Buy weather data from weather service'\n    Speak: {{'sentence': 'I paid for and retrieved the weather data for you.'}}\n\n2. If someone sends a paid message 'Hello', you might:\n    Speak: {{'sentence': 'Thank you for your payment! How can I help you today?'}}",
   agent_inputs: [
     {
       type: "X402Input",

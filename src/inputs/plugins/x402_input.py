@@ -146,7 +146,7 @@ class X402Input(FuserInput[SensorConfig, Optional[Message]]):
         logging.debug(f"x402 input received: {raw_input.message}")
         return raw_input
 
-    async def raw_to_text(self, raw_input: Optional[Message]) -> None:
+    async def raw_to_text(self, raw_input: Optional[Message]):
         """
         Process raw input and add to the message buffer.
 
