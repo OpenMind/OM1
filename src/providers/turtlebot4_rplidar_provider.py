@@ -61,7 +61,7 @@ class TurtleBot4RPLidarProvider:
         relevant_distance_min: float = DEFAULT_RELEVANT_DISTANCE_MIN,
         sensor_mounting_angle: float = DEFAULT_SENSOR_MOUNTING_ANGLE,
         URID: str = "",
-        rplidar_config: RPLidarConfig = RPLidarConfig(),
+        rplidar_config: Optional[RPLidarConfig] = None,
         log_file: bool = False,
     ):
         """
@@ -81,12 +81,15 @@ class TurtleBot4RPLidarProvider:
             The angle of the sensor zero relative to the way in which it's mounted
         URID: str = ""
             The URID of the robot, used for Zenoh communication
-        rplidar_config: RPLidarConfig = RPLidarConfig()
+        rplidar_config: Optional[RPLidarConfig] = None
             Configuration for the RPLidar sensor
         log_file: bool = False
             Whether to log data to a local file
         """
         logging.info("Booting TurtleBot4 RPLidar (Zenoh)")
+
+        if rplidar_config is None:
+            rplidar_config = RPLidarConfig()
 
         self.half_width_robot = half_width_robot
         self.angles_blanked = angles_blanked if angles_blanked is not None else []
