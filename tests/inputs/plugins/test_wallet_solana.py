@@ -27,7 +27,6 @@ def _make_sensor(env_overrides=None):
     ):
         sensor = WalletSolana(config=SensorConfig())
 
-    sensor._mock_client = mock_client
     return sensor
 
 
