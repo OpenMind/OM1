@@ -111,3 +111,39 @@ def test_position_property(mock_multiprocessing):
     assert position["odom_x"] == 0.0
     assert position["odom_y"] == 0.0
     assert position["moving"] is False
+
+
+def test_prometheus_register_on_init(mock_multiprocessing):
+    """Test PrometheusMonitor.register is called with correct name and metadata."""
+    with patch(
+        "providers.unitree_go2_odom_provider.PrometheusMonitor"
+    ) as mock_monitor_cls:
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        UnitreeGo2OdomProvider.reset()  # type: ignore
+        UnitreeGo2OdomProvider(channel="test")
+
+        mock_monitor.register.assert_called_once_with(
+            "UnitreeGo2OdomProvider",
+            metadata={
+                "type": "odom",
+                "category": "navigation",
+                "robot": "unitree_go2",
+            },
+        )
+
+
+def test_on_odom_processed_heartbeat(mock_multiprocessing):
+    """Test _on_odom_processed calls heartbeat with correct provider name."""
+    with patch(
+        "providers.unitree_go2_odom_provider.PrometheusMonitor"
+    ) as mock_monitor_cls:
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        UnitreeGo2OdomProvider.reset()  # type: ignore
+        provider = UnitreeGo2OdomProvider(channel="test")
+        provider._on_odom_processed()
+
+        mock_monitor.heartbeat.assert_called_with("UnitreeGo2OdomProvider")

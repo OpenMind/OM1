@@ -142,3 +142,10 @@ class TurtleBot4OdomProvider(OdomProviderBase):
         Sends a heartbeat to the Prometheus monitor.
         """
         self._monitor.heartbeat("TurtleBot4OdomProvider")
+
+    def _on_odom_error(self, error: str):
+        """
+        Hook called when an error occurs during odometry processing.
+        Reports the error to the Prometheus monitor.
+        """
+        self._monitor.report_error("TurtleBot4OdomProvider", error)

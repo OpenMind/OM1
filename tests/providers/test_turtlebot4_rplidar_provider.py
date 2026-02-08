@@ -329,3 +329,41 @@ class TestTurtleBot4RPLidarProvider:
         assert provider.rplidar_config.max_buf_meas == 50
         assert provider.rplidar_config.min_len == 8
         assert provider.rplidar_config.max_distance_mm == 8000
+
+    def test_prometheus_register_on_init(self, mock_rplidar_dependencies):
+        """Test PrometheusMonitor.register is called with correct name and metadata."""
+        with patch(
+            "providers.turtlebot4_rplidar_provider.PrometheusMonitor"
+        ) as mock_monitor_cls:
+            mock_monitor = MagicMock()
+            mock_monitor_cls.return_value = mock_monitor
+
+            TurtleBot4RPLidarProvider.reset()  # type: ignore
+            TurtleBot4RPLidarProvider(URID="test_robot")
+
+            mock_monitor.register.assert_called_once_with(
+                "TurtleBot4RPLidarProvider",
+                metadata={
+                    "type": "lidar",
+                    "category": "navigation",
+                    "robot": "turtlebot4",
+                },
+            )
+
+    def test_path_processor_heartbeat(self, mock_rplidar_dependencies):
+        """Test _path_processor calls heartbeat after processing scan data."""
+        import numpy as np
+
+        with patch(
+            "providers.turtlebot4_rplidar_provider.PrometheusMonitor"
+        ) as mock_monitor_cls:
+            mock_monitor = MagicMock()
+            mock_monitor_cls.return_value = mock_monitor
+
+            TurtleBot4RPLidarProvider.reset()  # type: ignore
+            provider = TurtleBot4RPLidarProvider(URID="test_robot")
+
+            empty_data = np.array([])
+            provider._path_processor(empty_data)
+
+            mock_monitor.heartbeat.assert_called_with("TurtleBot4RPLidarProvider")

@@ -224,3 +224,31 @@ def test_initial_values(mock_multiprocessing):
     assert provider.previous_y == 0
     assert provider.previous_z == 0
     assert provider.move_history == 0
+
+
+def test_prometheus_register_on_init(mock_multiprocessing):
+    """Test PrometheusMonitor.register is called with correct name and metadata."""
+    with patch("providers.tron_odom_provider.PrometheusMonitor") as mock_monitor_cls:
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        TronOdomProvider.reset()  # type: ignore
+        TronOdomProvider(topic="odom")
+
+        mock_monitor.register.assert_called_once_with(
+            "TronOdomProvider",
+            metadata={"type": "odom", "category": "navigation", "robot": "tron"},
+        )
+
+
+def test_on_odom_processed_heartbeat(mock_multiprocessing):
+    """Test _on_odom_processed calls heartbeat with correct provider name."""
+    with patch("providers.tron_odom_provider.PrometheusMonitor") as mock_monitor_cls:
+        mock_monitor = MagicMock()
+        mock_monitor_cls.return_value = mock_monitor
+
+        TronOdomProvider.reset()  # type: ignore
+        provider = TronOdomProvider(topic="odom")
+        provider._on_odom_processed()
+
+        mock_monitor.heartbeat.assert_called_with("TronOdomProvider")

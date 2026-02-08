@@ -116,82 +116,99 @@ class OdomProviderBase(ABC):
                 # Queue timeout or other errors
                 continue
 
-            # Handle different message types
-            # PoseWithCovarianceStamped has pose.pose, PoseStamped has just pose
-            if hasattr(pose_data.pose, "pose"):
-                # PoseWithCovarianceStamped
-                pose = pose_data.pose.pose
-            else:
-                # PoseStamped or similar
-                pose = pose_data.pose
+            try:
+                # Handle different message types
+                # PoseWithCovarianceStamped has pose.pose, PoseStamped has just pose
+                if hasattr(pose_data.pose, "pose"):
+                    # PoseWithCovarianceStamped
+                    pose = pose_data.pose.pose
+                else:
+                    # PoseStamped or similar
+                    pose = pose_data.pose
 
-            header = pose_data.header
+                header = pose_data.header
 
-            # This is the time according to the RockChip. It may be off by several seconds from UTC
-            self.odom_rockchip_ts = header.stamp.sec + header.stamp.nanosec * 1e-9
+                # This is the time according to the RockChip. It may be off by several seconds from UTC
+                self.odom_rockchip_ts = header.stamp.sec + header.stamp.nanosec * 1e-9
 
-            # The local timestamp
-            self.odom_subscriber_ts = time.time()
+                # The local timestamp
+                self.odom_subscriber_ts = time.time()
 
-            # Update body height and attitude if applicable
-            self._update_body_state(pose)
+                # Update body height and attitude if applicable
+                self._update_body_state(pose)
 
-            x = pose.orientation.x
-            y = pose.orientation.y
-            z = pose.orientation.z
-            w = pose.orientation.w
+                x = pose.orientation.x
+                y = pose.orientation.y
+                z = pose.orientation.z
+                w = pose.orientation.w
 
-            dx = (pose.position.x - self.previous_x) ** 2
-            dy = (pose.position.y - self.previous_y) ** 2
-            dz = (pose.position.z - self.previous_z) ** 2
+                dx = (pose.position.x - self.previous_x) ** 2
+                dy = (pose.position.y - self.previous_y) ** 2
+                dz = (pose.position.z - self.previous_z) ** 2
 
-            self.previous_x = pose.position.x
-            self.previous_y = pose.position.y
-            self.previous_z = pose.position.z
+                self.previous_x = pose.position.x
+                self.previous_y = pose.position.y
+                self.previous_z = pose.position.z
 
-            delta = math.sqrt(dx + dy + dz)
+                delta = math.sqrt(dx + dy + dz)
 
-            # moving? Use a decay kernel
-            self.move_history = 0.7 * delta + 0.3 * self.move_history
+                # moving? Use a decay kernel
+                self.move_history = 0.7 * delta + 0.3 * self.move_history
 
-            if delta > 0.01 or self.move_history > 0.01:
-                self.moving = True
-                logging.info(
-                    f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
+                if delta > 0.01 or self.move_history > 0.01:
+                    self.moving = True
+                    logging.info(
+                        f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
+                    )
+                else:
+                    self.moving = False
+
+                angles = self.euler_from_quaternion(x, y, z, w)
+
+                # This is in the standard robot convention
+                # yaw increases when you turn LEFT
+                # (counter-clockwise rotation about the vertical axis)
+                self.odom_yaw_m180_p180 = round(angles[2] * rad_to_deg, 4)
+
+                # We also provide a second data product, where
+                # * yaw increases when you turn RIGHT (CW), and
+                # * the range runs from 0 to 360 Deg
+                flip = -1.0 * self.odom_yaw_m180_p180
+                if flip < 0.0:
+                    flip = flip + 360.0
+
+                self.odom_yaw_0_360 = round(flip, 4)
+
+                # Current position in world frame
+                self.x = round(pose.position.x, 4)
+                self.y = round(pose.position.y, 4)
+                logging.debug(
+                    f"odom: X:{self.x} Y:{self.y} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
                 )
-            else:
-                self.moving = False
 
-            angles = self.euler_from_quaternion(x, y, z, w)
-
-            # This is in the standard robot convention
-            # yaw increases when you turn LEFT
-            # (counter-clockwise rotation about the vertical axis)
-            self.odom_yaw_m180_p180 = round(angles[2] * rad_to_deg, 4)
-
-            # We also provide a second data product, where
-            # * yaw increases when you turn RIGHT (CW), and
-            # * the range runs from 0 to 360 Deg
-            flip = -1.0 * self.odom_yaw_m180_p180
-            if flip < 0.0:
-                flip = flip + 360.0
-
-            self.odom_yaw_0_360 = round(flip, 4)
-
-            # Current position in world frame
-            self.x = round(pose.position.x, 4)
-            self.y = round(pose.position.y, 4)
-            logging.debug(
-                f"odom: X:{self.x} Y:{self.y} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
-            )
-
-            self._on_odom_processed()
+                self._on_odom_processed()
+            except Exception as e:
+                logging.error(f"Error processing odom data: {e}")
+                self._on_odom_error(str(e))
 
     def _on_odom_processed(self):
         """
         Hook called after each odometry update is processed.
         Can be overridden by subclasses to add post-processing logic
         such as health monitoring heartbeats.
+        """
+        pass
+
+    def _on_odom_error(self, error: str):
+        """
+        Hook called when an error occurs during odometry processing.
+        Can be overridden by subclasses to report errors to health
+        monitoring systems.
+
+        Parameters
+        ----------
+        error : str
+            The error message string.
         """
         pass
 

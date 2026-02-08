@@ -146,7 +146,12 @@ class UnitreeG1OdomProvider(OdomProviderBase):
     def process_odom(self):
         """
         Process the G1 SportModeState data and update the internal state.
-        This overrides the base class method to handle G1-specific message format.
+        This overrides the base class method to handle G1-specific message format
+        (SportModeState_ instead of PoseStamped/PoseWithCovarianceStamped).
+
+        NOTE: This is a full override - changes to OdomProviderBase.process_odom()
+        will NOT propagate here. If updating the base class processing logic,
+        ensure equivalent changes are applied to this method as well.
         """
         import math
 
@@ -158,66 +163,70 @@ class UnitreeG1OdomProvider(OdomProviderBase):
             except Exception:
                 continue
 
-            # Extract timestamp
-            self.odom_rockchip_ts = (
-                sport_data.stamp.sec + sport_data.stamp.nanosec * 1e-9
-            )
-            self.odom_subscriber_ts = time.time()
-
-            # Extract position from the array [x, y, z]
-            x_pos = sport_data.position[0]
-            y_pos = sport_data.position[1]
-            z_pos = sport_data.position[2]
-
-            # Calculate movement delta
-            dx = (x_pos - self.previous_x) ** 2
-            dy = (y_pos - self.previous_y) ** 2
-            dz = (z_pos - self.previous_z) ** 2
-
-            self.previous_x = x_pos
-            self.previous_y = y_pos
-            self.previous_z = z_pos
-
-            delta = math.sqrt(dx + dy + dz)
-
-            # Update moving status with decay kernel
-            self.move_history = 0.7 * delta + 0.3 * self.move_history
-
-            if delta > 0.01 or self.move_history > 0.01:
-                self.moving = True
-                logging.info(
-                    f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
+            try:
+                # Extract timestamp
+                self.odom_rockchip_ts = (
+                    sport_data.stamp.sec + sport_data.stamp.nanosec * 1e-9
                 )
-            else:
-                self.moving = False
+                self.odom_subscriber_ts = time.time()
 
-            # Extract yaw directly from IMU RPY (roll, pitch, yaw)
-            # rpy[2] is yaw in radians
-            yaw_rad = sport_data.imu_state.rpy[2]
+                # Extract position from the array [x, y, z]
+                x_pos = sport_data.position[0]
+                y_pos = sport_data.position[1]
+                z_pos = sport_data.position[2]
 
-            # Convert to degrees (standard robot convention: yaw increases CCW)
-            self.odom_yaw_m180_p180 = round(yaw_rad * rad_to_deg, 4)
+                # Calculate movement delta
+                dx = (x_pos - self.previous_x) ** 2
+                dy = (y_pos - self.previous_y) ** 2
+                dz = (z_pos - self.previous_z) ** 2
 
-            # Convert to 0-360 range (yaw increases CW)
-            flip = -1.0 * self.odom_yaw_m180_p180
-            if flip < 0.0:
-                flip = flip + 360.0
+                self.previous_x = x_pos
+                self.previous_y = y_pos
+                self.previous_z = z_pos
 
-            self.odom_yaw_0_360 = round(flip, 4)
+                delta = math.sqrt(dx + dy + dz)
 
-            # Update current position
-            self.x = round(x_pos, 4)
-            self.y = round(y_pos, 4)
-            self.z = round(z_pos, 4)
+                # Update moving status with decay kernel
+                self.move_history = 0.7 * delta + 0.3 * self.move_history
 
-            # We assume that the robot is always standing
-            self.body_attitude = RobotState.STANDING
+                if delta > 0.01 or self.move_history > 0.01:
+                    self.moving = True
+                    logging.info(
+                        f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
+                    )
+                else:
+                    self.moving = False
 
-            logging.debug(
-                f"G1 odom: X:{self.x} Y:{self.y} Z:{self.z} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
-            )
+                # Extract yaw directly from IMU RPY (roll, pitch, yaw)
+                # rpy[2] is yaw in radians
+                yaw_rad = sport_data.imu_state.rpy[2]
 
-            self._on_odom_processed()
+                # Convert to degrees (standard robot convention: yaw increases CCW)
+                self.odom_yaw_m180_p180 = round(yaw_rad * rad_to_deg, 4)
+
+                # Convert to 0-360 range (yaw increases CW)
+                flip = -1.0 * self.odom_yaw_m180_p180
+                if flip < 0.0:
+                    flip = flip + 360.0
+
+                self.odom_yaw_0_360 = round(flip, 4)
+
+                # Update current position
+                self.x = round(x_pos, 4)
+                self.y = round(y_pos, 4)
+                self.z = round(z_pos, 4)
+
+                # We assume that the robot is always standing
+                self.body_attitude = RobotState.STANDING
+
+                logging.debug(
+                    f"G1 odom: X:{self.x} Y:{self.y} Z:{self.z} W:{self.odom_yaw_m180_p180} H:{self.odom_yaw_0_360} T:{self.odom_rockchip_ts}"
+                )
+
+                self._on_odom_processed()
+            except Exception as e:
+                logging.error(f"Error processing G1 odom data: {e}")
+                self._on_odom_error(str(e))
 
     def _on_odom_processed(self):
         """
@@ -225,3 +234,10 @@ class UnitreeG1OdomProvider(OdomProviderBase):
         Sends a heartbeat to the Prometheus monitor.
         """
         self._monitor.heartbeat("UnitreeG1OdomProvider")
+
+    def _on_odom_error(self, error: str):
+        """
+        Hook called when an error occurs during odometry processing.
+        Reports the error to the Prometheus monitor.
+        """
+        self._monitor.report_error("UnitreeG1OdomProvider", error)

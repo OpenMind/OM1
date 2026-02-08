@@ -240,3 +240,37 @@ class TestUnitreeG1OdomProvider:
             provider.start()
 
         assert "G1 Odom Provider is already running" in caplog.text
+
+    def test_prometheus_register_on_init(self, mock_multiprocessing):
+        """Test PrometheusMonitor.register is called with correct name and metadata."""
+        with patch(
+            "providers.unitree_g1_odom_provider.PrometheusMonitor"
+        ) as mock_monitor_cls:
+            mock_monitor = MagicMock()
+            mock_monitor_cls.return_value = mock_monitor
+
+            UnitreeG1OdomProvider.reset()  # type: ignore
+            UnitreeG1OdomProvider(channel="test_channel")
+
+            mock_monitor.register.assert_called_once_with(
+                "UnitreeG1OdomProvider",
+                metadata={
+                    "type": "odom",
+                    "category": "navigation",
+                    "robot": "unitree_g1",
+                },
+            )
+
+    def test_on_odom_processed_heartbeat(self, mock_multiprocessing):
+        """Test _on_odom_processed calls heartbeat with correct provider name."""
+        with patch(
+            "providers.unitree_g1_odom_provider.PrometheusMonitor"
+        ) as mock_monitor_cls:
+            mock_monitor = MagicMock()
+            mock_monitor_cls.return_value = mock_monitor
+
+            UnitreeG1OdomProvider.reset()  # type: ignore
+            provider = UnitreeG1OdomProvider(channel="test_channel")
+            provider._on_odom_processed()
+
+            mock_monitor.heartbeat.assert_called_with("UnitreeG1OdomProvider")

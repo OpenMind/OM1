@@ -164,3 +164,10 @@ class UnitreeGo2OdomProvider(OdomProviderBase):
         Sends a heartbeat to the Prometheus monitor.
         """
         self._monitor.heartbeat("UnitreeGo2OdomProvider")
+
+    def _on_odom_error(self, error: str):
+        """
+        Hook called when an error occurs during odometry processing.
+        Reports the error to the Prometheus monitor.
+        """
+        self._monitor.report_error("UnitreeGo2OdomProvider", error)

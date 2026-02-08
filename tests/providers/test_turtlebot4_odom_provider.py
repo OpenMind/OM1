@@ -232,3 +232,37 @@ class TestTurtleBot4OdomProvider:
             provider.start()
 
         assert "TurtleBot4 Odom Provider is already running" in caplog.text
+
+    def test_prometheus_register_on_init(self, mock_multiprocessing):
+        """Test PrometheusMonitor.register is called with correct name and metadata."""
+        with patch(
+            "providers.turtlebot4_odom_provider.PrometheusMonitor"
+        ) as mock_monitor_cls:
+            mock_monitor = MagicMock()
+            mock_monitor_cls.return_value = mock_monitor
+
+            TurtleBot4OdomProvider.reset()  # type: ignore
+            TurtleBot4OdomProvider(URID="test_robot")
+
+            mock_monitor.register.assert_called_once_with(
+                "TurtleBot4OdomProvider",
+                metadata={
+                    "type": "odom",
+                    "category": "navigation",
+                    "robot": "turtlebot4",
+                },
+            )
+
+    def test_on_odom_processed_heartbeat(self, mock_multiprocessing):
+        """Test _on_odom_processed calls heartbeat with correct provider name."""
+        with patch(
+            "providers.turtlebot4_odom_provider.PrometheusMonitor"
+        ) as mock_monitor_cls:
+            mock_monitor = MagicMock()
+            mock_monitor_cls.return_value = mock_monitor
+
+            TurtleBot4OdomProvider.reset()  # type: ignore
+            provider = TurtleBot4OdomProvider(URID="test_robot")
+            provider._on_odom_processed()
+
+            mock_monitor.heartbeat.assert_called_with("TurtleBot4OdomProvider")
