@@ -134,19 +134,14 @@
           "connector": "avatar"
         },
         {
-          "name": "alert_family",
-          "llm_label": "notify_caregiver",
-          "connector": "notification_service",
-          "config": {
-            "priority": "normal",
-            "channel": "family_contacts"
-          }
+          "name": "move_go2_action",
+          "llm_label": "gentle_move",
+          "connector": "unitree_sdk"
         }
       ],
 
       "backgrounds": [
-        { "type": "UnitreeGo2State" },
-        { "type": "ScheduledReminders" }
+        { "type": "UnitreeGo2State" }
       ],
 
       "lifecycle_hooks": [
@@ -219,14 +214,9 @@
           "connector": "avatar"
         },
         {
-          "name": "emergency_alert",
-          "llm_label": "emergency_alert",
-          "connector": "emergency_notification",
-          "config": {
-            "priority": "critical",
-            "channels": ["family_contacts", "emergency_services"],
-            "escalation_timeout": 30
-          }
+          "name": "move_go2_action",
+          "llm_label": "stay_near",
+          "connector": "unitree_sdk"
         }
       ],
 
@@ -426,7 +416,7 @@
         {
           "name": "move_go2_autonomy",
           "llm_label": "move",
-          "connector": "unitree_sdk_advance"
+          "connector": "unitree_om_path_sdk"
         }
       ],
 
@@ -483,13 +473,9 @@
           "connector": "avatar"
         },
         {
-          "name": "emergency_alert",
-          "llm_label": "night_emergency",
-          "connector": "emergency_notification",
-          "config": {
-            "priority": "critical",
-            "channels": ["family_contacts"]
-          }
+          "name": "move_go2_action",
+          "llm_label": "gentle_move",
+          "connector": "unitree_sdk"
         }
       ],
 
