@@ -24,23 +24,23 @@ import dotenv
 import typer
 
 # Bootstrap must be imported first to configure sys.path for zenoh_msgs conflict
-import cli._bootstrap  # noqa: F401
-from cli import __version__
-from cli.commands.doctor import doctor
-from cli.commands.env import env
-from cli.commands.info import info
-from cli.commands.init import init
-from cli.commands.lint import lint
-from cli.commands.list_cmd import list_configs
-from cli.commands.modes import modes
-from cli.commands.restart import restart
-from cli.commands.run import run
-from cli.commands.setup import setup
-from cli.commands.status import status
-from cli.commands.stop import stop
-from cli.commands.test import test
-from cli.commands.validate import validate_cmd
-from cli.utils.output import console
+import om1_cli._bootstrap  # noqa: F401
+from om1_cli import __version__
+from om1_cli.commands.doctor import doctor
+from om1_cli.commands.env import env
+from om1_cli.commands.info import info
+from om1_cli.commands.init import init
+from om1_cli.commands.lint import lint
+from om1_cli.commands.list_cmd import list_configs
+from om1_cli.commands.modes import modes
+from om1_cli.commands.restart import restart
+from om1_cli.commands.run import run
+from om1_cli.commands.setup import setup
+from om1_cli.commands.status import status
+from om1_cli.commands.stop import stop
+from om1_cli.commands.test import test
+from om1_cli.commands.validate import validate_cmd
+from om1_cli.utils.output import console
 
 app = typer.Typer(
     name="om1",

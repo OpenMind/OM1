@@ -7,7 +7,7 @@ from typing import Generator
 import pytest
 from typer.testing import CliRunner as _CliRunner
 
-from cli.main import app
+from om1_cli.main import app
 
 
 def strip_ansi(text: str) -> str:
@@ -127,8 +127,8 @@ def temp_config_dir(tmp_path: Path) -> Generator[Path, None, None]:
 @pytest.fixture
 def mock_config_dir(temp_config_dir: Path, monkeypatch):
     """Mock the config directory to use temp directory."""
-    from cli.commands import init as init_module
-    from cli.utils import config as config_module
+    from om1_cli.commands import init as init_module
+    from om1_cli.utils import config as config_module
 
     monkeypatch.setattr(config_module, "get_config_dir", lambda: temp_config_dir)
     monkeypatch.setattr(init_module, "get_config_dir", lambda: temp_config_dir)

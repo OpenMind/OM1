@@ -4,8 +4,8 @@ from typing import Optional
 
 import typer
 
-from cli.utils.config import get_config_dir
-from cli.utils.output import console, print_error, print_info, print_success
+from om1_cli.utils.config import get_config_dir
+from om1_cli.utils.output import console, print_error, print_info, print_success
 
 BASIC_TEMPLATE = """{{
   version: "v1.0.1",

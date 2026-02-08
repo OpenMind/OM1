@@ -198,12 +198,12 @@ def test_init_command() -> list[TestResult]:
 def test_lint_command() -> list[TestResult]:
     """Test lint command variations."""
     return [
-        run_command(["uv", "run", "om1", "lint", "--check", "src/cli/__init__.py"]),
+        run_command(["uv", "run", "om1", "lint", "--check", "src/om1_cli/__init__.py"]),
         run_command(
-            ["uv", "run", "om1", "lint", "--check", "--verbose", "src/cli/__init__.py"]
+            ["uv", "run", "om1", "lint", "--check", "--verbose", "src/om1_cli/__init__.py"]
         ),
         run_command(
-            ["uv", "run", "om1", "lint", "--check", "--format", "src/cli/__init__.py"]
+            ["uv", "run", "om1", "lint", "--check", "--format", "src/om1_cli/__init__.py"]
         ),
         run_command(
             [
@@ -213,11 +213,11 @@ def test_lint_command() -> list[TestResult]:
                 "lint",
                 "--check",
                 "--type-check",
-                "src/cli/__init__.py",
+                "src/om1_cli/__init__.py",
             ]
         ),
         run_command(
-            ["uv", "run", "om1", "lint", "--check", "--all", "src/cli/__init__.py"]
+            ["uv", "run", "om1", "lint", "--check", "--all", "src/om1_cli/__init__.py"]
         ),
         run_command(["uv", "run", "om1", "lint", "nonexistent_path"]),
     ]

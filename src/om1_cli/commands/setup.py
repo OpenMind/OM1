@@ -7,9 +7,9 @@ from typing import Optional
 import typer
 from rich.panel import Panel
 
-from cli.utils.config import list_configs
-from cli.utils.output import console, print_error, print_info, print_success
-from cli.utils.system import (
+from om1_cli.utils.config import list_configs
+from om1_cli.utils.output import console, print_error, print_info, print_success
+from om1_cli.utils.system import (
     CheckStatus,
     get_required_api_keys_for_config,
     get_required_extras_for_config,
@@ -198,7 +198,7 @@ def _setup_environment(config_name: Optional[str]) -> None:
 
     # Create .env.example if it doesn't exist
     if not env_example_path.exists():
-        from cli.commands.env import ENV_TEMPLATE
+        from om1_cli.commands.env import ENV_TEMPLATE
 
         env_example_path.write_text(ENV_TEMPLATE)
         print_info("Created .env.example")

@@ -8,8 +8,8 @@ import typer
 from rich.panel import Panel
 from rich.table import Table
 
-from cli.utils.config import is_mode_aware_config, resolve_config_path
-from cli.utils.output import console, print_error, print_warning
+from om1_cli.utils.config import is_mode_aware_config, resolve_config_path
+from om1_cli.utils.output import console, print_error, print_warning
 
 
 def modes(

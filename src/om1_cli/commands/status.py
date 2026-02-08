@@ -6,8 +6,8 @@ import typer
 from rich.live import Live
 from rich.table import Table
 
-from cli.utils.output import console, print_info
-from cli.utils.process import get_running_agents
+from om1_cli.utils.output import console, print_info
+from om1_cli.utils.process import get_running_agents
 
 
 def _build_status_table() -> tuple[Table, int]:

@@ -7,8 +7,8 @@ from typing import List, Optional
 
 import typer
 
-from cli.utils.config import get_src_dir
-from cli.utils.output import (
+from om1_cli.utils.config import get_src_dir
+from om1_cli.utils.output import (
     console,
     print_error,
     print_info,
@@ -70,7 +70,7 @@ def lint(
         om1 lint --fix              # Fix lint issues
         om1 lint --format           # Lint + format
         om1 lint --all              # Lint + format + type-check
-        om1 lint src/cli/           # Lint specific directory
+        om1 lint src/om1_cli/       # Lint specific directory
         om1 lint --check            # Check mode (CI friendly)
     """
     project_root = get_src_dir().parent

@@ -7,8 +7,8 @@ from typing import List, Optional
 
 import typer
 
-from cli.utils.config import get_src_dir
-from cli.utils.output import console, print_error, print_info, print_success
+from om1_cli.utils.config import get_src_dir
+from om1_cli.utils.output import console, print_error, print_info, print_success
 
 
 def test(

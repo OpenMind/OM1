@@ -4,12 +4,12 @@ import typer
 from rich.panel import Panel
 from rich.table import Table
 
-from cli.utils.config import (
+from om1_cli.utils.config import (
     is_mode_aware_config,
     load_config_raw,
     resolve_config_path,
 )
-from cli.utils.output import console, print_error
+from om1_cli.utils.output import console, print_error
 
 
 def info(

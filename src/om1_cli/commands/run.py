@@ -7,9 +7,9 @@ from typing import Optional
 
 import typer
 
-from cli.utils.config import get_config_dir
-from cli.utils.output import console, print_error, print_info, print_warning
-from cli.utils.process import (
+from om1_cli.utils.config import get_config_dir
+from om1_cli.utils.output import console, print_error, print_info, print_warning
+from om1_cli.utils.process import (
     is_agent_running,
     register_cleanup_handler,
     remove_pid_file,
