@@ -2689,6 +2689,7 @@ dependencies = [
     { name = "uvicorn" },
     { name = "web3" },
     { name = "websockets" },
+    { name = "x402" },
 ]
 
 [package.optional-dependencies]
@@ -2751,6 +2752,7 @@ requires-dist = [
     { name = "uvicorn", specifier = "==0.34.0" },
     { name = "web3", specifier = "==7.6.0" },
     { name = "websockets", specifier = "==13.1" },
+    { name = "x402", specifier = ">=2.0.0" },
 ]
 provides-extras = ["dds", "macos"]
 
@@ -5055,6 +5057,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/e1/0122853035b40b3f333bbb25f1939fc1045e21dd518f7f0922b60c156f7c/wrapt-1.17.2-cp313-cp313t-win32.whl", hash = "sha256:13e6afb7fe71fe7485a4550a8844cc9ffbe263c0f1a1eea569bc7091d4898555", size = 37986, upload-time = "2025-01-14T10:35:00.498Z" },
     { url = "https://files.pythonhosted.org/packages/09/5e/1655cf481e079c1f22d0cabdd4e51733679932718dc23bf2db175f329b76/wrapt-1.17.2-cp313-cp313t-win_amd64.whl", hash = "sha256:eaf675418ed6b3b31c7a989fd007fa7c3be66ce14e5c3b27336383604c9da85c", size = 40750, upload-time = "2025-01-14T10:35:03.378Z" },
     { url = "https://files.pythonhosted.org/packages/2d/82/f56956041adef78f849db6b289b282e72b55ab8045a75abad81898c28d19/wrapt-1.17.2-py3-none-any.whl", hash = "sha256:b18f2d1533a71f069c7f82d524a52599053d4c7166e9dd374ae2136b7f40f7c8", size = 23594, upload-time = "2025-01-14T10:35:44.018Z" },
+]
+
+[[package]]
+name = "x402"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "typing-extensions", version = "4.12.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/01/e1/b3d1c79afa25513d51ae1d9379c178eb2b4f1eb8b1b73a4207cfba7a91ea/x402-2.0.0.tar.gz", hash = "sha256:ba458b81f3889c0de5f140549998e32b1dfac36eee15f52ebc8035bb7c6c4958", size = 866901, upload-time = "2026-01-22T00:51:08.382Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/82/fb15d27f1cf45d2e3fee17340672d38631df482f1be11029d5b4c2f72097/x402-2.0.0-py3-none-any.whl", hash = "sha256:9db08530b9daa0a00d8505f7cd0bddf45a27ff8948d11bb9961d324d10b91a50", size = 917873, upload-time = "2026-01-22T00:51:06.943Z" },
 ]
 
 [[package]]

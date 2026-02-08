@@ -1,0 +1,46 @@
+{
+  version: "v1.0.2",
+  hertz: 0.1,
+  name: "x402_test",
+  api_key: "openmind_free",
+  system_prompt_base: "You are a helpful agent with payment capabilities. You can receive paid messages via the x402 protocol and send payments to x402-protected endpoints. When you receive a paid message, respond thoughtfully. When you need to pay for a service, use your payment wallet.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  agent_inputs: [
+    {
+      type: "X402Input",
+      config: {
+        input_name: "Paid Messages",
+        fee: "0.01",
+        pay_to: "YOUR_WALLET_ADDRESS",
+        host: "localhost",
+        port: 8765,
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "PayBot",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "x402_command",
+      llm_label: "Your payment wallet, which allows you to pay for things you would like to buy",
+      implementation: "passthrough",
+      connector: "x402",
+      config: {
+        private_key: "YOUR_PRIVATE_KEY",
+        x402_endpoint: "https://example.com/x402",
+        network: "base-sepolia",
+      },
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+    },
+  ],
+}
