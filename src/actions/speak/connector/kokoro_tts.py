@@ -132,9 +132,9 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             if self.audio_pub:
                 self.audio_pub.put(self.audio_status.serialize())
 
-            logging.info("Elevenlabs TTS Zenoh client opened")
+            logging.info("Kokoro TTS Zenoh client opened")
         except Exception as e:
-            logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
+            logging.error(f"Error opening Kokoro TTS Zenoh client: {e}")
 
         # Initialize Kokoro TTS Provider
         self.tts = KokoroTTSProvider(
