@@ -8,8 +8,8 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
-from providers.odom_provider import OdomProvider, RobotState
-from providers.rplidar_provider import RPLidarProvider
+from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
+from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 
@@ -62,7 +62,7 @@ class MoveUnitreeRPLidarSDKConnector(
         self.movement_attempt_limit = 15
         self.gap_previous = 0
 
-        self.lidar = RPLidarProvider()
+        self.lidar = UnitreeGo2RPLidarProvider()
         self.unitree_go2_state = UnitreeGo2StateProvider()
 
         # create sport client
@@ -78,7 +78,7 @@ class MoveUnitreeRPLidarSDKConnector(
             logging.error(f"Error initializing Unitree sport client: {e}")
 
         unitree_ethernet = self.config.unitree_ethernet
-        self.odom = OdomProvider(channel=unitree_ethernet)
+        self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
         logging.info(f"Autonomy Odom Provider: {self.odom}")
 
     async def connect(self, output_interface: MoveInput) -> None:
