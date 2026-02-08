@@ -140,9 +140,15 @@ class WeatherProvider:
             If the API request fails.
         """
         location_param = "" if self.location == "auto" else self.location
-        url = f"https://wttr.in/{location_param}?format=j1"
+        base_path = f"{location_param}?format=j1"
 
-        response = requests.get(url, timeout=self.DEFAULT_TIMEOUT)
+        try:
+            url = f"https://wttr.in/{base_path}"
+            response = requests.get(url, timeout=self.DEFAULT_TIMEOUT)
+        except requests.exceptions.ConnectionError:
+            logging.warning("HTTPS connection failed, falling back to HTTP")
+            url = f"http://wttr.in/{base_path}"
+            response = requests.get(url, timeout=self.DEFAULT_TIMEOUT)
         response.raise_for_status()
 
         data = response.json()
