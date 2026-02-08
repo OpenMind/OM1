@@ -1,3 +1,4 @@
+import math
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -329,3 +330,59 @@ class TestTurtleBot4RPLidarProvider:
         assert provider.rplidar_config.max_buf_meas == 50
         assert provider.rplidar_config.min_len == 8
         assert provider.rplidar_config.max_distance_mm == 8000
+
+
+class TestDistancePointToLineSegment:
+    """Test cases for distance_point_to_line_segment floating-point safety."""
+
+    @pytest.fixture
+    def provider(self, mock_rplidar_dependencies):
+        return TurtleBot4RPLidarProvider()
+
+    def test_normal_line_segment(self, provider):
+        result = provider.distance_point_to_line_segment(
+            px=0.0, py=1.0, x1=0.0, y1=0.0, x2=2.0, y2=0.0
+        )
+        assert result == pytest.approx(1.0, rel=1e-9)
+
+    def test_point_on_line_segment(self, provider):
+        result = provider.distance_point_to_line_segment(
+            px=1.0, py=0.0, x1=0.0, y1=0.0, x2=2.0, y2=0.0
+        )
+        assert result == pytest.approx(0.0, abs=1e-9)
+
+    def test_zero_length_segment(self, provider):
+        result = provider.distance_point_to_line_segment(
+            px=3.0, py=4.0, x1=0.0, y1=0.0, x2=0.0, y2=0.0
+        )
+        assert result == pytest.approx(5.0, rel=1e-9)
+
+    def test_near_zero_segment_no_crash(self, provider):
+        result = provider.distance_point_to_line_segment(
+            px=1.0, py=1.0, x1=0.0, y1=0.0, x2=1e-16, y2=0.0
+        )
+        assert not math.isnan(result)
+        assert not math.isinf(result)
+        assert result == pytest.approx(math.sqrt(2), rel=0.01)
+
+    def test_extremely_small_segment_no_crash(self, provider):
+        result = provider.distance_point_to_line_segment(
+            px=1.0, py=1.0, x1=0.0, y1=0.0, x2=1e-200, y2=1e-200
+        )
+        assert not math.isnan(result)
+        assert not math.isinf(result)
+        expected = math.sqrt(1.0**2 + 1.0**2)
+        assert result == pytest.approx(expected, rel=0.01)
+
+    def test_diagonal_line_segment(self, provider):
+        result = provider.distance_point_to_line_segment(
+            px=0.0, py=1.0, x1=0.0, y1=0.0, x2=1.0, y2=1.0
+        )
+        expected = math.sqrt(2) / 2
+        assert result == pytest.approx(expected, rel=1e-6)
+
+    def test_point_beyond_segment_end(self, provider):
+        result = provider.distance_point_to_line_segment(
+            px=5.0, py=0.0, x1=0.0, y1=0.0, x2=2.0, y2=0.0
+        )
+        assert result == pytest.approx(3.0, rel=1e-9)
