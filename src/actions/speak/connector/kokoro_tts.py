@@ -94,7 +94,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         self.silence_rate = self.config.silence_rate
         self.silence_counter = 0
 
-        # IO Provider - initialize only once
+        # IO Provider
         self.io_provider = IOProvider()
 
         # Zenoh configuration
