@@ -200,10 +200,26 @@ def test_lint_command() -> list[TestResult]:
     return [
         run_command(["uv", "run", "om1", "lint", "--check", "src/om1_cli/__init__.py"]),
         run_command(
-            ["uv", "run", "om1", "lint", "--check", "--verbose", "src/om1_cli/__init__.py"]
+            [
+                "uv",
+                "run",
+                "om1",
+                "lint",
+                "--check",
+                "--verbose",
+                "src/om1_cli/__init__.py",
+            ]
         ),
         run_command(
-            ["uv", "run", "om1", "lint", "--check", "--format", "src/om1_cli/__init__.py"]
+            [
+                "uv",
+                "run",
+                "om1",
+                "lint",
+                "--check",
+                "--format",
+                "src/om1_cli/__init__.py",
+            ]
         ),
         run_command(
             [
