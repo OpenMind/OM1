@@ -4,6 +4,7 @@ Tests for weather_provider.
 This module contains tests for the WeatherProvider class.
 """
 
+import importlib
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -21,6 +22,13 @@ def mock_singleton(cls):
 
 sys.modules["providers.singleton"] = MagicMock()
 sys.modules["providers.singleton"].singleton = mock_singleton
+
+
+@pytest.fixture(autouse=True)
+def reload_weather_provider():
+    """Reload weather_provider module before each test to reset state."""
+    if "providers.weather_provider" in sys.modules:
+        importlib.reload(sys.modules["providers.weather_provider"])
 
 
 class TestWeatherProviderInitialization:
