@@ -32,7 +32,7 @@
       implementation: "passthrough",
       connector: "x402",
       config: {
-        private_key: "YOUR_PRIVATE_KEY",
+        private_key: "YOUR_PRIVATE_KEY",  // pragma: allowlist secret
         x402_endpoint: "https://example.com/x402",
         network: "base-sepolia",
       },
