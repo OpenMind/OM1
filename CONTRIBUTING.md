@@ -73,12 +73,6 @@ Before contributing, please take a moment to read through the following guidelin
     pre-commit run --all-files
     ```
 
-    After you have updated the core documentation, make sure to run:
-    ```bash
-    chmod +x scripts/mintlify.sh # first time only
-    ./scripts/mintlify.sh
-    ```
-
     To unit test the system, run
     ```bash
     uv run pytest --log-cli-level=DEBUG -s
