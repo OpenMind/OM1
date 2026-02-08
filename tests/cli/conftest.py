@@ -43,7 +43,7 @@ class StrippedResult:
 class CliRunner(_CliRunner):
     """CLI runner that strips ANSI codes from output for reliable assertions."""
 
-    def invoke(self, *args, **kwargs):
+    def invoke(self, *args, **kwargs):  # type: ignore[override]
         """Invoke CLI and return result with ANSI codes stripped."""
         result = super().invoke(*args, **kwargs)
         return StrippedResult(result)
