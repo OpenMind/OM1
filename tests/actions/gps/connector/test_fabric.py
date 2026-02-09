@@ -176,3 +176,63 @@ class TestGPSFabricConnector:
             connector.send_coordinates()
 
             mock_requests.post.assert_called_once()
+
+    def test_send_coordinates_partial_none_latitude(self, default_config):
+        """Test send_coordinates returns early when latitude is None."""
+        with (
+            patch("actions.gps.connector.fabric.IOProvider") as mock_io_provider_class,
+            patch("actions.gps.connector.fabric.requests") as mock_requests,
+        ):
+            mock_io_instance = Mock()
+            mock_io_instance.get_dynamic_variable.side_effect = lambda x: {
+                "latitude": None,
+                "longitude": -122.4194,
+                "yaw_deg": 90.0,
+            }.get(x)
+            mock_io_provider_class.return_value = mock_io_instance
+
+            connector = GPSFabricConnector(default_config)
+            result = connector.send_coordinates()
+
+            assert result is None
+            mock_requests.post.assert_not_called()
+
+    def test_send_coordinates_partial_none_longitude(self, default_config):
+        """Test send_coordinates returns early when longitude is None."""
+        with (
+            patch("actions.gps.connector.fabric.IOProvider") as mock_io_provider_class,
+            patch("actions.gps.connector.fabric.requests") as mock_requests,
+        ):
+            mock_io_instance = Mock()
+            mock_io_instance.get_dynamic_variable.side_effect = lambda x: {
+                "latitude": 37.7749,
+                "longitude": None,
+                "yaw_deg": 90.0,
+            }.get(x)
+            mock_io_provider_class.return_value = mock_io_instance
+
+            connector = GPSFabricConnector(default_config)
+            result = connector.send_coordinates()
+
+            assert result is None
+            mock_requests.post.assert_not_called()
+
+    def test_send_coordinates_partial_none_yaw(self, default_config):
+        """Test send_coordinates returns early when yaw is None."""
+        with (
+            patch("actions.gps.connector.fabric.IOProvider") as mock_io_provider_class,
+            patch("actions.gps.connector.fabric.requests") as mock_requests,
+        ):
+            mock_io_instance = Mock()
+            mock_io_instance.get_dynamic_variable.side_effect = lambda x: {
+                "latitude": 37.7749,
+                "longitude": -122.4194,
+                "yaw_deg": None,
+            }.get(x)
+            mock_io_provider_class.return_value = mock_io_instance
+
+            connector = GPSFabricConnector(default_config)
+            result = connector.send_coordinates()
+
+            assert result is None
+            mock_requests.post.assert_not_called()
