@@ -1,18 +1,7 @@
-"""
-Unit tests for runtime logging module (src/runtime/logging.py).
-"""
-
 import logging
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
-current_file_dir = Path(__file__).resolve().parent
-project_root = current_file_dir.parent
-src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
-
-from src.runtime.logging import (  # noqa: E402
+from runtime.logging import (
     LoggingConfig,
     get_logging_config,
     setup_logging,
@@ -53,10 +42,8 @@ class TestSetupLogging:
 
     def test_logs_to_file(self):
         with (
-            patch("src.runtime.logging.os.makedirs"),
-            patch(
-                "src.runtime.logging.time.strftime", return_value="2023-01-01_12-00-00"
-            ),
+            patch("runtime.logging.os.makedirs"),
+            patch("runtime.logging.time.strftime", return_value="2023-01-01_12-00-00"),
         ):
             setup_logging("test_config", log_to_file=True)
             logger = logging.getLogger()
@@ -86,10 +73,8 @@ class TestGetLoggingConfig:
 
     def test_with_file_handler(self):
         with (
-            patch("src.runtime.logging.os.makedirs"),
-            patch(
-                "src.runtime.logging.time.strftime", return_value="2023-01-01_12-00-00"
-            ),
+            patch("runtime.logging.os.makedirs"),
+            patch("runtime.logging.time.strftime", return_value="2023-01-01_12-00-00"),
         ):
             setup_logging("test_config", log_to_file=True)
             config = get_logging_config()
