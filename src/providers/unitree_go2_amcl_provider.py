@@ -78,6 +78,12 @@ class UnitreeGo2AMCLProvider(ZenohListenerProvider):
     def start(self, message_callback: Optional[Callable] = None):
         """
         Start the AMCL Provider by registering the message callback.
+
+        Parameters
+        ----------
+        message_callback : Optional[Callable]
+            Optional callback function for message processing. Not used directly
+            but kept for interface compatibility.
         """
         if not self.running:
             self.register_message_callback(self.amcl_message_callback)
