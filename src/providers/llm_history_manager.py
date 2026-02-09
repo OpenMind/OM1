@@ -1,6 +1,9 @@
 import asyncio
 import functools
+import json
 import logging
+import os
+import re
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
@@ -31,8 +34,12 @@ ACTION_MAP = {
 
 
 class LLMHistoryManager:
-    """
-    Manages the history of interactions for LLMs, including summarization.
+    """Manages the history of interactions for LLMs.
+
+    Includes:
+    - in-memory history buffer
+    - optional summarization
+    - optional persistence to disk (Issue #985)
     """
 
     def __init__(
@@ -87,6 +94,96 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # Optional history persistence
+        self._persistence_enabled = bool(
+            getattr(self.config, "history_persistence_enabled", False)
+        )
+        self._persistence_path = str(
+            getattr(self.config, "history_persistence_path", "~/.openmind/history")
+        )
+        if self._persistence_enabled:
+            self._load_history_from_disk()
+
+    def _safe_agent_filename(self) -> str:
+        agent = (self.agent_name or "agent").strip() or "agent"
+        # replace anything non alnum/dash/underscore/dot with underscore
+        agent = re.sub(r"[^A-Za-z0-9._-]+", "_", agent)
+        return f"{agent}.json"
+
+    def _history_file_path(self) -> str:
+        base_dir = os.path.expanduser(self._persistence_path)
+        return os.path.join(base_dir, self._safe_agent_filename())
+
+    def _load_history_from_disk(self) -> None:
+        """Load conversation history from disk if present.
+
+        This is best-effort: on any error/corruption, we log and start fresh.
+        """
+        try:
+            base_dir = os.path.expanduser(self._persistence_path)
+            os.makedirs(base_dir, mode=0o755, exist_ok=True)
+
+            path = self._history_file_path()
+            if not os.path.exists(path):
+                return
+
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if not isinstance(data, list):
+                logging.warning("History persistence: invalid format; expected list")
+                return
+
+            loaded: List[ChatMessage] = []
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                role = item.get("role")
+                content = item.get("content")
+                if isinstance(role, str) and isinstance(content, str):
+                    loaded.append(ChatMessage(role=role, content=content))
+
+            self.history = loaded
+
+            # Enforce history_length after load
+            target_length = getattr(self.config, "history_length", None)
+            if isinstance(target_length, int) and target_length >= 0:
+                if target_length == 0:
+                    self.history = []
+                elif len(self.history) > target_length:
+                    self.history = self.history[-target_length:]
+
+            logging.info(
+                f"History persistence: loaded {len(self.history)} messages from {path}"
+            )
+        except Exception as e:
+            logging.warning(
+                f"History persistence: failed to load history ({type(e).__name__}: {e}); starting fresh"
+            )
+            self.history = []
+
+    def _save_history_to_disk(self) -> None:
+        """Persist conversation history to disk (atomic best-effort)."""
+        try:
+            if not self._persistence_enabled:
+                return
+
+            base_dir = os.path.expanduser(self._persistence_path)
+            os.makedirs(base_dir, mode=0o755, exist_ok=True)
+
+            path = self._history_file_path()
+            tmp = path + ".tmp"
+
+            data = [{"role": m.role, "content": m.content} for m in self.history]
+
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, path)
+        except Exception as e:
+            logging.warning(
+                f"History persistence: failed to save history ({type(e).__name__}: {e})"
+            )
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -368,6 +465,10 @@ class LLMHistoryManager:
                         await self.history_manager.start_summary_task(
                             self.history_manager.history
                         )
+
+                    # Persist history after mutation (best-effort)
+                    if getattr(self.history_manager, "_persistence_enabled", False):
+                        self.history_manager._save_history_to_disk()
                 else:
                     if (
                         self.history_manager.history
@@ -377,6 +478,10 @@ class LLMHistoryManager:
                             "LLM response failed, removing unpaired user message"
                         )
                         self.history_manager.history.pop()
+
+                    # Persist history even on failure cleanup (best-effort)
+                    if getattr(self.history_manager, "_persistence_enabled", False):
+                        self.history_manager._save_history_to_disk()
 
                 self.history_manager.frame_index += 1
 

@@ -51,6 +51,17 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+
+    # Conversation history persistence (Issue #985)
+    history_persistence_enabled: bool = Field(
+        default=False,
+        description="Persist LLM conversation history to disk and reload on startup",
+    )
+    history_persistence_path: str = Field(
+        default="~/.openmind/history",
+        description="Directory for persisted conversation histories",
+    )
+
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:

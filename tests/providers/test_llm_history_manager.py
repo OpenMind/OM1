@@ -45,6 +45,71 @@ def history_manager(llm_config, openai_client):
     return LLMHistoryManager(llm_config, openai_client)
 
 
+def test_history_persistence_save_and_reload(tmp_path):
+    """History should be saved to disk and reloaded on new manager init."""
+
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 10
+    config.agent_name = "PersistBot"
+    config.history_persistence_enabled = True
+    config.history_persistence_path = str(tmp_path)
+
+    client = MagicMock(spec=openai.AsyncClient)
+
+    hm1 = LLMHistoryManager(config, client)
+    hm1.history = [
+        ChatMessage(role="user", content="hello"),
+        ChatMessage(role="assistant", content="hi"),
+    ]
+    hm1._save_history_to_disk()
+
+    hm2 = LLMHistoryManager(config, client)
+    assert [(m.role, m.content) for m in hm2.history] == [
+        ("user", "hello"),
+        ("assistant", "hi"),
+    ]
+
+
+def test_history_persistence_respects_history_length(tmp_path):
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 1
+    config.agent_name = "TrimBot"
+    config.history_persistence_enabled = True
+    config.history_persistence_path = str(tmp_path)
+
+    client = MagicMock(spec=openai.AsyncClient)
+
+    hm1 = LLMHistoryManager(config, client)
+    hm1.history = [
+        ChatMessage(role="user", content="m1"),
+        ChatMessage(role="assistant", content="m2"),
+    ]
+    hm1._save_history_to_disk()
+
+    hm2 = LLMHistoryManager(config, client)
+    assert len(hm2.history) == 1
+    assert hm2.history[0].content == "m2"
+
+
+def test_history_persistence_corruption_recovery(tmp_path):
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 10
+    config.agent_name = "CorruptBot"
+    config.history_persistence_enabled = True
+    config.history_persistence_path = str(tmp_path)
+
+    # Write a corrupted history file
+    history_file = tmp_path / "CorruptBot.json"
+    history_file.write_text("{not valid json]", encoding="utf-8")
+
+    client = MagicMock(spec=openai.AsyncClient)
+    hm = LLMHistoryManager(config, client)
+    assert hm.history == []
+
+
 @pytest.mark.asyncio
 async def test_summarize_messages_success(history_manager):
     # Create test messages
