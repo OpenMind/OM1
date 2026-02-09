@@ -1,5 +1,5 @@
 {
-  version: "v1.0.1",
+  version: "v1.0.2",
   hertz: 1,
   unitree_ethernet: "lo",
   name: "bits",
@@ -15,7 +15,7 @@
   6. If you sense something on your right, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning left to avoid the object on my right'}}",
   agent_inputs: [
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
     },
     {
       type: "UnitreeGo2Battery",
@@ -41,7 +41,7 @@
     {
       name: "move_go2_autonomy",
       llm_label: "move",
-      connector: "unitree_sdk_advance",
+      connector: "unitree_om_path_sdk",
     },
     {
       name: "speak",
