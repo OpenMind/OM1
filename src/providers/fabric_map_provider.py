@@ -22,17 +22,25 @@ class RFData:
         Unix timestamp of the scan.
     address : str
         Bluetooth address of the device.
-    name : str
+    name : Optional[str]
         Name of the device.
     rssi : int
         Received Signal Strength Indicator of the device.
+    tx_power : Optional[int]
+        Transmission power.
+    service_uuid : str
+        Service UUID.
+    mfgkey : str
+        Manufacturing key.
+    mfgval : str
+        Manufacturing value.
     """
 
     unix_ts: float
     address: str
-    name: str | None
+    name: Optional[str]
     rssi: int
-    tx_power: int | None
+    tx_power: Optional[int]
     service_uuid: str
     mfgkey: str
     mfgval: str
@@ -69,10 +77,10 @@ class RFDataRaw:
         Unix timestamp of the scan.
     address : str
         Bluetooth address of the device.
-    name : str
-        Name of the device.
     rssi : int
         Received Signal Strength Indicator of the device.
+    packet : str
+        Packet data.
     """
 
     unix_ts: float
@@ -183,8 +191,11 @@ class FabricDataSubmitter:
         api_key : Optional[str]
             API key for authentication. Default is None.
         base_url : str
-            Base URL for the teleops status API. Default is
+            Base URL for the FABRIC API. Default is
             "https://api.openmind.org/api/core/fabric/submit".
+        write_to_local_file : bool
+            If True, enables local file logging of submitted data.
+            Default is False.
         """
         self.api_key = api_key
         self.base_url = base_url
@@ -195,6 +206,9 @@ class FabricDataSubmitter:
         self.executor = ThreadPoolExecutor(max_workers=1)
 
     def update_filename(self):
+        """
+        Update the filename for local logging with a timestamp.
+        """
         unix_ts = time.time()
         logging.info(f"fabric time: {unix_ts}")
         unix_ts = str(unix_ts).replace(".", "_")
@@ -206,10 +220,11 @@ class FabricDataSubmitter:
         Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
         creates a new file with a timestamp.
 
-        Parameters:
-        - data: Dictionary to write
+        Parameters
+        ----------
+        data : dict
+            The dictionary to write to the file.
         """
-
         if not isinstance(data, dict):
             raise ValueError("Provided data must be a dictionary.")
 
@@ -235,7 +250,6 @@ class FabricDataSubmitter:
         data : FabricData
             The data to be shared.
         """
-
         logging.info(f"_share_data_worker: {data}")
         try:
             json_dict = data.to_dict()
@@ -256,6 +270,7 @@ class FabricDataSubmitter:
                 self.base_url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json=json_dict,
+                timeout=10,
             )
 
             if request.status_code == 201:

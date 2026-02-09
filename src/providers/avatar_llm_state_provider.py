@@ -12,12 +12,20 @@ T = TypeVar("T")
 class AvatarLLMState:
     """
     Singleton class to manage avatar thinking state during LLM processing.
+
+    This class implements a singleton pattern to manage avatar visual state transitions
+    during LLM (Large Language Model) processing. It coordinates between the avatar
+    provider and IO provider to display appropriate visual feedback when processing
+    voice inputs.
     """
 
     _instance = None
     _lock = None
 
     def __new__(cls):
+        """
+        Implement singleton pattern for AvatarLLMState.
+        """
         if cls._instance is None:
             if cls._lock is None:
                 cls._lock = threading.Lock()
@@ -94,8 +102,8 @@ class AvatarLLMState:
         if self.avatar_provider and self.avatar_provider.running:
             try:
                 self.avatar_provider.send_avatar_command("Happy")
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Failed to restore avatar to Happy state: {e}")
 
     def _has_face_action_in_result(self, result: Any) -> bool:
         """

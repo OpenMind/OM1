@@ -12,6 +12,7 @@ from simulators.base import Simulator
 class SimulatorOrchestrator:
     """
     Manages data flow to one or more simulators.
+
     Note: It is important that the simulators do not block the event loop.
     """
 
@@ -23,6 +24,14 @@ class SimulatorOrchestrator:
     _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
+        """
+        Initialize the Simulator Orchestrator.
+
+        Parameters
+        ----------
+        config : RuntimeConfig
+            Runtime configuration containing simulator settings.
+        """
         self._config = config
         self.promise_queue = []
         self._simulator_workers = (
@@ -36,7 +45,7 @@ class SimulatorOrchestrator:
 
     def start(self):
         """
-        Start simulators in separate threads
+        Start simulators in separate threads.
         """
         for simulator in self._config.simulators:
             if simulator.name in self._submitted_simulators:
@@ -44,6 +53,9 @@ class SimulatorOrchestrator:
                     f"Simulator {simulator.name} already submitted, skipping."
                 )
                 continue
+
+            simulator.set_stop_event(self._stop_event)
+
             self._simulator_executor.submit(self._run_simulator_loop, simulator)
             self._submitted_simulators.add(simulator.name)
 
@@ -51,7 +63,7 @@ class SimulatorOrchestrator:
 
     def _run_simulator_loop(self, simulator: Simulator):
         """
-        Thread-based simulator loop
+        Thread-based simulator loop.
 
         Parameters
         ----------
@@ -63,11 +75,11 @@ class SimulatorOrchestrator:
                 simulator.tick()
             except Exception as e:
                 logging.error(f"Error in simulator {simulator.name}: {e}")
+                self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
-        Flushes the promise queue and returns the completed promises
-        and the pending promises.
+        Flushes the promise queue and returns the completed promises and the pending promises.
 
         Returns
         -------
@@ -84,7 +96,7 @@ class SimulatorOrchestrator:
 
     async def promise(self, actions: T.List[Action]) -> None:
         """
-        Send actions to all simulators
+        Send actions to all simulators.
 
         Parameters
         ----------
@@ -101,7 +113,7 @@ class SimulatorOrchestrator:
         self, simulator: Simulator, actions: T.List[Action]
     ) -> T.Any:
         """
-        Send actions to a single simulator
+        Send actions to a single simulator.
 
         Parameters
         ----------

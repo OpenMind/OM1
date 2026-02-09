@@ -55,12 +55,12 @@ class TwitterInput(FuserInput[TwitterSensorConfig, Optional[str]]):
         self.query = self.config.query
 
     async def __aenter__(self):
-        """Async context manager entry"""
+        """Async context manager entry."""
         await self._init_session()
         return self
 
     async def __aexit__(self, _exc_type, _exc_val, _exc_tb):
-        """Async context manager exit"""
+        """Async context manager exit."""
         if self.session:
             await self.session.close()
 
@@ -172,7 +172,7 @@ TwitterInput CONTEXT
         return result
 
     async def initialize_with_query(self, query: str):
-        """Initialize with a query"""
+        """Initialize with a query."""
         logging.info(f"[TwitterInput] Initializing with query: {query}")
         self.message_buffer.put_nowait(query)  # Add query to message buffer
         await self._query_context(query)  # Immediately get context

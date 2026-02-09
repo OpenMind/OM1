@@ -1,7 +1,7 @@
 """
 Code example is from:
 https://github.com/manish-9245/Facial-Emotion-Recognition-using-OpenCV-and-Deepface
-Thank you @manish-9245
+Thank you @manish-9245.
 """
 
 import asyncio
@@ -40,7 +40,15 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
 
     def __init__(self, config: SensorConfig):
         """
-        Initialize FaceEmotionCapture instance.
+        Initialize the FaceEmotionCapture input handler.
+
+        Sets up the required providers and resources for handling facial emotion recognition.
+        Initializes OpenCV face cascade classifier and webcam capture if available.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the sensor input.
         """
         super().__init__(config)
 
@@ -131,7 +139,10 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
             )
 
             # Determine the dominant emotion
-            self.emotion = result[0]["dominant_emotion"]
+            if isinstance(result, list) and len(result) > 0:
+                emotion_data = result[0]
+                if isinstance(emotion_data, dict):
+                    self.emotion = emotion_data.get("dominant_emotion", "")
 
         if self.emotion == "":
             message = "I do not see anyone, so I can't estimate their emotion."

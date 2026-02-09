@@ -5,6 +5,10 @@ from actions.base import Interface
 
 
 class Action(str, Enum):
+    """
+    Enumeration of possible movement actions.
+    """
+
     SHAKE_PAW = "shake paw"
     DANCE = "dance"
     STRETCH = "stretch"
@@ -14,6 +18,10 @@ class Action(str, Enum):
 
 @dataclass
 class ActionInput:
+    """
+    Input interface for the Move action.
+    """
+
     action: Action
 
 
