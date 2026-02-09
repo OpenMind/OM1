@@ -1,6 +1,7 @@
 ---
 title: Unitree Go2
 description: "Unitree Go2 Autonomous Movement Logic"
+icon: dog
 ---
 
 ## Hardware needs

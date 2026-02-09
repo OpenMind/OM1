@@ -1,6 +1,7 @@
 ---
 title: Asimov Governance
 description: "Blockchain-based Governance for Robots"
+icon: gavel
 ---
 
 We are exploring a blockchain-based system for regulating robot behaviors. We store rule sets for desired robot behaviors on smart contracts following the ERC-7777 contract standard. These rules are then interleaved into the prompts that flow from the robot's sensors to the robot's action-generating LLMs. Such a system provides immutability and transparency to the rules that robots should follow, helping to ensure safe and human-friendly behaviors.
