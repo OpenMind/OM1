@@ -1,15 +1,6 @@
-"""Tests for the Face Avatar connector."""
-
-import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-
-# Mock modules at module load time BEFORE any other imports
-mock_zenoh = MagicMock()
-mock_zenoh_msgs = MagicMock()
-sys.modules["zenoh"] = mock_zenoh
-sys.modules["zenoh_msgs"] = mock_zenoh_msgs
 
 from actions.base import ActionConfig  # noqa: E402
 from actions.face.connector.avatar import FaceAvatarConnector  # noqa: E402
@@ -58,120 +49,135 @@ def face_input_excited():
     return FaceInput(action=FaceAction.EXCITED)
 
 
-@pytest.fixture(autouse=True)
-def reset_mocks():
-    """Reset all mock objects between tests."""
-    mock_zenoh.reset_mock()
-    mock_zenoh_msgs.reset_mock()
-    yield
+@pytest.fixture(scope="session", autouse=True)
+def mock_zenoh_modules():
+    """Mock zenoh modules before imports."""
+    with patch.dict(
+        "sys.modules",
+        {
+            "zenoh": MagicMock(),
+            "zenoh_msgs": MagicMock(),
+        },
+    ):
+        yield
 
 
 class TestFaceAvatarConnector:
     """Test the Face Avatar connector."""
 
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    def test_init(self, mock_avatar_provider_class, default_config):
+    def test_init(self, default_config):
         """Test initialization of FaceAvatarConnector."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
+            connector = FaceAvatarConnector(default_config)
 
-        mock_avatar_provider_class.assert_called_once()
-        assert connector.avatar_provider is not None
-        assert connector.avatar_provider == mock_provider_instance
+            mock_avatar_provider_class.assert_called_once()
+            assert connector.avatar_provider is not None
+            assert connector.avatar_provider == mock_provider_instance
 
     @pytest.mark.asyncio
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    async def test_connect_happy(
-        self, mock_avatar_provider_class, default_config, face_input_happy
-    ):
+    async def test_connect_happy(self, default_config, face_input_happy):
         """Test connect with happy expression."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
-        await connector.connect(face_input_happy)
+            connector = FaceAvatarConnector(default_config)
+            await connector.connect(face_input_happy)
 
-        mock_provider_instance.send_avatar_command.assert_called_once_with("Happy")
+            mock_provider_instance.send_avatar_command.assert_called_once_with("Happy")
 
     @pytest.mark.asyncio
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    async def test_connect_sad(
-        self, mock_avatar_provider_class, default_config, face_input_sad
-    ):
+    async def test_connect_sad(self, default_config, face_input_sad):
         """Test connect with sad expression."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
-        await connector.connect(face_input_sad)
+            connector = FaceAvatarConnector(default_config)
+            await connector.connect(face_input_sad)
 
-        mock_provider_instance.send_avatar_command.assert_called_once_with("Sad")
+            mock_provider_instance.send_avatar_command.assert_called_once_with("Sad")
 
     @pytest.mark.asyncio
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    async def test_connect_curious(
-        self, mock_avatar_provider_class, default_config, face_input_curious
-    ):
+    async def test_connect_curious(self, default_config, face_input_curious):
         """Test connect with curious expression."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
-        await connector.connect(face_input_curious)
+            connector = FaceAvatarConnector(default_config)
+            await connector.connect(face_input_curious)
 
-        mock_provider_instance.send_avatar_command.assert_called_once_with("Curious")
+            mock_provider_instance.send_avatar_command.assert_called_once_with(
+                "Curious"
+            )
 
     @pytest.mark.asyncio
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    async def test_connect_confused(
-        self, mock_avatar_provider_class, default_config, face_input_confused
-    ):
+    async def test_connect_confused(self, default_config, face_input_confused):
         """Test connect with confused expression."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
-        await connector.connect(face_input_confused)
+            connector = FaceAvatarConnector(default_config)
+            await connector.connect(face_input_confused)
 
-        mock_provider_instance.send_avatar_command.assert_called_once_with("Confused")
+            mock_provider_instance.send_avatar_command.assert_called_once_with(
+                "Confused"
+            )
 
     @pytest.mark.asyncio
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    async def test_connect_think(
-        self, mock_avatar_provider_class, default_config, face_input_think
-    ):
+    async def test_connect_think(self, default_config, face_input_think):
         """Test connect with think expression."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
-        await connector.connect(face_input_think)
+            connector = FaceAvatarConnector(default_config)
+            await connector.connect(face_input_think)
 
-        mock_provider_instance.send_avatar_command.assert_called_once_with("Think")
+            mock_provider_instance.send_avatar_command.assert_called_once_with("Think")
 
     @pytest.mark.asyncio
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    async def test_connect_excited(
-        self, mock_avatar_provider_class, default_config, face_input_excited
-    ):
+    async def test_connect_excited(self, default_config, face_input_excited):
         """Test connect with excited expression."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
-        await connector.connect(face_input_excited)
+            connector = FaceAvatarConnector(default_config)
+            await connector.connect(face_input_excited)
 
-        mock_provider_instance.send_avatar_command.assert_called_once_with("Excited")
+            mock_provider_instance.send_avatar_command.assert_called_once_with(
+                "Excited"
+            )
 
-    @patch("actions.face.connector.avatar.AvatarProvider")
-    def test_stop(self, mock_avatar_provider_class, default_config):
+    def test_stop(self, default_config):
         """Test stop method."""
-        mock_provider_instance = Mock()
-        mock_avatar_provider_class.return_value = mock_provider_instance
+        with patch(
+            "actions.face.connector.avatar.AvatarProvider"
+        ) as mock_avatar_provider_class:
+            mock_provider_instance = Mock()
+            mock_avatar_provider_class.return_value = mock_provider_instance
 
-        connector = FaceAvatarConnector(default_config)
-        connector.stop()
+            connector = FaceAvatarConnector(default_config)
+            connector.stop()
 
-        mock_provider_instance.stop.assert_called_once()
+            mock_provider_instance.stop.assert_called_once()

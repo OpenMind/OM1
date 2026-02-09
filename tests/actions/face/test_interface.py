@@ -1,5 +1,3 @@
-"""Tests for the Face action interface."""
-
 from actions.face.interface import Face, FaceAction, FaceInput
 
 
