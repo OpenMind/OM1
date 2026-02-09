@@ -15,7 +15,7 @@ class Fuser:
     Responsible for integrating system prompts, input streams, action descriptions,
     and command prompts into a coherent format for LLM processing.
 
-    Attributes
+    Parameters
     ----------
     config : RuntimeConfig
         Runtime configuration settings.
