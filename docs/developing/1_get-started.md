@@ -167,7 +167,7 @@ After the initial run, you can start the agent using the simplified command:
 uv run src/run.py
 ```
 
-![Reference](../assets/hot_reload.png)
+![ ](../assets/hot_reload.png)
 
 The system will automatically load the most recent agent configuration from memory. Additionally, a `.runtime.json5` file will be created in the root config directory, which persists across sessions unless a different agent configuration is specified.
 

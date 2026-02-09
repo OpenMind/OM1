@@ -12,7 +12,7 @@ Modes can be user-selected (via voice commands or UI).
 
 ## Modes Supported within OM1 for Unitree Go2 Currently
 
-![Modes](../assets/full-autonomy-assets/modes.png)
+![ ](../assets/full-autonomy-assets/modes.png)
 
 1. Welcome mode - Initial greeting and user information gathering
     - Face detection and face anonymization.
