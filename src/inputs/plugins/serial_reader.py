@@ -94,7 +94,9 @@ class SerialReader(FuserInput[SerialReaderConfig, Optional[str]]):
 
         try:
             # Open the serial port
-            self.ser = serial.Serial(config.port, config.baudrate, timeout=config.timeout)
+            self.ser = serial.Serial(
+                config.port, config.baudrate, timeout=config.timeout
+            )
             logging.info(f"Connected to {config.port} at {config.baudrate} baud")
         except serial.SerialException as e:
             logging.error(f"Error: {e}")
