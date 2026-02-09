@@ -23,12 +23,6 @@ class CortexRuntime:
     The CortexRuntime orchestrates communication between memory, fuser,
     actions, and manages inputs/outputs. It controls the agent's execution
     cycle and coordinates all major subsystems.
-
-    Parameters
-    ----------
-    config : RuntimeConfig
-        Configuration object containing all runtime settings including
-        agent inputs, cortex LLM settings, and execution parameters.
     """
 
     config: RuntimeConfig
@@ -140,8 +134,8 @@ class CortexRuntime:
                 logging.debug(f"Wrote runtime config to: {runtime_config_path}")
             else:
                 logging.warning(f"Config not found: {config_path}")
-        except Exception as e:
-            logging.error(f"Failed to create runtime config file: {e}")
+        except Exception:
+            logging.exception("Failed to create runtime config file")
 
         return str(runtime_config_path)
 
@@ -189,17 +183,17 @@ class CortexRuntime:
                     logging.debug("Tasks cancelled during config reload, continuing...")
                     await asyncio.sleep(0.1)
 
-                    if not self.cortex_loop_task.done():
+                    if self.cortex_loop_task and not self.cortex_loop_task.done():
                         continue
                     else:
                         break
 
-                except Exception as e:
-                    logging.error(f"Error in orchestrator tasks: {e}")
+                except Exception:
+                    logging.exception("Error in orchestrator tasks")
                     await asyncio.sleep(1.0)
 
-        except Exception as e:
-            logging.error(f"Error in cortex runtime: {e}")
+        except Exception:
+            logging.exception("Error in cortex runtime")
             raise
         finally:
             await self._cleanup_tasks()
@@ -239,8 +233,8 @@ class CortexRuntime:
             except asyncio.CancelledError:
                 logging.debug("Config watcher cancelled")
                 break
-            except Exception as e:
-                logging.error(f"Error checking config changes: {e}")
+            except Exception:
+                logging.exception("Error checking config changes")
                 await asyncio.sleep(5)
 
     async def _reload_config(self) -> None:
@@ -274,9 +268,9 @@ class CortexRuntime:
 
             logging.info("Configuration reloaded successfully")
 
-        except Exception as e:
-            logging.error(f"Failed to reload configuration: {e}")
-            logging.error("Continuing with previous configuration")
+        except Exception:
+            logging.exception("Failed to reload configuration")
+            logging.info("Continuing with previous configuration")
         finally:
             self._is_reloading = False
 
@@ -355,8 +349,8 @@ class CortexRuntime:
                                 f"  {name}: Exception - {type(e).__name__}: {e}"
                             )
 
-            except Exception as e:
-                logging.warning(f"Error during task cancellation: {e}")
+            except Exception:
+                logging.exception("Error during task cancellation")
                 logging.info("Continuing with reload despite cancellation errors")
 
         self.cortex_loop_task = None
@@ -467,8 +461,8 @@ class CortexRuntime:
         except asyncio.CancelledError:
             logging.info("Cortex loop cancelled, exiting gracefully")
             raise
-        except Exception as e:
-            logging.error(f"Unexpected error in cortex loop: {e}")
+        except Exception:
+            logging.exception("Unexpected error in cortex loop")
             raise
 
     async def _tick(self) -> None:
@@ -511,5 +505,5 @@ class CortexRuntime:
 
             # Trigger the actions
             await self.action_orchestrator.promise(output.actions)
-        except Exception as error:
-            logging.error(f"Error in cortex tick: {error}")
+        except Exception:
+            logging.exception("Error in cortex tick")
