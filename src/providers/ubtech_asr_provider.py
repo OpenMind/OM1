@@ -11,6 +11,10 @@ from .singleton import singleton
 
 @singleton
 class UbtechASRProvider:
+    """
+    Singleton class to handle ASR (Automatic Speech Recognition) for Ubtech robots.
+    """
+
     _instance = None
 
     @staticmethod
@@ -19,6 +23,16 @@ class UbtechASRProvider:
         return UbtechASRProvider._instance
 
     def __init__(self, robot_ip: str, language_code: str = "en"):
+        """
+        Initialize the Ubtech ASR Provider.
+
+        Parameters
+        ----------
+        robot_ip : str
+            The IP address of the robot.
+        language_code : str
+            The language code for ASR. Defaults to "en".
+        """
         UbtechASRProvider._instance = self
 
         self.robot_ip = robot_ip
@@ -37,31 +51,56 @@ class UbtechASRProvider:
         self._set_robot_language(language_code)
 
     def register_message_callback(self, cb: Optional[Callable]):
+        """
+        Register a callback to process recognized ASR messages.
+
+        Parameters
+        ----------
+        cb : Optional[callable]
+            The callback function to process recognized ASR messages.
+        """
         self._message_callback = cb
 
     def start(self):
+        """
+        Start the ASR provider and its background thread.
+        """
         if self.running:
             return
+
         logging.info("Starting UbtechASRProvider background thread...")
+
         self.running = True
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
     def stop(self):
+        """
+        Stop the ASR provider and its background thread.
+        """
         if not self.running:
             return
+
         logging.info("Stopping UbtechASRProvider background thread...")
         self.running = False
         self._stop_voice_iat()
+
         if self._thread:
             self._thread.join(timeout=3)
+
         logging.info("UbtechASRProvider stopped.")
 
     def pause(self):
+        """
+        Pause the ASR provider to stop listening for new utterances.
+        """
         logging.debug("Pausing UbtechASRProvider")
         self.paused = True
 
     def resume(self):
+        """
+        Resume the ASR provider after being paused.
+        """
         logging.debug("Resuming UbtechASRProvider")
         self.paused = False
         self.just_resumed = True  # Set flag on resume

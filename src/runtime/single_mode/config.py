@@ -12,6 +12,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from runtime.config import validate_config_schema
 from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
@@ -90,7 +91,19 @@ class RuntimeConfig:
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
-        """Load a runtime configuration from a file."""
+        """
+        Load a runtime configuration from a file.
+
+        Parameters
+        ----------
+        config_name : str
+            Name of the configuration file (without .json5 extension).
+
+        Returns
+        -------
+        RuntimeConfig
+            Parsed runtime configuration object.
+        """
         return load_config(config_name)
 
 
@@ -133,11 +146,17 @@ def load_config(
         else config_source_path
     )
 
-    with open(config_path, "r+") as f:
-        raw_config = json5.load(f)
+    with open(config_path, "r") as f:
+        try:
+            raw_config = json5.load(f)
+        except Exception as e:
+            raise ValueError(
+                f"Failed to parse configuration file '{config_path}': {e}"
+            ) from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
+    validate_config_schema(raw_config)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -291,13 +310,16 @@ def add_meta(
         The Robot ethernet port to add.
     g_URID : str
         The Robot URID to use.
+    g_robot_ip : Optional[str]
+        The Robot IP address.
+    g_mode : Optional[str]
+        The mode of operation.
 
     Returns
     -------
     dict
         The updated runtime configuration.
     """
-
     # logging.info(f"config before {config}")
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key
@@ -390,7 +412,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         available_actions=agent_actions,
     )
     return RuntimeConfig(
-        version=config.get("version", "v1.0.1"),
+        version=config.get("version", "v1.0.2"),
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
         system_prompt_base=config.get("system_prompt_base", ""),

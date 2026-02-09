@@ -15,7 +15,11 @@
     ],
     "properties": {
         "version": {"type": "string"},
-        "hertz": {"type": "number"},
+        "hertz": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "The frequency (in Hz) at which the control loop runs. Must be positive."
+        },
         "name": {"type": "string"},
         "api_key": {"type": "string"},
         "URID": {"type": "string"},
@@ -86,8 +90,7 @@
                     "config": {"type": "object"}
                 }
             }
-        }
-    },
+        },
         "action_execution_mode": {
             "type": "string",
             "enum": ["concurrent", "sequential", "dependencies"]
@@ -98,6 +101,7 @@
                 "type": "array",
                 "items": {"type": "string"}
             }
-        },
+        }
+    },
     "additionalProperties": true
 }

@@ -1,7 +1,6 @@
 import concurrent.futures
 import logging
 import threading
-import time
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
@@ -14,6 +13,10 @@ from ubtech.ubtechapi import YanAPI
 
 @dataclass
 class Motion:
+    """
+    Represents a motion command for the UBTECH Yanshee robot.
+    """
+
     name: str
     direction: Optional[str] = field(default=None)
     speed: Optional[str] = field(default=None)
@@ -67,6 +70,9 @@ class Motion:
     }
 
     def __post_init__(self):
+        """
+        Set default values for optional fields based on the motion name.
+        """
         defaults = self._defaults.get(self.name)
         if defaults is None:
             raise ValueError(f"Unknown motion name {self.name!r}")
@@ -79,7 +85,7 @@ class MoveYansheeConfig(ActionConfig):
     """
     Configuration for Yanshee motion connector.
 
-    Parameters:
+    Parameters
     ----------
     robot_ip : str
         IP address of the Yanshee robot.
@@ -312,4 +318,4 @@ class MoveYansheeConnector(ActionConnector[MoveYansheeConfig, MoveInput]):
         """
         Periodic tick function to maintain connection.
         """
-        time.sleep(0.1)
+        self.sleep(0.1)

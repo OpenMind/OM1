@@ -11,6 +11,7 @@ class LLMFunction:
     def __init__(self, description: str, name: T.Optional[str] = None):
         """
         Initialize the LLM function decorator.
+
         Parameters
         ----------
         description : str
@@ -21,10 +22,23 @@ class LLMFunction:
         self.description = description
         self.name = name
 
-    def __call__(self, func):
-        func._llm_function = True
-        func._llm_description = self.description
-        func._llm_name = self.name or func.__name__
+    def __call__(self, func: T.Callable) -> T.Callable:
+        """
+        Decorate the method to mark it as an LLM function.
+
+        Parameters
+        ----------
+        func : callable
+            The method to decorate.
+
+        Returns
+        -------
+        callable
+            The decorated method with LLM function metadata.
+        """
+        func._llm_function = True  # type: ignore
+        func._llm_description = self.description  # type: ignore
+        func._llm_name = self.name or func.__name__  # type: ignore
         return func
 
 
@@ -37,23 +51,40 @@ class FunctionGenerator:
     def python_type_to_json_schema(python_type: T.Type) -> T.Dict:
         """
         Convert Python type hints to JSON schema format.
+
         Parameters
         ----------
         python_type : T.Type
             The Python type to convert.
+
         Returns
         -------
         T.Dict
             JSON schema representation of the Python type.
         """
-        if get_origin(python_type) is T.Union:
-            args = get_args(python_type)
+        origin = get_origin(python_type)
+        args = get_args(python_type)
+
+        # Handle Optional types
+        if origin is T.Union:
             if len(args) == 2 and type(None) in args:
                 non_none_type = args[0] if args[1] is type(None) else args[1]
                 schema = FunctionGenerator.python_type_to_json_schema(non_none_type)
                 return schema
             else:
                 return {"type": "string"}
+
+        # Handle List/list generics
+        if origin is list or origin is T.List:
+            item_type = args[0] if args else str
+            return {
+                "type": "array",
+                "items": FunctionGenerator.python_type_to_json_schema(item_type),
+            }
+
+        # Handle Dict/dict generics
+        if origin is dict or origin is T.Dict:
+            return {"type": "object"}
 
         type_mapping = {
             str: {"type": "string"},
@@ -70,10 +101,12 @@ class FunctionGenerator:
     def extract_function_schema(method: T.Callable) -> T.Dict:
         """
         Extract OpenAI function schema from a method.
+
         Parameters
         ----------
         method : callable
             The method to extract the schema from.
+
         Returns
         -------
         T.Dict
@@ -97,17 +130,16 @@ class FunctionGenerator:
             if docstring and param_name in docstring:
                 param_schema["description"] = f"Parameter {param_name}"
 
-            properties[param_name] = param_schema
+            required.append(param_name)
 
-            if param.default == inspect.Parameter.empty:
-                required.append(param_name)
-            else:
-                required.append(param_name)
-                if isinstance(param_type, str) and param.default == "":
+            if param.default != inspect.Parameter.empty:
+                desc = param_schema.get("description", f"Parameter {param_name}")
+                if "(optional)" not in desc and "(optional" not in desc:
                     param_schema["description"] = (
-                        param_schema.get("description", f"Parameter {param_name}")
-                        + " (optional - can be empty string)"
+                        f"{desc} (optional, default: {param.default})"
                     )
+
+            properties[param_name] = param_schema
 
         return {
             "type": "function",
@@ -128,10 +160,12 @@ class FunctionGenerator:
     def generate_functions_from_class(cls_instance: T.Type) -> T.Dict:
         """
         Generate all function schemas from a class with decorated methods.
+
         Parameters
         ----------
         cls_instance : type
             The class to extract function schemas from.
+
         Returns
         -------
         T.Dict
