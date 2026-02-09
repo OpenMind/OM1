@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import serial
 
-from inputs.base import Message, SensorConfig
-from inputs.plugins.serial_reader import SerialReader
+from inputs.base import Message
+from inputs.plugins.serial_reader import SerialReader, SerialReaderConfig
 
 
 def test_initialization_success():
@@ -15,7 +15,7 @@ def test_initialization_success():
         patch("inputs.plugins.serial_reader.serial.Serial", return_value=mock_serial),
         patch("inputs.plugins.serial_reader.IOProvider"),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         assert sensor.ser == mock_serial
         assert sensor.messages == []
@@ -31,7 +31,7 @@ def test_initialization_serial_exception():
         ),
         patch("inputs.plugins.serial_reader.IOProvider"),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         assert sensor.ser is None
 
@@ -48,7 +48,7 @@ async def test_poll_with_data():
         patch("inputs.plugins.serial_reader.IOProvider"),
         patch("inputs.plugins.serial_reader.asyncio.sleep", new=AsyncMock()),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         result = await sensor._poll()
 
@@ -67,7 +67,7 @@ async def test_poll_no_data():
         patch("inputs.plugins.serial_reader.IOProvider"),
         patch("inputs.plugins.serial_reader.asyncio.sleep", new=AsyncMock()),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         result = await sensor._poll()
 
@@ -85,7 +85,7 @@ async def test_poll_with_no_serial_connection():
         patch("inputs.plugins.serial_reader.IOProvider"),
         patch("inputs.plugins.serial_reader.asyncio.sleep", new=AsyncMock()),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         result = await sensor._poll()
 
@@ -102,7 +102,7 @@ async def test_raw_to_text_with_valid_input():
         patch("inputs.plugins.serial_reader.IOProvider"),
         patch("inputs.plugins.serial_reader.time.time", return_value=1234.0),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         result = await sensor._raw_to_text("Pulse: Elevated")
 
@@ -120,7 +120,7 @@ async def test_raw_to_text_with_none():
         patch("inputs.plugins.serial_reader.serial.Serial", return_value=mock_serial),
         patch("inputs.plugins.serial_reader.IOProvider"),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         result = await sensor._raw_to_text(None)
         assert result is None
@@ -134,7 +134,7 @@ def test_formatted_latest_buffer_with_messages():
         patch("inputs.plugins.serial_reader.serial.Serial", return_value=mock_serial),
         patch("inputs.plugins.serial_reader.IOProvider"),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
         sensor.io_provider = MagicMock()
 
         sensor.messages = [
@@ -157,7 +157,7 @@ def test_formatted_latest_buffer_empty():
         patch("inputs.plugins.serial_reader.serial.Serial", return_value=mock_serial),
         patch("inputs.plugins.serial_reader.IOProvider"),
     ):
-        sensor = SerialReader(config=SensorConfig())
+        sensor = SerialReader(config=SerialReaderConfig())
 
         result = sensor.formatted_latest_buffer()
         assert result is None
