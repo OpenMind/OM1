@@ -1,6 +1,7 @@
 ---
 title: RF Mapping
 description: "Rf Mapping"
+icon: wave-sine
 ---
 
 Work in progress.

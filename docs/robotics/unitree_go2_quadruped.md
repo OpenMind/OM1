@@ -1,7 +1,7 @@
 ---
 title: Unitree Go2 Quadruped
 description: "Unitree Go2 EDU Quadruped (dog)"
-icon: robot
+icon: dog
 ---
 
 OM1 can control a Unitree Go2 EDU out of the box. This has been tested on Nvidia Orin, Mac Mini, and current (silicon) Mac laptops.
