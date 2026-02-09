@@ -52,7 +52,6 @@ async def test_load_rules_from_blockchain_success_scenario(governance_instance):
     mock_client_session_cm.__aenter__.return_value = mock_session
     mock_client_session_cm.__aexit__.return_value = None
 
-    # Patch decode_eth_response to return a predictable value
     with (
         patch.object(
             governance_instance, "decode_eth_response", return_value=expected_decoded
