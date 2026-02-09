@@ -125,8 +125,8 @@ class VLMPrivacyDetector(FuserInput[VLMPrivacyDetectorConfig, Optional[List]]):
         self.messages: list[Message] = []
         self.descriptor_for_LLM = "PrivacyEyes"
 
-        # Load YOLO model
-        self.model = YOLO("yolov8n.pt")
+        # Load YOLO model — 'small' variant for reliable screen/device detection
+        self.model = YOLO("yolov8s.pt")
 
         # Privacy config
         self.privacy_classes = set(config.privacy_classes)
@@ -206,7 +206,10 @@ class VLMPrivacyDetector(FuserInput[VLMPrivacyDetectorConfig, Optional[List]]):
             return None
 
         self.frame_index += 1
-        results = self.model.predict(source=frame, save=False, stream=True, verbose=False)
+        results = self.model.predict(
+            source=frame, save=False, stream=True, verbose=False,
+            conf=self.confidence_threshold,
+        )
 
         detections = []
         for r in results:

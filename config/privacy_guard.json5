@@ -1,30 +1,6 @@
 {
   version: "v1.0.2",
-  name: "privacy_guard",
   api_key: "openmind_free",
-  robot_ip: "",
-
-  // ── APP STORE METADATA ──────────────────────────────────────────────────
-  app_metadata: {
-    display_name: "Privacy Guard",
-    description: "A real-time visual privacy firewall that detects screens, documents, and sensitive situations — then averts the robot's gaze to protect human privacy.",
-    author: "GUDMAN",
-    version: "1.0.0",
-    category: "privacy",
-    tags: ["privacy", "security", "safety", "camera", "detection"],
-  },
-
-  // ── HARDWARE REQUIREMENTS ────────────────────────────────────────────────
-  hardware_requirements: {
-    sensors: ["camera"],
-    capabilities: ["head_tilt", "speech"],
-    min_battery_percent: 15,
-    supported_platforms: [
-      "unitree_go2",
-      "unitree_g1",
-      "turtlebot4",
-    ],
-  },
 
   // ── MODE SYSTEM ──────────────────────────────────────────────────────────
   default_mode: "active_scan",
