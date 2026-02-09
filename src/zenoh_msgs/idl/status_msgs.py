@@ -224,6 +224,7 @@ class ChargingStatus(IdlStruct, typename="ChargingStatus"):
     status: String
 
 
+@dataclass
 class PersonGreetingStatus(IdlStruct, typename="PersonGreetingStatus"):
     """Person greeting status message."""
 
