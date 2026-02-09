@@ -198,7 +198,7 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
 
         Parameters
         ----------
-        raw_input : List[float]
+        raw_input : List[str]
             Raw lowstate data to be processed
         """
         pending_message = await self._raw_to_text(raw_input)

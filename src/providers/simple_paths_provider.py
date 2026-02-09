@@ -27,6 +27,8 @@ def simple_paths_processor(
         Queue for receiving paths data.
     control_queue : mp.Queue
         Queue for sending control commands.
+    logging_config : Optional[LoggingConfig]
+        Optional logging configuration for the processor.
     """
     setup_logging("rplidar_processor", logging_config=logging_config)
 
