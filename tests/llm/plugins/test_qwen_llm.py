@@ -213,7 +213,7 @@ class TestQwenLLMInit:
     def test_init_with_config(self, llm, config):
         """Test initialization with provided configuration."""
         assert llm._config.model == config.model
-        assert llm._client.base_url == "http://127.0.0.1:8000/v1/"
+        assert llm._client.base_url == "http://127.0.0.1:8860/v1/"
 
     def test_init_default_model(self):
         """Test default model is set when not provided."""
