@@ -123,6 +123,8 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                 self.vehicle_jwt_expires is not None
                 and time.time() > self.vehicle_jwt_expires
                 and self.token_id is not None
+                and self.dimo is not None
+                and self.dev_jwt is not None
             ):
                 try:
                     get_vehicle_jwt = self.dimo.token_exchange.exchange(
