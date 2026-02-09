@@ -327,7 +327,6 @@ class UnitreeGo2RPLidarProvider:
         raw = []
 
         for angle, distance in data:
-
             d_m = distance
 
             # first, correctly orient the sensor zero to the robot zero
@@ -350,11 +349,9 @@ class UnitreeGo2RPLidarProvider:
             # convert the angle from [0 to 360] to [-180 to +180] range
             angle = angle - 180.0
 
-            for b in self.angles_blanked:
-                if angle >= b[0] and angle <= b[1]:
-                    # this is a permanent robot reflection
-                    # disregard
-                    continue
+            if any(b[0] <= angle <= b[1] for b in self.angles_blanked):
+                # this is a permanent robot reflection - disregard
+                continue
 
             # Convert angle to radians for trigonometric calculations
             # Note: angle is adjusted back to [0, 360] range
