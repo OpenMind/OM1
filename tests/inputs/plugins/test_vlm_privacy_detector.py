@@ -1,11 +1,26 @@
-"""Tests for the VLM Privacy Detector input plugin."""
+"""Tests for the VLM Privacy Detector input plugin.
 
+cv2 and ultralytics are mocked at the sys.modules level because they
+require native dependencies that may not be available in CI/test environments.
+"""
+
+import sys
 import time
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from inputs.plugins.vlm_privacy_detector import (
+# ---------------------------------------------------------------------------
+# Mock native dependencies before importing the detector
+# ---------------------------------------------------------------------------
+_mock_cv2 = MagicMock()
+_mock_ultralytics = MagicMock()
+_original_cv2 = sys.modules.get("cv2")
+_original_ultra = sys.modules.get("ultralytics")
+sys.modules["cv2"] = _mock_cv2
+sys.modules["ultralytics"] = _mock_ultralytics
+
+from inputs.plugins.vlm_privacy_detector import (  # noqa: E402
     DEFAULT_PRIVACY_CLASSES,
     SENSITIVITY_THRESHOLDS,
     THREAT_SEVERITY,
@@ -27,12 +42,10 @@ def config():
 @pytest.fixture
 def detector(config):
     """Create a detector with mocked camera and YOLO model."""
-    with patch("inputs.plugins.vlm_privacy_detector._init_camera", return_value=(640, 480)), \
-         patch("inputs.plugins.vlm_privacy_detector.cv2") as mock_cv2, \
-         patch("inputs.plugins.vlm_privacy_detector.YOLO") as mock_yolo, \
-         patch("inputs.plugins.vlm_privacy_detector.IOProvider"):
-        mock_cap = MagicMock()
-        mock_cv2.VideoCapture.return_value = mock_cap
+    with patch(
+        "inputs.plugins.vlm_privacy_detector._init_camera",
+        return_value=(640, 480),
+    ), patch("inputs.plugins.vlm_privacy_detector.IOProvider"):
         det = VLMPrivacyDetector(config)
         det.have_cam = True
         det.cam_third = 213  # 640 / 3
