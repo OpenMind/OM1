@@ -15,6 +15,8 @@ icon: robot
 
 It's ideal to have at least 128 GB SSD storage for the setup to run smoothly.
 
+Checkout the video walkthrough [here](https://assets.openmind.org/education-video/Gazebo%20Setup%20Tutorial%20%28Part%201%29.mp4). More video tutorials coming soon.
+
 ## Simulation Instructions
 
 To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.

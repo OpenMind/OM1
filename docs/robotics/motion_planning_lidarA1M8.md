@@ -1,6 +1,7 @@
 ---
 title: RPLidar A1M8
 description: "RPLidar A1M8 Setup and Use"
+icon: radar
 ---
 
 ## RPLidar
