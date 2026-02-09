@@ -1,6 +1,7 @@
 ---
 title: TurtleBot4
 description: "TurtleBot4 Autonomous Movement Logic"
+icon: turtle
 ---
 
 ## Overview

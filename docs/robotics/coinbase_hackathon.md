@@ -1,6 +1,7 @@
 ---
 title: Coinbase Hackathon Feb 1. 2025
 Description: "Coinbase Hackathon Quadruped Configuration"
+icon: hyphen
 ---
 
 The `Frenchie` quadruped has support for a Coinbase wallet. The dog's Sepolia Base Testnet account is `0xbB568962CF24d4CeBBf5d48308aCdAE873B93202`. You can check `Frenchie's` account balances using Coinbase's block explorer:
