@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,25 +15,42 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class NearAIModel(str, Enum):
+    """Available NearAI models."""
+
+    QWEN_30B_A3B_INSTRUCT_2507 = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+    DEEPSEEK_V3_1 = "deepseek-ai/DeepSeek-V3.1"
+    GPT_OSS_120B = "openai/gpt-oss-120b"
+    GPT_5_2 = "openai/gpt-5.2"
+    GLM_4_7 = "zai-org/GLM-4.7"
+    CLAUDE_SONNET_4_5 = "anthropic/claude-sonnet-4-5"
+    GEMINI_3_PRO = "google/gemini-3-pro"
+
+
+class NearAIConfig(LLMConfig):
+    """NearAI-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/nearai",
+        description="Base URL for the NearAI API endpoint",
+    )
+    model: T.Optional[T.Union[NearAIModel, str]] = Field(
+        default=NearAIModel.GPT_OSS_120B,
+        description="NearAI model to use",
+    )
+
+
 class NearAILLM(LLM[R]):
     """
-    An NearAI-based Language Learning Model implementation.
+    A NearAI-based Language Learning Model implementation.
 
     This class implements the LLM interface for Near AI's open-source models, handling
     configuration, authentication, and async API communication.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided,
-        the LLM will use function calls instead of structured JSON output.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: NearAIConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -40,7 +58,7 @@ class NearAILLM(LLM[R]):
 
         Parameters
         ----------
-        config : LLMConfig
+        config : NearAIConfig
             Configuration settings for the LLM.
         available_actions : list[AgentAction], optional
             List of available actions for function calling.
@@ -50,7 +68,7 @@ class NearAILLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "qwen3-30b-a3b-instruct-2507"
+            self._config.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
         self._client = openai.AsyncClient(
             base_url=config.base_url or "https://api.openmind.org/api/core/nearai",
@@ -95,12 +113,16 @@ class NearAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.beta.chat.completions.parse(
-                model=self._config.model or "qwen3-30b-a3b-instruct-2507",
+                model=self._config.model or "Qwen/Qwen3-30B-A3B-Instruct-2507",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
+
+            if not response.choices:
+                logging.warning("NearAI API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
@@ -122,7 +144,7 @@ class NearAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
+                logging.info(f"NearAI LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None

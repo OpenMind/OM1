@@ -268,7 +268,6 @@ class RPDriver(object):
         if self._serial.inWaiting() > 0:
             self.clean_input()
             time.sleep(0.5)
-            # return "Buffer is full! Run clean_input() to empty the buffer."
         self._send_cmd(GET_INFO_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
         if dsize != INFO_LEN:
@@ -306,7 +305,6 @@ class RPDriver(object):
         if self._serial.inWaiting() > 0:
             self.clean_input()
             time.sleep(0.5)
-            # return "Data in buffer. " "Run clean_input() to empty the buffer."
         self.logger.info("Asking for health")
         self._send_cmd(GET_HEALTH_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
@@ -324,7 +322,7 @@ class RPDriver(object):
     def clean_input(self):
         """Clean input buffer by reading all available data."""
         if self.scanning[0]:
-            return "Cleaning not allowed during active scanning!"
+            raise RPLidarException("Cleaning not allowed during active scanning!")
         self._serial.flushInput()
         self.express_trame = 32
         self.express_data = False
@@ -348,7 +346,7 @@ class RPDriver(object):
             Scan mode: normal, force, or express.
         """
         if self.scanning[0]:
-            return "Scan already running!"
+            raise RPLidarException("Scan already running!")
 
         # Check sensor health before starting
         status, error_code = self.get_health()
@@ -402,21 +400,21 @@ class RPDriver(object):
 
         Parameters
         ----------
+        scan_type : str
+            Type of scan to perform ('normal' or 'express'). Defaults to 'normal'.
         max_buf_meas : int or False if you want unlimited buffer
             Maximum number of bytes to be stored inside the buffer. Once
             number exceeds this limit buffer will be emptied out.
 
         Yields
         ------
-        new_scan : bool
-            True if measurement belongs to a new scan
-        quality : int
-            Reflected laser pulse strength
-        angle : float
-            The measurement heading angle in degree units [0, 360)
-        distance : float
-            Measured object distance related to the sensor's rotation center.
-            In millimeters. Set to 0 when measure is invalid.
+        tuple
+            A tuple containing (new_scan, quality, angle, distance):
+            - new_scan (bool): True if measurement belongs to a new scan
+            - quality (int): Reflected laser pulse strength
+            - angle (float): The measurement heading angle in degree units [0, 360)
+            - distance (float): Measured object distance related to the sensor's
+              rotation center in millimeters. Set to 0 when measure is invalid.
         """
         self.start_motor()
         if not self.scanning[0]:
@@ -503,6 +501,8 @@ class RPDriver(object):
 
         Parameters
         ----------
+        scan_type : str
+            Type of scan to perform ('normal' or 'express'). Defaults to 'normal'.
         max_buf_meas : int
             Maximum number of measures to be stored inside the buffer. Once
             number exceeds this limit buffer will be cleared.
@@ -511,7 +511,7 @@ class RPDriver(object):
 
         Yields
         ------
-        scan : list
+        list
             List of the measurements. Each measurement is a tuple with following
             format: (quality, angle, distance). For values description please
             refer to `iter_measures` method's documentation.
@@ -535,22 +535,26 @@ class RPDriver(object):
 
         Parameters
         ----------
+        scan_type : str
+            Type of scan to perform ('normal' or 'express'). Defaults to 'normal'.
         max_buf_meas : int
             Maximum number of measures to be stored inside the buffer. Once
             number exceeds this limit buffer will be cleared.
         min_len : int
             Minimum number of measures in the scan for it to be returned.
+        max_distance_mm : int
+            Maximum distance in millimeters. Points beyond this distance are filtered out.
 
         Yields
         ------
-        scan : list
+        list
             List of the measurements. Each measurement is a tuple with following
             format: (angle, distance). For values description please
             refer to `iter_measures` method's documentation.
         """
         scan_list = []
         iterator = self.iter_measures(scan_type, max_buf_meas)
-        for new_scan, quality, angle, distance in iterator:
+        for new_scan, _quality, angle, distance in iterator:
             if new_scan:
                 if len(scan_list) > min_len:
                     yield scan_list
@@ -583,13 +587,13 @@ class ExpressPacket(
         packet = bytearray(data)
 
         if (packet[0] >> 4) != cls.sync1 or (packet[1] >> 4) != cls.sync2:
-            raise ValueError("trying to parse corrupted data ({})".format(packet))
+            raise ValueError(f"trying to parse corrupted data ({packet})")
 
         checksum = 0
         for b in packet[2:]:
             checksum ^= b
         if checksum != (packet[0] & 0b00001111) + ((packet[1] & 0b00001111) << 4):
-            raise ValueError("Invalid checksum ({})".format(packet))
+            raise ValueError(f"Invalid checksum ({packet})")
 
         new_scan = packet[3] >> 7
         start_angle = (packet[2] + ((packet[3] & 0b01111111) << 8)) / 64

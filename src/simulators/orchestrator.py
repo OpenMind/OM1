@@ -24,6 +24,14 @@ class SimulatorOrchestrator:
     _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
+        """
+        Initialize the Simulator Orchestrator.
+
+        Parameters
+        ----------
+        config : RuntimeConfig
+            Runtime configuration containing simulator settings.
+        """
         self._config = config
         self.promise_queue = []
         self._simulator_workers = (
@@ -45,6 +53,9 @@ class SimulatorOrchestrator:
                     f"Simulator {simulator.name} already submitted, skipping."
                 )
                 continue
+
+            simulator.set_stop_event(self._stop_event)
+
             self._simulator_executor.submit(self._run_simulator_loop, simulator)
             self._submitted_simulators.add(simulator.name)
 
@@ -64,6 +75,7 @@ class SimulatorOrchestrator:
                 simulator.tick()
             except Exception as e:
                 logging.error(f"Error in simulator {simulator.name}: {e}")
+                self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
