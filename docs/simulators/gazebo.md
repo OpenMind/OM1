@@ -13,7 +13,7 @@ icon: robot
 | **GPU** | NVIDIA GTX 1660 Ti 6 GB VRAM | NVIDIA RTX 3070 or RTX 4060 Ti 8-12 GB VRAM | NVIDIA RTX 4080/4090 16+ GB VRAM with CUDA 11.8+ |
 | **OS** | Ubuntu 22.04 | Ubuntu 22.04 | Ubuntu 22.04 |
 
-It's ideal to have atleast 128 GB SSD storage for the setup to run smoothly.
+It's ideal to have at least 128 GB SSD storage for the setup to run smoothly.
 
 ## Simulation Instructions
 

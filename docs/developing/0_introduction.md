@@ -28,6 +28,6 @@ Whether you're just getting started with OM1 or looking to optimize an existing 
 | Supports Standard Middleware             | `ROS2`, `Zenoh`, and `CycloneDDS`                                               |
 | Includes a simple web-based debug display| Watch the system work (`WebSim` at [http://localhost:8000](http://localhost:8000)). |
 | Preconfigured endpoints                  | Text-to-Speech, OpenAI's `gpt-4o`, DeepSeek, Gemini, Openrouter, Near AI, Ollama (local), and multiple VLMs. |
-| Simulators                               | Gazebo, Issac Sim (Coming Soon)
+| Simulators                               | Gazebo, Isaac Sim (Coming Soon)
 
 To get started with OM1, head over to [Installation Guide](1_get-started).

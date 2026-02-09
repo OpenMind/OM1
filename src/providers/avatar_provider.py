@@ -91,6 +91,7 @@ class AvatarProvider:
         Parameters
         ----------
         command : str
+            The avatar face expression to switch to (will be converted to lowercase).
 
         Returns
         -------

@@ -84,6 +84,11 @@ class Simulator:
     def sim(self, actions: List[Action]) -> None:
         """
         Simulate the environment with the given actions.
+
+        Parameters
+        ----------
+        actions : List[Action]
+            List of actions to simulate in the environment.
         """
         pass
 
