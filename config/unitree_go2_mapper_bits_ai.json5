@@ -38,10 +38,10 @@
       type: "Rtk",
     },
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
     },
     {
-      type: "RPLidar",
+      type: "UnitreeGo2RPLidar",
     },
   ],
   cortex_llm: {
@@ -93,14 +93,14 @@
       },
     },
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
       config: {
         use_zenoh: false,
         URID: "", // only needed for Zenoh
       },
     },
     {
-      type: "RPLidar",
+      type: "UnitreeGo2RPLidar",
       config: {
         serial_port: "/dev/cu.usbserial-0001",
         half_width_robot: 0.21,
