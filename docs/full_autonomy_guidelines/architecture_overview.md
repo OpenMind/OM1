@@ -20,7 +20,7 @@ Thor is fully supported and optimized for ML-driven workloads, making it the rec
 
 The Full Autonomy stack is built from modular, containerized services that communicate through well-defined interfaces. The diagram below shows how these components interact within the system.
 
-![Architecture Diagram](../assets/full-autonomy-assets/full_autonomy_architecture.png)
+![ ](../assets/full-autonomy-assets/full_autonomy_architecture.png)
 
 ## Core Components
 OM1’s full autonomy is powered by the following tightly integrated services, each running in its own container and communicating in real time:
