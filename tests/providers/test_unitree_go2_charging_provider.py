@@ -34,7 +34,7 @@ def test_initialization(mock_zenoh):
     """Test UnitreeGo2ChargingProvider initialization with default topic."""
     provider = UnitreeGo2ChargingProvider()
 
-    assert provider.sub_topic == "go2/charging_status"
+    assert provider.sub_topic == "om/go2/charging_status"
     assert provider.latest_status is None
     assert provider.status_history == []
     assert provider.running is False
