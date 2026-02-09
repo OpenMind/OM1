@@ -13,7 +13,7 @@ from .zenoh_listener_provider import ZenohListenerProvider
 class UnitreeGo2ChargingProvider(ZenohListenerProvider):
     """
     Charging Status Provider for Unitree Go2 robot.
-    Subscribes to /go2/charging_status and exposes latest status.
+    Subscribes to om/go2/charging_status and exposes latest status.
     """
 
     def __init__(self, topic: str = "om/go2/charging_status"):
@@ -24,7 +24,7 @@ class UnitreeGo2ChargingProvider(ZenohListenerProvider):
         ----------
         topic : str, optional
             The topic on which to subscribe for charging status messages
-            (default is "/go2/charging_status").
+            (default is "om/go2/charging_status").
         """
         super().__init__(topic)
         logging.info("Charging Provider initialized with topic: %s", topic)
