@@ -4,17 +4,46 @@ import time
 from typing import Optional
 
 import serial
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class SerialReader(FuserInput[SensorConfig, Optional[str]]):
-    """
-    Reads data from serial port, typically from an Arduino
+class SerialReaderConfig(SensorConfig):
+    """Configuration for the SerialReader plugin."""
 
-    Maintains a buffer of messages.
+    port: str = Field(
+        default="/dev/cu.usbmodem1101",
+        description="Serial port device path (e.g., /dev/ttyUSB0 or COM3)",
+    )
+    baudrate: int = Field(
+        default=9600,
+        description="Serial communication baudrate",
+    )
+    timeout: float = Field(
+        default=1.0,
+        description="Read timeout in seconds",
+    )
+
+
+class SerialReader(FuserInput[SerialReaderConfig, Optional[str]]):
+    """
+    Serial port input reader for Arduino and other serial devices.
+
+    This class reads data from a serial port connection, typically used for
+    interfacing with Arduino microcontrollers or other serial devices. It
+    maintains an internal buffer of processed messages and converts raw serial
+    data into structured text descriptions suitable for LLM processing.
+
+    The reader supports configurable serial port settings (port, baudrate, timeout)
+    and handles connection errors gracefully. It processes incoming serial data
+    in real-time and maintains a message buffer for downstream processing.
+
+    Typical use cases include reading sensor data from Arduino (e.g., heart rate
+    monitors, grip strength sensors) and converting raw serial output into
+    natural language descriptions for the agent's context.
     """
 
     # simple code example to ingest serial data written by an Arduino, such as:
@@ -33,23 +62,42 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
 
     #
 
-    def __init__(self, config: SensorConfig):
+    def __init__(self, config: SerialReaderConfig):
         """
-        Initialize with empty message buffer.
+        Initialize the serial reader with configuration.
+
+        Sets up the serial port connection, initializes the message buffer,
+        and configures the IO provider for tracking input data.
+
+        Parameters
+        ----------
+        config : SerialReaderConfig
+            Configuration object containing sensor settings including port,
+            baudrate, and timeout.
+
+        Notes
+        -----
+        The serial port connection is attempted during initialization. If the
+        connection fails (e.g., port not found, permission denied), an error is
+        logged but the initialization continues. The `ser` attribute will be None
+        in case of connection failure, and subsequent polling operations will
+        return None until a successful connection is established.
+
+        The default serial port is set to "/dev/cu.usbmodem1101" (macOS) with
+        a baudrate of 9600. Users should modify these values to match their
+        specific hardware configuration.
         """
         super().__init__(config)
 
         # Configure the serial port
-        port = "/dev/cu.usbmodem1101"  # Replace with your serial port
-        baudrate = 9600
-        timeout = 1  # Optional: set a timeout for reading
-
         self.ser = None
 
         try:
             # Open the serial port
-            self.ser = serial.Serial(port, baudrate, timeout=timeout)
-            logging.info(f"Connected to {port} at {baudrate} baud")
+            self.ser = serial.Serial(
+                config.port, config.baudrate, timeout=config.timeout
+            )
+            logging.info(f"Connected to {config.port} at {config.baudrate} baud")
         except serial.SerialException as e:
             logging.error(f"Error: {e}")
 

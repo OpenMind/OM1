@@ -18,10 +18,18 @@ except ImportError:
     )
 
     class BmsState_:
+        """
+        Placeholder for BmsState_ when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
     class LowState_:
+        """
+        Placeholder for LowState_ when Unitree SDK is not installed.
+        """
+
         def __init__(self):
             pass
 
@@ -129,6 +137,14 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         self.descriptor_for_LLM = "Energy Level"
 
     def BMSStateHandler(self, msg: dds_.BmsState_):  # type: ignore
+        """
+        Handle incoming BmsState messages from the Unitree robot.
+
+        Parameters
+        ----------
+        msg : dds_.BmsState_
+            The incoming BmsState message containing battery state information.
+        """
         self.bms_state = msg
         logging.debug(f"BmsState_: {msg}")
 
@@ -138,6 +154,14 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         self.battery_temperature = float(msg.temperature[0])  # type: ignore
 
     def LowStateHandler(self, msg: dds_.LowState_):  # type: ignore
+        """
+        Handle incoming LowState messages from the Unitree robot.
+
+        Parameters
+        ----------
+        msg : dds_.LowState_
+            The incoming LowState message containing robot state information.
+        """
         self.low_state = msg
         logging.debug(f"LowState_: {msg}")
 
@@ -168,7 +192,6 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         List[float]
             list of floats
         """
-
         await asyncio.sleep(2.0)
 
         await self.update_status()

@@ -91,6 +91,7 @@ class AvatarProvider:
         Parameters
         ----------
         command : str
+            The avatar face expression to switch to (will be converted to lowercase).
 
         Returns
         -------
@@ -132,6 +133,14 @@ class AvatarProvider:
             return
 
         self.running = False
+
+        if self.avatar_subscriber:
+            self.avatar_subscriber.undeclare()
+            self.avatar_subscriber = None
+
+        if self.avatar_healthcheck_publisher:
+            self.avatar_healthcheck_publisher.undeclare()
+            self.avatar_healthcheck_publisher = None
 
         if self.session:
             self.session.close()

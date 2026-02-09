@@ -205,3 +205,10 @@ INPUT: {self.descriptor_for_LLM}
         self.messages = []
 
         return result
+
+    def stop(self):
+        """
+        Stop the VLM input.
+        """
+        if self.vlm:
+            self.vlm.stop()
