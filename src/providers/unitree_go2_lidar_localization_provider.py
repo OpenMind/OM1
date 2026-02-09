@@ -68,6 +68,12 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
     def start(self, message_callback: Optional[Callable] = None):
         """
         Start the Lidar Localization Provider by registering the message callback.
+
+        Parameters
+        ----------
+        message_callback : Optional[Callable]
+            Optional callback function for message processing. Not used directly
+            but kept for interface compatibility.
         """
         if not self.running:
             self.register_message_callback(self.lidar_localization_message_callback)

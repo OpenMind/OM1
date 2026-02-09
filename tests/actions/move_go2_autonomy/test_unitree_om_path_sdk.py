@@ -9,7 +9,7 @@ from actions.move_go2_autonomy.connector.unitree_om_path_sdk import (
     MoveUnitreeOMPathSDKConnector,
 )
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
-from providers.odom_provider import RobotState
+from providers.unitree_go2_odom_provider import RobotState
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def mock_dependencies():
             "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
         ) as mock_sport,
         patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.OdomProvider"
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"
         ) as mock_odom,
         patch(
             "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
@@ -157,7 +157,7 @@ class TestMoveUnitreeOMPathSDKConnectorInit:
                 "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
             ) as mock_sport,
             patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.OdomProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"
             ),
             patch(
                 "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
@@ -190,7 +190,7 @@ class TestMoveUnitreeOMPathSDKConnectorInit:
                 "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
             ),
             patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.OdomProvider"
+                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"
             ),
             patch(
                 "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
