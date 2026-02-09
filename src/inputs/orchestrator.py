@@ -11,11 +11,6 @@ class InputOrchestrator:
 
     Handles concurrent processing of multiple Sensor instances,
     orchestrating their data flows.
-
-    Parameters
-    ----------
-    inputs : Sequence[Sensor]
-        Sequence of input sources to manage
     """
 
     inputs: Sequence[Sensor]
@@ -23,6 +18,11 @@ class InputOrchestrator:
     def __init__(self, inputs: Sequence[Sensor]):
         """
         Initialize InputOrchestrator instance with input sources.
+
+        Parameters
+        ----------
+        inputs : Sequence[Sensor]
+            Sequence of input sources to manage.
         """
         self.inputs = inputs
 

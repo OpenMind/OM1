@@ -91,7 +91,19 @@ class RuntimeConfig:
 
     @classmethod
     def load(cls, config_name: str) -> "RuntimeConfig":
-        """Load a runtime configuration from a file."""
+        """
+        Load a runtime configuration from a file.
+
+        Parameters
+        ----------
+        config_name : str
+            Name of the configuration file (without .json5 extension).
+
+        Returns
+        -------
+        RuntimeConfig
+            Parsed runtime configuration object.
+        """
         return load_config(config_name)
 
 
@@ -298,6 +310,10 @@ def add_meta(
         The Robot ethernet port to add.
     g_URID : str
         The Robot URID to use.
+    g_robot_ip : Optional[str]
+        The Robot IP address.
+    g_mode : Optional[str]
+        The mode of operation.
 
     Returns
     -------
@@ -396,7 +412,7 @@ def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
         available_actions=agent_actions,
     )
     return RuntimeConfig(
-        version=config.get("version", "v1.0.1"),
+        version=config.get("version", "v1.0.2"),
         hertz=config.get("hertz", 1),
         name=config.get("name", "TestAgent"),
         system_prompt_base=config.get("system_prompt_base", ""),

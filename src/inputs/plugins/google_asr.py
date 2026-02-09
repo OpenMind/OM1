@@ -45,8 +45,6 @@ class GoogleASRSensorConfig(SensorConfig):
         Chunk size.
     base_url : Optional[str]
         Base URL for the ASR service.
-    stream_base_url : Optional[str]
-        Stream Base URL.
     microphone_device_id : Optional[str]
         Microphone Device ID.
     microphone_name : Optional[str]
@@ -65,7 +63,6 @@ class GoogleASRSensorConfig(SensorConfig):
     base_url: Optional[str] = Field(
         default=None, description="Base URL for the ASR service"
     )
-    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     microphone_device_id: Optional[int] = Field(
         default=None, description="Microphone Device ID"
     )
@@ -120,10 +117,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         base_url = (
             self.config.base_url
             or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
-        )
-        stream_base_url = (
-            self.config.stream_base_url
-            or f"wss://api.openmind.org/api/core/teleops/stream/audio?api_key={api_key}"
         )
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
@@ -197,7 +190,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             rate=rate,
             chunk=chunk,
             ws_url=base_url,
-            stream_url=stream_base_url,
             device_id=microphone_device_id,
             microphone_name=microphone_name,
             language_code=language_code,

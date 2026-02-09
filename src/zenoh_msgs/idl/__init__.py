@@ -42,10 +42,12 @@ from .status_msgs import (
     AvatarFaceRequest,
     AvatarFaceResponse,
     CameraStatus,
+    ChargingStatus,
     ConfigRequest,
     ConfigResponse,
     ModeStatusRequest,
     ModeStatusResponse,
+    PersonGreetingStatus,
     TTSStatusRequest,
     TTSStatusResponse,
 )
@@ -73,6 +75,8 @@ __all__ = [
     "ModeStatusResponse",
     "TTSStatusRequest",
     "TTSStatusResponse",
+    "ChargingStatus",
+    "PersonGreetingStatus",
     # geographic_msgs
     "GeoPoint",
     "GeoPointStamped",

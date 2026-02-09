@@ -46,7 +46,7 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
     """
     DIMO Tesla input handler.
 
-    A class that process Tesla data and generates text descriptions
+    A class that processes Tesla data and generates text descriptions
     """
 
     def __init__(self, config: DIMOTeslaConfig):
@@ -55,6 +55,11 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
 
         Sets up the required providers and buffers for handling Tesla data processing.
         Initializes connection to the Tesla service and registers message handlers.
+
+        Parameters
+        ----------
+        config : DIMOTeslaConfig
+            Configuration settings for the sensor input.
         """
         super().__init__(config)
 
