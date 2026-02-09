@@ -2,10 +2,11 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from bleak import BleakScanner
 from bleak.backends.scanner import AdvertisementData
+from pydantic import Field
 
 from backgrounds.base import Background, BackgroundConfig
 from providers.fabric_map_provider import (
@@ -15,32 +16,56 @@ from providers.fabric_map_provider import (
     RFDataRaw,
 )
 from providers.gps_provider import GpsProvider
-from providers.odom_provider import OdomProvider
 from providers.rtk_provider import RtkProvider
+from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
 
 
-class RFmapper(Background):
+class RFmapperConfig(BackgroundConfig):
     """
-    Assemble location and BLE data.
+    Configuration for RFmapper Background.
+
+    Parameters
+    ----------
+    name : str
+        Name of the RF mapper.
+    api_key : Optional[str]
+        API key for Fabric.
+    URID : Optional[str]
+        Unique Robot ID.
+    unitree_ethernet : Optional[str]
+        Unitree Ethernet channel.
     """
 
-    def __init__(self, config: BackgroundConfig = BackgroundConfig()):
+    name: str = Field(default="RFmapper", description="Name of the RF mapper")
+    api_key: Optional[str] = Field(default=None, description="API key")
+    URID: Optional[str] = Field(default=None, description="Unique Robot ID")
+    unitree_ethernet: Optional[str] = Field(
+        default=None, description="Unitree Ethernet channel"
+    )
+
+
+class RFmapper(Background[RFmapperConfig]):
+    """
+    Assemble location and BLE data with Unitree Go2 odometry and submit to Fabric.
+    """
+
+    def __init__(self, config: RFmapperConfig):
         """
         Initialize the RFmapper with configuration.
 
         Parameters
         ----------
-        config : BackgroundConfig
+        config : RFmapperConfig
             Configuration object for the background.
         """
         super().__init__(config)
 
         logging.info(f"Mapper config: {config}")
 
-        self.name = getattr(config, "name", "RFmapper")
-        self.api_key = getattr(config, "api_key", None)
-        self.URID = getattr(config, "URID", None)
-        self.unitree_ethernet = getattr(config, "unitree_ethernet", None)
+        self.name = self.config.name
+        self.api_key = self.config.api_key
+        self.URID = self.config.URID
+        self.unitree_ethernet = self.config.unitree_ethernet
 
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._scan_task)
@@ -81,7 +106,7 @@ class RFmapper(Background):
         self.rtk_on = self.rtk.running
         logging.info(f"Mapper Rtk Provider: {self.rtk}")
 
-        self.odom = OdomProvider()
+        self.odom = UnitreeGo2OdomProvider()
         logging.info(f"Mapper Odom Provider: {self.odom}")
 
         self.fds = FabricDataSubmitter(api_key=self.api_key, write_to_local_file=True)
@@ -92,10 +117,27 @@ class RFmapper(Background):
 
         self.start()
 
-    async def scan(self):
+    async def scan(self) -> List[RFData]:
+        """
+        Perform a BLE scan and collect RF data.
+
+        Returns
+        -------
+        List[RFData]
+            List of RFData objects from the scan.
+        """
 
         def detection_callback(device, advdata: AdvertisementData):
+            """
+            Callback for handling detected BLE devices.
 
+            Parameters
+            ----------
+            device : BLEDevice
+                The detected BLE device.
+            advdata : AdvertisementData
+                The advertisement data associated with the device.
+            """
             addr = device.address
 
             local_name = None
@@ -180,6 +222,9 @@ class RFmapper(Background):
         return final_list
 
     def _scan_task(self):
+        """
+        Background task to perform BLE scanning.
+        """
         asyncio.set_event_loop(self.loop)
         logging.info("Starting RF scan thread...")
         self.running = True
@@ -190,9 +235,15 @@ class RFmapper(Background):
             time.sleep(0.5)
 
     def start(self):
+        """
+        Start the background process.
+        """
         self.thread.start()
 
     def stop(self):
+        """
+        Stop the background process.
+        """
         self.running = False
         time.sleep(1)
         self.thread.join()
@@ -234,7 +285,7 @@ class RFmapper(Background):
                             self.ble_scan = g["ble_scan"]
                             logging.debug(f"RF scan results {self.ble_scan}")
                         else:
-                            logging.warn("No nRF52 scan results")
+                            logging.warning("No nRF52 scan results")
 
                 except Exception as e:
                     logging.error(f"Error parsing GPS: {e}")
@@ -296,7 +347,7 @@ class RFmapper(Background):
                 except Exception as e:
                     logging.error(f"Error sharing to Fabric: {e}")
 
-                time.sleep(1)  # we should send a payload every second
+                self.sleep(1)  # we should send a payload every second
 
         except KeyboardInterrupt:
             logging.info("Stopping RF scanner...")

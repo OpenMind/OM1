@@ -1,47 +1,65 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from queue import Queue
 from typing import List, Optional
 
 from dimo import DIMO
+from pydantic import Field
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
+class DIMOTeslaConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for DIMO Tesla input.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    client_id : Optional[str]
+        Client ID for DIMO authentication.
+    domain : Optional[str]
+        Domain for DIMO authentication redirect.
+    private_key : Optional[str]
+        Private Key for DIMO authentication.
+    token_id : Optional[int]
+        Token ID for the specific vehicle/device.
     """
 
-    timestamp: float
-    message: str
+    client_id: Optional[str] = Field(
+        default=None, description="Client ID for DIMO authentication"
+    )
+    domain: Optional[str] = Field(
+        default=None, description="Domain for DIMO authentication redirect"
+    )
+    private_key: Optional[str] = Field(
+        default=None, description="Private Key for DIMO authentication"
+    )
+    token_id: Optional[int] = Field(
+        default=None, description="Token ID for the specific vehicle/device"
+    )
 
 
-class DIMOTesla(FuserInput[str]):
+class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
     """
     DIMO Tesla input handler.
 
-    A class that process Tesla data and generates text descriptions
+    A class that processes Tesla data and generates text descriptions
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: DIMOTeslaConfig):
         """
         Initialize DIMO Tesla input handler.
 
         Sets up the required providers and buffers for handling Tesla data processing.
         Initializes connection to the Tesla service and registers message handlers.
+
+        Parameters
+        ----------
+        config : DIMOTeslaConfig
+            Configuration settings for the sensor input.
         """
         super().__init__(config)
 
@@ -61,9 +79,9 @@ class DIMOTesla(FuserInput[str]):
         self.vehicle_jwt = None
 
         # Configure the DIMO Tesla service
-        client_id = getattr(config, "client_id", None)
-        domain = getattr(config, "domain", None)
-        private_key = getattr(config, "private_key", None)
+        client_id = self.config.client_id
+        domain = self.config.domain
+        private_key = self.config.private_key
 
         if (
             client_id is None
@@ -76,7 +94,7 @@ class DIMOTesla(FuserInput[str]):
             )
             return
 
-        self.token_id = getattr(config, "token_id", None)
+        self.token_id = self.config.token_id
         if self.token_id is None:
             logging.info("DIMOTesla: You did not provide a token_id - aborting")
             return
@@ -107,7 +125,7 @@ class DIMOTesla(FuserInput[str]):
 
         Returns
         -------
-        str
+        Optional[str]
             The latest Tesla data
         """
         await asyncio.sleep(0.5)
@@ -179,41 +197,45 @@ class DIMOTesla(FuserInput[str]):
             currentLocationLatitude = tesla_data["currentLocationLatitude"]["value"]
             currentLocationLongitude = tesla_data["currentLocationLongitude"]["value"]
         except Exception as e:
-            print("Error parsing Tesla data")
             logging.error(f"Error parsing Tesla data: {e}")
             return None
 
-        return """
+        return f"""
         Powertrain Transmission Travelled Distance: {powertrainTransmissionTravelledDistance} km
         Exterior Air Temperature: {exteriorAirTemperature} C
         Speed: {speed} km/h
         Powertrain Range: {powertrainRange} km
         Current Location Latitude: {currentLocationLatitude}
         Current Location Longitude: {currentLocationLongitude}
-        """.format(
-            powertrainTransmissionTravelledDistance=powertrainTransmissionTravelledDistance,
-            exteriorAirTemperature=exteriorAirTemperature,
-            speed=speed,
-            powertrainRange=powertrainRange,
-            currentLocationLatitude=currentLocationLatitude,
-            currentLocationLongitude=currentLocationLongitude,
-        )
+        """
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped status or transaction notification
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Process Tesla data message buffer.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
         """
         pending_message = await self._raw_to_text(raw_input)
         if pending_message is not None:

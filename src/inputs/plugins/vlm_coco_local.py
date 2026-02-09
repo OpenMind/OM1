@@ -2,46 +2,51 @@ import asyncio
 import collections
 import logging
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 import cv2
 import numpy as np
 import torch
-from PIL import Image
+from pydantic import Field
 from torchvision.models import detection as detection_model
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
-Detection = collections.namedtuple("Detection", "label, bbox, score")
 
-
-@dataclass
-class Message:
+class VLM_COCO_LocalConfig(SensorConfig):
     """
-    Container for timestamped messages.
+    Configuration for Local COCO VLM Sensor.
 
     Parameters
     ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
+    camera_index : int
+        Index of the camera device.
     """
 
-    timestamp: float
-    message: str
+    camera_index: int = Field(default=0, description="Index of the camera device")
 
+
+Detection = collections.namedtuple("Detection", "label, bbox, score")
 
 # if working on Mac, please disable continuity camera on your iphone
-# Settings > General > AirPlay & Continuity, and tunr off Continuity
+# Settings > General > AirPlay & Continuity, and turn off Continuity
 
 
 def check_webcam(index_to_check):
     """
     Checks if a webcam is available and returns True if found, False otherwise.
+
+    Parameters
+    ----------
+    index_to_check : int
+        The camera index to check.
+
+    Returns
+    -------
+    bool
+        True if the webcam is available, False otherwise.
     """
     cap = cv2.VideoCapture(index_to_check)  # 0 is the default camera index
     if not cap.isOpened():
@@ -51,14 +56,14 @@ def check_webcam(index_to_check):
     return True
 
 
-class VLM_COCO_Local(FuserInput[Image.Image]):
+class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
     """
     Detects COCO objects in image and publishes messages.
     Uses PyTorch and FasterRCNN_MobileNet model from torchvision.
     Bounding Boxes use image convention, ie center.y = 0 means top of image.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: VLM_COCO_LocalConfig):
         """
         Initialize VLM input handler with empty message buffer.
         """
@@ -67,7 +72,7 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
         self.device = "cpu"
         self.detection_threshold = 0.2
 
-        self.camera_index = getattr(self.config, "camera_index", 0)
+        self.camera_index = self.config.camera_index
 
         # Track IO
         self.io_provider = IOProvider()
@@ -143,7 +148,6 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
         Message
             Timestamped message containing description
         """
-
         filtered_detections = None
 
         if raw_input is not None:
@@ -209,13 +213,13 @@ class VLM_COCO_Local(FuserInput[Image.Image]):
         if sentence is not None:
             return Message(timestamp=time.time(), message=sentence)
 
-    async def raw_to_text(self, raw_input: np.ndarray):
+    async def raw_to_text(self, raw_input: Optional[np.ndarray]):
         """
         Convert raw image to text and update message buffer.
 
         Parameters
         ----------
-        raw_input : np.ndarray
+        raw_input : Optional[np.ndarray]
             Raw image to be processed
         """
         pending_message = await self._raw_to_text(raw_input)

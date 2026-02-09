@@ -11,6 +11,7 @@ from runtime.multi_mode.config import (
     TransitionType,
     _load_mode_components,
     load_mode_config,
+    mode_config_to_dict,
 )
 from runtime.single_mode.config import RuntimeConfig
 
@@ -59,6 +60,7 @@ def mock_background():
 def sample_mode_config():
     """Sample mode configuration for testing."""
     return ModeConfig(
+        version="v1.0.0",
         name="test_mode",
         display_name="Test Mode",
         description="A test mode for unit testing",
@@ -74,6 +76,7 @@ def sample_mode_config():
 def sample_system_config():
     """Sample system configuration for testing."""
     return ModeSystemConfig(
+        version="v1.0.2",
         name="test_system",
         default_mode="default",
         config_name="test_config",
@@ -153,6 +156,7 @@ class TestModeConfig:
     def test_mode_config_defaults(self):
         """Test mode config with default values."""
         config = ModeConfig(
+            version="v1.0.0",
             name="minimal_mode",
             display_name="Minimal Mode",
             description="Minimal test mode",
@@ -232,6 +236,7 @@ class TestModeSystemConfig:
     def test_system_config_creation(self, sample_system_config):
         """Test basic system config creation."""
         config = sample_system_config
+        assert config.version == "v1.0.2"
         assert config.name == "test_system"
         assert config.default_mode == "default"
         assert config.config_name == "test_config"
@@ -247,9 +252,11 @@ class TestModeSystemConfig:
     def test_system_config_defaults(self):
         """Test system config with default values."""
         config = ModeSystemConfig(
+            version="v1.0.2",
             name="minimal_system",
             default_mode="default",
         )
+        assert config.version == "v1.0.2"
         assert config.config_name == ""
         assert config.allow_manual_switching is True
         assert config.mode_memory_enabled is True
@@ -288,11 +295,11 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading all component types."""
-        mock_load_input.return_value = lambda config: mock_sensor
-        mock_load_simulator.return_value = lambda config: mock_simulator
+        mock_load_input.return_value = mock_sensor
+        mock_load_simulator.return_value = mock_simulator
         mock_load_action.return_value = mock_action
-        mock_load_background.return_value = lambda config: mock_background
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_background.return_value = mock_background
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_inputs = [{"type": "test_input", "config": {}}]
         sample_mode_config._raw_simulators = [{"type": "test_simulator", "config": {}}]
@@ -323,7 +330,7 @@ class TestLoadModeComponents:
         mock_llm,
     ):
         """Test loading components with global LLM configuration."""
-        mock_load_llm.return_value = lambda config, available_actions: mock_llm
+        mock_load_llm.return_value = mock_llm
 
         sample_mode_config._raw_llm = None
         sample_system_config.global_cortex_llm = {"type": "global_llm", "config": {}}
@@ -331,7 +338,7 @@ class TestLoadModeComponents:
         _load_mode_components(sample_mode_config, sample_system_config)
 
         assert sample_mode_config.cortex_llm == mock_llm
-        mock_load_llm.assert_called_once_with("global_llm")
+        mock_load_llm.assert_called_once()
 
     def test_load_mode_components_no_llm_raises_error(
         self,
@@ -363,18 +370,21 @@ class TestLoadModeConfig:
     def test_load_mode_config_env_fallback(self):
         """Test that environment variables are used as fallback."""
         config_data = {
-            "name": "env_test",
+            "version": "v1.0.2",
             "default_mode": "default",
-            "robot_ip": "",
             "api_key": "openmind_free",
-            "URID": "default",
+            "system_governance": "Env governance",
             "modes": {
                 "default": {
+                    "hertz": 1.0,
                     "display_name": "Default",
                     "description": "Default mode",
                     "system_prompt_base": "Test prompt",
+                    "agent_inputs": [],
+                    "agent_actions": [],
                 }
             },
+            "cortex_llm": {"type": "test_llm"},
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
@@ -400,16 +410,22 @@ class TestLoadModeConfig:
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
-            "name": "unitree_test",
-            "default_mode": "default",
+            "version": "v1.0.2",
             "unitree_ethernet": "eth0",
+            "default_mode": "default",
+            "api_key": "openmind_free",
+            "system_governance": "Env governance",
             "modes": {
                 "default": {
+                    "hertz": 1.0,
                     "display_name": "Default",
                     "description": "Default mode",
                     "system_prompt_base": "Test prompt",
+                    "agent_inputs": [],
+                    "agent_actions": [],
                 }
             },
+            "cortex_llm": {"type": "test_llm"},
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
@@ -429,3 +445,78 @@ class TestLoadModeConfig:
 
         finally:
             os.unlink(temp_file)
+
+    def test_load_mode_config_invalid_version(self):
+        """Test load_mode_config with invalid version format."""
+        config_data = {
+            "version": "invalid_version",
+            "name": "invalid_version_test",
+            "default_mode": "default",
+            "modes": {
+                "default": {
+                    "display_name": "Default",
+                    "description": "Default mode",
+                    "system_prompt_base": "Test prompt",
+                }
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            import json5
+
+            json5.dump(config_data, f)
+            temp_file = f.name
+
+        try:
+            with patch("runtime.multi_mode.config.os.path.join") as mock_join:
+                mock_join.return_value = temp_file
+
+                with pytest.raises(ValueError, match="Invalid version format"):
+                    load_mode_config("invalid_version_test")
+
+        finally:
+            os.unlink(temp_file)
+
+
+class TestModeConfigToDict:
+    """Test cases for mode_config_to_dict function."""
+
+    def test_mode_config_to_dict_includes_version(self, sample_system_config):
+        """Test that mode_config_to_dict includes the version field."""
+        result = mode_config_to_dict(sample_system_config)
+
+        assert "version" in result
+        assert result["version"] == "v1.0.2"
+
+    def test_mode_config_to_dict_all_fields(self, sample_system_config):
+        """Test that mode_config_to_dict includes all expected fields."""
+        result = mode_config_to_dict(sample_system_config)
+
+        # Verify all top-level fields are present
+        expected_fields = [
+            "version",
+            "name",
+            "default_mode",
+            "allow_manual_switching",
+            "mode_memory_enabled",
+            "api_key",
+            "robot_ip",
+            "URID",
+            "unitree_ethernet",
+            "system_governance",
+            "system_prompt_examples",
+            "cortex_llm",
+            "global_lifecycle_hooks",
+            "modes",
+            "transition_rules",
+        ]
+
+        for field in expected_fields:
+            assert field in result, f"Missing field: {field}"
+
+        # Verify field values
+        assert result["version"] == sample_system_config.version
+        assert result["name"] == sample_system_config.name
+        assert result["default_mode"] == sample_system_config.default_mode
+        assert result["api_key"] == sample_system_config.api_key
+        assert result["robot_ip"] == sample_system_config.robot_ip

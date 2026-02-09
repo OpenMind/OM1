@@ -1,73 +1,103 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import Optional
 
 import serial
+from pydantic import Field
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
-# simple code example to ingest serial data written by an Arduino, such as:
 
-#       if (grip_force > grip_force_threshold) {
-#         Serial.println("Grip: Elevated");
-#       } else {
-#         Serial.println("Grip: Normal");
-#       }
+class SerialReaderConfig(SensorConfig):
+    """Configuration for the SerialReader plugin."""
 
-#       if (pulse_rate > pulse_threshold) {
-#         Serial.println("Pulse: Elevated");
-#       } else {
-#         Serial.println("Pulse: Normal");
-#       }
+    port: str = Field(
+        default="/dev/cu.usbmodem1101",
+        description="Serial port device path (e.g., /dev/ttyUSB0 or COM3)",
+    )
+    baudrate: int = Field(
+        default=9600,
+        description="Serial communication baudrate",
+    )
+    timeout: float = Field(
+        default=1.0,
+        description="Read timeout in seconds",
+    )
 
-#
 
-
-@dataclass
-class Message:
+class SerialReader(FuserInput[SerialReaderConfig, Optional[str]]):
     """
-    Container for timestamped messages.
+    Serial port input reader for Arduino and other serial devices.
 
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
+    This class reads data from a serial port connection, typically used for
+    interfacing with Arduino microcontrollers or other serial devices. It
+    maintains an internal buffer of processed messages and converts raw serial
+    data into structured text descriptions suitable for LLM processing.
 
-    timestamp: float
-    message: str
+    The reader supports configurable serial port settings (port, baudrate, timeout)
+    and handles connection errors gracefully. It processes incoming serial data
+    in real-time and maintains a message buffer for downstream processing.
 
-
-class SerialReader(FuserInput[str]):
-    """
-    Reads data from serial port, typically from an Arduino
-
-    Maintains a buffer of messages.
+    Typical use cases include reading sensor data from Arduino (e.g., heart rate
+    monitors, grip strength sensors) and converting raw serial output into
+    natural language descriptions for the agent's context.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    # simple code example to ingest serial data written by an Arduino, such as:
+
+    #       if (grip_force > grip_force_threshold) {
+    #         Serial.println("Grip: Elevated");
+    #       } else {
+    #         Serial.println("Grip: Normal");
+    #       }
+
+    #       if (pulse_rate > pulse_threshold) {
+    #         Serial.println("Pulse: Elevated");
+    #       } else {
+    #         Serial.println("Pulse: Normal");
+    #       }
+
+    #
+
+    def __init__(self, config: SerialReaderConfig):
         """
-        Initialize with empty message buffer.
+        Initialize the serial reader with configuration.
+
+        Sets up the serial port connection, initializes the message buffer,
+        and configures the IO provider for tracking input data.
+
+        Parameters
+        ----------
+        config : SerialReaderConfig
+            Configuration object containing sensor settings including port,
+            baudrate, and timeout.
+
+        Notes
+        -----
+        The serial port connection is attempted during initialization. If the
+        connection fails (e.g., port not found, permission denied), an error is
+        logged but the initialization continues. The `ser` attribute will be None
+        in case of connection failure, and subsequent polling operations will
+        return None until a successful connection is established.
+
+        The default serial port is set to "/dev/cu.usbmodem1101" (macOS) with
+        a baudrate of 9600. Users should modify these values to match their
+        specific hardware configuration.
         """
         super().__init__(config)
 
         # Configure the serial port
-        port = "/dev/cu.usbmodem1101"  # Replace with your serial port
-        baudrate = 9600
-        timeout = 1  # Optional: set a timeout for reading
-
         self.ser = None
 
         try:
             # Open the serial port
-            self.ser = serial.Serial(port, baudrate, timeout=timeout)
-            logging.info(f"Connected to {port} at {baudrate} baud")
+            self.ser = serial.Serial(
+                config.port, config.baudrate, timeout=config.timeout
+            )
+            logging.info(f"Connected to {config.port} at {config.baudrate} baud")
         except serial.SerialException as e:
             logging.error(f"Error: {e}")
 
@@ -79,16 +109,15 @@ class SerialReader(FuserInput[str]):
 
         self.descriptor_for_LLM = "Heart Rate and Grip Strength"
 
-    async def _poll(self) -> str | None:
+    async def _poll(self) -> Optional[str]:
         """
         Poll for serial data.
 
         Returns
         -------
-        str
-            message on serial bus
+        Optional[str]
+            The latest line read from the serial port, or None if no data
         """
-
         await asyncio.sleep(0.5)
 
         if self.ser is None:
@@ -103,15 +132,22 @@ class SerialReader(FuserInput[str]):
         else:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
-        Process raw string to higer level text description.
+        Process raw string to higher level text description.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
 
         Returns
         -------
-        Message
-            Timestamped message containing description
+        Optional[Message]
+            A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
 
         if "Pulse:" in raw_input:
             value = raw_input.split(" ")
@@ -124,9 +160,14 @@ class SerialReader(FuserInput[str]):
 
         return Message(timestamp=time.time(), message=message)
 
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Update message buffer.
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input to be processed, or None if no input is available
         """
         pending_message = await self._raw_to_text(raw_input)
 

@@ -1,33 +1,15 @@
 import asyncio
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import List, Optional
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.simple_paths_provider import SimplePathsProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class SimplePaths(FuserInput[str]):
+class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
     """
     SimplePaths input handler.
 
@@ -35,7 +17,17 @@ class SimplePaths(FuserInput[str]):
     It maintains an internal buffer of processed messages.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
+        """
+        Initialize the SimplePaths input handler.
+
+        Sets up the required providers and buffers for handling simple path data.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration for the sensor input.
+        """
         super().__init__(config)
 
         # Track IO
@@ -55,7 +47,7 @@ class SimplePaths(FuserInput[str]):
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for new messages from the RPLidar Provider.
+        Poll for new messages from the SimplePaths Provider.
 
         Checks the message buffer for new messages with a brief delay
         to prevent excessive CPU usage.
@@ -72,7 +64,7 @@ class SimplePaths(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -81,14 +73,17 @@ class SimplePaths(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

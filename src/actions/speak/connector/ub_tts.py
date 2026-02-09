@@ -1,7 +1,9 @@
 import logging
 import time
+from typing import Optional
 
 import zenoh
+from pydantic import Field
 
 # Import the necessary base classes and YOUR existing SpeakInput interface
 from actions.base import ActionConfig, ActionConnector
@@ -16,22 +18,46 @@ from zenoh_msgs import (
 )
 
 
-class UbTtsConnector(ActionConnector[SpeakInput]):
+class UbTtsConfig(ActionConfig):
+    """
+    Configuration for UbTts connector.
+
+    Parameters
+    ----------
+    robot_ip : Optional[str]
+        The IP address of the robot.
+    ub_tts_base_url : str
+        The base URL for the UbTTS service.
+    """
+
+    robot_ip: Optional[str] = Field(
+        default=None,
+        description="The IP address of the robot.",
+    )
+    base_url: str = Field(
+        default=f"http://{robot_ip}:9090/v1/",
+        description="The base URL for the UbTTS service.",
+    )
+
+
+class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
     """
     A "Speak" connector that uses the UbTtsProvider to perform Text-to-Speech.
     This connector is compatible with the standard SpeakInput interface.
     """
 
-    def __init__(self, config: ActionConfig):
+    def __init__(self, config: UbTtsConfig):
         """
         Initializes the connector and its underlying TTS provider.
+
+        Parameters
+        ----------
+        config : UbTtsConfig
+            Configuration for the connector.
         """
         super().__init__(config)
 
-        robot_ip = getattr(self.config, "robot_ip", None)
-        base_url = getattr(
-            self.config, "ub_tts_base_url", f"http://{robot_ip}:9090/v1/"
-        )
+        base_url = self.config.base_url
 
         # Zenoh topics
         self.tts_status_request_topic = "om/tts/request"
@@ -71,8 +97,8 @@ class UbTtsConnector(ActionConnector[SpeakInput]):
         # Call the provider's speak method using data from SpeakInput.
         # The text comes from the 'action' field.
         # 'interrupt' and 'timestamp' use default values since they are not in SpeakInput.
-        self.tts.speak(
-            tts=output_interface.action,
+        self.tts.adding_pending_message(
+            message=output_interface.action,
             interrupt=True,
             timestamp=int(time.time()),  # Use current time as a sensible default
         )
@@ -135,3 +161,13 @@ class UbTtsConnector(ActionConnector[SpeakInput]):
             return self._zenoh_tts_status_response_pub.put(
                 ai_status_response.serialize()
             )
+
+    def stop(self):
+        """
+        Stop the UbTtsConnector and clean up resources.
+        """
+        if self.session:
+            self.session.close()
+            logging.info("UB TTS Zenoh client closed.")
+
+        self.tts.stop()

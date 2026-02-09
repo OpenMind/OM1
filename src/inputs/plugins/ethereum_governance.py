@@ -1,12 +1,11 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
 from typing import Optional
 
-import requests
+import aiohttp
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
@@ -17,24 +16,7 @@ from providers.io_provider import IOProvider
 # interact with HOLESKY and decode the data, generating an ASCII string.
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class GovernanceEthereum(FuserInput[float]):
+class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
     """
     Ethereum ERC-7777 reader that tracks governance rules.
 
@@ -46,10 +28,17 @@ class GovernanceEthereum(FuserInput[float]):
         If connection to Ethereum network fails
     """
 
-    def load_rules_from_blockchain(self):
+    async def load_rules_from_blockchain(self) -> Optional[str]:
+        """
+        Load governance rules from the Ethereum blockchain.
+
+        Returns
+        -------
+        Optional[str]
+            Decoded governance rules string, or None on error.
+        """
         logging.info("Loading rules from Ethereum blockchain")
 
-        # Construct JSON-RPC request
         payload = {
             "jsonrpc": "2.0",
             "id": 636815446436324,
@@ -65,38 +54,50 @@ class GovernanceEthereum(FuserInput[float]):
         }
 
         try:
-            response = requests.post(
-                self.rpc_url, json=payload, headers={"Content-Type": "application/json"}
-            )
-            logging.debug(f"Blockchain response status: {response.status_code}")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.rpc_url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as response:
+                    logging.debug(f"Blockchain response status: {response.status}")
 
-            if response.status_code == 200:
-                result = response.json()
-                if "result" in result and result["result"]:
-                    hex_response = result["result"]
-                    logging.debug(f"Raw blockchain response: {hex_response}")
+                    if response.status == 200:
+                        result = await response.json()
+                        if "result" in result and result["result"]:
+                            hex_response = result["result"]
+                            logging.debug(f"Raw blockchain response: {hex_response}")
 
-                    # Decode the response using Web3.py
-                    decoded_data = self.decode_eth_response(hex_response)
-                    logging.debug(f"Decoded blockchain data: {decoded_data}")
-                    return decoded_data
-                else:
-                    logging.error("Error: No valid result in blockchain response")
-            else:
-                logging.error(
-                    f"Error: Blockchain request failed with status {response.status_code}"
-                )
-
+                            decoded_data = self.decode_eth_response(hex_response)
+                            logging.debug(f"Decoded blockchain data: {decoded_data}")
+                            return decoded_data
+                        else:
+                            logging.error(
+                                "Error: No valid result in blockchain response"
+                            )
+                    else:
+                        logging.error(
+                            f"Error: Blockchain request failed with status {response.status}"
+                        )
         except Exception as e:
             logging.error(f"Error loading rules from blockchain: {e}")
 
         return None
 
-    def decode_eth_response(self, hex_response):
+    def decode_eth_response(self, hex_response: str) -> Optional[str]:
         """
         Decodes an Ethereum eth_call response.
-        Extracts and decodes a UTF-8 string from ABI-encoded data.
-        Cleans any unwanted control characters.
+
+        Parameters
+        ----------
+        hex_response : str
+            Hexadecimal string response from Ethereum eth_call.
+
+        Returns
+        -------
+        Optional[str]
+            Decoded string, or None on error.
         """
         if hex_response.startswith("0x"):
             hex_response = hex_response[2:]
@@ -121,19 +122,24 @@ class GovernanceEthereum(FuserInput[float]):
             logging.error(f"Decoding error: {e}")
             return None
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize GovernanceEthereum instance.
+
+        Parameters
+        ----------
+        config : SensorConfig
+            Configuration settings for the sensor input.
         """
         super().__init__(config)
 
         self.descriptor_for_LLM = "Universal Laws"
 
         self.io_provider = IOProvider()
-        self.POLL_INTERVAL = 5  # seconds
-        self.rpc_url = "https://holesky.gateway.tenderly.co"  # Ethereum RPC URL
+        self.POLL_INTERVAL = 5.0  # seconds
+        self.rpc_url = "https://holesky.drpc.org"  # Ethereum RPC URL
 
-        # The smart contract address of ther ERC-7777 Governance Smart Contract
+        # The smart contract address of the ERC-7777 Governance Smart Contract
         self.contract_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
 
         # getRuleSet() Function selector (first 4 bytes of Keccak hash).
@@ -143,40 +149,59 @@ class GovernanceEthereum(FuserInput[float]):
         # getLatestRuleSetVersion(0x254e2f1e)
         # It's currently = 2
         self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
-
-        self.universal_rule = self.load_rules_from_blockchain()
+        self.universal_rule: Optional[str] = None
         self.messages: list[Message] = []
 
-        logging.info(f"7777 rules: {self.universal_rule}")
+        logging.info(
+            "GovernanceEthereum initialized, rules will be loaded on first poll"
+        )
 
     async def _poll(self) -> Optional[str]:
         """
-        Poll for Ethereum Governance Law Changes
+        Poll for Ethereum Governance Law Changes.
+
+        Returns
+        -------
+        Optional[str]
+            Latest governance rules as a string, or None on error
         """
         await asyncio.sleep(self.POLL_INTERVAL)
 
         try:
-            rules = self.load_rules_from_blockchain()
+            rules = await self.load_rules_from_blockchain()
             logging.debug(f"7777 rules: {rules}")
             return rules
         except Exception as e:
             logging.error(f"Error fetching blockchain data: {e}")
+            return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Convert self.universal_rule to a human-readable Message.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
+
         Returns
         -------
-        Message
+        Optional[Message]
             Timestamped status or transaction notification
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
-    async def raw_to_text(self, raw_input: str):
+    async def raw_to_text(self, raw_input: Optional[str]):
         """
         Process governance rule message buffer.
 
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Raw input string to be processed
         """
         pending_message = await self._raw_to_text(raw_input)
 
