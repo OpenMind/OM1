@@ -19,7 +19,7 @@ class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
 
     def __init__(self, config: SensorConfig):
         """
-        Initialize the LocalizationInput plugin.
+        Initialize the AMCLLocalizationInput plugin.
 
         Parameters
         ----------
