@@ -6,14 +6,39 @@ import pytest
 from inputs.plugins.wallet_coinbase import Message, WalletCoinbase, WalletCoinbaseConfig
 
 
-def test_initialization_with_missing_wallet_id():
-    """Missing COINBASE_WALLET_ID should fall back to a safe zero state."""
+def test_initialization_with_missing_wallet_id_and_missing_keys():
+    """Missing COINBASE_WALLET_ID and missing keys should result in no wallet."""
     with patch.dict(os.environ, {}, clear=True):
         wallet = WalletCoinbase(config=WalletCoinbaseConfig())
         assert wallet.wallet is None
         assert wallet.balance == 0.0
         assert wallet.balance_previous == 0.0
         assert wallet.asset_id == "eth"
+
+
+def test_initialization_creates_wallet_if_missing_id_but_keys_present():
+    """Missing COINBASE_WALLET_ID but present keys should create a new wallet."""
+    mock_wallet = MagicMock()
+    mock_wallet.id = "new_wallet_id"
+    mock_wallet.balance.return_value = "0.0"
+
+    env = {
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+        # COINBASE_WALLET_ID missing
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure") as mock_configure,
+        patch("inputs.plugins.wallet_coinbase.Wallet.create", return_value=mock_wallet) as mock_create,
+    ):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+        assert wallet.wallet == mock_wallet
+        assert wallet.balance == 0.0
+        
+        mock_configure.assert_called_once_with("k", "s")
+        mock_create.assert_called_once()
 
 
 def test_initialization_with_wallet_fetch_failure():
