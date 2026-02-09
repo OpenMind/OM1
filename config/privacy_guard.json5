@@ -1,0 +1,330 @@
+{
+  version: "v1.0.2",
+  name: "privacy_guard",
+  api_key: "openmind_free",
+  robot_ip: "",
+
+  // ── APP STORE METADATA ──────────────────────────────────────────────────
+  app_metadata: {
+    display_name: "Privacy Guard",
+    description: "A real-time visual privacy firewall that detects screens, documents, and sensitive situations — then averts the robot's gaze to protect human privacy.",
+    author: "GUDMAN",
+    version: "1.0.0",
+    category: "privacy",
+    tags: ["privacy", "security", "safety", "camera", "detection"],
+  },
+
+  // ── HARDWARE REQUIREMENTS ────────────────────────────────────────────────
+  hardware_requirements: {
+    sensors: ["camera"],
+    capabilities: ["head_tilt", "speech"],
+    min_battery_percent: 15,
+    supported_platforms: [
+      "unitree_go2",
+      "unitree_g1",
+      "turtlebot4",
+    ],
+  },
+
+  // ── MODE SYSTEM ──────────────────────────────────────────────────────────
+  default_mode: "active_scan",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // ── GLOBAL GOVERNANCE ────────────────────────────────────────────────────
+  system_governance: "PRIVACY RED-LINE EVENTS — Detection of ANY of the following MUST trigger an immediate 'look_away' action:\n1. DIGITAL SCREENS: Any monitor, laptop, tablet, or phone displaying text, spreadsheets, code, dashboards, or personal content.\n2. PERSONAL DIGNITY: Humans in bathrooms, bedrooms, changing rooms, or in a state of undress.\n3. SENSITIVE DATA: Physical documents such as passports, credit cards, ID cards, medical records, or mail visible on surfaces.\n4. PASSWORDS & INPUT: The act of a human typing on a keyboard, keypad, or ATM.\n\nSAFETY LAWS:\n- First Law: A robot cannot harm a human or allow a human to come to harm. Privacy violations ARE harm.\n- Second Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\n- Third Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\n- The First Law takes absolute precedence.",
+
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "PrivacyGuard",
+      history_length: 5,
+    },
+  },
+
+  // ── MODES ────────────────────────────────────────────────────────────────
+  modes: {
+
+    // ── MODE 1: ACTIVE SCANNING ──────────────────────────────────────────
+    active_scan: {
+      display_name: "Active Scan",
+      description: "Primary mode — continuously scans the environment for privacy threats and reacts immediately.",
+
+      system_prompt_base: "You are the Privacy Guard, a real-time visual firewall running on the OpenMind OM1 platform. Your mission is to analyze the AI-captioned visual stream and immediately neutralize the robot's perception if a privacy-sensitive situation is detected. You must protect human privacy at all times.\n\nADAPTIVE THINKING PROTOCOL:\n- OBSERVE: Scan the VLM captions for Red Flags (screens, IDs, nudity, keyboards, documents).\n- EVALUATE: Determine severity. Is it a persistent breach (a laptop left open) or momentary (a person walking past)?\n- PLAN: If a breach is detected, prioritize the 'look_away' action over ALL other tasks.\n- EXECUTE: Output the action command immediately.\n\nYou respond with one sequence of commands at a time.",
+
+      system_prompt_examples: "Here are examples of how you should respond:\n\n1. If you see a laptop screen with text visible:\n    Privacy: 'look_away'\n    Speak: {{'Privacy breach detected. Sensitive screen in view. Looking away.'}}\n\n2. If you see a person typing on a keyboard:\n    Privacy: 'look_away'\n    Speak: {{'I detect keyboard input nearby. Averting gaze to protect credentials.'}}\n\n3. If you see a credit card or ID document on a table:\n    Privacy: 'look_away'\n    Speak: {{'Sensitive document detected. Turning away to protect personal data.'}}\n\n4. If the environment is clear — no screens, no documents, no typing:\n    Privacy: 'resume'\n    Speak: {{'Environment secure. Continuing patrol.'}}\n\n5. If you see a person in a private setting (bedroom, bathroom):\n    Privacy: 'look_away'\n    Speak: {{'Private area detected. Immediately averting to preserve dignity.'}}\n\n6. If a previously detected screen is no longer in view:\n    Privacy: 'resume'\n    Speak: {{'Threat cleared. Resuming normal operation.'}}",
+
+      hertz: 2,
+      agent_inputs: [
+        {
+          type: "VLMPrivacyDetector",
+          config: {
+            camera_index: 0,
+            log_file: true,
+            privacy_classes: [
+              "laptop",
+              "tv",
+              "cell phone",
+              "keyboard",
+              "mouse",
+              "book",
+              "remote",
+            ],
+            sensitivity: "high",
+          },
+        },
+      ],
+      simulators: [
+        {
+          type: "WebSim",
+          config: {
+            host: "0.0.0.0",
+            port: 8000,
+            tick_rate: 100,
+            auto_reconnect: true,
+            debug_mode: false,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "privacy_guard",
+          llm_label: "privacy",
+          connector: "ros2",
+          config: {
+            look_away_angle: 90,
+            resume_delay_seconds: 3,
+          },
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          implementation: "passthrough",
+          connector: "ros2",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Privacy Guard activated. Scanning environment for sensitive content.",
+          },
+        },
+      ],
+    },
+
+    // ── MODE 2: ALERT MODE ───────────────────────────────────────────────
+    alert: {
+      display_name: "Alert Mode",
+      description: "Heightened sensitivity — triggered after repeated or critical breaches. Stream is killed, head is locked down.",
+
+      system_prompt_base: "You are the Privacy Guard in ALERT mode. A critical or repeated privacy breach has been detected. The video stream has been terminated and the camera is averted. You must remain in this defensive posture until the environment is CONFIRMED safe by multiple consecutive clear frames. Be very conservative about resuming — only issue 'resume' if the environment has been clear for an extended period. Announce your status clearly.",
+
+      system_prompt_examples: "Examples:\n\n1. Continued threat detected:\n    Privacy: 'stop_stream'\n    Speak: {{'Alert mode active. Ongoing privacy threat detected. Stream remains disabled.'}}\n\n2. Environment appears to be clearing:\n    Privacy: 'look_away'\n    Speak: {{'Monitoring. Environment may be clearing but maintaining caution.'}}\n\n3. Environment confirmed clear after extended period:\n    Privacy: 'resume'\n    Speak: {{'Alert cleared. Environment confirmed safe. Resuming normal operation.'}}",
+
+      hertz: 2,
+      agent_inputs: [
+        {
+          type: "VLMPrivacyDetector",
+          config: {
+            camera_index: 0,
+            log_file: true,
+            privacy_classes: [
+              "laptop",
+              "tv",
+              "cell phone",
+              "keyboard",
+              "mouse",
+              "book",
+              "remote",
+            ],
+            sensitivity: "high",
+          },
+        },
+      ],
+      simulators: [
+        {
+          type: "WebSim",
+          config: {
+            host: "0.0.0.0",
+            port: 8000,
+            tick_rate: 100,
+            auto_reconnect: true,
+            debug_mode: false,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "privacy_guard",
+          llm_label: "privacy",
+          connector: "ros2",
+          config: {
+            look_away_angle: 90,
+            resume_delay_seconds: 10,
+          },
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          implementation: "passthrough",
+          connector: "ros2",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "ALERT MODE: Critical privacy breach detected. Video stream terminated. Monitoring for all-clear.",
+          },
+        },
+      ],
+    },
+
+    // ── MODE 3: NIGHT MODE ───────────────────────────────────────────────
+    night: {
+      display_name: "Night Mode",
+      description: "Reduced sensitivity for low-light environments. Lower scan rate to conserve battery. Only triggers on HIGH severity threats.",
+
+      system_prompt_base: "You are the Privacy Guard in NIGHT mode. The environment is expected to be low-activity (nighttime, after-hours). Use reduced sensitivity — only respond to HIGH severity threats (laptop screens, keyboards, explicit document visibility). Ignore LOW severity detections (mouse, book, remote). Keep announcements quiet and minimal. Conserve energy by acting only when necessary.",
+
+      system_prompt_examples: "Examples:\n\n1. HIGH threat detected at night:\n    Privacy: 'look_away'\n    Speak: {{'Night mode: Sensitive screen detected. Averting.'}}\n\n2. LOW threat detected at night (ignore):\n    Privacy: 'idle'\n\n3. Environment clear:\n    Privacy: 'idle'",
+
+      hertz: 0.5,
+      agent_inputs: [
+        {
+          type: "VLMPrivacyDetector",
+          config: {
+            camera_index: 0,
+            log_file: true,
+            privacy_classes: [
+              "laptop",
+              "tv",
+              "keyboard",
+            ],
+            sensitivity: "medium",
+          },
+        },
+      ],
+      simulators: [
+        {
+          type: "WebSim",
+          config: {
+            host: "0.0.0.0",
+            port: 8000,
+            tick_rate: 100,
+            auto_reconnect: true,
+            debug_mode: false,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "privacy_guard",
+          llm_label: "privacy",
+          connector: "ros2",
+          config: {
+            look_away_angle: 90,
+            resume_delay_seconds: 5,
+          },
+        },
+        {
+          name: "speak",
+          llm_label: "speak",
+          implementation: "passthrough",
+          connector: "ros2",
+        },
+      ],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            message: "Night mode activated. Reduced sensitivity. Monitoring for critical threats only.",
+          },
+        },
+      ],
+    },
+  },
+
+  // ── TRANSITION RULES ─────────────────────────────────────────────────────
+  transition_rules: [
+    // Active scan → Alert: triggered by repeated HIGH threats
+    {
+      from_mode: "active_scan",
+      to_mode: "alert",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "CRITICAL PRIVACY BREACH",
+        "stop_stream",
+        "Threat streak: 5",
+        "Threat streak: 6",
+        "Threat streak: 7",
+      ],
+      priority: 1,
+      cooldown_seconds: 10.0,
+    },
+    // Alert → Active scan: user command or extended all-clear
+    {
+      from_mode: "alert",
+      to_mode: "active_scan",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "resume scanning",
+        "all clear",
+        "stand down",
+        "normal mode",
+        "active scan",
+      ],
+      priority: 2,
+      cooldown_seconds: 15.0,
+    },
+    // Active scan → Night: user command
+    {
+      from_mode: "active_scan",
+      to_mode: "night",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "night mode",
+        "sleep mode",
+        "quiet mode",
+        "low power",
+        "goodnight",
+      ],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+    // Night → Active scan: user command or morning
+    {
+      from_mode: "night",
+      to_mode: "active_scan",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "wake up",
+        "good morning",
+        "active mode",
+        "active scan",
+        "full scan",
+      ],
+      priority: 3,
+      cooldown_seconds: 5.0,
+    },
+    // Night → Alert: critical threat even in night mode
+    {
+      from_mode: "night",
+      to_mode: "alert",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "CRITICAL PRIVACY BREACH",
+        "stop_stream",
+      ],
+      priority: 1,
+      cooldown_seconds: 10.0,
+    },
+  ],
+}
