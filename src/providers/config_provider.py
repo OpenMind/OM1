@@ -104,11 +104,12 @@ class ConfigProvider:
         try:
             new_config = json5.loads(config_str)
 
-            temp_path = self.config_path + f".tmp.{uuid4()}"
+            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+            temp_path = self.config_path + ".tmp"
             with open(temp_path, "w") as f:
-                json.dump(new_config, f, indent=2)
+                json5.dump(new_config, f, indent=2)
 
-            os.rename(temp_path, self.config_path)
+            os.replace(temp_path, self.config_path)
 
             logging.info(f"Updated runtime config file: {self.config_path}")
 
