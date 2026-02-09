@@ -35,6 +35,10 @@
     config: {
       agent_name: "Spot",
       history_length: 3,
+
+      // Issue #985: persist conversation history across restarts
+      history_persistence_enabled: true,
+      history_persistence_path: "~/.openmind/history",
     },
   },
   agent_actions: [
