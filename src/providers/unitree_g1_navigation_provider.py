@@ -49,6 +49,7 @@ class UnitreeG1NavigationProvider:
         navigation_status_topic: str = "navigate_to_pose/_action/status",
         goal_pose_topic: str = "goal_pose",
         cancel_goal_topic: str = "navigate_to_pose/_action/cancel_goal",
+        tts_provider: Optional[object] = None,
     ):
         """
         Initialize the Unitree G1 Navigation Provider with a specific topic.
@@ -63,6 +64,9 @@ class UnitreeG1NavigationProvider:
             The topic on which to publish goal poses (default is "goal_pose").
         cancel_goal_topic : str, optional
             The topic on which to publish goal cancellations (default is "navigate_to_pose/_action/cancel_goal").
+        tts_provider : Optional[object], optional
+            The TTS provider instance to use for speech feedback.
+            Defaults to ElevenLabsTTSProvider if None.
         """
         self.session: Optional[zenoh.Session] = None
         try:
@@ -77,7 +81,13 @@ class UnitreeG1NavigationProvider:
         self.running: bool = False
         self._nav_in_progress: bool = False
         self._current_destination: Optional[str] = None
-        self.tts_provider = ElevenLabsTTSProvider()
+        
+        # Use injected TTS provider or default to ElevenLabsTTSProvider
+        if tts_provider is None:
+            self.tts_provider = ElevenLabsTTSProvider()
+        else:
+            self.tts_provider = tts_provider
+            
         self.ai_status_topic = "om/ai/request"
         self.ai_status_pub = None
         if self.session:
