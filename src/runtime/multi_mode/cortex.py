@@ -2,7 +2,9 @@ import asyncio
 import logging
 import os
 import time
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
+
+import json5
 
 from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
@@ -19,6 +21,15 @@ from runtime.multi_mode.config import (
 )
 from runtime.multi_mode.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+
+
+def _diff_top_level_fields(
+    old: Optional[dict[str, Any]], new: dict[str, Any]
+) -> set[str]:
+    if old is None:
+        return set(new.keys())
+    keys = set(old.keys()) | set(new.keys())
+    return {k for k in keys if old.get(k) != new.get(k)}
 
 
 class ModeCortexRuntime:
@@ -47,6 +58,7 @@ class ModeCortexRuntime:
         mode_config_name: str,
         hot_reload: bool = True,
         check_interval: float = 60,
+        use_watchdog: bool = True,
     ):
         """
         Initialize the mode-aware cortex runtime.
@@ -72,8 +84,11 @@ class ModeCortexRuntime:
         # Hot-reload configuration
         self.hot_reload = hot_reload
         self.check_interval = check_interval
+        self.use_watchdog = use_watchdog
         self.config_watcher_task: Optional[asyncio.Task] = None
         self.last_modified: Optional[float] = None
+        self._last_raw_config: Optional[dict[str, Any]] = None
+        self._file_watcher = None
 
         # Initialize hot-reload if enabled
         if self.hot_reload:
@@ -82,6 +97,11 @@ class ModeCortexRuntime:
             logging.info(
                 f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
             )
+            try:
+                with open(self.config_path, "r") as f:
+                    self._last_raw_config = json5.load(f)
+            except Exception:
+                self._last_raw_config = None
 
         # Current runtime components
         self.current_config: Optional[RuntimeConfig] = None
@@ -624,11 +644,57 @@ class ModeCortexRuntime:
         """
         Periodically check for config file changes and reload if necessary.
         """
+        if self.use_watchdog:
+            try:
+                from runtime.hot_reload.watcher import AsyncFileWatcher
+
+                loop = asyncio.get_running_loop()
+                watcher = AsyncFileWatcher(path=self.config_path, loop=loop)
+                watcher.start()
+                self._file_watcher = watcher
+
+                while True:
+                    await watcher.wait_for_change()
+
+                    if not self.config_path or not os.path.exists(self.config_path):
+                        continue
+
+                    if self._is_reloading:
+                        continue
+
+                    current_mtime = self._get_file_mtime()
+                    if self.last_modified and current_mtime <= self.last_modified:
+                        continue
+
+                    logging.info(
+                        f"Runtime config file changed, reloading: {self.config_path}"
+                    )
+                    await self._reload_config()
+                    self.last_modified = current_mtime
+
+            except asyncio.CancelledError:
+                logging.debug("Config watcher cancelled")
+                return
+            except Exception as e:
+                logging.info(
+                    f"Watchdog hot-reload unavailable, falling back to polling: {e}"
+                )
+            finally:
+                if self._file_watcher is not None:
+                    try:
+                        self._file_watcher.stop()
+                    except Exception:
+                        pass
+                self._file_watcher = None
+
         while True:
             try:
                 await asyncio.sleep(self.check_interval)
 
                 if not self.config_path or not os.path.exists(self.config_path):
+                    continue
+
+                if self._is_reloading:
                     continue
 
                 current_mtime = self._get_file_mtime()
@@ -647,6 +713,111 @@ class ModeCortexRuntime:
                 logging.error(f"Error checking config changes: {e}")
                 await asyncio.sleep(10)  # Wait before retrying
 
+    def _compute_patch(
+        self, old: Optional[dict[str, Any]], new: dict[str, Any]
+    ) -> set[str]:
+        return _diff_top_level_fields(old, new)
+
+    async def reload_from_patch(
+        self,
+        changed_top: set[str],
+        new_raw: dict[str, Any],
+        old_raw: Optional[dict[str, Any]],
+    ) -> None:
+        current_mode = self.mode_manager.current_mode_name
+
+        allowed_top = {"system_governance", "system_prompt_examples", "modes"}
+        can_partial = (
+            changed_top.issubset(allowed_top) and self.current_config is not None
+        )
+
+        if can_partial:
+            modes_changed = "modes" in changed_top
+            if modes_changed:
+                old_modes = (old_raw or {}).get("modes") or {}
+                new_modes = new_raw.get("modes") or {}
+
+                if current_mode not in old_modes or current_mode not in new_modes:
+                    can_partial = False
+                else:
+                    other_old = {k: v for k, v in old_modes.items() if k != current_mode}
+                    other_new = {k: v for k, v in new_modes.items() if k != current_mode}
+                    if other_old != other_new:
+                        can_partial = False
+                    else:
+                        mode_changed = _diff_top_level_fields(
+                            old_modes[current_mode], new_modes[current_mode]
+                        )
+                        if not mode_changed.issubset({"system_prompt_base"}):
+                            can_partial = False
+
+            if can_partial:
+                if "system_governance" in changed_top:
+                    self.mode_config.system_governance = new_raw.get(
+                        "system_governance", self.mode_config.system_governance
+                    )
+                    self.current_config.system_governance = self.mode_config.system_governance
+
+                if "system_prompt_examples" in changed_top:
+                    self.mode_config.system_prompt_examples = new_raw.get(
+                        "system_prompt_examples",
+                        self.mode_config.system_prompt_examples,
+                    )
+                    self.current_config.system_prompt_examples = (
+                        self.mode_config.system_prompt_examples
+                    )
+
+                if modes_changed:
+                    new_mode_base = (
+                        (new_raw.get("modes") or {})
+                        .get(current_mode, {})
+                        .get(
+                            "system_prompt_base",
+                            self.current_config.system_prompt_base,
+                        )
+                    )
+                    self.mode_config.modes[current_mode].system_prompt_base = new_mode_base
+                    self.current_config.system_prompt_base = new_mode_base
+
+                self._last_raw_config = new_raw
+                logging.info(
+                    f"Applied partial hot-reload for fields: {sorted(changed_top)}"
+                )
+                return
+
+        await self._stop_current_orchestrators()
+
+        logging.info("Loading configuration from the new runtime file")
+        new_mode_config = load_mode_config(
+            self.mode_config_name,
+            mode_source_path=self.mode_manager._get_runtime_config_path(),
+        )
+
+        self.mode_config = new_mode_config
+        self.mode_manager.config = new_mode_config
+
+        if current_mode not in new_mode_config.modes:
+            logging.warning(
+                f"Current mode '{current_mode}' not found in reloaded config, switching to default mode '{new_mode_config.default_mode}'"
+            )
+            current_mode = new_mode_config.default_mode
+
+        self.mode_manager.state.current_mode = current_mode
+        self.mode_manager.state.mode_start_time = time.time()
+        self.mode_manager.state.last_transition_time = time.time()
+        self.mode_manager.state.transition_history.append(
+            f"config_reload->{current_mode}:hot_reload"
+        )
+
+        await self._initialize_mode(current_mode)
+
+        await self._start_orchestrators()
+
+        logging.info(
+            f"Mode configuration reloaded successfully, active mode: {current_mode}"
+        )
+        self._last_raw_config = new_raw
+
     async def _reload_config(self) -> None:
         """
         Reload the mode configuration when runtime config file changes.
@@ -661,39 +832,21 @@ class ModeCortexRuntime:
 
             self._is_reloading = True
 
-            current_mode = self.mode_manager.current_mode_name
+            try:
+                with open(self.config_path, "r") as f:
+                    new_raw = json5.load(f)
+            except Exception as e:
+                logging.error(f"Failed to parse runtime config for reload: {e}")
+                return
 
-            await self._stop_current_orchestrators()
+            old_raw = self._last_raw_config
+            changed_top = self._compute_patch(old_raw, new_raw)
 
-            logging.info("Loading configuration from the new runtime file")
-            new_mode_config = load_mode_config(
-                self.mode_config_name,
-                mode_source_path=self.mode_manager._get_runtime_config_path(),
-            )
+            if not changed_top:
+                self._last_raw_config = new_raw
+                return
 
-            self.mode_config = new_mode_config
-            self.mode_manager.config = new_mode_config
-
-            if current_mode not in new_mode_config.modes:
-                logging.warning(
-                    f"Current mode '{current_mode}' not found in reloaded config, switching to default mode '{new_mode_config.default_mode}'"
-                )
-                current_mode = new_mode_config.default_mode
-
-            self.mode_manager.state.current_mode = current_mode
-            self.mode_manager.state.mode_start_time = time.time()
-            self.mode_manager.state.last_transition_time = time.time()
-            self.mode_manager.state.transition_history.append(
-                f"config_reload->{current_mode}:hot_reload"
-            )
-
-            await self._initialize_mode(current_mode)
-
-            await self._start_orchestrators()
-
-            logging.info(
-                f"Mode configuration reloaded successfully, active mode: {current_mode}"
-            )
+            await self.reload_from_patch(changed_top, new_raw, old_raw)
 
         except Exception as e:
             logging.error(f"Failed to reload mode configuration: {e}")
