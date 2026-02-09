@@ -1,21 +1,27 @@
-"""Tests for the Emotion Unitree SDK connector."""
-
-import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-# Mock the unitree module at module load time BEFORE any imports
-mock_audio_client = MagicMock()
-mock_unitree = MagicMock()
-mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client.AudioClient = mock_audio_client
-sys.modules["unitree"] = mock_unitree
-sys.modules["unitree.unitree_sdk2py"] = mock_unitree.unitree_sdk2py
-sys.modules["unitree.unitree_sdk2py.g1"] = mock_unitree.unitree_sdk2py.g1
-sys.modules["unitree.unitree_sdk2py.g1.audio"] = mock_unitree.unitree_sdk2py.g1.audio
-sys.modules["unitree.unitree_sdk2py.g1.audio.g1_audio_client"] = (
-    mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client
-)
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_unitree_modules():
+    """Mock the unitree module at module load time BEFORE any imports."""
+    mock_audio_client = MagicMock()
+    mock_unitree = MagicMock()
+    mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client.AudioClient = mock_audio_client
+
+    with patch.dict(
+        "sys.modules",
+        {
+            "unitree": mock_unitree,
+            "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
+            "unitree.unitree_sdk2py.g1": mock_unitree.unitree_sdk2py.g1,
+            "unitree.unitree_sdk2py.g1.audio": mock_unitree.unitree_sdk2py.g1.audio,
+            "unitree.unitree_sdk2py.g1.audio.g1_audio_client": mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client,
+        },
+    ):
+        yield mock_audio_client
+
 
 from actions.emotion.connector.unitree_sdk import (  # noqa: E402
     EmotionUnitreeConfig,
@@ -61,10 +67,10 @@ def emotion_input_curious():
 
 
 @pytest.fixture(autouse=True)
-def reset_mocks():
+def reset_mocks(mock_unitree_modules):
     """Reset all mock objects between tests."""
-    mock_audio_client.reset_mock()
-    mock_audio_client.return_value = MagicMock()
+    mock_unitree_modules.reset_mock()
+    mock_unitree_modules.return_value = MagicMock()
     yield
 
 
@@ -94,17 +100,20 @@ class TestEmotionUnitreeConnector:
 
     def test_init_with_ethernet(self, ethernet_config):
         """Test initialization with ethernet configured."""
-        mock_client_instance = Mock()
-        mock_audio_client.return_value = mock_client_instance
+        with patch(
+            "actions.emotion.connector.unitree_sdk.AudioClient"
+        ) as mock_audio_client:
+            mock_client_instance = Mock()
+            mock_audio_client.return_value = mock_client_instance
 
-        connector = EmotionUnitreeConnector(ethernet_config)
+            connector = EmotionUnitreeConnector(ethernet_config)
 
-        assert connector.ao_client is not None
-        assert connector.unitree_ethernet == "eth0"
-        # Verify SetTimeout, Init, and LedControl calls
-        mock_client_instance.SetTimeout.assert_called_once_with(10.0)
-        mock_client_instance.Init.assert_called_once()
-        mock_client_instance.LedControl.assert_called_once_with(0, 255, 0)
+            assert connector.ao_client is not None
+            assert connector.unitree_ethernet == "eth0"
+            # Verify SetTimeout, Init, and LedControl calls
+            mock_client_instance.SetTimeout.assert_called_once_with(10.0)
+            mock_client_instance.Init.assert_called_once()
+            mock_client_instance.LedControl.assert_called_once_with(0, 255, 0)
 
     @pytest.mark.asyncio
     async def test_connect_without_client(self, default_config, emotion_input_happy):
@@ -116,46 +125,58 @@ class TestEmotionUnitreeConnector:
     @pytest.mark.asyncio
     async def test_connect_happy(self, ethernet_config, emotion_input_happy):
         """Test connect with happy emotion."""
-        mock_client_instance = Mock()
-        mock_audio_client.return_value = mock_client_instance
+        with patch(
+            "actions.emotion.connector.unitree_sdk.AudioClient"
+        ) as mock_audio_client:
+            mock_client_instance = Mock()
+            mock_audio_client.return_value = mock_client_instance
 
-        connector = EmotionUnitreeConnector(ethernet_config)
-        await connector.connect(emotion_input_happy)
+            connector = EmotionUnitreeConnector(ethernet_config)
+            await connector.connect(emotion_input_happy)
 
-        mock_client_instance.LedControlNoReply.assert_called_with(0, 255, 0)
+            mock_client_instance.LedControlNoReply.assert_called_with(0, 255, 0)
 
     @pytest.mark.asyncio
     async def test_connect_sad(self, ethernet_config, emotion_input_sad):
         """Test connect with sad emotion."""
-        mock_client_instance = Mock()
-        mock_audio_client.return_value = mock_client_instance
+        with patch(
+            "actions.emotion.connector.unitree_sdk.AudioClient"
+        ) as mock_audio_client:
+            mock_client_instance = Mock()
+            mock_audio_client.return_value = mock_client_instance
 
-        connector = EmotionUnitreeConnector(ethernet_config)
-        await connector.connect(emotion_input_sad)
+            connector = EmotionUnitreeConnector(ethernet_config)
+            await connector.connect(emotion_input_sad)
 
-        mock_client_instance.LedControlNoReply.assert_called_with(255, 255, 0)
+            mock_client_instance.LedControlNoReply.assert_called_with(255, 255, 0)
 
     @pytest.mark.asyncio
     async def test_connect_mad(self, ethernet_config, emotion_input_mad):
         """Test connect with mad emotion."""
-        mock_client_instance = Mock()
-        mock_audio_client.return_value = mock_client_instance
+        with patch(
+            "actions.emotion.connector.unitree_sdk.AudioClient"
+        ) as mock_audio_client:
+            mock_client_instance = Mock()
+            mock_audio_client.return_value = mock_client_instance
 
-        connector = EmotionUnitreeConnector(ethernet_config)
-        await connector.connect(emotion_input_mad)
+            connector = EmotionUnitreeConnector(ethernet_config)
+            await connector.connect(emotion_input_mad)
 
-        mock_client_instance.LedControlNoReply.assert_called_with(255, 0, 0)
+            mock_client_instance.LedControlNoReply.assert_called_with(255, 0, 0)
 
     @pytest.mark.asyncio
     async def test_connect_curious(self, ethernet_config, emotion_input_curious):
         """Test connect with curious emotion."""
-        mock_client_instance = Mock()
-        mock_audio_client.return_value = mock_client_instance
+        with patch(
+            "actions.emotion.connector.unitree_sdk.AudioClient"
+        ) as mock_audio_client:
+            mock_client_instance = Mock()
+            mock_audio_client.return_value = mock_client_instance
 
-        connector = EmotionUnitreeConnector(ethernet_config)
-        await connector.connect(emotion_input_curious)
+            connector = EmotionUnitreeConnector(ethernet_config)
+            await connector.connect(emotion_input_curious)
 
-        mock_client_instance.LedControlNoReply.assert_called_with(0, 0, 255)
+            mock_client_instance.LedControlNoReply.assert_called_with(0, 0, 255)
 
     def test_tick(self, default_config):
         """Test tick method."""

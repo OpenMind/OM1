@@ -1,5 +1,3 @@
-"""Tests for the Emotion action interface."""
-
 from actions.emotion.interface import Emotion, EmotionAction, EmotionInput
 
 
