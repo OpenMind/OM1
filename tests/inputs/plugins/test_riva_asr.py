@@ -57,7 +57,7 @@ def test_formatted_latest_buffer():
 
         test_message = Message(timestamp=123.456, message="hello world how are you")
         sensor.messages = []  # type: ignore
-        sensor.messages.append(test_message)  # type: ignore
+        sensor.messages.append(test_message.message)  # type: ignore
 
         result = sensor.formatted_latest_buffer()
         assert isinstance(result, str)

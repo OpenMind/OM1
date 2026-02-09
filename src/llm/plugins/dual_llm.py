@@ -84,13 +84,6 @@ class DualLLM(LLM[R]):
                 "cloud_llm_config": {"model": "gpt-4.1"}
             }
         }
-
-    Parameters
-    ----------
-    config : LLMConfig, optional
-        Configuration settings for the LLM.
-    available_actions : list[AgentAction], optional
-        List of available actions for function calling.
     """
 
     TIMEOUT_THRESHOLD = 3.2
@@ -138,7 +131,7 @@ class DualLLM(LLM[R]):
         self._cloud_llm._skip_state_management = True
 
         self._eval_client = openai.AsyncClient(
-            base_url="http://127.0.0.1:8000/v1", api_key="local"
+            base_url="http://127.0.0.1:8860/v1", api_key="local"
         )
         self._eval_model = local_cfg.get(
             "model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
@@ -205,7 +198,7 @@ class DualLLM(LLM[R]):
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
+        prompt : str
             Extracted user voice input for context.
 
         Returns
