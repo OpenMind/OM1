@@ -45,7 +45,7 @@ dependencies = [
 ]
 
 [project.scripts]
-om1 = "cli.main:app"
+om1 = "om1_cli.main:app"
 
 [project.optional-dependencies]
 dds = [
@@ -144,4 +144,4 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cli", "src/runtime", "src/llm", "src/actions", "src/inputs", "src/providers", "src/backgrounds", "src/simulators", "src/fuser", "src/hooks", "src/zenoh_msgs"]
+packages = ["src/om1_cli", "src/runtime", "src/llm", "src/actions", "src/inputs", "src/providers", "src/backgrounds", "src/simulators", "src/fuser", "src/hooks", "src/zenoh_msgs"]

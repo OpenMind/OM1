@@ -5,8 +5,8 @@ from typing import Optional
 import typer
 from rich.panel import Panel
 
-from cli.utils.output import console
-from cli.utils.system import CheckStatus, run_all_checks
+from om1_cli.utils.output import console
+from om1_cli.utils.system import CheckStatus, run_all_checks
 
 
 def doctor(

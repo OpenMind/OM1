@@ -11,13 +11,13 @@ import json5
 import typer
 from jsonschema import ValidationError, validate
 
-from cli.utils.config import (
+from om1_cli.utils.config import (
     get_config_dir,
     get_src_dir,
     list_configs,
     resolve_config_path,
 )
-from cli.utils.output import console, print_error, print_success, print_warning
+from om1_cli.utils.output import console, print_error, print_success, print_warning
 
 
 def validate_cmd(

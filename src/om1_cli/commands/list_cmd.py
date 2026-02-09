@@ -3,8 +3,8 @@
 import typer
 from rich.table import Table
 
-from cli.utils.config import list_configs as get_configs
-from cli.utils.output import console
+from om1_cli.utils.config import list_configs as get_configs
+from om1_cli.utils.output import console
 
 
 def list_configs(

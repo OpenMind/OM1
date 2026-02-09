@@ -4,8 +4,8 @@ from typing import Optional
 
 import typer
 
-from cli.utils.output import console, print_error, print_info, print_success
-from cli.utils.process import get_running_agents, stop_agent, stop_all_agents
+from om1_cli.utils.output import console, print_error, print_info, print_success
+from om1_cli.utils.process import get_running_agents, stop_agent, stop_all_agents
 
 
 def stop(

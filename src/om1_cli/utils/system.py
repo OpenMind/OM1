@@ -269,10 +269,11 @@ def check_microphone() -> CheckResult:
         input_devices = [d for d in devices if d.get("max_input_channels", 0) > 0]
         if input_devices:
             default = sd.query_devices(kind="input")
+            device_name = default["name"] if isinstance(default, dict) else "Unknown"
             return CheckResult(
                 name="Microphone",
                 status=CheckStatus.OK,
-                message=f"Found: {default.get('name', 'Unknown')[:30]}",
+                message=f"Found: {str(device_name)[:30]}",
             )
     except Exception as e:
         logging.debug("Failed to check microphone: %s", e)

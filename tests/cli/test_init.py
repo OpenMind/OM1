@@ -4,7 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from cli.main import app
+from om1_cli.main import app
 
 
 class TestInitCommand:

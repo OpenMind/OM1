@@ -7,8 +7,8 @@ import time
 
 import typer
 
-from cli.utils.output import console, print_error, print_info, print_success
-from cli.utils.process import is_agent_running, read_state, stop_agent
+from om1_cli.utils.output import console, print_error, print_info, print_success
+from om1_cli.utils.process import is_agent_running, read_state, stop_agent
 
 
 def restart(
@@ -84,7 +84,7 @@ def restart(
 
 def _trigger_hot_reload(config_name: str) -> None:
     """Trigger hot-reload by touching the config file."""
-    from cli.utils.config import get_config_dir
+    from om1_cli.utils.config import get_config_dir
 
     if not is_agent_running(config_name):
         print_error(f"Agent '{config_name}' is not running")
@@ -115,7 +115,7 @@ def _trigger_hot_reload(config_name: str) -> None:
 def _start_agent(config_name: str, hot_reload: bool = True) -> None:
     """Start an agent in the current process."""
     # Build the command
-    args = [sys.executable, "-m", "cli.main", "run", config_name]
+    args = [sys.executable, "-m", "om1_cli.main", "run", config_name]
     if not hot_reload:
         args.append("--no-hot-reload")
 

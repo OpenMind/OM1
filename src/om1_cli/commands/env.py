@@ -7,7 +7,7 @@ from typing import Optional
 import typer
 from rich.table import Table
 
-from cli.utils.output import console, print_error, print_info, print_success
+from om1_cli.utils.output import console, print_error, print_info, print_success
 
 # Template for .env.example
 ENV_TEMPLATE = """# OM1 Environment Configuration
