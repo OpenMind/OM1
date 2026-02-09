@@ -68,13 +68,6 @@ class QwenLLM(LLM[R]):
             }
         }
 
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration with model name. Defaults to qwen30b-quantized.
-    available_actions : list, optional
-        List of available actions for function call generation.
-
     Attributes
     ----------
     _client : openai.AsyncClient

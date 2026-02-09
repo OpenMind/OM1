@@ -49,13 +49,6 @@ class OllamaLLM(LLM[R]):
 
     This class implements the LLM interface for local Ollama models,
     providing privacy-focused, cost-free, offline-capable inference.
-
-    Parameters
-    ----------
-    config : OllamaLLMConfig
-        Configuration object containing Ollama settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation.
     """
 
     def __init__(

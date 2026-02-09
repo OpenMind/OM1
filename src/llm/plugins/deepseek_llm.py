@@ -36,7 +36,7 @@ class DeepSeekConfig(LLMConfig):
 
 class DeepSeekLLM(LLM[R]):
     """
-    An DeepSeek-based Language Learning Model implementation.
+    A DeepSeek-based Language Learning Model implementation.
 
     This class implements the LLM interface for DeepSeek's conversation models, handling
     configuration, authentication, and async API communication.
