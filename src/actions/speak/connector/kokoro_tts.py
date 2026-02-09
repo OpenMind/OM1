@@ -88,15 +88,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         api_key = getattr(self.config, "api_key", None)
 
         # Sleep mode configuration
-        self.io_provider = IOProvider()
         self.last_voice_command_time = time.time()
-
-        # Kokoro TTS configuration
-        voice_id = self.config.voice_id
-        model_id = self.config.model_id
-        output_format = self.config.output_format
-        rate = self.config.rate
-        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         # silence rate
         self.silence_rate = self.config.silence_rate
@@ -105,11 +97,13 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         # IO Provider
         self.io_provider = IOProvider()
 
+        # Zenoh configuration
         self.audio_topic = "robot/status/audio"
         self.tts_status_request_topic = "om/tts/request"
         self.tts_status_response_topic = "om/tts/response"
         self.session = None
         self.audio_pub = None
+        self._zenoh_tts_status_response_pub = None
 
         self.audio_status = AudioStatus(
             header=prepare_header(str(uuid4())),
@@ -118,6 +112,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             sentence_to_speak=String(""),
         )
 
+        # Initialize Zenoh session
         try:
             self.session = open_zenoh_session()
             self.audio_pub = self.session.declare_publisher(self.audio_topic)
@@ -132,9 +127,16 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             if self.audio_pub:
                 self.audio_pub.put(self.audio_status.serialize())
 
-            logging.info("Elevenlabs TTS Zenoh client opened")
+            logging.info("Kokoro TTS Zenoh client opened")
         except Exception as e:
-            logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
+            logging.error(f"Error opening Kokoro TTS Zenoh client: {e}")
+
+        # Kokoro TTS configuration
+        voice_id = self.config.voice_id
+        model_id = self.config.model_id
+        output_format = self.config.output_format
+        rate = self.config.rate
+        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         # Initialize Kokoro TTS Provider
         self.tts = KokoroTTSProvider(
@@ -174,7 +176,10 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         data : zenoh.Sample
             The Zenoh sample received, which should have a 'payload' attribute.
         """
-        self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
+        try:
+            self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
+        except Exception as e:
+            logging.error(f"Error deserializing audio status: {e}")
 
     async def connect(self, output_interface: SpeakInput) -> None:
         """
@@ -235,63 +240,72 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         data : zenoh.Sample
             The Zenoh sample received, which should have a 'payload' attribute.
         """
-        tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
-        logging.debug(f"Received TTS Control Status message: {tts_status}")
+        try:
+            tts_status = TTSStatusRequest.deserialize(data.payload.to_bytes())
+            logging.debug(f"Received TTS Control Status message: {tts_status}")
 
-        code = tts_status.code
-        request_id = tts_status.request_id
+            code = tts_status.code
+            request_id = tts_status.request_id
 
-        # Read the current status
-        if code == 2:
-            tts_status_response = TTSStatusResponse(
-                header=prepare_header(tts_status.header.frame_id),
-                request_id=request_id,
-                code=1 if self.tts_enabled else 0,
-                status=String(
-                    data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                ),
-            )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
+            # Read the current status
+            if code == 2:
+                tts_status_response = TTSStatusResponse(
+                    header=prepare_header(tts_status.header.frame_id),
+                    request_id=request_id,
+                    code=1 if self.tts_enabled else 0,
+                    status=String(
+                        data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
+                    ),
+                )
+                if self._zenoh_tts_status_response_pub:
+                    self._zenoh_tts_status_response_pub.put(
+                        tts_status_response.serialize()
+                    )
+                return
 
-        # Enable the TTS
-        if code == 1:
-            self.tts_enabled = True
-            logging.debug("TTS Enabled")
+            # Enable the TTS
+            if code == 1:
+                self.tts_enabled = True
+                logging.debug("TTS Enabled")
 
-            ai_status_response = TTSStatusResponse(
-                header=prepare_header(tts_status.header.frame_id),
-                request_id=request_id,
-                code=1,
-                status=String(data="TTS Enabled"),
-            )
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+                tts_status_response = TTSStatusResponse(
+                    header=prepare_header(tts_status.header.frame_id),
+                    request_id=request_id,
+                    code=1,
+                    status=String(data="TTS Enabled"),
+                )
+                if self._zenoh_tts_status_response_pub:
+                    self._zenoh_tts_status_response_pub.put(
+                        tts_status_response.serialize()
+                    )
+                return
 
-        # Disable the TTS
-        if code == 0:
-            self.tts_enabled = False
-            logging.debug("TTS Disabled")
-            ai_status_response = TTSStatusResponse(
-                header=prepare_header(tts_status.header.frame_id),
-                request_id=request_id,
-                code=0,
-                status=String(data="TTS Disabled"),
-            )
+            # Disable the TTS
+            if code == 0:
+                self.tts_enabled = False
+                logging.debug("TTS Disabled")
+                tts_status_response = TTSStatusResponse(
+                    header=prepare_header(tts_status.header.frame_id),
+                    request_id=request_id,
+                    code=0,
+                    status=String(data="TTS Disabled"),
+                )
+                if self._zenoh_tts_status_response_pub:
+                    self._zenoh_tts_status_response_pub.put(
+                        tts_status_response.serialize()
+                    )
+                return
 
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+        except Exception as e:
+            logging.error(f"Error processing TTS status request: {e}")
 
     def stop(self) -> None:
         """
-        Stop the Elevenlabs TTS connector and cleanup resources.
+        Stop the Kokoro TTS connector and cleanup resources.
         """
         if self.session:
             self.session.close()
-            logging.info("Elevenlabs TTS Zenoh client closed")
+            logging.info("Kokoro TTS Zenoh client closed")
 
         if self.tts:
             self.tts.stop()

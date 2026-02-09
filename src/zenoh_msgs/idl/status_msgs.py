@@ -205,3 +205,25 @@ class ConfigResponse(IdlStruct, typename="ConfigResponse"):
     request_id: String
     config: String
     message: String
+
+
+@dataclass
+class PersonGreetingStatus(IdlStruct, typename="PersonGreetingStatus"):
+    """Person greeting status message."""
+
+    class STATUS(Enum):
+        """
+        Code enum for PersonGreetingStatus.
+
+        APPROACHING: A person is approaching.
+        APPROACHED: A person has approached.
+        SWITCH: Switch state from the conversation to find the next person.
+        """
+
+        APPROACHING = 0
+        APPROACHED = 1
+        SWITCH = 2
+
+    header: Header
+    request_id: String
+    status: int8
