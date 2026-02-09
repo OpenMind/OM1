@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import zenoh
 
 
-async def on_message(sample):
+def on_message(sample):
     """Callback for Zenoh message subscriber."""
     try:
         payload = sample.payload.to_bytes()
