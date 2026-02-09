@@ -490,7 +490,7 @@ class WebSim(Simulator):
             logging.info("Starting WebSim server thread...")
             self.server_thread = threading.Thread(target=self._run_server, daemon=True)
             self.server_thread.start()
-            time.sleep(1)
+            self.sleep(1)
 
             if self.server_thread.is_alive():
                 logging.info(
@@ -564,7 +564,19 @@ class WebSim(Simulator):
             logging.error(f"Error in broadcast_state: {e}")
 
     def get_earliest_time(self, inputs: Dict[str, Input]) -> float:
-        """Get earliest timestamp from inputs."""
+        """
+        Get earliest timestamp from inputs.
+
+        Parameters
+        ----------
+        inputs : Dict[str, Input]
+            Dictionary of input types to their Input objects.
+
+        Returns
+        -------
+        float
+            The earliest timestamp found in inputs, or 0.0 if none found.
+        """
         earliest_time = float("inf")
         for input_type, input_info in inputs.items():
             logging.debug(f"GET {input_info}")
@@ -604,7 +616,7 @@ class WebSim(Simulator):
             except Exception as e:
                 logging.error(f"Error in tick: {e}")
 
-            time.sleep(0.5)
+            self.sleep(0.5)
 
     def sim(self, actions: List[Action]) -> None:
         """
@@ -641,23 +653,32 @@ class WebSim(Simulator):
                         }
                     )
 
+                fuser_start_time = self.io_provider.fuser_start_time or 0
                 fuser_end_time = self.io_provider.fuser_end_time or 0
                 llm_start_time = self.io_provider.llm_start_time or 0
                 llm_end_time = self.io_provider.llm_end_time or 0
 
                 system_latency = {
                     "fuse_time": (
-                        fuser_end_time - earliest_time if fuser_end_time else 0
+                        fuser_end_time - fuser_start_time
+                        if (fuser_end_time and fuser_start_time)
+                        else 0
                     ),
                     "llm_start": (
-                        llm_start_time - earliest_time if llm_start_time else 0
+                        llm_start_time - fuser_start_time
+                        if (llm_start_time and fuser_start_time)
+                        else 0
                     ),
                     "processing": (
                         llm_end_time - llm_start_time
                         if (llm_end_time and llm_start_time)
                         else 0
                     ),
-                    "complete": llm_end_time - earliest_time if llm_end_time else 0,
+                    "complete": (
+                        llm_end_time - fuser_start_time
+                        if (llm_end_time and fuser_start_time)
+                        else 0
+                    ),
                 }
 
                 for action in actions:

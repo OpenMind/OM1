@@ -46,8 +46,7 @@ def open_zenoh_session() -> zenoh.Session:
         session = zenoh.open(local_config)
         logging.info("Zenoh client opened without network discovery")
         return session
-    except Exception as e:
-        logging.warning(f"Local connection failed: {e}")
+    except Exception:
         logging.info("Falling back to network discovery...")
 
     config = create_zenoh_config()

@@ -20,7 +20,7 @@ class UnitreeRealSenseDevVideoStream(VideoStream):
     Manages video capture and streaming from a camera device.
 
     Captures frames from a camera, encodes them to base64, and sends them
-    through the callback. Supports both macOS and Linux devices.
+    through the callback. Currently supports Linux devices.
     """
 
     def __init__(
