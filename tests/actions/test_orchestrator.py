@@ -1,5 +1,7 @@
 import asyncio
+import json
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, List
 from unittest.mock import MagicMock
 
@@ -507,3 +509,407 @@ class TestActionOrchestratorModeComparison:
         sequential_executed = set(MockConnector.execution_order)
 
         assert concurrent_executed == sequential_executed == {"action1", "action2"}
+
+
+class TestLLMResultParser:
+    """Test the LLM result parser in _promise_action."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Reset mock connector state before each test."""
+        MockConnector.reset()
+
+    @pytest.fixture
+    def mock_runtime_config(self):
+        """Create a mock RuntimeConfig for testing."""
+        config = MagicMock(spec=RuntimeConfig)
+        config.action_execution_mode = "concurrent"
+        config.action_dependencies = {}
+        config.agent_actions = []
+        return config
+
+    @pytest.fixture
+    def create_typed_action(self):
+        """Factory to create test agent actions with different input types."""
+
+        def _create(name: str, llm_label: str, input_type) -> AgentAction:
+            connector = MockConnector(ActionConfig(), name)
+
+            @dataclass
+            class CustomOutput:
+                result: str
+
+            CustomInterface = type(
+                "CustomInterface",
+                (Interface,),
+                {
+                    "__annotations__": {"input": input_type, "output": CustomOutput},
+                    "__dataclass_fields__": {},
+                },
+            )
+            CustomInterface = dataclass(CustomInterface)
+
+            return AgentAction(
+                name=name,
+                llm_label=llm_label,
+                interface=CustomInterface,
+                connector=connector,
+                exclude_from_prompt=False,
+            )
+
+        return _create
+
+    @pytest.mark.asyncio
+    async def test_parse_simple_string_value(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test parsing a simple string value (non-JSON)."""
+
+        @dataclass
+        class StringInput:
+            action: str
+
+        action = create_typed_action("move", "move", StringInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [Action(type="move", value="forward")]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(action.connector.connected_values) == 1
+        assert action.connector.connected_values[0] == "forward"
+
+    @pytest.mark.asyncio
+    async def test_parse_json_string_value(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test parsing a JSON string value."""
+
+        @dataclass
+        class JsonInput:
+            action: str
+
+        action = create_typed_action("move", "move", JsonInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [Action(type="move", value='{"action": "turn left"}')]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(action.connector.connected_values) == 1
+        assert action.connector.connected_values[0] == "turn left"
+
+    @pytest.mark.asyncio
+    async def test_parse_json_non_dict_value(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test parsing a JSON value that's not a dictionary."""
+
+        @dataclass
+        class SimpleInput:
+            action: str
+
+        action = create_typed_action("move", "move", SimpleInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [Action(type="move", value='["item1", "item2"]')]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(action.connector.connected_values) == 1
+        assert action.connector.connected_values[0] == '["item1", "item2"]'
+
+    @pytest.mark.asyncio
+    async def test_parse_multiple_parameters(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test parsing multiple parameters from JSON."""
+
+        @dataclass
+        class MultiParamInput:
+            speed: float
+            direction: str
+            distance: int
+
+        action = create_typed_action("move", "move", MultiParamInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"speed": 1.5, "direction": "north", "distance": 10})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_float_conversion(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test automatic type conversion for float."""
+
+        @dataclass
+        class FloatInput:
+            speed: float
+
+        action = create_typed_action("move", "move", FloatInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"speed": "2.5"})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_int_conversion(self, mock_runtime_config, create_typed_action):
+        """Test automatic type conversion for int."""
+
+        @dataclass
+        class IntInput:
+            count: int
+
+        action = create_typed_action("move", "move", IntInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"count": "42"})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_bool_conversion_true(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test automatic type conversion for bool (true values)."""
+
+        @dataclass
+        class BoolInput:
+            enabled: bool
+
+        action = create_typed_action("move", "move", BoolInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        # Test various true representations
+        for true_val in ["true", "True", "1", "yes", "YES"]:
+            MockConnector.reset()
+            json_value = json.dumps({"enabled": true_val})
+            actions = [Action(type="move", value=json_value)]
+            await orchestrator.promise(actions)
+            await orchestrator.flush_promises()
+            assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_bool_conversion_false(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test automatic type conversion for bool (false values)."""
+
+        @dataclass
+        class BoolInput:
+            enabled: bool
+
+        action = create_typed_action("move", "move", BoolInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        for false_val in ["false", "False", "0", "no"]:
+            MockConnector.reset()
+            json_value = json.dumps({"enabled": false_val})
+            actions = [Action(type="move", value=json_value)]
+            await orchestrator.promise(actions)
+            await orchestrator.flush_promises()
+            assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_enum_conversion(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test automatic type conversion for Enum."""
+
+        class Direction(Enum):
+            NORTH = "north"
+            SOUTH = "south"
+            EAST = "east"
+            WEST = "west"
+
+        @dataclass
+        class EnumInput:
+            direction: Direction
+
+        action = create_typed_action("move", "move", EnumInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"direction": "north"})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_mixed_types(self, mock_runtime_config, create_typed_action):
+        """Test parsing mixed parameter types."""
+
+        class Mode(Enum):
+            FAST = "fast"
+            SLOW = "slow"
+
+        @dataclass
+        class MixedInput:
+            speed: float
+            count: int
+            enabled: bool
+            mode: Mode
+            description: str
+
+        action = create_typed_action("move", "move", MixedInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps(
+            {
+                "speed": "3.14",
+                "count": "7",
+                "enabled": "true",
+                "mode": "fast",
+                "description": "test action",
+            }
+        )
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_invalid_json(self, mock_runtime_config, create_typed_action):
+        """Test handling of invalid JSON (should fall back to simple string)."""
+
+        @dataclass
+        class StringInput:
+            action: str
+
+        action = create_typed_action("move", "move", StringInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [Action(type="move", value="{not valid json}")]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(action.connector.connected_values) == 1
+        assert action.connector.connected_values[0] == "{not valid json}"
+
+    @pytest.mark.asyncio
+    async def test_parse_empty_string(self, mock_runtime_config, create_typed_action):
+        """Test handling of empty string value."""
+
+        @dataclass
+        class StringInput:
+            action: str
+
+        action = create_typed_action("move", "move", StringInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [Action(type="move", value="")]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(action.connector.connected_values) == 1
+        assert action.connector.connected_values[0] == ""
+
+    @pytest.mark.asyncio
+    async def test_parse_extra_parameters_ignored(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test that extra parameters not in type hints are safely ignored."""
+
+        @dataclass
+        class SimpleInput:
+            action: str
+
+        action = create_typed_action("move", "move", SimpleInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"action": "forward", "speed": "fast"})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(action.connector.connected_values) == 1
+        assert action.connector.connected_values[0] == "forward"
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_only_valid_parameters(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test that when only valid parameters are provided, parsing succeeds."""
+
+        @dataclass
+        class SimpleInput:
+            action: str
+
+        action = create_typed_action("move", "move", SimpleInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"action": "forward"})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(action.connector.connected_values) == 1
+        assert action.connector.connected_values[0] == "forward"
+
+    @pytest.mark.asyncio
+    async def test_parse_none_value(self, mock_runtime_config, create_typed_action):
+        """Test handling of None/null values."""
+
+        @dataclass
+        class StringInput:
+            action: str
+
+        action = create_typed_action("move", "move", StringInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"action": None})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
+    async def test_parse_nested_json(self, mock_runtime_config, create_typed_action):
+        """Test handling of nested JSON structures."""
+
+        @dataclass
+        class NestedInput:
+            config: str  # Will receive JSON string
+
+        action = create_typed_action("move", "move", NestedInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        nested_config = {"speed": 1.5, "mode": "auto"}
+        json_value = json.dumps({"config": json.dumps(nested_config)})
+        actions = [Action(type="move", value=json_value)]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert len(MockConnector.execution_order) == 1

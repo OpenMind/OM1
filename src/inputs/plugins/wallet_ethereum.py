@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import random
 import time
 from typing import List, Optional
 
@@ -85,15 +84,7 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
                 f"Block: {self.eth_info['block_number']}, Account Balance: {self.eth_info['balance']:.3f} ETH"
             )
 
-            # randomly simulate ETH inbound transfers for debugging purposes
-            random_add_for_debugging = 0
-            dice = random.randint(0, 10)
-            logging.debug(f"WalletEthereum: dice {dice}")
-            if dice > 7:
-                logging.info("WalletEthereum: randomly adding 1.0 ETH")
-                random_add_for_debugging = 1.0
-
-            self.ETH_balance = self.balance_eth + random_add_for_debugging
+            self.ETH_balance = self.balance_eth
             self.balance_change = self.ETH_balance - self.ETH_balance_previous
             self.ETH_balance_previous = self.ETH_balance
 
