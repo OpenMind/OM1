@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -33,6 +33,26 @@ def tesla_connector(mock_dimo):
     return connector
 
 
+def create_aiohttp_mock(status=200):
+    """Create aiohttp ClientSession mock with proper async context managers."""
+    mock_response = Mock()
+    mock_response.status = status
+    mock_response.text = AsyncMock(return_value="OK")
+
+    mock_post_cm = Mock()
+    mock_post_cm.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_post_cm.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = Mock()
+    mock_session.post = Mock(return_value=mock_post_cm)
+
+    mock_session_cm = Mock()
+    mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+    return mock_session_cm, mock_session
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "action_input,expected_endpoint",
@@ -47,21 +67,23 @@ def tesla_connector(mock_dimo):
 async def test_lock_doors_case_insensitive(
     tesla_connector, action_input, expected_endpoint
 ):
-    """
-    Test that 'lock doors' command works regardless of case.
-    """
-    with patch("actions.dimo.connector.tesla.requests.post") as mock_post:
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
+    """Test that 'lock doors' command works regardless of case."""
+    mock_session_cm, mock_session = create_aiohttp_mock()
 
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ),
+    ):
         input_interface = Mock()
         input_interface.action = action_input
 
         await tesla_connector.connect(input_interface)
 
-        mock_post.assert_called_once()
-        call_url = mock_post.call_args[0][0]
+        mock_session.post.assert_called_once()
+        call_url = mock_session.post.call_args[0][0]
         assert expected_endpoint in call_url
 
 
@@ -78,18 +100,22 @@ async def test_unlock_doors_case_insensitive(
     tesla_connector, action_input, expected_endpoint
 ):
     """Test that 'unlock doors' command works regardless of case."""
-    with patch("actions.dimo.connector.tesla.requests.post") as mock_post:
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
+    mock_session_cm, mock_session = create_aiohttp_mock()
 
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ),
+    ):
         input_interface = Mock()
         input_interface.action = action_input
 
         await tesla_connector.connect(input_interface)
 
-        mock_post.assert_called_once()
-        call_url = mock_post.call_args[0][0]
+        mock_session.post.assert_called_once()
+        call_url = mock_session.post.call_args[0][0]
         assert expected_endpoint in call_url
 
 
@@ -106,18 +132,22 @@ async def test_open_frunk_case_insensitive(
     tesla_connector, action_input, expected_endpoint
 ):
     """Test that 'open frunk' command works regardless of case."""
-    with patch("actions.dimo.connector.tesla.requests.post") as mock_post:
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
+    mock_session_cm, mock_session = create_aiohttp_mock()
 
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ),
+    ):
         input_interface = Mock()
         input_interface.action = action_input
 
         await tesla_connector.connect(input_interface)
 
-        mock_post.assert_called_once()
-        call_url = mock_post.call_args[0][0]
+        mock_session.post.assert_called_once()
+        call_url = mock_session.post.call_args[0][0]
         assert expected_endpoint in call_url
 
 
@@ -134,18 +164,22 @@ async def test_open_trunk_case_insensitive(
     tesla_connector, action_input, expected_endpoint
 ):
     """Test that 'open trunk' command works regardless of case."""
-    with patch("actions.dimo.connector.tesla.requests.post") as mock_post:
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_post.return_value = mock_response
+    mock_session_cm, mock_session = create_aiohttp_mock()
 
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ),
+    ):
         input_interface = Mock()
         input_interface.action = action_input
 
         await tesla_connector.connect(input_interface)
 
-        mock_post.assert_called_once()
-        call_url = mock_post.call_args[0][0]
+        mock_session.post.assert_called_once()
+        call_url = mock_session.post.call_args[0][0]
         assert expected_endpoint in call_url
 
 
@@ -159,28 +193,44 @@ async def test_open_trunk_case_insensitive(
     ],
 )
 async def test_idle_case_insensitive(tesla_connector, action_input):
-    """Test that 'idle' command works regardless of case."""
-    with patch("actions.dimo.connector.tesla.requests.post") as mock_post:
+    """Test that 'idle' command works regardless of case and makes no HTTP call."""
+    mock_session_cm, mock_session = create_aiohttp_mock()
+
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ) as mock_client_session,
+    ):
         input_interface = Mock()
         input_interface.action = action_input
 
         await tesla_connector.connect(input_interface)
 
-        mock_post.assert_not_called()
+        mock_client_session.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_unknown_action_logs_error(tesla_connector):
     """Test that unknown actions are logged as errors."""
-    with patch("actions.dimo.connector.tesla.requests.post") as mock_post:
-        with patch("actions.dimo.connector.tesla.logging") as mock_logging:
-            input_interface = Mock()
-            input_interface.action = "invalid_action"
+    mock_session_cm, mock_session = create_aiohttp_mock()
 
-            await tesla_connector.connect(input_interface)
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ) as mock_client_session,
+        patch("actions.dimo.connector.tesla.logging") as mock_logging,
+    ):
+        input_interface = Mock()
+        input_interface.action = "invalid_action"
 
-            mock_post.assert_not_called()
-            mock_logging.error.assert_called()
+        await tesla_connector.connect(input_interface)
+
+        mock_client_session.assert_not_called()
+        mock_logging.error.assert_called()
 
 
 @pytest.mark.asyncio
@@ -202,3 +252,79 @@ async def test_no_jwt_logs_error(mock_dimo):
         await connector.connect(input_interface)
 
         mock_logging.error.assert_called_with("No vehicle jwt")
+
+
+@pytest.mark.asyncio
+async def test_uses_aiohttp_not_requests(tesla_connector):
+    """Test that aiohttp is used for non-blocking HTTP calls."""
+    mock_session_cm, mock_session = create_aiohttp_mock()
+
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout") as mock_timeout,
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ) as mock_client_session,
+    ):
+        input_interface = Mock()
+        input_interface.action = "lock doors"
+
+        await tesla_connector.connect(input_interface)
+
+        mock_timeout.assert_called_once_with(total=10)
+        mock_client_session.assert_called_once()
+
+
+def test_requests_not_imported():
+    """Verify blocking requests library is not imported in tesla module."""
+    from actions.dimo.connector import tesla
+
+    module_source = open(tesla.__file__).read()
+    assert "import requests" not in module_source
+    assert "from requests" not in module_source
+
+
+@pytest.mark.asyncio
+async def test_http_error_status_logs_error(tesla_connector):
+    """Test that HTTP error status (non-200) is logged as error."""
+    mock_session_cm, mock_session = create_aiohttp_mock(status=500)
+
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ),
+        patch("actions.dimo.connector.tesla.logging") as mock_logging,
+    ):
+        input_interface = Mock()
+        input_interface.action = "lock doors"
+
+        await tesla_connector.connect(input_interface)
+
+        mock_logging.error.assert_called()
+        error_call = mock_logging.error.call_args[0][0]
+        assert "500" in error_call
+
+
+@pytest.mark.asyncio
+async def test_timeout_is_configured(tesla_connector):
+    """Test that aiohttp timeout is properly configured to 10 seconds."""
+    mock_session_cm, mock_session = create_aiohttp_mock()
+
+    with (
+        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout") as mock_timeout,
+        patch(
+            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            return_value=mock_session_cm,
+        ) as mock_client_session,
+    ):
+        input_interface = Mock()
+        input_interface.action = "lock doors"
+
+        await tesla_connector.connect(input_interface)
+
+        mock_timeout.assert_called_once_with(total=10)
+        mock_client_session.assert_called_once()
+        call_kwargs = mock_client_session.call_args[1]
+        assert "timeout" in call_kwargs
