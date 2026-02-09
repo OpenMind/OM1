@@ -15,10 +15,9 @@
   6. If you sense something on your right, you might:\n Move: 'turn left'\n Speak: {{'I\\'m turning left to avoid the object on my right'}}",
   agent_inputs: [
     {
-      type: "RPLidar",
+      type: "TurtleBot4RPLidar",
       config: {
         half_width_robot: 0.21,
-        use_zenoh: true,
         relevant_distance_max: 1.1,
         sensor_mounting_angle: 270.0,
         angles_blanked: [
@@ -28,10 +27,7 @@
       },
     },
     {
-      type: "Odom",
-      config: {
-        use_zenoh: true,
-      },
+      type: "Turtlebot4Odom",
     },
     {
       type: "TurtleBot4Battery",
