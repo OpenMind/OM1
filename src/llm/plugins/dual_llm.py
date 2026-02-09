@@ -205,7 +205,7 @@ class DualLLM(LLM[R]):
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
+        prompt : str
             Extracted user voice input for context.
 
         Returns
