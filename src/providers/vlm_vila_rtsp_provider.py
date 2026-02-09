@@ -53,7 +53,7 @@ class VLMVilaRTSPProvider:
 
         Parameters
         ----------
-        video_callback : callable
+        video_callback : Optional[Callable]
             The callback function to process video frames.
         """
         if video_callback is not None:
@@ -65,7 +65,7 @@ class VLMVilaRTSPProvider:
 
         Parameters
         ----------
-        callback : callable
+         message_callback : Optional[Callable]
             The callback function to process VLM results.
         """
         if message_callback is not None:

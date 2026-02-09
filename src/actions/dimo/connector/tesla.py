@@ -116,7 +116,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
         if output_interface.action != self.previous_output:
             self.previous_output = output_interface.action
 
-            # checkout timeout of vehicle_jwt
+            # check timeout of vehicle_jwt
             if (
                 self.vehicle_jwt_expires is not None
                 and time.time() > self.vehicle_jwt_expires

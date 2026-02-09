@@ -191,8 +191,11 @@ class FabricDataSubmitter:
         api_key : Optional[str]
             API key for authentication. Default is None.
         base_url : str
-            Base URL for the teleops status API. Default is
+            Base URL for the FABRIC API. Default is
             "https://api.openmind.org/api/core/fabric/submit".
+        write_to_local_file : bool
+            If True, enables local file logging of submitted data.
+            Default is False.
         """
         self.api_key = api_key
         self.base_url = base_url
