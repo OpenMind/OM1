@@ -223,6 +223,7 @@ class ChargingStatus(IdlStruct, typename="ChargingStatus"):
     code: int8
     status: String
 
+
 class PersonGreetingStatus(IdlStruct, typename="PersonGreetingStatus"):
     """Person greeting status message."""
 
