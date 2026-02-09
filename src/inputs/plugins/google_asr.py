@@ -3,9 +3,10 @@ import json
 import logging
 import time
 from queue import Empty, Queue
-from typing import Dict, List, Optional
+from typing import List, Optional, Union
 from uuid import uuid4
 
+import pyaudio
 from pydantic import Field
 
 from inputs.base import Message, SensorConfig
@@ -16,7 +17,7 @@ from providers.sleep_ticker_provider import SleepTickerProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
 from zenoh_msgs import ASRText, open_zenoh_session, prepare_header
 
-LANGUAGE_CODE_MAP: dict = {
+LANGUAGE_CODE_MAP = {
     "english": "en-US",
     "chinese": "cmn-Hans-CN",
     "german": "de-DE",
@@ -34,25 +35,6 @@ LANGUAGE_CODE_MAP: dict = {
 class GoogleASRSensorConfig(SensorConfig):
     """
     Configuration for Google ASR Sensor.
-
-    Parameters
-    ----------
-    api_key : Optional[str]
-        API Key.
-    rate : int
-        Sampling rate.
-    chunk : int
-        Chunk size.
-    base_url : Optional[str]
-        Base URL for the ASR service.
-    microphone_device_id : Optional[str]
-        Microphone Device ID.
-    microphone_name : Optional[str]
-        Microphone Name.
-    language : str
-        Language for speech recognition.
-    remote_input : bool
-        Whether to use remote input.
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
@@ -61,8 +43,8 @@ class GoogleASRSensorConfig(SensorConfig):
     base_url: Optional[str] = Field(
         default=None, description="Base URL for the ASR service"
     )
-    microphone_device_id: Optional[int] = Field(
-        default=None, description="Microphone Device ID"
+    microphone_device_id: Optional[Union[int, str]] = Field(
+        default=None, description="Microphone Device ID or name (e.g., 'hw:1,0')"
     )
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
     language: str = Field(
@@ -78,46 +60,28 @@ class GoogleASRSensorConfig(SensorConfig):
 class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
     """
     Google Automatic Speech Recognition (ASR) input handler.
-
-    This class manages the input stream from an ASR service, buffering messages
-    and providing text conversion capabilities.
     """
 
     def __init__(self, config: GoogleASRSensorConfig):
-        """
-        Initialize GoogleASRInput instance.
-
-        Parameters
-        ----------
-        config : GoogleASRSensorConfig
-            Configuration for the Google ASR input
-        """
         super().__init__(config)
 
-        # Buffer for storing the final output
         self.messages: List[str] = []
-
-        # Set IO Provider
         self.descriptor_for_LLM = "Voice"
         self.io_provider = IOProvider()
-
-        # Buffer for storing messages
         self.message_buffer: Queue[str] = Queue()
 
-        # Initialize ASR provider
-        # Initialize ASR provider
-        api_key = self.config.api_key
-        rate = self.config.rate
-        chunk = self.config.chunk
+        resolved_device_id = self._resolve_audio_device(config.microphone_device_id)
+        resolved_microphone_name = config.microphone_name
+
+        api_key = config.api_key
+        rate = config.rate
+        chunk = config.chunk
         base_url = (
-            self.config.base_url
+            config.base_url
             or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
         )
-        microphone_device_id = self.config.microphone_device_id
-        microphone_name = self.config.microphone_name
 
-        language = self.config.language.strip().lower()
-
+        language = config.language.strip().lower()
         if language not in LANGUAGE_CODE_MAP:
             logging.error(
                 f"Language {language} not supported. Current supported languages are : {list(LANGUAGE_CODE_MAP.keys())}. Defaulting to English"
@@ -127,15 +91,20 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
         logging.info(f"Using language code {language_code} for Google ASR")
 
-        remote_input = self.config.remote_input
-        enable_tts_interrupt = self.config.enable_tts_interrupt
+        remote_input = config.remote_input
+        enable_tts_interrupt = config.enable_tts_interrupt
+
+        # Pass only int or None to ASRProvider, since it only accepts int | None
+        device_id_for_asr = (
+            resolved_device_id if isinstance(resolved_device_id, int) else None
+        )
 
         self.asr: ASRProvider = ASRProvider(
             rate=rate,
             chunk=chunk,
             ws_url=base_url,
-            device_id=microphone_device_id,
-            microphone_name=microphone_name,
+            device_id=device_id_for_asr,  # Only pass int or None
+            microphone_name=resolved_microphone_name,
             language_code=language_code,
             remote_input=remote_input,
             enable_tts_interrupt=enable_tts_interrupt,
@@ -143,13 +112,9 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
 
-        # Initialize sleep ticker provider
         self.global_sleep_ticker_provider = SleepTickerProvider()
-
-        # Initialize conversation provider
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
-        # Initialize Zenoh session
         self.asr_topic = "om/asr/text"
         self.session = None
         self.asr_publisher = None
@@ -163,17 +128,37 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             self.session = None
             self.asr_publisher = None
 
-    def _handle_asr_message(self, raw_message: str):
-        """
-        Process incoming ASR messages.
+    def _resolve_audio_device(
+        self, requested_device: Optional[Union[int, str]]
+    ) -> Optional[Union[int, str]]:
+        if requested_device is not None:
+            logging.info(
+                f"Using explicitly configured microphone device: {requested_device}"
+            )
+            return requested_device
 
-        Parameters
-        ----------
-        raw_message : str
-            Raw message received from ASR service
-        """
         try:
-            json_message: Dict = json.loads(raw_message)
+            p = pyaudio.PyAudio()
+            default_info = p.get_default_input_device_info()
+            p.terminate()
+
+            # Convert to int as expected by ASRProvider
+            device_id = int(default_info["index"])
+            device_name = default_info["name"]
+
+            logging.info(
+                f"Auto-detected default microphone: {device_name} (ID: {device_id})"
+            )
+            return device_id
+        except Exception as e:
+            logging.warning(
+                f"Could not auto-detect default microphone: {e}. Using None (system default)."
+            )
+            return None
+
+    def _handle_asr_message(self, raw_message: str):
+        try:
+            json_message = json.loads(raw_message)
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
                 if len(asr_reply.split()) > 1:
@@ -183,14 +168,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             pass
 
     async def _poll(self) -> Optional[str]:
-        """
-        Poll for new messages in the buffer.
-
-        Returns
-        -------
-        Optional[str]
-            Message from the buffer if available, None otherwise
-        """
         await asyncio.sleep(0.1)
         try:
             message = self.message_buffer.get_nowait()
@@ -199,37 +176,15 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             return None
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
-        """
-        Convert raw input to text format.
-
-        Parameters
-        ----------
-        raw_input : Optional[str]
-            Raw input to be processed
-
-        Returns
-        -------
-        Optional[Message]
-            Processed message or None if input is None
-        """
         if raw_input is None:
             return None
-
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
-        """
-        Convert raw input to processed text and manage buffer.
-
-        Parameters
-        ----------
-        raw_input : Optional[str]
-            Raw input to be processed
-        """
+        """Convert raw input to processed text and manage buffer."""
         pending_message = await self._raw_to_text(raw_input)
         if pending_message is None:
             if len(self.messages) != 0:
-                # Skip sleep if there's already a message in the messages buffer
                 self.global_sleep_ticker_provider.skip_sleep = True
 
         if pending_message is not None:
@@ -239,14 +194,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
                 self.messages[-1] = f"{self.messages[-1]} {pending_message.message}"
 
     def formatted_latest_buffer(self) -> Optional[str]:
-        """
-        Format and clear the latest buffer contents.
-
-        Returns
-        -------
-        Optional[str]
-            Formatted string of buffer contents or None if buffer is empty
-        """
+        """Format and clear the latest buffer contents."""
         if len(self.messages) == 0:
             return None
 
@@ -256,14 +204,12 @@ INPUT: {self.descriptor_for_LLM}
 {self.messages[-1]}
 // END
 """
-        # Add to IO provider and conversation provider
         self.io_provider.add_input(
             self.descriptor_for_LLM, self.messages[-1], time.time()
         )
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
 
-        # Publish to Zenoh
         if self.asr_publisher:
             try:
                 asr_msg = ASRText(
@@ -275,14 +221,11 @@ INPUT: {self.descriptor_for_LLM}
             except Exception as e:
                 logging.warning(f"Failed to publish ASR to Zenoh: {e}")
 
-        # Reset messages buffer
         self.messages = []
         return result
 
     def stop(self):
-        """
-        Stop the ASR input.
-        """
+        """Stop the ASR input."""
         if self.asr:
             self.asr.stop()
 
