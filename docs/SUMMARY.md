@@ -27,8 +27,11 @@
     * [Unitree Go2 Quadruped](robotics/unitree_go2_quadruped.md)
     * [Raspberry Pi](robotics/raspberrypi.md)
     * [Tesla Dimo](robotics/tesla_dimo.md)
-    * [TurtleBot4 Zenoh](robotics/turtlebot4_zenoh.md)
+    * [TurtleBot4](robotics/turtlebot4_zenoh.md)
     * [UBTech Yanshee](robotics/ubtech_yanshee.md)
+* [Examples](examples/conversation.md)
+    * [Conversation](examples/conversation.md)
+    * [Smart Toy](examples/smart_toy.md)
 
 ## Simulators <a href="#simulators" id="simulators"></a>
 
@@ -46,17 +49,11 @@
     * [Riva](api-reference/endpoints/riva.md)
     * [ViLA VLM](api-reference/endpoints/vila_vlm.md)
 
-## Examples <a href="#examples" id="examples"></a>
-
-* [Conversation](examples/conversation.md)
-* [Smart Toy](examples/smart_toy.md)
-
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
 * [Architecture Overview](full_autonomy_guidelines/architecture_overview.md)
     * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
-    * [Setup System](full_autonomy_guidelines/setup_system.md)
     * [System Config](full_autonomy_guidelines/system_config.md)
     * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
 * [Modes and Lifecycle](full_autonomy_guidelines/modes.md)
