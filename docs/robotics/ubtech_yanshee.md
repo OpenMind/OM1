@@ -1,7 +1,7 @@
 ---
 title: UbTech Yanshee Robot Setup
 description: "UbTech Yanshee Setup (Mini Humanoid)"
-icon: robot
+icon: user-robot
 ---
 
 ## Requirements

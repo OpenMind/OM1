@@ -97,17 +97,17 @@ Step 2: Start talking to your robot dog and ask it to switch to a particular mod
 
 Step 1: Configure your API key in ~/.bashrc file and start your machine in full autonomy mode.
 Step 2: Login to your OM1 portal and head over to Machine Teleops on the left navigation bar.
-    ![Machine Teleops](../assets/full-autonomy-assets/machine_teleops.png)
+    ![ ](../assets/full-autonomy-assets/machine_teleops.png)
 Step 3: Once connected, you’ll see your machine listed as **Online** at the top of the screen.
-    ![Online Machines](../assets/full-autonomy-assets/online_machine.png)
+    ![ ](../assets/full-autonomy-assets/online_machine.png)
 Step 4: Scroll down to access the Mode Selection section. From here, choose the mode you want your robot to switch to.
-    ![Online Machines](../assets/full-autonomy-assets/portal_mode_selection.png)
+    ![ ](../assets/full-autonomy-assets/portal_mode_selection.png)
 Step 5: In SLAM Mode, you can manually guide the robot through its environment to generate a map. As you move, you can label specific areas and have the robot remember them. The resulting map should appear as follows:
-    ![Online Machines](../assets/full-autonomy-assets/slam_map.png)
+    ![ ](../assets/full-autonomy-assets/slam_map.png)
 Step 6: Once the map is saved, switch to Navigation Mode to make the robot move autonomously between locations.
     Use the dropdown menu to select a destination.
-    ![Online Machines](../assets/full-autonomy-assets/select_location_to_navigate.png)
+    ![ ](../assets/full-autonomy-assets/select_location_to_navigate.png)
 Step 7: You can also monitor three live camera streams directly from the portal.
-    ![Online Machines](../assets/full-autonomy-assets/video_streams.png)
+    ![ ](../assets/full-autonomy-assets/video_streams.png)
 
 These steps and exploration methods provide a structured approach to understanding and managing OM1’s modes.
