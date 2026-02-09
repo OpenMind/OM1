@@ -1,6 +1,7 @@
 ---
 title: Long Range RF Robot Control
 description: "CRSF Protocol Support"
+icon: hyphen
 ---
 
 ## Introduction

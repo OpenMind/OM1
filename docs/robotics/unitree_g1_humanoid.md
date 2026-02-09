@@ -1,7 +1,7 @@
 ---
 title: Unitree G1 Humanoid
 description: "Unitree G1 Humanoid"
-icon: robot
+icon: user-robot
 ---
 
 ## Useful links and Reading
