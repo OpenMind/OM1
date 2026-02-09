@@ -5,15 +5,23 @@ from actions.base import Interface
 
 
 class TeslaAction(str, Enum):
+    """
+    Enumeration of possible Tesla actions.
+    """
+
     IDLE = "idle"
     LOCK_DOORS = "lock doors"
-    UNLOCK_DOOS = "unlock doors"
+    UNLOCK_DOORS = "unlock doors"
     OPEN_FRUNK = "open frunk"
     OPEN_TRUNK = "open trunk"
 
 
 @dataclass
 class TeslaInput:
+    """
+    Input interface for the DIMOTesla action.
+    """
+
     action: TeslaAction
 
 

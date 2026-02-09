@@ -3,7 +3,6 @@ This only works if you actually have a serial port connected to your computer, s
 """
 
 import logging
-import time
 
 import serial
 from pydantic import Field
@@ -16,7 +15,7 @@ class MoveSerialConfig(ActionConfig):
     """
     Configuration for Serial to Arduino connector.
 
-    Parameters:
+    Parameters
     ----------
     port : str
         The serial port to connect to the Arduino (e.g., COM3 or /dev/cu.usbmodem14101). Leave empty to simulate.
@@ -86,4 +85,4 @@ class MoveSerialConnector(ActionConnector[MoveSerialConfig, MoveInput]):
         """
         Periodic tick function to maintain connection.
         """
-        time.sleep(0.1)
+        self.sleep(0.1)

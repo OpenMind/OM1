@@ -4,12 +4,16 @@ from unittest.mock import AsyncMock, Mock, mock_open, patch
 import pytest
 
 from runtime.multi_mode.hook import (
+    ActionHookConfig,
     ActionHookHandler,
+    CommandHookConfig,
     CommandHookHandler,
+    FunctionHookConfig,
     FunctionHookHandler,
     LifecycleHook,
     LifecycleHookHandler,
     LifecycleHookType,
+    MessageHookConfig,
     MessageHookHandler,
     create_hook_handler,
     execute_lifecycle_hooks,
@@ -128,30 +132,31 @@ def test_hook_with_custom_values(sample_command_hook):
 
 def test_base_handler_creation():
     """Test base handler creation."""
-    config = {"test": "value"}
+    config = MessageHookConfig(message="test value")
     handler = LifecycleHookHandler(config)
-    assert handler.config == config
+    assert isinstance(handler.config, MessageHookConfig)
 
 
 @pytest.mark.asyncio
 async def test_base_handler_execute_not_implemented():
     """Test that base handler execute method raises NotImplementedError."""
-    handler = LifecycleHookHandler({})
+    handler = LifecycleHookHandler(MessageHookConfig())
     with pytest.raises(NotImplementedError):
         await handler.execute({})
 
 
 def test_message_handler_creation():
     """Test message handler creation."""
-    config = {"message": "test message"}
+    config = MessageHookConfig(message="test message")
     handler = MessageHookHandler(config)
-    assert handler.config == config
+    assert isinstance(handler.config, MessageHookConfig)
+    assert handler.config.message == "test message"
 
 
 @pytest.mark.asyncio
 async def test_message_handler_basic_execution(sample_context):
     """Test basic message handler execution."""
-    config = {"message": "Mode: {mode_name}"}
+    config = MessageHookConfig(message="Mode: {mode_name}")
     handler = MessageHookHandler(config)
 
     mock_tts = Mock()
@@ -172,7 +177,7 @@ async def test_message_handler_basic_execution(sample_context):
 @pytest.mark.asyncio
 async def test_message_handler_with_announcement(sample_context):
     """Test message handler with TTS announcement."""
-    config = {"message": "Mode: {mode_name}"}
+    config = MessageHookConfig(message="Mode: {mode_name}")
     handler = MessageHookHandler(config)
 
     mock_tts = Mock()
@@ -191,7 +196,7 @@ async def test_message_handler_with_announcement(sample_context):
 @pytest.mark.asyncio
 async def test_message_handler_tts_import_error(sample_context):
     """Test message handler when TTS provider is not available."""
-    config = {"message": "Mode: {mode_name}"}
+    config = MessageHookConfig(message="Mode: {mode_name}")
     handler = MessageHookHandler(config)
 
     with patch("runtime.multi_mode.hook.logging") as mock_logging:
@@ -206,7 +211,7 @@ async def test_message_handler_tts_import_error(sample_context):
 @pytest.mark.asyncio
 async def test_message_handler_format_error():
     """Test message handler with format error."""
-    config = {"message": "Invalid format: {nonexistent_key}"}
+    config = MessageHookConfig(message="Invalid format: {nonexistent_key}")
     handler = MessageHookHandler(config)
     context = {"mode_name": "test"}
 
@@ -219,7 +224,7 @@ async def test_message_handler_format_error():
 @pytest.mark.asyncio
 async def test_message_handler_no_message():
     """Test message handler with no message configured."""
-    config = {}
+    config = MessageHookConfig()
     handler = MessageHookHandler(config)
 
     result = await handler.execute({})
@@ -229,27 +234,279 @@ async def test_message_handler_no_message():
 @pytest.mark.asyncio
 async def test_message_handler_empty_message():
     """Test message handler with empty message."""
-    config = {"message": ""}
+    config = MessageHookConfig(message="")
     handler = MessageHookHandler(config)
 
     result = await handler.execute({})
     assert result is True
 
 
+def test_message_handler_default_tts_provider():
+    """Test that default TTS provider is elevenlabs."""
+    config = MessageHookConfig(message="test")
+    handler = MessageHookHandler(config)
+    assert handler.config.tts_provider == "elevenlabs"
+
+
+def test_message_handler_create_elevenlabs_provider():
+    """Test creating ElevenLabs TTS provider with default settings."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="elevenlabs",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            api_key=None,
+            elevenlabs_api_key=None,
+            voice_id="JBFqnCBsd6RMkjVDRZzb",
+            model_id="eleven_flash_v2_5",
+            output_format="mp3_44100_128",
+            enable_tts_interrupt=False,
+        )
+
+
+def test_message_handler_create_elevenlabs_provider_with_custom_config():
+    """Test creating ElevenLabs TTS provider with custom configuration."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="elevenlabs",
+        url="https://custom.url/tts",
+        api_key="test_api_key",
+        elevenlabs_api_key="test_elevenlabs_key",
+        voice_id="custom_voice",
+        model_id="custom_model",
+        output_format="wav_44100",
+        enable_tts_interrupt=True,
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="https://custom.url/tts",
+            api_key="test_api_key",
+            elevenlabs_api_key="test_elevenlabs_key",
+            voice_id="custom_voice",
+            model_id="custom_model",
+            output_format="wav_44100",
+            enable_tts_interrupt=True,
+        )
+
+
+def test_message_handler_create_kokoro_provider():
+    """Test creating Kokoro TTS provider with default settings."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="kokoro",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.KokoroTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://127.0.0.1:8880/v1",
+            api_key=None,
+            voice_id="af_bella",
+            model_id="kokoro",
+            output_format="pcm",
+            rate=24000,
+            enable_tts_interrupt=False,
+        )
+
+
+def test_message_handler_create_kokoro_provider_with_custom_config():
+    """Test creating Kokoro TTS provider with custom configuration."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="kokoro",
+        url="http://custom.host:8880/v1",
+        api_key="test_api_key",
+        voice_id="af_sky",
+        model_id="kokoro_v2",
+        output_format="wav",
+        rate=48000,
+        enable_tts_interrupt=True,
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.KokoroTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://custom.host:8880/v1",
+            api_key="test_api_key",
+            voice_id="af_sky",
+            model_id="kokoro_v2",
+            output_format="wav",
+            rate=48000,
+            enable_tts_interrupt=True,
+        )
+
+
+def test_message_handler_create_riva_provider():
+    """Test creating Riva TTS provider with default settings."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="riva",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.RivaTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://127.0.0.1:50051",
+            api_key=None,
+        )
+
+
+def test_message_handler_create_riva_provider_with_custom_config():
+    """Test creating Riva TTS provider with custom configuration."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="riva",
+        url="http://custom.host:50051",
+        api_key="test_api_key",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.RivaTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once_with(
+            url="http://custom.host:50051",
+            api_key="test_api_key",
+        )
+
+
+def test_message_handler_unsupported_provider():
+    """Test creating TTS provider with unsupported provider type."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="unsupported_provider",
+    )
+    handler = MessageHookHandler(config)
+
+    with pytest.raises(
+        ValueError, match="Unsupported TTS provider: unsupported_provider"
+    ):
+        handler._create_tts_provider()
+
+
+def test_message_handler_case_insensitive_provider():
+    """Test that provider type is case-insensitive."""
+    config = MessageHookConfig(
+        message="test",
+        tts_provider="ELEVENLABS",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+        handler._create_tts_provider()
+        mock_provider.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_with_kokoro(sample_context):
+    """Test message handler execution with Kokoro provider."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="kokoro",
+    )
+    handler = MessageHookHandler(config)
+
+    mock_tts = Mock()
+    mock_tts.start = Mock()
+    mock_tts.add_pending_message = Mock()
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.multi_mode.hook.KokoroTTSProvider", return_value=mock_tts):
+            result = await handler.execute(sample_context)
+            assert result is True
+            mock_logging.info.assert_called_once_with(
+                "Lifecycle hook message: Mode: test_mode"
+            )
+            mock_tts.start.assert_called_once()
+            mock_tts.add_pending_message.assert_called_once_with("Mode: test_mode")
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_with_riva(sample_context):
+    """Test message handler execution with Riva provider."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="riva",
+    )
+    handler = MessageHookHandler(config)
+
+    mock_tts = Mock()
+    mock_tts.start = Mock()
+    mock_tts.add_pending_message = Mock()
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.multi_mode.hook.RivaTTSProvider", return_value=mock_tts):
+            result = await handler.execute(sample_context)
+            assert result is True
+            mock_logging.info.assert_called_once_with(
+                "Lifecycle hook message: Mode: test_mode"
+            )
+            mock_tts.start.assert_called_once()
+            mock_tts.add_pending_message.assert_called_once_with("Mode: test_mode")
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_with_unsupported_provider(sample_context):
+    """Test message handler execution with unsupported provider fails gracefully."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="invalid",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        result = await handler.execute(sample_context)
+        assert result is False
+        mock_logging.error.assert_called_once()
+        error_call = mock_logging.error.call_args[0][0]
+        assert "Error adding TTS message:" in error_call
+
+
+@pytest.mark.asyncio
+async def test_message_handler_execute_provider_exception(sample_context):
+    """Test message handler execution when provider initialization fails."""
+    config = MessageHookConfig(
+        message="Mode: {mode_name}",
+        tts_provider="elevenlabs",
+    )
+    handler = MessageHookHandler(config)
+
+    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch(
+            "runtime.multi_mode.hook.ElevenLabsTTSProvider",
+            side_effect=Exception("Provider init failed"),
+        ):
+            result = await handler.execute(sample_context)
+            assert result is False
+            mock_logging.error.assert_called_once()
+            error_call = mock_logging.error.call_args[0][0]
+            assert "Error adding TTS message:" in error_call
+
+
 def test_command_handler_creation():
     """Test command handler creation."""
-    config = {"command": "echo test"}
+    config = CommandHookConfig(command="echo test")
     handler = CommandHookHandler(config)
-    assert handler.config == config
+    assert isinstance(handler.config, CommandHookConfig)
+    assert handler.config.command == "echo test"
 
 
 @pytest.mark.asyncio
 async def test_command_handler_successful_execution(sample_context):
     """Test successful command execution."""
-    config = {"command": "echo 'Mode: {mode_name}'"}
+    config = CommandHookConfig(command="echo 'Mode: {mode_name}'")
     handler = CommandHookHandler(config)
 
-    # Mock successful process
     mock_process = AsyncMock()
     mock_process.communicate.return_value = (b"Mode: test_mode\n", b"")
     mock_process.returncode = 0
@@ -269,10 +526,9 @@ async def test_command_handler_successful_execution(sample_context):
 @pytest.mark.asyncio
 async def test_command_handler_failed_execution(sample_context):
     """Test failed command execution."""
-    config = {"command": "false"}  # Command that always fails
+    config = CommandHookConfig(command="false")  # Command that always fails
     handler = CommandHookHandler(config)
 
-    # Mock failed process
     mock_process = AsyncMock()
     mock_process.communicate.return_value = (b"", b"Command failed")
     mock_process.returncode = 1
@@ -290,7 +546,7 @@ async def test_command_handler_failed_execution(sample_context):
 @pytest.mark.asyncio
 async def test_command_handler_no_command():
     """Test command handler with no command specified."""
-    config = {}
+    config = CommandHookConfig()
     handler = CommandHookHandler(config)
 
     with patch("runtime.multi_mode.hook.logging") as mock_logging:
@@ -304,7 +560,7 @@ async def test_command_handler_no_command():
 @pytest.mark.asyncio
 async def test_command_handler_empty_command():
     """Test command handler with empty command."""
-    config = {"command": ""}
+    config = CommandHookConfig(command="")
     handler = CommandHookHandler(config)
 
     with patch("runtime.multi_mode.hook.logging") as mock_logging:
@@ -316,7 +572,7 @@ async def test_command_handler_empty_command():
 @pytest.mark.asyncio
 async def test_command_handler_execution_exception(sample_context):
     """Test command handler with execution exception."""
-    config = {"command": "echo test"}
+    config = CommandHookConfig(command="echo test")
     handler = CommandHookHandler(config)
 
     with patch(
@@ -332,7 +588,7 @@ async def test_command_handler_execution_exception(sample_context):
 @pytest.mark.asyncio
 async def test_command_handler_successful_no_output(sample_context):
     """Test successful command with no output."""
-    config = {"command": "true"}  # Command that succeeds with no output
+    config = CommandHookConfig(command="true")  # Command that succeeds with no output
     handler = CommandHookHandler(config)
 
     mock_process = AsyncMock()
@@ -349,153 +605,170 @@ async def test_command_handler_successful_no_output(sample_context):
 
 def test_function_handler_creation():
     """Test function handler creation."""
-    config = {"function": "test_func", "module_name": "test_module"}
+    config = FunctionHookConfig(function="test_func", module_name="test_module")
     handler = FunctionHookHandler(config)
-    assert handler.config == config
+    assert isinstance(handler.config, FunctionHookConfig)
+    assert handler.config.function == "test_func"
+    assert handler.config.module_name == "test_module"
 
 
 @pytest.mark.asyncio
 async def test_function_handler_no_function():
     """Test function handler with no function specified."""
-    config = {"module_name": "test_module"}
-    handler = FunctionHookHandler(config)
-
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        result = await handler.execute({})
-        assert result is False
-        mock_logging.error.assert_called_once_with(
-            "No function specified for function hook"
-        )
+    with pytest.raises(Exception):
+        config = FunctionHookConfig(module_name="test_module")  # type: ignore
+        FunctionHookHandler(config)
 
 
 @pytest.mark.asyncio
 async def test_function_handler_no_module():
     """Test function handler with no module specified."""
-    config = {"function": "test_func"}
+    with pytest.raises(Exception):
+        config = FunctionHookConfig(function="test_func")  # type: ignore
+        FunctionHookHandler(config)
+
+
+@pytest.mark.asyncio
+async def test_function_handler_successful_sync_execution(sample_context):
+    """Test successful synchronous function execution."""
+    config = FunctionHookConfig(function="test_func", module_name="test_module")
     handler = FunctionHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        result = await handler.execute({})
+    def mock_function(context):
+        return True
+
+    with patch.object(handler, "_find_function_in_module", return_value=mock_function):
+        result = await handler.execute(sample_context)
+        assert result is True
+
+
+@pytest.mark.asyncio
+async def test_function_handler_successful_async_execution(sample_context):
+    """Test successful asynchronous function execution."""
+    config = FunctionHookConfig(function="test_func", module_name="test_module")
+    handler = FunctionHookHandler(config)
+
+    async def mock_async_function(context):
+        return True
+
+    with patch.object(
+        handler, "_find_function_in_module", return_value=mock_async_function
+    ):
+        result = await handler.execute(sample_context)
+        assert result is True
+
+
+@pytest.mark.asyncio
+async def test_function_handler_function_returns_false(sample_context):
+    """Test function that returns False."""
+    config = FunctionHookConfig(function="test_func", module_name="test_module")
+    handler = FunctionHookHandler(config)
+
+    def mock_function(context):
+        return False
+
+    with patch.object(handler, "_find_function_in_module", return_value=mock_function):
+        result = await handler.execute(sample_context)
         assert result is False
-        mock_logging.error.assert_called_once_with(
-            "No module_name specified for function hook"
-        )
 
-    @pytest.mark.asyncio
-    async def test_function_handler_successful_sync_execution(self, sample_context):
-        """Test successful synchronous function execution."""
-        config = {"function": "test_func", "module_name": "test_module"}
-        handler = FunctionHookHandler(config)
 
-        def mock_function(context):
-            return True
+@pytest.mark.asyncio
+async def test_function_handler_function_returns_none(sample_context):
+    """Test function that returns None (should be treated as success)."""
+    config = FunctionHookConfig(function="test_func", module_name="test_module")
+    handler = FunctionHookHandler(config)
 
-        with patch.object(
-            handler, "_find_function_in_module", return_value=mock_function
-        ):
-            result = await handler.execute(sample_context)
-            assert result is True
+    def mock_function(context):
+        return None
 
-    @pytest.mark.asyncio
-    async def test_function_handler_successful_async_execution(self, sample_context):
-        """Test successful asynchronous function execution."""
-        config = {"function": "test_func", "module_name": "test_module"}
-        handler = FunctionHookHandler(config)
+    with patch.object(handler, "_find_function_in_module", return_value=mock_function):
+        result = await handler.execute(sample_context)
+        assert result is True
 
-        async def mock_async_function(context):
-            return True
 
-        with patch.object(
-            handler, "_find_function_in_module", return_value=mock_async_function
-        ):
-            result = await handler.execute(sample_context)
-            assert result is True
+@pytest.mark.asyncio
+async def test_function_handler_function_not_found(sample_context):
+    """Test function handler when function is not found."""
+    config = FunctionHookConfig(function="test_func", module_name="test_module")
+    handler = FunctionHookHandler(config)
 
-    @pytest.mark.asyncio
-    async def test_function_handler_function_returns_false(self, sample_context):
-        """Test function that returns False."""
-        config = {"function": "test_func", "module_name": "test_module"}
-        handler = FunctionHookHandler(config)
+    with patch.object(handler, "_find_function_in_module", return_value=None):
+        result = await handler.execute(sample_context)
+        assert result is False
 
-        def mock_function(context):
-            return False
 
-        with patch.object(
-            handler, "_find_function_in_module", return_value=mock_function
-        ):
+@pytest.mark.asyncio
+async def test_function_handler_execution_exception(sample_context):
+    """Test function handler with execution exception."""
+    config = FunctionHookConfig(function="test_func", module_name="test_module")
+    handler = FunctionHookHandler(config)
+
+    def mock_function(context):
+        raise ValueError("Test error")
+
+    with patch.object(handler, "_find_function_in_module", return_value=mock_function):
+        with patch("runtime.multi_mode.hook.logging") as mock_logging:
             result = await handler.execute(sample_context)
             assert result is False
+            mock_logging.error.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_function_handler_function_returns_none(self, sample_context):
-        """Test function that returns None (should be treated as success)."""
-        config = {"function": "test_func", "module_name": "test_module"}
-        handler = FunctionHookHandler(config)
 
-        def mock_function(context):
-            return None
+def test_find_function_in_module_hooks_dir_not_found():
+    """Test function search when hooks directory doesn't exist."""
+    handler = FunctionHookHandler(
+        FunctionHookConfig(function="test_func", module_name="test_module")
+    )
 
-        with patch.object(
-            handler, "_find_function_in_module", return_value=mock_function
-        ):
-            result = await handler.execute(sample_context)
-            assert result is True
+    with patch("runtime.multi_mode.hook.os.path.exists", return_value=False):
+        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+            result = handler._find_function_in_module("test_module", "test_func")
+            assert result is None
+            mock_logging.error.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_function_handler_function_not_found(self, sample_context):
-        """Test function handler when function is not found."""
-        config = {"function": "test_func", "module_name": "test_module"}
-        handler = FunctionHookHandler(config)
 
-        with patch.object(handler, "_find_function_in_module", return_value=None):
-            result = await handler.execute(sample_context)
-            assert result is False
+def test_find_function_in_module_file_not_found():
+    """Test function search when module file doesn't exist."""
+    handler = FunctionHookHandler(
+        FunctionHookConfig(function="test_func", module_name="test_module")
+    )
 
-    @pytest.mark.asyncio
-    async def test_function_handler_execution_exception(self, sample_context):
-        """Test function handler with execution exception."""
-        config = {"function": "test_func", "module_name": "test_module"}
-        handler = FunctionHookHandler(config)
+    with patch("runtime.multi_mode.hook.os.path.exists", side_effect=[True, False]):
+        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+            result = handler._find_function_in_module("test_module", "test_func")
+            assert result is None
+            mock_logging.error.assert_called_once()
 
-        def mock_function(context):
-            raise ValueError("Test error")
 
-        with patch.object(
-            handler, "_find_function_in_module", return_value=mock_function
-        ):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
-                result = await handler.execute(sample_context)
-                assert result is False
-                mock_logging.error.assert_called_once()
+def test_find_function_in_module_function_not_in_file():
+    """Test function search when function is not found in file."""
+    handler = FunctionHookHandler(
+        FunctionHookConfig(function="test_func", module_name="test_module")
+    )
 
-    def test_find_function_in_module_hooks_dir_not_found(self):
-        """Test function search when hooks directory doesn't exist."""
-        handler = FunctionHookHandler({})
+    file_content = "def other_function():\n    pass"
 
-        with patch("runtime.multi_mode.hook.os.path.exists", return_value=False):
+    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=file_content)):
             with patch("runtime.multi_mode.hook.logging") as mock_logging:
                 result = handler._find_function_in_module("test_module", "test_func")
                 assert result is None
                 mock_logging.error.assert_called_once()
 
-    def test_find_function_in_module_file_not_found(self):
-        """Test function search when module file doesn't exist."""
-        handler = FunctionHookHandler({})
 
-        with patch("runtime.multi_mode.hook.os.path.exists", side_effect=[True, False]):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
-                result = handler._find_function_in_module("test_module", "test_func")
-                assert result is None
-                mock_logging.error.assert_called_once()
+def test_find_function_in_module_import_error():
+    """Test function search with import error."""
+    handler = FunctionHookHandler(
+        FunctionHookConfig(function="test_func", module_name="test_module")
+    )
 
-    def test_find_function_in_module_function_not_in_file(self):
-        """Test function search when function is not found in file."""
-        handler = FunctionHookHandler({})
+    file_content = "def test_func():\n    pass"
 
-        file_content = "def other_function():\n    pass"
-
-        with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
-            with patch("builtins.open", mock_open(read_data=file_content)):
+    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=file_content)):
+            with patch(
+                "runtime.multi_mode.hook.importlib.import_module",
+                side_effect=ImportError("Module not found"),
+            ):
                 with patch("runtime.multi_mode.hook.logging") as mock_logging:
                     result = handler._find_function_in_module(
                         "test_module", "test_func"
@@ -503,72 +776,59 @@ async def test_function_handler_no_module():
                     assert result is None
                     mock_logging.error.assert_called_once()
 
-    def test_find_function_in_module_import_error(self):
-        """Test function search with import error."""
-        handler = FunctionHookHandler({})
 
-        file_content = "def test_func():\n    pass"
+def test_find_function_in_module_successful():
+    """Test successful function search and import."""
+    handler = FunctionHookHandler(
+        FunctionHookConfig(function="test_func", module_name="test_module")
+    )
 
-        with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
-            with patch("builtins.open", mock_open(read_data=file_content)):
-                with patch(
-                    "runtime.multi_mode.hook.importlib.import_module",
-                    side_effect=ImportError("Module not found"),
-                ):
-                    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-                        result = handler._find_function_in_module(
-                            "test_module", "test_func"
-                        )
-                        assert result is None
-                        mock_logging.error.assert_called_once()
+    file_content = "def test_func():\n    pass"
 
-    def test_find_function_in_module_successful(self):
-        """Test successful function search and import."""
-        handler = FunctionHookHandler({})
+    def mock_function():
+        pass
 
-        file_content = "def test_func():\n    pass"
+    mock_module = Mock()
+    mock_module.test_func = mock_function
 
-        def mock_function():
-            pass
+    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=file_content)):
+            with patch(
+                "runtime.multi_mode.hook.importlib.import_module",
+                return_value=mock_module,
+            ):
+                with patch("runtime.multi_mode.hook.hasattr", return_value=True):
+                    result = handler._find_function_in_module(
+                        "test_module", "test_func"
+                    )
+                    assert result == mock_function
 
-        mock_module = Mock()
-        mock_module.test_func = mock_function
 
-        with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
-            with patch("builtins.open", mock_open(read_data=file_content)):
-                with patch(
-                    "runtime.multi_mode.hook.importlib.import_module",
-                    return_value=mock_module,
-                ):
-                    with patch("runtime.multi_mode.hook.hasattr", return_value=True):
-                        result = handler._find_function_in_module(
-                            "test_module", "test_func"
-                        )
-                        assert result == mock_function
+def test_find_function_in_module_async_function():
+    """Test finding async function."""
+    handler = FunctionHookHandler(
+        FunctionHookConfig(function="test_func", module_name="test_module")
+    )
 
-    def test_find_function_in_module_async_function(self):
-        """Test finding async function."""
-        handler = FunctionHookHandler({})
+    file_content = "async def test_func():\n    pass"
 
-        file_content = "async def test_func():\n    pass"
+    async def mock_async_function():
+        pass
 
-        async def mock_async_function():
-            pass
+    mock_module = Mock()
+    mock_module.test_func = mock_async_function
 
-        mock_module = Mock()
-        mock_module.test_func = mock_async_function
-
-        with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
-            with patch("builtins.open", mock_open(read_data=file_content)):
-                with patch(
-                    "runtime.multi_mode.hook.importlib.import_module",
-                    return_value=mock_module,
-                ):
-                    with patch("runtime.multi_mode.hook.hasattr", return_value=True):
-                        result = handler._find_function_in_module(
-                            "test_module", "test_func"
-                        )
-                        assert result == mock_async_function
+    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+        with patch("builtins.open", mock_open(read_data=file_content)):
+            with patch(
+                "runtime.multi_mode.hook.importlib.import_module",
+                return_value=mock_module,
+            ):
+                with patch("runtime.multi_mode.hook.hasattr", return_value=True):
+                    result = handler._find_function_in_module(
+                        "test_module", "test_func"
+                    )
+                    assert result == mock_async_function
 
 
 class TestActionHookHandler:
@@ -576,28 +836,23 @@ class TestActionHookHandler:
 
     def test_action_handler_creation(self):
         """Test action handler creation."""
-        config = {"action_type": "test_action", "action_config": {}}
+        config = ActionHookConfig(action_type="test_action", action_config={})
         handler = ActionHookHandler(config)
-        assert handler.config == config
+        assert isinstance(handler.config, ActionHookConfig)
+        assert handler.config.action_type == "test_action"
         assert handler.action is None
 
     @pytest.mark.asyncio
     async def test_action_handler_no_action_type(self):
         """Test action handler with no action type specified."""
-        config = {"action_config": {}}
-        handler = ActionHookHandler(config)
-
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
-            result = await handler.execute({})
-            assert result is False
-            mock_logging.error.assert_called_once_with(
-                "No action_type specified for action hook"
-            )
+        with pytest.raises(Exception):
+            config = ActionHookConfig(action_config={})  # type: ignore
+            ActionHookHandler(config)
 
     @pytest.mark.asyncio
     async def test_action_handler_action_load_error(self, sample_context):
         """Test action handler with action loading error."""
-        config = {"action_type": "nonexistent_action", "action_config": {}}
+        config = ActionHookConfig(action_type="nonexistent_action", action_config={})
         handler = ActionHookHandler(config)
 
         with patch("actions.load_action", side_effect=ImportError("Action not found")):
@@ -609,7 +864,9 @@ class TestActionHookHandler:
     @pytest.mark.asyncio
     async def test_action_handler_successful_execution(self, sample_context):
         """Test successful action execution."""
-        config = {"action_type": "test_action", "action_config": {"param": "value"}}
+        config = ActionHookConfig(
+            action_type="test_action", action_config={"param": "value"}
+        )
         handler = ActionHookHandler(config)
 
         # Mock action and connector
@@ -628,7 +885,7 @@ class TestActionHookHandler:
     @pytest.mark.asyncio
     async def test_action_handler_execution_error(self, sample_context):
         """Test action handler with execution error."""
-        config = {"action_type": "test_action", "action_config": {}}
+        config = ActionHookConfig(action_type="test_action", action_config={})
         handler = ActionHookHandler(config)
 
         mock_connector = AsyncMock()
@@ -645,7 +902,7 @@ class TestActionHookHandler:
     @pytest.mark.asyncio
     async def test_action_handler_reuse_action(self, sample_context):
         """Test that action handler reuses loaded action."""
-        config = {"action_type": "test_action", "action_config": {}}
+        config = ActionHookConfig(action_type="test_action", action_config={})
         handler = ActionHookHandler(config)
 
         mock_connector = AsyncMock()
@@ -654,7 +911,6 @@ class TestActionHookHandler:
         mock_action.connector = mock_connector
         handler.action = mock_action  # Pre-load the action
 
-        # Should not call load_action since action is already loaded
         with patch("actions.load_action") as mock_load_action:
             result = await handler.execute(sample_context)
             assert result is True
@@ -669,25 +925,42 @@ class TestCreateHookHandler:
         """Test creating message hook handler."""
         handler = create_hook_handler(sample_message_hook)
         assert isinstance(handler, MessageHookHandler)
-        assert handler.config == sample_message_hook.handler_config
+        assert isinstance(handler.config, MessageHookConfig)
+        assert handler.config.message == sample_message_hook.handler_config["message"]
 
     def test_create_command_handler(self, sample_command_hook):
         """Test creating command hook handler."""
         handler = create_hook_handler(sample_command_hook)
         assert isinstance(handler, CommandHookHandler)
-        assert handler.config == sample_command_hook.handler_config
+        assert isinstance(handler.config, CommandHookConfig)
+        assert handler.config.command == sample_command_hook.handler_config["command"]
 
     def test_create_function_handler(self, sample_function_hook):
         """Test creating function hook handler."""
         handler = create_hook_handler(sample_function_hook)
         assert isinstance(handler, FunctionHookHandler)
-        assert handler.config == sample_function_hook.handler_config
+        assert isinstance(handler.config, FunctionHookConfig)
+        assert (
+            handler.config.function == sample_function_hook.handler_config["function"]
+        )
+        assert (
+            handler.config.module_name
+            == sample_function_hook.handler_config["module_name"]
+        )
 
     def test_create_action_handler(self, sample_action_hook):
         """Test creating action hook handler."""
         handler = create_hook_handler(sample_action_hook)
         assert isinstance(handler, ActionHookHandler)
-        assert handler.config == sample_action_hook.handler_config
+        assert isinstance(handler.config, ActionHookConfig)
+        assert (
+            handler.config.action_type
+            == sample_action_hook.handler_config["action_type"]
+        )
+        assert (
+            handler.config.action_config
+            == sample_action_hook.handler_config["action_config"]
+        )
 
     def test_create_handler_unknown_type(self):
         """Test creating handler with unknown type."""
@@ -855,7 +1128,6 @@ class TestExecuteLifecycleHooks:
                 assert result is True
                 mock_logging.info.assert_called_once_with("Executing 2 on_entry hooks")
 
-                # Verify hooks are executed in priority order (higher priority first)
                 assert mock_create.call_count == 2
                 mock_handler2.execute.assert_called_once()  # Priority 2 first
                 mock_handler1.execute.assert_called_once()  # Priority 1 second
@@ -1166,4 +1438,4 @@ class TestExecuteLifecycleHooks:
             side_effect=[mock_handler_success, mock_handler_failure],
         ):
             result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)
-            assert result is False  # Overall result is False due to one failure
+            assert result is False

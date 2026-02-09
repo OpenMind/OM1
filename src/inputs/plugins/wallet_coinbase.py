@@ -27,10 +27,21 @@ class WalletCoinbaseConfig(SensorConfig):
 
 class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
     """
-    Queries current balance of the configured asset and reports a balance increase
+    Queries current balance of the configured asset and reports a balance increase.
     """
 
     def __init__(self, config: WalletCoinbaseConfig):
+        """
+        Initialize the WalletCoinbase input handler.
+
+        Sets up the required providers and buffers for handling Coinbase wallet data.
+        Fetches the initial wallet balance.
+
+        Parameters
+        ----------
+        config : WalletCoinbaseConfig
+            Configuration for the sensor input, specifying the asset ID to query.
+        """
         super().__init__(config)
 
         self.asset_id = self.config.asset_id
