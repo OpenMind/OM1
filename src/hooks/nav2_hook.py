@@ -83,11 +83,11 @@ async def stop_nav2_hook(context: Dict[str, Any]):
                 if response.status == 200:
                     result = await response.json()
                     logging.info(
-                        f"Nav2 started successfully: {result.get('message', 'Success')}"
+                        f"Nav2 stopped successfully: {result.get('message', 'Success')}"
                     )
                     return {
                         "status": "success",
-                        "message": "Nav2 process initiated",
+                        "message": "Nav2 process stopped",
                         "response": result,
                     }
                 else:
@@ -96,12 +96,12 @@ async def stop_nav2_hook(context: Dict[str, Any]):
                     except Exception as _:
                         error_info = {"message": "Unknown error"}
                     logging.error(
-                        f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}"
+                        f"Failed to stop Nav2: {error_info.get('message', 'Unknown error')}"
                     )
                     raise Exception(
-                        f"Failed to start Nav2: {error_info.get('message', 'Unknown error')}"
+                        f"Failed to stop Nav2: {error_info.get('message', 'Unknown error')}"
                     )
 
     except aiohttp.ClientError as e:
-        logging.error(f"Error calling Nav2 API: {str(e)}")
-        raise Exception(f"Error calling Nav2 API: {str(e)}")
+        logging.error(f"Error calling Nav2 stop API: {str(e)}")
+        raise Exception(f"Error calling Nav2 stop API: {str(e)}")
