@@ -62,20 +62,29 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
         # TODO(Kyle): Support importing other wallets, following https://docs.cdp.coinbase.com/mpc-wallet/docs/wallets#importing-a-wallet
         API_KEY = os.environ.get("COINBASE_API_KEY")
         API_SECRET = os.environ.get("COINBASE_API_SECRET")
+        api_keys_present = False
         if not API_KEY or not API_SECRET:
             logging.error(
                 "COINBASE_API_KEY or COINBASE_API_SECRET environment variable is not set"
             )
         else:
             Cdp.configure(API_KEY, API_SECRET)
+            api_keys_present = True
 
         try:
             # fetch wallet data
-            if not self.COINBASE_WALLET_ID:
+            if self.COINBASE_WALLET_ID:
+                self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
+                logging.info(f"Wallet: {self.wallet}")
+            elif api_keys_present:
+                logging.info("COINBASE_WALLET_ID not provided. Creating new wallet...")
+                self.wallet = Wallet.create()
+                logging.warning(
+                    f"NEW WALLET CREATED! ID: {self.wallet.id}\n"
+                    "Please set COINBASE_WALLET_ID environment variable to this value to persist this wallet."
+                )
+            else:
                 raise ValueError("COINBASE_WALLET_ID environment variable is not set")
-
-            self.wallet = Wallet.fetch(self.COINBASE_WALLET_ID)
-            logging.info(f"Wallet: {self.wallet}")
 
             self.balance = float(self.wallet.balance(self.asset_id))
             self.balance_previous = self.balance
