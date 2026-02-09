@@ -20,20 +20,20 @@ class AwairData:
     """
 
     timestamp: str
-    score: int              # 0-100 AWAIR Score
-    temp: float             # Temperature in Celsius
-    humid: float            # Relative humidity %
-    abs_humid: float        # Absolute humidity g/m³
-    dew_point: float        # Dew point in Celsius
-    co2: int                # CO2 in ppm
-    co2_est: int            # Estimated CO2
-    voc: int                # VOC in ppb
-    voc_baseline: int       # VOC baseline
-    pm25: int               # PM2.5 in µg/m³
-    pm10_est: int           # Estimated PM10 in µg/m³
+    score: int  # 0-100 AWAIR Score
+    temp: float  # Temperature in Celsius
+    humid: float  # Relative humidity %
+    abs_humid: float  # Absolute humidity g/m³
+    dew_point: float  # Dew point in Celsius
+    co2: int  # CO2 in ppm
+    co2_est: int  # Estimated CO2
+    voc: int  # VOC in ppb
+    voc_baseline: int  # VOC baseline
+    pm25: int  # PM2.5 in µg/m³
+    pm10_est: int  # Estimated PM10 in µg/m³
 
 
-class AwairElement(FuserInput[Dict[str, Any]]):
+class AwairElement(FuserInput[SensorConfig, Dict[str, Any]]):
     """
     AWAIR Element Air Quality Monitor integration for OM1.
 
@@ -80,9 +80,7 @@ class AwairElement(FuserInput[Dict[str, Any]]):
                 "AwairElement: Cloud mode requires access_token and device_id."
             )
 
-        logging.info(
-            f"\033[94mAwairElement: Initialized ({self.mode} mode)\033[0m"
-        )
+        logging.info(f"\033[94mAwairElement: Initialized ({self.mode} mode)\033[0m")
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp session."""
@@ -187,8 +185,6 @@ class AwairElement(FuserInput[Dict[str, Any]]):
             pm25=raw.get("pm25", 0),
             pm10_est=raw.get("pm10_est", 0),
         )
-
-
 
     def _get_score_description(self, score: int) -> str:
         """Get human-readable description of AWAIR score."""

@@ -51,6 +51,7 @@ def mock_cloud_config():
 def awair_local_plugin(mock_local_config):
     """Create an AwairElement instance in local mode."""
     from inputs.plugins import awair as awair_module
+
     with patch.object(awair_module, "IOProvider"):
         return awair_module.AwairElement(mock_local_config)
 
@@ -59,6 +60,7 @@ def awair_local_plugin(mock_local_config):
 def awair_cloud_plugin(mock_cloud_config):
     """Create an AwairElement instance in cloud mode."""
     from inputs.plugins import awair as awair_module
+
     with patch.object(awair_module, "IOProvider"):
         return awair_module.AwairElement(mock_cloud_config)
 
@@ -76,6 +78,7 @@ class TestAwairConfiguration:
         """Test initialization in cloud mode."""
         with patch("inputs.plugins.awair.IOProvider"):
             from inputs.plugins.awair import AwairElement
+
             plugin = AwairElement(mock_cloud_config)
 
             assert plugin.mode == "cloud"
@@ -86,6 +89,7 @@ class TestAwairConfiguration:
         """Test initialization with default configuration."""
         with patch("inputs.plugins.awair.IOProvider"):
             from inputs.plugins.awair import AwairElement
+
             plugin = AwairElement(SensorConfig())
 
             assert plugin.mode == "local"
@@ -94,7 +98,10 @@ class TestAwairConfiguration:
 
     def test_descriptor_for_llm(self, awair_local_plugin):
         """Test that the LLM descriptor is set correctly."""
-        assert awair_local_plugin.descriptor_for_LLM == "Indoor Air Quality (AWAIR Element)"
+        assert (
+            awair_local_plugin.descriptor_for_LLM
+            == "Indoor Air Quality (AWAIR Element)"
+        )
 
 
 class TestDataParsing:
@@ -163,9 +170,18 @@ class TestSignificantChangeDetection:
         from inputs.plugins.awair import AwairData
 
         data = AwairData(
-            timestamp="", score=74, temp=27.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=822, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=74,
+            temp=27.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=822,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         assert awair_local_plugin._has_significant_change(data, None) is True
@@ -175,15 +191,33 @@ class TestSignificantChangeDetection:
         from inputs.plugins.awair import AwairData
 
         data1 = AwairData(
-            timestamp="", score=74, temp=27.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=822, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=74,
+            temp=27.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=822,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         data2 = AwairData(
-            timestamp="", score=75, temp=27.1, humid=31.5,
-            abs_humid=0, dew_point=0, co2=830, co2_est=0,
-            voc=1850, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=75,
+            temp=27.1,
+            humid=31.5,
+            abs_humid=0,
+            dew_point=0,
+            co2=830,
+            co2_est=0,
+            voc=1850,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         assert awair_local_plugin._has_significant_change(data2, data1) is False
@@ -193,15 +227,33 @@ class TestSignificantChangeDetection:
         from inputs.plugins.awair import AwairData
 
         data1 = AwairData(
-            timestamp="", score=74, temp=27.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=822, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=74,
+            temp=27.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=822,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         data2 = AwairData(
-            timestamp="", score=60, temp=27.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=822, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=60,
+            temp=27.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=822,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         assert awair_local_plugin._has_significant_change(data2, data1) is True
@@ -211,15 +263,33 @@ class TestSignificantChangeDetection:
         from inputs.plugins.awair import AwairData
 
         data1 = AwairData(
-            timestamp="", score=74, temp=22.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=822, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=74,
+            temp=22.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=822,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         data2 = AwairData(
-            timestamp="", score=74, temp=25.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=822, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=74,
+            temp=25.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=822,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         assert awair_local_plugin._has_significant_change(data2, data1) is True
@@ -229,15 +299,33 @@ class TestSignificantChangeDetection:
         from inputs.plugins.awair import AwairData
 
         data1 = AwairData(
-            timestamp="", score=74, temp=22.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=600, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=74,
+            temp=22.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=600,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         data2 = AwairData(
-            timestamp="", score=74, temp=22.0, humid=31.0,
-            abs_humid=0, dew_point=0, co2=850, co2_est=0,
-            voc=1848, voc_baseline=0, pm25=2, pm10_est=0
+            timestamp="",
+            score=74,
+            temp=22.0,
+            humid=31.0,
+            abs_humid=0,
+            dew_point=0,
+            co2=850,
+            co2_est=0,
+            voc=1848,
+            voc_baseline=0,
+            pm25=2,
+            pm10_est=0,
         )
 
         assert awair_local_plugin._has_significant_change(data2, data1) is True
@@ -282,7 +370,7 @@ class TestMessageFormatting:
         awair_local_plugin.messages = [
             Message(
                 timestamp=time.time(),
-                message="Room Temperature: 22.0°C\nHumidity: 45%\nAir Quality Score: 74/100"
+                message="Room Temperature: 22.0°C\nHumidity: 45%\nAir Quality Score: 74/100",
             )
         ]
 
@@ -330,6 +418,7 @@ class TestAPIFetching:
         """Test local fetch without IP configured."""
         with patch("inputs.plugins.awair.IOProvider"):
             from inputs.plugins.awair import AwairElement
+
             plugin = AwairElement(SensorConfig(mode="local"))
 
             result = await plugin._fetch_local()

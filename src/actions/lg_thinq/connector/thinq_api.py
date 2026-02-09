@@ -43,8 +43,67 @@ class LGThinQConfig(ActionConfig):
 
 # Region mapping based on country code
 REGION_MAP = {
-    "KIC": ["AU", "BD", "CN", "HK", "ID", "IN", "JP", "KH", "KR", "LA", "LK", "MM", "MY", "NP", "NZ", "PH", "SG", "TH", "TW", "VN"],
-    "AIC": ["AG", "AR", "AW", "BB", "BO", "BR", "BS", "BZ", "CA", "CL", "CO", "CR", "CU", "DM", "DO", "EC", "GD", "GT", "GY", "HN", "HT", "JM", "KN", "LC", "MX", "NI", "PA", "PE", "PR", "PY", "SR", "SV", "TT", "US", "UY", "VC", "VE"],
+    "KIC": [
+        "AU",
+        "BD",
+        "CN",
+        "HK",
+        "ID",
+        "IN",
+        "JP",
+        "KH",
+        "KR",
+        "LA",
+        "LK",
+        "MM",
+        "MY",
+        "NP",
+        "NZ",
+        "PH",
+        "SG",
+        "TH",
+        "TW",
+        "VN",
+    ],
+    "AIC": [
+        "AG",
+        "AR",
+        "AW",
+        "BB",
+        "BO",
+        "BR",
+        "BS",
+        "BZ",
+        "CA",
+        "CL",
+        "CO",
+        "CR",
+        "CU",
+        "DM",
+        "DO",
+        "EC",
+        "GD",
+        "GT",
+        "GY",
+        "HN",
+        "HT",
+        "JM",
+        "KN",
+        "LC",
+        "MX",
+        "NI",
+        "PA",
+        "PE",
+        "PR",
+        "PY",
+        "SR",
+        "SV",
+        "TT",
+        "US",
+        "UY",
+        "VC",
+        "VE",
+    ],
 }
 
 # LG ThinQ Connect public API key (shared across all ThinQ Connect integrations)
@@ -64,12 +123,12 @@ def get_region_from_country(country_code: str) -> str:
 def generate_message_id() -> str:
     """Generate a URL-safe base64 message ID from UUID."""
     uid = uuid.uuid4()
-    return base64.urlsafe_b64encode(uid.bytes).decode('utf-8').rstrip('=')[:22]
+    return base64.urlsafe_b64encode(uid.bytes).decode("utf-8").rstrip("=")[:22]
 
 
 def extract_temperature(text: str) -> Optional[float]:
     """Extract temperature value from text like 'set temperature 24' or '24 degrees'."""
-    match = re.search(r'(\d+(?:\.\d+)?)\s*(?:degrees?|celsius|c)?', text.lower())
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:degrees?|celsius|c)?", text.lower())
     if match:
         temp = float(match.group(1))
         if 16 <= temp <= 30:
@@ -111,9 +170,7 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
                 "Get one from https://connect-pat.lgthinq.com"
             )
 
-        logging.info(
-            f"\033[94mLGThinQConnector: Initialized ({self.region})\033[0m"
-        )
+        logging.info(f"\033[94mLGThinQConnector: Initialized ({self.region})\033[0m")
 
     def _get_headers(self) -> Dict[str, str]:
         """Generate headers for ThinQ API requests."""
@@ -134,10 +191,7 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
         return self._session
 
     async def _api_request(
-        self,
-        method: str,
-        endpoint: str,
-        data: Optional[Dict[str, Any]] = None
+        self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """Make a request to the ThinQ API."""
         url = f"{self.base_url}/{endpoint}"
@@ -145,7 +199,9 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
 
         try:
             if method == "GET":
-                async with session.get(url, headers=self._get_headers(), timeout=10) as resp:
+                async with session.get(
+                    url, headers=self._get_headers(), timeout=10
+                ) as resp:
                     if resp.status == 200:
                         result = await resp.json()
                         return result.get("response")
@@ -153,13 +209,17 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
                         text = await resp.text()
                         logging.error(f"LGThinQ: API error {resp.status}: {text}")
             elif method == "POST":
-                async with session.post(url, headers=self._get_headers(), json=data, timeout=10) as resp:
+                async with session.post(
+                    url, headers=self._get_headers(), json=data, timeout=10
+                ) as resp:
                     if resp.status == 200:
                         result = await resp.json()
                         return result.get("response")
                     else:
                         text = await resp.text()
-                        logging.error(f"\033[91mLGThinQ: API error {resp.status}\033[0m")
+                        logging.error(
+                            f"\033[91mLGThinQ: API error {resp.status}\033[0m"
+                        )
         except asyncio.TimeoutError:
             logging.error("\033[91mLGThinQ: Request timed out\033[0m")
         except aiohttp.ClientError:
@@ -177,10 +237,15 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
         devices = await self._api_request("GET", "devices")
         if devices:
             for device in devices:
-                if device.get("deviceInfo", {}).get("deviceType") == "DEVICE_AIR_CONDITIONER":
+                if (
+                    device.get("deviceInfo", {}).get("deviceType")
+                    == "DEVICE_AIR_CONDITIONER"
+                ):
                     self.device_id = device.get("deviceId")
                     alias = device.get("deviceInfo", {}).get("alias", "Unknown")
-                    logging.info(f"LGThinQ: Auto-discovered AC: {alias} ({self.device_id[:16]}...)")
+                    logging.info(
+                        f"LGThinQ: Auto-discovered AC: {alias} ({self.device_id[:16]}...)"
+                    )
                     return self.device_id
 
         logging.error("LGThinQ: No AC device found")
@@ -193,9 +258,7 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
             return False
 
         result = await self._api_request(
-            "POST",
-            f"devices/{device_id}/control",
-            command
+            "POST", f"devices/{device_id}/control", command
         )
 
         if result is not None:
@@ -210,9 +273,15 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
         if text in ["idle", "nothing", "do nothing", "no action"]:
             return ("idle", None)
 
-        if any(x in text for x in ["turn on", "power on", "switch on", "start"]) and "power save" not in text:
+        if (
+            any(x in text for x in ["turn on", "power on", "switch on", "start"])
+            and "power save" not in text
+        ):
             return ("power_on", None)
-        if any(x in text for x in ["turn off", "power off", "switch off", "stop"]) and "power save" not in text:
+        if (
+            any(x in text for x in ["turn off", "power off", "switch off", "stop"])
+            and "power save" not in text
+        ):
             return ("power_off", None)
 
         if "power save" in text or "energy sav" in text:
@@ -258,7 +327,9 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
         logging.warning(f"LGThinQ: Could not parse action: {text}")
         return ("idle", None)
 
-    def _get_command(self, action_type: str, value: Optional[float]) -> Optional[Dict[str, Any]]:
+    def _get_command(
+        self, action_type: str, value: Optional[float]
+    ) -> Optional[Dict[str, Any]]:
         """Get API command for action type."""
         commands = {
             "power_on": {"operation": {"airConOperationMode": "POWER_ON"}},
@@ -274,10 +345,18 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
             "fan_auto": {"airFlow": {"windStrength": "AUTO"}},
             "power_save_on": {"powerSave": {"powerSaveEnabled": True}},
             "power_save_off": {"powerSave": {"powerSaveEnabled": False}},
-            "swing_on": {"windDirection": {"rotateLeftRight": True, "rotateUpDown": True}},
-            "swing_off": {"windDirection": {"rotateLeftRight": False, "rotateUpDown": False}},
-            "swing_horizontal": {"windDirection": {"rotateLeftRight": True, "rotateUpDown": False}},
-            "swing_vertical": {"windDirection": {"rotateLeftRight": False, "rotateUpDown": True}},
+            "swing_on": {
+                "windDirection": {"rotateLeftRight": True, "rotateUpDown": True}
+            },
+            "swing_off": {
+                "windDirection": {"rotateLeftRight": False, "rotateUpDown": False}
+            },
+            "swing_horizontal": {
+                "windDirection": {"rotateLeftRight": True, "rotateUpDown": False}
+            },
+            "swing_vertical": {
+                "windDirection": {"rotateLeftRight": False, "rotateUpDown": True}
+            },
         }
 
         if action_type == "temperature" and value:
@@ -329,7 +408,13 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
                 continue
 
             # Mode changes need power on first
-            if action_type in ["mode_cool", "mode_heat", "mode_auto", "mode_fan", "mode_dry"]:
+            if action_type in [
+                "mode_cool",
+                "mode_heat",
+                "mode_auto",
+                "mode_fan",
+                "mode_dry",
+            ]:
                 power_cmd = self._get_command("power_on", None)
                 if power_cmd:
                     await self._control_device(power_cmd)
