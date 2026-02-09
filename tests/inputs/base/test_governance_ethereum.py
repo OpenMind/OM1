@@ -2,6 +2,7 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
+from eth_abi import encode as abi_encode
 
 from inputs.base import SensorConfig
 from inputs.plugins.ethereum_governance import GovernanceEthereum
@@ -104,18 +105,13 @@ async def test_load_rules_from_blockchain_empty_result(governance):
 
 @pytest.mark.asyncio
 async def test_poll_returns_rules(governance):
+    payload = abi_encode(["bytes[]"], [[b"Hello"]])
     mock_response = MockResponse(
         status=200,
         json_data={
             "jsonrpc": "2.0",
             "id": 1,
-            "result": "0x"
-            + "0" * 64  # offset
-            + "0" * 64  # padding
-            + "0" * 64  # padding
-            + "0000000000000000000000000000000000000000000000000000000000000005"  # length
-            + "48656c6c6f"
-            + "0" * 54,  # "Hello"
+            "result": "0x" + payload.hex(),
         },
     )
 
@@ -143,16 +139,8 @@ def test_governance_initialization():
 def test_decode_eth_response_valid():
     governance = GovernanceEthereum(config=SensorConfig())
 
-    # Encoded "Hello" string
-    hex_response = (
-        "0x"
-        + "0" * 64  # offset
-        + "0" * 64  # padding
-        + "0" * 64  # padding
-        + "0000000000000000000000000000000000000000000000000000000000000005"  # length=5
-        + "48656c6c6f"
-        + "0" * 54  # "Hello" + padding
-    )
+    payload = abi_encode(["bytes[]"], [[b"Hello"]])
+    hex_response = "0x" + payload.hex()
 
     result = governance.decode_eth_response(hex_response)
     assert result == "Hello"
@@ -465,18 +453,8 @@ def test_decode_eth_response_with_control_characters():
     """Test that decode_eth_response correctly strips unwanted control characters."""
     governance = GovernanceEthereum(config=SensorConfig())
 
-    # Build hex with control character \x19 embedded in "Hello\x19World"
-    # String: "Hello\x19World" = 11 bytes
-    # Hex: 48656c6c6f19576f726c64
-    hex_response = (
-        "0x"
-        + "0" * 64  # offset
-        + "0" * 64  # padding
-        + "0" * 64  # padding
-        + "000000000000000000000000000000000000000000000000000000000000000b"  # length=11
-        + "48656c6c6f19576f726c64"  # "Hello\x19World"
-        + "0" * 42  # padding to fill 32-byte slot
-    )
+    payload = abi_encode(["bytes[]"], [[b"Hello\x19World"]])
+    hex_response = "0x" + payload.hex()
 
     result = governance.decode_eth_response(hex_response)
     # Control character \x19 should be stripped
@@ -488,15 +466,8 @@ def test_decode_eth_response_without_0x_prefix():
     """Test that decode_eth_response works with hex strings missing '0x' prefix."""
     governance = GovernanceEthereum(config=SensorConfig())
 
-    # Same as valid test but without "0x" prefix
-    hex_response = (
-        "0" * 64  # offset
-        + "0" * 64  # padding
-        + "0" * 64  # padding
-        + "0000000000000000000000000000000000000000000000000000000000000005"  # length=5
-        + "48656c6c6f"
-        + "0" * 54  # "Hello" + padding
-    )
+    payload = abi_encode(["bytes[]"], [[b"Hello"]])
+    hex_response = payload.hex()
 
     result = governance.decode_eth_response(hex_response)
     assert result == "Hello"
