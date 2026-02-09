@@ -51,7 +51,7 @@ class ActionConfig(BaseModel):
 @dataclass
 class Interface(T.Generic[IT, OT]):
     """
-    An interface for a action.
+    An interface for an action.
 
     Parameters
     ----------

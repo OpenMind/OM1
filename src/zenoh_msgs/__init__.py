@@ -37,6 +37,7 @@ from .idl import (
     NavSatStatus,
     Odometry,
     Paths,
+    PersonGreetingStatus,
     Point,
     Point32,
     PointCloud,
@@ -88,6 +89,7 @@ __all__ = [
     "ModeStatusResponse",
     "TTSStatusRequest",
     "TTSStatusResponse",
+    "PersonGreetingStatus",
     # geographic_msgs
     "GeoPoint",
     "GeoPointStamped",

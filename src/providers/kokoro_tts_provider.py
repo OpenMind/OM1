@@ -208,7 +208,7 @@ class KokoroTTSProvider:
         Start the TTS provider and its audio stream.
         """
         if self.running:
-            logging.warning("Eleven Labs TTS provider is already running")
+            logging.warning("Kokoro TTS provider is already running")
             return
 
         self.running = True
@@ -219,7 +219,7 @@ class KokoroTTSProvider:
         Stop the TTS provider and cleanup resources.
         """
         if not self.running:
-            logging.warning("Eleven Labs TTS provider is not running")
+            logging.warning("Kokoro TTS provider is not running")
             return
 
         self.running = False
