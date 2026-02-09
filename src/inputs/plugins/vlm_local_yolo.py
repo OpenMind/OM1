@@ -12,7 +12,7 @@ from ultralytics import YOLO  # type: ignore
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
-from providers.odom_provider import OdomProvider
+from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
 
 
 class VLM_Local_YOLOConfig(SensorConfig):
@@ -84,21 +84,33 @@ def set_best_resolution(cap: cv2.VideoCapture, resolutions: List[tuple]) -> tupl
 def check_webcam(index_to_check):
     """
     Checks if a webcam is available and returns True if found, False otherwise.
+
+    Parameters
+    ----------
+    index_to_check : int
+        The camera index to check.
+
+    Returns
+    -------
+    tuple
+        Tuple of (width, height) if webcam is found, (0, 0) otherwise.
     """
     cap = cv2.VideoCapture(index_to_check)
     if not cap.isOpened():
         logging.error(f"YOLO did not find cam: {index_to_check}")
+        cap.release()
         return 0, 0
 
     # Set the best available resolution
     width, height = set_best_resolution(cap, RESOLUTIONS)
-    logging.info(f"YOLO found cam: {index_to_check} set to {width}{height}")
+    logging.info(f"YOLO found cam: {index_to_check} set to {width}x{height}")
+    cap.release()
     return width, height
 
 
 class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
     """
-    VLM Input Handler using Local YOLO Model.
+    VLM Input Handler using Local YOLO Model with Unitree Go2 Odometry.
     """
 
     def __init__(self, config: VLM_Local_YOLOConfig):
@@ -153,7 +165,7 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
                 f"Webcam pixel dimensions for YOLO: {self.width}, {self.height}"
             )
 
-        self.odom = OdomProvider()
+        self.odom = UnitreeGo2OdomProvider()
         logging.info(f"YOLO Odom Provider: {self.odom}")
         self.odom_rockchip_ts = 0.0
         self.odom_subscriber_ts = 0.0
@@ -271,12 +283,13 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
 
     def write_str_to_file(self, json_line: str):
         """
-        Writes a dictionary to a file in JSON lines format. If the file exceeds max_file_size_bytes,
+        Writes a string to a file in JSON lines format. If the file exceeds max_file_size_bytes,
         creates a new file with a timestamp.
 
         Parameters
         ----------
-        - data: Dictionary to write
+        json_line : str
+            JSON string to write to the file.
         """
         if not isinstance(json_line, str):
             raise ValueError("Provided json_line must be a json string.")
