@@ -17,39 +17,34 @@ def config():
 
 
 @pytest.fixture
-def mock_response():
-    """Fixture providing a valid mock API response"""
+def mock_completion_response_with_tool_calls():
+    mock_tool_call = MagicMock()
+    mock_tool_call.function.name = "test_function"
+    mock_tool_call.function.arguments = '{"arg1": "value1"}'
+    mock_message = MagicMock()
+    mock_message.content = '{"test_field": "success"}'
+    mock_message.tool_calls = [mock_tool_call]
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(content='{"test_field": "success"}', tool_calls=None)
-        )
-    ]
+    response.choices = [mock_choice]
     return response
 
 
 @pytest.fixture
-def mock_response_with_tool_calls():
-    """Fixture providing a mock API response with tool calls"""
-    tool_call = MagicMock()
-    tool_call.function.name = "test_function"
-    tool_call.function.arguments = '{"arg1": "value1"}'
-
+def mock_completion_response_without_tool_calls():
+    mock_message = MagicMock()
+    mock_message.content = '{"test_field": "success"}'
+    mock_message.tool_calls = None
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(
-                content='{"test_field": "success"}', tool_calls=[tool_call]
-            )
-        )
-    ]
+    response.choices = [mock_choice]
     return response
 
 
 @pytest.fixture(autouse=True)
 def mock_avatar_components():
-    """Mock all avatar and IO components to prevent Zenoh session creation"""
-
     def mock_decorator(func=None):
         def decorator(f):
             return f
@@ -59,10 +54,8 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
-        patch("llm.plugins.deepseek_llm.AvatarLLMState") as mock_avatar_state,
+        patch("llm.plugins.openai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch("llm.plugins.openai_llm.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
         patch(
             "providers.avatar_llm_state_provider.AvatarProvider"
@@ -70,14 +63,12 @@ def mock_avatar_components():
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
-
         mock_provider_instance = MagicMock()
         mock_provider_instance.running = False
         mock_provider_instance.session = None
         mock_provider_instance.stop = MagicMock()
         mock_avatar_provider.return_value = mock_provider_instance
         mock_avatar_llm_state_provider.return_value = mock_provider_instance
-
         yield
 
 
@@ -95,63 +86,77 @@ async def test_init_with_config(llm, config):
 
 @pytest.mark.asyncio
 async def test_init_empty_key():
-    config = OpenAIConfig(base_url="test_url")
+    config = OpenAIConfig(base_url="test_url", api_key="")
     with pytest.raises(ValueError, match="config file missing api_key"):
         OpenAILLM(config, available_actions=None)
 
 
 @pytest.mark.asyncio
-async def test_ask_success(llm, mock_response):
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
-            AsyncMock(return_value=mock_response),
-        )
-
-        result = await llm.ask("test prompt")
-        assert result is None
-
-
-@pytest.mark.asyncio
-async def test_ask_with_tool_calls(llm, mock_response_with_tool_calls):
-    """Test successful API request with tool calls"""
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.chat.completions,
-            "create",
-            AsyncMock(return_value=mock_response_with_tool_calls),
-        )
-
-        result = await llm.ask("test prompt")
-        assert isinstance(result, CortexOutputModel)
-        assert result.actions == [Action(type="test_function", value="value1")]
+async def test_ask_success_with_tool_calls(
+    llm, mock_completion_response_with_tool_calls
+):
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = mock_completion_response_with_tool_calls
+        with patch(
+            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+        ) as mock_convert:
+            expected_action = Action(type="test_function", value="value1")
+            mock_convert.return_value = [expected_action]
+            result = await llm.ask("test prompt")
+            mock_create.assert_called_once()
+            call_kwargs = mock_create.call_args.kwargs
+            assert call_kwargs["model"] == llm._config.model
+            assert "messages" in call_kwargs
+            assert "tools" in call_kwargs
+            assert call_kwargs["tool_choice"] == "auto"
+            mock_convert.assert_called_once()
+            assert isinstance(result, CortexOutputModel)
+            assert result.actions == [expected_action]
 
 
 @pytest.mark.asyncio
-async def test_ask_invalid_json(llm):
-    invalid_response = MagicMock()
-    invalid_response.choices = [MagicMock(message=MagicMock(content="invalid"))]
-
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
-            AsyncMock(return_value=invalid_response),
-        )
-
-        result = await llm.ask("test prompt")
-        assert result is None
+async def test_ask_success_without_tool_calls(
+    llm, mock_completion_response_without_tool_calls
+):
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = mock_completion_response_without_tool_calls
+        with patch(
+            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+        ) as mock_convert:
+            result = await llm.ask("test prompt")
+            mock_create.assert_called_once()
+            call_kwargs = mock_create.call_args.kwargs
+            assert call_kwargs["model"] == llm._config.model
+            assert "messages" in call_kwargs
+            assert "tools" in call_kwargs
+            assert call_kwargs["tool_choice"] == "auto"
+            mock_convert.assert_not_called()
+            assert result is None
 
 
 @pytest.mark.asyncio
 async def test_ask_api_error(llm):
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
-            AsyncMock(side_effect=Exception("API error")),
-        )
-
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.side_effect = Exception("API error")
         result = await llm.ask("test prompt")
+        mock_create.assert_called_once()
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_empty_choices(llm):
+    mock_response_empty_choices = MagicMock()
+    mock_response_empty_choices.choices = []
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = mock_response_empty_choices
+        result = await llm.ask("test prompt")
+        mock_create.assert_called_once()
         assert result is None

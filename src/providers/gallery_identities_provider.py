@@ -135,7 +135,14 @@ class GalleryIdentitiesProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to stop."""
+        """
+        Request the background thread to stop.
+
+        Parameters
+        ----------
+        wait : bool
+            If True, waits for the thread to finish. Defaults to False.
+        """
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)
