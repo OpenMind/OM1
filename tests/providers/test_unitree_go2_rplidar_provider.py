@@ -154,7 +154,7 @@ def test_path_processor_filters_blanked_angles(mock_rplidar_dependencies):
     mocks["d435_instance"].running = False
     mocks["d435_instance"].obstacle = []
 
-    provider = RPLidarProvider(
+    provider = UnitreeGo2RPLidarProvider(
         angles_blanked=[[-170.0, -150.0]],
         sensor_mounting_angle=180.0,
         relevant_distance_max=1.1,
@@ -192,7 +192,7 @@ def test_path_processor_no_blanking_when_empty(mock_rplidar_dependencies):
     mocks["d435_instance"].running = False
     mocks["d435_instance"].obstacle = []
 
-    provider = RPLidarProvider(
+    provider = UnitreeGo2RPLidarProvider(
         angles_blanked=[],
         sensor_mounting_angle=180.0,
         relevant_distance_max=1.1,
