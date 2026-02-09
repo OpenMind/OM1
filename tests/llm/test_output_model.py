@@ -1,22 +1,7 @@
-"""
-Unit tests for the output model module (src/llm/output_model.py).
-Tests the Action and CortexOutputModel classes.
-"""
-
-import sys
-from pathlib import Path
-
 import pytest
 from pydantic import ValidationError
 
-# --- Setup path *before* importing from src ---
-current_file_dir = Path(__file__).resolve().parent
-project_root = current_file_dir.parent.parent
-src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
-# ------------------------------------------------
-
-from src.llm.output_model import Action, CortexOutputModel  # noqa: E402
+from llm.output_model import Action, CortexOutputModel  # noqa: E402
 
 
 class TestAction:
@@ -30,15 +15,12 @@ class TestAction:
 
     def test_action_required_fields(self):
         """Test that Action requires both type and value fields."""
-        # Test missing type - create dict without type
         with pytest.raises(ValidationError):
             Action.model_validate({"value": "forward"})
 
-        # Test missing value - create dict without value
         with pytest.raises(ValidationError):
             Action.model_validate({"type": "move"})
 
-        # Test both missing
         with pytest.raises(ValidationError):
             Action.model_validate({})
 
@@ -106,13 +88,11 @@ class TestCortexOutputModel:
 
     def test_cortex_output_model_invalid_actions_type(self):
         """Test that CortexOutputModel validates action types in list."""
-        # Test with invalid action in list - try to validate with wrong type
         with pytest.raises(ValidationError):
             CortexOutputModel.model_validate({"actions": ["invalid_action"]})
 
     def test_cortex_output_model_nested_validation(self):
         """Test that nested Action validation works within CortexOutputModel."""
-        # Test with invalid Action inside valid list - missing value in nested action
         with pytest.raises(ValidationError):
             CortexOutputModel.model_validate(
                 {
