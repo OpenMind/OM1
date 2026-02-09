@@ -73,6 +73,12 @@ class UnitreeGo2FrontierExplorationProvider(ZenohListenerProvider):
     def start(self, message_callback: Optional[Callable] = None):
         """
         Start the frontier exploration provider by registering the message callback.
+
+        Parameters
+        ----------
+        message_callback : Optional[Callable]
+            Optional callback function for message processing. Not used directly
+            but kept for interface compatibility.
         """
         if not self.running:
             self.register_message_callback(self.frontier_exploration_message_callback)

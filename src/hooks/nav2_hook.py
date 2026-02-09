@@ -103,5 +103,5 @@ async def stop_nav2_hook(context: Dict[str, Any]):
                     )
 
     except aiohttp.ClientError as e:
-        logging.error(f"Error calling Nav2 API: {str(e)}")
-        raise Exception(f"Error calling Nav2 API: {str(e)}")
+        logging.error(f"Error calling Nav2 stop API: {str(e)}")
+        raise Exception(f"Error calling Nav2 stop API: {str(e)}")
