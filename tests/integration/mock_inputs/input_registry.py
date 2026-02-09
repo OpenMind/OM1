@@ -2,7 +2,7 @@ import logging
 import sys
 from types import ModuleType
 
-from tests.integration.mock_inputs.mock_rplidar import MockRPLidar
+from tests.integration.mock_inputs.mock_unitree_go2_rplidar import MockUnitreeGo2RPLidar
 from tests.integration.mock_inputs.mock_vlm_coco import MockVLM_COCO
 from tests.integration.mock_inputs.mock_vlm_gemini import MockVLM_Gemini
 from tests.integration.mock_inputs.mock_vlm_openai import MockVLM_OpenAI
@@ -19,7 +19,7 @@ def register_mock_inputs():
     This approach is more direct and reliable than patching the load_input function.
     """
     # Import all the modules we need to modify
-    import inputs.plugins.rplidar
+    import inputs.plugins.unitree_go2_rplidar
     import inputs.plugins.vlm_coco_local
     import inputs.plugins.vlm_gemini
     import inputs.plugins.vlm_openai
@@ -32,7 +32,7 @@ def register_mock_inputs():
         "VLMOpenAI": inputs.plugins.vlm_openai.VLMOpenAI,
         "VLMGemini": inputs.plugins.vlm_gemini.VLMGemini,
         "VLMVila": inputs.plugins.vlm_vila.VLMVila,
-        "RPLidar": inputs.plugins.rplidar.RPLidar,
+        "UnitreeGo2RPLidar": inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidar,
     }
 
     # Replace with mock classes
@@ -40,7 +40,7 @@ def register_mock_inputs():
     inputs.plugins.vlm_openai.VLMOpenAI = MockVLM_OpenAI
     inputs.plugins.vlm_gemini.VLMGemini = MockVLM_Gemini
     inputs.plugins.vlm_vila.VLMVila = MockVLM_Vila
-    inputs.plugins.rplidar.RPLidar = MockRPLidar
+    inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidar = MockUnitreeGo2RPLidar
 
     # Add mock modules to namespace for discoverability
     mock_modules = {
@@ -48,7 +48,9 @@ def register_mock_inputs():
         "inputs.plugins.mock_vlm_openai": {"MockVLM_OpenAI": MockVLM_OpenAI},
         "inputs.plugins.mock_vlm_gemini": {"MockVLM_Gemini": MockVLM_Gemini},
         "inputs.plugins.mock_vlm_vila": {"MockVLM_Vila": MockVLM_Vila},
-        "inputs.plugins.mock_rplidar": {"MockRPLidar": MockRPLidar},
+        "inputs.plugins.mock_unitree_go2_rplidar": {
+            "MockUnitreeGo2RPLidar": MockUnitreeGo2RPLidar
+        },
     }
 
     for module_name, mock_classes in mock_modules.items():
@@ -68,7 +70,7 @@ def unregister_mock_inputs():
 
     if _original_classes:
         # Restore original classes
-        import inputs.plugins.rplidar
+        import inputs.plugins.unitree_go2_rplidar
         import inputs.plugins.vlm_coco_local
         import inputs.plugins.vlm_gemini
         import inputs.plugins.vlm_openai
@@ -85,14 +87,14 @@ def unregister_mock_inputs():
             elif plugin_name == "VLMVila":
                 inputs.plugins.vlm_vila.VLMVila = original_class
             elif plugin_name == "RPLidar":
-                inputs.plugins.rplidar.RPLidar = original_class
+                inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidar = original_class
         # Remove mock modules
         mock_modules = [
             "inputs.plugins.mock_vlm_coco",
             "inputs.plugins.mock_vlm_openai",
             "inputs.plugins.mock_vlm_gemini",
             "inputs.plugins.mock_vlm_vila",
-            "inputs.plugins.mock_rplidar",
+            "inputs.plugins.mock_unitree_go2_rplidar",
         ]
         for module in mock_modules:
             sys.modules.pop(module, None)
