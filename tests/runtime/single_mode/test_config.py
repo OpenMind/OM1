@@ -1,10 +1,10 @@
+import json
 import logging
 import os
 from contextlib import contextmanager
 from typing import Optional
 from unittest.mock import mock_open, patch
 
-import json5
 import pytest
 
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
@@ -18,7 +18,7 @@ from simulators.base import Simulator, SimulatorConfig
 @pytest.fixture
 def mock_config_data():
     return {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "test_config",
         "api_key": "global_test_api_key",
@@ -92,7 +92,7 @@ def mock_dependencies():
 @pytest.fixture
 def mock_empty_config_data():
     return {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "empty_config",
         "system_prompt_base": "",
@@ -108,7 +108,7 @@ def mock_empty_config_data():
 @pytest.fixture
 def mock_multiple_components_config():
     return {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 20.0,
         "name": "multiple_components",
         "system_prompt_base": "system prompt base",
@@ -139,7 +139,7 @@ def mock_multiple_components_config():
 
 def test_load_config(mock_config_data, mock_dependencies):
     with (
-        patch("builtins.open", mock_open(read_data=json5.dumps(mock_config_data))),
+        patch("builtins.open", mock_open(read_data=json.dumps(mock_config_data))),
         patch(
             "runtime.single_mode.config.load_input",
             return_value=mock_dependencies["input"](),
@@ -179,9 +179,7 @@ def test_load_config(mock_config_data, mock_dependencies):
 
 def test_load_empty_config(mock_empty_config_data, mock_dependencies):
     with (
-        patch(
-            "builtins.open", mock_open(read_data=json5.dumps(mock_empty_config_data))
-        ),
+        patch("builtins.open", mock_open(read_data=json.dumps(mock_empty_config_data))),
         patch(
             "runtime.single_mode.config.load_input",
             return_value=mock_dependencies["input"](),
@@ -218,7 +216,7 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
     with (
         patch(
             "builtins.open",
-            mock_open(read_data=json5.dumps(mock_multiple_components_config)),
+            mock_open(read_data=json.dumps(mock_multiple_components_config)),
         ),
         patch(
             "runtime.single_mode.config.load_input",
@@ -249,11 +247,11 @@ def test_load_multiple_components(mock_multiple_components_config, mock_dependen
 
 def test_load_config_missing_required_fields():
     invalid_config = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "name": "invalid_config",
     }
 
-    with patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))):
+    with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
         with pytest.raises(KeyError):
             load_config("invalid_config")
 
@@ -272,14 +270,14 @@ def test_load_config_invalid_version():
         "agent_actions": [],
     }
 
-    with patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))):
+    with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
         with pytest.raises(ValueError):
             load_config("invalid_version_config")
 
 
 def test_load_config_invalid_hertz():
     invalid_config = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": -1.0,
         "name": "invalid_hertz",
         "system_prompt_base": "system prompt base",
@@ -291,7 +289,7 @@ def test_load_config_invalid_hertz():
         "agent_actions": [],
     }
 
-    with patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))):
+    with patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))):
         with pytest.raises(ValueError):
             load_config("invalid_config")
 
@@ -309,7 +307,7 @@ def test_load_config_invalid_json():
 
 def test_load_config_invalid_component_type():
     invalid_config = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "invalid_component",
         "system_prompt_base": "system prompt base",
@@ -322,7 +320,7 @@ def test_load_config_invalid_component_type():
     }
 
     with (
-        patch("builtins.open", mock_open(read_data=json5.dumps(invalid_config))),
+        patch("builtins.open", mock_open(read_data=json.dumps(invalid_config))),
         patch("runtime.single_mode.config.load_input", side_effect=ImportError),
     ):
         with pytest.raises(ImportError):
@@ -349,7 +347,7 @@ def temp_env(key: str, value: Optional[str]):
 def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
     """Test that missing OM_API_KEY logs warning but doesn't raise."""
     config_data = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "test_missing_key",
         "api_key": "",  # Empty key should trigger env check
@@ -363,7 +361,7 @@ def test_load_config_missing_api_key_warns(caplog, mock_dependencies):
     }
 
     with (
-        patch("builtins.open", mock_open(read_data=json5.dumps(config_data))),
+        patch("builtins.open", mock_open(read_data=json.dumps(config_data))),
         patch(
             "runtime.single_mode.config.load_llm",
             return_value=mock_dependencies["llm"],
@@ -384,7 +382,7 @@ def test_load_config_empty_api_key_falls_back_to_env(caplog, mock_dependencies):
     caplog.set_level(logging.INFO)
 
     config_data = {
-        "version": "v1.0.1",
+        "version": "v1.0.2",
         "hertz": 10.0,
         "name": "test_env_key",
         "api_key": "openmind_free",
@@ -398,7 +396,7 @@ def test_load_config_empty_api_key_falls_back_to_env(caplog, mock_dependencies):
     }
 
     with (
-        patch("builtins.open", mock_open(read_data=json5.dumps(config_data))),
+        patch("builtins.open", mock_open(read_data=json.dumps(config_data))),
         patch(
             "runtime.single_mode.config.load_llm",
             return_value=mock_dependencies["llm"],

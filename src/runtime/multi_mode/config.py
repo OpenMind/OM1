@@ -13,6 +13,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from runtime.config import validate_config_schema
 from runtime.multi_mode.hook import (
     LifecycleHook,
     LifecycleHookType,
@@ -268,6 +269,8 @@ class ModeSystemConfig:
 
     Parameters
     ----------
+    version : str
+        Version of the mode system configuration.
     name : str
         Name of the mode system.
     default_mode : str
@@ -301,6 +304,7 @@ class ModeSystemConfig:
     """
 
     # Global settings
+    version: str
     name: str
     default_mode: str
     config_name: str = ""
@@ -391,6 +395,7 @@ def load_mode_config(
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
+    validate_config_schema(raw_config)
 
     g_robot_ip = raw_config.get("robot_ip", None)
     if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
@@ -421,6 +426,7 @@ def load_mode_config(
         load_unitree(g_ut_eth)
 
     mode_system_config = ModeSystemConfig(
+        version=config_version,
         name=raw_config.get("name", "mode_system"),
         default_mode=raw_config["default_mode"],
         config_name=config_name,
@@ -434,7 +440,7 @@ def load_mode_config(
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         global_cortex_llm=raw_config.get("cortex_llm"),
         global_lifecycle_hooks=parse_lifecycle_hooks(
-            raw_config.get("global_lifecycle_hooks", [])
+            raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
         ),
         _raw_global_lifecycle_hooks=raw_config.get("global_lifecycle_hooks", []),
     )
@@ -447,7 +453,9 @@ def load_mode_config(
             description=mode_data.get("description", ""),
             system_prompt_base=mode_data["system_prompt_base"],
             hertz=mode_data.get("hertz", 1.0),
-            lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", [])),
+            lifecycle_hooks=parse_lifecycle_hooks(
+                mode_data.get("lifecycle_hooks", []), api_key=g_api_key
+            ),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
             save_interactions=mode_data.get("save_interactions", False),
@@ -639,6 +647,7 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
             )
 
         return {
+            "version": config.version,
             "name": config.name,
             "default_mode": config.default_mode,
             "allow_manual_switching": config.allow_manual_switching,
