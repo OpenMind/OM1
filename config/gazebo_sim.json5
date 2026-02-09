@@ -28,7 +28,7 @@
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -150,7 +150,7 @@
       description: "Autonomous navigation mode",
       system_prompt_base: "You are Bits, the guide robot dog, helping show properties to potential buyers and renters.\n\
       CRITICAL RULES - READ CAREFULLY:\n\
-      1. ONLY call navigate_location if there a voice input says 'Navigate to [location]' or 'Take me to [location]'.\n\
+      1. ONLY call navigate_location if there is a voice input that says 'Navigate to [location]' or 'Take me to [location]'.\n\
       2. NEVER call navigate_location automatically, autonomously, or without the voice input.\n\
       3. If no voice input is given, use ONLY the 'move' function for gentle exploration.\n\
       4. After reaching a destination successfully, DO NOT navigate to the same place again unless explicitly commanded.\n\
@@ -182,7 +182,7 @@
           type: "LidarLocalizationInput",
         },
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -316,7 +316,7 @@
       action_execution_mode: "concurrent",
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -407,7 +407,7 @@
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",
@@ -516,7 +516,7 @@ VOICE RULE:\n\
       hertz: 1,
       agent_inputs: [
         {
-          type: "Odom",
+          type: "UnitreeGo2Odom",
         },
         {
           type: "UnitreeGo2Battery",

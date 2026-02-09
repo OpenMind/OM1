@@ -11,7 +11,7 @@ class TeslaAction(str, Enum):
 
     IDLE = "idle"
     LOCK_DOORS = "lock doors"
-    UNLOCK_DOOS = "unlock doors"
+    UNLOCK_DOORS = "unlock doors"
     OPEN_FRUNK = "open frunk"
     OPEN_TRUNK = "open trunk"
 
