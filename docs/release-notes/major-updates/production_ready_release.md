@@ -1,0 +1,27 @@
+---
+title: Production Ready Release
+description: "First Production Ready Release of our software stack"
+icon: tarp
+---
+
+## Summary
+
+v1.0.0 marks the first production-ready release, delivering autonomous robotics capabilities. This release introduces full Gazebo simulation support, complete autonomy for Unitree G1 humanoid robots, over-the-air updates, and significant improvements to the developer experience through hot reload and configuration versioning.
+
+## Core Services
+- OM1
+- OM1-avatar
+- OM1-ros2-sdk
+- OM1-video-processor
+- OM1-system-setup
+
+## Key Highlights
+- Full Autonomy for Go2 and G1
+- Local LLM integration
+- ML stack migration to NVIDIA Thor
+- Hot Reload
+- OTA updates
+- Gazebo integration for Go2 with OM1
+- Pydantic-Based Configuration
+
+> Note: We're committed to continuous improvement and regular updates. Your feedback and contributions are invaluable in shaping the future of OM1. Join our community to stay updated on the latest developments!
