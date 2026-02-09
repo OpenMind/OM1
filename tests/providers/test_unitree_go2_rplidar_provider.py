@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
 from providers.unitree_go2_rplidar_provider import (
@@ -52,7 +53,6 @@ def mock_rplidar_dependencies():
         patch("providers.unitree_go2_rplidar_provider.mp.Queue") as mock_queue,
         patch("providers.unitree_go2_rplidar_provider.mp.Process") as mock_process,
     ):
-
         mock_odom_instance = MagicMock()
         mock_odom.return_value = mock_odom_instance
 
@@ -140,6 +140,77 @@ def test_angles_blanked_custom(mock_rplidar_dependencies):
     custom_blanked = [[-90, -45], [45, 90]]
     provider = UnitreeGo2RPLidarProvider(angles_blanked=custom_blanked)
     assert provider.angles_blanked == custom_blanked
+
+
+def test_path_processor_filters_blanked_angles(mock_rplidar_dependencies):
+    """Test that _path_processor excludes readings from blanked angle ranges.
+
+    The blanked range [-170, -150] (in the converted [-180, +180] space)
+    corresponds to angles behind the robot's mounting bracket. Readings
+    that land inside this range should be filtered out before reaching
+    the path planner.
+    """
+    mocks = mock_rplidar_dependencies
+    mocks["d435_instance"].running = False
+    mocks["d435_instance"].obstacle = []
+
+    provider = UnitreeGo2RPLidarProvider(
+        angles_blanked=[[-170.0, -150.0]],
+        sensor_mounting_angle=180.0,
+        relevant_distance_max=1.1,
+        relevant_distance_min=0.08,
+    )
+
+    # Build scan data as (sensor_angle, distance_m) pairs.
+    # After adding sensor_mounting_angle (180) and converting to [-180, +180]:
+    #   sensor 0.0   -> oriented 180.0 -> converted 0.0    (outside blank)
+    #   sensor 190.0 -> oriented 10.0  -> converted -170.0 (inside blank)
+    #   sensor 200.0 -> oriented 20.0  -> converted -160.0 (inside blank)
+    #   sensor 215.0 -> oriented 35.0  -> converted -145.0 (outside blank)
+    scan_data = np.array(
+        [
+            [0.0, 0.5],
+            [190.0, 0.5],
+            [200.0, 0.5],
+            [215.0, 0.5],
+        ]
+    )
+
+    provider._path_processor(scan_data)
+
+    assert provider._raw_scan is not None
+    result_angles = provider._raw_scan[:, 2]
+
+    assert len(result_angles) == 2
+    assert -170.0 not in result_angles
+    assert -160.0 not in result_angles
+
+
+def test_path_processor_no_blanking_when_empty(mock_rplidar_dependencies):
+    """Test that all valid readings pass through when angles_blanked is empty."""
+    mocks = mock_rplidar_dependencies
+    mocks["d435_instance"].running = False
+    mocks["d435_instance"].obstacle = []
+
+    provider = UnitreeGo2RPLidarProvider(
+        angles_blanked=[],
+        sensor_mounting_angle=180.0,
+        relevant_distance_max=1.1,
+        relevant_distance_min=0.08,
+    )
+
+    scan_data = np.array(
+        [
+            [0.0, 0.5],
+            [90.0, 0.5],
+            [180.0, 0.5],
+        ]
+    )
+
+    provider._path_processor(scan_data)
+
+    assert provider._raw_scan is not None
+    assert len(provider._raw_scan) == 3
 
 
 def test_log_file_initialization(mock_rplidar_dependencies):
