@@ -6,7 +6,7 @@ icon: car
 
 We work with DIMO to bring your Tesla to life. This plugin allows you to read data from your Tesla and control it.
 
-## Preqrequisites
+## Prerequisites
 
 ### Step 0: Install the DIMO App
 

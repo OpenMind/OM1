@@ -54,7 +54,6 @@ class Sensor(T.Generic[ConfigType, R]):
             Configuration object for the sensor.
         """
         self.config = config
-        pass
 
     async def _raw_to_text(self, raw_input: R) -> T.Optional[Message]:
         """

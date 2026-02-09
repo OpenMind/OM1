@@ -31,7 +31,7 @@ class VLM_COCO_LocalConfig(SensorConfig):
 Detection = collections.namedtuple("Detection", "label, bbox, score")
 
 # if working on Mac, please disable continuity camera on your iphone
-# Settings > General > AirPlay & Continuity, and tunr off Continuity
+# Settings > General > AirPlay & Continuity, and turn off Continuity
 
 
 def check_webcam(index_to_check):

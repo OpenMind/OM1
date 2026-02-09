@@ -41,7 +41,7 @@ class ZenohListenerProvider:
 
         Parameters
         ----------
-        message_callback : Callable
+        message_callback : Optional[Callable]
             The function that will be called with each incoming Zenoh sample.
         """
         if self.session is not None:

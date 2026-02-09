@@ -14,7 +14,7 @@ Sign up for an account on [OpenMind Portal](https://portal.openmind.org/).
 
 ### Step 2: Get OpenMind API key
 
-Get you API key from the [Dashboard](https://portal.openmind.org/) page.
+Get your API key from the [Dashboard](https://portal.openmind.org/) page.
 
 ### Step 3: Set the API key
 
