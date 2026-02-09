@@ -13,6 +13,7 @@ dependencies = [
     "matplotlib==3.10.1",
     "json5==0.10.0",
     "jsonschema==4.23.0",
+    "watchdog==6.0.0",
     "pycdr2==1.0.0",
     "eclipse-zenoh==1.4.0",
     "pyaudio==0.2.14",
