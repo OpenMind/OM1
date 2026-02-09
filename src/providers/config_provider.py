@@ -104,7 +104,7 @@ class ConfigProvider:
         try:
             new_config = json5.loads(config_str)
 
-            temp_path = self.config_path + ".tmp"
+            temp_path = self.config_path + f".tmp.{uuid4()}"
             with open(temp_path, "w") as f:
                 json.dump(new_config, f, indent=2)
 
