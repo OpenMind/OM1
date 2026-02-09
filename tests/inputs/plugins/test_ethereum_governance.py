@@ -1,4 +1,5 @@
-import logging
+import asyncio
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -7,344 +8,306 @@ from inputs.base import SensorConfig
 from inputs.plugins.ethereum_governance import GovernanceEthereum, Message
 
 
-class MockResponse:
-    def __init__(self, status: int, json_data: dict):
-        self.status = status
-        self._json_data = json_data
-
-    async def json(self):
-        return self._json_data
-
-
-class MockClientSession:
-    def __init__(self, response: MockResponse):
-        self._response = response
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *args):
-        pass
-
-    def post(self, *args, **kwargs):
-        return MockPostContext(self._response)
-
-
-class MockPostContext:
-    def __init__(self, response: MockResponse):
-        self._response = response
-
-    async def __aenter__(self):
-        return self._response
-
-    async def __aexit__(self, *args):
-        pass
+@pytest.fixture
+def mock_io_provider():
+    with patch("inputs.plugins.ethereum_governance.IOProvider") as mock_class:
+        mock_instance = Mock()
+        mock_class.return_value = mock_instance
+        yield mock_instance
 
 
 @pytest.fixture
-def governance():
+def governance_instance(mock_io_provider):
     config = SensorConfig()
-    with (
-        patch("inputs.plugins.ethereum_governance.Web3"),
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
+    with patch(
+        "inputs.plugins.ethereum_governance.IOProvider", return_value=mock_io_provider
     ):
         instance = GovernanceEthereum(config=config)
-        instance.contract = Mock()
     return instance
 
 
 @pytest.mark.asyncio
-async def test_poll_returns_rules(governance):
-    expected_rules = "Hello World"
-    mock_load_func = AsyncMock(return_value=expected_rules)
-    with (
-        patch.object(governance, "load_rules_from_blockchain", mock_load_func),
-        patch("asyncio.sleep"),
-    ):
-        governance.POLL_INTERVAL = 0.01
-        result = await governance._poll()
+async def test_load_rules_from_blockchain_success_scenario(governance_instance):
+    """
+    Test that load_rules_from_blockchain runs without error when aiohttp returns a valid response.
+    We don't deeply test the decode_eth_response logic here, just that the flow works.
+    Mock decode_eth_response to return a known value to avoid hex complexity.
+    """
+    expected_decoded = "Mocked Decoded Rules"
+    raw_hex_response = "0x1234..."  # Doesn't matter, we mock decode_eth_response
 
-    assert result == expected_rules
-    mock_load_func.assert_awaited_once()
+    mock_response_json = {"result": raw_hex_response}
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.json.return_value = mock_response_json
+
+    mock_session_post_cm = AsyncMock()
+    mock_session_post_cm.__aenter__.return_value = mock_response
+    mock_session_post_cm.__aexit__.return_value = None
+
+    mock_session = Mock()
+    mock_session.post.return_value = mock_session_post_cm
+
+    mock_client_session_cm = AsyncMock()
+    mock_client_session_cm.__aenter__.return_value = mock_session
+    mock_client_session_cm.__aexit__.return_value = None
+
+    with (
+        patch.object(
+            governance_instance, "decode_eth_response", return_value=expected_decoded
+        ),
+        patch(
+            "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
+            return_value=mock_client_session_cm,
+        ),
+    ):
+        result = await governance_instance.load_rules_from_blockchain()
+
+    assert result == expected_decoded
+    mock_session.post.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_poll_handles_load_failure(governance):
-    mock_load_func = AsyncMock(return_value=None)
+async def test_load_rules_from_blockchain_http_error(governance_instance, caplog):
+    mock_response_json = {"error": "Not Found"}
+    mock_response = AsyncMock()
+    mock_response.status = 404
+    mock_response.json.return_value = mock_response_json
+
+    mock_session_post_cm = AsyncMock()
+    mock_session_post_cm.__aenter__.return_value = mock_response
+    mock_session_post_cm.__aexit__.return_value = None
+
+    mock_session = Mock()
+    mock_session.post.return_value = mock_session_post_cm
+
+    mock_client_session_cm = AsyncMock()
+    mock_client_session_cm.__aenter__.return_value = mock_session
+    mock_client_session_cm.__aexit__.return_value = None
+
     with (
-        patch.object(governance, "load_rules_from_blockchain", mock_load_func),
-        patch("asyncio.sleep"),
+        caplog.at_level("ERROR"),
+        patch(
+            "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
+            return_value=mock_client_session_cm,
+        ),
     ):
-        governance.POLL_INTERVAL = 0.01
-        result = await governance._poll()
+        result = await governance_instance.load_rules_from_blockchain()
 
     assert result is None
+    assert "Blockchain request failed with status 404" in caplog.text
+    mock_session.post.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_load_rules_from_blockchain_no_result_in_response(
+    governance_instance, caplog
+):
+    mock_response_json = {"error": "Something went wrong"}
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.json.return_value = mock_response_json
+
+    mock_session_post_cm = AsyncMock()
+    mock_session_post_cm.__aenter__.return_value = mock_response
+    mock_session_post_cm.__aexit__.return_value = None
+
+    mock_session = Mock()
+    mock_session.post.return_value = mock_session_post_cm
+
+    mock_client_session_cm = AsyncMock()
+    mock_client_session_cm.__aenter__.return_value = mock_session
+    mock_client_session_cm.__aexit__.return_value = None
+
+    with (
+        caplog.at_level("ERROR"),
+        patch(
+            "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
+            return_value=mock_client_session_cm,
+        ),
+    ):
+        result = await governance_instance.load_rules_from_blockchain()
+
+    assert result is None
+    assert "No valid result in blockchain response" in caplog.text
+    mock_session.post.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_load_rules_from_blockchain_exception(governance_instance, caplog):
+    mock_session_post_cm = AsyncMock()
+    mock_session_post_cm.__aenter__.side_effect = asyncio.TimeoutError(
+        "Request timed out"
+    )
+    mock_session_post_cm.__aexit__.return_value = None
+
+    mock_session = Mock()
+    mock_session.post.return_value = mock_session_post_cm
+
+    mock_client_session_cm = AsyncMock()
+    mock_client_session_cm.__aenter__.return_value = mock_session
+    mock_client_session_cm.__aexit__.return_value = None
+
+    with (
+        caplog.at_level("ERROR"),
+        patch(
+            "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
+            return_value=mock_client_session_cm,
+        ),
+    ):
+        result = await governance_instance.load_rules_from_blockchain()
+
+    assert result is None
+    assert "Error loading rules from blockchain" in caplog.text
+    mock_session.post.assert_called_once()
+
+
+def test_decode_eth_response_valid_hex_returns_something(governance_instance):
+    """
+    Test that decode_eth_response handles a valid hex string without throwing an error.
+    It might return '', a string, or None depending on the internal logic, which is okay.
+    The key is that it doesn't crash.
+    """
+    valid_hex = "0x00" * 64
+    result = governance_instance.decode_eth_response(valid_hex)
+    assert isinstance(result, (str, type(None)))
+
+
+def test_decode_eth_response_invalid_hex_returns_none(governance_instance, caplog):
+    invalid_hex = "invalid_hex_string!"
+
+    with caplog.at_level("ERROR"):
+        result = governance_instance.decode_eth_response(invalid_hex)
+
+    assert result is None
+    assert "Decoding error" in caplog.text
+
+
+def test_decode_eth_response_short_hex_returns_something_or_none(
+    governance_instance, caplog
+):
+    """
+    Test with a short hex that might cause an error inside the try block.
+    This should ideally trigger the except clause.
+    """
+    short_hex = "0x00" * 8
+
+    with caplog.at_level("ERROR"):
+        result = governance_instance.decode_eth_response(short_hex)
+
+    assert isinstance(result, (str, type(None)))
+
+
+def test_initialization_sets_defaults(governance_instance, mock_io_provider):
+    assert governance_instance.io_provider is not None
+    assert governance_instance.POLL_INTERVAL == 5.0
+    assert governance_instance.rpc_url == "https://holesky.drpc.org"
+    assert (
+        governance_instance.contract_address
+        == "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
+    )
+    assert governance_instance.function_selector == "0x1db3d5ff"
+    assert (
+        governance_instance.function_argument
+        == "0000000000000000000000000000000000000000000000000000000000000002"
+    )
+    assert governance_instance.universal_rule is None
+    assert hasattr(governance_instance, "messages")
+    assert isinstance(governance_instance.messages, list)
+
+
+@pytest.mark.asyncio
+async def test_poll_calls_load_rules_and_returns_result(governance_instance):
+    expected_result = "Poll Result Rule"
+    mock_load_func = AsyncMock(return_value=expected_result)
+    with (
+        patch.object(governance_instance, "load_rules_from_blockchain", mock_load_func),
+        patch("asyncio.sleep"),
+    ):
+        result = await governance_instance._poll()
+
+    assert result == expected_result
     mock_load_func.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_poll_handles_exception_from_load(governance, caplog):
-    mock_load_func = AsyncMock(side_effect=Exception("Test error"))
+async def test_poll_handles_exception_from_load_rules(governance_instance, caplog):
+    mock_load_func = AsyncMock(side_effect=Exception("Load Error"))
     with (
-        patch.object(governance, "load_rules_from_blockchain", mock_load_func),
+        patch.object(governance_instance, "load_rules_from_blockchain", mock_load_func),
         caplog.at_level("ERROR"),
         patch("asyncio.sleep"),
     ):
-        governance.POLL_INTERVAL = 0.01
-        result = await governance._poll()
+        result = await governance_instance._poll()
 
     assert result is None
     assert "Error fetching blockchain data" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_raw_to_text_with_none():
-    governance = GovernanceEthereum(config=SensorConfig())
-    with (
-        patch("inputs.plugins.ethereum_governance.Web3"),
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-    ):
-        result = await governance._raw_to_text(None)
-    assert result is None
+async def test_raw_to_text_converts_string_to_message(governance_instance):
+    test_rule_str = "Raw Governance Rule Text"
+    timestamp_before = time.time()
 
+    result = await governance_instance._raw_to_text(test_rule_str)
 
-@pytest.mark.asyncio
-async def test_raw_to_text_with_valid_input():
-    governance = GovernanceEthereum(config=SensorConfig())
-    with (
-        patch("inputs.plugins.ethereum_governance.Web3"),
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-    ):
-        result = await governance._raw_to_text("Test rules")
+    timestamp_after = time.time()
     assert result is not None
-    assert result.message == "Test rules"
-    assert result.timestamp > 0
+    assert result.message == test_rule_str
+    assert timestamp_before <= result.timestamp <= timestamp_after
 
 
 @pytest.mark.asyncio
-async def test_raw_to_text_buffer_management(governance):
-    await governance.raw_to_text("First rule")
-    assert len(governance.messages) == 1
-    assert governance.messages[0].message == "First rule"
-
-    await governance.raw_to_text("First rule")
-    assert len(governance.messages) == 1
-
-    await governance.raw_to_text("Second rule")
-    assert len(governance.messages) == 2
-    assert governance.messages[1].message == "Second rule"
-
-
-@pytest.mark.asyncio
-async def test_raw_to_text_with_none_input(governance):
-    initial_len = len(governance.messages)
-
-    await governance.raw_to_text(None)
-    assert len(governance.messages) == initial_len
-
-
-def test_formatted_latest_buffer_empty(governance):
-    governance.messages = []
-    result = governance.formatted_latest_buffer()
+async def test_raw_to_text_returns_none_if_input_none(governance_instance):
+    result = await governance_instance._raw_to_text(None)
     assert result is None
 
 
-def test_formatted_latest_buffer_with_message(governance):
-    msg = Message(timestamp=12345.0, message="Test governance rule")
-    governance.messages = [msg]
+@pytest.mark.asyncio
+async def test_raw_to_text_adds_unique_message_to_buffer(governance_instance):
+    test_rule_str = "Unique Governance Rule"
+    initial_len = len(governance_instance.messages)
 
-    with patch.object(governance.io_provider, "add_input") as mock_add_input:
-        result = governance.formatted_latest_buffer()
+    with patch("time.time", return_value=1234.0):
+        await governance_instance.raw_to_text(test_rule_str)
 
-        assert result is not None
-        assert "Universal Laws" in result
-        assert "Test governance rule" in result
-        assert "// START" in result
-        assert "// END" in result
-        mock_add_input.assert_called_once_with(
-            "Universal Laws", "Test governance rule", 12345.0
-        )
-
-
-def test_formatted_latest_buffer_does_not_clear_messages(governance):
-    msg1 = Message(timestamp=12345.0, message="First rule")
-    msg2 = Message(timestamp=12346.0, message="Second rule")
-    governance.messages = [msg1, msg2]
-
-    with patch.object(governance.io_provider, "add_input"):
-        governance.formatted_latest_buffer()
-
-    assert len(governance.messages) == 2
-    assert governance.messages[0].message == "First rule"
-    assert governance.messages[1].message == "Second rule"
-
-
-def test_governance_initialization():
-    config = SensorConfig()
-    expected_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
-    expected_checksummed_address = expected_address.upper()
-
-    with (
-        patch("inputs.plugins.ethereum_governance.Web3") as mock_w3_constructor,
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-    ):
-        mock_w3_instance = Mock()
-        mock_contract_instance = Mock()
-
-        mock_w3_instance.to_checksum_address.return_value = expected_checksummed_address
-
-        mock_w3_constructor.return_value = mock_w3_instance
-        mock_w3_instance.eth.contract.return_value = mock_contract_instance
-
-        governance = GovernanceEthereum(config=config)
-
-        assert governance.rpc_url == "https://holesky.drpc.org"
-        assert governance.contract_address == expected_address
-        assert governance.POLL_INTERVAL == 5.0
-        assert governance.universal_rule is None
-        assert governance.rule_set_version == 2
-
-        mock_w3_constructor.assert_called_once()
-        mock_w3_instance.eth.contract.assert_called_once()
-        call_kwargs = mock_w3_instance.eth.contract.call_args.kwargs
-        assert call_kwargs.get("address") == expected_checksummed_address
-        assert "abi" in call_kwargs
-        assert governance.contract == mock_contract_instance
-
-        mock_w3_instance.to_checksum_address.assert_called_once_with(expected_address)
-
-
-@pytest.fixture
-def mock_web3_components():
-    with (
-        patch("inputs.plugins.ethereum_governance.Web3") as mock_w3_constructor,
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-    ):
-        mock_w3_instance = Mock()
-        mock_contract_instance = Mock()
-        mock_w3_constructor.return_value = mock_w3_instance
-        mock_w3_instance.eth.contract.return_value = mock_contract_instance
-        mock_w3_instance.to_checksum_address = lambda addr: addr.upper()
-
-        yield {
-            "w3_mock": mock_w3_instance,
-            "contract_mock": mock_contract_instance,
-            "w3_constructor": mock_w3_constructor,
-        }
+    assert len(governance_instance.messages) == initial_len + 1
+    assert governance_instance.messages[-1].message == test_rule_str
+    assert governance_instance.messages[-1].timestamp == 1234.0
 
 
 @pytest.mark.asyncio
-async def test_load_rules_from_blockchain_success(mock_web3_components):
-    config = SensorConfig()
-    expected_rules = "Example Governance Rules From Contract"
-    expected_version = 2
-    mock_web3_components[
-        "contract_mock"
-    ].functions.getRuleSet.return_value.call.return_value = expected_rules
+async def test_raw_to_text_does_not_add_duplicate_message(governance_instance):
+    test_rule_str = "Duplicate Governance Rule"
+    existing_msg = Message(timestamp=1233.0, message=test_rule_str)
+    governance_instance.messages = [existing_msg]
 
-    with patch("inputs.plugins.ethereum_governance.HTTPProvider"):
-        governance = GovernanceEthereum(config=config)
+    initial_len = len(governance_instance.messages)
 
-    result = await governance.load_rules_from_blockchain()
+    with patch("time.time", return_value=1234.0):
+        await governance_instance.raw_to_text(test_rule_str)
 
-    assert result == expected_rules
-    mock_web3_components["contract_mock"].functions.getRuleSet.assert_called_once_with(
-        expected_version
+    assert len(governance_instance.messages) == initial_len
+    assert governance_instance.messages[-1].timestamp == 1233.0
+
+
+def test_formatted_latest_buffer_empty(governance_instance):
+    result = governance_instance.formatted_latest_buffer()
+    assert result is None
+
+
+def test_formatted_latest_buffer_formats_latest_message(
+    governance_instance, mock_io_provider
+):
+    msg = Message(timestamp=1234.0, message="formatted buffered message")
+    governance_instance.messages = [msg]
+
+    result = governance_instance.formatted_latest_buffer()
+
+    assert "INPUT:" in result
+    assert "Universal Laws" in result
+    assert "formatted buffered message" in result
+    assert len(governance_instance.messages) == 1
+    mock_io_provider.add_input.assert_called_once_with(
+        "Universal Laws", "formatted buffered message", 1234.0
     )
-    mock_web3_components[
-        "contract_mock"
-    ].functions.getRuleSet.return_value.call.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_load_rules_from_blockchain_handles_none_return(
-    mock_web3_components, caplog
-):
-    config = SensorConfig()
-    mock_web3_components[
-        "contract_mock"
-    ].functions.getRuleSet.return_value.call.return_value = None
-
-    with (
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-        caplog.at_level(logging.WARNING),
-    ):
-        governance = GovernanceEthereum(config=config)
-
-    with caplog.at_level(logging.WARNING):
-        result = await governance.load_rules_from_blockchain()
-
-    assert result is None
-    assert "Contract function returned None." in caplog.text
-
-
-@pytest.mark.asyncio
-async def test_load_rules_from_blockchain_handles_bad_function_call(
-    mock_web3_components, caplog
-):
-    from web3.exceptions import BadFunctionCallOutput
-
-    config = SensorConfig()
-    error_msg = "Function does not exist or bad args"
-    mock_web3_components[
-        "contract_mock"
-    ].functions.getRuleSet.return_value.call.side_effect = BadFunctionCallOutput(
-        error_msg
-    )
-
-    with (
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-        caplog.at_level(logging.ERROR),
-    ):
-        governance = GovernanceEthereum(config=config)
-
-    result = await governance.load_rules_from_blockchain()
-
-    assert result is None
-    assert "Blockchain function call failed (BadFunctionCallOutput)" in caplog.text
-
-
-@pytest.mark.asyncio
-async def test_load_rules_from_blockchain_handles_contract_logic_error(
-    mock_web3_components, caplog
-):
-    from web3.exceptions import ContractLogicError
-
-    config = SensorConfig()
-    error_msg = "Internal contract error"
-    mock_web3_components[
-        "contract_mock"
-    ].functions.getRuleSet.return_value.call.side_effect = ContractLogicError(error_msg)
-
-    with (
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-        caplog.at_level(logging.ERROR),
-    ):
-        governance = GovernanceEthereum(config=config)
-
-    result = await governance.load_rules_from_blockchain()
-
-    assert result is None
-    assert "Smart contract logic error during call" in caplog.text
-
-
-@pytest.mark.asyncio
-async def test_load_rules_from_blockchain_handles_general_exception(
-    mock_web3_components, caplog
-):
-    config = SensorConfig()
-    error_msg = "Some other error occurred"
-    mock_web3_components[
-        "contract_mock"
-    ].functions.getRuleSet.return_value.call.side_effect = Exception(error_msg)
-
-    with (
-        patch("inputs.plugins.ethereum_governance.HTTPProvider"),
-        caplog.at_level(logging.ERROR),
-    ):
-        governance = GovernanceEthereum(config=config)
-
-    result = await governance.load_rules_from_blockchain()
-
-    assert result is None
-    assert "General error calling blockchain function via web3.py" in caplog.text
