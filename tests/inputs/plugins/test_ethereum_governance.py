@@ -3,6 +3,7 @@ import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from web3 import Web3
 
 from inputs.base import SensorConfig
 from inputs.plugins.ethereum_governance import GovernanceEthereum, Message
@@ -24,6 +25,13 @@ def governance_instance(mock_io_provider):
     ):
         instance = GovernanceEthereum(config=config)
     return instance
+
+
+def _abi_encode(types, args):
+    codec = Web3().codec
+    if hasattr(codec, "encode"):
+        return codec.encode(types, args)
+    return codec.encode_abi(types, args)
 
 
 @pytest.mark.asyncio
@@ -171,6 +179,11 @@ def test_decode_eth_response_valid_hex_returns_something(governance_instance):
     valid_hex = "0x00" * 64
     result = governance_instance.decode_eth_response(valid_hex)
     assert isinstance(result, (str, type(None)))
+
+def test_decode_eth_response_bytes_array_decodes(governance_instance):
+    payload = _abi_encode(["bytes[]"], [[b"Hello"]])
+    result = governance_instance.decode_eth_response("0x" + payload.hex())
+    assert result == "Hello"
 
 
 def test_decode_eth_response_invalid_hex_returns_none(governance_instance, caplog):
