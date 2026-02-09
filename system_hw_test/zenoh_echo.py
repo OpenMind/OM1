@@ -9,23 +9,50 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import zenoh
 
+from zenoh_msgs import Odometer, RemoteControllerState
+
+
+def deserialize_message(key, payload):
+    """
+    Attempt to deserialize payload based on key expression.
+    Returns formatted string or None if unknown/failed.
+    """
+    try:
+        if "remote_controller_state" in key:
+            msg = RemoteControllerState.deserialize(payload)
+            return f"RemoteControllerState(event={msg.event}, lx={msg.lx:.2f}, ly={msg.ly:.2f}, rx={msg.rx:.2f}, ry={msg.ry:.2f})"
+        elif "odometer_state" in key:
+            msg = Odometer.deserialize(payload)
+            return f"Odometer(x={msg.x:.2f}, y={msg.y:.2f}, theta={msg.theta:.2f})"
+        # Add more message types here as needed
+        return None
+    except Exception as e:
+        return f"<Deserialization Error: {e}>"
+
 
 def on_message(sample):
     """Callback for Zenoh message subscriber."""
     try:
         payload = sample.payload.to_bytes()
-        # Try to decode as string first
+        key = str(sample.key_expr)
+
+        # Try specific deserialization first
+        deserialized = deserialize_message(key, payload)
+        if deserialized:
+            print(f"[{key}]: {deserialized}")
+            return
+
+        # Fallback to string/JSON/bytes
         try:
             decoded = payload.decode("utf-8")
-            # Try to format as JSON if possible
             try:
                 json_obj = json.loads(decoded)
                 formatted = json.dumps(json_obj, indent=2)
-                print(f"[{sample.key_expr}]:\n{formatted}")
+                print(f"[{key}]:\n{formatted}")
             except json.JSONDecodeError:
-                print(f"[{sample.key_expr}]: {decoded}")
+                print(f"[{key}]: {decoded}")
         except UnicodeDecodeError:
-            print(f"[{sample.key_expr}]: {payload}")
+            print(f"[{key}]: {payload}")
     except Exception as e:
         print(f"Error processing message on {sample.key_expr}: {e}")
 
