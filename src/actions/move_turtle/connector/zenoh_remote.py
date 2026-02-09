@@ -36,7 +36,7 @@ class MoveZenohRemoteConfig(ActionConfig):
 
 class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]):
     """
-    Zenoh remote connector for the Move Turtlbot4 remotely action.
+    Zenoh remote connector for the Move TurtleBot4 remotely action.
     """
 
     def __init__(self, config: MoveZenohRemoteConfig):
@@ -45,7 +45,7 @@ class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]
 
         Parameters
         ----------
-        config : ActionConfig
+        config : MoveZenohRemoteConfig
             The configuration for the action connector.
         """
         super().__init__(config)
