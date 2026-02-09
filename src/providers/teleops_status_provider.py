@@ -99,7 +99,7 @@ class CommandStatus:
             vx=data.get("vx", 0.0),
             vy=data.get("vy", 0.0),
             vyaw=data.get("vyaw", 0.0),
-            timestamp=data.get("timestamp", time.time()),
+            timestamp=data.get("timestamp", str(time.time())),
         )
 
 
@@ -194,7 +194,7 @@ class TeleopsStatus:
             Dictionary containing teleops status information.
         """
         return cls(
-            update_time=data.get("update_time", time.time()),
+            update_time=data.get("update_time", str(time.time())),
             battery_status=BatteryStatus.from_dict(data.get("battery_status", {})),
             action_status=ActionStatus.from_dict(data.get("action_status", {})),
             machine_name=data.get("machine_name", "unknown"),
@@ -216,9 +216,12 @@ class TeleopsStatusProvider:
         """
         Initialize the TeleopsStatusProvider.
 
+        Sets up the teleops status provider with API authentication and base URL.
+        Initializes a thread pool executor for asynchronous status sharing operations.
+
         Parameters
         ----------
-        api_key : str
+        api_key : Optional[str]
             API key for authentication. Default is None.
         base_url : str
             Base URL for the teleops status API. Default is

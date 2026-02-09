@@ -490,7 +490,7 @@ class WebSim(Simulator):
             logging.info("Starting WebSim server thread...")
             self.server_thread = threading.Thread(target=self._run_server, daemon=True)
             self.server_thread.start()
-            time.sleep(1)
+            self.sleep(1)
 
             if self.server_thread.is_alive():
                 logging.info(
@@ -564,7 +564,19 @@ class WebSim(Simulator):
             logging.error(f"Error in broadcast_state: {e}")
 
     def get_earliest_time(self, inputs: Dict[str, Input]) -> float:
-        """Get earliest timestamp from inputs."""
+        """
+        Get earliest timestamp from inputs.
+
+        Parameters
+        ----------
+        inputs : Dict[str, Input]
+            Dictionary of input types to their Input objects.
+
+        Returns
+        -------
+        float
+            The earliest timestamp found in inputs, or 0.0 if none found.
+        """
         earliest_time = float("inf")
         for input_type, input_info in inputs.items():
             logging.debug(f"GET {input_info}")
@@ -604,7 +616,7 @@ class WebSim(Simulator):
             except Exception as e:
                 logging.error(f"Error in tick: {e}")
 
-            time.sleep(0.5)
+            self.sleep(0.5)
 
     def sim(self, actions: List[Action]) -> None:
         """

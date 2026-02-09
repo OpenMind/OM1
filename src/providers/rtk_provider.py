@@ -64,6 +64,16 @@ class RtkProvider:
         """
         Convert a UTC datetime.time object to a Unix timestamp by combining
         it with the local computer's current date.
+
+        Parameters
+        ----------
+        utc_time_obj : datetime.time
+            A UTC time object to convert.
+
+        Returns
+        -------
+        float
+            Unix timestamp representing the combined date and time.
         """
         if not isinstance(utc_time_obj, datetime.time):
             raise TypeError("Expected a datetime.time object")
@@ -200,12 +210,19 @@ class RtkProvider:
 
     def stop(self):
         """
-        Stop the RTK provider.
+        Stop the RTK provider and cleanup resources.
         """
         self.running = False
         if self._thread:
             logging.info("Stopping RTK provider")
             self._thread.join(timeout=5)
+
+        if self.serial_connection and self.serial_connection.is_open:
+            try:
+                self.serial_connection.close()
+                logging.info("RTK serial port closed")
+            except Exception as e:
+                logging.error(f"Error closing RTK serial port: {e}")
 
     @property
     def data(self) -> Optional[dict]:
