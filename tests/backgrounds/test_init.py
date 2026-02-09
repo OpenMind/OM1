@@ -1,12 +1,12 @@
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
 from backgrounds import find_module_with_class, load_background
-from backgrounds.base import Background
+from backgrounds.base import Background, BackgroundConfig
 
 
-class MockBackground(Background):
+class MockBackground(Background[BackgroundConfig]):
     def run(self):
         pass
 
@@ -17,15 +17,15 @@ def test_load_background_success():
         patch("importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "mock_background"
-        mock_module = Mock()
+        mock_module = MagicMock()
         mock_module.MockBackground = MockBackground
         mock_import.return_value = mock_module
 
-        result = load_background("MockBackground")
+        result = load_background({"type": "MockBackground"})
 
         mock_find_module.assert_called_once_with("MockBackground")
         mock_import.assert_called_once_with("backgrounds.plugins.mock_background")
-        assert result == MockBackground
+        assert isinstance(result, Background)
 
 
 def test_load_background_not_found():
@@ -36,7 +36,7 @@ def test_load_background_not_found():
             ValueError,
             match="Class 'NonexistentBackground' not found in any background plugin module",
         ):
-            load_background("NonexistentBackground")
+            load_background({"type": "NonexistentBackground"})
 
 
 def test_load_background_multiple_plugins():
@@ -45,15 +45,20 @@ def test_load_background_multiple_plugins():
         patch("importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "bg2"
-        mock_module2 = Mock()
-        mock_module2.Background2 = type("Background2", (Background,), {})
+
+        class Background2(Background[BackgroundConfig]):
+            def run(self):
+                pass
+
+        mock_module2 = MagicMock()
+        mock_module2.Background2 = Background2
         mock_import.return_value = mock_module2
 
-        result = load_background("Background2")
+        result = load_background({"type": "Background2"})
 
         mock_find_module.assert_called_once_with("Background2")
         mock_import.assert_called_once_with("backgrounds.plugins.bg2")
-        assert result == mock_module2.Background2
+        assert isinstance(result, Background)
 
 
 def test_load_background_invalid_type():
@@ -66,14 +71,14 @@ def test_load_background_invalid_type():
         class InvalidBackground:
             pass
 
-        mock_module = Mock()
+        mock_module = MagicMock()
         mock_module.InvalidBackground = InvalidBackground
         mock_import.return_value = mock_module
 
         with pytest.raises(
             ValueError, match="'InvalidBackground' is not a valid background subclass"
         ):
-            load_background("InvalidBackground")
+            load_background({"type": "InvalidBackground"})
 
 
 def test_find_module_with_class_success():

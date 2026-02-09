@@ -53,8 +53,10 @@ def fps():
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    UnitreeCameraVLMProvider._instance = None
+    """Reset singleton instances between tests."""
+    UnitreeCameraVLMProvider.reset()  # type: ignore
     yield
+    UnitreeCameraVLMProvider.reset()  # type: ignore
 
 
 @pytest.fixture
@@ -82,7 +84,7 @@ def test_video_stream_initialization(mock_video_client):
     assert stream.frame_callbacks[0] == callback
     assert stream.fps == 30
     assert stream.frame_delay == 1 / 30
-    assert stream.video_client.init_called
+    assert mock_video_client.init_called
 
 
 def test_video_stream_processing(mock_video_client):
@@ -126,6 +128,7 @@ def test_video_stream_resize(mock_video_client):
     img_array = np.frombuffer(img_data, dtype=np.uint8)
     decoded_img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
 
+    assert decoded_img is not None, "Failed to decode image"
     height, width = decoded_img.shape[:2]
     assert width <= 640
     assert height <= 480

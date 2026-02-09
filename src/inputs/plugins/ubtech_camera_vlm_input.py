@@ -2,23 +2,37 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Optional
 
-from inputs.base import SensorConfig
+from pydantic import Field
+
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.ubtech_vlm_provider import UbtechVLMProvider
 
 
-@dataclass
-class Message:
-    timestamp: float
-    message: str
+class UbtechCameraVLMSensorConfig(SensorConfig):
+    """
+    Configuration for Ubtech Camera VLM Sensor.
+
+    Parameters
+    ----------
+    robot_ip : str
+        Robot IP address.
+    base_url : str
+        Base URL for the VLM service.
+    """
+
+    robot_ip: str = Field(default="", description="Robot IP address")
+    base_url: str = Field(
+        default="wss://api-vila.openmind.org",
+        description="Base URL for the VLM service",
+    )
 
 
-class UbtechCameraVLMInput(FuserInput[str]):
+class UbtechCameraVLMInput(FuserInput[UbtechCameraVLMSensorConfig, Optional[str]]):
     """
     UbTech Camera VLM bridge.
 
@@ -26,7 +40,7 @@ class UbtechCameraVLMInput(FuserInput[str]):
     converts the responses to text strings, and sends them to the fuser.
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: UbtechCameraVLMSensorConfig):
         """
         Initialize VLM input handler.
 
@@ -39,7 +53,7 @@ class UbtechCameraVLMInput(FuserInput[str]):
         self.io_provider = IOProvider()
 
         self.descriptor_for_LLM = "Your Eyes"
-        self.robot_ip = getattr(self.config, "robot_ip", "")
+        self.robot_ip = self.config.robot_ip
         # Buffer for storing the final output
         self.messages: List[Message] = []
 
@@ -47,7 +61,7 @@ class UbtechCameraVLMInput(FuserInput[str]):
         self.message_buffer: Queue[str] = Queue()
 
         # Initialize VLM provider
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
+        base_url = self.config.base_url
         self.vlm: UbtechVLMProvider = UbtechVLMProvider(
             ws_url=base_url, robot_ip=self.robot_ip
         )
@@ -94,7 +108,7 @@ class UbtechCameraVLMInput(FuserInput[str]):
         except Empty:
             return None
 
-    async def _raw_to_text(self, raw_input: str) -> Message:
+    async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
         """
         Process raw input to generate a timestamped message.
 
@@ -103,14 +117,17 @@ class UbtechCameraVLMInput(FuserInput[str]):
 
         Parameters
         ----------
-        raw_input : str
+        raw_input : Optional[str]
             Raw input string to be processed
 
         Returns
         -------
-        Message
+        Optional[Message]
             A timestamped message containing the processed input
         """
+        if raw_input is None:
+            return None
+
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):

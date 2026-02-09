@@ -18,11 +18,6 @@ class Fuser:
     Parameters
     ----------
     config : RuntimeConfig
-        Runtime configuration containing system prompts and agent actions.
-
-    Attributes
-    ----------
-    config : RuntimeConfig
         Runtime configuration settings.
     io_provider : IOProvider
         Provider for handling I/O data and timing.

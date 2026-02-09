@@ -1,136 +1,294 @@
-"""
-Test cases for WalletCoinbase input plugin.
-"""
-
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from inputs.plugins.wallet_coinbase import Message, WalletCoinbase
+from inputs.plugins.wallet_coinbase import Message, WalletCoinbase, WalletCoinbaseConfig
 
 
-class TestWalletCoinbase:
-    """Test cases for WalletCoinbase class."""
+def test_initialization_with_missing_wallet_id():
+    """Missing COINBASE_WALLET_ID should fall back to a safe zero state."""
+    with patch.dict(os.environ, {}, clear=True):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+        assert wallet.wallet is None
+        assert wallet.balance == 0.0
+        assert wallet.balance_previous == 0.0
+        assert wallet.asset_id == "eth"
 
-    def test_initialization_with_missing_wallet_id(self):
-        """Test that initialization handles missing COINBASE_WALLET_ID gracefully."""
-        with patch.dict(os.environ, {}, clear=True):
-            wallet = WalletCoinbase()
-            assert wallet.wallet is None
-            assert wallet.ETH_balance == 0.0
-            assert wallet.ETH_balance_previous == 0.0
 
-    def test_initialization_with_wallet_fetch_failure(self):
-        """Test that initialization handles wallet fetch failure gracefully."""
-        with patch.dict(os.environ, {"COINBASE_WALLET_ID": "test_wallet_id"}):
-            with patch("inputs.plugins.wallet_coinbase.Wallet.fetch") as mock_fetch:
-                mock_fetch.side_effect = Exception("Network error")
+def test_initialization_with_wallet_fetch_failure():
+    """Wallet.fetch failure should be handled gracefully."""
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure"),
+        patch("inputs.plugins.wallet_coinbase.Wallet.fetch") as mock_fetch,
+    ):
+        mock_fetch.side_effect = Exception("Network error")
 
-                wallet = WalletCoinbase()
-                assert wallet.wallet is None
-                assert wallet.ETH_balance == 0.0
-                assert wallet.ETH_balance_previous == 0.0
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
-    def test_initialization_with_successful_wallet_fetch(self):
-        """Test that initialization works correctly when wallet fetch succeeds."""
-        mock_wallet = MagicMock()
-        mock_wallet.balance.return_value = "1.5"
+        assert wallet.wallet is None
+        assert wallet.balance == 0.0
+        assert wallet.balance_previous == 0.0
 
-        with patch.dict(os.environ, {"COINBASE_WALLET_ID": "test_wallet_id"}):
-            with patch(
-                "inputs.plugins.wallet_coinbase.Wallet.fetch", return_value=mock_wallet
-            ):
-                with patch("inputs.plugins.wallet_coinbase.Cdp.configure"):
-                    wallet = WalletCoinbase()
-                    assert wallet.wallet == mock_wallet
-                    assert wallet.ETH_balance == 1.5
-                    assert wallet.ETH_balance_previous == 1.5
 
-    @pytest.mark.asyncio
-    async def test_poll_with_wallet_fetch_failure(self):
-        """Test that _poll handles wallet fetch failure gracefully."""
-        with patch.dict(os.environ, {"COINBASE_WALLET_ID": "test_wallet_id"}):
-            with patch("inputs.plugins.wallet_coinbase.Wallet.fetch") as mock_fetch:
-                mock_fetch.side_effect = Exception("Network error")
+def test_initialization_with_successful_wallet_fetch_default_asset():
+    """Successful initialization should read balance using default asset_id 'eth'."""
+    mock_wallet = MagicMock()
+    mock_wallet.balance.return_value = "1.5"
 
-                wallet = WalletCoinbase()
-                result = await wallet._poll()
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure") as mock_configure,
+        patch(
+            "inputs.plugins.wallet_coinbase.Wallet.fetch",
+            return_value=mock_wallet,
+        ),
+    ):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
-                # Should return zero balance change when wallet refresh fails
-                assert result == [0.0, 0.0]
+        assert wallet.wallet == mock_wallet
+        assert wallet.asset_id == "eth"
+        assert wallet.balance == 1.5
+        assert wallet.balance_previous == 1.5
 
-    @pytest.mark.asyncio
-    async def test_poll_with_successful_wallet_refresh(self):
-        """Test that _poll works correctly when wallet refresh succeeds."""
-        mock_wallet = MagicMock()
-        mock_wallet.balance.return_value = "2.0"
+        mock_configure.assert_called_once_with("k", "s")
+        mock_wallet.balance.assert_called_with("eth")
 
-        with patch.dict(os.environ, {"COINBASE_WALLET_ID": "test_wallet_id"}):
-            with patch(
-                "inputs.plugins.wallet_coinbase.Wallet.fetch", return_value=mock_wallet
-            ):
-                with patch("inputs.plugins.wallet_coinbase.Cdp.configure"):
-                    wallet = WalletCoinbase()
-                    wallet.ETH_balance_previous = 1.5  # Set previous balance
 
-                    result = await wallet._poll()
+def test_initialization_with_custom_asset_id():
+    """Custom asset_id should be respected during initialization."""
+    mock_wallet = MagicMock()
+    mock_wallet.balance.return_value = "100.0"
 
-                    # Should return current balance and balance change
-                    assert result == [2.0, 0.5]
+    config = WalletCoinbaseConfig(asset_id="btc")
 
-    def test_raw_to_text_with_positive_balance_change(self):
-        """Test that _raw_to_text correctly handles positive balance changes."""
-        wallet = WalletCoinbase()
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure"),
+        patch(
+            "inputs.plugins.wallet_coinbase.Wallet.fetch",
+            return_value=mock_wallet,
+        ),
+    ):
+        wallet = WalletCoinbase(config=config)
 
-        # Test with positive balance change
-        raw_input = [2.0, 0.5]  # [current_balance, balance_change]
+        assert wallet.asset_id == "btc"
+        assert wallet.balance == 100.0
+        assert wallet.balance_previous == 100.0
 
-        # This is an async method, so we need to run it
-        import asyncio
+        mock_wallet.balance.assert_called_with("btc")
 
-        result = asyncio.run(wallet._raw_to_text(raw_input))
 
-        assert result is not None
-        assert isinstance(result, Message)
-        assert result.message == "0.50000"
+def test_initialization_without_api_keys_does_not_call_configure():
+    """
+    If API key/secret are missing, Cdp.configure should not be called.
+    Initialization should still safely proceed (with Wallet.fetch mocked).
+    """
+    mock_wallet = MagicMock()
+    mock_wallet.balance.return_value = "3.0"
 
-    def test_raw_to_text_with_zero_balance_change(self):
-        """Test that _raw_to_text returns None for zero balance change."""
-        wallet = WalletCoinbase()
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        # Intentionally omit API key/secret
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure") as mock_configure,
+        patch(
+            "inputs.plugins.wallet_coinbase.Wallet.fetch",
+            return_value=mock_wallet,
+        ),
+    ):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
-        # Test with zero balance change
-        raw_input = [2.0, 0.0]  # [current_balance, balance_change]
+        assert wallet.wallet == mock_wallet
+        assert wallet.balance == 3.0
+        assert wallet.balance_previous == 3.0
 
-        # This is an async method, so we need to run it
-        import asyncio
+        mock_configure.assert_not_called()
 
-        result = asyncio.run(wallet._raw_to_text(raw_input))
 
-        assert result is None
+@pytest.mark.asyncio
+async def test_poll_with_wallet_refresh_failure_returns_zero_delta():
+    """_poll should return zero delta if Wallet.fetch fails."""
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure"),
+        patch("inputs.plugins.wallet_coinbase.Wallet.fetch") as mock_fetch,
+        patch(
+            "inputs.plugins.wallet_coinbase.asyncio.sleep",
+            new=AsyncMock(return_value=None),
+        ),
+    ):
+        mock_fetch.side_effect = Exception("Network error")
 
-    def test_formatted_latest_buffer_with_multiple_transactions(self):
-        """Test that formatted_latest_buffer correctly combines multiple transactions."""
-        wallet = WalletCoinbase()
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
 
-        # Add multiple messages to the buffer
-        wallet.messages = [
-            Message(timestamp=1000.0, message="0.5"),
-            Message(timestamp=1001.0, message="0.3"),
-            Message(timestamp=1002.0, message="0.2"),
-        ]
+        result = await wallet._poll()
 
-        result = wallet.formatted_latest_buffer()
+        assert result == [0.0, 0.0]
 
-        assert result is not None
-        assert "You just received 1.00000 ETH." in result
-        assert "WalletCoinbase INPUT" in result
-        assert len(wallet.messages) == 0  # Buffer should be cleared
 
-    def test_formatted_latest_buffer_with_empty_buffer(self):
-        """Test that formatted_latest_buffer returns None for empty buffer."""
-        wallet = WalletCoinbase()
+@pytest.mark.asyncio
+async def test_poll_with_successful_wallet_refresh_calculates_delta():
+    """_poll should update balance and compute correct delta on success."""
+    mock_wallet = MagicMock()
+    mock_wallet.balance.return_value = "2.0"
 
-        result = wallet.formatted_latest_buffer()
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+    }
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure"),
+        patch(
+            "inputs.plugins.wallet_coinbase.Wallet.fetch",
+            return_value=mock_wallet,
+        ),
+        patch(
+            "inputs.plugins.wallet_coinbase.asyncio.sleep",
+            new=AsyncMock(return_value=None),
+        ),
+    ):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+        wallet.balance_previous = 1.5
 
-        assert result is None
+        result = await wallet._poll()
+
+        assert result == [2.0, 0.5]
+        mock_wallet.balance.assert_called_with("eth")
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_positive_balance_change():
+    """_raw_to_text should return Message for positive deltas."""
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        patch("inputs.plugins.wallet_coinbase.time.time", return_value=1234.0),
+    ):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+        raw_input = [2.0, 0.5]
+        result = await wallet._raw_to_text(raw_input)
+
+    assert result is not None
+    assert isinstance(result, Message)
+    assert result.timestamp == 1234.0
+    assert result.message == "0.50000"
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_zero_balance_change():
+    """_raw_to_text should return None for zero deltas."""
+    with patch.dict(os.environ, {}, clear=True):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+        raw_input = [2.0, 0.0]
+        result = await wallet._raw_to_text(raw_input)
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_negative_balance_change():
+    """_raw_to_text should return None for negative deltas."""
+    with patch.dict(os.environ, {}, clear=True):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+        raw_input = [2.0, -0.1]
+        result = await wallet._raw_to_text(raw_input)
+
+    assert result is None
+
+
+def test_formatted_latest_buffer_with_multiple_transactions():
+    """formatted_latest_buffer should sum messages, write IO, and clear buffer."""
+    with patch.dict(os.environ, {}, clear=True):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+    wallet.io_provider = MagicMock()
+
+    wallet.messages = [
+        Message(timestamp=1000.0, message="0.5"),
+        Message(timestamp=1001.0, message="0.3"),
+        Message(timestamp=1002.0, message="0.2"),
+    ]
+
+    result = wallet.formatted_latest_buffer()
+
+    assert result is not None
+    assert "WalletCoinbase INPUT" in result
+    assert "You just received 1.00000 ETH." in result
+
+    wallet.io_provider.add_input.assert_called_once()
+    assert len(wallet.messages) == 0
+
+
+def test_formatted_latest_buffer_with_custom_asset_symbol():
+    """Custom asset should appear in upper-case in formatted output."""
+    config = WalletCoinbaseConfig(asset_id="btc")
+
+    env = {
+        "COINBASE_WALLET_ID": "test_wallet_id",
+        "COINBASE_API_KEY": "k",
+        "COINBASE_API_SECRET": "s",
+    }
+
+    mock_wallet = MagicMock()
+    mock_wallet.balance.return_value = "0.0"
+
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("inputs.plugins.wallet_coinbase.Cdp.configure"),
+        patch(
+            "inputs.plugins.wallet_coinbase.Wallet.fetch",
+            return_value=mock_wallet,
+        ),
+    ):
+        wallet = WalletCoinbase(config=config)
+
+    wallet.io_provider = MagicMock()
+
+    wallet.messages = [
+        Message(timestamp=1000.0, message="10.0"),
+    ]
+
+    result = wallet.formatted_latest_buffer()
+
+    assert result is not None
+    assert "You just received 10.00000 BTC." in result
+
+    wallet.io_provider.add_input.assert_called_once()
+    assert len(wallet.messages) == 0
+
+
+def test_formatted_latest_buffer_with_empty_buffer():
+    """Empty buffer should return None."""
+    with patch.dict(os.environ, {}, clear=True):
+        wallet = WalletCoinbase(config=WalletCoinbaseConfig())
+
+    result = wallet.formatted_latest_buffer()
+    assert result is None

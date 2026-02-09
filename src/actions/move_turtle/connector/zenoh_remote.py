@@ -1,8 +1,10 @@
 import json
 import logging
 import time
+from typing import Optional
 
 from om1_utils import ws
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.move_turtle.interface import MoveInput
@@ -10,24 +12,46 @@ from providers import CommandStatus
 from zenoh_msgs import geometry_msgs, open_zenoh_session
 
 
-class MoveZenohRemoteConnector(ActionConnector[MoveInput]):
+class MoveZenohRemoteConfig(ActionConfig):
     """
-    Zenoh remote connector for the Move action.
+    Configuration for Zenoh remote connector.
+
+    Parameters
+    ----------
+    api_key : Optional[str]
+        OM API key.
+    URID : Optional[str]
+        URID for Zenoh topics.
     """
 
-    def __init__(self, config: ActionConfig):
+    api_key: Optional[str] = Field(
+        default=None,
+        description="OM API key",
+    )
+    URID: Optional[str] = Field(
+        default=None,
+        description="URID for Zenoh topics",
+    )
+
+
+class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]):
+    """
+    Zenoh remote connector for the Move TurtleBot4 remotely action.
+    """
+
+    def __init__(self, config: MoveZenohRemoteConfig):
         """
         Initialize the Zenoh remote connector.
 
         Parameters
         ----------
-        config : ActionConfig
+        config : MoveZenohRemoteConfig
             The configuration for the action connector.
         """
         super().__init__(config)
 
-        api_key = getattr(config, "api_key", None)
-        URID = getattr(self.config, "URID", None)
+        api_key = self.config.api_key
+        URID = self.config.URID
         self.cmd_vel = f"{URID}/c3/cmd_vel"
 
         self.session = None

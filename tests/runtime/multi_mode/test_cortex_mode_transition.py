@@ -16,6 +16,7 @@ from runtime.multi_mode.cortex import ModeCortexRuntime
 def sample_mode_configs():
     """Sample mode configurations for testing mode transitions."""
     default_mode = ModeConfig(
+        version="v1.0.0",
         name="default",
         display_name="Default Mode",
         description="Default operational mode",
@@ -23,6 +24,7 @@ def sample_mode_configs():
     )
 
     advanced_mode = ModeConfig(
+        version="v1.0.0",
         name="advanced",
         display_name="Advanced Mode",
         description="Advanced operational mode",
@@ -30,6 +32,7 @@ def sample_mode_configs():
     )
 
     emergency_mode = ModeConfig(
+        version="v1.0.0",
         name="emergency",
         display_name="Emergency Mode",
         description="Emergency operational mode",
@@ -160,11 +163,11 @@ def mock_mode_manager():
 
         input_lower = input_text.lower()
         if "emergency" in input_lower or "urgent" in input_lower:
-            return "emergency"
+            return ("emergency", "input_triggered")
         elif "advanced" in input_lower:
-            return "advanced"
+            return ("advanced", "input_triggered")
         elif "default" in input_lower or "normal" in input_lower:
-            return "default"
+            return ("default", "input_triggered")
         return None
 
     manager.process_tick = AsyncMock(side_effect=mock_process_tick)
@@ -461,6 +464,7 @@ async def test_handle_mode_transitions_processes_pending_transition(
     async def limited_handle_transitions():
         await runtime._mode_transition_event.wait()
 
+        success = False
         if runtime._pending_mode_transition:
             target_mode = runtime._pending_mode_transition
             runtime._pending_mode_transition = None
@@ -496,6 +500,7 @@ async def test_handle_mode_transitions_handles_failed_transition(
     async def limited_handle_transitions():
         await runtime._mode_transition_event.wait()
 
+        success = False
         if runtime._pending_mode_transition:
             target_mode = runtime._pending_mode_transition
             runtime._pending_mode_transition = None
@@ -509,6 +514,7 @@ async def test_handle_mode_transitions_handles_failed_transition(
 
     success = await limited_handle_transitions()
 
+    assert success is False
     assert success is False
     mocks["mode_manager"]._execute_transition.assert_called_once_with(
         "invalid_mode", "input_triggered"

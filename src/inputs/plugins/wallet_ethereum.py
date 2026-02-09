@@ -1,36 +1,17 @@
 import asyncio
 import logging
 import os
-import random
 import time
-from dataclasses import dataclass
 from typing import List, Optional
 
 from web3 import Web3
 
-from inputs.base import SensorConfig
+from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-@dataclass
-class Message:
-    """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class WalletEthereum(FuserInput[float]):
+class WalletEthereum(FuserInput[SensorConfig, List[float]]):
     """
     Ethereum wallet monitor that tracks ETH balance changes.
 
@@ -43,7 +24,7 @@ class WalletEthereum(FuserInput[float]):
         If connection to Ethereum network fails
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: SensorConfig):
         """
         Initialize WalletEthereum instance.
         """
@@ -103,15 +84,7 @@ class WalletEthereum(FuserInput[float]):
                 f"Block: {self.eth_info['block_number']}, Account Balance: {self.eth_info['balance']:.3f} ETH"
             )
 
-            # randomly simulate ETH inbound transfers for debugging purposes
-            random_add_for_debugging = 0
-            dice = random.randint(0, 10)
-            logging.debug(f"WalletEthereum: dice {dice}")
-            if dice > 7:
-                logging.info("WalletEthereum: randomly adding 1.0 ETH")
-                random_add_for_debugging = 1.0
-
-            self.ETH_balance = self.balance_eth + random_add_for_debugging
+            self.ETH_balance = self.balance_eth
             self.balance_change = self.ETH_balance - self.ETH_balance_previous
             self.ETH_balance_previous = self.ETH_balance
 

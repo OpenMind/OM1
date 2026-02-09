@@ -1,13 +1,14 @@
 import json
 import logging
 import time
+from typing import Optional
 from uuid import uuid4
 
 import zenoh
+from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.speak.interface import SpeakInput
-from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 from providers.io_provider import IOProvider
 from providers.teleops_conversation_provider import TeleopsConversationProvider
@@ -21,12 +22,67 @@ from zenoh_msgs import (
 )
 
 
-# unstable / not released
-# from zenoh.ext import HistoryConfig, Miss, RecoveryConfig, declare_advanced_subscriber
-class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
+class SpeakElevenLabsTTSConfig(ActionConfig):
+    """
+    Configuration for ElevenLabs TTS connector.
 
-    def __init__(self, config: ActionConfig):
+    Parameters
+    ----------
+    elevenlabs_api_key : Optional[str]
+        ElevenLabs API key.
+    voice_id : str
+        ElevenLabs voice ID.
+    model_id : str
+        ElevenLabs model ID.
+    output_format : str
+        ElevenLabs output format.
+    silence_rate : int
+        Number of responses to skip before speaking.
+    """
 
+    elevenlabs_api_key: Optional[str] = Field(
+        default=None,
+        description="ElevenLabs API key",
+    )
+    voice_id: str = Field(
+        default="JBFqnCBsd6RMkjVDRZzb",
+        description="ElevenLabs voice ID",
+    )
+    model_id: str = Field(
+        default="eleven_flash_v2_5",
+        description="ElevenLabs model ID",
+    )
+    output_format: str = Field(
+        default="mp3_44100_128",
+        description="ElevenLabs output format",
+    )
+    silence_rate: int = Field(
+        default=0,
+        description="Number of responses to skip before speaking",
+    )
+    enable_tts_interrupt: bool = Field(
+        default=False,
+        description="Enable TTS interrupt when ASR detects speech during playback",
+    )
+
+
+class SpeakElevenLabsTTSConnector(
+    ActionConnector[SpeakElevenLabsTTSConfig, SpeakInput]
+):
+    """
+    A "Speak" connector that uses the ElevenLabs TTS Provider to perform Text-to-Speech.
+    This connector is compatible with the standard SpeakInput interface.
+    """
+
+    def __init__(self, config: SpeakElevenLabsTTSConfig):
+        """
+        Initializes the connector and its underlying TTS provider.
+
+        Parameters
+        ----------
+        config : SpeakElevenLabsTTSConfig
+            Configuration for the connector.
+        """
         super().__init__(config)
 
         # OM API key
@@ -37,13 +93,14 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.last_voice_command_time = time.time()
 
         # Eleven Labs TTS configuration
-        elevenlabs_api_key = getattr(self.config, "elevenlabs_api_key", None)
-        voice_id = getattr(self.config, "voice_id", "JBFqnCBsd6RMkjVDRZzb")
-        model_id = getattr(self.config, "model_id", "eleven_flash_v2_5")
-        output_format = getattr(self.config, "output_format", "mp3_44100_128")
+        elevenlabs_api_key = self.config.elevenlabs_api_key
+        voice_id = self.config.voice_id
+        model_id = self.config.model_id
+        output_format = self.config.output_format
+        enable_tts_interrupt = self.config.enable_tts_interrupt
 
         # silence rate
-        self.silence_rate = getattr(self.config, "silence_rate", 0)
+        self.silence_rate = self.config.silence_rate
         self.silence_counter = 0
 
         # IO Provider
@@ -53,7 +110,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.tts_status_request_topic = "om/tts/request"
         self.tts_status_response_topic = "om/tts/response"
         self.session = None
-        self.auido_pub = None
+        self.audio_pub = None
 
         self.audio_status = AudioStatus(
             header=prepare_header(str(uuid4())),
@@ -64,7 +121,7 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
 
         try:
             self.session = open_zenoh_session()
-            self.auido_pub = self.session.declare_publisher(self.audio_topic)
+            self.audio_pub = self.session.declare_publisher(self.audio_topic)
             self.session.declare_subscriber(self.audio_topic, self.zenoh_audio_message)
             self.session.declare_subscriber(
                 self.tts_status_request_topic, self._zenoh_tts_status_request
@@ -73,31 +130,14 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
                 self.tts_status_response_topic
             )
 
-            # Unstable / not released
-            # advanced_sub = declare_advanced_subscriber(
-            #     self.session,
-            #     self.audio_topic,
-            #     self.audio_message,
-            #     history=HistoryConfig(detect_late_publishers=True),
-            #     recovery=RecoveryConfig(heartbeat=True),
-            #     subscriber_detection=True,
-            # )
-            # advanced_sub.sample_miss_listener(self.miss_listener)
-
-            if self.auido_pub:
-                self.auido_pub.put(self.audio_status.serialize())
+            if self.audio_pub:
+                self.audio_pub.put(self.audio_status.serialize())
 
             logging.info("Elevenlabs TTS Zenoh client opened")
         except Exception as e:
             logging.error(f"Error opening Elevenlabs TTS Zenoh client: {e}")
 
-        base_url = getattr(
-            self.config,
-            "base_url",
-            f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
-        )
-        self.asr = ASRRTSPProvider(ws_url=base_url)
-
+        # Initialize Eleven Labs TTS Provider
         self.tts = ElevenLabsTTSProvider(
             url="https://api.openmind.org/api/core/elevenlabs/tts",
             api_key=api_key,
@@ -105,8 +145,20 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             voice_id=voice_id,
             model_id=model_id,
             output_format=output_format,
+            enable_tts_interrupt=enable_tts_interrupt,
         )
         self.tts.start()
+
+        # Configure Eleven Labs TTS Provider to ensure settings are applied
+        self.tts.configure(
+            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            api_key=api_key,
+            elevenlabs_api_key=elevenlabs_api_key,
+            voice_id=voice_id,
+            model_id=model_id,
+            output_format=output_format,
+            enable_tts_interrupt=enable_tts_interrupt,
+        )
 
         # TTS status
         self.tts_enabled = True
@@ -115,9 +167,25 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         self.conversation_provider = TeleopsConversationProvider(api_key=api_key)
 
     def zenoh_audio_message(self, data: zenoh.Sample):
+        """
+        Process an incoming audio status message.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The Zenoh sample received, which should have a 'payload' attribute.
+        """
         self.audio_status = AudioStatus.deserialize(data.payload.to_bytes())
 
     async def connect(self, output_interface: SpeakInput) -> None:
+        """
+        Process a speak action by sending text to Elevenlabs TTS.
+
+        Parameters
+        ----------
+        output_interface : SpeakInput
+            The SpeakInput interface containing the text to be spoken.
+        """
         if self.tts_enabled is False:
             logging.info("TTS is disabled, skipping TTS action")
             return
@@ -153,11 +221,10 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
             sentence_to_speak=String(json.dumps(pending_message)),
         )
 
-        if self.auido_pub:
-            self.auido_pub.put(state.serialize())
+        if self.audio_pub:
+            self.audio_pub.put(state.serialize())
             return
 
-        self.tts.register_tts_state_callback(self.asr.audio_stream.on_tts_state_change)
         self.tts.add_pending_message(pending_message)
 
     def _zenoh_tts_status_request(self, data: zenoh.Sample):
@@ -226,9 +293,6 @@ class SpeakElevenLabsTTSConnector(ActionConnector[SpeakInput]):
         if self.session:
             self.session.close()
             logging.info("Elevenlabs TTS Zenoh client closed")
-
-        if self.asr:
-            self.asr.stop()
 
         if self.tts:
             self.tts.stop()

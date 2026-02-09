@@ -15,22 +15,30 @@ from .singleton import singleton
 @singleton
 class GpsProvider:
     """
-    GPS Provider.
+    GPS Provider for managing GPS, magnetometer, and BLE data from serial connection.
 
-    This class implements a singleton pattern to manage:
-        * GPS data from serial
+    This class implements a singleton pattern to manage GPS data acquisition from a serial
+    port connection (typically connected to an Arduino-based GPS module). It handles:
+        * GPS position data (latitude, longitude, altitude)
+        * Satellite information and fix quality
+        * Magnetometer heading data
+        * BLE (Bluetooth Low Energy) scan data for triangulation
+        * Real-time data processing in a background thread
 
-    Parameters
-    ----------
-    serial_port: str = ""
-        The Serial port the Arduino is connected to
+    The provider automatically starts a background thread upon initialization to continuously
+    read and process incoming serial data. GPS data is updated in real-time and can be accessed
+    through the `data` property.
     """
 
     def __init__(self, serial_port: str = ""):
         """
-        Robot and sensor configuration
-        """
+        Initialize the GPS Provider with serial port connection.
 
+        Parameters
+        ----------
+        serial_port : str
+            The serial port to connect to (e.g., '/dev/ttyUSB0' or 'COM3').
+        """
         logging.info(f"GPS_Provider booting GPS Provider at serial: {serial_port}")
 
         baudrate = 115200
@@ -65,18 +73,34 @@ class GpsProvider:
         self._thread: Optional[threading.Thread] = None
         self.start()
 
-    def string_to_unix_timestamp(self, time_str):
+    def string_to_unix_timestamp(self, time_str: str) -> float:
         """
         Convert a time string in the format 'YYYY:MM:DD:HH:MM:SS:ms'
         to a Unix timestamp (UTC).
+
+        Parameters
+        ----------
+        time_str : str
+            The input time string.
+
+        Returns
+        -------
+        float
+            The corresponding Unix timestamp.
         """
         dt = datetime.strptime(time_str, "%Y:%m:%d:%H:%M:%S:%f")
         dt = dt.replace(tzinfo=timezone.utc)
         return dt.timestamp()
 
-    def magGPSProcessor(self, data):
-        # Used whenever there is a connected
-        # nav Arduino on serial
+    def magGPSProcessor(self, data: str):
+        """
+        Process incoming MAG/GPS/BLE data from serial input.
+
+        Parameters
+        ----------
+        data : str
+            The input data string from serial.
+        """
         try:
             if data.startswith("HDG:"):
                 parts = data.split(":")
@@ -162,7 +186,20 @@ class GpsProvider:
             "ble_scan": self.ble_scan,
         }
 
-    def compass_heading_to_direction(self, degrees):
+    def compass_heading_to_direction(self, degrees: float) -> str:
+        """
+        Convert compass heading in degrees to cardinal direction.
+
+        Parameters
+        ----------
+        degrees : float
+            Compass heading in degrees.
+
+        Returns
+        -------
+        str
+            Cardinal direction as a string.
+        """
         directions = [
             "North",
             "North East",
@@ -176,8 +213,20 @@ class GpsProvider:
         index = int((degrees + 22.5) % 360 / 45)
         return directions[index]
 
-    def parse_ble_triang_string(self, input_string):
+    def parse_ble_triang_string(self, input_string: str) -> List[RFDataRaw]:
+        """
+        Parse BLE triangulation data from a string.
 
+        Parameters
+        ----------
+        input_string : str
+            The input string containing BLE triangulation data.
+
+        Returns
+        -------
+        List[RFDataRaw]
+            A list of RFDataRaw objects parsed from the input string.
+        """
         if not input_string.startswith("BLE:"):
             return []
 
@@ -233,9 +282,21 @@ class GpsProvider:
             logging.info("Stopping GPS provider")
             self._thread.join(timeout=5)
 
+        if self.serial_connection and self.serial_connection.is_open:
+            try:
+                self.serial_connection.close()
+                logging.info("GPS serial port closed")
+            except Exception as e:
+                logging.error(f"Error closing serial port: {e}")
+
     @property
     def data(self) -> Optional[dict]:
-        # """
-        # Get the current robot gps data
-        # """
+        """
+        Get the latest GPS data.
+
+        Returns
+        -------
+        Optional[dict]
+            The current GPS data dictionary or None if no data is available.
+        """
         return self._gps

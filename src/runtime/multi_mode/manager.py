@@ -91,19 +91,23 @@ class ModeManager:
         # Start zenoh controller
         self.mode_status_request = "om/mode/request"
         self.mode_status_response = "om/mode/response"
+        self.context_update_topic = "om/mode/context"
 
         try:
             self.session = open_zenoh_session()
             self.session.declare_subscriber(
                 self.mode_status_request, self._zenoh_mode_status_request
             )
+            self.session.declare_subscriber(
+                self.context_update_topic, self._zenoh_context_update
+            )
             self._zenoh_mode_status_response_pub = self.session.declare_publisher(
                 self.mode_status_response
             )
-        except Exception as e:
-            logging.error(f"Error opening Zenoh client: {e}")
+        except Exception:
+            logging.exception("Error opening Zenoh client")
             self.session = None
-            self.pub = None
+            self._zenoh_mode_status_response_pub = None
 
         logging.info(
             f"Mode Manager initialized with current mode: {self.state.current_mode}"
@@ -147,8 +151,8 @@ class ModeManager:
             os.rename(temp_file, runtime_config_path)
             logging.debug(f"Runtime config file created/updated: {runtime_config_path}")
 
-        except Exception as e:
-            logging.error(f"Error creating runtime config file: {e}")
+        except Exception:
+            logging.exception("Error creating runtime config file")
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         """
@@ -272,6 +276,39 @@ class ModeManager:
 
         return None
 
+    async def check_context_aware_transitions(self) -> Optional[str]:
+        """
+        Check if any context-aware transitions should be triggered based on current user context.
+
+        Returns
+        -------
+        Optional[str]
+            The target mode if a transition should occur, None otherwise
+        """
+        # Find matching transition rules sorted by priority (higher priority first)
+        matching_rules = []
+        for rule in self.config.transition_rules:
+            if (
+                rule.from_mode == self.state.current_mode or rule.from_mode == "*"
+            ) and rule.transition_type == TransitionType.CONTEXT_AWARE:
+
+                if self._can_transition(rule) and self._evaluate_context_conditions(
+                    rule
+                ):
+                    matching_rules.append(rule)
+
+        if matching_rules:
+            # Sort by priority (higher first) and select the best match
+            matching_rules.sort(key=lambda r: r.priority, reverse=True)
+            target_rule = matching_rules[0]
+            logging.info(
+                f"Context-aware transition triggered: {self.state.current_mode} -> {target_rule.to_mode} "
+                f"(priority: {target_rule.priority}, conditions: {target_rule.context_conditions})"
+            )
+            return target_rule.to_mode
+
+        return None
+
     def check_input_triggered_transitions(self, input_text: str) -> Optional[str]:
         """
         Check if any input-triggered transitions should be activated.
@@ -346,9 +383,100 @@ class ModeManager:
             logging.warning(f"Target mode '{rule.to_mode}' not found in configuration")
             return False
 
-        # TODO: Add context-aware transition logic
+        return True
+
+    def _evaluate_context_conditions(self, rule: TransitionRule) -> bool:
+        """
+        Evaluate if the context conditions for a transition rule are met.
+
+        Parameters
+        ----------
+        rule : TransitionRule
+            The transition rule with context conditions to evaluate
+
+        Returns
+        -------
+        bool
+            True if all context conditions are satisfied, False otherwise
+        """
+        if not rule.context_conditions:
+            return True
+
+        user_context = self.state.user_context
+
+        for condition_key, condition_value in rule.context_conditions.items():
+            if not self._evaluate_single_condition(
+                condition_key, condition_value, user_context
+            ):
+                logging.debug(
+                    f"Context condition failed: {condition_key}={condition_value}, "
+                    f"actual context: {user_context.get(condition_key)}"
+                )
+                return False
 
         return True
+
+    def _evaluate_single_condition(
+        self, key: str, expected_value, user_context: Dict
+    ) -> bool:
+        """
+        Evaluate a single context condition.
+
+        Parameters
+        ----------
+        key : str
+            The context key to check
+        expected_value : Any
+            The expected value for the condition
+        user_context : Dict
+            The current user context
+
+        Returns
+        -------
+        bool
+            True if the condition is satisfied, False otherwise
+        """
+        if key not in user_context:
+            return False
+
+        actual_value = user_context[key]
+
+        # Handle different condition types
+        if isinstance(expected_value, dict):
+            # Support for complex conditions like {"min": 5, "max": 10} or {"contains": "pattern"}
+            if "min" in expected_value or "max" in expected_value:
+                # Numeric range condition
+                if not isinstance(actual_value, (int, float)):
+                    return False
+                if "min" in expected_value and actual_value < expected_value["min"]:
+                    return False
+                if "max" in expected_value and actual_value > expected_value["max"]:
+                    return False
+                return True
+
+            elif "contains" in expected_value:
+                # String contains condition
+                if not isinstance(actual_value, str):
+                    return False
+                return expected_value["contains"].lower() in actual_value.lower()
+
+            elif "one_of" in expected_value:
+                # Value must be one of the specified options
+                return actual_value in expected_value["one_of"]
+
+            elif "not" in expected_value:
+                # Negation condition
+                return actual_value != expected_value["not"]
+
+        elif isinstance(expected_value, list):
+            # List membership condition
+            return actual_value in expected_value
+
+        else:
+            # Simple equality condition
+            return actual_value == expected_value
+
+        return False
 
     async def request_transition(
         self, target_mode: str, reason: str = "manual"
@@ -406,88 +534,89 @@ class ModeManager:
                 return True
 
             self._is_transitioning = True
-
-        try:
             from_mode = self.state.current_mode
 
-            if from_mode == target_mode:
-                logging.debug(
-                    f"Already in target mode '{target_mode}', skipping transition"
-                )
-                return True
+            try:
+                if from_mode == target_mode:
+                    logging.debug(
+                        f"Already in target mode '{target_mode}', skipping transition"
+                    )
+                    return True
 
-            transition_key = f"{from_mode}->{target_mode}"
-            self.transition_cooldowns[transition_key] = time.time()
+                transition_key = f"{from_mode}->{target_mode}"
+                self.transition_cooldowns[transition_key] = time.time()
 
-            from_config = self.config.modes.get(from_mode)
-            to_config = self.config.modes[target_mode]
+                from_config = self.config.modes.get(from_mode)
+                to_config = self.config.modes[target_mode]
 
-            transition_context = {
-                "from_mode": from_mode,
-                "to_mode": target_mode,
-                "reason": reason,
-                "timestamp": time.time(),
-                "transition_key": transition_key,
-            }
+                transition_context = {
+                    "from_mode": from_mode,
+                    "to_mode": target_mode,
+                    "reason": reason,
+                    "timestamp": time.time(),
+                    "transition_key": transition_key,
+                }
 
-            # Execute exit hooks for the current mode
-            if from_config:
-                logging.debug(f"Executing exit hooks for mode: {from_mode}")
-                exit_success = await from_config.execute_lifecycle_hooks(
+                # Execute exit hooks for the current mode
+                if from_config:
+                    logging.debug(f"Executing exit hooks for mode: {from_mode}")
+                    exit_success = await from_config.execute_lifecycle_hooks(
+                        LifecycleHookType.ON_EXIT, transition_context.copy()
+                    )
+                    if not exit_success:
+                        logging.warning(f"Some exit hooks failed for mode: {from_mode}")
+
+                # Execute global exit hooks
+                global_exit_success = await self.config.execute_global_lifecycle_hooks(
                     LifecycleHookType.ON_EXIT, transition_context.copy()
                 )
-                if not exit_success:
-                    logging.warning(f"Some exit hooks failed for mode: {from_mode}")
+                if not global_exit_success:
+                    logging.warning("Some global exit hooks failed")
 
-            # Execute global exit hooks
-            global_exit_success = await self.config.execute_global_lifecycle_hooks(
-                LifecycleHookType.ON_EXIT, transition_context.copy()
-            )
-            if not global_exit_success:
-                logging.warning("Some global exit hooks failed")
+                # Update state
+                self.state.previous_mode = from_mode
+                self.state.current_mode = target_mode
+                self.state.mode_start_time = time.time()
+                self.state.last_transition_time = time.time()
+                self.state.transition_history.append(
+                    f"{from_mode}->{target_mode}:{reason}"
+                )
 
-            # Update state
-            self.state.previous_mode = from_mode
-            self.state.current_mode = target_mode
-            self.state.mode_start_time = time.time()
-            self.state.last_transition_time = time.time()
-            self.state.transition_history.append(f"{from_mode}->{target_mode}:{reason}")
+                if len(self.state.transition_history) > 50:
+                    self.state.transition_history = self.state.transition_history[-25:]
 
-            if len(self.state.transition_history) > 50:
-                self.state.transition_history = self.state.transition_history[-25:]
+                logging.info(
+                    f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
+                )
 
-            logging.info(
-                f"Mode transition: {from_mode} -> {target_mode} (reason: {reason})"
-            )
+                # Execute entry hooks for the new mode
+                logging.debug(f"Executing entry hooks for mode: {target_mode}")
+                entry_success = await to_config.execute_lifecycle_hooks(
+                    LifecycleHookType.ON_ENTRY, transition_context.copy()
+                )
+                if not entry_success:
+                    logging.warning(f"Some entry hooks failed for mode: {target_mode}")
 
-            # Execute entry hooks for the new mode
-            logging.debug(f"Executing entry hooks for mode: {target_mode}")
-            entry_success = await to_config.execute_lifecycle_hooks(
-                LifecycleHookType.ON_ENTRY, transition_context.copy()
-            )
-            if not entry_success:
-                logging.warning(f"Some entry hooks failed for mode: {target_mode}")
+                # Execute global entry hooks
+                global_entry_success = await self.config.execute_global_lifecycle_hooks(
+                    LifecycleHookType.ON_ENTRY, transition_context.copy()
+                )
+                if not global_entry_success:
+                    logging.warning("Some global entry hooks failed")
 
-            # Execute global entry hooks
-            global_entry_success = await self.config.execute_global_lifecycle_hooks(
-                LifecycleHookType.ON_ENTRY, transition_context.copy()
-            )
-            if not global_entry_success:
-                logging.warning("Some global entry hooks failed")
+                await self._notify_transition_callbacks(from_mode, target_mode)
 
-            await self._notify_transition_callbacks(from_mode, target_mode)
+                self._save_mode_state()
 
-            self._save_mode_state()
+                return True
 
-            return True
-
-        except Exception as e:
-            logging.error(
-                f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
-            )
-            return False
-        finally:
-            self._is_transitioning = False
+            except Exception as e:
+                logging.error(
+                    f"Failed to execute transition {from_mode} -> {target_mode}: {e}"
+                )
+                return False
+            finally:
+                self._is_transitioning = False
 
     def get_available_transitions(self) -> List[str]:
         """
@@ -531,7 +660,7 @@ class ModeManager:
             "transition_history": self.state.transition_history[-5:],
             "timeout_seconds": current_config.timeout_seconds,
             "time_remaining": (
-                current_config.timeout_seconds - mode_duration
+                max(0, current_config.timeout_seconds - mode_duration)
                 if current_config.timeout_seconds
                 else None
             ),
@@ -552,7 +681,9 @@ class ModeManager:
         """Get the current user context."""
         return self.state.user_context.copy()
 
-    async def process_tick(self, input_text: Optional[str]) -> Optional[str]:
+    async def process_tick(
+        self, input_text: Optional[str]
+    ) -> Optional[tuple[str, str]]:
         """
         Process a tick and check for any needed transitions.
 
@@ -563,23 +694,24 @@ class ModeManager:
 
         Returns
         -------
-        Optional[str]
-            The new mode if a transition occurred, None otherwise
+        Optional[tuple[str, str]]
+            A tuple of (target_mode, reason) if a transition occurred, None otherwise
         """
-        if not input_text:
-            return None
-
-        # Check time-based transitions first
         time_target = await self.check_time_based_transitions()
         if time_target:
             logging.info(f"Time-based transition to mode: {time_target}")
-            return time_target
+            return (time_target, "time_based")
 
-        # Then check input-triggered transitions
-        target_mode = self.check_input_triggered_transitions(input_text)
-        if target_mode:
-            logging.info(f"Input-triggered transition to mode: {target_mode}")
-            return target_mode
+        context_target = await self.check_context_aware_transitions()
+        if context_target:
+            logging.info(f"Context-aware transition to mode: {context_target}")
+            return (context_target, "context_aware")
+
+        if input_text:
+            target_mode = self.check_input_triggered_transitions(input_text)
+            if target_mode:
+                logging.info(f"Input-triggered transition to mode: {target_mode}")
+                return (target_mode, "input_triggered")
 
         return None
 
@@ -627,9 +759,57 @@ class ModeManager:
                 current_mode=String(self.state.current_mode),
                 message=String(json.dumps(self.get_mode_info())),
             )
-            return self._zenoh_mode_status_response_pub.put(
-                mode_status_response.serialize()
-            )
+            if self._zenoh_mode_status_response_pub is not None:
+                return self._zenoh_mode_status_response_pub.put(
+                    mode_status_response.serialize()
+                )
+
+    def _zenoh_context_update(self, data: zenoh.Sample):
+        """
+        Process incoming context update messages via Zenoh.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The incoming Zenoh sample containing the context update.
+        """
+        try:
+            context_data = json.loads(data.payload.to_string())
+            logging.debug(f"Received context update: {context_data}")
+
+            if isinstance(context_data, dict):
+                self.update_user_context(context_data)
+                logging.info(f"Updated user context with: {context_data}")
+
+                if self._main_event_loop and self._main_event_loop.is_running():
+                    self._main_event_loop.call_soon_threadsafe(
+                        lambda: asyncio.create_task(
+                            self._check_and_apply_context_transition()
+                        )
+                    )
+            else:
+                logging.warning(f"Invalid context data format: {context_data}")
+
+        except (json.JSONDecodeError, Exception) as e:
+            logging.error(f"Error processing context update: {e}")
+
+    async def _check_and_apply_context_transition(self):
+        """
+        Check for context-aware transitions and apply them if conditions are met.
+
+        This method is called when the user context is updated to ensure
+        that context-aware transitions can occur even when the LLM is not triggered.
+        """
+        try:
+            context_target = await self.check_context_aware_transitions()
+            if context_target:
+                logging.info(
+                    f"Context-aware transition triggered by context update: "
+                    f"{self.state.current_mode} -> {context_target}"
+                )
+                await self._execute_transition(context_target, "context_aware")
+        except Exception as e:
+            logging.error(f"Error checking context-aware transitions: {e}")
 
     async def _handle_mode_switch_request(
         self, frame_id: str, request_id: str, target_mode: str
@@ -665,7 +845,8 @@ class ModeManager:
                 message=String(f"Failed to switch to mode {target_mode}"),
             )
 
-        self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
+        if self._zenoh_mode_status_response_pub is not None:
+            self._zenoh_mode_status_response_pub.put(mode_status_response.serialize())
 
     def _get_state_file_path(self) -> str:
         """

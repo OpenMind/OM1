@@ -12,12 +12,20 @@ T = TypeVar("T")
 class AvatarLLMState:
     """
     Singleton class to manage avatar thinking state during LLM processing.
+
+    This class implements a singleton pattern to manage avatar visual state transitions
+    during LLM (Large Language Model) processing. It coordinates between the avatar
+    provider and IO provider to display appropriate visual feedback when processing
+    voice inputs.
     """
 
     _instance = None
     _lock = None
 
     def __new__(cls):
+        """
+        Implement singleton pattern for AvatarLLMState.
+        """
         if cls._instance is None:
             if cls._lock is None:
                 cls._lock = threading.Lock()
@@ -94,8 +102,8 @@ class AvatarLLMState:
         if self.avatar_provider and self.avatar_provider.running:
             try:
                 self.avatar_provider.send_avatar_command("Happy")
-            except Exception:
-                pass
+            except Exception as e:
+                logging.warning(f"Failed to restore avatar to Happy state: {e}")
 
     def _has_face_action_in_result(self, result: Any) -> bool:
         """
@@ -121,7 +129,9 @@ class AvatarLLMState:
         return any(getattr(a, "type", "").lower() == "face" for a in actions)
 
     @classmethod
-    def trigger_thinking(cls, func: Optional[Callable[..., Awaitable[T]]] = None):
+    def trigger_thinking(
+        cls, func: Optional[Callable[..., Awaitable[T]]] = None
+    ) -> Any:
         """
         Decorator to manage avatar state during LLM processing.
 
@@ -139,6 +149,10 @@ class AvatarLLMState:
         def decorator(f: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
             @functools.wraps(f)
             async def wrapper(*args: Any, **kwargs: Any) -> T:
+
+                if getattr(args[0], "_skip_state_management", False):
+                    return await f(*args, **kwargs)
+
                 instance = cls()
                 instance._start_thinking()
 
@@ -160,3 +174,13 @@ class AvatarLLMState:
             return decorator(func)
 
         return decorator
+
+    def stop(self) -> None:
+        """
+        Stop the AvatarLLMState singleton instance.
+        """
+        if self.avatar_provider and self.avatar_provider.running:
+            try:
+                self.avatar_provider.stop()
+            except Exception:
+                logging.error("Failed to stop AvatarProvider in AvatarLLMState")

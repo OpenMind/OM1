@@ -1,11 +1,10 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
 
-from llm import LLMConfig
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.openrouter import OpenRouter
+from llm.plugins.openrouter import OpenRouter, OpenRouterConfig
 
 
 class DummyOutputModel(BaseModel):
@@ -14,7 +13,9 @@ class DummyOutputModel(BaseModel):
 
 @pytest.fixture
 def config():
-    return LLMConfig(base_url="test_url/", api_key="test_key", model="test_model")
+    return OpenRouterConfig(
+        base_url="test_url/", api_key="test_key", model="test_model"
+    )
 
 
 @pytest.fixture
@@ -47,6 +48,41 @@ def mock_response_with_tool_calls():
     return response
 
 
+@pytest.fixture(autouse=True)
+def mock_avatar_components():
+    """Mock all avatar and IO components to prevent Zenoh session creation"""
+
+    def mock_decorator(func=None):
+        def decorator(f):
+            return f
+
+        if func is not None:
+            return decorator(func)
+        return decorator
+
+    with (
+        patch(
+            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
+        ),
+        patch("llm.plugins.deepseek_llm.AvatarLLMState") as mock_avatar_state,
+        patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
+        patch(
+            "providers.avatar_llm_state_provider.AvatarProvider"
+        ) as mock_avatar_llm_state_provider,
+    ):
+        mock_avatar_state._instance = None
+        mock_avatar_state._lock = None
+
+        mock_provider_instance = MagicMock()
+        mock_provider_instance.running = False
+        mock_provider_instance.session = None
+        mock_provider_instance.stop = MagicMock()
+        mock_avatar_provider.return_value = mock_provider_instance
+        mock_avatar_llm_state_provider.return_value = mock_provider_instance
+
+        yield
+
+
 @pytest.fixture
 def llm(config):
     return OpenRouter(config, available_actions=None)
@@ -61,7 +97,7 @@ async def test_init_with_config(llm, config):
 
 @pytest.mark.asyncio
 async def test_init_empty_key():
-    config = LLMConfig(base_url="test_url")
+    config = OpenRouterConfig(base_url="test_url")
     with pytest.raises(ValueError, match="config file missing api_key"):
         OpenRouter(config, available_actions=None)
 
