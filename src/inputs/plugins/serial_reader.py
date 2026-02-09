@@ -4,13 +4,31 @@ import time
 from typing import Optional
 
 import serial
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
 
-class SerialReader(FuserInput[SensorConfig, Optional[str]]):
+class SerialReaderConfig(SensorConfig):
+    """Configuration for the SerialReader plugin."""
+
+    port: str = Field(
+        default="/dev/cu.usbmodem1101",
+        description="Serial port device path (e.g., /dev/ttyUSB0 or COM3)",
+    )
+    baudrate: int = Field(
+        default=9600,
+        description="Serial communication baudrate",
+    )
+    timeout: float = Field(
+        default=1.0,
+        description="Read timeout in seconds",
+    )
+
+
+class SerialReader(FuserInput[SerialReaderConfig, Optional[str]]):
     """
     Serial port input reader for Arduino and other serial devices.
 
@@ -44,7 +62,7 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
 
     #
 
-    def __init__(self, config: SensorConfig):
+    def __init__(self, config: SerialReaderConfig):
         """
         Initialize the serial reader with configuration.
 
@@ -53,11 +71,9 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
 
         Parameters
         ----------
-        config : SensorConfig
-            Configuration object containing sensor settings. The serial port
-            connection parameters (port, baudrate, timeout) are currently
-            hardcoded in the implementation but should be configurable via
-            the config object in future versions.
+        config : SerialReaderConfig
+            Configuration object containing sensor settings including port,
+            baudrate, and timeout.
 
         Notes
         -----
@@ -74,16 +90,12 @@ class SerialReader(FuserInput[SensorConfig, Optional[str]]):
         super().__init__(config)
 
         # Configure the serial port
-        port = "/dev/cu.usbmodem1101"  # Replace with your serial port
-        baudrate = 9600
-        timeout = 1  # Optional: set a timeout for reading
-
         self.ser = None
 
         try:
             # Open the serial port
-            self.ser = serial.Serial(port, baudrate, timeout=timeout)
-            logging.info(f"Connected to {port} at {baudrate} baud")
+            self.ser = serial.Serial(config.port, config.baudrate, timeout=config.timeout)
+            logging.info(f"Connected to {config.port} at {config.baudrate} baud")
         except serial.SerialException as e:
             logging.error(f"Error: {e}")
 
