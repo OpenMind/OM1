@@ -190,7 +190,6 @@ def test_path_processor_filters_blanked_angles(mock_rplidar_dependencies):
     assert provider._raw_scan is not None
     result_angles = provider._raw_scan[:, 2]
 
-    # Only the two non-blanked readings should survive
     assert len(result_angles) == 2
     assert -170.0 not in result_angles
     assert -160.0 not in result_angles
@@ -220,7 +219,6 @@ def test_path_processor_no_blanking_when_empty(mock_rplidar_dependencies):
     provider._path_processor(scan_data)
 
     assert provider._raw_scan is not None
-    # All three readings are within distance range and nothing is blanked
     assert len(provider._raw_scan) == 3
 
 
