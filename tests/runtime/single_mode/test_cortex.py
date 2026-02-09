@@ -651,6 +651,49 @@ class TestCortexRuntimeHotReload:
             runtime._check_config_changes.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_run_handles_none_cortex_loop_task_on_reload(
+        self, mock_config, mock_dependencies
+    ):
+        """Test run() handles cortex_loop_task being None during config reload."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=False)
+            runtime._start_orchestrators = AsyncMock()
+            runtime._cleanup_tasks = AsyncMock()
+
+            async def mock_cortex_loop():
+                # Simulate reload: task is set to None then cancelled
+                runtime.cortex_loop_task = None
+                raise asyncio.CancelledError()
+
+            runtime._run_cortex_loop = AsyncMock(side_effect=mock_cortex_loop)
+
+            try:
+                await asyncio.wait_for(runtime.run(), timeout=2.0)
+            except asyncio.TimeoutError:
+                pass
+
+    @pytest.mark.asyncio
     async def test_cleanup_tasks_with_config_watcher(
         self, mock_config, mock_dependencies
     ):
