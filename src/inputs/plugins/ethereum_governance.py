@@ -4,10 +4,17 @@ import time
 from typing import Optional
 
 import aiohttp
+from web3 import Web3
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
-from providers.io_provider import IOProvider
+
+try:
+    from providers.io_provider import IOProvider
+except ModuleNotFoundError:
+    class IOProvider:
+        def add_input(self, *_args, **_kwargs):
+            return None
 
 # RULES are stored on the ETHEREUM HOLESKY testnet
 # "GovernanceContract": "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
@@ -104,19 +111,32 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
         try:
             response_bytes = bytes.fromhex(hex_response)
+            if not response_bytes:
+                return None
 
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
-            string_length = int.from_bytes(response_bytes[96:128], "big")
+            try:
+                codec = Web3().codec
+                if hasattr(codec, "decode"):
+                    (chunks,) = codec.decode(["bytes[]"], response_bytes)
+                else:
+                    (chunks,) = codec.decode_abi(["bytes[]"], response_bytes)
+                if not chunks:
+                    return ""
+                decoded_string = b"".join(bytes(c) for c in chunks).decode(
+                    "utf-8", errors="replace"
+                )
+            except Exception:
+                codec = Web3().codec
+                if hasattr(codec, "decode"):
+                    (decoded_string,) = codec.decode(["string"], response_bytes)
+                else:
+                    (decoded_string,) = codec.decode_abi(["string"], response_bytes)
 
-            # Extract and decode string
-            string_bytes = response_bytes[128 : 128 + string_length]
-            decoded_string = string_bytes.decode("utf-8")
+            cleaned_string = "".join(
+                ch for ch in decoded_string if ch.isprintable() or ch in "\n\r\t"
+            )
 
-            # Remove unexpected control characters (like \x19)
-            cleaned_string = "".join(ch for ch in decoded_string if ch.isprintable())
-
-            return cleaned_string
+            return cleaned_string.strip()
 
         except Exception as e:
             logging.error(f"Decoding error: {e}")
