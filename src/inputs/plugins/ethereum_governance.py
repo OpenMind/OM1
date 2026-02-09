@@ -3,229 +3,123 @@ import logging
 import time
 from typing import Optional
 
-import aiohttp
+from web3 import HTTPProvider, Web3
+from web3.exceptions import BadFunctionCallOutput, ContractLogicError
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 
-# RULES are stored on the ETHEREUM HOLESKY testnet
-# "GovernanceContract": "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
-# https://holesky.etherscan.io/address/0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695
-# Note: Etherscan.io does not handle bytes[]/json well. See below for ways to
-# interact with HOLESKY and decode the data, generating an ASCII string.
-
 
 class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
-    """
-    Ethereum ERC-7777 reader that tracks governance rules.
+    """Ethereum ERC-7777 reader that tracks governance rules."""
 
-    Queries the Ethereum blockchain for relevant governance rules.
-
-    Raises
-    ------
-    Exception
-        If connection to Ethereum network fails
-    """
-
-    async def load_rules_from_blockchain(self) -> Optional[str]:
-        """
-        Load governance rules from the Ethereum blockchain.
-
-        Returns
-        -------
-        Optional[str]
-            Decoded governance rules string, or None on error.
-        """
-        logging.info("Loading rules from Ethereum blockchain")
-
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 636815446436324,
-            "method": "eth_call",
-            "params": [
-                {
-                    "from": "0x0000000000000000000000000000000000000000",
-                    "to": self.contract_address,
-                    "data": f"{self.function_selector}{self.function_argument}",
-                },
-                "latest",
-            ],
+    CONTRACT_ABI = [
+        {
+            "inputs": [{"name": "_version", "type": "uint256"}],
+            "name": "getRuleSet",
+            "outputs": [{"name": "", "type": "string"}],
+            "stateMutability": "view",
+            "type": "function",
         }
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.rpc_url,
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as response:
-                    logging.debug(f"Blockchain response status: {response.status}")
-
-                    if response.status == 200:
-                        result = await response.json()
-                        if "result" in result and result["result"]:
-                            hex_response = result["result"]
-                            logging.debug(f"Raw blockchain response: {hex_response}")
-
-                            decoded_data = self.decode_eth_response(hex_response)
-                            logging.debug(f"Decoded blockchain data: {decoded_data}")
-                            return decoded_data
-                        else:
-                            logging.error(
-                                "Error: No valid result in blockchain response"
-                            )
-                    else:
-                        logging.error(
-                            f"Error: Blockchain request failed with status {response.status}"
-                        )
-        except Exception as e:
-            logging.error(f"Error loading rules from blockchain: {e}")
-
-        return None
-
-    def decode_eth_response(self, hex_response: str) -> Optional[str]:
-        """
-        Decodes an Ethereum eth_call response.
-
-        Parameters
-        ----------
-        hex_response : str
-            Hexadecimal string response from Ethereum eth_call.
-
-        Returns
-        -------
-        Optional[str]
-            Decoded string, or None on error.
-        """
-        if hex_response.startswith("0x"):
-            hex_response = hex_response[2:]
-
-        try:
-            response_bytes = bytes.fromhex(hex_response)
-
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
-            string_length = int.from_bytes(response_bytes[96:128], "big")
-
-            # Extract and decode string
-            string_bytes = response_bytes[128 : 128 + string_length]
-            decoded_string = string_bytes.decode("utf-8")
-
-            # Remove unexpected control characters (like \x19)
-            cleaned_string = "".join(ch for ch in decoded_string if ch.isprintable())
-
-            return cleaned_string
-
-        except Exception as e:
-            logging.error(f"Decoding error: {e}")
-            return None
+    ]
 
     def __init__(self, config: SensorConfig):
-        """
-        Initialize GovernanceEthereum instance.
-
-        Parameters
-        ----------
-        config : SensorConfig
-            Configuration settings for the sensor input.
-        """
         super().__init__(config)
-
         self.descriptor_for_LLM = "Universal Laws"
-
         self.io_provider = IOProvider()
         self.POLL_INTERVAL = 5.0  # seconds
-        self.rpc_url = "https://holesky.drpc.org"  # Ethereum RPC URL
-
-        # The smart contract address of the ERC-7777 Governance Smart Contract
+        self.rpc_url = "https://holesky.drpc.org"  # Removed trailing spaces
+        self.w3 = Web3(HTTPProvider(self.rpc_url))
         self.contract_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
 
-        # getRuleSet() Function selector (first 4 bytes of Keccak hash).
-        self.function_selector = "0x1db3d5ff"
+        try:
+            self.contract = self.w3.eth.contract(
+                address=self.w3.to_checksum_address(self.contract_address),
+                abi=self.CONTRACT_ABI,
+            )
+        except Exception as e:
+            logging.error(f"Failed to initialize Web3 contract object: {e}")
+            raise
 
-        # The current rule set can be obtained from
-        # getLatestRuleSetVersion(0x254e2f1e)
-        # It's currently = 2
-        self.function_argument = "0000000000000000000000000000000000000000000000000000000000000002"  # Argument
+        self.rule_set_version = 2
         self.universal_rule: Optional[str] = None
         self.messages: list[Message] = []
-
         logging.info(
-            "GovernanceEthereum initialized, rules will be loaded on first poll"
+            f"GovernanceEthereum initialized for contract {self.contract_address}, "
+            f"rules (version {self.rule_set_version}) will be loaded on first poll"
         )
 
-    async def _poll(self) -> Optional[str]:
-        """
-        Poll for Ethereum Governance Law Changes.
-
-        Returns
-        -------
-        Optional[str]
-            Latest governance rules as a string, or None on error
-        """
-        await asyncio.sleep(self.POLL_INTERVAL)
+    async def load_rules_from_blockchain(self) -> Optional[str]:
+        """Load governance rules from the Ethereum blockchain using web3.py."""
+        logging.info("Loading rules from Ethereum blockchain via web3.py")
 
         try:
+            raw_result: str = self.contract.functions.getRuleSet(
+                self.rule_set_estimator()
+            ).call()
+            logging.debug("Raw blockchain response (via web3): %s", raw_result)
+
+            if raw_result is None:
+                logging.warning("Contract function returned None.")
+                return None
+
+            # Clean non-printable characters
+            cleaned_string = "".join(ch for ch in raw_result if ch.isprintable())
+            logging.debug("Cleaned blockchain data: %s", cleaned_string)
+            return cleaned_string
+
+        except BadFunctionCallOutput as e:
+            logging.error(
+                "Blockchain function call failed (BadFunctionCallOutput): %s", e
+            )
+        except ContractLogicError as e:
+            logging.error("Smart contract logic error during call: %s", e)
+        except Exception as e:
+            logging.error(
+                "General error calling blockchain function via web3.py: %s", e
+            )
+
+        logging.error("Failed to load or decode rules from blockchain.")
+        return None
+
+    def rule_set_estimator(self) -> int:
+        """Estimates the rule set version to fetch."""
+        return self.rule_set_version
+
+    async def _poll(self) -> Optional[str]:
+        """Poll for Ethereum Governance Law Changes."""
+        await asyncio.sleep(self.POLL_INTERVAL)
+        try:
             rules = await self.load_rules_from_blockchain()
-            logging.debug(f"7777 rules: {rules}")
+            logging.debug("7777 rules: %s", rules)
             return rules
         except Exception as e:
-            logging.error(f"Error fetching blockchain data: {e}")
+            logging.error("Error fetching blockchain data: %s", e)
             return None
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
-        """
-        Convert self.universal_rule to a human-readable Message.
-
-        Parameters
-        ----------
-        raw_input : Optional[str]
-            Raw input string to be processed
-
-        Returns
-        -------
-        Optional[Message]
-            Timestamped status or transaction notification
-        """
+        """Convert raw input to a human-readable Message."""
         if raw_input is None:
             return None
-
         return Message(timestamp=time.time(), message=raw_input)
 
     async def raw_to_text(self, raw_input: Optional[str]):
-        """
-        Process governance rule message buffer.
-
-        Parameters
-        ----------
-        raw_input : Optional[str]
-            Raw input string to be processed
-        """
+        """Process governance rule message buffer."""
         pending_message = await self._raw_to_text(raw_input)
 
         if pending_message is not None:
             if len(self.messages) == 0:
                 self.messages.append(pending_message)
-            # only update if there has been a change
             elif self.messages[-1].message != pending_message.message:
                 self.messages.append(pending_message)
 
     def formatted_latest_buffer(self) -> Optional[str]:
-        """
-        Format and clear the latest buffer contents.
-
-        Returns
-        -------
-        Optional[str]
-            Formatted string of buffer contents or None if buffer is empty
-        """
+        """Format and return the latest buffer contents."""
         if len(self.messages) == 0:
             return None
 
         latest_message = self.messages[-1]
-
         result = f"""
 INPUT: {self.descriptor_for_LLM}
 // START
@@ -236,6 +130,4 @@ INPUT: {self.descriptor_for_LLM}
         self.io_provider.add_input(
             self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
-        # no need to blank because we are only saving rare law changes
-        # self.messages = []
         return result
