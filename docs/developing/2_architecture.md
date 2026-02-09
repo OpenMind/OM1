@@ -26,7 +26,7 @@ These models convert raw sensor data into meaningful descriptions:
 
 - VLM (Vision Language Model): Converts visual data to natural language descriptions (e.g., human activities, object interactions).
 - ASR (Automatic Speech Recognition): Converts audio data into text.
-- Platform State: Describes internal system status (e.g battery percentage, odometry readings).
+- Platform State: Describes internal system status (e.g. battery percentage, odometry readings).
 - Spatial/NAV: Processes location and navigation data.
 - 3D environments: Interprets 3D environmental data from sensors like LIDAR.
 
@@ -56,7 +56,7 @@ Example fuser output:
 
 ### Multi AI Planning/Decision Layer
 
-Uses fused data to make decisions through one or more AI models. A typical multi-agent endpoint wraps three of more LLMs:
+Uses fused data to make decisions through one or more AI models. A typical multi-agent endpoint wraps three or more LLMs:
 
 - Fast Action LLM (Local or Cloud): A small LLM that quickly processes immediate or time-critical actions without significant latency. Expected token response time - 300 ms.
 - Cognition ("Core") LLM (Cloud): Cloud-based LLM for complex reasoning, long-term planning, and high-level cognitive tasks, leveraging more computational resources. Expected token response time - 2 s.

@@ -36,7 +36,7 @@ sudo apt-get update
 # browser
 sudo apt install chromium-browser
 
-# gihub desktop
+# github desktop
 
 # directly download from github. Use the most recent release for arm64, such as
 # https://github.com/shiftkey/desktop/releases/download/release-3.4.13-linux1/GitHubDesktop-linux-arm64-3.4.13-linux1.deb
@@ -49,7 +49,7 @@ sudo apt-get update
 sudo apt-get install sublime-text
 
 # camera device info
-v4ls-ctl --listdevices
+v4l2-ctl --listdevices
 
 # to test cameras
 sudo apt install guvcview # FYI the cheese webcam app is broken on Thor
