@@ -29,7 +29,7 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         self.descriptor_for_LLM = "Universal Laws"
         self.io_provider = IOProvider()
         self.POLL_INTERVAL = 5.0  # seconds
-        self.rpc_url = "https://holesky.drpc.org"  # Removed trailing spaces
+        self.rpc_url = "https://holesky.drpc.org"
         self.w3 = Web3(HTTPProvider(self.rpc_url))
         self.contract_address = "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
 
@@ -64,8 +64,10 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
                 logging.warning("Contract function returned None.")
                 return None
 
-            # Clean non-printable characters
-            cleaned_string = "".join(ch for ch in raw_result if ch.isprintable())
+            # Clean non-printable characters but preserve newlines and tabs
+            cleaned_string = "".join(
+                ch for ch in raw_result if ch.isprintable() or ch in ["\n", "\r", "\t"]
+            )
             logging.debug("Cleaned blockchain data: %s", cleaned_string)
             return cleaned_string
 
