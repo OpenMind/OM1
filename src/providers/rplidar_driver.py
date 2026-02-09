@@ -400,21 +400,21 @@ class RPDriver(object):
 
         Parameters
         ----------
+        scan_type : str
+            Type of scan to perform ('normal' or 'express'). Defaults to 'normal'.
         max_buf_meas : int or False if you want unlimited buffer
             Maximum number of bytes to be stored inside the buffer. Once
             number exceeds this limit buffer will be emptied out.
 
         Yields
         ------
-        new_scan : bool
-            True if measurement belongs to a new scan
-        quality : int
-            Reflected laser pulse strength
-        angle : float
-            The measurement heading angle in degree units [0, 360)
-        distance : float
-            Measured object distance related to the sensor's rotation center.
-            In millimeters. Set to 0 when measure is invalid.
+        tuple
+            A tuple containing (new_scan, quality, angle, distance):
+            - new_scan (bool): True if measurement belongs to a new scan
+            - quality (int): Reflected laser pulse strength
+            - angle (float): The measurement heading angle in degree units [0, 360)
+            - distance (float): Measured object distance related to the sensor's
+              rotation center in millimeters. Set to 0 when measure is invalid.
         """
         self.start_motor()
         if not self.scanning[0]:
@@ -501,6 +501,8 @@ class RPDriver(object):
 
         Parameters
         ----------
+        scan_type : str
+            Type of scan to perform ('normal' or 'express'). Defaults to 'normal'.
         max_buf_meas : int
             Maximum number of measures to be stored inside the buffer. Once
             number exceeds this limit buffer will be cleared.
@@ -509,7 +511,7 @@ class RPDriver(object):
 
         Yields
         ------
-        scan : list
+        list
             List of the measurements. Each measurement is a tuple with following
             format: (quality, angle, distance). For values description please
             refer to `iter_measures` method's documentation.
@@ -533,22 +535,26 @@ class RPDriver(object):
 
         Parameters
         ----------
+        scan_type : str
+            Type of scan to perform ('normal' or 'express'). Defaults to 'normal'.
         max_buf_meas : int
             Maximum number of measures to be stored inside the buffer. Once
             number exceeds this limit buffer will be cleared.
         min_len : int
             Minimum number of measures in the scan for it to be returned.
+        max_distance_mm : int
+            Maximum distance in millimeters. Points beyond this distance are filtered out.
 
         Yields
         ------
-        scan : list
+        list
             List of the measurements. Each measurement is a tuple with following
             format: (angle, distance). For values description please
             refer to `iter_measures` method's documentation.
         """
         scan_list = []
         iterator = self.iter_measures(scan_type, max_buf_meas)
-        for new_scan, quality, angle, distance in iterator:
+        for new_scan, _quality, angle, distance in iterator:
             if new_scan:
                 if len(scan_list) > min_len:
                     yield scan_list

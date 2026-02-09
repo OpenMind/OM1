@@ -1,5 +1,6 @@
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
@@ -10,13 +11,68 @@ class UbTtsProvider:
     """
 
     def __init__(self, url: str):
+        """
+        Initialize the Ubtech TTS Provider.
+
+        Parameters
+        ----------
+        url : str
+            The URL of the Ubtech TTS service.
+        """
         self.tts_url = url
+        self.executor = ThreadPoolExecutor(max_workers=1)
         self.headers = {"Content-Type": "application/json"}
+
         logging.info(f"Ubtech TTS Provider initialized for URL: {self.tts_url}")
 
-    def speak(self, tts: str, interrupt: bool = True, timestamp: int = 0) -> bool:
-        """Sends a request to the TTS service. Returns True on success."""
-        payload = {"tts": tts, "interrupt": interrupt, "timestamp": timestamp}
+    def start(self):
+        """Placeholder start method for compatibility."""
+        logging.info("Ubtech TTS Provider started.")
+
+    def adding_pending_message(
+        self, message: str, interrupt: bool = True, timestamp: int = 0
+    ):
+        """
+        Add a pending TTS message to be processed asynchronously.
+
+        Parameters
+        ----------
+        message : str
+            The text message to be converted to speech.
+        interrupt : bool
+            Whether to interrupt current TTS playback.
+        timestamp : int
+            A timestamp to identify the TTS request.
+        """
+        self.executor.submit(self._speak_workder, message, interrupt, timestamp)
+
+    def stop(self):
+        """
+        Stop the TeleopsStatusProvider and clean up resources.
+        """
+        self.executor.shutdown(wait=True)
+
+    def _speak_workder(
+        self, message: str, interrupt: bool = True, timestamp: int = 0
+    ) -> bool:
+        """
+        Worker function to send TTS command to Ubtech TTS service.
+
+        Parameters
+        ----------
+        message : str
+            The text to be converted to speech.
+        interrupt : bool
+            Whether to interrupt current TTS playback.
+        timestamp : int
+            A timestamp to identify the TTS request.
+
+        Returns
+        -------
+        bool
+            True if the TTS command was successfully sent, False otherwise.
+        """
+        payload = {"tts": message, "interrupt": interrupt, "timestamp": timestamp}
         try:
             response = requests.put(
                 url=self.tts_url,

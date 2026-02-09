@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -88,3 +89,30 @@ def test_handle_config_request(mock_zenoh):
     call_args = mock_session_instance.declare_subscriber.call_args
     assert call_args[0][0] == "om/config/request"
     assert callable(call_args[0][1])
+
+
+def test_set_config_uses_unique_temp_file(mock_zenoh, tmp_path):
+    """Test that _handle_set_config uses unique temp file names to prevent race condition."""
+    provider = ConfigProvider()
+    provider.config_path = str(tmp_path / ".runtime.json5")
+
+    temp_paths_used = []
+    original_rename = os.rename
+
+    def track_rename(src, dst):
+        temp_paths_used.append(src)
+        return original_rename(src, dst)
+
+    with patch("os.rename", side_effect=track_rename):
+        with patch.object(provider, "_send_config_response"):
+            from zenoh_msgs import String
+
+            provider._handle_set_config(String("req1"), '{"key": "value1"}')
+            provider._handle_set_config(String("req2"), '{"key": "value2"}')
+
+    assert len(temp_paths_used) == 2
+    assert (
+        temp_paths_used[0] != temp_paths_used[1]
+    ), "Temp files should have unique names"
+    assert ".tmp." in temp_paths_used[0], "Temp file should contain .tmp. prefix"
+    assert ".tmp." in temp_paths_used[1], "Temp file should contain .tmp. prefix"
