@@ -66,6 +66,8 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
         self.base_url = "https://devices-api.dimo.zone/v1/vehicle"
 
         self.previous_output = None
+        self.dev_jwt = None
+        self.dimo = None
 
         self.token_id = self.io_provider.get_dynamic_variable("token_id")
         self.vehicle_jwt = self.io_provider.get_dynamic_variable("vehicle_jwt")
