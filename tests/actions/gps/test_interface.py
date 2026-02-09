@@ -1,5 +1,3 @@
-"""Tests for the GPS action interface."""
-
 from actions.gps.interface import GPS, GPSAction, GPSInput
 
 
