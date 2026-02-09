@@ -9,7 +9,7 @@ The `Frenchie` quadruped has support for a Coinbase wallet. The dog's Sepolia Ba
 https://sepolia.basescan.org/address/0xbB568962CF24d4CeBBf5d48308aCdAE873B93202
 ```
 
-To send Sepolia Base ETH to `Frenchie`, you can set up a Coinbase wallet on your phone or on [Google Chrome](https://chromewebstore.google.com/detail/coinbase-wallet-extension/hnfanknocfeofbddgcijnmhnfnkdnaad?pli=1). Then request Sepolia Base ETH from a friend or the [Coinbase developer faucet](https://docs.base.org/docs/tools/network-faucets/). Finally, send some Sepolia Base ETH to `Fenchie`, and see what she does!
+To send Sepolia Base ETH to `Frenchie`, you can set up a Coinbase wallet on your phone or on [Google Chrome](https://chromewebstore.google.com/detail/coinbase-wallet-extension/hnfanknocfeofbddgcijnmhnfnkdnaad?pli=1). Then request Sepolia Base ETH from a friend or the [Coinbase developer faucet](https://docs.base.org/docs/tools/network-faucets/). Finally, send some Sepolia Base ETH to `Frenchie`, and see what she does!
 
 ## How it works
 
