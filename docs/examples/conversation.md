@@ -7,7 +7,7 @@ This section provides various examples for integrating and using multiple cloud-
 
 ## Voice to Text Processing with OpenAI
 
-This example uses your `default` audio in (microphone) and your `default` audio output (speaker). Please test both your microphone and speaker in your system settings to make sure they are connected and working. On a Mac, the system may request permission to on your audio - Allow permissions.
+This example uses your `default` audio in (microphone) and your `default` audio output (speaker). Please test both your microphone and speaker in your system settings to make sure they are connected and working. On a Mac, the system may request permission to access your audio - Allow permissions.
 
 ```bash
 uv run src/run.py conversation

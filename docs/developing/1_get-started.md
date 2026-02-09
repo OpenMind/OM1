@@ -79,7 +79,7 @@ OM1 provides a command-line interface (CLI). The main entry point is `src/run.py
 - `start`: Start an agent with a specified config
 
 ```bash
-python src/run.py start [config_name] [--log-level] [--log-to-file]
+uv run src/run.py start [config_name] [--log-level] [--log-to-file]
 ```
 
 - `config_name`: Name of the config file (without `.json5` extension) in the `/config` directory.
