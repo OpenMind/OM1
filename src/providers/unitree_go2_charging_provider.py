@@ -3,7 +3,7 @@ from typing import Callable, Optional
 
 import zenoh
 
-from zenoh_msgs.idl.status_msgs import ChargingStatus
+from zenoh_msgs import ChargingStatus
 
 from .singleton import singleton
 from .zenoh_listener_provider import ZenohListenerProvider
@@ -16,7 +16,7 @@ class UnitreeGo2ChargingProvider(ZenohListenerProvider):
     Subscribes to /go2/charging_status and exposes latest status.
     """
 
-    def __init__(self, topic: str = "go2/charging_status"):
+    def __init__(self, topic: str = "om/go2/charging_status"):
         """
         Initialize the Charging Provider with a specific topic.
 

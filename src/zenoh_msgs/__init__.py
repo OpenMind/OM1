@@ -14,6 +14,7 @@ from .idl import (
     BatteryState,
     CameraInfo,
     CameraStatus,
+    ChargingStatus,
     ColorRGBA,
     ConfigRequest,
     ConfigResponse,
@@ -89,6 +90,7 @@ __all__ = [
     "ModeStatusResponse",
     "TTSStatusRequest",
     "TTSStatusResponse",
+    "ChargingStatus",
     "PersonGreetingStatus",
     # geographic_msgs
     "GeoPoint",
