@@ -21,8 +21,8 @@ jobs:
       - run: echo "Schema upload job skipped (forks typically lack AWS secrets)."
 
   generate-and-upload:
-    # Forks typically don't have the AWS upload secrets; skip cleanly when missing.
-    if: ${{ secrets.AWS_ROLE != '' && secrets.S3_BUCKET != '' && secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+    # Forks don't have the AWS upload secrets; only run this job on the upstream repo.
+    if: ${{ github.repository_owner == 'OpenMind' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
