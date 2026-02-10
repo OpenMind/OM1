@@ -54,7 +54,9 @@ Enter the URID in the "URID" field in the `/config/turtlebot4.json5` file. You c
 URID=OM742d35Cc6634 # yours will be different!
 ```
 
-Note: for testing you can use any short string as the URID, as long as it's unique for each robot within a team of robots within the same local network.
+{% hint style="info" %}
+**Note:** for testing you can use any short string as the URID, as long as it's unique for each robot within a team of robots within
+{% endhint %}
 
 ## Configure the TurtleBot4
 

@@ -1,6 +1,6 @@
 ---
 title: Isaac Sim
-description: "Quadruped Simulation and Control"
+description: "Simulation and Control with OM1"
 icon: robot
 ---
 
@@ -41,15 +41,16 @@ cmake --build . --target install
 ```
 
 To install ROS2 Humble, go to this [link](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html). Follow the steps under Setup Sources.
+
 Now, run
 
 ```bash
 sudo apt update
 sudo apt upgrade
-sudo apt install ros-humble-desktop-full
+sudo apt install ros-humble-desktop
 ```
 
-This will install ROS, RViz, Gazebo and all the relevant packages.
+This will install ROS and all the relevant packages.
 
 To install compilers and other tools to build ROS packages, run
 
@@ -77,6 +78,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Use this **CycloneDDS** configuration. It uses `lo` as the network interface. We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
+
 To add it to `cyclonedds.xml`:
 
 ```bash
@@ -190,7 +192,7 @@ Step 3: Build all the packages:
     colcon build
     ```
 
-Step 4: Open a terminal and run the following commands.
+Step 4: Install Isaac Sim
 
     ```bash
     uv venv --python 3.11 --seed env_isaacsim
@@ -208,9 +210,13 @@ Step 4: Open a terminal and run the following commands.
     isaacsim
     ```
 
-    Now, let's get our system ready to run OM1 with Isaac Sim.
+    If the previous command ran with no issues, Isaac Sim was installed successfully.
 
-    To run the script, simply do (note: a trained policy is required, which should contain the policy.pt, env.yaml, and deploy.yaml files)
+Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a terminal and run the following commands.
+
+    To run the script, export the following
+
+    > **Note**: a trained policy is required, which should contain the policy.pt, env.yaml, and deploy.yaml files
 
     ```bash
     export ROS_DISTRO=humble
@@ -288,4 +294,4 @@ When keyboard control is enabled (default), use the following keys:
 | `N` or `Numpad 7` | Rotate left |
 | `M` or `Numpad 9` | Rotate right |
 
-Note: We don't have auto charging feature supported with Issac Sim but it will be launched soon. Stay tuned!
+> **Note**: We don't have auto charging feature supported with Issac Sim but it will be launched soon. Stay tuned!

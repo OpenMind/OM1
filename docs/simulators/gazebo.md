@@ -260,4 +260,4 @@ Step 10: Teleoperate the robot in simulation
     U/O/M/> - Move diagonally
     ```
 
-Note: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
+> **Note**: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!

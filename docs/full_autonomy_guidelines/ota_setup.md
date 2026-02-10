@@ -69,7 +69,9 @@ vim ota_updater.yml
 
 Copy the content from the [ota_updater.yml template](https://github.com/OpenMind/OM1-deployment/blob/main/latest/ota_updater.yml) to `ota_updater.yml` file.
 
-> **Note:** You can use the stable version as well. The file example provided is the latest version.
+{% hint style="info" %}
+**Note:** You can use the stable version as well. The file example provided is the latest version.
+{% endhint %}
 
 Save and close the file (`:wq` in vim).
 
@@ -92,7 +94,9 @@ vim ota_agent.yml
 
 Copy the content from the [ota_agent.yml template](https://github.com/OpenMind/OM1-deployment/blob/main/latest/ota_agent.yml) to `ota_agent.yml` file.
 
-> **Note:** You can use the stable version as well. The file example provided is the latest version.
+{% hint style="info" %}
+**Note:** You can use the stable version as well. The file example provided is the latest version.
+{% endhint %}
 
 Save and close the file.
 
@@ -162,7 +166,9 @@ sudo bash riva_init.sh
 
 This will ask the NGC api key to download the model, use `<YOUR_API_KEY>`. It will take a while to download.
 
-> **Note:** The following command is for testing.
+{% hint style="info" %}
+**Note:** The following command is for testing.
+{% endhint %}
 
 Run Riva locally:
 
@@ -192,7 +198,10 @@ docker pull openmindagi/riva-speech-server:2.24.0-l4t-aarch64
 
 The dockerfile can be found [here](https://github.com/OpenMind/OM1-deployment/blob/main/docker/riva/Dockerfile) and the docker-compose file can be found [here](https://github.com/OpenMind/OM1-deployment/blob/main/docker-compose/riva-compose.yml).
 
-> **Note:** Once you download the models from NGC and export the environment variables, you can use OpenMind Portal to download Riva dockerfile and run Riva services.
+{% hint style="info" %}
+**Note:** Once you download the models from NGC and export the environment variables, you can use OpenMind Portal to download Riva dockerfile and run Riva services.
+
+
 
 ### Test Riva Services
 
