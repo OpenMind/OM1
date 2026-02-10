@@ -216,7 +216,7 @@ Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a termin
 
     To run the script, export the following
 
-    > **Note**: a trained policy is required, which should contain the policy.pt, env.yaml, and deploy.yaml files
+> **Note**: a trained policy is required, which should contain the policy.pt, env.yaml, and deploy.yaml files
 
     ```bash
     export ROS_DISTRO=humble
@@ -233,9 +233,9 @@ Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a termin
 
     You'll now be able to see Isaac Sim running on your system.
 
-    [ ](../assets/isaac-sim.png)
+[ ](../assets/isaac-sim.png)
 
-Step 5: Open a new terminal and run:
+Step 6: Open a new terminal and run:
 
     ```bash
     source install/setup.bash
@@ -244,7 +244,7 @@ Step 5: Open a new terminal and run:
 
     This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
-Step 6: Open a new terminal and run:
+Step 7: Open a new terminal and run:
 
     ```bash
     source install/setup.bash
@@ -253,7 +253,7 @@ Step 6: Open a new terminal and run:
 
     This will bring up the `orchestrator`, to consume data collected by `om1_sensor` doe SLAM and Navigation.
 
-Step 7: Run Zenoh Ros2 Bridge
+Step 8: Run Zenoh Ros2 Bridge
 
     To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
 
@@ -263,7 +263,7 @@ Step 7: Run Zenoh Ros2 Bridge
     zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
     ```
 
-Step 8: Start OM1
+Step 9: Start OM1
 
     Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
@@ -273,10 +273,20 @@ Step 8: Start OM1
     uv pip install -r pyproject.toml --extra dds
     ```
 
-    Setup your API key and run your simulation agent:
+    Setup your API key in `.bashrc` file and run your simulation agent:
+
+    Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
 
     ```bash
-    uv run src/run.py gazebo_sim
+    vi ~/.bashrc
+    ```
+
+    ```bash
+    export OM_API_KEY="<your_api_key>"
+    ```
+
+    ```bash
+    uv run src/run.py simulation
     ```
 
 Congratulations! You have launched Isaac Sim with OM1 successfully.

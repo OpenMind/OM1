@@ -202,7 +202,16 @@ Step 5: Open a new terminal and run:
 
     This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
-Step 6: Run Zenoh Ros2 Bridge
+Step 6: Open a new terminal and run:
+
+    ```bash
+    source install/setup.bash
+    ros2 launch orchestrator orchestrator.py use_sim:=true
+    ```
+
+    This will bring up the `orchestrator`, to consume data collected by `om1_sensor` doe SLAM and Navigation.
+
+Step 7: Run Zenoh Ros2 Bridge
 
     To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
 
@@ -212,36 +221,33 @@ Step 6: Run Zenoh Ros2 Bridge
     zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
     ```
 
-Step 7: Start SLAM mode
+Step 8: Start OM1
 
-    Open a new terminal and run the following to start the SLAM mode for the robot to start mapping the area. Our Gazebo setup includes auto mapping feature, this will let the robot to generate a 2D map for the area which can then be utilised at later stage to make the robot move from point A to point B.
+    Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_sdk slam_launch.py use_sim:=true
-    ```
-
-Step 8: Save the map
-
-    After the SLAM mode is complete, you can save the map by using the following command. Replace `<my_map>` with the name you prefer for saving the map.
+    Then add the optional Python CycloneDDS module to OM1, run
 
     ```bash
-    source install/setup.bash
-    ros2 run nav2_map_server map_saver_cli -f my_map
+    uv pip install -r pyproject.toml --extra dds
     ```
 
-Step 9: Navigate the robot across the map
+    Setup your API key in `.bashrc` file and run your simulation agent:
 
-    Once you successfully save the map, you can run the following command in a new terminal to enable navigation. After running the command, simply head over to RViz window and press **2D goal pose**. Now click at any new location on the map to make the robot start navigating towards it.
-
-    Make sure the map name is same as the one you set up in the previous step.
+    Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
 
     ```bash
-    source install/setup.bash
-    ros2 launch go2_sdk nav2_launch.py use_sim:=true map_yaml_file:=my_map.yaml
+    vi ~/.bashrc
     ```
 
-Step 10: Teleoperate the robot in simulation
+    ```bash
+    export OM_API_KEY="<your_api_key>"
+    ```
+
+    ```bash
+    uv run src/run.py simulation
+    ```
+
+Step 9: Teleoperate the robot in simulation
 
     You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
 
