@@ -224,6 +224,8 @@ Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a termin
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaaclab/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
     ```
 
+> **Note:** Make sure to replace PATH_TO_VENV with the actual path to your virtual environment
+
     We support Isaac Sim for Unitree Go2 and G1. To run the simulation for Go2, run
 
     ```bash
