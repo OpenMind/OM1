@@ -24,14 +24,24 @@ icon: book-open
       <td>with OpenMind’s OM1</td>
       <td><a href="assets/favicon.png">favicon.png</a></td>
       <td><a href="developing/0_introduction.md">0_introduction.md</a></td>
-      <td><a href=".gitbook/assets/quick_start_light.png">quick_start_light.png</a></td>
+    </tr>
+    <tr>
+      <td><strong>BrainPack Introduction</strong></td>
+      <td>Our technical APIs</td>
+      <td><a href="assets/brainpack_2.png">favicon.png</a></td>
+      <td><a href="full_autonomy_guidelines/brainpack_introduction.md">introduction.md</a></td>
+    </tr>
+    <tr>
+      <td><strong>Full Autonomy</strong></td>
+      <td>Unitree for G1 and Go2</td>
+      <td><a href="assets/favicon.png">favicon.png</a></td>
+      <td><a href="developing/0_introduction.md">0_introduction.md</a></td>
     </tr>
     <tr>
       <td><strong>OM1 API Reference</strong></td>
       <td>Our technical APIs</td>
       <td><a href="assets/favicon.png">favicon.png</a></td>
       <td><a href="api-reference/introduction.md">introduction.md</a></td>
-      <td><a href=".gitbook/assets/api_light.png">api_light.png</a></td>
     </tr>
   </tbody>
 </table>

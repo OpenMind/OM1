@@ -273,9 +273,9 @@ Step 8: Start OM1
     uv run src/run.py gazebo_sim
     ```
 
-Congratulations! You have launched Isaac Sim with OM1 to run Unitree Go2 autonomously.
+Congratulations! You have launched Isaac Sim with OM1 successfully.
 
-Step 9: Control Methods
+### Control Methods
 
 When keyboard control is enabled (default), use the following keys:
 
@@ -288,5 +288,4 @@ When keyboard control is enabled (default), use the following keys:
 | `N` or `Numpad 7` | Rotate left |
 | `M` or `Numpad 9` | Rotate right |
 
-
-Note: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
+Note: We don't have auto charging feature supported with Issac Sim but it will be launched soon. Stay tuned!
