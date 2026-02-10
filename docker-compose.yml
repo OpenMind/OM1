@@ -21,6 +21,7 @@ services:
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - PULSE_COOKIE=/root/.config/pulse/cookie
       - ALSA_CARD=0
+      - OM1_COMMAND=${OM1_COMMAND:-}
     volumes:
       - ./config:/app/OM1/config
       - ./cyclonedds:/cyclonedds
