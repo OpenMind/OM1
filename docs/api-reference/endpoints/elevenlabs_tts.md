@@ -86,7 +86,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 }
 ```
 
-<Note>The returned audio is base64-encoded. You must decode it before playback or saving to a file.</Note>
+> **Note:** The returned audio is base64-encoded. You must decode it before playback or saving to a file.
 
 ## Usage Examples
 
@@ -261,10 +261,9 @@ echo "SUQzBAAAAAAAI1RTU0UAAAA..." | base64 -d > audio.mp3
 curl ... | jq -r '.response' | base64 -d > audio.mp3
 ```
 
-<Note>
-Note the following best practices when using the ElevenLabs TTS API:
-- Audio responses are base64-encoded and must be decoded before playback
-- The ElevenLabs API key can be configured server-side or provided per-request
-- Default voice and model settings are optimized for English speech
-- Large text inputs may take longer to process
-</Note>
+> **Note:**
+> Note the following best practices when using the ElevenLabs TTS API:
+> - Audio responses are base64-encoded and must be decoded before playback
+> - The ElevenLabs API key can be configured server-side or provided per-request
+> - Default voice and model settings are optimized for English speech
+> - Large text inputs may take longer to process
