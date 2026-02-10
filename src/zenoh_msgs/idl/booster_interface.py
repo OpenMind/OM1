@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from pycdr2 import IdlStruct
-from pycdr2.types import float32, float64, int16, int32
+from pycdr2.types import float32, int16, int32
 
 
 @dataclass
@@ -29,10 +29,10 @@ class RemoteControllerState(IdlStruct, typename="RemoteControllerState"):
     """
 
     event: int32 = 1536
-    lx: float64 = 0.0
-    ly: float64 = 0.0
-    rx: float64 = 0.0
-    ry: float64 = 0.0
+    lx: float32 = 0.0
+    ly: float32 = 0.0
+    rx: float32 = 0.0
+    ry: float32 = 0.0
     a: bool = False
     b: bool = False
     x: bool = False
