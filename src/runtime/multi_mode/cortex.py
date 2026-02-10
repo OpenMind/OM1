@@ -2,7 +2,9 @@ import asyncio
 import logging
 import os
 import time
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Set, Union
+
+import json5
 
 from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
@@ -19,6 +21,21 @@ from runtime.multi_mode.config import (
 )
 from runtime.multi_mode.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+
+# Top-level fields that can be updated in-place without restarting.
+HOT_RELOAD_SAFE_FIELDS: Set[str] = {
+    "system_governance",
+    "system_prompt_examples",
+}
+
+# Per-mode fields that can be updated in-place.
+HOT_RELOAD_SAFE_MODE_FIELDS: Set[str] = {
+    "system_prompt_base",
+    "system_prompt_examples",
+    "hertz",
+    "description",
+    "display_name",
+}
 
 
 class ModeCortexRuntime:
@@ -75,10 +92,13 @@ class ModeCortexRuntime:
         self.config_watcher_task: Optional[asyncio.Task] = None
         self.last_modified: Optional[float] = None
 
+        self._last_raw_config: Optional[dict] = None
+
         # Initialize hot-reload if enabled
         if self.hot_reload:
             self.config_path = self.mode_manager._get_runtime_config_path()
             self.last_modified = self._get_file_mtime()
+            self._last_raw_config = self._read_raw_config()
             logging.info(
                 f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
             )
@@ -620,10 +640,118 @@ class ModeCortexRuntime:
             return os.path.getmtime(self.config_path)
         return 0.0
 
+    def _read_raw_config(self) -> Optional[dict]:
+        """Read the raw JSON5 config from disk without instantiating components."""
+        try:
+            with open(self.config_path, "r") as f:
+                return json5.load(f)
+        except Exception:
+            logging.exception("Failed to read raw config file")
+            return None
+
+    @staticmethod
+    def _detect_changed_fields(
+        old_config: dict, new_config: dict
+    ) -> Dict[str, Set[str]]:
+        """Compare two raw mode-system config dicts and categorize changes.
+
+        Returns
+        -------
+        dict
+            ``{"safe": set_of_field_paths, "unsafe": set_of_field_paths}``
+            Mode-specific fields use dot notation: ``modes.<name>.<field>``
+        """
+        changed_safe: Set[str] = set()
+        changed_unsafe: Set[str] = set()
+
+        # Compare top-level fields (excluding modes and transition_rules)
+        all_keys = set(old_config.keys()) | set(new_config.keys())
+        for key in all_keys:
+            if key in ("modes", "transition_rules"):
+                continue
+            if old_config.get(key) != new_config.get(key):
+                if key in HOT_RELOAD_SAFE_FIELDS:
+                    changed_safe.add(key)
+                else:
+                    changed_unsafe.add(key)
+
+        # Transition rules changed → full reload
+        if old_config.get("transition_rules") != new_config.get("transition_rules"):
+            changed_unsafe.add("transition_rules")
+
+        # Compare modes
+        old_modes = old_config.get("modes", {})
+        new_modes = new_config.get("modes", {})
+
+        if set(old_modes.keys()) != set(new_modes.keys()):
+            # Modes added or removed → full reload
+            changed_unsafe.add("modes")
+        else:
+            for mode_name in old_modes:
+                old_mode = old_modes[mode_name]
+                new_mode = new_modes[mode_name]
+                mode_keys = set(old_mode.keys()) | set(new_mode.keys())
+                for key in mode_keys:
+                    if old_mode.get(key) != new_mode.get(key):
+                        field_path = f"modes.{mode_name}.{key}"
+                        if key in HOT_RELOAD_SAFE_MODE_FIELDS:
+                            changed_safe.add(field_path)
+                        else:
+                            changed_unsafe.add(field_path)
+
+        return {"safe": changed_safe, "unsafe": changed_unsafe}
+
+    async def _apply_safe_reload(
+        self, new_raw_config: dict, changed_fields: Set[str]
+    ) -> None:
+        """Update safe fields in-place on the live config objects."""
+        current_mode_name = self.mode_manager.current_mode_name
+
+        for field_path in changed_fields:
+            if field_path.startswith("modes."):
+                parts = field_path.split(".")
+                mode_name, field_name = parts[1], parts[2]
+                new_value = new_raw_config["modes"][mode_name].get(field_name)
+
+                if field_name == "hertz":
+                    if (
+                        not isinstance(new_value, (int, float))
+                        or new_value <= 0
+                    ):
+                        logging.warning(
+                            f"Ignoring invalid hertz value for mode "
+                            f"'{mode_name}': {new_value}"
+                        )
+                        continue
+
+                # Update the ModeConfig
+                mode_cfg = self.mode_config.modes.get(mode_name)
+                if mode_cfg and hasattr(mode_cfg, field_name):
+                    setattr(mode_cfg, field_name, new_value)
+
+                # If it's the active mode, also patch the live RuntimeConfig
+                if mode_name == current_mode_name and self.current_config:
+                    if hasattr(self.current_config, field_name):
+                        setattr(self.current_config, field_name, new_value)
+
+                logging.info(
+                    f"Hot-reloaded '{field_path}' in-place"
+                )
+            else:
+                # Top-level field (e.g. system_governance)
+                new_value = new_raw_config.get(field_path)
+
+                if hasattr(self.mode_config, field_path):
+                    setattr(self.mode_config, field_path, new_value)
+
+                # Also update the live RuntimeConfig if applicable
+                if self.current_config and hasattr(self.current_config, field_path):
+                    setattr(self.current_config, field_path, new_value)
+
+                logging.info(f"Hot-reloaded '{field_path}' in-place")
+
     async def _check_config_changes(self) -> None:
-        """
-        Periodically check for config file changes and reload if necessary.
-        """
+        """Periodically check for config file changes and selectively reload."""
         while True:
             try:
                 await asyncio.sleep(self.check_interval)
@@ -635,9 +763,47 @@ class ModeCortexRuntime:
 
                 if self.last_modified and current_mtime > self.last_modified:
                     logging.info(
-                        f"Runtime config file changed, reloading: {self.config_path}"
+                        f"Config file changed, analyzing: {self.config_path}"
                     )
-                    await self._reload_config()
+
+                    new_raw = self._read_raw_config()
+                    if new_raw is None:
+                        logging.error(
+                            "Failed to read updated config, skipping reload"
+                        )
+                        self.last_modified = current_mtime
+                        continue
+
+                    if self._last_raw_config is not None:
+                        changes = self._detect_changed_fields(
+                            self._last_raw_config, new_raw
+                        )
+
+                        if not changes["safe"] and not changes["unsafe"]:
+                            logging.info(
+                                "Config file touched but no field changes detected"
+                            )
+                        elif changes["unsafe"]:
+                            logging.info(
+                                f"Structural field changes detected: "
+                                f"{changes['unsafe']}. Performing full reload."
+                            )
+                            await self._full_reload()
+                        else:
+                            logging.info(
+                                f"Safe field changes detected: "
+                                f"{changes['safe']}. Applying in-place update."
+                            )
+                            await self._apply_safe_reload(
+                                new_raw, changes["safe"]
+                            )
+                    else:
+                        logging.info(
+                            "No previous config snapshot, performing full reload"
+                        )
+                        await self._full_reload()
+
+                    self._last_raw_config = new_raw
                     self.last_modified = current_mtime
 
             except asyncio.CancelledError:
@@ -645,18 +811,13 @@ class ModeCortexRuntime:
                 break
             except Exception as e:
                 logging.error(f"Error checking config changes: {e}")
-                await asyncio.sleep(10)  # Wait before retrying
+                await asyncio.sleep(10)
 
-    async def _reload_config(self) -> None:
-        """
-        Reload the mode configuration when runtime config file changes.
-
-        The runtime config file serves as a trigger - when it changes, we reload
-        from the original configuration source and then regenerate the runtime config.
-        """
+    async def _full_reload(self) -> None:
+        """Full reload: stop orchestrators, reload config, restart everything."""
         try:
             logging.info(
-                f"Runtime config file changed, triggering reload: {self.config_path}"
+                f"Full reload triggered: {self.config_path}"
             )
 
             self._is_reloading = True
@@ -676,7 +837,8 @@ class ModeCortexRuntime:
 
             if current_mode not in new_mode_config.modes:
                 logging.warning(
-                    f"Current mode '{current_mode}' not found in reloaded config, switching to default mode '{new_mode_config.default_mode}'"
+                    f"Current mode '{current_mode}' not found in reloaded config, "
+                    f"switching to default mode '{new_mode_config.default_mode}'"
                 )
                 current_mode = new_mode_config.default_mode
 
@@ -692,7 +854,7 @@ class ModeCortexRuntime:
             await self._start_orchestrators()
 
             logging.info(
-                f"Mode configuration reloaded successfully, active mode: {current_mode}"
+                f"Full reload completed, active mode: {current_mode}"
             )
 
         except Exception as e:

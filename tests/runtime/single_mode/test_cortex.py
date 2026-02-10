@@ -354,8 +354,10 @@ class TestCortexRuntimeHotReload:
             )
             runtime.config_path = temp_config_file
             runtime.last_modified = 1.0
+            runtime._last_raw_config = {"hertz": 1}
+            runtime._read_raw_config = Mock(return_value={"hertz": 1, "agent_inputs": [{"type": "new"}]})
 
-            runtime._reload_config = AsyncMock()
+            runtime._full_reload = AsyncMock()
 
             task = asyncio.create_task(runtime._check_config_changes())
 
@@ -363,7 +365,7 @@ class TestCortexRuntimeHotReload:
                 await asyncio.sleep(0.2)
                 task.cancel()
 
-                runtime._reload_config.assert_called_once()
+                runtime._full_reload.assert_called_once()
             except asyncio.CancelledError:
                 pass
 
@@ -398,7 +400,7 @@ class TestCortexRuntimeHotReload:
             )
             runtime.last_modified = 1234567890.0
 
-            runtime._reload_config = AsyncMock()
+            runtime._full_reload = AsyncMock()
 
             task = asyncio.create_task(runtime._check_config_changes())
 
@@ -406,13 +408,13 @@ class TestCortexRuntimeHotReload:
                 await asyncio.sleep(0.2)
                 task.cancel()
 
-                runtime._reload_config.assert_not_called()
+                runtime._full_reload.assert_not_called()
             except asyncio.CancelledError:
                 pass
 
     @pytest.mark.asyncio
-    async def test_reload_config_success(self, mock_config, mock_dependencies):
-        """Test successful config reload."""
+    async def test_full_reload_success(self, mock_config, mock_dependencies):
+        """Test successful full config reload."""
         with (
             patch(
                 "runtime.single_mode.cortex.Fuser",
@@ -445,7 +447,7 @@ class TestCortexRuntimeHotReload:
             runtime._stop_current_orchestrators = AsyncMock()
             runtime._start_orchestrators = AsyncMock()
 
-            await runtime._reload_config()
+            await runtime._full_reload()
 
             mock_load_config.assert_called_once()
             runtime._stop_current_orchestrators.assert_called_once()
@@ -454,8 +456,8 @@ class TestCortexRuntimeHotReload:
             assert runtime.config == new_mock_config
 
     @pytest.mark.asyncio
-    async def test_reload_config_no_config_name(self, mock_config, mock_dependencies):
-        """Test config reload with no config name."""
+    async def test_full_reload_no_config_name(self, mock_config, mock_dependencies):
+        """Test full reload with no config name."""
         with (
             patch(
                 "runtime.single_mode.cortex.Fuser",
@@ -484,14 +486,14 @@ class TestCortexRuntimeHotReload:
 
             runtime._stop_current_orchestrators = AsyncMock()
 
-            await runtime._reload_config()
+            await runtime._full_reload()
 
             mock_load_config.assert_not_called()
             runtime._stop_current_orchestrators.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_reload_config_failure(self, mock_config, mock_dependencies):
-        """Test config reload failure handling."""
+    async def test_full_reload_failure(self, mock_config, mock_dependencies):
+        """Test full reload failure handling."""
         with (
             patch(
                 "runtime.single_mode.cortex.Fuser",
@@ -522,7 +524,7 @@ class TestCortexRuntimeHotReload:
 
             runtime._stop_current_orchestrators = AsyncMock()
 
-            await runtime._reload_config()
+            await runtime._full_reload()
 
             runtime._stop_current_orchestrators.assert_not_called()
 
@@ -733,3 +735,259 @@ class TestCortexRuntimeHotReload:
 
                 mock_config_watcher.cancel.assert_called_once()
                 mock_gather.assert_called_once()
+
+
+class TestSelectiveHotReload:
+    """Test cases for selective field-based hot reload in CortexRuntime."""
+
+    @pytest.fixture
+    def temp_config_file(self):
+        """Create a temporary config file for testing."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
+            f.write('{"test": "config"}')
+            temp_path = f.name
+        yield temp_path
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+    def test_detect_changed_fields_safe_only(self):
+        """Only safe fields changed → all in 'safe' set."""
+        old = {"hertz": 1, "system_prompt_base": "old", "agent_inputs": []}
+        new = {"hertz": 2, "system_prompt_base": "new", "agent_inputs": []}
+        result = CortexRuntime._detect_changed_fields(old, new)
+        assert result["safe"] == {"hertz", "system_prompt_base"}
+        assert result["unsafe"] == set()
+
+    def test_detect_changed_fields_unsafe_only(self):
+        """Only unsafe fields changed → all in 'unsafe' set."""
+        old = {"hertz": 1, "agent_inputs": [{"type": "A"}]}
+        new = {"hertz": 1, "agent_inputs": [{"type": "B"}]}
+        result = CortexRuntime._detect_changed_fields(old, new)
+        assert result["safe"] == set()
+        assert result["unsafe"] == {"agent_inputs"}
+
+    def test_detect_changed_fields_mixed(self):
+        """Both safe and unsafe changed → both sets populated."""
+        old = {"hertz": 1, "agent_inputs": [], "system_governance": "old"}
+        new = {"hertz": 2, "agent_inputs": [{"type": "X"}], "system_governance": "new"}
+        result = CortexRuntime._detect_changed_fields(old, new)
+        assert result["safe"] == {"hertz", "system_governance"}
+        assert result["unsafe"] == {"agent_inputs"}
+
+    def test_detect_changed_fields_no_changes(self):
+        """Identical configs → both sets empty."""
+        cfg = {"hertz": 1, "system_prompt_base": "same", "agent_inputs": []}
+        result = CortexRuntime._detect_changed_fields(cfg, cfg.copy())
+        assert result["safe"] == set()
+        assert result["unsafe"] == set()
+
+    def test_detect_changed_fields_new_key_added(self):
+        """A new key appears in the new config."""
+        old = {"hertz": 1}
+        new = {"hertz": 1, "cortex_llm": {"type": "OpenAI"}}
+        result = CortexRuntime._detect_changed_fields(old, new)
+        assert "cortex_llm" in result["unsafe"]
+
+    @pytest.mark.asyncio
+    async def test_apply_safe_reload_prompts(self, mock_config, mock_dependencies):
+        """Safe reload updates prompt fields in-place on RuntimeConfig."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=False)
+            runtime.config.system_prompt_base = "old prompt"
+            runtime.config.system_governance = "old gov"
+
+            new_raw = {
+                "system_prompt_base": "new prompt",
+                "system_governance": "new gov",
+            }
+            await runtime._apply_safe_reload(
+                new_raw, {"system_prompt_base", "system_governance"}
+            )
+
+            assert runtime.config.system_prompt_base == "new prompt"
+            assert runtime.config.system_governance == "new gov"
+
+    @pytest.mark.asyncio
+    async def test_apply_safe_reload_hertz(self, mock_config, mock_dependencies):
+        """Safe reload updates hertz in-place."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=False)
+            runtime.config.hertz = 1.0
+
+            await runtime._apply_safe_reload({"hertz": 5.0}, {"hertz"})
+            assert runtime.config.hertz == 5.0
+
+    @pytest.mark.asyncio
+    async def test_apply_safe_reload_invalid_hertz(self, mock_config, mock_dependencies):
+        """Invalid hertz value is rejected during safe reload."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(mock_config, "test_config", hot_reload=False)
+            runtime.config.hertz = 1.0
+
+            # Zero hertz → rejected
+            await runtime._apply_safe_reload({"hertz": 0}, {"hertz"})
+            assert runtime.config.hertz == 1.0
+
+            # Negative hertz → rejected
+            await runtime._apply_safe_reload({"hertz": -5}, {"hertz"})
+            assert runtime.config.hertz == 1.0
+
+    @pytest.mark.asyncio
+    async def test_check_config_safe_change_skips_full_reload(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """Safe-only field change does NOT trigger _full_reload."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.config_path = temp_config_file
+            runtime.last_modified = 1.0
+            runtime.config.system_prompt_base = "old"
+
+            runtime._last_raw_config = {"system_prompt_base": "old", "hertz": 1}
+            runtime._read_raw_config = Mock(
+                return_value={"system_prompt_base": "new", "hertz": 1}
+            )
+            runtime._full_reload = AsyncMock()
+
+            task = asyncio.create_task(runtime._check_config_changes())
+            try:
+                await asyncio.sleep(0.2)
+                task.cancel()
+                runtime._full_reload.assert_not_called()
+                assert runtime.config.system_prompt_base == "new"
+            except asyncio.CancelledError:
+                pass
+
+    @pytest.mark.asyncio
+    async def test_check_config_no_field_changes_skips_reload(
+        self, mock_config, mock_dependencies, temp_config_file
+    ):
+        """File touched but content identical → no reload at all."""
+        with (
+            patch(
+                "runtime.single_mode.cortex.Fuser",
+                return_value=mock_dependencies["fuser"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.ActionOrchestrator",
+                return_value=mock_dependencies["action_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SimulatorOrchestrator",
+                return_value=mock_dependencies["simulator_orchestrator"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.SleepTickerProvider",
+                return_value=mock_dependencies["sleep_ticker_provider"],
+            ),
+            patch(
+                "runtime.single_mode.cortex.BackgroundOrchestrator",
+                return_value=mock_dependencies["background_orchestrator"],
+            ),
+        ):
+            runtime = CortexRuntime(
+                mock_config, "test_config", hot_reload=True, check_interval=0.1
+            )
+            runtime.config_path = temp_config_file
+            runtime.last_modified = 1.0
+
+            same_config = {"system_prompt_base": "same", "hertz": 1}
+            runtime._last_raw_config = same_config.copy()
+            runtime._read_raw_config = Mock(return_value=same_config.copy())
+            runtime._full_reload = AsyncMock()
+            runtime._apply_safe_reload = AsyncMock()
+
+            task = asyncio.create_task(runtime._check_config_changes())
+            try:
+                await asyncio.sleep(0.2)
+                task.cancel()
+                runtime._full_reload.assert_not_called()
+                runtime._apply_safe_reload.assert_not_called()
+            except asyncio.CancelledError:
+                pass

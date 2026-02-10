@@ -464,7 +464,11 @@ class TestModeCortexRuntimeHotReload:
             runtime.config_path = temp_config_file
             runtime.last_modified = 1.0
 
-            runtime._reload_config = AsyncMock()
+            runtime._last_raw_config = {"default_mode": "default"}
+            runtime._read_raw_config = Mock(
+                return_value={"default_mode": "default", "agent_inputs": [{"type": "new"}]}
+            )
+            runtime._full_reload = AsyncMock()
 
             task = asyncio.create_task(runtime._check_config_changes())
 
@@ -472,7 +476,7 @@ class TestModeCortexRuntimeHotReload:
                 await asyncio.sleep(0.2)
                 task.cancel()
 
-                runtime._reload_config.assert_called_once()
+                runtime._full_reload.assert_called_once()
             except asyncio.CancelledError:
                 pass
 
@@ -498,7 +502,7 @@ class TestModeCortexRuntimeHotReload:
             )
             runtime.last_modified = 1234567890.0
 
-            runtime._reload_config = AsyncMock()
+            runtime._full_reload = AsyncMock()
 
             task = asyncio.create_task(runtime._check_config_changes())
 
@@ -506,7 +510,7 @@ class TestModeCortexRuntimeHotReload:
                 await asyncio.sleep(0.2)
                 task.cancel()
 
-                runtime._reload_config.assert_not_called()
+                runtime._full_reload.assert_not_called()
             except asyncio.CancelledError:
                 pass
 
@@ -531,7 +535,7 @@ class TestModeCortexRuntimeHotReload:
             runtime.config_path = "/nonexistent/file.json5"
             runtime.last_modified = 1.0
 
-            runtime._reload_config = AsyncMock()
+            runtime._full_reload = AsyncMock()
 
             task = asyncio.create_task(runtime._check_config_changes())
 
@@ -539,13 +543,13 @@ class TestModeCortexRuntimeHotReload:
                 await asyncio.sleep(0.2)
                 task.cancel()
 
-                runtime._reload_config.assert_not_called()
+                runtime._full_reload.assert_not_called()
             except asyncio.CancelledError:
                 pass
 
     @pytest.mark.asyncio
-    async def test_reload_config_success(self, mock_system_config):
-        """Test successful config reload."""
+    async def test_full_reload_success(self, mock_system_config):
+        """Test successful full config reload."""
         with (
             patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
             patch("runtime.multi_mode.cortex.IOProvider"),
@@ -577,7 +581,7 @@ class TestModeCortexRuntimeHotReload:
             runtime._start_orchestrators = AsyncMock()
             runtime._run_cortex_loop = AsyncMock()
 
-            await runtime._reload_config()
+            await runtime._full_reload()
 
             mock_load_config.assert_called_once_with(
                 "test_config", mode_source_path="/fake/path/test_config.json5"
@@ -590,8 +594,8 @@ class TestModeCortexRuntimeHotReload:
             assert runtime.mode_manager.config == new_mock_config
 
     @pytest.mark.asyncio
-    async def test_reload_config_mode_not_found(self, mock_system_config):
-        """Test config reload when current mode is not in new config."""
+    async def test_full_reload_mode_not_found(self, mock_system_config):
+        """Test full reload when current mode is not in new config."""
         with (
             patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
             patch("runtime.multi_mode.cortex.IOProvider"),
@@ -623,14 +627,14 @@ class TestModeCortexRuntimeHotReload:
             runtime._start_orchestrators = AsyncMock()
             runtime._run_cortex_loop = AsyncMock()
 
-            await runtime._reload_config()
+            await runtime._full_reload()
 
             runtime._initialize_mode.assert_called_once_with("default_mode")
             assert runtime.mode_manager.state.current_mode == "default_mode"
 
     @pytest.mark.asyncio
-    async def test_reload_config_failure(self, mock_system_config):
-        """Test config reload failure handling."""
+    async def test_full_reload_failure(self, mock_system_config):
+        """Test full reload failure handling."""
         with (
             patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
             patch("runtime.multi_mode.cortex.IOProvider"),
@@ -654,7 +658,7 @@ class TestModeCortexRuntimeHotReload:
 
             runtime._stop_current_orchestrators = AsyncMock()
 
-            await runtime._reload_config()
+            await runtime._full_reload()
 
             runtime._stop_current_orchestrators.assert_called_once()
 
@@ -744,3 +748,217 @@ class TestModeCortexRuntimeHotReload:
 
                 mock_config_watcher.cancel.assert_called_once()
                 mock_gather.assert_called_once()
+
+
+class TestMultiModeSelectiveHotReload:
+    """Test cases for selective field-based hot reload in ModeCortexRuntime."""
+
+    def test_detect_changed_fields_safe_top_level(self):
+        """Top-level safe fields changed → in 'safe' set."""
+        old = {"system_governance": "old", "default_mode": "m1", "modes": {}}
+        new = {"system_governance": "new", "default_mode": "m1", "modes": {}}
+        result = ModeCortexRuntime._detect_changed_fields(old, new)
+        assert result["safe"] == {"system_governance"}
+        assert result["unsafe"] == set()
+
+    def test_detect_changed_fields_unsafe_top_level(self):
+        """Top-level unsafe fields changed → in 'unsafe' set."""
+        old = {"default_mode": "m1", "api_key": "old", "modes": {}}
+        new = {"default_mode": "m2", "api_key": "new", "modes": {}}
+        result = ModeCortexRuntime._detect_changed_fields(old, new)
+        assert result["safe"] == set()
+        assert result["unsafe"] == {"default_mode", "api_key"}
+
+    def test_detect_changed_fields_safe_mode_fields(self):
+        """Per-mode safe fields changed → in 'safe' set with dot notation."""
+        old = {"modes": {"scan": {"system_prompt_base": "old", "hertz": 1}}}
+        new = {"modes": {"scan": {"system_prompt_base": "new", "hertz": 2}}}
+        result = ModeCortexRuntime._detect_changed_fields(old, new)
+        assert "modes.scan.system_prompt_base" in result["safe"]
+        assert "modes.scan.hertz" in result["safe"]
+        assert result["unsafe"] == set()
+
+    def test_detect_changed_fields_unsafe_mode_fields(self):
+        """Per-mode unsafe fields changed → in 'unsafe' set."""
+        old = {"modes": {"scan": {"agent_inputs": []}}}
+        new = {"modes": {"scan": {"agent_inputs": [{"type": "X"}]}}}
+        result = ModeCortexRuntime._detect_changed_fields(old, new)
+        assert "modes.scan.agent_inputs" in result["unsafe"]
+
+    def test_detect_changed_fields_modes_added(self):
+        """Mode added → 'modes' in unsafe set."""
+        old = {"modes": {"scan": {}}}
+        new = {"modes": {"scan": {}, "alert": {}}}
+        result = ModeCortexRuntime._detect_changed_fields(old, new)
+        assert "modes" in result["unsafe"]
+
+    def test_detect_changed_fields_modes_removed(self):
+        """Mode removed → 'modes' in unsafe set."""
+        old = {"modes": {"scan": {}, "alert": {}}}
+        new = {"modes": {"scan": {}}}
+        result = ModeCortexRuntime._detect_changed_fields(old, new)
+        assert "modes" in result["unsafe"]
+
+    def test_detect_changed_fields_transition_rules(self):
+        """Transition rules changed → unsafe."""
+        old = {"modes": {}, "transition_rules": [{"from": "a", "to": "b"}]}
+        new = {"modes": {}, "transition_rules": [{"from": "a", "to": "c"}]}
+        result = ModeCortexRuntime._detect_changed_fields(old, new)
+        assert "transition_rules" in result["unsafe"]
+
+    def test_detect_changed_fields_no_changes(self):
+        """Identical configs → both sets empty."""
+        cfg = {"system_governance": "gov", "modes": {"m1": {"hertz": 1}}}
+        result = ModeCortexRuntime._detect_changed_fields(cfg, cfg.copy())
+        assert result["safe"] == set()
+        assert result["unsafe"] == set()
+
+    @pytest.mark.asyncio
+    async def test_apply_safe_reload_active_mode(self, mock_system_config):
+        """Safe reload updates active mode's RuntimeConfig in-place."""
+        with (
+            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.multi_mode.cortex.IOProvider"),
+            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "scan"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=False
+            )
+            runtime.mode_manager = mock_manager
+
+            # Set up a mock current_config and mode_config
+            runtime.current_config = Mock()
+            runtime.current_config.system_prompt_base = "old"
+            runtime.current_config.hertz = 1.0
+
+            mock_mode = Mock()
+            mock_mode.system_prompt_base = "old"
+            mock_mode.hertz = 1.0
+            runtime.mode_config.modes = {"scan": mock_mode}
+
+            new_raw = {
+                "modes": {
+                    "scan": {"system_prompt_base": "new prompt", "hertz": 5.0}
+                }
+            }
+            await runtime._apply_safe_reload(
+                new_raw,
+                {"modes.scan.system_prompt_base", "modes.scan.hertz"},
+            )
+
+            assert runtime.current_config.system_prompt_base == "new prompt"
+            assert runtime.current_config.hertz == 5.0
+            assert mock_mode.system_prompt_base == "new prompt"
+            assert mock_mode.hertz == 5.0
+
+    @pytest.mark.asyncio
+    async def test_apply_safe_reload_inactive_mode(self, mock_system_config):
+        """Safe reload on inactive mode updates ModeConfig but not RuntimeConfig."""
+        with (
+            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.multi_mode.cortex.IOProvider"),
+            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "scan"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=False
+            )
+            runtime.mode_manager = mock_manager
+
+            runtime.current_config = Mock()
+            runtime.current_config.system_prompt_base = "scan prompt"
+
+            mock_alert_mode = Mock()
+            mock_alert_mode.system_prompt_base = "old alert"
+            runtime.mode_config.modes = {"scan": Mock(), "alert": mock_alert_mode}
+
+            new_raw = {
+                "modes": {"alert": {"system_prompt_base": "new alert"}}
+            }
+            await runtime._apply_safe_reload(
+                new_raw, {"modes.alert.system_prompt_base"}
+            )
+
+            # ModeConfig updated
+            assert mock_alert_mode.system_prompt_base == "new alert"
+            # Active RuntimeConfig NOT changed (different mode)
+            assert runtime.current_config.system_prompt_base == "scan prompt"
+
+    @pytest.mark.asyncio
+    async def test_apply_safe_reload_invalid_hertz(self, mock_system_config):
+        """Invalid hertz in mode field is rejected."""
+        with (
+            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.multi_mode.cortex.IOProvider"),
+            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "scan"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=False
+            )
+            runtime.mode_manager = mock_manager
+
+            runtime.current_config = Mock()
+            runtime.current_config.hertz = 2.0
+
+            mock_mode = Mock()
+            mock_mode.hertz = 2.0
+            runtime.mode_config.modes = {"scan": mock_mode}
+
+            new_raw = {"modes": {"scan": {"hertz": -1}}}
+            await runtime._apply_safe_reload(new_raw, {"modes.scan.hertz"})
+
+            assert runtime.current_config.hertz == 2.0
+            assert mock_mode.hertz == 2.0
+
+    @pytest.mark.asyncio
+    async def test_apply_safe_reload_top_level_governance(self, mock_system_config):
+        """Safe reload of top-level system_governance updates both configs."""
+        with (
+            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.multi_mode.cortex.IOProvider"),
+            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "scan"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=False
+            )
+            runtime.mode_manager = mock_manager
+            runtime.mode_config.system_governance = "old rules"
+            runtime.current_config = Mock()
+            runtime.current_config.system_governance = "old rules"
+
+            new_raw = {"system_governance": "new safety rules"}
+            await runtime._apply_safe_reload(new_raw, {"system_governance"})
+
+            assert runtime.mode_config.system_governance == "new safety rules"
+            assert runtime.current_config.system_governance == "new safety rules"

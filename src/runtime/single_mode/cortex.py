@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Set, Union
 
 import json5
 
@@ -14,6 +14,15 @@ from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.single_mode.config import RuntimeConfig, load_config
 from simulators.orchestrator import SimulatorOrchestrator
+
+# Fields that can be updated in-place without restarting orchestrators.
+# These are simple value fields consumed by the Fuser or cortex loop.
+HOT_RELOAD_SAFE_FIELDS: Set[str] = {
+    "system_prompt_base",
+    "system_governance",
+    "system_prompt_examples",
+    "hertz",
+}
 
 
 class CortexRuntime:
@@ -77,10 +86,12 @@ class CortexRuntime:
         self.cortex_loop_task: Optional[asyncio.Task] = None
 
         self._is_reloading = False
+        self._last_raw_config: Optional[dict] = None
 
         if self.hot_reload:
             self.config_path = self._create_runtime_config_file()
             self.last_modified = self._get_file_mtime()
+            self._last_raw_config = self._read_raw_config()
             logging.info(
                 f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
             )
@@ -212,10 +223,70 @@ class CortexRuntime:
         except OSError:
             return 0.0
 
+    def _read_raw_config(self) -> Optional[dict]:
+        """Read the raw JSON5 config from disk without instantiating components."""
+        try:
+            with open(self.config_path, "r") as f:
+                return json5.load(f)
+        except Exception:
+            logging.exception("Failed to read raw config file")
+            return None
+
+    @staticmethod
+    def _detect_changed_fields(
+        old_config: dict, new_config: dict
+    ) -> Dict[str, Set[str]]:
+        """Compare two raw config dicts and categorize changed fields.
+
+        Returns
+        -------
+        dict
+            ``{"safe": set_of_safe_field_names, "unsafe": set_of_unsafe_field_names}``
+        """
+        changed_safe: Set[str] = set()
+        changed_unsafe: Set[str] = set()
+
+        all_keys = set(old_config.keys()) | set(new_config.keys())
+        for key in all_keys:
+            if old_config.get(key) != new_config.get(key):
+                if key in HOT_RELOAD_SAFE_FIELDS:
+                    changed_safe.add(key)
+                else:
+                    changed_unsafe.add(key)
+
+        return {"safe": changed_safe, "unsafe": changed_unsafe}
+
+    async def _apply_safe_reload(
+        self, new_raw_config: dict, changed_fields: Set[str]
+    ) -> None:
+        """Update safe fields in-place on the live RuntimeConfig."""
+        for field in changed_fields:
+            new_value = new_raw_config.get(field)
+
+            if field == "hertz":
+                if (
+                    not isinstance(new_value, (int, float))
+                    or new_value <= 0
+                ):
+                    logging.warning(
+                        f"Ignoring invalid hertz value: {new_value}"
+                    )
+                    continue
+
+            if hasattr(self.config, field):
+                old_value = getattr(self.config, field)
+                setattr(self.config, field, new_value)
+                logging.info(
+                    f"Hot-reloaded '{field}' in-place "
+                    f"(was {repr(old_value)[:80]})"
+                )
+            else:
+                logging.warning(
+                    f"Field '{field}' not found on RuntimeConfig, skipping"
+                )
+
     async def _check_config_changes(self) -> None:
-        """
-        Periodically check for config file changes and reload if needed.
-        """
+        """Periodically check for config file changes and selectively reload."""
         while True:
             try:
                 await asyncio.sleep(self.check_interval)
@@ -226,8 +297,48 @@ class CortexRuntime:
                 current_mtime = self._get_file_mtime()
 
                 if self.last_modified and current_mtime > self.last_modified:
-                    logging.info(f"Config file changed, reloading: {self.config_path}")
-                    await self._reload_config()
+                    logging.info(
+                        f"Config file changed, analyzing: {self.config_path}"
+                    )
+
+                    new_raw = self._read_raw_config()
+                    if new_raw is None:
+                        logging.error(
+                            "Failed to read updated config, skipping reload"
+                        )
+                        self.last_modified = current_mtime
+                        continue
+
+                    if self._last_raw_config is not None:
+                        changes = self._detect_changed_fields(
+                            self._last_raw_config, new_raw
+                        )
+
+                        if not changes["safe"] and not changes["unsafe"]:
+                            logging.info(
+                                "Config file touched but no field changes detected"
+                            )
+                        elif changes["unsafe"]:
+                            logging.info(
+                                f"Structural field changes detected: "
+                                f"{changes['unsafe']}. Performing full reload."
+                            )
+                            await self._full_reload()
+                        else:
+                            logging.info(
+                                f"Safe field changes detected: "
+                                f"{changes['safe']}. Applying in-place update."
+                            )
+                            await self._apply_safe_reload(
+                                new_raw, changes["safe"]
+                            )
+                    else:
+                        logging.info(
+                            "No previous config snapshot, performing full reload"
+                        )
+                        await self._full_reload()
+
+                    self._last_raw_config = new_raw
                     self.last_modified = current_mtime
 
             except asyncio.CancelledError:
@@ -237,12 +348,10 @@ class CortexRuntime:
                 logging.exception("Error checking config changes")
                 await asyncio.sleep(5)
 
-    async def _reload_config(self) -> None:
-        """
-        Reload the configuration and restart all components.
-        """
+    async def _full_reload(self) -> None:
+        """Reload the configuration and restart all components."""
         try:
-            logging.info(f"Reloading configuration: {self.config_name}")
+            logging.info(f"Full reload: {self.config_name}")
             self._is_reloading = True
 
             if not self.config_name:
@@ -266,7 +375,7 @@ class CortexRuntime:
 
             self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
 
-            logging.info("Configuration reloaded successfully")
+            logging.info("Full configuration reload completed successfully")
 
         except Exception:
             logging.exception("Failed to reload configuration")
