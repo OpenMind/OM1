@@ -1,38 +1,34 @@
-import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from actions.move_go2_action.interface import Action, ActionInput
 
-mock_unitree = MagicMock()
-_mocked_modules = {
-    "unitree": mock_unitree,
-    "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
-    "unitree.unitree_sdk2py.go2": mock_unitree.unitree_sdk2py.go2,
-    "unitree.unitree_sdk2py.go2.sport": mock_unitree.unitree_sdk2py.go2.sport,
-    "unitree.unitree_sdk2py.go2.sport.sport_client": (
-        mock_unitree.unitree_sdk2py.go2.sport.sport_client
-    ),
-}
-sys.modules.update(_mocked_modules)
 
-from actions.move_go2_action.connector.unitree_sdk import (  # noqa: E402
-    ActionUnitreeSDKConfig,
-    ActionUnitreeSDKConnector,
-)
-
-
-def teardown_module():
-    """Clean up sys.modules mock to prevent leaking into other test modules."""
-    for key, val in _mocked_modules.items():
-        if sys.modules.get(key) is val:
-            sys.modules.pop(key, None)
+@pytest.fixture(scope="module", autouse=True)
+def _mock_unitree_modules():
+    """Mock unitree SDK modules to allow importing connector without real SDK."""
+    mock_unitree = MagicMock()
+    with patch.dict(
+        "sys.modules",
+        {
+            "unitree": mock_unitree,
+            "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
+            "unitree.unitree_sdk2py.go2": mock_unitree.unitree_sdk2py.go2,
+            "unitree.unitree_sdk2py.go2.sport": mock_unitree.unitree_sdk2py.go2.sport,
+            "unitree.unitree_sdk2py.go2.sport.sport_client": (
+                mock_unitree.unitree_sdk2py.go2.sport.sport_client
+            ),
+        },
+    ):
+        yield
 
 
 @pytest.fixture
 def mock_dependencies():
     """Mock all external dependencies for connector initialization."""
+    from actions.move_go2_action.connector.unitree_sdk import ActionUnitreeSDKConnector
+
     with (
         patch(
             "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider"
@@ -71,6 +67,11 @@ def mock_dependencies():
 @pytest.fixture
 def connector(mock_dependencies):
     """Create ActionUnitreeSDKConnector with mocked dependencies."""
+    from actions.move_go2_action.connector.unitree_sdk import (
+        ActionUnitreeSDKConfig,
+        ActionUnitreeSDKConnector,
+    )
+
     config = ActionUnitreeSDKConfig()
     return ActionUnitreeSDKConnector(config)
 
@@ -80,11 +81,15 @@ class TestActionUnitreeSDKConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
+        from actions.move_go2_action.connector.unitree_sdk import ActionUnitreeSDKConfig
+
         config = ActionUnitreeSDKConfig()
         assert config.unitree_ethernet is None
 
     def test_custom_ethernet(self):
         """Test custom ethernet configuration."""
+        from actions.move_go2_action.connector.unitree_sdk import ActionUnitreeSDKConfig
+
         config = ActionUnitreeSDKConfig(unitree_ethernet="eth0")
         assert config.unitree_ethernet == "eth0"
 
@@ -106,6 +111,11 @@ class TestActionUnitreeSDKConnectorInit:
 
     def test_initialization_sport_client_error(self):
         """Test initialization when SportClient fails."""
+        from actions.move_go2_action.connector.unitree_sdk import (
+            ActionUnitreeSDKConfig,
+            ActionUnitreeSDKConnector,
+        )
+
         with (
             patch(
                 "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider"

@@ -1,27 +1,22 @@
-import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-mock_om1_utils = MagicMock()
-_mocked_modules = {
-    "om1_utils": mock_om1_utils,
-    "om1_utils.ws": mock_om1_utils.ws,
-}
-sys.modules.update(_mocked_modules)
-
-from actions.move_go2_autonomy.interface import MoveInput, MovementAction  # noqa: E402
-from actions.move_tron.connector.tron_sdk import (  # noqa: E402
-    MoveTronSDKConfig,
-    MoveTronSDKConnector,
-)
+from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 
 
-def teardown_module():
-    """Clean up sys.modules mock to prevent leaking into other test modules."""
-    for key, val in _mocked_modules.items():
-        if sys.modules.get(key) is val:
-            sys.modules.pop(key, None)
+@pytest.fixture(scope="module", autouse=True)
+def _mock_om1_utils_modules():
+    """Mock om1_utils module to allow importing connector without real package."""
+    mock_om1_utils = MagicMock()
+    with patch.dict(
+        "sys.modules",
+        {
+            "om1_utils": mock_om1_utils,
+            "om1_utils.ws": mock_om1_utils.ws,
+        },
+    ):
+        yield
 
 
 class TestMoveTronSDKConfig:
@@ -29,12 +24,16 @@ class TestMoveTronSDKConfig:
 
     def test_default_config(self):
         """Test default base_url value."""
+        from actions.move_tron.connector.tron_sdk import MoveTronSDKConfig
+
         config = MoveTronSDKConfig(accid="robot123")
         assert config.base_url == "ws://10.192.1.2:5000"
         assert config.accid == "robot123"
 
     def test_custom_config(self):
         """Test custom configuration values."""
+        from actions.move_tron.connector.tron_sdk import MoveTronSDKConfig
+
         config = MoveTronSDKConfig(
             base_url="ws://custom:8080",
             accid="custom_robot",
@@ -48,6 +47,11 @@ class TestMoveTronSDKConnectorInit:
 
     def test_init_creates_ws_client(self):
         """Test that init creates and starts a WebSocket client."""
+        from actions.move_tron.connector.tron_sdk import (
+            MoveTronSDKConfig,
+            MoveTronSDKConnector,
+        )
+
         with patch("actions.move_tron.connector.tron_sdk.ws.Client") as mock_ws_client:
             mock_client = Mock()
             mock_ws_client.return_value = mock_client
@@ -66,6 +70,11 @@ class TestMoveTronSDKConnectorConnect:
     @pytest.fixture
     def connector(self):
         """Create connector with mocked WebSocket client."""
+        from actions.move_tron.connector.tron_sdk import (
+            MoveTronSDKConfig,
+            MoveTronSDKConnector,
+        )
+
         with patch("actions.move_tron.connector.tron_sdk.ws.Client") as mock_ws_client:
             mock_client = Mock()
             mock_client.connected = True
@@ -78,6 +87,11 @@ class TestMoveTronSDKConnectorConnect:
     @pytest.fixture
     def disconnected_connector(self):
         """Create connector with disconnected WebSocket client."""
+        from actions.move_tron.connector.tron_sdk import (
+            MoveTronSDKConfig,
+            MoveTronSDKConnector,
+        )
+
         with patch("actions.move_tron.connector.tron_sdk.ws.Client") as mock_ws_client:
             mock_client = Mock()
             mock_client.connected = False

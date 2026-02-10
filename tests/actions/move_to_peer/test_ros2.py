@@ -1,4 +1,3 @@
-import sys
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -6,33 +5,37 @@ import pytest
 from actions.base import ActionConfig
 from actions.move_to_peer.interface import MoveToPeerAction, MoveToPeerInput
 
-mock_unitree = MagicMock()
-mock_sport_client_class = Mock()
-mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = mock_sport_client_class
-_mocked_modules = {
-    "unitree": mock_unitree,
-    "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
-    "unitree.unitree_sdk2py.go2": mock_unitree.unitree_sdk2py.go2,
-    "unitree.unitree_sdk2py.go2.sport": mock_unitree.unitree_sdk2py.go2.sport,
-    "unitree.unitree_sdk2py.go2.sport.sport_client": (
-        mock_unitree.unitree_sdk2py.go2.sport.sport_client
-    ),
-}
-sys.modules.update(_mocked_modules)
 
-from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector  # noqa: E402
-
-
-def teardown_module():
-    """Clean up sys.modules mock to prevent leaking into other test modules."""
-    for key, val in _mocked_modules.items():
-        if sys.modules.get(key) is val:
-            sys.modules.pop(key, None)
+@pytest.fixture(scope="module", autouse=True)
+def _mock_unitree_modules():
+    """Mock unitree SDK modules to allow importing connector without real SDK."""
+    mock_unitree = MagicMock()
+    mock_sport_client_class = Mock()
+    mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = (
+        mock_sport_client_class
+    )
+    with patch.dict(
+        "sys.modules",
+        {
+            "unitree": mock_unitree,
+            "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
+            "unitree.unitree_sdk2py.go2": mock_unitree.unitree_sdk2py.go2,
+            "unitree.unitree_sdk2py.go2.sport": mock_unitree.unitree_sdk2py.go2.sport,
+            "unitree.unitree_sdk2py.go2.sport.sport_client": (
+                mock_unitree.unitree_sdk2py.go2.sport.sport_client
+            ),
+        },
+    ):
+        yield mock_sport_client_class
 
 
 @pytest.fixture
-def mock_dependencies():
+def mock_dependencies(_mock_unitree_modules):
     """Mock all external dependencies."""
+    from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector
+
+    mock_sport_client_class = _mock_unitree_modules
+
     with patch("actions.move_to_peer.connector.ros2.IOProvider") as mock_io_class:
         mock_io = Mock()
         mock_io_class.return_value = mock_io

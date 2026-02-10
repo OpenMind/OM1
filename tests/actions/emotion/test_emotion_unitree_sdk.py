@@ -1,33 +1,27 @@
-import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from actions.emotion.interface import EmotionAction, EmotionInput
 
-mock_unitree = MagicMock()
-_mocked_modules = {
-    "unitree": mock_unitree,
-    "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
-    "unitree.unitree_sdk2py.g1": mock_unitree.unitree_sdk2py.g1,
-    "unitree.unitree_sdk2py.g1.audio": mock_unitree.unitree_sdk2py.g1.audio,
-    "unitree.unitree_sdk2py.g1.audio.g1_audio_client": (
-        mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client
-    ),
-}
-sys.modules.update(_mocked_modules)
 
-from actions.emotion.connector.unitree_sdk import (  # noqa: E402
-    EmotionUnitreeConfig,
-    EmotionUnitreeConnector,
-)
-
-
-def teardown_module():
-    """Clean up sys.modules mock to prevent leaking into other test modules."""
-    for key, val in _mocked_modules.items():
-        if sys.modules.get(key) is val:
-            sys.modules.pop(key, None)
+@pytest.fixture(scope="module", autouse=True)
+def _mock_unitree_modules():
+    """Mock unitree SDK modules to allow importing connector without real SDK."""
+    mock_unitree = MagicMock()
+    with patch.dict(
+        "sys.modules",
+        {
+            "unitree": mock_unitree,
+            "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
+            "unitree.unitree_sdk2py.g1": mock_unitree.unitree_sdk2py.g1,
+            "unitree.unitree_sdk2py.g1.audio": mock_unitree.unitree_sdk2py.g1.audio,
+            "unitree.unitree_sdk2py.g1.audio.g1_audio_client": (
+                mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client
+            ),
+        },
+    ):
+        yield
 
 
 class TestEmotionUnitreeConfig:
@@ -35,11 +29,15 @@ class TestEmotionUnitreeConfig:
 
     def test_default_config(self):
         """Test default configuration has empty ethernet."""
+        from actions.emotion.connector.unitree_sdk import EmotionUnitreeConfig
+
         config = EmotionUnitreeConfig()
         assert config.unitree_ethernet == ""
 
     def test_custom_ethernet(self):
         """Test custom ethernet adapter configuration."""
+        from actions.emotion.connector.unitree_sdk import EmotionUnitreeConfig
+
         config = EmotionUnitreeConfig(unitree_ethernet="eth0")
         assert config.unitree_ethernet == "eth0"
 
@@ -49,6 +47,11 @@ class TestEmotionUnitreeConnectorInit:
 
     def test_init_without_ethernet(self):
         """Test initialization without ethernet (no audio client)."""
+        from actions.emotion.connector.unitree_sdk import (
+            EmotionUnitreeConfig,
+            EmotionUnitreeConnector,
+        )
+
         config = EmotionUnitreeConfig()
         connector = EmotionUnitreeConnector(config)
         assert connector.ao_client is None
@@ -56,6 +59,11 @@ class TestEmotionUnitreeConnectorInit:
 
     def test_init_with_ethernet(self):
         """Test initialization with ethernet creates AudioClient."""
+        from actions.emotion.connector.unitree_sdk import (
+            EmotionUnitreeConfig,
+            EmotionUnitreeConnector,
+        )
+
         with patch("actions.emotion.connector.unitree_sdk.AudioClient") as mock_audio:
             mock_instance = Mock()
             mock_audio.return_value = mock_instance
@@ -76,12 +84,22 @@ class TestEmotionUnitreeConnectorConnect:
     @pytest.fixture
     def connector_no_client(self):
         """Create connector without audio client."""
+        from actions.emotion.connector.unitree_sdk import (
+            EmotionUnitreeConfig,
+            EmotionUnitreeConnector,
+        )
+
         config = EmotionUnitreeConfig()
         return EmotionUnitreeConnector(config)
 
     @pytest.fixture
     def connector_with_client(self):
         """Create connector with mocked audio client."""
+        from actions.emotion.connector.unitree_sdk import (
+            EmotionUnitreeConfig,
+            EmotionUnitreeConnector,
+        )
+
         with patch("actions.emotion.connector.unitree_sdk.AudioClient") as mock_audio:
             mock_instance = Mock()
             mock_audio.return_value = mock_instance
@@ -150,6 +168,11 @@ class TestEmotionUnitreeConnectorTick:
 
     def test_tick_calls_sleep(self):
         """Test tick calls sleep with 5 seconds."""
+        from actions.emotion.connector.unitree_sdk import (
+            EmotionUnitreeConfig,
+            EmotionUnitreeConnector,
+        )
+
         config = EmotionUnitreeConfig()
         connector = EmotionUnitreeConnector(config)
         with patch.object(connector, "sleep") as mock_sleep:
