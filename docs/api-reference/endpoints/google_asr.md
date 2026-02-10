@@ -86,9 +86,9 @@ Send audio data as JSON messages over the WebSocket connection:
 | `language_code` | string | No | `"en-US"` | Language code for recognition (e.g., "en-US", "es-ES", "fr-FR") |
 
 > **Note:** Note the following when sending audio data:
-- The `rate` and `language_code` parameters only need to be sent with the first message. Subsequent messages can contain only the `audio` field.
-- Audio must be LINEAR16 PCM encoded
-- Maximum streaming duration is 4 minutes (240 seconds) per session
+> - The `rate` and `language_code` parameters only need to be sent with the first message. Subsequent messages can contain only the `audio` field.
+> - Audio must be LINEAR16 PCM encoded
+> - Maximum streaming duration is 4 minutes (240 seconds) per session
 
 ## Receiving Transcription Results
 

@@ -268,7 +268,8 @@ Each API key object contains:
 }
 ```
 
-> **Note:** the following about the API keys listed:
+> **Note:**
+> Note the following about the API keys listed:
 > - Only active (non-deleted) API keys are returned.
 > - The actual secret portion of the API key is never returned in this endpoint.
 > - The `hashed_key` field is stored in the database but not exposed in the API response for security.
