@@ -136,7 +136,7 @@ def extract_temperature(text: str) -> Optional[float]:
     return None
 
 
-class LGThinQConnector(ActionConnector[LGThinQInput]):
+class LGThinQConnector(ActionConnector[LGThinQConfig, LGThinQInput]):
     """
     Connector for controlling LG devices via ThinQ Connect API.
     """
@@ -144,15 +144,15 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
     # Class-level: Last executed action (persists across instances)
     _last_action: Optional[str] = None
 
-    def __init__(self, config: ActionConfig):
+    def __init__(self, config: LGThinQConfig):
         super().__init__(config)
 
         self.io_provider = IOProvider()
 
         # Configuration
-        self.pat_token = getattr(config, "pat_token", None)
-        self.country_code = getattr(config, "country_code", "TR")
-        self.device_id = getattr(config, "device_id", None)
+        self.pat_token = config.pat_token
+        self.country_code = config.country_code
+        self.device_id = config.device_id
 
         # Determine region and base URL
         self.region = get_region_from_country(self.country_code)
@@ -192,7 +192,7 @@ class LGThinQConnector(ActionConnector[LGThinQInput]):
 
     async def _api_request(
         self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[Any]:
         """Make a request to the ThinQ API."""
         url = f"{self.base_url}/{endpoint}"
         session = await self._get_session()

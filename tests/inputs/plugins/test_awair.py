@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from inputs.base import SensorConfig
+from inputs.plugins.awair import AwairConfig
 
 # Sample AWAIR data for testing
 SAMPLE_AWAIR_DATA = {
@@ -28,7 +28,7 @@ SAMPLE_AWAIR_DATA = {
 @pytest.fixture
 def mock_local_config():
     """Create a mock configuration for Local API mode."""
-    return SensorConfig(
+    return AwairConfig(
         mode="local",
         device_ip="192.168.0.17",
         poll_interval=1.0,
@@ -38,7 +38,7 @@ def mock_local_config():
 @pytest.fixture
 def mock_cloud_config():
     """Create a mock configuration for Cloud API mode."""
-    return SensorConfig(
+    return AwairConfig(
         mode="cloud",
         access_token="test_token_12345",
         device_id="12345",
@@ -90,7 +90,7 @@ class TestAwairConfiguration:
         with patch("inputs.plugins.awair.IOProvider"):
             from inputs.plugins.awair import AwairElement
 
-            plugin = AwairElement(SensorConfig())
+            plugin = AwairElement(AwairConfig())
 
             assert plugin.mode == "local"
             assert plugin.device_ip is None
@@ -419,7 +419,7 @@ class TestAPIFetching:
         with patch("inputs.plugins.awair.IOProvider"):
             from inputs.plugins.awair import AwairElement
 
-            plugin = AwairElement(SensorConfig(mode="local"))
+            plugin = AwairElement(AwairConfig(mode="local"))
 
             result = await plugin._fetch_local()
             assert result is None

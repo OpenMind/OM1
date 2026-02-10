@@ -2,6 +2,7 @@
   // AWAIR Element + LG ThinQ Climate Control
   // Air quality monitoring -> AI analysis -> AC control
 
+  "version": "v1.0.2",
   "hertz": 0.05,
   "name": "awair_lg_climate",
   "api_key": "YOUR_OM1_API_KEY",

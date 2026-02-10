@@ -5,10 +5,48 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import aiohttp
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
+
+
+class AwairConfig(SensorConfig):
+    """Configuration for AWAIR Element sensor.
+
+    Parameters
+    ----------
+    mode : str
+        API mode: "local" or "cloud".
+    device_ip : Optional[str]
+        IP address for local API mode.
+    access_token : Optional[str]
+        Bearer token for cloud API mode.
+    device_id : Optional[str]
+        Device ID for cloud API mode.
+    device_type : str
+        AWAIR device type identifier.
+    poll_interval : float
+        Polling interval in seconds.
+    """
+
+    mode: str = Field(default="local", description="API mode: local or cloud")
+    device_ip: Optional[str] = Field(
+        default=None, description="IP address for local API mode"
+    )
+    access_token: Optional[str] = Field(
+        default=None, description="Bearer token for cloud API mode"
+    )
+    device_id: Optional[str] = Field(
+        default=None, description="Device ID for cloud API mode"
+    )
+    device_type: str = Field(
+        default="awair-element", description="AWAIR device type identifier"
+    )
+    poll_interval: float = Field(
+        default=10.0, description="Polling interval in seconds"
+    )
 
 
 @dataclass
@@ -33,7 +71,7 @@ class AwairData:
     pm10_est: int  # Estimated PM10 in µg/m³
 
 
-class AwairElement(FuserInput[SensorConfig, Dict[str, Any]]):
+class AwairElement(FuserInput[AwairConfig, Dict[str, Any]]):
     """
     AWAIR Element Air Quality Monitor integration for OM1.
 
@@ -47,7 +85,7 @@ class AwairElement(FuserInput[SensorConfig, Dict[str, Any]]):
     - Provide health recommendations based on air quality
     """
 
-    def __init__(self, config: SensorConfig = SensorConfig()):
+    def __init__(self, config: AwairConfig = AwairConfig()):
         super().__init__(config)
 
         self.io_provider = IOProvider()
@@ -55,12 +93,12 @@ class AwairElement(FuserInput[SensorConfig, Dict[str, Any]]):
         self.descriptor_for_LLM = "Indoor Air Quality (AWAIR Element)"
 
         # Configuration
-        self.mode = getattr(config, "mode", "local")  # "local" or "cloud"
-        self.device_ip = getattr(config, "device_ip", None)
-        self.access_token = getattr(config, "access_token", None)
-        self.device_id = getattr(config, "device_id", None)
-        self.device_type = getattr(config, "device_type", "awair-element")
-        self.poll_interval = getattr(config, "poll_interval", 10.0)
+        self.mode = config.mode
+        self.device_ip = config.device_ip
+        self.access_token = config.access_token
+        self.device_id = config.device_id
+        self.device_type = config.device_type
+        self.poll_interval = config.poll_interval
 
         # State tracking
         self._previous_data: Optional[AwairData] = None
@@ -222,14 +260,14 @@ class AwairElement(FuserInput[SensorConfig, Dict[str, Any]]):
 
         return False
 
-    async def _poll(self) -> Optional[Dict[str, Any]]:
+    async def _poll(self) -> Dict[str, Any]:
         """
         Poll for air quality data from AWAIR device.
 
         Returns
         -------
-        Optional[Dict[str, Any]]
-            Raw sensor data if available
+        Dict[str, Any]
+            Raw sensor data, empty dict if unavailable
         """
         # First call: fetch immediately. Subsequent calls: wait first.
         if self._first_poll:
@@ -252,7 +290,7 @@ class AwairElement(FuserInput[SensorConfig, Dict[str, Any]]):
         else:
             raw_data = await self._fetch_cloud()
 
-        return raw_data
+        return raw_data if raw_data is not None else {}
 
     async def _raw_to_text(self, raw_input: Dict[str, Any]) -> Optional[Message]:
         """
