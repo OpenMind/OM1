@@ -158,7 +158,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
             return
 
         if self.odom.x == 0.0:
-            # this value is never precisely zero EXCEPT while
+            # this value is never precisely zero except while
             # booting and waiting for data to arrive
             logging.info("Waiting for location data")
             return

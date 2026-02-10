@@ -173,7 +173,7 @@ class MoveUnitreeOMPathSDKConnector(
             return
 
         if self.odom.position["odom_x"] == 0.0:
-            # this value is never precisely zero EXCEPT while
+            # this value is never precisely zero except while
             # booting and waiting for data to arrive
             logging.info("Waiting for location data")
             return

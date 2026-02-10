@@ -215,8 +215,8 @@ class BatteryState(IdlStruct, typename="BatteryState"):
     present: bool  # True if the battery is present
     cell_voltage: List[
         float32
-    ]  # An array of individual cell voltages for each cell in the pack
-    # If individual voltages unknown but number of cells known set each to NaN
+    ]  # An array of individual cell temperatures for each cell in the pack
+    # If individual temperatures unknown but number of cells known set each to NaN
     cell_temperature: List[
         float32
     ]  # An array of individual cell temperatures for each cell in the pack

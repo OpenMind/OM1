@@ -344,7 +344,7 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
                 logging.warning(f"Controller disconnected: {e}")
                 self.gamepad = None
 
-        # special case for no data if the D-pad or LT and RT is kept pressed
+        # special case for no data if the D-pad or LT and RT are kept pressed
         if data is None or len(data) == 0:
             if self.rt_previous > 0 or self.lt_previous > 0:
                 # we always execute the left turn first
