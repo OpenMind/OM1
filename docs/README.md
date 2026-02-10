@@ -31,15 +31,5 @@ icon: book-open
       <td><a href="assets/favicon.png">favicon.png</a></td>
       <td><a href="api-reference/introduction.md">introduction.md</a></td>
     </tr>
-    <tr>
-      <td><strong>BrainPack Introduction</strong></td>
-      <td><a href="assets/brainpack_2.png">brainpack_2.png</a></td>
-      <td><a href="full_autonomy_guidelines/brainpack_introduction.md">brainpack_introduction.md</a></td>
-    </tr>
-    <tr>
-      <td><strong>Full Autonomy</strong></td>
-      <td><a href="assets/brainpack_2.png">brainpack_2.png</a></td>
-      <td><a href="full_autonomy_guidelines/architecture_overview.md">architecture_overview.md</a></td>
-    </tr>
   </tbody>
 </table>
