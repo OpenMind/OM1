@@ -834,3 +834,99 @@ def test_available_modes_structure(cortex_runtime):
     assert result["default"]["is_current"] is True
     assert result["advanced"]["is_current"] is False
     assert result["emergency"]["is_current"] is False
+
+
+@pytest.mark.asyncio
+async def test_on_mode_transition_rolls_back_on_initialize_failure(cortex_runtime):
+    """Test that _on_mode_transition rolls back to the previous mode when
+    initialization of the target mode fails."""
+    runtime, components = cortex_runtime
+
+    runtime._stop_current_orchestrators = AsyncMock()
+    runtime._start_orchestrators = AsyncMock()
+
+    call_count = 0
+    original_from_mode = "default"
+    target_mode = "advanced"
+
+    async def mock_initialize(mode):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1 and mode == target_mode:
+            raise RuntimeError("Failed to load advanced mode config")
+
+    runtime._initialize_mode = AsyncMock(side_effect=mock_initialize)
+    runtime.mode_manager = Mock()
+    runtime.mode_manager.state = Mock()
+    runtime.mode_manager.state.current_mode = original_from_mode
+
+    await runtime._on_mode_transition(original_from_mode, target_mode)
+
+    assert runtime._initialize_mode.call_count == 2
+    runtime._initialize_mode.assert_any_call(target_mode)
+    runtime._initialize_mode.assert_any_call(original_from_mode)
+    assert runtime._is_reloading is False
+    assert runtime.mode_manager.state.current_mode == original_from_mode
+
+
+@pytest.mark.asyncio
+async def test_on_mode_transition_rolls_back_on_start_failure(cortex_runtime):
+    """Test that _on_mode_transition rolls back when starting orchestrators fails
+    after a successful mode initialization."""
+    runtime, components = cortex_runtime
+
+    runtime._stop_current_orchestrators = AsyncMock()
+    runtime._initialize_mode = AsyncMock()
+
+    start_call_count = 0
+
+    async def mock_start():
+        nonlocal start_call_count
+        start_call_count += 1
+        if start_call_count == 1:
+            raise RuntimeError("Orchestrator failed to start")
+
+    runtime._start_orchestrators = AsyncMock(side_effect=mock_start)
+    runtime.mode_manager = Mock()
+    runtime.mode_manager.state = Mock()
+    runtime.mode_manager.state.current_mode = "default"
+
+    await runtime._on_mode_transition("default", "advanced")
+
+    assert runtime._start_orchestrators.call_count == 2
+    assert runtime._is_reloading is False
+    assert runtime.mode_manager.state.current_mode == "default"
+
+
+@pytest.mark.asyncio
+async def test_on_mode_transition_reloading_flag_cleared_on_success(cortex_runtime):
+    """Test that _is_reloading is properly cleared after a successful transition."""
+    runtime, components = cortex_runtime
+
+    runtime._stop_current_orchestrators = AsyncMock()
+    runtime._initialize_mode = AsyncMock()
+    runtime._start_orchestrators = AsyncMock()
+
+    runtime._is_reloading = False
+
+    await runtime._on_mode_transition("default", "advanced")
+
+    assert runtime._is_reloading is False
+
+
+@pytest.mark.asyncio
+async def test_on_mode_transition_reloading_flag_cleared_on_total_failure(cortex_runtime):
+    """Test that _is_reloading is cleared even when both the transition and
+    the rollback attempt fail."""
+    runtime, components = cortex_runtime
+
+    runtime._stop_current_orchestrators = AsyncMock()
+    runtime._initialize_mode = AsyncMock(
+        side_effect=RuntimeError("All modes broken")
+    )
+    runtime.mode_manager = Mock()
+    runtime.mode_manager.state = Mock()
+
+    await runtime._on_mode_transition("default", "advanced")
+
+    assert runtime._is_reloading is False

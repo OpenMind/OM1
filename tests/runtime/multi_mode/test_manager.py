@@ -1423,3 +1423,93 @@ class TestModeManager:
                 "Updated user context with" in record.message
                 for record in caplog.records
             )
+
+
+class TestFileOperations:
+    """Tests for cross-platform file write operations."""
+
+    @pytest.fixture
+    def mode_manager(self, sample_system_config):
+        with (
+            patch("runtime.multi_mode.manager.open_zenoh_session"),
+            patch("runtime.multi_mode.manager.ModeManager._load_mode_state"),
+        ):
+            return ModeManager(sample_system_config)
+
+    def test_save_mode_state_overwrites_existing_file(self, mode_manager):
+        """Test that saving mode state works when the file already exists."""
+        mode_manager.state.current_mode = "default"
+        mode_manager.state.previous_mode = None
+        mode_manager.state.transition_history = ["init"]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = os.path.join(temp_dir, "test_state.json5")
+
+            with patch.object(
+                mode_manager, "_get_state_file_path", return_value=state_file
+            ):
+                # First write
+                mode_manager._save_mode_state()
+
+                with open(state_file, "r") as f:
+                    first_data = json.load(f)
+                assert first_data["last_active_mode"] == "default"
+
+                # Transition then second write (overwrite)
+                mode_manager.state.current_mode = "advanced"
+                mode_manager.state.previous_mode = "default"
+                mode_manager.state.transition_history = [
+                    "init",
+                    "default->advanced:manual",
+                ]
+
+                mode_manager._save_mode_state()
+
+                with open(state_file, "r") as f:
+                    second_data = json.load(f)
+                assert second_data["last_active_mode"] == "advanced"
+                assert second_data["previous_mode"] == "default"
+
+    def test_create_runtime_config_file_overwrites_existing(self, mode_manager):
+        """Test that runtime config file creation works when the file already exists."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = os.path.join(temp_dir, ".runtime.json5")
+
+            with patch.object(
+                mode_manager, "_get_runtime_config_path", return_value=config_path
+            ):
+                # First write
+                mode_manager._create_runtime_config_file()
+                assert os.path.exists(config_path)
+
+                # Second write (overwrite)
+                mode_manager._create_runtime_config_file()
+                assert os.path.exists(config_path)
+
+
+class TestTransitionReturnValue:
+    """Tests for _execute_transition return values."""
+
+    @pytest.fixture
+    def mode_manager(self, sample_system_config):
+        with (
+            patch("runtime.multi_mode.manager.open_zenoh_session"),
+            patch("runtime.multi_mode.manager.ModeManager._load_mode_state"),
+        ):
+            return ModeManager(sample_system_config)
+
+    @pytest.mark.asyncio
+    async def test_execute_transition_same_mode_returns_true(self, mode_manager):
+        """Test that transitioning to the same mode returns True."""
+        result = await mode_manager._execute_transition("default", "test")
+        assert result is True
+        assert mode_manager.state.current_mode == "default"
+
+    @pytest.mark.asyncio
+    async def test_execute_transition_valid_target_succeeds(self, mode_manager):
+        """Test that transitioning to a valid target mode succeeds."""
+        with patch.object(mode_manager, "_save_mode_state"):
+            result = await mode_manager._execute_transition("advanced", "test")
+            assert result is True
+            assert mode_manager.state.current_mode == "advanced"
+            assert mode_manager.state.previous_mode == "default"

@@ -148,7 +148,7 @@ class ModeManager:
             with open(temp_file, "w") as f:
                 json5.dump(runtime_config, f, indent=2)
 
-            os.rename(temp_file, runtime_config_path)
+            os.replace(temp_file, runtime_config_path)
             logging.debug(f"Runtime config file created/updated: {runtime_config_path}")
 
         except Exception:
@@ -531,7 +531,7 @@ class ModeManager:
                 logging.debug(
                     f"Transition already in progress, skipping transition to {target_mode}"
                 )
-                return True
+                return False
 
             self._is_transitioning = True
             from_mode = self.state.current_mode
@@ -942,7 +942,7 @@ class ModeManager:
             with open(temp_file, "w") as f:
                 json.dump(state_data, f, indent=2)
 
-            os.rename(temp_file, state_file)
+            os.replace(temp_file, state_file)
             logging.debug(f"Mode state saved to {state_file}")
 
         except Exception as e:

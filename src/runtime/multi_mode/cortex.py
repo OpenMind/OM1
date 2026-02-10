@@ -186,6 +186,9 @@ class ModeCortexRuntime:
         """
         Handle mode transitions by gracefully stopping current components and starting new ones for the target mode.
 
+        If the transition to the target mode fails, attempts to roll back to the
+        previous mode so the system remains operational.
+
         Parameters
         ----------
         from_mode : str
@@ -212,8 +215,21 @@ class ModeCortexRuntime:
 
         except Exception as e:
             logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
-            raise
+            logging.info(f"Attempting to roll back to previous mode: {from_mode}")
+
+            try:
+                await self._initialize_mode(from_mode)
+                await self._start_orchestrators()
+
+                self.mode_manager.state.current_mode = from_mode
+                self.mode_manager.state.mode_start_time = time.time()
+
+                logging.info(f"Successfully rolled back to mode: {from_mode}")
+            except Exception as rollback_error:
+                logging.error(
+                    f"Rollback to '{from_mode}' also failed: {rollback_error}. "
+                    f"System may be in an inconsistent state."
+                )
         finally:
             self._is_reloading = False
 
