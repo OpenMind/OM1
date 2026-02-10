@@ -1,7 +1,7 @@
 ---
 title: TurtleBot4
 description: "TurtleBot4 Basic Setup"
-icon: robot
+icon: vacuum-robot
 ---
 
 ## Establishing Basic Networking and Connectivity

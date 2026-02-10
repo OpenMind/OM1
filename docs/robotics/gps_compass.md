@@ -1,6 +1,7 @@
 ---
 title: GPS and Compass Support
 description: "Arduino GPS and Compass Support"
+icon: compass
 ---
 
 ## Hardware

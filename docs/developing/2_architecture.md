@@ -8,7 +8,7 @@ icon: sitemap
 
 This system diagram illustrates some of OM1's layers and modules.
 
-![Architecture Diagram](../assets/om1-architecture.png)
+![ ](../assets/om1-architecture.png)
 
 ### Raw Sensor Layer
 
