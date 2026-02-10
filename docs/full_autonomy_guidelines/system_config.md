@@ -76,9 +76,7 @@ sudo systemctl enable kiosk.service
 sudo systemctl start kiosk.service
 ```
 
-{% hint style="info" %}
-**Note:** To stop the kiosk service, use `sudo systemctl stop kiosk.service`.
-{% endhint %}
+> **Note:** To stop the kiosk service, use `sudo systemctl stop kiosk.service`.
 
 ### AEC Service
 
@@ -129,9 +127,7 @@ Now, you can restart the system to ensure PulseAudio is running properly.
 sudo reboot
 ```
 
-{% hint style="info" %}
-**Note:** After reboot, if the audio devices are not automatically detected, you may need to manually start PulseAudio with the command:
-{% endhint %}
+> **Note:** After reboot, if the audio devices are not automatically detected, you may need to manually start PulseAudio with the command:
 
 ```bash
 systemctl --user restart pulseaudio
@@ -200,9 +196,7 @@ Use the following command to get the list of audio sources and sinks:
 pactl list short
 ```
 
-{% hint style="info" %}
-**Note:** Replace `alsa_output.platform-88090b0000.had.hdmi-stereo` with your speaker source and `alsa_input.usb-R__DE_R__DE_VideoMic_GO_II_FEB0C614-00.mono-fallback` with mic source
-{% endhint %}
+> **Note:** Replace `alsa_output.platform-88090b0000.had.hdmi-stereo` with your speaker source and `alsa_input.usb-R__DE_R__DE_VideoMic_GO_II_FEB0C614-00.mono-fallback` with mic source
 
 Make it executable:
 
