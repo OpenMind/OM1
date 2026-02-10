@@ -319,4 +319,4 @@ When keyboard control is enabled (default), use the following keys:
 | `N` or `Numpad 7` | Rotate left |
 | `M` or `Numpad 9` | Rotate right |
 
-> **Note**: We don't have auto charging feature supported with Issac Sim but it will be launched soon. Stay tuned!
+> **Note**: We don't have auto charging feature supported with Isaac Sim but it will be launched soon. Stay tuned!
