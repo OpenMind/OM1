@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Optional
 
 from duckduckgo_search import DDGS
@@ -110,7 +111,7 @@ class DuckDuckGoConnector(ActionConnector[DuckDuckGoConfig, WebSearchInput]):
             logging.debug(f"WebSearch results:\n{formatted_results}")
 
             self.io_provider.add_input(
-                "WebSearch", f"Query: {query}\n\n{formatted_results}", 0
+                "WebSearch", f"Query: {query}\n\n{formatted_results}", time.time()
             )
 
         except Exception as e:
