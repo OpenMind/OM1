@@ -5,7 +5,6 @@ import pytest
 
 from actions.move_ub.interface import MoveInput, MovementAction
 
-# Mock ubtech module before importing connector
 mock_ubtech = MagicMock()
 sys.modules["ubtech"] = mock_ubtech
 sys.modules["ubtech.ubtechapi"] = mock_ubtech.ubtechapi
@@ -116,7 +115,6 @@ class TestMoveYansheeConnectorSendCommand:
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api:
             mock_api.sync_play_motion.return_value = "ok"
             result = connector._send_command(Motion("reset"))
-            # reset calls itself recursively once, then returns
             assert result is not None or result is None  # no crash
 
     def test_send_command_timeout(self, connector):

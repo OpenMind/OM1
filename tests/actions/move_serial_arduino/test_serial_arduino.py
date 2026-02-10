@@ -5,7 +5,6 @@ import pytest
 
 from actions.move.interface import MoveInput
 
-# Mock serial module before importing connector
 sys.modules["serial"] = MagicMock()
 
 from actions.move_serial_arduino.connector.serial_arduino import (  # noqa: E402
@@ -80,7 +79,6 @@ class TestMoveSerialConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_be_still_simulation(self, connector_no_serial):
         """Test be still action in simulation mode."""
-        # Connector uses actions.move.interface.MoveInput but compares raw strings
         move_input = MoveInput(action="be still")  # type: ignore[arg-type]
         with patch(
             "actions.move_serial_arduino.connector.serial_arduino.logging"

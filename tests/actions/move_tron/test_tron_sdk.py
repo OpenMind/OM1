@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-# Mock om1_utils before importing connector
 mock_om1_utils = MagicMock()
 sys.modules["om1_utils"] = mock_om1_utils
 sys.modules["om1_utils.ws"] = mock_om1_utils.ws

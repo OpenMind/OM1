@@ -6,7 +6,6 @@ import pytest
 
 from actions.base import MoveCommand
 
-# Mock external modules before importing connector
 mock_zenoh = MagicMock()
 sys.modules["zenoh"] = mock_zenoh
 

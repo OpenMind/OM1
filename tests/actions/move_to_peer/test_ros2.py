@@ -6,7 +6,6 @@ import pytest
 from actions.base import ActionConfig
 from actions.move_to_peer.interface import MoveToPeerAction, MoveToPeerInput
 
-# Mock unitree SDK before importing connector
 mock_unitree = MagicMock()
 mock_sport_client_class = Mock()
 mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = mock_sport_client_class

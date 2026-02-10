@@ -5,7 +5,6 @@ import pytest
 
 from actions.emergency_alert.interface import EmergencyAlertInput
 
-# Mock external modules before importing connector
 mock_zenoh = MagicMock()
 sys.modules["zenoh"] = mock_zenoh
 

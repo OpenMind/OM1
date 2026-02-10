@@ -5,7 +5,6 @@ import pytest
 
 from actions.navigate_location.interface import NavigateLocationInput
 
-# Mock external modules before importing connectors
 mock_zenoh_msgs = MagicMock()
 sys.modules["zenoh_msgs"] = mock_zenoh_msgs
 
@@ -17,8 +16,6 @@ from actions.navigate_location.connector.unitree_go2_nav import (  # noqa: E402
     UnitreeGo2NavConfig,
     UnitreeGo2NavConnector,
 )
-
-# ===================== G1 Nav Tests =====================
 
 
 class TestUnitreeG1NavConfig:
@@ -161,7 +158,6 @@ class TestUnitreeG1NavConnectorConnect:
         nav_input = NavigateLocationInput(action="Go to the kitchen")
         with patch("actions.navigate_location.connector.unitree_g1_nav.logging"):
             await connector.connect(nav_input)
-            # Should have cleaned label to "kitchen"
             mock_loc.get_location.assert_called_with("kitchen")
 
     @pytest.mark.asyncio
@@ -183,8 +179,6 @@ class TestUnitreeG1NavConnectorConnect:
             await connector.connect(nav_input)
             mock_logging.error.assert_called()
 
-
-# ===================== Go2 Nav Tests =====================
 
 
 class TestUnitreeGo2NavConfig:

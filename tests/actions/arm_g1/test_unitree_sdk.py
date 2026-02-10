@@ -6,7 +6,6 @@ import pytest
 from actions.arm_g1.interface import ArmAction, ArmInput
 from actions.base import ActionConfig
 
-# Mock unitree SDK modules before importing connector
 mock_unitree = MagicMock()
 sys.modules["unitree"] = mock_unitree
 sys.modules["unitree.unitree_sdk2py"] = mock_unitree.unitree_sdk2py

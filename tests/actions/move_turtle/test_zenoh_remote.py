@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-# Mock external modules before importing connector
 mock_zenoh_msgs = MagicMock()
 sys.modules["zenoh_msgs"] = mock_zenoh_msgs
 
@@ -129,4 +128,3 @@ class TestMoveZenohRemoteConnectorConnect:
         """Test connect is a no-op (pass)."""
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)
-        # No crash, no side effects

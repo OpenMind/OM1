@@ -34,7 +34,6 @@ def create_aiohttp_mock(status=200, text="OK"):
     return mock_session_cm, mock_session
 
 
-# ===================== G1 Remember Location Tests =====================
 
 
 class TestUnitreeG1RememberLocationConfig:
@@ -163,7 +162,6 @@ class TestUnitreeG1RememberLocationConnector:
             )
 
 
-# ===================== Go2 Remember Location Tests =====================
 
 
 class TestUnitreeGo2RememberLocationConfig:

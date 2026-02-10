@@ -172,7 +172,6 @@ class TestSelfieConnectorConnect:
             mock_tts.add_pending_message.assert_called_once_with(
                 "Woof! Woof! I remember you, wendy! You are now enrolled."
             )
-            # Blur should be restored
             assert mock_blur.call_count == 2  # once off, once restore
 
     @pytest.mark.asyncio

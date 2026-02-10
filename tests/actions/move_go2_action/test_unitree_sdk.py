@@ -5,7 +5,6 @@ import pytest
 
 from actions.move_go2_action.interface import Action, ActionInput
 
-# Mock external modules before importing connector
 mock_unitree = MagicMock()
 sys.modules["unitree"] = mock_unitree
 sys.modules["unitree.unitree_sdk2py"] = mock_unitree.unitree_sdk2py
@@ -223,5 +222,4 @@ class TestActionUnitreeSDKConnectorConnect:
         mock_dependencies["state"].go2_action_progress = 0
         connector.sport_client = None
         action_input = ActionInput(action=Action.SHAKE_PAW)
-        # Should not raise
         await connector.connect(action_input)
