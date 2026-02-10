@@ -4,7 +4,7 @@ description: "Quadruped Simulation and Control"
 icon: robot
 ---
 
-## Minimum System Requirements
+## System Requirements
 
 | Component | Minimum | Good/Recommended | Ideal |
 |-----------|---------|------------------|-------|
