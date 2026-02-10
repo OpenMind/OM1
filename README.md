@@ -47,12 +47,12 @@ brew install portaudio ffmpeg
 For Linux
 ```bash
 sudo apt-get update
-sudo apt-get install portaudio19-dev python-dev ffmpeg
+sudo apt-get install portaudio19-dev python3-dev ffmpeg
 ```
 
 ### Obtain an OpenMind API Key
 
-Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp env.example .env` and add your key to the `.env`.
+Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp .env.example .env` and add your key to the `.env`.
 
 ### Launching OM1
 
@@ -112,72 +112,10 @@ Stay tuned!
 We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
 
 - **om1**
-- **unitree_sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
+- **OM1-ros2-sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 - **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
-
-Clone the following repositories -
-- git clone https://github.com/OpenMind/OM1.git
-- git clone https://github.com/OpenMind/unitree-sdk.git
-- git clone https://github.com/OpenMind/OM1-avatar.git
-- git clone https://github.com/OpenMind/OM1-video-processor.git
-- git clone https://github.com/OpenMind/OM1-system-setup.git
-
-## Starting the system
-To start all services, run the following commands:
-- For OM1
-
-Setup the API key
-
-For Bash: vim ~/.bashrc or ~/.bash_profile.
-
-For Zsh: vim ~/.zshrc.
-
-Add
-
-```bash
-export OM_API_KEY="your_api_key"
-```
-
-Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
-```bash
-command: ["unitree_go2_autonomy_advance"]
-```
-
-```bash
-cd OM1
-docker-compose up om1 -d --no-build
-```
-
-- For unitree_sdk
-```bash
-cd unitree_sdk
-docker-compose up orchestrator -d --no-build
-docker-compose up om1_sensor -d --no-build
-docker-compose up watchdog -d --no-build
-docker-compose up zenoh_bridge -d --no-build
-```
-
-- For OM1-avatar
-```bash
-cd OM1-avatar
-docker-compose up om1_avatar -d --no-build
-```
-
-- For OM1-video-processor
-```bash
-cd OM1-video-processor
-docker-compose up -d
-```
-
-- For OM1-system-setup
-```bash
-cd OM1-system-setup
-docker-compose up -d ota_agent
-docker-compose up -d ota_updater
-docker-compose up -d om1_monitor
-```
 
 ## Detailed Documentation
 
