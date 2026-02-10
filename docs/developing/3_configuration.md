@@ -190,7 +190,11 @@ Lists the simulation modules used by the agent. Here is an example configuration
 
 ## Agent Actions (`agent_actions`)
 
-Defines the agent's available capabilities, including action names, their implementation, and the connector used to execute them. Here is an example configuration for the `agent_actions` section:
+Defines the agent's available capabilities, including action names, their implementation, and the connector used to execute them.
+
+**Important:** Only actions explicitly listed in `agent_actions` are available to the LLM. For example, if you want the agent to produce speech output via TTS, you must include the `speak` action. Without it, the LLM has no way to trigger speech execution.
+
+Here is a basic example with `move` and `speak`:
 
 ```python
   "agent_actions": [
@@ -207,6 +211,34 @@ Defines the agent's available capabilities, including action names, their implem
       "connector": "ros2"
     }
   ]
+```
+
+Here is a more complete example combining `speak`, `move`, and `emotion` with concurrent execution:
+
+```json5
+  action_execution_mode: "concurrent",
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "elevenlabs_tts",
+      config: {
+        voice_id: "TbMNBJ27fH2U0VgpSNko",
+        silence_rate: 20,
+      },
+    },
+    {
+      name: "move",
+      llm_label: "move",
+      implementation: "passthrough",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "avatar",
+    },
+  ],
 ```
 
 You can customize the actions following the [Action Plugin Guide](6_actions.md)
