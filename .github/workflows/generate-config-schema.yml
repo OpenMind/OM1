@@ -16,6 +16,8 @@ on:
 
 jobs:
   generate-and-upload:
+    # Forks typically don't have the AWS upload secrets; skip cleanly when missing.
+    if: ${{ secrets.AWS_ROLE != '' && secrets.S3_BUCKET != '' && secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
