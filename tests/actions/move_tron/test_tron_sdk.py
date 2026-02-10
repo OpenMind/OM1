@@ -4,14 +4,24 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 mock_om1_utils = MagicMock()
-sys.modules["om1_utils"] = mock_om1_utils
-sys.modules["om1_utils.ws"] = mock_om1_utils.ws
+_mocked_modules = {
+    "om1_utils": mock_om1_utils,
+    "om1_utils.ws": mock_om1_utils.ws,
+}
+sys.modules.update(_mocked_modules)
 
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction  # noqa: E402
 from actions.move_tron.connector.tron_sdk import (  # noqa: E402
     MoveTronSDKConfig,
     MoveTronSDKConnector,
 )
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 class TestMoveTronSDKConfig:

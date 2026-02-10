@@ -7,15 +7,25 @@ from actions.arm_g1.interface import ArmAction, ArmInput
 from actions.base import ActionConfig
 
 mock_unitree = MagicMock()
-sys.modules["unitree"] = mock_unitree
-sys.modules["unitree.unitree_sdk2py"] = mock_unitree.unitree_sdk2py
-sys.modules["unitree.unitree_sdk2py.g1"] = mock_unitree.unitree_sdk2py.g1
-sys.modules["unitree.unitree_sdk2py.g1.arm"] = mock_unitree.unitree_sdk2py.g1.arm
-sys.modules["unitree.unitree_sdk2py.g1.arm.g1_arm_action_client"] = (
-    mock_unitree.unitree_sdk2py.g1.arm.g1_arm_action_client
-)
+_mocked_modules = {
+    "unitree": mock_unitree,
+    "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
+    "unitree.unitree_sdk2py.g1": mock_unitree.unitree_sdk2py.g1,
+    "unitree.unitree_sdk2py.g1.arm": mock_unitree.unitree_sdk2py.g1.arm,
+    "unitree.unitree_sdk2py.g1.arm.g1_arm_action_client": (
+        mock_unitree.unitree_sdk2py.g1.arm.g1_arm_action_client
+    ),
+}
+sys.modules.update(_mocked_modules)
 
 from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector  # noqa: E402
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 @pytest.fixture

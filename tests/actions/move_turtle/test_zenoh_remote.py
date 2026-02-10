@@ -3,18 +3,25 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-mock_zenoh_msgs = MagicMock()
-sys.modules["zenoh_msgs"] = mock_zenoh_msgs
-
 mock_om1_utils = MagicMock()
-sys.modules["om1_utils"] = mock_om1_utils
-sys.modules["om1_utils.ws"] = mock_om1_utils.ws
+_mocked_modules = {
+    "om1_utils": mock_om1_utils,
+    "om1_utils.ws": mock_om1_utils.ws,
+}
+sys.modules.update(_mocked_modules)
 
 from actions.move_turtle.connector.zenoh_remote import (  # noqa: E402
     MoveZenohRemoteConfig,
     MoveZenohRemoteConnector,
 )
 from actions.move_turtle.interface import MoveInput, MovementAction  # noqa: E402
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 @pytest.fixture

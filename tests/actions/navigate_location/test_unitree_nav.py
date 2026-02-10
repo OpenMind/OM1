@@ -1,21 +1,16 @@
-import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from actions.navigate_location.interface import NavigateLocationInput
-
-mock_zenoh_msgs = MagicMock()
-sys.modules["zenoh_msgs"] = mock_zenoh_msgs
-
-from actions.navigate_location.connector.unitree_g1_nav import (  # noqa: E402
+from actions.navigate_location.connector.unitree_g1_nav import (
     UnitreeG1NavConfig,
     UnitreeG1NavConnector,
 )
-from actions.navigate_location.connector.unitree_go2_nav import (  # noqa: E402
+from actions.navigate_location.connector.unitree_go2_nav import (
     UnitreeGo2NavConfig,
     UnitreeGo2NavConnector,
 )
+from actions.navigate_location.interface import NavigateLocationInput
 
 
 class TestUnitreeG1NavConfig:

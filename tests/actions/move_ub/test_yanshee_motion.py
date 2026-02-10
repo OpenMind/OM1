@@ -6,14 +6,24 @@ import pytest
 from actions.move_ub.interface import MoveInput, MovementAction
 
 mock_ubtech = MagicMock()
-sys.modules["ubtech"] = mock_ubtech
-sys.modules["ubtech.ubtechapi"] = mock_ubtech.ubtechapi
+_mocked_modules = {
+    "ubtech": mock_ubtech,
+    "ubtech.ubtechapi": mock_ubtech.ubtechapi,
+}
+sys.modules.update(_mocked_modules)
 
 from actions.move_ub.connector.yanshee_motion import (  # noqa: E402
     Motion,
     MoveYansheeConfig,
     MoveYansheeConnector,
 )
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 class TestMotion:

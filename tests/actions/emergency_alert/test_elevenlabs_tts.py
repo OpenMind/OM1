@@ -6,15 +6,22 @@ import pytest
 from actions.emergency_alert.interface import EmergencyAlertInput
 
 mock_zenoh = MagicMock()
-sys.modules["zenoh"] = mock_zenoh
-
-mock_zenoh_msgs = MagicMock()
-sys.modules["zenoh_msgs"] = mock_zenoh_msgs
+_mocked_modules = {
+    "zenoh": mock_zenoh,
+}
+sys.modules.update(_mocked_modules)
 
 from actions.emergency_alert.connector.elevenlabs_tts import (  # noqa: E402
     EmergencyAlertElevenLabsTTSConnector,
     SpeakElevenLabsTTSConfig,
 )
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 @pytest.fixture

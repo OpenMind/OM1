@@ -9,15 +9,25 @@ from actions.move_to_peer.interface import MoveToPeerAction, MoveToPeerInput
 mock_unitree = MagicMock()
 mock_sport_client_class = Mock()
 mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = mock_sport_client_class
-sys.modules["unitree"] = mock_unitree
-sys.modules["unitree.unitree_sdk2py"] = mock_unitree.unitree_sdk2py
-sys.modules["unitree.unitree_sdk2py.go2"] = mock_unitree.unitree_sdk2py.go2
-sys.modules["unitree.unitree_sdk2py.go2.sport"] = mock_unitree.unitree_sdk2py.go2.sport
-sys.modules["unitree.unitree_sdk2py.go2.sport.sport_client"] = (
-    mock_unitree.unitree_sdk2py.go2.sport.sport_client
-)
+_mocked_modules = {
+    "unitree": mock_unitree,
+    "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
+    "unitree.unitree_sdk2py.go2": mock_unitree.unitree_sdk2py.go2,
+    "unitree.unitree_sdk2py.go2.sport": mock_unitree.unitree_sdk2py.go2.sport,
+    "unitree.unitree_sdk2py.go2.sport.sport_client": (
+        mock_unitree.unitree_sdk2py.go2.sport.sport_client
+    ),
+}
+sys.modules.update(_mocked_modules)
 
 from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector  # noqa: E402
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 @pytest.fixture

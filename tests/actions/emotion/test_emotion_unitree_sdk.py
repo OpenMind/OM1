@@ -6,18 +6,28 @@ import pytest
 from actions.emotion.interface import EmotionAction, EmotionInput
 
 mock_unitree = MagicMock()
-sys.modules["unitree"] = mock_unitree
-sys.modules["unitree.unitree_sdk2py"] = mock_unitree.unitree_sdk2py
-sys.modules["unitree.unitree_sdk2py.g1"] = mock_unitree.unitree_sdk2py.g1
-sys.modules["unitree.unitree_sdk2py.g1.audio"] = mock_unitree.unitree_sdk2py.g1.audio
-sys.modules["unitree.unitree_sdk2py.g1.audio.g1_audio_client"] = (
-    mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client
-)
+_mocked_modules = {
+    "unitree": mock_unitree,
+    "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
+    "unitree.unitree_sdk2py.g1": mock_unitree.unitree_sdk2py.g1,
+    "unitree.unitree_sdk2py.g1.audio": mock_unitree.unitree_sdk2py.g1.audio,
+    "unitree.unitree_sdk2py.g1.audio.g1_audio_client": (
+        mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client
+    ),
+}
+sys.modules.update(_mocked_modules)
 
 from actions.emotion.connector.unitree_sdk import (  # noqa: E402
     EmotionUnitreeConfig,
     EmotionUnitreeConnector,
 )
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 class TestEmotionUnitreeConfig:

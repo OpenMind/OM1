@@ -5,12 +5,23 @@ import pytest
 
 from actions.move.interface import MoveInput
 
-sys.modules["serial"] = MagicMock()
+_mock_serial = MagicMock()
+_mocked_modules = {
+    "serial": _mock_serial,
+}
+sys.modules.update(_mocked_modules)
 
 from actions.move_serial_arduino.connector.serial_arduino import (  # noqa: E402
     MoveSerialConfig,
     MoveSerialConnector,
 )
+
+
+def teardown_module():
+    """Clean up sys.modules mock to prevent leaking into other test modules."""
+    for key, val in _mocked_modules.items():
+        if sys.modules.get(key) is val:
+            sys.modules.pop(key, None)
 
 
 class TestMoveSerialConfig:
