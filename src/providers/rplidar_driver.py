@@ -309,7 +309,7 @@ class RPDriver(object):
         self._send_cmd(GET_HEALTH_BYTE)
         dsize, is_single, dtype = self._read_descriptor()
         if dsize != HEALTH_LEN:
-            raise RPLidarException("Wrong get_info reply length")
+            raise RPLidarException("Wrong get_health reply length")
         if not is_single:
             raise RPLidarException("Not a single response mode")
         if dtype != HEALTH_TYPE:
@@ -377,7 +377,7 @@ class RPDriver(object):
 
         dsize, is_single, dtype = self._read_descriptor()
         if dsize != _SCAN_TYPE[scan_type]["size"]:
-            raise RPLidarException("Wrong get_info reply length")
+            raise RPLidarException("Wrong start scan reply length")
         if is_single:
             raise RPLidarException("Not a multiple response mode")
         if dtype != _SCAN_TYPE[scan_type]["response"]:

@@ -317,7 +317,7 @@ class UnitreeRealSenseDevVLMProvider:
         if not already running.
         """
         if self.running:
-            logging.warning("Unitree RealSenseDev VLM provider is already running")
+            logger.warning("Unitree RealSenseDev VLM provider is already running")
             return
 
         self.running = True
@@ -330,7 +330,7 @@ class UnitreeRealSenseDevVLMProvider:
                 self.stream_ws_client.send_message
             )
 
-        logging.info("Unitree RealSenseDev VLM provider started")
+        logger.info("Unitree RealSenseDev VLM provider started")
 
     def stop(self):
         """
