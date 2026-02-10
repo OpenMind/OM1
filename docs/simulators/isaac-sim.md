@@ -30,7 +30,7 @@ To get started with **Isaac Sim** and **Unitree SDK**, please install cyclonedds
 Install cyclonedds from this [link](https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html) or follow the instructions below.
 
 ```bash
-apt-get install git cmake gcc
+sudo apt-get install git cmake gcc
 ```
 
 ```bash
@@ -260,7 +260,7 @@ Step 7: Open a new terminal and run:
     ros2 launch orchestrator orchestrator.py use_sim:=true
     ```
 
-    This will bring up the `orchestrator`, to consume data collected by `om1_sensor` doe SLAM and Navigation.
+    This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
 
 Step 8: Run Zenoh Ros2 Bridge
 
