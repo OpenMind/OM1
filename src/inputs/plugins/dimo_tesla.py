@@ -46,7 +46,7 @@ class DIMOTesla(FuserInput[DIMOTeslaConfig, Optional[str]]):
     """
     DIMO Tesla input handler.
 
-    A class that process Tesla data and generates text descriptions
+    A class that processes Tesla data and generates text descriptions
     """
 
     def __init__(self, config: DIMOTeslaConfig):

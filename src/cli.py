@@ -180,6 +180,19 @@ def validate_config(
     - API key configuration (warning only)
     - Component existence (with --check-components flag)
 
+    Parameters
+    ----------
+    config_name : str
+        Configuration file name or path (e.g., 'test' or 'config/test.json5').
+    verbose : bool
+        Show detailed validation information.
+    check_components : bool
+        Verify that all components (inputs, LLMs, actions) exist in codebase.
+    skip_inputs : bool
+        Skip input validation (useful for debugging).
+    allow_missing : bool
+        Allow missing components (only warn, don't fail).
+
     Examples
     --------
         uv run src/cli.py validate-config test
