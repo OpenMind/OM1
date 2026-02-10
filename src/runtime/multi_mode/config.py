@@ -20,6 +20,7 @@ from runtime.multi_mode.hook import (
     execute_lifecycle_hooks,
     parse_lifecycle_hooks,
 )
+from runtime.normalization import normalize_to_multi_mode
 from runtime.robotics import load_unitree
 from runtime.single_mode.config import RuntimeConfig, add_meta
 from runtime.version import verify_runtime_version
@@ -392,6 +393,8 @@ def load_mode_config(
             raise ValueError(
                 f"Failed to parse configuration file '{config_path}': {e}"
             ) from e
+
+    raw_config = normalize_to_multi_mode(raw_config)
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)

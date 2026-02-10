@@ -44,9 +44,7 @@ def validate_config_schema(raw_config: dict) -> None:
     raw_config : dict
         The raw configuration dictionary to validate.
     """
-    schema_file = (
-        "multi_mode_schema.json" if "modes" in raw_config else "single_mode_schema.json"
-    )
+    schema_file = "multi_mode_schema.json"
 
     try:
         schema = _load_schema(schema_file)
