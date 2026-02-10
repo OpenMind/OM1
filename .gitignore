@@ -43,3 +43,8 @@ logs/
 # Mode system state files
 config/memory
 config/.runtime.json5
+
+# API Keys & Secrets
+.env
+.env.local
+**/api_keys.json
