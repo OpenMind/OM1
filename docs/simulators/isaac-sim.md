@@ -160,7 +160,7 @@ sudo apt-get update
 sudo apt-get install python3-rosdep
 ```
 
-Once you've successfully completed above steps, follow the following steps to start the gazebo simulation, generate SLAM map of the surrounding and start navigation.
+Once you've successfully completed above steps, follow the following steps to start the Isaac Sim simulation with OM1.
 
 Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
 
@@ -195,6 +195,8 @@ Step 3: Build all the packages:
 Step 4: Install Isaac Sim
 
     ```bash
+    cd unitree/isaac_sim
+
     uv venv --python 3.11 --seed env_isaacsim
 
     source env_isaacsim/bin/activate
