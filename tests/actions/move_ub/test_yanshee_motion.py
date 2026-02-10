@@ -111,11 +111,28 @@ class TestMoveYansheeConnectorSendCommand:
             connector = MoveYansheeConnector(config)
             return connector
 
-    def test_send_command_success(self, connector):
+    def test_send_command_success_reset(self, connector):
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api:
             mock_api.sync_play_motion.return_value = "ok"
             result = connector._send_command(Motion("reset"))
-            assert result is not None or result is None  # no crash
+            assert result == "ok"
+            mock_api.sync_play_motion.assert_called_once()
+
+    def test_send_command_non_reset_sends_reset_after(self, connector):
+        with patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api:
+            mock_api.sync_play_motion.return_value = "ok"
+            connector._send_command(Motion("wave"))
+            assert mock_api.sync_play_motion.call_count == 2
+
+    def test_send_command_value_error(self, connector):
+        with (
+            patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api,
+            patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging,
+        ):
+            mock_api.sync_play_motion.side_effect = ValueError("bad param")
+            result = connector._send_command(Motion("wave"))
+            assert result is False
+            mock_logging.error.assert_called()
 
     def test_send_command_timeout(self, connector):
         """Test _send_command with timeout."""
@@ -201,6 +218,69 @@ class TestMoveYansheeConnectorConnect:
         with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
             await connector.connect(move_input)
             mock_logging.info.assert_any_call("UB command: hug")
+
+    @pytest.mark.asyncio
+    async def test_connect_walk_left(self, connector):
+        move_input = MoveInput(action=MovementAction.WALK_LEFT)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: walk left")
+
+    @pytest.mark.asyncio
+    async def test_connect_walk_right(self, connector):
+        move_input = MoveInput(action=MovementAction.WALK_RIGHT)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: walk right")
+
+    @pytest.mark.asyncio
+    async def test_connect_look_left(self, connector):
+        move_input = MoveInput(action=MovementAction.LOOK_LEFT)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: look left")
+
+    @pytest.mark.asyncio
+    async def test_connect_look_right(self, connector):
+        move_input = MoveInput(action=MovementAction.LOOK_RIGHT)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: look right")
+
+    @pytest.mark.asyncio
+    async def test_connect_crouch(self, connector):
+        move_input = MoveInput(action=MovementAction.CROUCH)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: crouch")
+
+    @pytest.mark.asyncio
+    async def test_connect_come_on(self, connector):
+        move_input = MoveInput(action=MovementAction.COME)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: come on")
+
+    @pytest.mark.asyncio
+    async def test_connect_waka_waka(self, connector):
+        move_input = MoveInput(action=MovementAction.WAKAWAKA)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: waka waka")
+
+    @pytest.mark.asyncio
+    async def test_connect_raise_right_hand(self, connector):
+        move_input = MoveInput(action=MovementAction.RAISE_RIGHT_HAND)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: raise right hand")
+
+    @pytest.mark.asyncio
+    async def test_connect_push_up(self, connector):
+        move_input = MoveInput(action=MovementAction.PUSH_UP)
+        with patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging:
+            await connector.connect(move_input)
+            mock_logging.info.assert_any_call("UB command: push up")
 
     @pytest.mark.asyncio
     async def test_connect_unknown_action(self, connector):
