@@ -243,6 +243,8 @@ Step 8: Start OM1
     export OM_API_KEY="<your_api_key>"
     ```
 
+    Now, run the simulation agent
+
     ```bash
     uv run src/run.py simulation
     ```

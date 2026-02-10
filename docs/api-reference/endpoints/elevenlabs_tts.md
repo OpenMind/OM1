@@ -261,11 +261,9 @@ echo "SUQzBAAAAAAAI1RTU0UAAAA..." | base64 -d > audio.mp3
 curl ... | jq -r '.response' | base64 -d > audio.mp3
 ```
 
-{% hint style="info" %}
-**Note:**
-Note the following best practices when using the ElevenLabs TTS API:
-- Audio responses are base64-encoded and must be decoded before playback
-- The ElevenLabs API key can be configured server-side or provided per-request
-- Default voice and model settings are optimized for English speech
-- Large text inputs may take longer to process
-{% endhint %}
+> **Note:**
+> Note the following best practices when using the ElevenLabs TTS API:
+> - Audio responses are base64-encoded and must be decoded before playback
+> - The ElevenLabs API key can be configured server-side or provided per-request
+> - Default voice and model settings are optimized for English speech
+> - Large text inputs may take longer to process
