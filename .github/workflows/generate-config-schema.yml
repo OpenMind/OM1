@@ -15,6 +15,11 @@ on:
   workflow_dispatch:
 
 jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Schema upload job skipped (forks typically lack AWS secrets)."
+
   generate-and-upload:
     # Forks typically don't have the AWS upload secrets; skip cleanly when missing.
     if: ${{ secrets.AWS_ROLE != '' && secrets.S3_BUCKET != '' && secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
