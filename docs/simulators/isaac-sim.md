@@ -164,145 +164,145 @@ Once you've successfully completed above steps, follow the following steps to st
 
 Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
 
-    ```bash
-    git clone https://github.com/OpenMind/OM1-ros2-sdk.git
-    ```
+```bash
+git clone https://github.com/OpenMind/OM1-ros2-sdk.git
+```
 
 Step 2: Install all the necessary dependencies:
 
-    ```bash
-    cd OM1-ros2-sdk
-    uv venv
-    sudo rosdep init
-    rosdep update
-    rosdep install --from-paths . --ignore-src -r -y
-    source .venv/bin/activate
-    uv pip install .
-    ```
+```bash
+cd OM1-ros2-sdk
+uv venv
+sudo rosdep init
+rosdep update
+rosdep install --from-paths . --ignore-src -r -y
+source .venv/bin/activate
+uv pip install .
+```
 
-    Export the python path to your virtual environment
+Export the python path to your virtual environment
 
-    ```bash
-    export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
-    ```
+```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
+```
 
 Step 3: Build all the packages:
 
-    ```bash
-    colcon build
-    ```
+```bash
+colcon build
+```
 
 Step 4: Install Isaac Sim
 
-    ```bash
-    cd unitree/isaac_sim
+```bash
+cd unitree/isaac_sim
 
-    uv venv --python 3.11 --seed env_isaacsim
+uv venv --python 3.11 --seed env_isaacsim
 
-    source env_isaacsim/bin/activate
+source env_isaacsim/bin/activate
 
-    # note that here we are installing IsaacSim 5.1
-    pip install "isaacsim[all,extscache]==5.1.0" --extra-index-url https://pypi.nvidia.com
+# note that here we are installing IsaacSim 5.1
+pip install "isaacsim[all,extscache]==5.1.0" --extra-index-url https://pypi.nvidia.com
 
-    # install the following or another CUDA-enabled PyTorch build that matches your system architecture
+# install the following or another CUDA-enabled PyTorch build that matches your system architecture
 
-    pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
 
-    # after installation, run the following to test successful installation
-    isaacsim
-    ```
+# after installation, run the following to test successful installation
+isaacsim
+```
 
-    If the previous command ran with no issues, Isaac Sim was installed successfully.
+If the previous command ran with no issues, Isaac Sim was installed successfully.
 
 Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a terminal and run the following commands.
 
-    To run the script, export the following
+To run the script, export the following
 
 > **Note**: a trained policy is required, which should contain the policy.pt, env.yaml, and deploy.yaml files
 
-    ```bash
-    export ROS_DISTRO=humble
-    export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaaclab/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
-    ```
+```bash
+export ROS_DISTRO=humble
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaaclab/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
+```
 
 > **Note:** Make sure to replace PATH_TO_VENV with the actual path to your virtual environment
 
-    We support Isaac Sim for Unitree Go2 and G1. To run the simulation for Go2, run
+We support Isaac Sim for Unitree Go2 and G1. To run the simulation for Go2, run
 
-    ```bash
-    source env_isaacsim/bin/activate
-    python3 run.py # using default policy
-    python3 run.py --policy_dir YOUR_POLICY_DIR # using your own policy
-    ```
+```bash
+source env_isaacsim/bin/activate
+python3 run.py # using default policy
+python3 run.py --policy_dir YOUR_POLICY_DIR # using your own policy
+```
 
-    To run the simulation for G1, run
+To run the simulation for G1, run
 
-    ```bash
-    source env_isaacsim/bin/activate
-    python3 run.py --robot_type g1 # using default policy
-    python3 run.py --robot_type g1 --policy_dir YOUR_POLICY_DIR # using your own policy
-    ```
+```bash
+source env_isaacsim/bin/activate
+python3 run.py --robot_type g1 # using default policy
+python3 run.py --robot_type g1 --policy_dir YOUR_POLICY_DIR # using your own policy
+```
 
-    You'll now be able to see Isaac Sim running on your system.
+You'll now be able to see Isaac Sim running on your system.
 
 ![ ](../assets/isaac-sim.png)
 
 Step 6: Open a new terminal and run:
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_sdk sensor_launch.py use_sim:=true
-    ```
+```bash
+source install/setup.bash
+ros2 launch go2_sdk sensor_launch.py use_sim:=true
+```
 
-    This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
+This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
 Step 7: Open a new terminal and run:
 
-    ```bash
-    source install/setup.bash
-    ros2 launch orchestrator orchestrator.py use_sim:=true
-    ```
+```bash
+source install/setup.bash
+ros2 launch orchestrator orchestrator.py use_sim:=true
+```
 
-    This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
+This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
 
 Step 8: Run Zenoh Ros2 Bridge
 
-    To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
 
-    After installing the Zenoh ROS 2 bridge, you can run it with the following command:
+After installing the Zenoh ROS 2 bridge, you can run it with the following command:
 
-    ```bash
-    zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
-    ```
+```bash
+zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
+```
 
 Step 9: Start OM1
 
-    Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
-    Then add the optional Python CycloneDDS module to OM1, run
+Then add the optional Python CycloneDDS module to OM1, run
 
-    ```bash
-    uv pip install -r pyproject.toml --extra dds
-    ```
+```bash
+uv pip install -r pyproject.toml --extra dds
+```
 
-    Setup your API key in `.bashrc` file and run your simulation agent:
+Setup your API key in `.bashrc` file and run your simulation agent:
 
-    Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
+Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
 
-    ```bash
-    vi ~/.bashrc
-    ```
+```bash
+vi ~/.bashrc
+```
 
-    ```bash
-    export OM_API_KEY="<your_api_key>"
-    ```
+```bash
+export OM_API_KEY="<your_api_key>"
+```
 
-    Now, run the simulation agent
+Now, run the simulation agent
 
-    ```bash
-    uv run src/run.py simulation
-    ```
+```bash
+uv run src/run.py simulation
+```
 
 Congratulations! You have launched Isaac Sim with OM1 successfully.
 

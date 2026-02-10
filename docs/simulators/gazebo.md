@@ -156,116 +156,116 @@ Once you've successfully completed above steps, follow the following steps to st
 
 Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
 
-    ```bash
-    git clone https://github.com/OpenMind/OM1-ros2-sdk.git
-    ```
+```bash
+git clone https://github.com/OpenMind/OM1-ros2-sdk.git
+```
 
 Step 2: Install all the necessary dependencies:
 
-    ```bash
-    cd OM1-ros2-sdk
-    uv venv
-    sudo rosdep init
-    rosdep update
-    rosdep install --from-paths . --ignore-src -r -y
-    source .venv/bin/activate
-    uv pip install .
-    ```
+```bash
+cd OM1-ros2-sdk
+uv venv
+sudo rosdep init
+rosdep update
+rosdep install --from-paths . --ignore-src -r -y
+source .venv/bin/activate
+uv pip install .
+```
 
-    Export the python path to your virtual environment
+Export the python path to your virtual environment
 
-    ```bash
-    export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
-    ```
+```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
+```
 
 Step 3: Build all the packages:
 
-    ```bash
-    colcon build
-    ```
+```bash
+colcon build
+```
 
-    Now you should be able to launch the **Gazebo Simulator**.
+Now you should be able to launch the **Gazebo Simulator**.
 
 Step 4: Open a terminal and run the following commands. You'll now be able to see the Gazebo and RViZ windows launch on your system.
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_gazebo_sim go2_launch.py
-    ```
+```bash
+source install/setup.bash
+ros2 launch go2_gazebo_sim go2_launch.py
+```
 
 Step 5: Open a new terminal and run:
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_sdk sensor_launch.py use_sim:=true
-    ```
+```bash
+source install/setup.bash
+ros2 launch go2_sdk sensor_launch.py use_sim:=true
+```
 
-    This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
+This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
 Step 6: Open a new terminal and run:
 
-    ```bash
-    source install/setup.bash
-    ros2 launch orchestrator orchestrator.py use_sim:=true
-    ```
+```bash
+source install/setup.bash
+ros2 launch orchestrator orchestrator.py use_sim:=true
+```
 
-    This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
+This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
 
 Step 7: Run Zenoh Ros2 Bridge
 
-    To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
 
-    After installing the Zenoh ROS 2 bridge, you can run it with the following command:
+After installing the Zenoh ROS 2 bridge, you can run it with the following command:
 
-    ```bash
-    zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
-    ```
+```bash
+zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
+```
 
 Step 8: Start OM1
 
-    Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
-    Then add the optional Python CycloneDDS module to OM1, run
+Then add the optional Python CycloneDDS module to OM1, run
 
-    ```bash
-    uv pip install -r pyproject.toml --extra dds
-    ```
+```bash
+uv pip install -r pyproject.toml --extra dds
+```
 
-    Setup your API key in `.bashrc` file and run your simulation agent:
+Setup your API key in `.bashrc` file and run your simulation agent:
 
-    Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
+Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
 
-    ```bash
-    vi ~/.bashrc
-    ```
+```bash
+vi ~/.bashrc
+```
 
-    ```bash
-    export OM_API_KEY="<your_api_key>"
-    ```
+```bash
+export OM_API_KEY="<your_api_key>"
+```
 
-    Now, run the simulation agent
+Now, run the simulation agent
 
-    ```bash
-    uv run src/run.py simulation
-    ```
+```bash
+uv run src/run.py simulation
+```
 
 Step 9: Teleoperate the robot in simulation
 
-    You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
+You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
 
-    ```bash
-    source install/setup.bash
-    ros2 run teleop_twist_keyboard teleop_twist_keyboard
-    ```
+```bash
+source install/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
 
-    Use the keyboard controls displayed in the terminal to move the robot:
-    ```
-    i - Move forward
-    , - Move backward
-    j - Turn left
-    l - Turn right
-    k - Stop
-    U/O/M/> - Move diagonally
-    ```
+Use the keyboard controls displayed in the terminal to move the robot:
+```
+i - Move forward
+, - Move backward
+j - Turn left
+l - Turn right
+k - Stop
+U/O/M/> - Move diagonally
+```
 
 > **Note**: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
