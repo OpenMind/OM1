@@ -68,7 +68,6 @@ class WeatherInput(FuserInput[WeatherConfig, Optional[dict]]):
         self.units = config.units
 
         self._last_poll_time: float = 0
-        self._cached_data: Optional[dict] = None
 
         if not self.api_key:
             logging.warning("WeatherInput: API key not provided")
@@ -119,21 +118,22 @@ class WeatherInput(FuserInput[WeatherConfig, Optional[dict]]):
 
     async def _poll(self) -> Optional[dict]:
         """
-        Poll for weather data with caching based on poll_interval.
+        Poll for weather data based on poll_interval.
 
         Returns
         -------
         Optional[dict]
-            Weather data if available, None otherwise.
+            Fresh weather data when poll interval has elapsed, None otherwise.
         """
         current_time = time.time()
 
-        if current_time - self._last_poll_time >= self.poll_interval:
-            self._cached_data = await self._fetch_weather()
-            self._last_poll_time = current_time
+        if current_time - self._last_poll_time < self.poll_interval:
+            await asyncio.sleep(1.0)
+            return None
 
+        self._last_poll_time = current_time
         await asyncio.sleep(1.0)
-        return self._cached_data
+        return await self._fetch_weather()
 
     async def _raw_to_text(self, raw_input: Optional[dict]) -> Optional[Message]:
         """
@@ -164,8 +164,15 @@ class WeatherInput(FuserInput[WeatherConfig, Optional[dict]]):
             condition = weather.get("description", "unknown")
             wind_speed = wind.get("speed")
 
-            unit_symbol = "°C" if self.units == "metric" else "°F"
-            wind_unit = "m/s" if self.units == "metric" else "mph"
+            if self.units == "metric":
+                unit_symbol = "°C"
+                wind_unit = "m/s"
+            elif self.units == "imperial":
+                unit_symbol = "°F"
+                wind_unit = "mph"
+            else:
+                unit_symbol = " K"
+                wind_unit = "m/s"
 
             parts = [f"Weather in {location}: {condition}"]
 
@@ -219,7 +226,7 @@ class WeatherInput(FuserInput[WeatherConfig, Optional[dict]]):
         )
 
         self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
+            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
         self.messages = []
 

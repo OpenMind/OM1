@@ -1,5 +1,4 @@
-"""Tests for Weather input plugin."""
-
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -155,6 +154,94 @@ class TestWeatherInputFetch:
         assert result is None
 
 
+class TestWeatherInputPoll:
+    """Tests for _poll() behavior."""
+
+    @pytest.fixture
+    def mock_io_provider(self):
+        """Mock IOProvider."""
+        with patch("inputs.plugins.weather.IOProvider") as mock:
+            yield mock
+
+    @pytest.fixture
+    def weather_input(self, mock_io_provider):
+        """Create a WeatherInput instance with short poll interval."""
+        config = WeatherConfig(api_key="test_api_key", poll_interval=60.0)
+        return WeatherInput(config)
+
+    @pytest.mark.asyncio
+    async def test_poll_returns_data_on_first_call(self, weather_input):
+        """Test that first poll fetches weather data."""
+        mock_data = {"name": "NYC", "main": {"temp": 20.0}}
+
+        with patch.object(
+            weather_input, "_fetch_weather", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = mock_data
+            result = await weather_input._poll()
+
+            assert result == mock_data
+            mock_fetch.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_poll_returns_none_before_interval(self, weather_input):
+        """Test that poll returns None when interval has not elapsed."""
+        mock_data = {"name": "NYC", "main": {"temp": 20.0}}
+
+        with patch.object(
+            weather_input, "_fetch_weather", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = mock_data
+
+            await weather_input._poll()
+            mock_fetch.reset_mock()
+
+            result = await weather_input._poll()
+            assert result is None
+            mock_fetch.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_poll_fetches_again_after_interval(self, weather_input):
+        """Test that poll fetches new data after interval elapses."""
+        mock_data = {"name": "NYC", "main": {"temp": 20.0}}
+
+        with patch.object(
+            weather_input, "_fetch_weather", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = mock_data
+
+            await weather_input._poll()
+            mock_fetch.reset_mock()
+
+            weather_input._last_poll_time = time.time() - 120.0
+
+            result = await weather_input._poll()
+            assert result == mock_data
+            mock_fetch.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_poll_does_not_send_duplicate_data(self, weather_input):
+        """Test that repeated polls don't create duplicate messages."""
+        mock_data = {
+            "name": "NYC",
+            "main": {"temp": 20.0},
+            "weather": [{"description": "clear"}],
+        }
+
+        with patch.object(
+            weather_input, "_fetch_weather", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = mock_data
+
+            result1 = await weather_input._poll()
+            await weather_input.raw_to_text(result1)
+            assert len(weather_input.messages) == 1
+
+            result2 = await weather_input._poll()
+            await weather_input.raw_to_text(result2)
+            assert len(weather_input.messages) == 1
+
+
 class TestWeatherInputRawToText:
     """Tests for raw_to_text conversion."""
 
@@ -213,6 +300,28 @@ class TestWeatherInputRawToText:
         """Test that None input returns None."""
         result = await weather_input._raw_to_text(None)
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_raw_to_text_kelvin_units(self, mock_io_provider):
+        """Test conversion with standard (Kelvin) units."""
+        config = WeatherConfig(api_key="test_key", units="standard")
+        weather = WeatherInput(config)
+
+        raw_data = {
+            "name": "Moscow",
+            "main": {"temp": 263.15, "feels_like": 258.0, "humidity": 70},
+            "weather": [{"description": "snow"}],
+            "wind": {"speed": 7.0},
+        }
+
+        result = await weather._raw_to_text(raw_data)
+
+        assert result is not None
+        assert "Moscow" in result.message
+        assert " K" in result.message
+        assert "m/s" in result.message
+        assert "°F" not in result.message
+        assert "°C" not in result.message
 
     @pytest.mark.asyncio
     async def test_raw_to_text_partial_data(self, weather_input):
