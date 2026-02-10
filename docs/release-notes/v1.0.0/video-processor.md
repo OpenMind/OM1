@@ -1,0 +1,32 @@
+---
+title: Video Processor Production Ready Release
+description: "v1.0.0-beta.1"
+icon: tarp
+---
+
+## What's included
+
+Production ready release for OM1 video processor.
+
+## Features
+
+### [v1.0.0](https://github.com/OpenMind/OM1-video-processor/releases/tag/v1.0.0)
+- Updated the environment to support newer Python and CUDA version. It refines dependency management, and improves model handling. The changes enhance compatibility with latest libraries and streamline deployment, especially for NVIDIA THOR and specific version of TensorRT-based inference.
+- Updated Dockerfile for Thor support
+- Fixed CUDA driver mismatch
+- Added venv to docker image
+
+### Docker Image
+
+The video-processor is provided as a Docker image for easy setup.
+   ```bash
+   git clone https://github.com/OpenMind/OM1-video-processor.git
+   cd OM1-video-processor
+   docker-compose up -d
+   ```
+
+Follow the steps [here](https://docs.openmind.org/full_autonomy_guidelines/om1_video_processor), for complete setup.
+
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1_video_processor/v1.0.0).
+
+For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om1_video_processor).

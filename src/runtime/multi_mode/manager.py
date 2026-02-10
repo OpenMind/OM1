@@ -104,8 +104,8 @@ class ModeManager:
             self._zenoh_mode_status_response_pub = self.session.declare_publisher(
                 self.mode_status_response
             )
-        except Exception as e:
-            logging.error(f"Error opening Zenoh client: {e}")
+        except Exception:
+            logging.exception("Error opening Zenoh client")
             self.session = None
             self._zenoh_mode_status_response_pub = None
 
@@ -151,8 +151,8 @@ class ModeManager:
             os.rename(temp_file, runtime_config_path)
             logging.debug(f"Runtime config file created/updated: {runtime_config_path}")
 
-        except Exception as e:
-            logging.error(f"Error creating runtime config file: {e}")
+        except Exception:
+            logging.exception("Error creating runtime config file")
 
     def set_event_loop(self, loop: asyncio.AbstractEventLoop):
         """
