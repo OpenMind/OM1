@@ -23,6 +23,16 @@ class UbtechASRProvider:
         return UbtechASRProvider._instance
 
     def __init__(self, robot_ip: str, language_code: str = "en"):
+        """
+        Initialize the Ubtech ASR Provider.
+
+        Parameters
+        ----------
+        robot_ip : str
+            The IP address of the robot.
+        language_code : str
+            The language code for ASR. Defaults to "en".
+        """
         UbtechASRProvider._instance = self
 
         self.robot_ip = robot_ip

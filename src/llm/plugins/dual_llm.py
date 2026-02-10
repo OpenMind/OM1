@@ -84,13 +84,6 @@ class DualLLM(LLM[R]):
                 "cloud_llm_config": {"model": "gpt-4.1"}
             }
         }
-
-    Parameters
-    ----------
-    config : LLMConfig, optional
-        Configuration settings for the LLM.
-    available_actions : list[AgentAction], optional
-        List of available actions for function calling.
     """
 
     TIMEOUT_THRESHOLD = 3.2
@@ -205,7 +198,7 @@ class DualLLM(LLM[R]):
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
+        prompt : str
             Extracted user voice input for context.
 
         Returns

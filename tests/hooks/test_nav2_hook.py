@@ -176,7 +176,7 @@ class TestStopNav2Hook:
             result = await stop_nav2_hook(context)
 
         assert result["status"] == "success"
-        assert result["message"] == "Nav2 process initiated"
+        assert result["message"] == "Nav2 process stopped"
         assert result["response"] == expected_response
 
     @pytest.mark.asyncio
@@ -214,7 +214,7 @@ class TestStopNav2Hook:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(Exception, match="Failed to start Nav2: Failed to stop"):
+            with pytest.raises(Exception, match="Failed to stop Nav2: Failed to stop"):
                 await stop_nav2_hook(context)
 
     @pytest.mark.asyncio
@@ -229,6 +229,6 @@ class TestStopNav2Hook:
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
             with pytest.raises(
-                Exception, match="Error calling Nav2 API: Network error"
+                Exception, match="Error calling Nav2 stop API: Network error"
             ):
                 await stop_nav2_hook(context)
