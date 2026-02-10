@@ -180,7 +180,6 @@ class TestUnitreeG1NavConnectorConnect:
             mock_logging.error.assert_called()
 
 
-
 class TestUnitreeGo2NavConfig:
     """Test UnitreeGo2NavConfig configuration."""
 

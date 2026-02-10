@@ -73,12 +73,8 @@ class TestMoveZenohRemoteConnectorInit:
     def test_init_ws_url_contains_api_key(self):
         """Test WebSocket URL is constructed with api_key."""
         with (
-            patch(
-                "actions.move_turtle.connector.zenoh_remote.open_zenoh_session"
-            ),
-            patch(
-                "actions.move_turtle.connector.zenoh_remote.ws.Client"
-            ) as mock_ws,
+            patch("actions.move_turtle.connector.zenoh_remote.open_zenoh_session"),
+            patch("actions.move_turtle.connector.zenoh_remote.ws.Client") as mock_ws,
         ):
             config = MoveZenohRemoteConfig(api_key="secret123", URID="bot")
             MoveZenohRemoteConnector(config)
@@ -89,9 +85,7 @@ class TestMoveZenohRemoteConnectorInit:
     def test_init_cmd_vel_without_urid(self):
         """Test cmd_vel topic when URID is None."""
         with (
-            patch(
-                "actions.move_turtle.connector.zenoh_remote.open_zenoh_session"
-            ),
+            patch("actions.move_turtle.connector.zenoh_remote.open_zenoh_session"),
             patch("actions.move_turtle.connector.zenoh_remote.ws.Client"),
         ):
             config = MoveZenohRemoteConfig(URID=None)

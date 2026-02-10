@@ -34,8 +34,6 @@ def create_aiohttp_mock(status=200, text="OK"):
     return mock_session_cm, mock_session
 
 
-
-
 class TestUnitreeG1RememberLocationConfig:
     """Test UnitreeG1RememberLocationConfig."""
 
@@ -160,8 +158,6 @@ class TestUnitreeG1RememberLocationConnector:
             mock_logging.error.assert_called_with(
                 "RememberLocationG1 API request timed out"
             )
-
-
 
 
 class TestUnitreeGo2RememberLocationConfig:
