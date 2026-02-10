@@ -242,7 +242,7 @@ Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a termin
 
     You'll now be able to see Isaac Sim running on your system.
 
-    ![ ](../assets/isaac-sim.png)
+![ ](../assets/isaac-sim.png)
 
 Step 6: Open a new terminal and run:
 
