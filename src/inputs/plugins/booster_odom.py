@@ -8,8 +8,8 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
-from providers.booster_odom_provider import BoosterOdomProvider, RobotState
 from providers.io_provider import IOProvider
+from providers.k1_odom_provider import K1OdomProvider, RobotState
 
 
 class BoosterOdomConfig(SensorConfig):
@@ -58,7 +58,7 @@ class BoosterOdom(FuserInput[BoosterOdomConfig, Optional[dict]]):
         topic = self.config.topic
         logging.info(f"BoosterOdom using Zenoh topic: {topic}")
 
-        self.odom = BoosterOdomProvider(topic)
+        self.odom = K1OdomProvider(topic)
         self.descriptor_for_LLM = "Information about your location and body pose, to help plan your movements."
 
     async def _poll(self) -> Optional[dict]:

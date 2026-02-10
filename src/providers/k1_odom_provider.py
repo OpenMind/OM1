@@ -16,13 +16,13 @@ from .singleton import singleton
 rad_to_deg = 57.2958
 
 
-def booster_odom_processor(
+def k1_odom_processor(
     topic: str,
     data_queue: mp.Queue,
     logging_config: Optional[LoggingConfig] = None,
 ) -> None:
     """
-    Process function for the Booster Odom Provider.
+    Process function for the K1 Odom Provider.
     This function runs in a separate process to periodically retrieve the odometry
     data from the robot via Zenoh and put it into a multiprocessing queue.
 
@@ -35,7 +35,7 @@ def booster_odom_processor(
     logging_config : LoggingConfig, optional
         Optional logging configuration. If provided, it will override the default logging settings.
     """
-    setup_logging("booster_odom_processor", logging_config=logging_config)
+    setup_logging("k1_odom_processor", logging_config=logging_config)
 
     def zenoh_odom_handler(data: zenoh.Sample):
         """
@@ -49,7 +49,7 @@ def booster_odom_processor(
         try:
             odom: Odometer = Odometer.deserialize(data.payload.to_bytes())
             logging.debug(
-                f"Booster Zenoh odom handler: x={odom.x}, y={odom.y}, theta={odom.theta}"
+                f"K1 Zenoh odom handler: x={odom.x}, y={odom.y}, theta={odom.theta}"
             )
 
             # Put the odometer data directly in the queue
@@ -62,15 +62,15 @@ def booster_odom_processor(
                 }
             )
         except Exception as e:
-            logging.error(f"Error deserializing Booster odometry data: {e}")
+            logging.error(f"Error deserializing K1 odometry data: {e}")
 
     try:
         session = open_zenoh_session()
-        logging.info(f"Booster Zenoh odom provider opened session: {session}")
-        logging.info(f"Booster odom listener subscribing to topic: {topic}")
+        logging.info(f"K1 Zenoh odom provider opened session: {session}")
+        logging.info(f"K1 odom listener subscribing to topic: {topic}")
         session.declare_subscriber(topic, zenoh_odom_handler)
     except Exception as e:
-        logging.error(f"Error opening Zenoh client for Booster odom: {e}")
+        logging.error(f"Error opening Zenoh client for K1 odom: {e}")
         return None
 
     while True:
@@ -78,11 +78,11 @@ def booster_odom_processor(
 
 
 @singleton
-class BoosterOdomProvider(OdomProviderBase):
+class K1OdomProvider(OdomProviderBase):
     """
-    Booster Odom Provider.
+    K1 Odom Provider.
 
-    This class implements odometry management for Booster robots using Zenoh
+    This class implements odometry management for K1 robots using Zenoh
     for communication.
 
     Parameters
@@ -94,7 +94,7 @@ class BoosterOdomProvider(OdomProviderBase):
 
     def __init__(self, topic: str = "odometer_state"):
         """
-        Initialize the Booster Odom Provider with Zenoh configuration.
+        Initialize the K1 Odom Provider with Zenoh configuration.
 
         Parameters
         ----------
@@ -108,20 +108,20 @@ class BoosterOdomProvider(OdomProviderBase):
 
     def start(self) -> None:
         """
-        Start the Booster Odom Provider.
+        Start the K1 Odom Provider.
         """
         if self._odom_reader_thread and self._odom_reader_thread.is_alive():
-            logging.warning("Booster Odom Provider is already running.")
+            logging.warning("K1 Odom Provider is already running.")
             return
 
         if not self.topic:
-            logging.error("Topic must be specified to start the Booster Odom Provider.")
+            logging.error("Topic must be specified to start the K1 Odom Provider.")
             return
 
-        logging.info(f"Starting Booster Odom Provider on Zenoh topic: {self.topic}")
+        logging.info(f"Starting K1 Odom Provider on Zenoh topic: {self.topic}")
 
         self._odom_reader_thread = mp.Process(
-            target=booster_odom_processor,
+            target=k1_odom_processor,
             args=(
                 self.topic,
                 self.data_queue,
@@ -132,10 +132,10 @@ class BoosterOdomProvider(OdomProviderBase):
         self._odom_reader_thread.start()
 
         if self._odom_processor_thread and self._odom_processor_thread.is_alive():
-            logging.warning("Booster Odom processor thread is already running.")
+            logging.warning("K1 Odom processor thread is already running.")
             return
         else:
-            logging.info("Starting Booster Odom processor thread")
+            logging.info("Starting K1 Odom processor thread")
             self._odom_processor_thread = threading.Thread(
                 target=self.process_odom, daemon=True
             )
@@ -143,21 +143,21 @@ class BoosterOdomProvider(OdomProviderBase):
 
     def _update_body_state(self, pose):
         """
-        Update body height and attitude based on pose data for Booster robot.
+        Update body height and attitude based on pose data for K1 robot.
 
         Parameters
         ----------
         pose : Pose
             The pose data containing position and orientation.
         """
-        # For Booster robot, we don't have z position data from the simple Odometer message
+        # For K1 robot, we don't have z position data from the simple Odometer message
         # Assume robot is always standing when we receive odometry data
         self.body_attitude = RobotState.STANDING
         self.body_height_cm = 70  # Default standing height
 
     def process_odom(self):
         """
-        Process the odom data from Booster's custom Odometer message.
+        Process the odom data from K1's custom Odometer message.
         This method runs in a separate thread and continuously processes
         odometry data from the queue.
         """
@@ -226,6 +226,6 @@ class BoosterOdomProvider(OdomProviderBase):
             self._update_body_state(None)
 
             logging.debug(
-                f"booster odom: X:{self.x} Y:{self.y} Theta:{round(theta, 4)} "
+                f"k1 odom: X:{self.x} Y:{self.y} Theta:{round(theta, 4)} "
                 f"Yaw_m180_p180:{self.odom_yaw_m180_p180} Yaw_0_360:{self.odom_yaw_0_360}"
             )

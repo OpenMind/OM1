@@ -7,8 +7,8 @@ from typing import List, Optional
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector, MoveCommand
-from actions.move_booster_autonomy.interface import MoveInput
-from providers.booster_odom_provider import BoosterOdomProvider, RobotState
+from actions.move_k1_autonomy.interface import MoveInput
+from providers.k1_odom_provider import K1OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
 from zenoh_msgs import RemoteControllerState, open_zenoh_session
 
@@ -74,7 +74,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             logging.error(f"Error opening Zenoh client for Booster: {e}")
 
         self.path_provider = SimplePathsProvider()
-        self.odom = BoosterOdomProvider(topic=odom_topic)
+        self.odom = K1OdomProvider(topic=odom_topic)
 
         logging.info(f"Booster Autonomy Odom Provider: {self.odom}")
         logging.info(f"Booster Autonomy cmd_vel topic: {self.cmd_vel_topic}")
