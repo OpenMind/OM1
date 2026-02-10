@@ -224,16 +224,25 @@ Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a termin
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaaclab/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
     ```
 
-    Run the following commands to run Isaac sim.
+    We support Isaac Sim for Unitree Go2 and G1. To run the simulation for Go2, run
 
     ```bash
     source env_isaacsim/bin/activate
-    python3 run.py
+    python3 run.py # using default policy
+    python3 run.py --policy_dir YOUR_POLICY_DIR # using your own policy
+    ```
+
+    To run the simulation for G1, run
+
+    ```bash
+    source env_isaacsim/bin/activate
+    python3 run.py --robot_type g1 # using default policy
+    python3 run.py --robot_type g1 --policy_dir YOUR_POLICY_DIR # using your own policy
     ```
 
     You'll now be able to see Isaac Sim running on your system.
 
-[ ](../assets/isaac-sim.png)
+    ![ ](../assets/isaac-sim.png)
 
 Step 6: Open a new terminal and run:
 
@@ -284,6 +293,8 @@ Step 9: Start OM1
     ```bash
     export OM_API_KEY="<your_api_key>"
     ```
+
+    Now, run the simulation agent
 
     ```bash
     uv run src/run.py simulation
