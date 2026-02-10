@@ -38,7 +38,7 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
         output_interface : ArmInput
             The output interface containing the arm action command.
         """
-        logging.info(f"AI command.action: {output_interface.action}")
+        logging.info(f"Arm command.action: {output_interface.action}")
 
         if output_interface.action == "idle":
             logging.info("No action to perform, returning.")
