@@ -15,10 +15,6 @@ def _mock_zenoh_modules():
 @pytest.fixture
 def mock_dependencies():
     """Mock all external dependencies for connector initialization."""
-    from actions.emergency_alert.connector.elevenlabs_tts import (
-        EmergencyAlertElevenLabsTTSConnector,
-        SpeakElevenLabsTTSConfig,
-    )
 
     with (
         patch("actions.emergency_alert.connector.elevenlabs_tts.IOProvider") as mock_io,

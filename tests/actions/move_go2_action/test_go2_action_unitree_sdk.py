@@ -27,7 +27,6 @@ def _mock_unitree_modules():
 @pytest.fixture
 def mock_dependencies():
     """Mock all external dependencies for connector initialization."""
-    from actions.move_go2_action.connector.unitree_sdk import ActionUnitreeSDKConnector
 
     with (
         patch(

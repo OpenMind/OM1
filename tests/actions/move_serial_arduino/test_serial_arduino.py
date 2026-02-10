@@ -17,14 +17,18 @@ class TestMoveSerialConfig:
 
     def test_default_config(self):
         """Test default configuration has empty port."""
-        from actions.move_serial_arduino.connector.serial_arduino import MoveSerialConfig
+        from actions.move_serial_arduino.connector.serial_arduino import (
+            MoveSerialConfig,
+        )
 
         config = MoveSerialConfig()
         assert config.port == ""
 
     def test_custom_port(self):
         """Test custom port configuration."""
-        from actions.move_serial_arduino.connector.serial_arduino import MoveSerialConfig
+        from actions.move_serial_arduino.connector.serial_arduino import (
+            MoveSerialConfig,
+        )
 
         config = MoveSerialConfig(port="/dev/cu.usbmodem14101")
         assert config.port == "/dev/cu.usbmodem14101"

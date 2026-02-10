@@ -20,7 +20,6 @@ def _mock_om1_utils_modules():
 @pytest.fixture
 def mock_dependencies():
     """Mock all external dependencies."""
-    from actions.move_turtle.connector.zenoh_remote import MoveZenohRemoteConnector
 
     with (
         patch(

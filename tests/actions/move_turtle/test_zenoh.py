@@ -16,7 +16,6 @@ def _mock_zenoh_modules():
 @pytest.fixture
 def mock_dependencies():
     """Mock all external dependencies."""
-    from actions.move_turtle.connector.zenoh import MoveZenohConnector
 
     with (
         patch(
@@ -90,7 +89,10 @@ class TestMoveZenohConnectorInit:
 
     def test_init_without_urid(self):
         """Test initialization without URID aborts."""
-        from actions.move_turtle.connector.zenoh import MoveZenohConfig, MoveZenohConnector
+        from actions.move_turtle.connector.zenoh import (
+            MoveZenohConfig,
+            MoveZenohConnector,
+        )
 
         with (
             patch("actions.move_turtle.connector.zenoh.open_zenoh_session"),
@@ -107,7 +109,10 @@ class TestMoveZenohConnectorInit:
 
     def test_init_zenoh_error(self):
         """Test initialization when Zenoh fails."""
-        from actions.move_turtle.connector.zenoh import MoveZenohConfig, MoveZenohConnector
+        from actions.move_turtle.connector.zenoh import (
+            MoveZenohConfig,
+            MoveZenohConnector,
+        )
 
         with (
             patch(
