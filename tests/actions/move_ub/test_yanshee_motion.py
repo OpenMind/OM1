@@ -5,7 +5,7 @@ import pytest
 from actions.move_ub.interface import MoveInput, MovementAction
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _mock_ubtech_modules():
     """Mock ubtech module to allow importing connector without real package."""
     mock_ubtech = MagicMock()

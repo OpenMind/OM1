@@ -5,7 +5,7 @@ import pytest
 from actions.emotion.interface import EmotionAction, EmotionInput
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _mock_unitree_modules():
     """Mock unitree SDK modules to allow importing connector without real SDK."""
     mock_unitree = MagicMock()

@@ -5,7 +5,7 @@ import pytest
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _mock_om1_utils_modules():
     """Mock om1_utils module to allow importing connector without real package."""
     mock_om1_utils = MagicMock()

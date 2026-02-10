@@ -6,7 +6,7 @@ import pytest
 from actions.base import MoveCommand
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _mock_zenoh_modules():
     """Mock zenoh module to allow importing connector without real zenoh."""
     with patch.dict("sys.modules", {"zenoh": MagicMock()}):

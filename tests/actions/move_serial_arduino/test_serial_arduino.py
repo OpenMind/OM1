@@ -5,7 +5,7 @@ import pytest
 from actions.move.interface import MoveInput
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _mock_serial_module():
     """Mock serial module to allow importing connector without real pyserial."""
     with patch.dict("sys.modules", {"serial": MagicMock()}):

@@ -5,7 +5,7 @@ import pytest
 from actions.move_go2_action.interface import Action, ActionInput
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _mock_unitree_modules():
     """Mock unitree SDK modules to allow importing connector without real SDK."""
     mock_unitree = MagicMock()

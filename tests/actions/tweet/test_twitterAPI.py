@@ -6,7 +6,7 @@ from actions.base import ActionConfig
 from actions.tweet.interface import TweetInput
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def mock_tweepy():
     """Mock tweepy module to avoid import errors."""
     mock_module = MagicMock()

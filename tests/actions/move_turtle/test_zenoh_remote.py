@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def _mock_om1_utils_modules():
     """Mock om1_utils module to allow importing connector without real package."""
     mock_om1_utils = MagicMock()
