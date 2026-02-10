@@ -1,18 +1,13 @@
-import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Mock providers before importing connector
-sys.modules["providers"] = MagicMock()
-sys.modules["providers.io_provider"] = MagicMock()
-
-from actions.home_assistant.connector.rest_api import (  # noqa: E402
+from actions.home_assistant.connector.rest_api import (
     HomeAssistantConfig,
     HomeAssistantConnector,
     extract_temperature,
 )
-from actions.home_assistant.interface import HomeAssistantInput  # noqa: E402
+from actions.home_assistant.interface import HomeAssistantInput
 
 
 class TestExtractTemperature:
