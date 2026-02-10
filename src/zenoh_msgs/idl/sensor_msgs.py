@@ -219,8 +219,8 @@ class BatteryState(IdlStruct, typename="BatteryState"):
     # If individual voltages unknown but number of cells known set each to NaN
     cell_temperature: List[
         float32
-    ]  # An array of individual cell voltages for each cell in the pack
-    # If individual voltages unknown but number of cells known set each to NaN
+    ]  # An array of individual cell temperatures for each cell in the pack
+    # If individual temperatures unknown but number of cells known set each to NaN
     location: (
         String  # The location into which the battery is inserted. (slot number or plug)
     )
