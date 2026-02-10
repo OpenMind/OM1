@@ -184,6 +184,48 @@ async def test_race_both_fast_both_functions_eval(dual_llm):
 
 
 @pytest.mark.asyncio
+async def test_llm_error_handling(dual_llm):
+    """Test scenario where one LLM raises an exception"""
+    cloud_result = CortexOutputModel(actions=[])
+
+    async def failing_local(*args):
+        raise Exception("Local LLM error")
+
+    dual_llm._local_llm.ask = AsyncMock(side_effect=failing_local)
+    dual_llm._cloud_llm.ask = AsyncMock(return_value=cloud_result)
+    dual_llm.TIMEOUT_THRESHOLD = 1.0
+
+    response = await dual_llm.ask("test prompt")
+    assert response == cloud_result
+
+
+@pytest.mark.asyncio
+async def test_both_llms_fail(dual_llm):
+    """Test scenario where both LLMs fail"""
+    async def failing(*args):
+        raise Exception("LLM error")
+
+    dual_llm._local_llm.ask = AsyncMock(side_effect=failing)
+    dual_llm._cloud_llm.ask = AsyncMock(side_effect=failing)
+
+    response = await dual_llm.ask("test prompt")
+    assert response is None
+
+
+@pytest.mark.asyncio
+async def test_one_returns_none(dual_llm):
+    """Test scenario: One LLM returns None"""
+    cloud_result = CortexOutputModel(actions=[])
+
+    dual_llm._local_llm.ask = AsyncMock(return_value=None)
+    dual_llm._cloud_llm.ask = AsyncMock(return_value=cloud_result)
+    dual_llm.TIMEOUT_THRESHOLD = 1.0
+
+    response = await dual_llm.ask("test prompt")
+    assert response == cloud_result
+
+
+@pytest.mark.asyncio
 async def test_timeout_both_slow(dual_llm):
     """Test scenario: Both slow -> Wait for first to complete"""
     local_result = CortexOutputModel(actions=[])
@@ -207,43 +249,96 @@ async def test_timeout_both_slow(dual_llm):
 
 
 @pytest.mark.asyncio
-async def test_llm_error_handling(dual_llm):
-    """Test scenario where one LLM raises an exception"""
+async def test_call_llm_exception(dual_llm):
+    """Test _call_llm returns result with None when LLM raises."""
+    dual_llm._local_llm.ask = AsyncMock(side_effect=RuntimeError("local error"))
+    entry = await dual_llm._call_llm(
+        dual_llm._local_llm, "prompt", [], "local"
+    )
+    assert entry["result"] is None
+    assert entry["source"] == "local"
+    assert "time" in entry
+
+
+@pytest.mark.asyncio
+async def test_has_function_calls(dual_llm):
+    """Test _has_function_calls returns True when result has actions."""
+    assert dual_llm._has_function_calls(
+        {"result": CortexOutputModel(actions=[Action(type="speak", value="hi")])}
+    ) is True
+    assert dual_llm._has_function_calls({"result": CortexOutputModel(actions=[])}) is False
+    assert dual_llm._has_function_calls({"result": None}) is False
+
+
+@pytest.mark.asyncio
+async def test_both_fast_neither_has_function(dual_llm):
+    """Test both in time, neither has function call -> local wins."""
+    local_result = CortexOutputModel(actions=[])
     cloud_result = CortexOutputModel(actions=[])
 
-    async def failing_local(*args):
-        raise Exception("Local LLM error")
-
-    dual_llm._local_llm.ask = AsyncMock(side_effect=failing_local)
+    dual_llm._local_llm.ask = AsyncMock(return_value=local_result)
     dual_llm._cloud_llm.ask = AsyncMock(return_value=cloud_result)
     dual_llm.TIMEOUT_THRESHOLD = 1.0
 
     response = await dual_llm.ask("test prompt")
-    assert response == cloud_result
+    assert response == local_result
 
 
 @pytest.mark.asyncio
-async def test_both_llms_fail(dual_llm):
-    """Test scenario where both LLMs fail"""
+async def test_evaluate_quality_empty_choices(dual_llm):
+    """Test _evaluate_quality returns local when response has no choices."""
+    local_entry = {"result": CortexOutputModel(actions=[Action(type="f", value="v")])}
+    cloud_entry = {"result": CortexOutputModel(actions=[Action(type="f", value="v")])}
+    dual_llm._eval_client.chat.completions.create = AsyncMock(
+        return_value=MagicMock(choices=[])
+    )
+    winner = await dual_llm._evaluate_quality(
+        local_entry, cloud_entry, "prompt"
+    )
+    assert winner == "local"
 
-    async def failing(*args):
-        raise Exception("LLM error")
 
-    dual_llm._local_llm.ask = AsyncMock(side_effect=failing)
-    dual_llm._cloud_llm.ask = AsyncMock(side_effect=failing)
+@pytest.mark.asyncio
+async def test_evaluate_quality_content_none(dual_llm):
+    """Test _evaluate_quality returns local when message content is None."""
+    local_entry = {"result": CortexOutputModel(actions=[Action(type="f", value="v")])}
+    cloud_entry = {"result": CortexOutputModel(actions=[Action(type="f", value="v")])}
+    dual_llm._eval_client.chat.completions.create = AsyncMock(
+        return_value=MagicMock(choices=[MagicMock(message=MagicMock(content=None))])
+    )
+    winner = await dual_llm._evaluate_quality(
+        local_entry, cloud_entry, "prompt"
+    )
+    assert winner == "local"
 
+
+@pytest.mark.asyncio
+async def test_ask_exception_returns_none(dual_llm):
+    """Test ask returns None when exception is raised."""
+    dual_llm._local_llm.ask = AsyncMock(side_effect=RuntimeError("fail"))
+    dual_llm._cloud_llm.ask = AsyncMock(side_effect=RuntimeError("fail"))
+    dual_llm.TIMEOUT_THRESHOLD = 0.1
     response = await dual_llm.ask("test prompt")
     assert response is None
 
 
 @pytest.mark.asyncio
-async def test_one_returns_none(dual_llm):
-    """Test scenario: One LLM returns None"""
+async def test_both_completed_late(dual_llm):
+    """Test neither in time, both already completed -> use min by time."""
+    local_result = CortexOutputModel(actions=[])
     cloud_result = CortexOutputModel(actions=[])
 
-    dual_llm._local_llm.ask = AsyncMock(return_value=None)
-    dual_llm._cloud_llm.ask = AsyncMock(return_value=cloud_result)
-    dual_llm.TIMEOUT_THRESHOLD = 1.0
+    async def very_slow_local(*args):
+        await asyncio.sleep(0.5)
+        return local_result
+
+    async def very_slow_cloud(*args):
+        await asyncio.sleep(0.6)
+        return cloud_result
+
+    dual_llm._local_llm.ask = AsyncMock(side_effect=very_slow_local)
+    dual_llm._cloud_llm.ask = AsyncMock(side_effect=very_slow_cloud)
+    dual_llm.TIMEOUT_THRESHOLD = 0.05
 
     response = await dual_llm.ask("test prompt")
-    assert response == cloud_result
+    assert response is not None

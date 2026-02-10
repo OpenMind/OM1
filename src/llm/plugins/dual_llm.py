@@ -285,7 +285,12 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
         if cloud_has_function_call and not local_has_function_call:
             return cloud_entry
         if not local_has_function_call and not cloud_has_function_call:
-            return local_entry
+            # Prefer the entry with a valid (non-None) result
+            if local_entry["result"] is not None and cloud_entry["result"] is None:
+                return local_entry
+            if local_entry["result"] is None and cloud_entry["result"] is not None:
+                return cloud_entry
+            return local_entry  # both valid or both None: default to local
 
         # Both have function calls → evaluate quality
         winner = await self._evaluate_quality(local_entry, cloud_entry, prompt)
@@ -345,11 +350,11 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                 )
 
                 for task in done:
-                    # Only call result() if task is done
-                    if task.done():
-                        result = task.result()
-                        if result["time"] <= self.TIMEOUT_THRESHOLD:
-                            in_time[result["source"]] = result
+                    if not task.done():
+                        continue
+                    result = task.result()
+                    if result["time"] <= self.TIMEOUT_THRESHOLD:
+                        in_time[result["source"]] = result
 
             # Both in time → select best
             if len(in_time) == 2:
@@ -380,28 +385,28 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                     done, rest = await asyncio.wait(
                         pending, return_when=asyncio.FIRST_COMPLETED
                     )
-                    if done:
-                        task = list(done)[0]
-                        if task.done():
-                            chosen = task.result()
-                            logging.debug(
-                                f"Using first completed LLM response from {chosen['source']} LLM."
-                            )
-                        else:
-                            logging.warning("First completed task not yet done")
-                            chosen = None
-                    else:
-                        chosen = None
+                    first_done = list(done)[0]
+                    chosen = first_done.result() if first_done.done() else None
+                    if chosen:
+                        logging.debug(
+                            f"Using first completed LLM response from {chosen['source']} LLM."
+                        )
                     for task in rest:
                         task.cancel()
                         logging.debug(f"Cancelled {task} LLM task due to timeout.")
                 else:
-                    # Both already completed (just late)
-                    results = [t.result() for t in tasks.values() if t.done()]
-                    if results:
-                        chosen = min(results, key=lambda x: x["time"])
-                    else:
-                        chosen = None
+                    # Both already completed (just late): prefer valid result, then by time
+                    results = [
+                        t.result()
+                        for t in tasks.values()
+                        if t.done() and not t.cancelled()
+                    ]
+                    valid = [r for r in results if r.get("result") is not None]
+                    chosen = (
+                        min(valid, key=lambda x: x["time"])
+                        if valid
+                        else (min(results, key=lambda x: x["time"]) if results else None)
+                    )
 
             self.io_provider.llm_end_time = time.time()
 
