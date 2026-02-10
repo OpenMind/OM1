@@ -3,7 +3,7 @@ import logging
 
 def is_single_mode(raw_config: dict) -> bool:
     """Detect whether the configuration is in single-mode format."""
-    return "modes" not in raw_config or "default_mode" not in raw_config
+    return "modes" not in raw_config
 
 
 def normalize_to_multi_mode(raw_config: dict) -> dict:
@@ -18,13 +18,13 @@ def normalize_to_multi_mode(raw_config: dict) -> dict:
     mode_name = raw_config.get("name", "default")
     logging.info(f"Normalizing single-mode config '{mode_name}'")
 
-    normalized = _build_global_section(raw_config, mode_name)
-    normalized["modes"] = {mode_name: _build_mode_section(raw_config)}
-    normalized["transition_rules"] = []
+    normalized_config = _build_global_section(raw_config, mode_name)
+    normalized_config["modes"] = {mode_name: _build_mode_section(raw_config)}
+    normalized_config["transition_rules"] = []
 
-    _validate_normalized(normalized, mode_name)
+    _validate_normalized(normalized_config, mode_name)
 
-    return normalized
+    return normalized_config
 
 
 def _build_global_section(raw_config: dict, mode_name: str) -> dict:
@@ -50,7 +50,7 @@ def _build_mode_section(raw_config: dict) -> dict:
     mode_name = raw_config.get("name", "default")
     return {
         "display_name": mode_name,
-        "description": f"Auto-normalized from single-mode config '{mode_name}'",
+        "description": f"Normalized config from single-mode config '{mode_name}'",
         "hertz": raw_config.get("hertz", 1.0),
         "system_prompt_base": raw_config.get("system_prompt_base", ""),
         "agent_inputs": raw_config.get("agent_inputs", []),
@@ -63,16 +63,39 @@ def _build_mode_section(raw_config: dict) -> dict:
     }
 
 
-def _validate_normalized(normalized: dict, mode_name: str) -> None:
-    """Validate that normalization produced a well-formed multi-mode config."""
-    if "modes" not in normalized:
-        raise ValueError("Normalization failed: missing 'modes'")
-    if "default_mode" not in normalized:
-        raise ValueError("Normalization failed: missing 'default_mode'")
-    if mode_name not in normalized["modes"]:
-        raise ValueError(f"Normalization failed: mode '{mode_name}' not in modes")
-    mode = normalized["modes"][mode_name]
-    if mode.get("system_prompt_base") is None:
-        raise ValueError("Normalization failed: missing 'system_prompt_base' in mode")
+def _validate_normalized(normalized_config: dict, mode_name: str) -> None:
+    """Validate that normalization is correct."""
+    global_required = [
+        "version",
+        "default_mode",
+        "api_key",
+        "system_governance",
+        "cortex_llm",
+        "modes",
+    ]
+    for field in global_required:
+        if field not in normalized_config or normalized_config[field] is None:
+            raise ValueError(
+                f"Normalization failed: missing global required field '{field}'"
+            )
+    if mode_name not in normalized_config["modes"]:
+        raise ValueError(
+            f"Normalization failed: default_mode '{mode_name}' not in modes"
+        )
+
+    mode_required = [
+        "display_name",
+        "description",
+        "system_prompt_base",
+        "hertz",
+        "agent_inputs",
+        "agent_actions",
+    ]
+    mode = normalized_config["modes"][mode_name]
+    for field in mode_required:
+        if field not in mode or mode[field] is None:
+            raise ValueError(
+                f"Normalization failed: missing required field '{field}' in mode '{mode_name}'"
+            )
 
     logging.info(f"Normalization validated: config '{mode_name}'")

@@ -13,7 +13,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
-from runtime.config import validate_config_schema
+from runtime.config import RuntimeConfig, add_meta, validate_config_schema
 from runtime.multi_mode.hook import (
     LifecycleHook,
     LifecycleHookType,
@@ -22,7 +22,6 @@ from runtime.multi_mode.hook import (
 )
 from runtime.normalization import normalize_to_multi_mode
 from runtime.robotics import load_unitree
-from runtime.single_mode.config import RuntimeConfig, add_meta
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
 from simulators.base import Simulator
