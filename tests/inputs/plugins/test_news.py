@@ -1,5 +1,4 @@
-"""Tests for News input plugin."""
-
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -197,6 +196,86 @@ class TestNewsInputFetch:
 
             result = await news._fetch_news()
             assert result is not None
+
+
+class TestNewsInputPoll:
+    """Tests for _poll behavior."""
+
+    @pytest.fixture
+    def mock_io_provider(self):
+        """Mock IOProvider."""
+        with patch("inputs.plugins.news.IOProvider") as mock:
+            yield mock
+
+    @pytest.fixture
+    def news_input(self, mock_io_provider):
+        """Create a NewsInput instance with short poll interval."""
+        config = NewsConfig(api_key="test_api_key", poll_interval=10.0)
+        return NewsInput(config)
+
+    @pytest.mark.asyncio
+    async def test_poll_returns_data_on_first_call(self, news_input):
+        """Test that first poll fetches and returns data."""
+        mock_data = {
+            "status": "ok",
+            "articles": [{"source": {"name": "BBC"}, "title": "News"}],
+        }
+        with patch.object(
+            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
+        ):
+            result = await news_input._poll()
+            assert result is not None
+            assert result["status"] == "ok"
+
+    @pytest.mark.asyncio
+    async def test_poll_returns_none_before_interval(self, news_input):
+        """Test that poll returns None when interval has not elapsed."""
+        mock_data = {
+            "status": "ok",
+            "articles": [{"source": {"name": "BBC"}, "title": "News"}],
+        }
+        with patch.object(
+            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
+        ):
+            await news_input._poll()
+            result = await news_input._poll()
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_poll_fetches_again_after_interval(self, news_input):
+        """Test that poll fetches fresh data after interval elapses."""
+        mock_data = {
+            "status": "ok",
+            "articles": [{"source": {"name": "BBC"}, "title": "Fresh news"}],
+        }
+        with patch.object(
+            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
+        ):
+            await news_input._poll()
+
+            news_input._last_poll_time = time.time() - 20.0
+
+            result = await news_input._poll()
+            assert result is not None
+            assert news_input._fetch_news.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_poll_does_not_send_duplicate_news(self, news_input):
+        """Test that same news is not sent to LLM repeatedly between intervals."""
+        mock_data = {
+            "status": "ok",
+            "articles": [{"source": {"name": "BBC"}, "title": "Breaking"}],
+        }
+        with patch.object(
+            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
+        ):
+            result1 = await news_input._poll()
+            await news_input.raw_to_text(result1)
+            assert len(news_input.messages) == 1
+
+            result2 = await news_input._poll()
+            await news_input.raw_to_text(result2)
+            assert len(news_input.messages) == 1
 
 
 class TestNewsInputRawToText:

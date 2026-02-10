@@ -72,7 +72,6 @@ class NewsInput(FuserInput[NewsConfig, Optional[dict]]):
         self.poll_interval = config.poll_interval
 
         self._last_poll_time: float = 0
-        self._cached_data: Optional[dict] = None
 
         if not self.api_key:
             logging.warning("NewsInput: API key not provided")
@@ -134,21 +133,22 @@ class NewsInput(FuserInput[NewsConfig, Optional[dict]]):
 
     async def _poll(self) -> Optional[dict]:
         """
-        Poll for news data with caching based on poll_interval.
+        Poll for news data based on poll_interval.
 
         Returns
         -------
         Optional[dict]
-            News data if available, None otherwise.
+            Fresh news data when poll interval has elapsed, None otherwise.
         """
         current_time = time.time()
 
-        if current_time - self._last_poll_time >= self.poll_interval:
-            self._cached_data = await self._fetch_news()
-            self._last_poll_time = current_time
+        if current_time - self._last_poll_time < self.poll_interval:
+            await asyncio.sleep(1.0)
+            return None
 
+        self._last_poll_time = current_time
         await asyncio.sleep(1.0)
-        return self._cached_data
+        return await self._fetch_news()
 
     async def _raw_to_text(self, raw_input: Optional[dict]) -> Optional[Message]:
         """
@@ -224,7 +224,7 @@ class NewsInput(FuserInput[NewsConfig, Optional[dict]]):
         )
 
         self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
+            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
         )
         self.messages = []
 
