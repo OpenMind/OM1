@@ -7,6 +7,8 @@ from pydantic import Field
 from actions.base import ActionConfig, ActionConnector
 from actions.discord.interface import DiscordInput
 
+DISCORD_MAX_CONTENT_LENGTH = 2000
+
 
 class DiscordWebhookConfig(ActionConfig):
     """
@@ -71,6 +73,13 @@ class DiscordWebhookConnector(ActionConnector[DiscordWebhookConfig, DiscordInput
             logging.warning("Empty Discord message, skipping send")
             return
 
+        if len(message_text) > DISCORD_MAX_CONTENT_LENGTH:
+            logging.warning(
+                f"Discord message truncated from {len(message_text)} "
+                f"to {DISCORD_MAX_CONTENT_LENGTH} characters"
+            )
+            message_text = message_text[:DISCORD_MAX_CONTENT_LENGTH]
+
         try:
             logging.info(f"SendThisToDiscord: {message_text}")
 
@@ -85,16 +94,19 @@ class DiscordWebhookConnector(ActionConnector[DiscordWebhookConfig, DiscordInput
                 async with session.post(
                     self.config.webhook_url,
                     json=payload,
-                    headers={"Content-Type": "application/json"},
                 ) as response:
-                    if response.status == 204:
-                        logging.info("Discord message sent successfully!")
-                    elif response.status == 200:
+                    if response.status in (200, 204):
                         logging.info("Discord message sent successfully!")
                     else:
                         error_text = await response.text()
                         logging.error(
                             f"Discord webhook error: {response.status} - {error_text}"
+                        )
+                        raise aiohttp.ClientResponseError(
+                            response.request_info,
+                            response.history,
+                            status=response.status,
+                            message=error_text,
                         )
 
         except aiohttp.ClientError as e:
