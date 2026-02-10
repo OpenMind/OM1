@@ -300,3 +300,80 @@ class TestSMTPConnectorConnect:
                     "authentication failed" in str(call).lower()
                     for call in mock_error.call_args_list
                 )
+
+    @pytest.mark.asyncio
+    async def test_connect_handles_smtp_exception(self, connector_with_credentials):
+        """Test that connect handles generic SMTP errors."""
+        import aiosmtplib
+
+        with patch("actions.send_email.connector.smtpAPI.aiosmtplib.send") as mock_send:
+            mock_send.side_effect = aiosmtplib.SMTPException("Connection refused")
+
+            with patch(
+                "actions.send_email.connector.smtpAPI.logging.error"
+            ) as mock_error:
+                input_obj = SendEmailInput(action="Test")
+
+                with pytest.raises(aiosmtplib.SMTPException):
+                    await connector_with_credentials.connect(input_obj)
+
+                assert any(
+                    "smtp error" in str(call).lower()
+                    for call in mock_error.call_args_list
+                )
+
+    @pytest.mark.asyncio
+    async def test_connect_handles_generic_exception(self, connector_with_credentials):
+        """Test that connect handles unexpected errors."""
+        with patch("actions.send_email.connector.smtpAPI.aiosmtplib.send") as mock_send:
+            mock_send.side_effect = ConnectionError("Network unreachable")
+
+            with patch(
+                "actions.send_email.connector.smtpAPI.logging.error"
+            ) as mock_error:
+                input_obj = SendEmailInput(action="Test")
+
+                with pytest.raises(ConnectionError):
+                    await connector_with_credentials.connect(input_obj)
+
+                assert any(
+                    "failed to send email" in str(call).lower()
+                    for call in mock_error.call_args_list
+                )
+
+    @pytest.mark.asyncio
+    async def test_connect_sends_correct_mime_content(self, connector_with_credentials):
+        """Test that the sent MIMEMultipart message has correct From/To/Subject/body."""
+        with patch("actions.send_email.connector.smtpAPI.aiosmtplib.send") as mock_send:
+            mock_send.return_value = None
+
+            input_obj = SendEmailInput(
+                action="subject: Fire Alert | body: Smoke detected in zone 3"
+            )
+            await connector_with_credentials.connect(input_obj)
+
+            sent_msg = mock_send.call_args[0][0]
+            assert sent_msg["From"] == "robot@example.com"
+            assert sent_msg["To"] == "user@example.com"
+            assert sent_msg["Subject"] == "Fire Alert"
+            assert "Smoke detected in zone 3" in sent_msg.as_string()
+
+    @pytest.mark.asyncio
+    async def test_connect_with_tls_disabled(self):
+        """Test that connect passes start_tls=False when use_tls is disabled."""
+        config = SMTPConfig(
+            sender_email="robot@example.com",
+            sender_password="password123",
+            recipient_email="user@example.com",
+            use_tls=False,
+        )
+        connector = SMTPConnector(config)
+
+        with patch("actions.send_email.connector.smtpAPI.aiosmtplib.send") as mock_send:
+            mock_send.return_value = None
+
+            input_obj = SendEmailInput(action="Test message")
+            await connector.connect(input_obj)
+
+            call_kwargs = mock_send.call_args[1]
+            assert call_kwargs["start_tls"] is False
