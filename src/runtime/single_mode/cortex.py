@@ -5,7 +5,6 @@ import logging
 import os
 from pathlib import Path
 from typing import Optional
-
 import json5
 
 from actions.orchestrator import ActionOrchestrator
@@ -22,7 +21,22 @@ from utils.config_watcher import ConfigFileWatcher
 
 
 class CortexRuntime:
-    """Main runtime controller for single-mode Cortex execution."""
+    """
+    The main entry point for the OM1 agent runtime environment.
+
+    The CortexRuntime orchestrates communication between memory, fuser,
+    actions, and manages inputs/outputs. It controls the agent's execution
+    cycle and coordinates all major subsystems.
+    """
+
+    config: RuntimeConfig
+    fuser: Fuser
+    action_orchestrator: ActionOrchestrator
+    simulator_orchestrator: SimulatorOrchestrator
+    background_orchestrator: BackgroundOrchestrator
+    sleep_ticker_provider: SleepTickerProvider
+    io_provider: IOProvider
+    config_provider: ConfigProvider
 
     def __init__(
         self,
@@ -241,8 +255,17 @@ class CortexRuntime:
         self.action_task = self.action_orchestrator.start()
         self.background_task = self.background_orchestrator.start()
 
-    async def run(self):
-        """Start the Cortex runtime."""
+    async def run(self) -> None:
+        """
+        Start the runtime's main execution loop.
+
+        This method initializes input listeners and begins the cortex
+        processing loop, running them concurrently.
+
+        Returns
+        -------
+        None
+        """
         if self.hot_reload:
             self.config_watcher = ConfigFileWatcher(
                 config_path=Path(self.config_path),
