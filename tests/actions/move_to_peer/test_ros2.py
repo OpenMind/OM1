@@ -11,21 +11,30 @@ _mock_sport_client_class = Mock()
 _mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = (
     _mock_sport_client_class
 )
-sys.modules["unitree"] = _mock_unitree
-sys.modules["unitree.unitree_sdk2py"] = _mock_unitree.unitree_sdk2py
-sys.modules["unitree.unitree_sdk2py.go2"] = _mock_unitree.unitree_sdk2py.go2
-sys.modules["unitree.unitree_sdk2py.go2.sport"] = _mock_unitree.unitree_sdk2py.go2.sport
-sys.modules["unitree.unitree_sdk2py.go2.sport.sport_client"] = (
-    _mock_unitree.unitree_sdk2py.go2.sport.sport_client
-)
+_unitree_mocks = {
+    "unitree": _mock_unitree,
+    "unitree.unitree_sdk2py": _mock_unitree.unitree_sdk2py,
+    "unitree.unitree_sdk2py.go2": _mock_unitree.unitree_sdk2py.go2,
+    "unitree.unitree_sdk2py.go2.sport": _mock_unitree.unitree_sdk2py.go2.sport,
+    "unitree.unitree_sdk2py.go2.sport.sport_client": (
+        _mock_unitree.unitree_sdk2py.go2.sport.sport_client
+    ),
+}
+sys.modules.update(_unitree_mocks)
 
 from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector  # noqa: E402
+
+for _k in _unitree_mocks:
+    sys.modules.pop(_k, None)
 
 
 @pytest.fixture
 def mock_dependencies():
     """Mock all external dependencies."""
-    with patch("actions.move_to_peer.connector.ros2.IOProvider") as mock_io_class:
+    with (
+        patch.dict("sys.modules", _unitree_mocks),
+        patch("actions.move_to_peer.connector.ros2.IOProvider") as mock_io_class,
+    ):
         mock_io = Mock()
         mock_io_class.return_value = mock_io
 

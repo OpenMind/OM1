@@ -7,9 +7,13 @@ from actions.base import ActionConfig
 from actions.tweet.interface import TweetInput
 
 _mock_tweepy = MagicMock()
-sys.modules["tweepy"] = _mock_tweepy
+_tweepy_mocks = {"tweepy": _mock_tweepy}
+sys.modules.update(_tweepy_mocks)
 
 from actions.tweet.connector.twitterAPI import TweetAPIConnector  # noqa: E402
+
+for _k in _tweepy_mocks:
+    sys.modules.pop(_k, None)
 
 
 @pytest.fixture
@@ -28,7 +32,10 @@ def mock_env_vars():
 @pytest.fixture
 def twitter_connector(mock_env_vars):
     """Create TweetAPIConnector with mocked dependencies."""
-    with patch("actions.tweet.connector.twitterAPI.load_dotenv"):
+    with (
+        patch.dict("sys.modules", _tweepy_mocks),
+        patch("actions.tweet.connector.twitterAPI.load_dotenv"),
+    ):
         mock_client = Mock()
         _mock_tweepy.Client.return_value = mock_client
 
@@ -42,7 +49,10 @@ class TestTweetAPIConnectorInit:
 
     def test_init_creates_tweepy_client(self, mock_env_vars):
         """Test that init creates a tweepy Client with env vars."""
-        with patch("actions.tweet.connector.twitterAPI.load_dotenv"):
+        with (
+            patch.dict("sys.modules", _tweepy_mocks),
+            patch("actions.tweet.connector.twitterAPI.load_dotenv"),
+        ):
             mock_client = Mock()
             _mock_tweepy.Client.return_value = mock_client
 

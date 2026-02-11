@@ -7,15 +7,21 @@ from actions.arm_g1.interface import ArmAction, ArmInput
 from actions.base import ActionConfig
 
 _mock_unitree = MagicMock()
-sys.modules["unitree"] = _mock_unitree
-sys.modules["unitree.unitree_sdk2py"] = _mock_unitree.unitree_sdk2py
-sys.modules["unitree.unitree_sdk2py.g1"] = _mock_unitree.unitree_sdk2py.g1
-sys.modules["unitree.unitree_sdk2py.g1.arm"] = _mock_unitree.unitree_sdk2py.g1.arm
-sys.modules["unitree.unitree_sdk2py.g1.arm.g1_arm_action_client"] = (
-    _mock_unitree.unitree_sdk2py.g1.arm.g1_arm_action_client
-)
+_unitree_mocks = {
+    "unitree": _mock_unitree,
+    "unitree.unitree_sdk2py": _mock_unitree.unitree_sdk2py,
+    "unitree.unitree_sdk2py.g1": _mock_unitree.unitree_sdk2py.g1,
+    "unitree.unitree_sdk2py.g1.arm": _mock_unitree.unitree_sdk2py.g1.arm,
+    "unitree.unitree_sdk2py.g1.arm.g1_arm_action_client": (
+        _mock_unitree.unitree_sdk2py.g1.arm.g1_arm_action_client
+    ),
+}
+sys.modules.update(_unitree_mocks)
 
 from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector  # noqa: E402
+
+for _k in _unitree_mocks:
+    sys.modules.pop(_k, None)
 
 
 @pytest.fixture

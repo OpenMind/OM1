@@ -7,13 +7,19 @@ import pytest
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 
 _mock_om1_utils = MagicMock()
-sys.modules["om1_utils"] = _mock_om1_utils
-sys.modules["om1_utils.ws"] = _mock_om1_utils.ws
+_om1_utils_mocks = {
+    "om1_utils": _mock_om1_utils,
+    "om1_utils.ws": _mock_om1_utils.ws,
+}
+sys.modules.update(_om1_utils_mocks)
 
 from actions.move_tron.connector.tron_sdk import (  # noqa: E402
     MoveTronSDKConfig,
     MoveTronSDKConnector,
 )
+
+for _k in _om1_utils_mocks:
+    sys.modules.pop(_k, None)
 
 
 class TestMoveTronSDKConfig:

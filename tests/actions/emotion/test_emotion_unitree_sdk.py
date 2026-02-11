@@ -6,18 +6,24 @@ import pytest
 from actions.emotion.interface import EmotionAction, EmotionInput
 
 _mock_unitree = MagicMock()
-sys.modules["unitree"] = _mock_unitree
-sys.modules["unitree.unitree_sdk2py"] = _mock_unitree.unitree_sdk2py
-sys.modules["unitree.unitree_sdk2py.g1"] = _mock_unitree.unitree_sdk2py.g1
-sys.modules["unitree.unitree_sdk2py.g1.audio"] = _mock_unitree.unitree_sdk2py.g1.audio
-sys.modules["unitree.unitree_sdk2py.g1.audio.g1_audio_client"] = (
-    _mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client
-)
+_unitree_mocks = {
+    "unitree": _mock_unitree,
+    "unitree.unitree_sdk2py": _mock_unitree.unitree_sdk2py,
+    "unitree.unitree_sdk2py.g1": _mock_unitree.unitree_sdk2py.g1,
+    "unitree.unitree_sdk2py.g1.audio": _mock_unitree.unitree_sdk2py.g1.audio,
+    "unitree.unitree_sdk2py.g1.audio.g1_audio_client": (
+        _mock_unitree.unitree_sdk2py.g1.audio.g1_audio_client
+    ),
+}
+sys.modules.update(_unitree_mocks)
 
 from actions.emotion.connector.unitree_sdk import (  # noqa: E402
     EmotionUnitreeConfig,
     EmotionUnitreeConnector,
 )
+
+for _k in _unitree_mocks:
+    sys.modules.pop(_k, None)
 
 
 class TestEmotionUnitreeConfig:
