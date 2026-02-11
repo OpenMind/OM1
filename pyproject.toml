@@ -17,7 +17,7 @@ dependencies = [
     "eclipse-zenoh==1.4.0",
     "pyaudio==0.2.14",
     "openai==1.60.1",
-    "pillow==11.1.0",
+    "pillow==12.1.1",
     "python-dotenv==1.0.1",
     "typer==0.15.1",
     "opencv-python==4.11.0.86",
