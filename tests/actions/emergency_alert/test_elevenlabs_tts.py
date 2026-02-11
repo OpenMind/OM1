@@ -1,12 +1,16 @@
-from unittest.mock import Mock, patch
+import sys
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from actions.emergency_alert.connector.elevenlabs_tts import (
+from actions.emergency_alert.interface import EmergencyAlertInput
+
+sys.modules["om1_speech"] = MagicMock()
+
+from actions.emergency_alert.connector.elevenlabs_tts import (  # noqa: E402
     EmergencyAlertElevenLabsTTSConnector,
     SpeakElevenLabsTTSConfig,
 )
-from actions.emergency_alert.interface import EmergencyAlertInput
 
 
 @pytest.fixture

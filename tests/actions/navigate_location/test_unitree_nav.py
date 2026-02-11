@@ -1,16 +1,20 @@
-from unittest.mock import Mock, patch
+import sys
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from actions.navigate_location.connector.unitree_g1_nav import (
+from actions.navigate_location.interface import NavigateLocationInput
+
+sys.modules["om1_speech"] = MagicMock()
+
+from actions.navigate_location.connector.unitree_g1_nav import (  # noqa: E402
     UnitreeG1NavConfig,
     UnitreeG1NavConnector,
 )
-from actions.navigate_location.connector.unitree_go2_nav import (
+from actions.navigate_location.connector.unitree_go2_nav import (  # noqa: E402
     UnitreeGo2NavConfig,
     UnitreeGo2NavConnector,
 )
-from actions.navigate_location.interface import NavigateLocationInput
 
 
 class TestUnitreeG1NavConfig:
