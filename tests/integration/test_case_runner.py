@@ -12,14 +12,9 @@ import openai
 import pytest
 from PIL import Image
 
-from actions import load_action
-from backgrounds import load_background
-from inputs import load_input
-from llm import load_llm
 from llm.output_model import Action, CortexOutputModel
-from runtime.multi_mode.config import RuntimeConfig, add_meta
+from runtime.multi_mode.config import ModeConfig, ModeSystemConfig
 from runtime.multi_mode.cortex import ModeCortexRuntime
-from simulators import load_simulator
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_image_provider,
     load_test_images,
@@ -46,82 +41,35 @@ TEST_CASES_DIR = DATA_DIR / "test_cases"
 _llm_client = None
 
 
-def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
-    """Build a RuntimeConfig from a test case dictionary."""
-    api_key = config.get("api_key")
-    g_ut_eth = config.get("unitree_ethernet")
-    g_URID = config.get("URID")
-    g_robot_ip = config.get("robot_ip")
+def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
+    """Build a ModeSystemConfig from a test case dictionary.
 
-    backgrounds = [
-        load_background(
-            {
-                **bg,
-                "config": add_meta(
-                    bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for bg in config.get("backgrounds", [])
-    ]
-    agent_inputs = [
-        load_input(
-            {
-                **inp,
-                "config": add_meta(
-                    inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for inp in config.get("agent_inputs", [])
-    ]
-    simulators = [
-        load_simulator(
-            {
-                **sim,
-                "config": add_meta(
-                    sim.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for sim in config.get("simulators", [])
-    ]
-    agent_actions = [
-        load_action(
-            {
-                **action,
-                "config": add_meta(
-                    action.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
-                ),
-            }
-        )
-        for action in config.get("agent_actions", [])
-    ]
-    cortex_llm = load_llm(
-        {
-            **config["cortex_llm"],
-            "config": add_meta(
-                config["cortex_llm"].get("config", {}),
-                api_key,
-                g_ut_eth,
-                g_URID,
-                g_robot_ip,
-            ),
-        },
-        available_actions=agent_actions,
-    )
-    return RuntimeConfig(
+    Stores raw config dicts so that ModeConfig.load_components() handles
+    the actual component loading through the standard initialization path.
+    """
+    mode_config = ModeConfig(
         version=config.get("version", "v1.0.2"),
-        hertz=config.get("hertz", 1),
-        name=config.get("name", "TestAgent"),
+        name="default",
+        display_name="Default",
+        description="Integration test mode",
         system_prompt_base=config.get("system_prompt_base", ""),
+        hertz=config.get("hertz", 1),
+        _raw_inputs=config.get("agent_inputs", []),
+        _raw_llm=config.get("cortex_llm"),
+        _raw_simulators=config.get("simulators", []),
+        _raw_actions=config.get("agent_actions", []),
+        _raw_backgrounds=config.get("backgrounds", []),
+    )
+    return ModeSystemConfig(
+        version=config.get("version", "v1.0.2"),
+        name=config.get("name", "TestAgent"),
+        default_mode="default",
+        config_name="test_config",
+        mode_memory_enabled=False,
+        api_key=config.get("api_key"),
         system_governance=config.get("system_governance", ""),
         system_prompt_examples=config.get("system_prompt_examples", ""),
-        agent_inputs=agent_inputs,
-        cortex_llm=cortex_llm,
-        simulators=simulators,
-        agent_actions=agent_actions,
-        backgrounds=backgrounds,
+        modes={"default": mode_config},
     )
 
 
@@ -414,28 +362,10 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # No need to modify config - the input_registry will handle mapping
     # the real input types to their mock equivalents
 
-    # Build a runtime config from the test case config
-    runtime_config = build_runtime_config_from_test_case(config)
-
-    # Create a ModeCortexRuntime with a mock ModeSystemConfig
-    mock_mode_config = MagicMock()
-    mock_mode_config.name = "test_config"
-    mock_mode_config.default_mode = "default"
-    mock_mode_config.modes = {}
-    cortex = ModeCortexRuntime(mock_mode_config, "test_config", hot_reload=False)
-
-    # Manually initialize the runtime components (bypass _initialize_mode)
-    from actions.orchestrator import ActionOrchestrator
-    from backgrounds.orchestrator import BackgroundOrchestrator
-    from fuser import Fuser
-    from simulators.orchestrator import SimulatorOrchestrator
-
-    cortex.current_config = runtime_config
-    cortex.fuser = Fuser(runtime_config)
-    cortex.action_orchestrator = ActionOrchestrator(runtime_config)
-    cortex.simulator_orchestrator = SimulatorOrchestrator(runtime_config)
-    cortex.background_orchestrator = BackgroundOrchestrator(runtime_config)
-    cortex._mode_initialized = True
+    # Build a ModeSystemConfig and initialize the runtime
+    mode_system_config = build_mode_system_config_from_test_case(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    await cortex._initialize_mode("default")
 
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}

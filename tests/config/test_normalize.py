@@ -135,16 +135,7 @@ class TestNormalizeToMultiMode:
         assert result["transition_rules"] == []
 
     def test_default_name_fallback(self):
-        config = {
-            "version": "0.1.0",
-            "system_prompt_base": "prompt",
-            "hertz": 1.0,
-            "api_key": "k",
-            "system_governance": "g",
-            "cortex_llm": {"type": "TestLLM"},
-            "agent_inputs": [],
-            "agent_actions": [],
-        }
+        config = {"version": "0.1.0"}
         result = normalize_to_multi_mode(config)
 
         assert result["default_mode"] == "default"
@@ -154,10 +145,6 @@ class TestNormalizeToMultiMode:
         config = {
             "name": "minimal",
             "version": "0.1.0",
-            "system_prompt_base": "prompt",
-            "cortex_llm": {"type": "TestLLM"},
-            "agent_inputs": [],
-            "agent_actions": [],
         }
         result = normalize_to_multi_mode(config)
         mode = result["modes"]["minimal"]
@@ -189,54 +176,26 @@ class TestValidateNormalized:
 
     def test_missing_modes_raises(self):
         with pytest.raises(ValueError, match="modes"):
-            _validate_normalized(
-                {
-                    "default_mode": "x",
-                    "version": "1",
-                    "api_key": "k",
-                    "system_governance": "g",
-                    "cortex_llm": {},
-                },
-                "x",
-            )
+            _validate_normalized({"default_mode": "x"}, "x")
 
     def test_missing_default_mode_raises(self):
         with pytest.raises(ValueError, match="default_mode"):
-            _validate_normalized(
-                {
-                    "modes": {"x": {}},
-                    "version": "1",
-                    "api_key": "k",
-                    "system_governance": "g",
-                    "cortex_llm": {},
-                },
-                "x",
-            )
+            _validate_normalized({"modes": {"x": {}}}, "x")
 
     def test_mode_name_mismatch_raises(self):
         with pytest.raises(ValueError, match="not in modes"):
+            _validate_normalized({"modes": {"a": {}}, "default_mode": "b"}, "b")
+
+    def test_missing_display_name_raises(self):
+        with pytest.raises(ValueError, match="display_name"):
             _validate_normalized(
-                {
-                    "modes": {"a": {}},
-                    "default_mode": "b",
-                    "version": "1",
-                    "api_key": "k",
-                    "system_governance": "g",
-                    "cortex_llm": {},
-                },
-                "b",
+                {"modes": {"x": {"description": "test"}}, "default_mode": "x"},
+                "x",
             )
 
-    def test_missing_system_prompt_raises(self):
-        with pytest.raises(ValueError, match="system_prompt_base"):
+    def test_missing_description_raises(self):
+        with pytest.raises(ValueError, match="description"):
             _validate_normalized(
-                {
-                    "modes": {"x": {"display_name": "X", "description": "test"}},
-                    "default_mode": "x",
-                    "version": "1",
-                    "api_key": "k",
-                    "system_governance": "g",
-                    "cortex_llm": {},
-                },
+                {"modes": {"x": {"display_name": "X"}}, "default_mode": "x"},
                 "x",
             )

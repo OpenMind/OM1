@@ -64,15 +64,13 @@ def _build_mode_section(raw_config: dict) -> dict:
 
 
 def _validate_normalized(normalized_config: dict, mode_name: str) -> None:
-    """Validate that normalization is correct."""
-    global_required = [
-        "version",
-        "default_mode",
-        "api_key",
-        "system_governance",
-        "cortex_llm",
-        "modes",
-    ]
+    """Validate that normalization produced the required multi-mode structure.
+
+    Only checks structural fields that multi-mode requires but single-mode
+    does not.  Fields already validated by the single-mode schema (version,
+    api_key, cortex_llm, etc.) are intentionally skipped.
+    """
+    global_required = ["default_mode", "modes"]
     for field in global_required:
         if field not in normalized_config or normalized_config[field] is None:
             raise ValueError(
@@ -83,14 +81,7 @@ def _validate_normalized(normalized_config: dict, mode_name: str) -> None:
             f"Normalization failed: default_mode '{mode_name}' not in modes"
         )
 
-    mode_required = [
-        "display_name",
-        "description",
-        "system_prompt_base",
-        "hertz",
-        "agent_inputs",
-        "agent_actions",
-    ]
+    mode_required = ["display_name", "description"]
     mode = normalized_config["modes"][mode_name]
     for field in mode_required:
         if field not in mode or mode[field] is None:
