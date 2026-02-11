@@ -34,4 +34,4 @@ For more technical details, please refer to the [Architecture Overview](https://
   - AMD64
   - ARM64
 
-> Note: We're committed to continuous improvement and regular updates. Your feedback and contributions are invaluable in shaping the future of OM1. Join our community to stay updated on the latest developments!
+> **Note:** We're committed to continuous improvement and regular updates. Your feedback and contributions are invaluable in shaping the future of OM1. Join our community to stay updated on the latest developments!

@@ -1,25 +1,31 @@
 ---
-title: Gazebo Simulator
-description: "Quadruped Simulation and Control"
+title: Isaac Sim
+description: "Simulation and Control with OM1"
 icon: robot
 ---
 
 ## System Requirements
 
-| Component | Minimum | Good/Recommended | Ideal |
-|-----------|---------|------------------|-------|
-| **CPU** | Intel i7 (10th gen) or AMD Ryzen 7-8 cores minimum | Intel i9 (12th gen+) or AMD Ryzen 9-12 cores | AMD Ryzen 9 7950X or Intel i9-13900K 16+ cores (24+ threads) |
-| **RAM** | 16 GB | 32 GB | 64 GB|
-| **GPU** | NVIDIA GTX 1660 Ti 6 GB VRAM | NVIDIA RTX 3070 or RTX 4060 Ti 8-12 GB VRAM | NVIDIA RTX 4080/4090 16+ GB VRAM with CUDA 11.8+ |
-| **OS** | Ubuntu 22.04 | Ubuntu 22.04 | Ubuntu 22.04 |
+| Component| Minimum                                   | Good                                   | Ideal                                   |
+|----------|-------------------------------------------|----------------------------------------|------------------------------------------|
+| OS       | Ubuntu 20.04 / 22.04<br>Windows 10 / 11    | Ubuntu 20.04 / 22.04<br>Windows 10 / 11 | Ubuntu 20.04 / 22.04<br>Windows 10 / 11 |
+| CPU      | Intel Core i7 (7th Gen)<br>AMD Ryzen 5    | Intel Core i7 (9th Gen)<br>AMD Ryzen 7 | Intel Core i9, X-series or higher<br>AMD Ryzen 9, Threadripper or higher |
+| Cores    | 4                                         | 8                                      | 16                                       |
+| RAM      | 32 GB                                     | 64 GB                                  | 64 GB                                    |
+| Storage  | 50 GB SSD                                 | 500 GB SSD                             | 1 TB NVMe SSD                            |
+| GPU      | GeForce RTX 3070                          | GeForce RTX 4080                       | RTX Ada 6000                             |
+| VRAM     | 8 GB                                      | 16 GB                                  | 48 GB                                    |
 
-It's ideal to have at least 128 GB SSD storage for the setup to run smoothly.
+## Features
 
-Checkout the video walkthrough [here](https://assets.openmind.org/education-video/Gazebo%20Setup%20Tutorial%20%28Part%201%29.mp4). More video tutorials coming soon.
+- Isaac Sim: Realistic physics simulation of the Unitree Go2.
+- Navigation Stack (Nav2): Fully configured navigation stack for autonomous movement.
+- SLAM: Mapping capabilities using slam_toolbox.
+- LiDAR Support: Simulation of Velodyne VLP-16 and Unitree 4D LiDAR.
 
 ## Simulation Instructions
 
-To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
+To get started with **Isaac Sim** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
 
 Install cyclonedds from this [link](https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html) or follow the instructions below.
 
@@ -35,15 +41,16 @@ cmake --build . --target install
 ```
 
 To install ROS2 Humble, go to this [link](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html). Follow the steps under Setup Sources.
+
 Now, run
 
 ```bash
 sudo apt update
 sudo apt upgrade
-sudo apt install ros-humble-desktop-full
+sudo apt install ros-humble-desktop
 ```
 
-This will install ROS, RViz, Gazebo and all the relevant packages.
+This will install ROS and all the relevant packages.
 
 To install compilers and other tools to build ROS packages, run
 
@@ -71,6 +78,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Use this **CycloneDDS** configuration. It uses `lo` as the network interface. We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
+
 To add it to `cyclonedds.xml`:
 
 ```bash
@@ -152,7 +160,7 @@ sudo apt-get update
 sudo apt-get install python3-rosdep
 ```
 
-Once you've successfully completed above steps, follow the following steps to start the gazebo simulation, generate SLAM map of the surrounding and start navigation.
+Once you've successfully completed above steps, follow the following steps to start the Isaac Sim simulation with OM1.
 
 Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
 
@@ -184,16 +192,63 @@ Step 3: Build all the packages:
 colcon build
 ```
 
-Now you should be able to launch the **Gazebo Simulator**.
-
-Step 4: Open a terminal and run the following commands. You'll now be able to see the Gazebo and RViZ windows launch on your system.
+Step 4: Install Isaac Sim
 
 ```bash
-source install/setup.bash
-ros2 launch go2_gazebo_sim go2_launch.py
+cd unitree/isaac_sim
+
+uv venv --python 3.11 --seed env_isaacsim
+
+source env_isaacsim/bin/activate
+
+# note that here we are installing IsaacSim 5.1
+pip install "isaacsim[all,extscache]==5.1.0" --extra-index-url https://pypi.nvidia.com
+
+# install the following or another CUDA-enabled PyTorch build that matches your system architecture
+
+pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+
+# after installation, run the following to test successful installation
+isaacsim
 ```
 
-Step 5: Open a new terminal and run:
+If the previous command ran with no issues, Isaac Sim was installed successfully.
+
+Step 5: Now, let's get our system ready to run OM1 with Isaac Sim. Open a terminal and run the following commands.
+
+To run the script, export the following
+
+> **Note**: a trained policy is required, which should contain the policy.pt, env.yaml, and deploy.yaml files
+
+```bash
+export ROS_DISTRO=humble
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaaclab/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
+```
+
+> **Note:** Make sure to replace PATH_TO_VENV with the actual path to your virtual environment
+
+We support Isaac Sim for Unitree Go2 and G1. To run the simulation for Go2, run
+
+```bash
+source env_isaacsim/bin/activate
+python3 run.py # using default policy
+python3 run.py --policy_dir YOUR_POLICY_DIR # using your own policy
+```
+
+To run the simulation for G1, run
+
+```bash
+source env_isaacsim/bin/activate
+python3 run.py --robot_type g1 # using default policy
+python3 run.py --robot_type g1 --policy_dir YOUR_POLICY_DIR # using your own policy
+```
+
+You'll now be able to see Isaac Sim running on your system.
+
+![ ](../assets/isaac-sim.png)
+
+Step 6: Open a new terminal and run:
 
 ```bash
 source install/setup.bash
@@ -202,7 +257,7 @@ ros2 launch go2_sdk sensor_launch.py use_sim:=true
 
 This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
-Step 6: Open a new terminal and run:
+Step 7: Open a new terminal and run:
 
 ```bash
 source install/setup.bash
@@ -211,7 +266,7 @@ ros2 launch orchestrator orchestrator.py use_sim:=true
 
 This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
 
-Step 7: Run Zenoh Ros2 Bridge
+Step 8: Run Zenoh Ros2 Bridge
 
 To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
 
@@ -221,7 +276,7 @@ After installing the Zenoh ROS 2 bridge, you can run it with the following comma
 zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
 ```
 
-Step 8: Start OM1
+Step 9: Start OM1
 
 Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
@@ -249,23 +304,19 @@ Now, run the simulation agent
 uv run src/run.py simulation
 ```
 
-Step 9: Teleoperate the robot in simulation
+Congratulations! You have launched Isaac Sim with OM1 successfully.
 
-You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
+### Control Methods
 
-```bash
-source install/setup.bash
-ros2 run teleop_twist_keyboard teleop_twist_keyboard
-```
+When keyboard control is enabled (default), use the following keys:
 
-Use the keyboard controls displayed in the terminal to move the robot:
-```
-i - Move forward
-, - Move backward
-j - Turn left
-l - Turn right
-k - Stop
-U/O/M/> - Move diagonally
-```
+| Key | Action |
+|-----|--------|
+| `↑` or `Numpad 8` | Move forward |
+| `↓` or `Numpad 2` | Move backward |
+| `←` or `Numpad 4` | Strafe left |
+| `→` or `Numpad 6` | Strafe right |
+| `N` or `Numpad 7` | Rotate left |
+| `M` or `Numpad 9` | Rotate right |
 
-> **Note**: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
+> **Note**: We don't have auto charging feature supported with Isaac Sim but it will be launched soon. Stay tuned!
