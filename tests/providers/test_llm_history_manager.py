@@ -456,7 +456,7 @@ async def test_llm_response_failure_removes_unpaired_user_message():
     config.agent_name = "TestBot"
 
     client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
+    history_manager = LLMHistoryManager(config, client, load_existing_history=False)
 
     class MockLLMProvider:
         def __init__(self):
@@ -495,7 +495,7 @@ async def test_llm_response_failure_with_existing_history():
     config.agent_name = "TestBot"
 
     client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
+    history_manager = LLMHistoryManager(config, client, load_existing_history=False)
 
     class MockLLMProvider:
         def __init__(self):
@@ -550,7 +550,7 @@ async def test_multiple_summarization_failures_prevent_unbounded_growth():
     config.agent_name = "TestBot"
 
     client = AsyncMock()
-    history_manager = LLMHistoryManager(config, client)
+    history_manager = LLMHistoryManager(config, client, load_existing_history=False)
 
     # Mock summarization to always fail
     history_manager.summarize_messages = AsyncMock()
@@ -589,3 +589,264 @@ async def test_multiple_summarization_failures_prevent_unbounded_growth():
 
     # Final check: history should be at or below history_length
     assert len(history_manager.history) <= config.history_length
+
+
+@pytest.mark.asyncio
+async def test_load_existing_history_on_init(
+    tmp_path, llm_config, openai_client, monkeypatch
+):
+    """Test that LLMHistoryManager loads existing history on initialization."""
+    import json
+
+    history_file = tmp_path / "conversation_history.json"
+    test_history = [
+        {"role": "user", "content": "Previous message"},
+        {"role": "assistant", "content": "Previous response"},
+    ]
+
+    history_file.write_text(json.dumps(test_history))
+
+    monkeypatch.setattr("providers.history_storage.HISTORY_FILE", history_file)
+
+    manager = LLMHistoryManager(llm_config, openai_client, load_existing_history=True)
+
+    assert len(manager.history) == 2
+    assert manager.history[0].role == "user"
+    assert manager.history[0].content == "Previous message"
+    assert manager.history[1].role == "assistant"
+    assert manager.history[1].content == "Previous response"
+
+
+@pytest.mark.asyncio
+async def test_reset_cancels_running_summary_task(llm_config, openai_client):
+    """Test that reset cancels a running summary task."""
+    manager = LLMHistoryManager(llm_config, openai_client, load_existing_history=False)
+
+    async def slow_summary(messages):
+        await asyncio.sleep(10)
+        return ChatMessage(role="assistant", content="Summary")
+
+    manager.summarize_messages = slow_summary
+
+    messages = [ChatMessage(role="user", content="Test")]
+
+    await manager.start_summary_task(messages)
+
+    assert manager._summary_task is not None
+    assert not manager._summary_task.done()
+
+    manager.reset()
+
+    assert manager._summary_task is None
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_with_exactly_4_messages(history_manager):
+    """Test summarization logic with exactly 4 messages."""
+    messages = [
+        ChatMessage(role="assistant", content="Previous summary of events"),
+        ChatMessage(role="assistant", content="Actions taken"),
+        ChatMessage(role="user", content="New sensor input A"),
+        ChatMessage(role="user", content="New sensor input B"),
+    ]
+
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "assistant"
+    assert "Previously" in result.content
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_with_non_4_messages(history_manager):
+    """Test summarization logic with message count other than 4."""
+    messages = [
+        ChatMessage(role="user", content="Message 1"),
+        ChatMessage(role="assistant", content="Response 1"),
+        ChatMessage(role="user", content="Message 2"),
+    ]
+
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "assistant"
+    assert "Previously" in result.content
+
+    messages = [
+        ChatMessage(role="user", content="Message 1"),
+        ChatMessage(role="assistant", content="Response 1"),
+        ChatMessage(role="user", content="Message 2"),
+        ChatMessage(role="assistant", content="Response 2"),
+        ChatMessage(role="user", content="Message 3"),
+    ]
+
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "assistant"
+
+
+@pytest.mark.asyncio
+async def test_start_summary_task_cancelled_error(history_manager):
+    """Test that CancelledError in start_summary_task is handled."""
+    from unittest.mock import patch
+
+    messages = [ChatMessage(role="user", content="Test")]
+
+    def mock_create_task(coro):
+        raise asyncio.CancelledError("Task was cancelled")
+
+    with patch("asyncio.create_task", side_effect=mock_create_task):
+        await history_manager.start_summary_task(messages)
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_timeout_error(history_manager):
+    """Test that timeout error is handled gracefully."""
+
+    async def timeout_mock(**kwargs):
+        await asyncio.sleep(100)
+
+    history_manager.client.chat.completions.create = AsyncMock(side_effect=timeout_mock)
+
+    messages = [ChatMessage(role="user", content="Test")]
+
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "timed out" in result.content.lower()
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_openai_api_error(history_manager):
+    """Test that OpenAI API errors are handled gracefully."""
+    mock_request = MagicMock()
+    history_manager.client.chat.completions.create = AsyncMock(
+        side_effect=openai.APIError(
+            "Service unavailable", request=mock_request, body=None
+        )
+    )
+
+    messages = [ChatMessage(role="user", content="Test")]
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "API service unavailable" in result.content
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_empty_response(history_manager):
+    """Test handling of empty response from API."""
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = None
+
+    history_manager.client.chat.completions.create = AsyncMock(return_value=response)
+
+    messages = [ChatMessage(role="user", content="Test")]
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "empty summary" in result.content.lower()
+
+
+@pytest.mark.asyncio
+async def test_summarize_messages_no_choices(history_manager):
+    """Test handling of API response with no choices."""
+    response = MagicMock()
+    response.choices = []
+
+    history_manager.client.chat.completions.create = AsyncMock(return_value=response)
+
+    messages = [ChatMessage(role="user", content="Test")]
+    result = await history_manager.summarize_messages(messages)
+
+    assert result.role == "system"
+    assert "invalid response" in result.content.lower()
+
+
+@pytest.mark.asyncio
+async def test_persist_history_called_every_5_frames(llm_config, openai_client):
+    """Test that persist_history is called every 5 frame increments."""
+    history_manager = LLMHistoryManager(
+        llm_config, openai_client, load_existing_history=False
+    )
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = llm_config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = llm_config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list):
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Response")]
+            return response
+
+    provider = MockLLMProvider()
+
+    persist_calls = []
+
+    def mock_persist():
+        persist_calls.append(history_manager.frame_index)
+        return True
+
+    history_manager.persist_history = mock_persist
+
+    for i in range(10):
+        provider.io_provider.add_input(f"input_{i}", f"Test {i}", float(i))
+        await provider.process("test")
+        provider.io_provider.increment_tick()
+
+    assert 5 in persist_calls
+    assert 10 in persist_calls
+    assert len([x for x in persist_calls if x % 5 == 0]) >= 2
+
+
+@pytest.mark.asyncio
+async def test_get_messages_format(history_manager):
+    """Test that get_messages returns correct format for OpenAI API."""
+    history_manager.history = [
+        ChatMessage(role="user", content="Hello"),
+        ChatMessage(role="assistant", content="Hi there!"),
+    ]
+
+    messages = history_manager.get_messages()
+
+    assert len(messages) == 2
+    assert messages[0] == {"role": "user", "content": "Hello"}
+    assert messages[1] == {"role": "assistant", "content": "Hi there!"}
+    assert all(isinstance(msg, dict) for msg in messages)
+    assert all("role" in msg and "content" in msg for msg in messages)
+
+
+@pytest.mark.asyncio
+async def test_persist_history_integration(history_manager, tmp_path):
+    """Test that persist_history actually saves to file."""
+    from unittest.mock import patch
+
+    history_manager.history = [
+        ChatMessage(role="user", content="Test message"),
+        ChatMessage(role="assistant", content="Test response"),
+    ]
+
+    # Use actual temp file
+    test_file = tmp_path / "test_history.json"
+
+    with patch("providers.history_storage.HISTORY_FILE", test_file):
+        result = history_manager.persist_history()
+
+        # Should return True on success
+        assert result is True
+
+        # File should exist and contain data
+        assert test_file.exists()
+
+        import json
+
+        with open(test_file) as f:
+            saved_data = json.load(f)
+
+        assert len(saved_data) == 2
+        assert saved_data[0]["role"] == "user"
+        assert saved_data[0]["content"] == "Test message"
