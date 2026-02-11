@@ -738,3 +738,70 @@ class TestModeCortexRuntimeHotReload:
 
                 mock_config_watcher.cancel.assert_called_once()
                 mock_gather.assert_called_once()
+
+
+class TestHotReloadMultiToSingle:
+    """Test hot reload from multi-mode config to single-mode config."""
+
+    @pytest.mark.asyncio
+    async def test_reload_multi_to_single_mode(self, mock_system_config):
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "mode_1"
+            mock_manager.state = Mock()
+            mock_manager.state.transition_history = []
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            mock_system_config.modes = {
+                "mode_1": Mock(),
+                "mode_2": Mock(),
+            }
+            mock_system_config.default_mode = "mode_1"
+
+            single_mode_mock = Mock(spec=ModeConfig)
+            single_mode_mock.name = "single_mode"
+            single_mode_mock.display_name = "single_mode"
+
+            new_single_config = Mock(spec=ModeSystemConfig)
+            new_single_config.default_mode = "single_mode"
+            new_single_config.modes = {"single_mode": single_mode_mock}
+            mock_load_config.return_value = new_single_config
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+            runtime._run_cortex_loop = AsyncMock()
+
+            await runtime._reload_config()
+
+            runtime._initialize_mode.assert_called_once_with("single_mode")
+            assert runtime.mode_manager.state.current_mode == "single_mode"
+
+            assert runtime.mode_config == new_single_config
+            assert runtime.mode_manager.config == new_single_config
+
+            runtime._stop_current_orchestrators.assert_called_once()
+            runtime._start_orchestrators.assert_called_once()
+
+            assert len(runtime.mode_manager.state.transition_history) == 1
+            assert (
+                "config_reload->single_mode:hot_reload"
+                in runtime.mode_manager.state.transition_history[0]
+            )
+
+            assert len(new_single_config.modes) == 1
+            assert "single_mode" in new_single_config.modes
