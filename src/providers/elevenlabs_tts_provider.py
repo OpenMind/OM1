@@ -1,7 +1,7 @@
 import logging
 from typing import Callable, Optional, Union
 
-from om1_speech import AudioOutputStream
+from om1_speech import AudioOutputLiveStream
 
 from .singleton import singleton
 
@@ -24,6 +24,7 @@ class ElevenLabsTTSProvider:
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
         output_format: Optional[str] = "mp3_44100_128",
+        rate: int = 44100,
         enable_tts_interrupt: bool = False,
     ):
         """
@@ -63,16 +64,22 @@ class ElevenLabsTTSProvider:
 
         # Initialize TTS provider
         self.running: bool = False
-        self._audio_stream: AudioOutputStream = AudioOutputStream(
+        self._audio_stream: AudioOutputLiveStream = AudioOutputLiveStream(
             url=url,
-            headers={"x-api-key": api_key} if api_key else None,
+            tts_model=model_id,
+            tts_voice=voice_id,
+            response_format=output_format,
+            rate=rate,
+            api_key=api_key,
             enable_tts_interrupt=enable_tts_interrupt,
+            extra_headers={"x-elevenlabs-api-key": self.elevenlabs_api_key} if self.elevenlabs_api_key else None,
         )
 
         # Set Eleven Labs TTS parameters
         self._voice_id = voice_id
         self._model_id = model_id
         self._output_format = output_format
+        self._rate = rate
 
     def configure(
         self,
@@ -82,6 +89,7 @@ class ElevenLabsTTSProvider:
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
         output_format: Optional[str] = "mp3_44100_128",
+        rate: Optional[int] = 44100,
         enable_tts_interrupt: bool = False,
     ):
         """
@@ -112,6 +120,7 @@ class ElevenLabsTTSProvider:
             or model_id != self._model_id
             or output_format != self._output_format
             or enable_tts_interrupt != self._enable_tts_interrupt
+            or rate != self._rate
         )
 
         if not restart_needed:
@@ -126,11 +135,17 @@ class ElevenLabsTTSProvider:
         self._model_id = model_id
         self._output_format = output_format
         self._enable_tts_interrupt = enable_tts_interrupt
+        self._rate = rate
 
-        self._audio_stream: AudioOutputStream = AudioOutputStream(
+        self._audio_stream: AudioOutputLiveStream = AudioOutputLiveStream(
             url=url,
-            headers={"x-api-key": api_key} if api_key else None,
+            tts_model=model_id,
+            tts_voice=voice_id,
+            response_format=output_format,
+            rate=rate,
             enable_tts_interrupt=enable_tts_interrupt,
+            api_key=api_key,
+            extra_headers={"x-elevenlabs-api-key": self.elevenlabs_api_key} if self.elevenlabs_api_key else None,
         )
         self._audio_stream.start()
 
@@ -161,17 +176,11 @@ class ElevenLabsTTSProvider:
             A dictionary containing the TTS request parameters.
         """
         logging.info(f"audio_stream: {text}")
-        elevenlabs_api_key = (
-            {"elevenlabs_api_key": self.elevenlabs_api_key}
-            if self.elevenlabs_api_key
-            else {}
-        )
         return {
             "text": text,
             "voice_id": self._voice_id,
             "model_id": self._model_id,
             "output_format": self._output_format,
-            **elevenlabs_api_key,
         }
 
     def add_pending_message(self, message: Union[str, dict]):
