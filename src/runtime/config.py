@@ -29,7 +29,24 @@ from simulators.base import Simulator
 
 
 def _load_schema(schema_file: str) -> dict:
-    """Load and cache schema files."""
+    """
+    Load and cache schema files.
+
+    Parameters
+    ----------
+    schema_file : str
+        Name of the schema file to load.
+
+    Returns
+    -------
+    dict
+        The loaded schema dictionary.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the schema file does not exist.
+    """
     schema_path = Path(__file__).parent / "../../config/schema" / schema_file
 
     if not schema_path.exists():
@@ -42,7 +59,14 @@ def _load_schema(schema_file: str) -> dict:
 
 
 def validate_config_schema(raw_config: dict) -> None:
-    """Validate the configuration against the appropriate schema."""
+    """
+    Validate the configuration against the appropriate schema.
+
+    Parameters
+    ----------
+    raw_config : dict
+        The raw configuration dictionary to validate.
+    """
     schema_file = (
         "multi_mode_schema.json"
         if "modes" in raw_config and "default_mode" in raw_config
@@ -64,7 +88,48 @@ def validate_config_schema(raw_config: dict) -> None:
 
 @dataclass
 class RuntimeConfig:
-    """Runtime configuration for the agent."""
+    """
+    Runtime configuration for the agent.
+
+    Parameters
+    ----------
+    version : str
+        Configuration version.
+    hertz : float
+        Execution frequency.
+    name : str
+        Config name.
+    system_prompt_base : str
+        Base system prompt.
+    system_governance : str
+        Governance rules for the system.
+    system_prompt_examples : str
+        Example prompts for the system.
+    agent_inputs : List[Sensor]
+        List of agent input sensors.
+    cortex_llm : LLM
+        The main LLM for the agent.
+    simulators : List[Simulator]
+        List of simulators.
+    agent_actions : List[AgentAction]
+        List of agent actions.
+    backgrounds : List[Background]
+        List of background processes.
+    mode : Optional[str]
+        Optional mode setting.
+    api_key : Optional[str]
+        Optional API key.
+    robot_ip : Optional[str]
+        Optional robot IP address.
+    URID : Optional[str]
+        Optional unique robot identifier.
+    unitree_ethernet : Optional[str]
+        Optional Unitree ethernet port.
+    action_execution_mode : Optional[str]
+        Optional action execution mode (e.g., "concurrent", "sequential", "dependencies"). Defaults to "concurrent".
+    action_dependencies : Optional[Dict[str, List[str]]]
+        Optional mapping of action dependencies.
+    """
 
     version: str
     hertz: float
@@ -96,7 +161,30 @@ def add_meta(
     g_robot_ip: Optional[str],
     g_mode: Optional[str] = None,
 ) -> dict[str, str]:
-    """Add API key and robot configuration to a component's config dict."""
+    """
+    Add an API key and Robot configuration to a runtime configuration.
+
+    Parameters
+    ----------
+    config : dict
+        The runtime configuration to update.
+    g_api_key : str
+        The API key to add.
+    g_ut_eth : str
+        The Robot ethernet port to add.
+    g_URID : str
+        The Robot URID to use.
+    g_robot_ip : Optional[str]
+        The Robot IP address.
+    g_mode : Optional[str]
+        The mode of operation.
+
+    Returns
+    -------
+    dict
+        The updated runtime configuration.
+    """
+    # logging.info(f"config before {config}")
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key
     if "unitree_ethernet" not in config and g_ut_eth is not None:
@@ -442,7 +530,19 @@ class ModeSystemConfig:
 
 
 def is_single_mode(raw_config: dict) -> bool:
-    """Detect whether the configuration is in single-mode format."""
+    """
+    Detect whether the configuration is in single-mode format.
+
+    Parameters
+    ----------
+    raw_config : dict
+        The raw configuration dictionary to check.
+
+    Returns
+    -------
+    bool
+        True if the config is single-mode (missing 'modes' or 'default_mode').
+    """
     return "modes" not in raw_config or "default_mode" not in raw_config
 
 
@@ -451,6 +551,16 @@ def normalize_to_multi_mode(raw_config: dict) -> dict:
     Normalize a single-mode config to multi-mode format.
 
     If the config is already multi-mode, return it unchanged.
+
+    Parameters
+    ----------
+    raw_config : dict
+        The raw configuration dictionary to normalize.
+
+    Returns
+    -------
+    dict
+        A multi-mode formatted configuration dictionary.
     """
     if not is_single_mode(raw_config):
         return raw_config
@@ -468,7 +578,21 @@ def normalize_to_multi_mode(raw_config: dict) -> dict:
 
 
 def _build_global_section(raw_config: dict, mode_name: str) -> dict:
-    """Build the global fields of a multi-mode config."""
+    """
+    Build the global fields of a multi-mode config.
+
+    Parameters
+    ----------
+    raw_config : dict
+        The original single-mode configuration.
+    mode_name : str
+        Name of the mode to use as default.
+
+    Returns
+    -------
+    dict
+        Global-level fields for the multi-mode config.
+    """
     return {
         "version": raw_config.get("version"),
         "name": mode_name,
@@ -486,7 +610,19 @@ def _build_global_section(raw_config: dict, mode_name: str) -> dict:
 
 
 def _build_mode_section(raw_config: dict) -> dict:
-    """Build the mode-specific fields from a single-mode config."""
+    """
+    Build the mode-specific fields from a single-mode config.
+
+    Parameters
+    ----------
+    raw_config : dict
+        The original single-mode configuration.
+
+    Returns
+    -------
+    dict
+        Mode-level fields extracted from the single-mode config.
+    """
     mode_name = raw_config.get("name", "default")
     return {
         "display_name": mode_name,
@@ -504,11 +640,24 @@ def _build_mode_section(raw_config: dict) -> dict:
 
 
 def _validate_normalized(normalized_config: dict, mode_name: str) -> None:
-    """Validate that normalization produced the required multi-mode structure.
+    """
+    Validate that normalization produced the required multi-mode structure.
 
     Only checks structural fields that multi-mode requires but single-mode
-    does not.  Fields already validated by the single-mode schema (version,
+    does not. Fields already validated by the single-mode schema (version,
     api_key, cortex_llm, etc.) are intentionally skipped.
+
+    Parameters
+    ----------
+    normalized_config : dict
+        The normalized multi-mode configuration to validate.
+    mode_name : str
+        The expected default mode name.
+
+    Raises
+    ------
+    ValueError
+        If required structural fields are missing.
     """
     global_required = ["default_mode", "modes"]
     for key in global_required:
