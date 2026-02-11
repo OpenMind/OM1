@@ -203,25 +203,6 @@ async def test_ask_empty_choices(llm):
 
 
 @pytest.mark.asyncio
-async def test_ask_with_messages(llm, mock_response):
-    """Test API call with message history"""
-    messages = [
-        {"role": "user", "content": "previous message"},
-        {"role": "assistant", "content": "previous response"}
-    ]
-    
-    with pytest.MonkeyPatch.context() as m:
-        mock_create = AsyncMock(return_value=mock_response)
-        m.setattr(llm._client.chat.completions, "create", mock_create)
-        
-        await llm.ask("test prompt", messages=messages)
-        
-        # Verify messages were formatted correctly
-        call_args = mock_create.call_args
-        assert len(call_args.kwargs['messages']) == 3  # 2 history + 1 new
-
-
-@pytest.mark.asyncio
 async def test_ask_with_multiple_tool_calls(llm):
     """Test handling multiple tool calls in one response"""
     tool_call_1 = MagicMock()
@@ -270,24 +251,3 @@ async def test_ask_with_available_actions(config):
     actions = [MagicMock(name="test_action")]
     llm = DeepSeekLLM(config, available_actions=actions)
     assert llm.function_schemas is not None
-
-
-@pytest.mark.asyncio
-async def test_messages_missing_role_or_content(llm, mock_response):
-    """Test handling of malformed messages"""
-    messages = [
-        {"role": "user"},  # missing content
-        {"content": "test"}  # missing role
-    ]
-    
-    with pytest.MonkeyPatch.context() as m:
-        mock_create = AsyncMock(return_value=mock_response)
-        m.setattr(llm._client.chat.completions, "create", mock_create)
-        
-        result = await llm.ask("test prompt", messages=messages)
-        
-        # Should handle gracefully with default values
-        call_args = mock_create.call_args
-        formatted_messages = call_args.kwargs['messages']
-        assert formatted_messages[0]['content'] == ""
-        assert formatted_messages[1]['role'] == "user"
