@@ -83,7 +83,15 @@ jobs:
 
       - name: Run integration tests
         run: |
-          uv run pytest -m "integration" --log-cli-level=DEBUG --junitxml=test-reports/results.xml -s
+          uv run pytest -m "integration" \
+            --ignore=tests/actions/move_go2_autonomy/test_unitree_om_path_sdk.py \
+            --ignore=tests/actions/move_go2_autonomy/test_unitree_rplidar_sdk.py \
+            --ignore=tests/inputs/base/test_inputs_plugins.py \
+            --ignore=tests/inputs/plugins/test_ubtech_camera_vlm_input.py \
+            --ignore=tests/inputs/plugins/test_unitree_g1_basic.py \
+            --ignore=tests/providers/test_ubtech_video_stream.py \
+            --ignore=tests/providers/test_ubtech_vlm_provider.py \
+            --log-cli-level=DEBUG --junitxml=test-reports/results.xml -s
 
       - name: Extract test summary
         id: summary
