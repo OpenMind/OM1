@@ -6,7 +6,7 @@ from unittest.mock import Mock, mock_open, patch
 import pytest
 from jsonschema import ValidationError
 
-from runtime.multi_mode.config import (
+from runtime.config import (
     ModeConfig,
     ModeSystemConfig,
     RuntimeConfig,
@@ -223,7 +223,7 @@ class TestModeConfig:
         sample_mode_config.agent_actions = [mock_action]
         assert sample_mode_config.is_loaded() is True
 
-    @patch("runtime.multi_mode.config._load_mode_components")
+    @patch("runtime.config._load_mode_components")
     def test_load_components(
         self, mock_load_components, sample_mode_config, sample_system_config
     ):
@@ -278,11 +278,11 @@ class TestModeSystemConfig:
 class TestLoadModeComponents:
     """Test cases for _load_mode_components function."""
 
-    @patch("runtime.multi_mode.config.load_input")
-    @patch("runtime.multi_mode.config.load_simulator")
-    @patch("runtime.multi_mode.config.load_action")
-    @patch("runtime.multi_mode.config.load_background")
-    @patch("runtime.multi_mode.config.load_llm")
+    @patch("runtime.config.load_input")
+    @patch("runtime.config.load_simulator")
+    @patch("runtime.config.load_action")
+    @patch("runtime.config.load_background")
+    @patch("runtime.config.load_llm")
     def test_load_mode_components_complete(
         self,
         mock_load_llm,
@@ -325,7 +325,7 @@ class TestLoadModeComponents:
         assert sample_mode_config.backgrounds[0] == mock_background
         assert sample_mode_config.cortex_llm == mock_llm
 
-    @patch("runtime.multi_mode.config.load_llm")
+    @patch("runtime.config.load_llm")
     def test_load_mode_components_with_global_llm(
         self,
         mock_load_llm,
@@ -398,7 +398,7 @@ class TestLoadModeConfig:
             temp_file = f.name
 
         try:
-            with patch("runtime.multi_mode.config.os.path.join") as mock_join:
+            with patch("runtime.config.os.path.join") as mock_join:
                 mock_join.return_value = temp_file
 
                 config = load_mode_config("env_test")
@@ -410,7 +410,7 @@ class TestLoadModeConfig:
         finally:
             os.unlink(temp_file)
 
-    @patch("runtime.multi_mode.config.load_unitree")
+    @patch("runtime.config.load_unitree")
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
@@ -439,7 +439,7 @@ class TestLoadModeConfig:
             temp_file = f.name
 
         try:
-            with patch("runtime.multi_mode.config.os.path.join") as mock_join:
+            with patch("runtime.config.os.path.join") as mock_join:
                 mock_join.return_value = temp_file
 
                 config = load_mode_config("unitree_test")
@@ -475,7 +475,7 @@ class TestLoadModeConfig:
             temp_file = f.name
 
         try:
-            with patch("runtime.multi_mode.config.os.path.join") as mock_join:
+            with patch("runtime.config.os.path.join") as mock_join:
                 mock_join.return_value = temp_file
 
                 with pytest.raises(ValueError, match="Invalid version format"):
@@ -618,7 +618,7 @@ class TestValidateConfigSchema:
             "inputs": [],
             "backgrounds": [],
         }
-        with patch("runtime.multi_mode.config._load_schema") as mock_load:
+        with patch("runtime.config._load_schema") as mock_load:
             mock_load.return_value = {
                 "type": "object",
                 "properties": {},
@@ -635,7 +635,7 @@ class TestValidateConfigSchema:
             "modes": {},
             "default_mode": "test",
         }
-        with patch("runtime.multi_mode.config._load_schema") as mock_load:
+        with patch("runtime.config._load_schema") as mock_load:
             mock_load.return_value = {
                 "type": "object",
                 "properties": {},
@@ -648,7 +648,7 @@ class TestValidateConfigSchema:
         """Test that FileNotFoundError is raised when schema file is missing."""
         config = {"name": "test"}
         with patch(
-            "runtime.multi_mode.config._load_schema",
+            "runtime.config._load_schema",
             side_effect=FileNotFoundError("Schema not found"),
         ):
             with pytest.raises(FileNotFoundError):
@@ -678,7 +678,7 @@ class TestValidateConfigSchema:
         """Test that FileNotFoundError is logged."""
         config = {"name": "test"}
         with patch(
-            "runtime.multi_mode.config._load_schema",
+            "runtime.config._load_schema",
             side_effect=FileNotFoundError("Schema file missing"),
         ):
             with caplog.at_level(logging.ERROR):
@@ -736,13 +736,13 @@ class TestValidateConfigSchema:
         except ValidationError:
             pass
 
-    @patch("runtime.multi_mode.config.validate")
+    @patch("runtime.config.validate")
     def test_validate_config_calls_jsonschema_validate(self, mock_validate):
         """Test that jsonschema.validate is called with correct parameters."""
         config = {"name": "test", "modes": {}, "default_mode": "test"}
         schema = {"type": "object"}
 
-        with patch("runtime.multi_mode.config._load_schema", return_value=schema):
+        with patch("runtime.config._load_schema", return_value=schema):
             validate_config_schema(config)
         mock_validate.assert_called_once_with(instance=config, schema=schema)
 

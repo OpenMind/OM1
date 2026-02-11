@@ -13,8 +13,8 @@ import pytest
 from PIL import Image
 
 from llm.output_model import Action, CortexOutputModel
-from runtime.multi_mode.config import ModeConfig, ModeSystemConfig
-from runtime.multi_mode.cortex import ModeCortexRuntime
+from runtime.config import ModeConfig, ModeSystemConfig
+from runtime.cortex import ModeCortexRuntime
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_image_provider,
     load_test_images,
@@ -123,10 +123,8 @@ def mock_confige_provider_components():
 
     with (
         patch("providers.config_provider.ConfigProvider") as mock_config_provider,
-        patch(
-            "runtime.multi_mode.cortex.ConfigProvider"
-        ) as mock_multi_cortex_config_provider,
-        patch("runtime.multi_mode.manager.open_zenoh_session"),
+        patch("runtime.cortex.ConfigProvider") as mock_multi_cortex_config_provider,
+        patch("runtime.manager.open_zenoh_session"),
     ):
         mock_config_provider_instance = MagicMock()
         mock_config_provider_instance.running = False

@@ -8,9 +8,9 @@ from typing import Optional, Tuple
 import dotenv
 import typer
 
+from runtime.config import load_mode_config
+from runtime.cortex import ModeCortexRuntime
 from runtime.logging import setup_logging
-from runtime.multi_mode.config import load_mode_config
-from runtime.multi_mode.cortex import ModeCortexRuntime
 
 app = typer.Typer()
 

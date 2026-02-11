@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock, mock_open, patch
 
 import pytest
 
-from runtime.multi_mode.hook import (
+from runtime.hook import (
     ActionHookConfig,
     ActionHookHandler,
     CommandHookConfig,
@@ -162,10 +162,8 @@ async def test_message_handler_basic_execution(sample_context):
     mock_tts = Mock()
     mock_tts.add_pending_message = Mock()
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        with patch(
-            "runtime.multi_mode.hook.ElevenLabsTTSProvider", return_value=mock_tts
-        ):
+    with patch("runtime.hook.logging") as mock_logging:
+        with patch("runtime.hook.ElevenLabsTTSProvider", return_value=mock_tts):
             result = await handler.execute(sample_context)
             assert result is True
             mock_logging.info.assert_called_once_with(
@@ -183,10 +181,8 @@ async def test_message_handler_with_announcement(sample_context):
     mock_tts = Mock()
     mock_tts.add_pending_message = Mock()
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        with patch(
-            "runtime.multi_mode.hook.ElevenLabsTTSProvider", return_value=mock_tts
-        ):
+    with patch("runtime.hook.logging") as mock_logging:
+        with patch("runtime.hook.ElevenLabsTTSProvider", return_value=mock_tts):
             result = await handler.execute(sample_context)
             assert result is True
             mock_logging.info.assert_called_once()
@@ -199,10 +195,8 @@ async def test_message_handler_tts_import_error(sample_context):
     config = MessageHookConfig(message="Mode: {mode_name}")
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        with patch(
-            "runtime.multi_mode.hook.ElevenLabsTTSProvider", side_effect=ImportError
-        ):
+    with patch("runtime.hook.logging") as mock_logging:
+        with patch("runtime.hook.ElevenLabsTTSProvider", side_effect=ImportError):
             result = await handler.execute(sample_context)
             assert result is False
             mock_logging.error.assert_called_once_with("Error adding TTS message: ")
@@ -215,7 +209,7 @@ async def test_message_handler_format_error():
     handler = MessageHookHandler(config)
     context = {"mode_name": "test"}
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+    with patch("runtime.hook.logging") as mock_logging:
         result = await handler.execute(context)
         assert result is False
         mock_logging.error.assert_called_once()
@@ -256,7 +250,7 @@ def test_message_handler_create_elevenlabs_provider():
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+    with patch("runtime.hook.ElevenLabsTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once_with(
             url="https://api.openmind.org/api/core/elevenlabs/tts",
@@ -284,7 +278,7 @@ def test_message_handler_create_elevenlabs_provider_with_custom_config():
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+    with patch("runtime.hook.ElevenLabsTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once_with(
             url="https://custom.url/tts",
@@ -305,7 +299,7 @@ def test_message_handler_create_kokoro_provider():
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.KokoroTTSProvider") as mock_provider:
+    with patch("runtime.hook.KokoroTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once_with(
             url="http://127.0.0.1:8880/v1",
@@ -333,7 +327,7 @@ def test_message_handler_create_kokoro_provider_with_custom_config():
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.KokoroTTSProvider") as mock_provider:
+    with patch("runtime.hook.KokoroTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once_with(
             url="http://custom.host:8880/v1",
@@ -354,7 +348,7 @@ def test_message_handler_create_riva_provider():
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.RivaTTSProvider") as mock_provider:
+    with patch("runtime.hook.RivaTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once_with(
             url="http://127.0.0.1:50051",
@@ -372,7 +366,7 @@ def test_message_handler_create_riva_provider_with_custom_config():
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.RivaTTSProvider") as mock_provider:
+    with patch("runtime.hook.RivaTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once_with(
             url="http://custom.host:50051",
@@ -402,7 +396,7 @@ def test_message_handler_case_insensitive_provider():
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.ElevenLabsTTSProvider") as mock_provider:
+    with patch("runtime.hook.ElevenLabsTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once()
 
@@ -420,8 +414,8 @@ async def test_message_handler_execute_with_kokoro(sample_context):
     mock_tts.start = Mock()
     mock_tts.add_pending_message = Mock()
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        with patch("runtime.multi_mode.hook.KokoroTTSProvider", return_value=mock_tts):
+    with patch("runtime.hook.logging") as mock_logging:
+        with patch("runtime.hook.KokoroTTSProvider", return_value=mock_tts):
             result = await handler.execute(sample_context)
             assert result is True
             mock_logging.info.assert_called_once_with(
@@ -444,8 +438,8 @@ async def test_message_handler_execute_with_riva(sample_context):
     mock_tts.start = Mock()
     mock_tts.add_pending_message = Mock()
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
-        with patch("runtime.multi_mode.hook.RivaTTSProvider", return_value=mock_tts):
+    with patch("runtime.hook.logging") as mock_logging:
+        with patch("runtime.hook.RivaTTSProvider", return_value=mock_tts):
             result = await handler.execute(sample_context)
             assert result is True
             mock_logging.info.assert_called_once_with(
@@ -464,7 +458,7 @@ async def test_message_handler_execute_with_unsupported_provider(sample_context)
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+    with patch("runtime.hook.logging") as mock_logging:
         result = await handler.execute(sample_context)
         assert result is False
         mock_logging.error.assert_called_once()
@@ -481,9 +475,9 @@ async def test_message_handler_execute_provider_exception(sample_context):
     )
     handler = MessageHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+    with patch("runtime.hook.logging") as mock_logging:
         with patch(
-            "runtime.multi_mode.hook.ElevenLabsTTSProvider",
+            "runtime.hook.ElevenLabsTTSProvider",
             side_effect=Exception("Provider init failed"),
         ):
             result = await handler.execute(sample_context)
@@ -512,10 +506,10 @@ async def test_command_handler_successful_execution(sample_context):
     mock_process.returncode = 0
 
     with patch(
-        "runtime.multi_mode.hook.asyncio.create_subprocess_shell",
+        "runtime.hook.asyncio.create_subprocess_shell",
         return_value=mock_process,
     ):
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.logging") as mock_logging:
             result = await handler.execute(sample_context)
             assert result is True
             mock_logging.info.assert_called_once_with(
@@ -534,10 +528,10 @@ async def test_command_handler_failed_execution(sample_context):
     mock_process.returncode = 1
 
     with patch(
-        "runtime.multi_mode.hook.asyncio.create_subprocess_shell",
+        "runtime.hook.asyncio.create_subprocess_shell",
         return_value=mock_process,
     ):
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.logging") as mock_logging:
             result = await handler.execute(sample_context)
             assert result is False
             mock_logging.error.assert_called_once()
@@ -549,7 +543,7 @@ async def test_command_handler_no_command():
     config = CommandHookConfig()
     handler = CommandHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+    with patch("runtime.hook.logging") as mock_logging:
         result = await handler.execute({})
         assert result is False
         mock_logging.warning.assert_called_once_with(
@@ -563,7 +557,7 @@ async def test_command_handler_empty_command():
     config = CommandHookConfig(command="")
     handler = CommandHookHandler(config)
 
-    with patch("runtime.multi_mode.hook.logging") as mock_logging:
+    with patch("runtime.hook.logging") as mock_logging:
         result = await handler.execute({})
         assert result is False
         mock_logging.warning.assert_called_once()
@@ -576,10 +570,10 @@ async def test_command_handler_execution_exception(sample_context):
     handler = CommandHookHandler(config)
 
     with patch(
-        "runtime.multi_mode.hook.asyncio.create_subprocess_shell",
+        "runtime.hook.asyncio.create_subprocess_shell",
         side_effect=OSError("Permission denied"),
     ):
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.logging") as mock_logging:
             result = await handler.execute(sample_context)
             assert result is False
             mock_logging.error.assert_called_once()
@@ -596,7 +590,7 @@ async def test_command_handler_successful_no_output(sample_context):
     mock_process.returncode = 0
 
     with patch(
-        "runtime.multi_mode.hook.asyncio.create_subprocess_shell",
+        "runtime.hook.asyncio.create_subprocess_shell",
         return_value=mock_process,
     ):
         result = await handler.execute(sample_context)
@@ -707,7 +701,7 @@ async def test_function_handler_execution_exception(sample_context):
         raise ValueError("Test error")
 
     with patch.object(handler, "_find_function_in_module", return_value=mock_function):
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.logging") as mock_logging:
             result = await handler.execute(sample_context)
             assert result is False
             mock_logging.error.assert_called_once()
@@ -719,8 +713,8 @@ def test_find_function_in_module_hooks_dir_not_found():
         FunctionHookConfig(function="test_func", module_name="test_module")
     )
 
-    with patch("runtime.multi_mode.hook.os.path.exists", return_value=False):
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+    with patch("runtime.hook.os.path.exists", return_value=False):
+        with patch("runtime.hook.logging") as mock_logging:
             result = handler._find_function_in_module("test_module", "test_func")
             assert result is None
             mock_logging.error.assert_called_once()
@@ -732,8 +726,8 @@ def test_find_function_in_module_file_not_found():
         FunctionHookConfig(function="test_func", module_name="test_module")
     )
 
-    with patch("runtime.multi_mode.hook.os.path.exists", side_effect=[True, False]):
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+    with patch("runtime.hook.os.path.exists", side_effect=[True, False]):
+        with patch("runtime.hook.logging") as mock_logging:
             result = handler._find_function_in_module("test_module", "test_func")
             assert result is None
             mock_logging.error.assert_called_once()
@@ -747,9 +741,9 @@ def test_find_function_in_module_function_not_in_file():
 
     file_content = "def other_function():\n    pass"
 
-    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+    with patch("runtime.hook.os.path.exists", return_value=True):
         with patch("builtins.open", mock_open(read_data=file_content)):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+            with patch("runtime.hook.logging") as mock_logging:
                 result = handler._find_function_in_module("test_module", "test_func")
                 assert result is None
                 mock_logging.error.assert_called_once()
@@ -763,13 +757,13 @@ def test_find_function_in_module_import_error():
 
     file_content = "def test_func():\n    pass"
 
-    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+    with patch("runtime.hook.os.path.exists", return_value=True):
         with patch("builtins.open", mock_open(read_data=file_content)):
             with patch(
-                "runtime.multi_mode.hook.importlib.import_module",
+                "runtime.hook.importlib.import_module",
                 side_effect=ImportError("Module not found"),
             ):
-                with patch("runtime.multi_mode.hook.logging") as mock_logging:
+                with patch("runtime.hook.logging") as mock_logging:
                     result = handler._find_function_in_module(
                         "test_module", "test_func"
                     )
@@ -791,13 +785,13 @@ def test_find_function_in_module_successful():
     mock_module = Mock()
     mock_module.test_func = mock_function
 
-    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+    with patch("runtime.hook.os.path.exists", return_value=True):
         with patch("builtins.open", mock_open(read_data=file_content)):
             with patch(
-                "runtime.multi_mode.hook.importlib.import_module",
+                "runtime.hook.importlib.import_module",
                 return_value=mock_module,
             ):
-                with patch("runtime.multi_mode.hook.hasattr", return_value=True):
+                with patch("runtime.hook.hasattr", return_value=True):
                     result = handler._find_function_in_module(
                         "test_module", "test_func"
                     )
@@ -818,13 +812,13 @@ def test_find_function_in_module_async_function():
     mock_module = Mock()
     mock_module.test_func = mock_async_function
 
-    with patch("runtime.multi_mode.hook.os.path.exists", return_value=True):
+    with patch("runtime.hook.os.path.exists", return_value=True):
         with patch("builtins.open", mock_open(read_data=file_content)):
             with patch(
-                "runtime.multi_mode.hook.importlib.import_module",
+                "runtime.hook.importlib.import_module",
                 return_value=mock_module,
             ):
-                with patch("runtime.multi_mode.hook.hasattr", return_value=True):
+                with patch("runtime.hook.hasattr", return_value=True):
                     result = handler._find_function_in_module(
                         "test_module", "test_func"
                     )
@@ -856,7 +850,7 @@ class TestActionHookHandler:
         handler = ActionHookHandler(config)
 
         with patch("actions.load_action", side_effect=ImportError("Action not found")):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+            with patch("runtime.hook.logging") as mock_logging:
                 result = await handler.execute(sample_context)
                 assert result is False
                 mock_logging.error.assert_called_once()
@@ -894,7 +888,7 @@ class TestActionHookHandler:
         mock_action.connector = mock_connector
 
         with patch("actions.load_action", return_value=mock_action):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+            with patch("runtime.hook.logging") as mock_logging:
                 result = await handler.execute(sample_context)
                 assert result is False
                 mock_logging.error.assert_called_once()
@@ -970,7 +964,7 @@ class TestCreateHookHandler:
             handler_config={},
         )
 
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.logging") as mock_logging:
             handler = create_hook_handler(hook)
             assert handler is None
             mock_logging.error.assert_called_once_with(
@@ -1056,7 +1050,7 @@ class TestParseLifecycleHooks:
             }
         ]
 
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.logging") as mock_logging:
             hooks = parse_lifecycle_hooks(raw_hooks)
             assert len(hooks) == 0
             mock_logging.error.assert_called_once()
@@ -1074,7 +1068,7 @@ class TestParseLifecycleHooks:
             },
         ]
 
-        with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.logging") as mock_logging:
             hooks = parse_lifecycle_hooks(raw_hooks)
             assert len(hooks) == 0
             assert mock_logging.error.call_count == 2
@@ -1114,14 +1108,14 @@ class TestExecuteLifecycleHooks:
             ),
         ]
 
-        with patch("runtime.multi_mode.hook.create_hook_handler") as mock_create:
+        with patch("runtime.hook.create_hook_handler") as mock_create:
             mock_handler1 = AsyncMock()
             mock_handler1.execute.return_value = True
             mock_handler2 = AsyncMock()
             mock_handler2.execute.return_value = True
             mock_create.side_effect = [mock_handler1, mock_handler2]
 
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+            with patch("runtime.hook.logging") as mock_logging:
                 result = await execute_lifecycle_hooks(
                     hooks, LifecycleHookType.ON_ENTRY, sample_context
                 )
@@ -1168,9 +1162,7 @@ class TestExecuteLifecycleHooks:
             handler.execute = execute_with_tracking
             return handler
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", side_effect=track_execution
-        ):
+        with patch("runtime.hook.create_hook_handler", side_effect=track_execution):
             result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)
             assert result is True
             assert execution_order == [
@@ -1190,8 +1182,8 @@ class TestExecuteLifecycleHooks:
             )
         ]
 
-        with patch("runtime.multi_mode.hook.create_hook_handler", return_value=None):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.create_hook_handler", return_value=None):
+            with patch("runtime.hook.logging") as mock_logging:
                 result = await execute_lifecycle_hooks(
                     hooks, LifecycleHookType.ON_ENTRY
                 )
@@ -1213,9 +1205,7 @@ class TestExecuteLifecycleHooks:
         mock_handler = AsyncMock()
         mock_handler.execute.return_value = False
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
-        ):
+        with patch("runtime.hook.create_hook_handler", return_value=mock_handler):
             result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)
             assert result is False  # Overall result is False, but execution continues
 
@@ -1242,10 +1232,10 @@ class TestExecuteLifecycleHooks:
         mock_handler2.execute.return_value = True
 
         with patch(
-            "runtime.multi_mode.hook.create_hook_handler",
+            "runtime.hook.create_hook_handler",
             side_effect=[mock_handler1, mock_handler2],
         ):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+            with patch("runtime.hook.logging") as mock_logging:
                 result = await execute_lifecycle_hooks(
                     hooks, LifecycleHookType.ON_ENTRY
                 )
@@ -1273,10 +1263,8 @@ class TestExecuteLifecycleHooks:
         mock_handler = AsyncMock()
         mock_handler.execute.side_effect = slow_execution
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
-        ):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.create_hook_handler", return_value=mock_handler):
+            with patch("runtime.hook.logging") as mock_logging:
                 result = await execute_lifecycle_hooks(
                     hooks, LifecycleHookType.ON_ENTRY
                 )
@@ -1303,9 +1291,7 @@ class TestExecuteLifecycleHooks:
         mock_handler = AsyncMock()
         mock_handler.execute.side_effect = slow_execution
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
-        ):
+        with patch("runtime.hook.create_hook_handler", return_value=mock_handler):
             result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)
             assert result is False
 
@@ -1324,9 +1310,7 @@ class TestExecuteLifecycleHooks:
         mock_handler = AsyncMock()
         mock_handler.execute.return_value = True
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
-        ):
+        with patch("runtime.hook.create_hook_handler", return_value=mock_handler):
             result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)
             assert result is True
 
@@ -1352,9 +1336,7 @@ class TestExecuteLifecycleHooks:
 
         mock_handler.execute = capture_context
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
-        ):
+        with patch("runtime.hook.create_hook_handler", return_value=mock_handler):
             await execute_lifecycle_hooks(
                 hooks, LifecycleHookType.ON_ENTRY, sample_context
             )
@@ -1378,10 +1360,8 @@ class TestExecuteLifecycleHooks:
         mock_handler = AsyncMock()
         mock_handler.execute.side_effect = Exception("General error")
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
-        ):
-            with patch("runtime.multi_mode.hook.logging") as mock_logging:
+        with patch("runtime.hook.create_hook_handler", return_value=mock_handler):
+            with patch("runtime.hook.logging") as mock_logging:
                 result = await execute_lifecycle_hooks(
                     hooks, LifecycleHookType.ON_ENTRY
                 )
@@ -1403,9 +1383,7 @@ class TestExecuteLifecycleHooks:
         mock_handler = AsyncMock()
         mock_handler.execute.side_effect = Exception("General error")
 
-        with patch(
-            "runtime.multi_mode.hook.create_hook_handler", return_value=mock_handler
-        ):
+        with patch("runtime.hook.create_hook_handler", return_value=mock_handler):
             result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)
             assert result is False
 
@@ -1434,7 +1412,7 @@ class TestExecuteLifecycleHooks:
         mock_handler_failure.execute.return_value = False
 
         with patch(
-            "runtime.multi_mode.hook.create_hook_handler",
+            "runtime.hook.create_hook_handler",
             side_effect=[mock_handler_success, mock_handler_failure],
         ):
             result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)

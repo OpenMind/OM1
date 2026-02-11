@@ -10,8 +10,7 @@ import json5
 import typer
 from jsonschema import ValidationError, validate
 
-from runtime.multi_mode.config import load_mode_config
-from runtime.normalization import normalize_to_multi_mode
+from runtime.config import load_mode_config, normalize_to_multi_mode
 
 app = typer.Typer()
 

@@ -16,13 +16,12 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
-from runtime.multi_mode.hook import (
+from runtime.hook import (
     LifecycleHook,
     LifecycleHookType,
     execute_lifecycle_hooks,
     parse_lifecycle_hooks,
 )
-from runtime.normalization import normalize_to_multi_mode
 from runtime.robotics import load_unitree
 from runtime.version import verify_runtime_version
 from simulators import load_simulator
@@ -31,7 +30,7 @@ from simulators.base import Simulator
 
 def _load_schema(schema_file: str) -> dict:
     """Load and cache schema files."""
-    schema_path = Path(__file__).parent / "../../../config/schema" / schema_file
+    schema_path = Path(__file__).parent / "../../config/schema" / schema_file
 
     if not schema_path.exists():
         raise FileNotFoundError(
@@ -442,6 +441,97 @@ class ModeSystemConfig:
         )
 
 
+def is_single_mode(raw_config: dict) -> bool:
+    """Detect whether the configuration is in single-mode format."""
+    return "modes" not in raw_config or "default_mode" not in raw_config
+
+
+def normalize_to_multi_mode(raw_config: dict) -> dict:
+    """
+    Normalize a single-mode config to multi-mode format.
+
+    If the config is already multi-mode, return it unchanged.
+    """
+    if not is_single_mode(raw_config):
+        return raw_config
+
+    mode_name = raw_config.get("name", "default")
+    logging.info(f"Normalizing single-mode config '{mode_name}'")
+
+    normalized_config = _build_global_section(raw_config, mode_name)
+    normalized_config["modes"] = {mode_name: _build_mode_section(raw_config)}
+    normalized_config["transition_rules"] = []
+
+    _validate_normalized(normalized_config, mode_name)
+
+    return normalized_config
+
+
+def _build_global_section(raw_config: dict, mode_name: str) -> dict:
+    """Build the global fields of a multi-mode config."""
+    return {
+        "version": raw_config.get("version"),
+        "name": mode_name,
+        "default_mode": mode_name,
+        "allow_manual_switching": False,
+        "mode_memory_enabled": False,
+        "api_key": raw_config.get("api_key", ""),
+        "robot_ip": raw_config.get("robot_ip", ""),
+        "URID": raw_config.get("URID", "default"),
+        "unitree_ethernet": raw_config.get("unitree_ethernet", ""),
+        "system_governance": raw_config.get("system_governance", ""),
+        "system_prompt_examples": raw_config.get("system_prompt_examples", ""),
+        "cortex_llm": raw_config.get("cortex_llm"),
+    }
+
+
+def _build_mode_section(raw_config: dict) -> dict:
+    """Build the mode-specific fields from a single-mode config."""
+    mode_name = raw_config.get("name", "default")
+    return {
+        "display_name": mode_name,
+        "description": f"Normalized config from single-mode config '{mode_name}'",
+        "hertz": raw_config.get("hertz", 1.0),
+        "system_prompt_base": raw_config.get("system_prompt_base", ""),
+        "agent_inputs": raw_config.get("agent_inputs", []),
+        "agent_actions": raw_config.get("agent_actions", []),
+        "backgrounds": raw_config.get("backgrounds", []),
+        "simulators": raw_config.get("simulators", []),
+        "cortex_llm": raw_config.get("cortex_llm"),
+        "action_execution_mode": raw_config.get("action_execution_mode", "concurrent"),
+        "action_dependencies": raw_config.get("action_dependencies", {}),
+    }
+
+
+def _validate_normalized(normalized_config: dict, mode_name: str) -> None:
+    """Validate that normalization produced the required multi-mode structure.
+
+    Only checks structural fields that multi-mode requires but single-mode
+    does not.  Fields already validated by the single-mode schema (version,
+    api_key, cortex_llm, etc.) are intentionally skipped.
+    """
+    global_required = ["default_mode", "modes"]
+    for key in global_required:
+        if key not in normalized_config or normalized_config[key] is None:
+            raise ValueError(
+                f"Normalization failed: missing global required field '{key}'"
+            )
+    if mode_name not in normalized_config["modes"]:
+        raise ValueError(
+            f"Normalization failed: default_mode '{mode_name}' not in modes"
+        )
+
+    mode_required = ["display_name", "description"]
+    mode = normalized_config["modes"][mode_name]
+    for key in mode_required:
+        if key not in mode or mode[key] is None:
+            raise ValueError(
+                f"Normalization failed: missing required field '{key}' in mode '{mode_name}'"
+            )
+
+    logging.info(f"Normalization validated: config '{mode_name}'")
+
+
 def load_mode_config(
     config_name: str, mode_source_path: Optional[str] = None
 ) -> ModeSystemConfig:
@@ -462,9 +552,7 @@ def load_mode_config(
         Parsed mode system configuration
     """
     config_path = (
-        os.path.join(
-            os.path.dirname(__file__), "../../../config", config_name + ".json5"
-        )
+        os.path.join(os.path.dirname(__file__), "../../config", config_name + ".json5")
         if mode_source_path is None
         else mode_source_path
     )

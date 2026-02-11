@@ -2,7 +2,7 @@ import copy
 
 import pytest
 
-from runtime.normalization import (
+from runtime.config import (
     _validate_normalized,
     is_single_mode,
     normalize_to_multi_mode,
