@@ -1,22 +1,19 @@
+import json
+import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from actions.move_go2_autonomy.interface import MoveInput, MovementAction
 
+_mock_om1_utils = MagicMock()
+sys.modules["om1_utils"] = _mock_om1_utils
+sys.modules["om1_utils.ws"] = _mock_om1_utils.ws
 
-@pytest.fixture(scope="session", autouse=True)
-def _mock_om1_utils_modules():
-    """Mock om1_utils module to allow importing connector without real package."""
-    mock_om1_utils = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "om1_utils": mock_om1_utils,
-            "om1_utils.ws": mock_om1_utils.ws,
-        },
-    ):
-        yield
+from actions.move_tron.connector.tron_sdk import (  # noqa: E402
+    MoveTronSDKConfig,
+    MoveTronSDKConnector,
+)
 
 
 class TestMoveTronSDKConfig:
@@ -24,16 +21,12 @@ class TestMoveTronSDKConfig:
 
     def test_default_config(self):
         """Test default base_url value."""
-        from actions.move_tron.connector.tron_sdk import MoveTronSDKConfig
-
         config = MoveTronSDKConfig(accid="robot123")
         assert config.base_url == "ws://10.192.1.2:5000"
         assert config.accid == "robot123"
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        from actions.move_tron.connector.tron_sdk import MoveTronSDKConfig
-
         config = MoveTronSDKConfig(
             base_url="ws://custom:8080",
             accid="custom_robot",
@@ -47,11 +40,6 @@ class TestMoveTronSDKConnectorInit:
 
     def test_init_creates_ws_client(self):
         """Test that init creates and starts a WebSocket client."""
-        from actions.move_tron.connector.tron_sdk import (
-            MoveTronSDKConfig,
-            MoveTronSDKConnector,
-        )
-
         with patch("actions.move_tron.connector.tron_sdk.ws.Client") as mock_ws_client:
             mock_client = Mock()
             mock_ws_client.return_value = mock_client
@@ -70,11 +58,6 @@ class TestMoveTronSDKConnectorConnect:
     @pytest.fixture
     def connector(self):
         """Create connector with mocked WebSocket client."""
-        from actions.move_tron.connector.tron_sdk import (
-            MoveTronSDKConfig,
-            MoveTronSDKConnector,
-        )
-
         with patch("actions.move_tron.connector.tron_sdk.ws.Client") as mock_ws_client:
             mock_client = Mock()
             mock_client.connected = True
@@ -87,11 +70,6 @@ class TestMoveTronSDKConnectorConnect:
     @pytest.fixture
     def disconnected_connector(self):
         """Create connector with disconnected WebSocket client."""
-        from actions.move_tron.connector.tron_sdk import (
-            MoveTronSDKConfig,
-            MoveTronSDKConnector,
-        )
-
         with patch("actions.move_tron.connector.tron_sdk.ws.Client") as mock_ws_client:
             mock_client = Mock()
             mock_client.connected = False
@@ -108,8 +86,6 @@ class TestMoveTronSDKConnectorConnect:
         await connector.connect(move_input)
 
         connector.client.send_message.assert_called_once()
-        import json
-
         sent_data = json.loads(connector.client.send_message.call_args[0][0])
         assert sent_data["accid"] == "robot123"
         assert sent_data["title"] == "request_twist"
@@ -123,8 +99,6 @@ class TestMoveTronSDKConnectorConnect:
         move_input = MoveInput(action=MovementAction.MOVE_BACK)
         await connector.connect(move_input)
 
-        import json
-
         sent_data = json.loads(connector.client.send_message.call_args[0][0])
         assert sent_data["data"]["x"] == -0.5
 
@@ -133,8 +107,6 @@ class TestMoveTronSDKConnectorConnect:
         """Test turn left sends positive z velocity."""
         move_input = MoveInput(action=MovementAction.TURN_LEFT)
         await connector.connect(move_input)
-
-        import json
 
         sent_data = json.loads(connector.client.send_message.call_args[0][0])
         assert sent_data["data"]["z"] == 0.5
@@ -146,8 +118,6 @@ class TestMoveTronSDKConnectorConnect:
         move_input = MoveInput(action=MovementAction.TURN_RIGHT)
         await connector.connect(move_input)
 
-        import json
-
         sent_data = json.loads(connector.client.send_message.call_args[0][0])
         assert sent_data["data"]["z"] == -0.5
         assert sent_data["data"]["x"] == 0.0
@@ -157,8 +127,6 @@ class TestMoveTronSDKConnectorConnect:
         """Test stand still sends zero velocities."""
         move_input = MoveInput(action=MovementAction.STAND_STILL)
         await connector.connect(move_input)
-
-        import json
 
         sent_data = json.loads(connector.client.send_message.call_args[0][0])
         assert sent_data["data"]["x"] == 0.0
@@ -181,8 +149,6 @@ class TestMoveTronSDKConnectorConnect:
         """Test that each message has a unique guid."""
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)
-
-        import json
 
         sent_data = json.loads(connector.client.send_message.call_args[0][0])
         assert "guid" in sent_data

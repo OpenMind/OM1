@@ -1,31 +1,9 @@
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
+from actions.selfie.connector.selfie import SelfieConfig, SelfieConnector
 from actions.selfie.interface import SelfieInput
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _mock_zenoh_modules():
-    """Mock zenoh and om1_speech to prevent real zenoh import via ElevenLabsTTSProvider."""
-    mock_zenoh = MagicMock()
-    mock_zenoh_msgs = MagicMock()
-    mock_om1_speech = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "zenoh": mock_zenoh,
-            "zenoh_msgs": mock_zenoh_msgs,
-            "zenoh_msgs.idl": mock_zenoh_msgs.idl,
-            "zenoh_msgs.session": mock_zenoh_msgs.session,
-            "om1_speech": mock_om1_speech,
-            "om1_speech.audio": mock_om1_speech.audio,
-            "om1_speech.audio.audio_output_stream": (
-                mock_om1_speech.audio.audio_output_stream
-            ),
-        },
-    ):
-        yield
 
 
 @pytest.fixture
@@ -48,8 +26,6 @@ def mock_dependencies():
 @pytest.fixture
 def connector(mock_dependencies):
     """Create SelfieConnector with mocked dependencies."""
-    from actions.selfie.connector.selfie import SelfieConfig, SelfieConnector
-
     config = SelfieConfig()
     return SelfieConnector(config)
 
@@ -58,8 +34,6 @@ class TestSelfieConfig:
     """Test SelfieConfig configuration."""
 
     def test_default_config(self):
-        from actions.selfie.connector.selfie import SelfieConfig
-
         config = SelfieConfig()
         assert config.face_http_base_url == "http://127.0.0.1:6793"
         assert config.face_recent_sec == 1.0
@@ -68,8 +42,6 @@ class TestSelfieConfig:
         assert config.http_timeout_sec == 5.0
 
     def test_custom_config(self):
-        from actions.selfie.connector.selfie import SelfieConfig
-
         config = SelfieConfig(
             face_http_base_url="http://custom:9999",
             face_recent_sec=2.0,

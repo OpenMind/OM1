@@ -1,27 +1,23 @@
+import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from actions.move_go2_action.interface import Action, ActionInput
 
+_mock_unitree = MagicMock()
+sys.modules["unitree"] = _mock_unitree
+sys.modules["unitree.unitree_sdk2py"] = _mock_unitree.unitree_sdk2py
+sys.modules["unitree.unitree_sdk2py.go2"] = _mock_unitree.unitree_sdk2py.go2
+sys.modules["unitree.unitree_sdk2py.go2.sport"] = _mock_unitree.unitree_sdk2py.go2.sport
+sys.modules["unitree.unitree_sdk2py.go2.sport.sport_client"] = (
+    _mock_unitree.unitree_sdk2py.go2.sport.sport_client
+)
 
-@pytest.fixture(scope="session", autouse=True)
-def _mock_unitree_modules():
-    """Mock unitree SDK modules to allow importing connector without real SDK."""
-    mock_unitree = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "unitree": mock_unitree,
-            "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
-            "unitree.unitree_sdk2py.go2": mock_unitree.unitree_sdk2py.go2,
-            "unitree.unitree_sdk2py.go2.sport": mock_unitree.unitree_sdk2py.go2.sport,
-            "unitree.unitree_sdk2py.go2.sport.sport_client": (
-                mock_unitree.unitree_sdk2py.go2.sport.sport_client
-            ),
-        },
-    ):
-        yield
+from actions.move_go2_action.connector.unitree_sdk import (  # noqa: E402
+    ActionUnitreeSDKConfig,
+    ActionUnitreeSDKConnector,
+)
 
 
 @pytest.fixture
@@ -66,11 +62,6 @@ def mock_dependencies():
 @pytest.fixture
 def connector(mock_dependencies):
     """Create ActionUnitreeSDKConnector with mocked dependencies."""
-    from actions.move_go2_action.connector.unitree_sdk import (
-        ActionUnitreeSDKConfig,
-        ActionUnitreeSDKConnector,
-    )
-
     config = ActionUnitreeSDKConfig()
     return ActionUnitreeSDKConnector(config)
 
@@ -80,15 +71,11 @@ class TestActionUnitreeSDKConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        from actions.move_go2_action.connector.unitree_sdk import ActionUnitreeSDKConfig
-
         config = ActionUnitreeSDKConfig()
         assert config.unitree_ethernet is None
 
     def test_custom_ethernet(self):
         """Test custom ethernet configuration."""
-        from actions.move_go2_action.connector.unitree_sdk import ActionUnitreeSDKConfig
-
         config = ActionUnitreeSDKConfig(unitree_ethernet="eth0")
         assert config.unitree_ethernet == "eth0"
 
@@ -110,11 +97,6 @@ class TestActionUnitreeSDKConnectorInit:
 
     def test_initialization_sport_client_error(self):
         """Test initialization when SportClient fails."""
-        from actions.move_go2_action.connector.unitree_sdk import (
-            ActionUnitreeSDKConfig,
-            ActionUnitreeSDKConnector,
-        )
-
         with (
             patch(
                 "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider"

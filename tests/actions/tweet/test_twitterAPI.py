@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -5,13 +6,10 @@ import pytest
 from actions.base import ActionConfig
 from actions.tweet.interface import TweetInput
 
+_mock_tweepy = MagicMock()
+sys.modules["tweepy"] = _mock_tweepy
 
-@pytest.fixture(scope="session", autouse=True)
-def mock_tweepy():
-    """Mock tweepy module to avoid import errors."""
-    mock_module = MagicMock()
-    with patch.dict("sys.modules", {"tweepy": mock_module}):
-        yield mock_module
+from actions.tweet.connector.twitterAPI import TweetAPIConnector  # noqa: E402
 
 
 @pytest.fixture
@@ -31,12 +29,8 @@ def mock_env_vars():
 def twitter_connector(mock_env_vars):
     """Create TweetAPIConnector with mocked dependencies."""
     with patch("actions.tweet.connector.twitterAPI.load_dotenv"):
-        import tweepy  # type: ignore[import-not-found]
-
         mock_client = Mock()
-        tweepy.Client.return_value = mock_client
-
-        from actions.tweet.connector.twitterAPI import TweetAPIConnector
+        _mock_tweepy.Client.return_value = mock_client
 
         connector = TweetAPIConnector(ActionConfig())
         connector.client = mock_client
@@ -49,12 +43,8 @@ class TestTweetAPIConnectorInit:
     def test_init_creates_tweepy_client(self, mock_env_vars):
         """Test that init creates a tweepy Client with env vars."""
         with patch("actions.tweet.connector.twitterAPI.load_dotenv"):
-            import tweepy  # type: ignore[import-not-found]
-
             mock_client = Mock()
-            tweepy.Client.return_value = mock_client
-
-            from actions.tweet.connector.twitterAPI import TweetAPIConnector
+            _mock_tweepy.Client.return_value = mock_client
 
             connector = TweetAPIConnector(ActionConfig())
             assert connector.client == mock_client

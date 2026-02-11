@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -5,24 +6,16 @@ import pytest
 from actions.arm_g1.interface import ArmAction, ArmInput
 from actions.base import ActionConfig
 
+_mock_unitree = MagicMock()
+sys.modules["unitree"] = _mock_unitree
+sys.modules["unitree.unitree_sdk2py"] = _mock_unitree.unitree_sdk2py
+sys.modules["unitree.unitree_sdk2py.g1"] = _mock_unitree.unitree_sdk2py.g1
+sys.modules["unitree.unitree_sdk2py.g1.arm"] = _mock_unitree.unitree_sdk2py.g1.arm
+sys.modules["unitree.unitree_sdk2py.g1.arm.g1_arm_action_client"] = (
+    _mock_unitree.unitree_sdk2py.g1.arm.g1_arm_action_client
+)
 
-@pytest.fixture(scope="session", autouse=True)
-def _mock_unitree_modules():
-    """Mock unitree SDK modules to allow importing connector without real SDK."""
-    mock_unitree = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "unitree": mock_unitree,
-            "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
-            "unitree.unitree_sdk2py.g1": mock_unitree.unitree_sdk2py.g1,
-            "unitree.unitree_sdk2py.g1.arm": mock_unitree.unitree_sdk2py.g1.arm,
-            "unitree.unitree_sdk2py.g1.arm.g1_arm_action_client": (
-                mock_unitree.unitree_sdk2py.g1.arm.g1_arm_action_client
-            ),
-        },
-    ):
-        yield
+from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector  # noqa: E402
 
 
 @pytest.fixture
@@ -37,8 +30,6 @@ def mock_arm_client():
 @pytest.fixture
 def connector(mock_arm_client):
     """Create ARMUnitreeSDKConnector with mocked arm client."""
-    from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector
-
     config = ActionConfig()
     connector = ARMUnitreeSDKConnector(config)
     return connector
@@ -49,8 +40,6 @@ class TestARMUnitreeSDKConnectorInit:
 
     def test_init_creates_arm_client(self, mock_arm_client):
         """Test that init creates and initializes G1ArmActionClient."""
-        from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector
-
         config = ActionConfig()
         ARMUnitreeSDKConnector(config)
 
@@ -59,8 +48,6 @@ class TestARMUnitreeSDKConnectorInit:
 
     def test_init_handles_client_error(self):
         """Test that init handles G1ArmActionClient initialization errors."""
-        from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector
-
         with (
             patch(
                 "actions.arm_g1.connector.unitree_sdk.G1ArmActionClient"

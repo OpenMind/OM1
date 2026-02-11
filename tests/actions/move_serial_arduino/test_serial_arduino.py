@@ -1,15 +1,12 @@
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from actions.move.interface import MoveInput
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _mock_serial_module():
-    """Mock serial module to allow importing connector without real pyserial."""
-    with patch.dict("sys.modules", {"serial": MagicMock()}):
-        yield
+from actions.move_serial_arduino.connector.serial_arduino import (
+    MoveSerialConfig,
+    MoveSerialConnector,
+)
 
 
 class TestMoveSerialConfig:
@@ -17,19 +14,11 @@ class TestMoveSerialConfig:
 
     def test_default_config(self):
         """Test default configuration has empty port."""
-        from actions.move_serial_arduino.connector.serial_arduino import (
-            MoveSerialConfig,
-        )
-
         config = MoveSerialConfig()
         assert config.port == ""
 
     def test_custom_port(self):
         """Test custom port configuration."""
-        from actions.move_serial_arduino.connector.serial_arduino import (
-            MoveSerialConfig,
-        )
-
         config = MoveSerialConfig(port="/dev/cu.usbmodem14101")
         assert config.port == "/dev/cu.usbmodem14101"
 
@@ -39,11 +28,6 @@ class TestMoveSerialConnectorInit:
 
     def test_init_without_port(self):
         """Test initialization without port (simulation mode)."""
-        from actions.move_serial_arduino.connector.serial_arduino import (
-            MoveSerialConfig,
-            MoveSerialConnector,
-        )
-
         config = MoveSerialConfig()
         connector = MoveSerialConnector(config)
         assert connector.port == ""
@@ -51,11 +35,6 @@ class TestMoveSerialConnectorInit:
 
     def test_init_with_port(self):
         """Test initialization with port creates serial connection."""
-        from actions.move_serial_arduino.connector.serial_arduino import (
-            MoveSerialConfig,
-            MoveSerialConnector,
-        )
-
         with patch(
             "actions.move_serial_arduino.connector.serial_arduino.serial.Serial"
         ) as mock_serial:
@@ -76,22 +55,12 @@ class TestMoveSerialConnectorConnect:
     @pytest.fixture
     def connector_no_serial(self):
         """Create connector without serial port (simulation mode)."""
-        from actions.move_serial_arduino.connector.serial_arduino import (
-            MoveSerialConfig,
-            MoveSerialConnector,
-        )
-
         config = MoveSerialConfig()
         return MoveSerialConnector(config)
 
     @pytest.fixture
     def connector_with_serial(self):
         """Create connector with mocked serial port."""
-        from actions.move_serial_arduino.connector.serial_arduino import (
-            MoveSerialConfig,
-            MoveSerialConnector,
-        )
-
         with patch(
             "actions.move_serial_arduino.connector.serial_arduino.serial.Serial"
         ) as mock_serial:
@@ -186,11 +155,6 @@ class TestMoveSerialConnectorTick:
 
     def test_tick_calls_sleep(self):
         """Test tick calls sleep with 0.1 seconds."""
-        from actions.move_serial_arduino.connector.serial_arduino import (
-            MoveSerialConfig,
-            MoveSerialConnector,
-        )
-
         config = MoveSerialConfig()
         connector = MoveSerialConnector(config)
         with patch.object(connector, "sleep") as mock_sleep:

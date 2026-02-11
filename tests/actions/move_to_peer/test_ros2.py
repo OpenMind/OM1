@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -5,43 +6,31 @@ import pytest
 from actions.base import ActionConfig
 from actions.move_to_peer.interface import MoveToPeerAction, MoveToPeerInput
 
+_mock_unitree = MagicMock()
+_mock_sport_client_class = Mock()
+_mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = (
+    _mock_sport_client_class
+)
+sys.modules["unitree"] = _mock_unitree
+sys.modules["unitree.unitree_sdk2py"] = _mock_unitree.unitree_sdk2py
+sys.modules["unitree.unitree_sdk2py.go2"] = _mock_unitree.unitree_sdk2py.go2
+sys.modules["unitree.unitree_sdk2py.go2.sport"] = _mock_unitree.unitree_sdk2py.go2.sport
+sys.modules["unitree.unitree_sdk2py.go2.sport.sport_client"] = (
+    _mock_unitree.unitree_sdk2py.go2.sport.sport_client
+)
 
-@pytest.fixture(scope="session", autouse=True)
-def _mock_unitree_modules():
-    """Mock unitree SDK modules to allow importing connector without real SDK."""
-    mock_unitree = MagicMock()
-    mock_sport_client_class = Mock()
-    mock_unitree.unitree_sdk2py.go2.sport.sport_client.SportClient = (
-        mock_sport_client_class
-    )
-    with patch.dict(
-        "sys.modules",
-        {
-            "unitree": mock_unitree,
-            "unitree.unitree_sdk2py": mock_unitree.unitree_sdk2py,
-            "unitree.unitree_sdk2py.go2": mock_unitree.unitree_sdk2py.go2,
-            "unitree.unitree_sdk2py.go2.sport": mock_unitree.unitree_sdk2py.go2.sport,
-            "unitree.unitree_sdk2py.go2.sport.sport_client": (
-                mock_unitree.unitree_sdk2py.go2.sport.sport_client
-            ),
-        },
-    ):
-        yield mock_sport_client_class
+from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector  # noqa: E402
 
 
 @pytest.fixture
-def mock_dependencies(_mock_unitree_modules):
+def mock_dependencies():
     """Mock all external dependencies."""
-    from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector
-
-    mock_sport_client_class = _mock_unitree_modules
-
     with patch("actions.move_to_peer.connector.ros2.IOProvider") as mock_io_class:
         mock_io = Mock()
         mock_io_class.return_value = mock_io
 
         mock_sport = Mock()
-        mock_sport_client_class.return_value = mock_sport
+        _mock_sport_client_class.return_value = mock_sport
 
         config = ActionConfig()
         connector = MoveToPeerRos2Connector(config)

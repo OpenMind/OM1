@@ -1,30 +1,26 @@
+import concurrent.futures
+import sys
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 from actions.move_ub.interface import MoveInput, MovementAction
 
+_mock_ubtech = MagicMock()
+sys.modules["ubtech"] = _mock_ubtech
+sys.modules["ubtech.ubtechapi"] = _mock_ubtech.ubtechapi
 
-@pytest.fixture(scope="session", autouse=True)
-def _mock_ubtech_modules():
-    """Mock ubtech module to allow importing connector without real package."""
-    mock_ubtech = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "ubtech": mock_ubtech,
-            "ubtech.ubtechapi": mock_ubtech.ubtechapi,
-        },
-    ):
-        yield
+from actions.move_ub.connector.yanshee_motion import (  # noqa: E402
+    Motion,
+    MoveYansheeConfig,
+    MoveYansheeConnector,
+)
 
 
 class TestMotion:
     """Test Motion dataclass."""
 
     def test_reset_defaults(self):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         m = Motion("reset")
         assert m.direction == ""
         assert m.speed == "normal"
@@ -32,34 +28,24 @@ class TestMotion:
         assert m.version == "v1"
 
     def test_wave_defaults(self):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         m = Motion("wave")
         assert m.direction == "both"
 
     def test_walk_defaults(self):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         m = Motion("walk")
         assert m.direction == "forward"
 
     def test_custom_override(self):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         m = Motion("walk", direction="backward", repeat=3)
         assert m.direction == "backward"
         assert m.repeat == 3
 
     def test_unknown_motion_raises(self):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         with pytest.raises(ValueError, match="Unknown motion name"):
             Motion("fly")
 
     def test_all_known_motions(self):
         """Test all known motion names don't raise."""
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         known = [
             "reset",
             "wave",
@@ -83,14 +69,10 @@ class TestMoveYansheeConfig:
     """Test MoveYansheeConfig configuration."""
 
     def test_default_config(self):
-        from actions.move_ub.connector.yanshee_motion import MoveYansheeConfig
-
         config = MoveYansheeConfig()
         assert config.robot_ip == "127.0.0.1"
 
     def test_custom_ip(self):
-        from actions.move_ub.connector.yanshee_motion import MoveYansheeConfig
-
         config = MoveYansheeConfig(robot_ip="192.168.1.100")
         assert config.robot_ip == "192.168.1.100"
 
@@ -99,11 +81,6 @@ class TestMoveYansheeConnectorInit:
     """Test MoveYansheeConnector initialization."""
 
     def test_init(self):
-        from actions.move_ub.connector.yanshee_motion import (
-            MoveYansheeConfig,
-            MoveYansheeConnector,
-        )
-
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api:
             config = MoveYansheeConfig()
             connector = MoveYansheeConnector(config)
@@ -114,11 +91,6 @@ class TestMoveYansheeConnectorInit:
             assert connector.timeout == 8.0
 
     def test_init_api_error(self):
-        from actions.move_ub.connector.yanshee_motion import (
-            MoveYansheeConfig,
-            MoveYansheeConnector,
-        )
-
         with (
             patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api,
             patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging,
@@ -134,11 +106,6 @@ class TestMoveYansheeConnectorSendCommand:
 
     @pytest.fixture
     def connector(self):
-        from actions.move_ub.connector.yanshee_motion import (
-            MoveYansheeConfig,
-            MoveYansheeConnector,
-        )
-
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api:
             self.mock_api = mock_api
             config = MoveYansheeConfig()
@@ -146,8 +113,6 @@ class TestMoveYansheeConnectorSendCommand:
             return connector
 
     def test_send_command_success_reset(self, connector):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api:
             mock_api.sync_play_motion.return_value = "ok"
             result = connector._send_command(Motion("reset"))
@@ -155,16 +120,12 @@ class TestMoveYansheeConnectorSendCommand:
             mock_api.sync_play_motion.assert_called_once()
 
     def test_send_command_non_reset_sends_reset_after(self, connector):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api:
             mock_api.sync_play_motion.return_value = "ok"
             connector._send_command(Motion("wave"))
             assert mock_api.sync_play_motion.call_count == 2
 
     def test_send_command_value_error(self, connector):
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         with (
             patch("actions.move_ub.connector.yanshee_motion.YanAPI") as mock_api,
             patch("actions.move_ub.connector.yanshee_motion.logging") as mock_logging,
@@ -176,10 +137,6 @@ class TestMoveYansheeConnectorSendCommand:
 
     def test_send_command_timeout(self, connector):
         """Test _send_command with timeout."""
-        import concurrent.futures
-
-        from actions.move_ub.connector.yanshee_motion import Motion
-
         with patch(
             "actions.move_ub.connector.yanshee_motion.concurrent.futures.ThreadPoolExecutor"
         ) as mock_executor:
@@ -199,11 +156,6 @@ class TestMoveYansheeConnectorConnect:
 
     @pytest.fixture
     def connector(self):
-        from actions.move_ub.connector.yanshee_motion import (
-            MoveYansheeConfig,
-            MoveYansheeConnector,
-        )
-
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI"):
             config = MoveYansheeConfig()
             connector = MoveYansheeConnector(config)
@@ -341,11 +293,6 @@ class TestMoveYansheeConnectorTick:
     """Test tick method."""
 
     def test_tick_calls_sleep(self):
-        from actions.move_ub.connector.yanshee_motion import (
-            MoveYansheeConfig,
-            MoveYansheeConnector,
-        )
-
         with patch("actions.move_ub.connector.yanshee_motion.YanAPI"):
             config = MoveYansheeConfig()
             connector = MoveYansheeConnector(config)

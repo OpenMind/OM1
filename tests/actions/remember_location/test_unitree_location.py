@@ -1,32 +1,17 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from actions.remember_location.connector.unitree_g1_location import (
+    UnitreeG1RememberLocationConfig,
+    UnitreeG1RememberLocationConnector,
+)
+from actions.remember_location.connector.unitree_go2_location import (
+    UnitreeGo2RememberLocationConfig,
+    UnitreeGo2RememberLocationConnector,
+)
 from actions.remember_location.interface import RememberLocationInput
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _mock_zenoh_modules():
-    """Mock zenoh and om1_speech to prevent real zenoh import via ElevenLabsTTSProvider."""
-    mock_zenoh = MagicMock()
-    mock_zenoh_msgs = MagicMock()
-    mock_om1_speech = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "zenoh": mock_zenoh,
-            "zenoh_msgs": mock_zenoh_msgs,
-            "zenoh_msgs.idl": mock_zenoh_msgs.idl,
-            "zenoh_msgs.session": mock_zenoh_msgs.session,
-            "om1_speech": mock_om1_speech,
-            "om1_speech.audio": mock_om1_speech.audio,
-            "om1_speech.audio.audio_output_stream": (
-                mock_om1_speech.audio.audio_output_stream
-            ),
-        },
-    ):
-        yield
 
 
 def create_aiohttp_mock(status=200, text="OK"):
@@ -53,20 +38,12 @@ class TestUnitreeG1RememberLocationConfig:
     """Test UnitreeG1RememberLocationConfig."""
 
     def test_default_config(self):
-        from actions.remember_location.connector.unitree_g1_location import (
-            UnitreeG1RememberLocationConfig,
-        )
-
         config = UnitreeG1RememberLocationConfig()
         assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
         assert config.timeout == 5
         assert config.map_name == "map"
 
     def test_custom_config(self):
-        from actions.remember_location.connector.unitree_g1_location import (
-            UnitreeG1RememberLocationConfig,
-        )
-
         config = UnitreeG1RememberLocationConfig(
             base_url="http://custom:8080",
             timeout=10,
@@ -82,11 +59,6 @@ class TestUnitreeG1RememberLocationConnector:
 
     @pytest.fixture
     def g1_connector(self):
-        from actions.remember_location.connector.unitree_g1_location import (
-            UnitreeG1RememberLocationConfig,
-            UnitreeG1RememberLocationConnector,
-        )
-
         with patch(
             "actions.remember_location.connector.unitree_g1_location.ElevenLabsTTSProvider"
         ) as mock_tts:
@@ -192,20 +164,12 @@ class TestUnitreeGo2RememberLocationConfig:
     """Test UnitreeGo2RememberLocationConfig."""
 
     def test_default_config(self):
-        from actions.remember_location.connector.unitree_go2_location import (
-            UnitreeGo2RememberLocationConfig,
-        )
-
         config = UnitreeGo2RememberLocationConfig()
         assert config.base_url == "http://localhost:5000/maps/locations/add/slam"
         assert config.timeout == 5
         assert config.map_name == "map"
 
     def test_custom_config(self):
-        from actions.remember_location.connector.unitree_go2_location import (
-            UnitreeGo2RememberLocationConfig,
-        )
-
         config = UnitreeGo2RememberLocationConfig(
             base_url="http://go2:9090",
             timeout=20,
@@ -221,11 +185,6 @@ class TestUnitreeGo2RememberLocationConnector:
 
     @pytest.fixture
     def go2_connector(self):
-        from actions.remember_location.connector.unitree_go2_location import (
-            UnitreeGo2RememberLocationConfig,
-            UnitreeGo2RememberLocationConnector,
-        )
-
         with patch(
             "actions.remember_location.connector.unitree_go2_location.ElevenLabsTTSProvider"
         ) as mock_tts:

@@ -1,15 +1,12 @@
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
+from actions.emergency_alert.connector.elevenlabs_tts import (
+    EmergencyAlertElevenLabsTTSConnector,
+    SpeakElevenLabsTTSConfig,
+)
 from actions.emergency_alert.interface import EmergencyAlertInput
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _mock_zenoh_modules():
-    """Mock zenoh module to allow importing connector without real zenoh."""
-    with patch.dict("sys.modules", {"zenoh": MagicMock()}):
-        yield
 
 
 @pytest.fixture
@@ -70,11 +67,6 @@ def mock_dependencies():
 @pytest.fixture
 def connector(mock_dependencies):
     """Create connector with mocked dependencies."""
-    from actions.emergency_alert.connector.elevenlabs_tts import (
-        EmergencyAlertElevenLabsTTSConnector,
-        SpeakElevenLabsTTSConfig,
-    )
-
     config = SpeakElevenLabsTTSConfig()
     return EmergencyAlertElevenLabsTTSConnector(config)
 
@@ -83,10 +75,6 @@ class TestSpeakElevenLabsTTSConfig:
     """Test SpeakElevenLabsTTSConfig configuration."""
 
     def test_default_config(self):
-        from actions.emergency_alert.connector.elevenlabs_tts import (
-            SpeakElevenLabsTTSConfig,
-        )
-
         config = SpeakElevenLabsTTSConfig()
         assert config.elevenlabs_api_key is None
         assert config.voice_id == "JBFqnCBsd6RMkjVDRZzb"
@@ -95,10 +83,6 @@ class TestSpeakElevenLabsTTSConfig:
         assert config.silence_rate == 0
 
     def test_custom_config(self):
-        from actions.emergency_alert.connector.elevenlabs_tts import (
-            SpeakElevenLabsTTSConfig,
-        )
-
         config = SpeakElevenLabsTTSConfig(
             elevenlabs_api_key="test_key",
             voice_id="custom_voice",
@@ -125,11 +109,6 @@ class TestEmergencyAlertConnectorInit:
 
     def test_init_zenoh_error(self):
         """Test initialization when Zenoh session fails."""
-        from actions.emergency_alert.connector.elevenlabs_tts import (
-            EmergencyAlertElevenLabsTTSConnector,
-            SpeakElevenLabsTTSConfig,
-        )
-
         with (
             patch("actions.emergency_alert.connector.elevenlabs_tts.IOProvider"),
             patch(

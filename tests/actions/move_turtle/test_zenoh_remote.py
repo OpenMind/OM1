@@ -1,20 +1,17 @@
+import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+_mock_om1_utils = MagicMock()
+sys.modules["om1_utils"] = _mock_om1_utils
+sys.modules["om1_utils.ws"] = _mock_om1_utils.ws
 
-@pytest.fixture(scope="session", autouse=True)
-def _mock_om1_utils_modules():
-    """Mock om1_utils module to allow importing connector without real package."""
-    mock_om1_utils = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "om1_utils": mock_om1_utils,
-            "om1_utils.ws": mock_om1_utils.ws,
-        },
-    ):
-        yield
+from actions.move_turtle.connector.zenoh_remote import (  # noqa: E402
+    MoveZenohRemoteConfig,
+    MoveZenohRemoteConnector,
+)
+from actions.move_turtle.interface import MoveInput, MovementAction  # noqa: E402
 
 
 @pytest.fixture
@@ -42,11 +39,6 @@ def mock_dependencies():
 @pytest.fixture
 def connector(mock_dependencies):
     """Create MoveZenohRemoteConnector."""
-    from actions.move_turtle.connector.zenoh_remote import (
-        MoveZenohRemoteConfig,
-        MoveZenohRemoteConnector,
-    )
-
     config = MoveZenohRemoteConfig(api_key="test_key", URID="test_robot")
     return MoveZenohRemoteConnector(config)
 
@@ -55,15 +47,11 @@ class TestMoveZenohRemoteConfig:
     """Test MoveZenohRemoteConfig configuration."""
 
     def test_default_config(self):
-        from actions.move_turtle.connector.zenoh_remote import MoveZenohRemoteConfig
-
         config = MoveZenohRemoteConfig()
         assert config.api_key is None
         assert config.URID is None
 
     def test_custom_config(self):
-        from actions.move_turtle.connector.zenoh_remote import MoveZenohRemoteConfig
-
         config = MoveZenohRemoteConfig(api_key="my_key", URID="my_robot")
         assert config.api_key == "my_key"
         assert config.URID == "my_robot"
@@ -82,11 +70,6 @@ class TestMoveZenohRemoteConnectorInit:
 
     def test_init_ws_url_contains_api_key(self):
         """Test WebSocket URL is constructed with api_key."""
-        from actions.move_turtle.connector.zenoh_remote import (
-            MoveZenohRemoteConfig,
-            MoveZenohRemoteConnector,
-        )
-
         with (
             patch("actions.move_turtle.connector.zenoh_remote.open_zenoh_session"),
             patch("actions.move_turtle.connector.zenoh_remote.ws.Client") as mock_ws,
@@ -99,11 +82,6 @@ class TestMoveZenohRemoteConnectorInit:
 
     def test_init_cmd_vel_without_urid(self):
         """Test cmd_vel topic when URID is None."""
-        from actions.move_turtle.connector.zenoh_remote import (
-            MoveZenohRemoteConfig,
-            MoveZenohRemoteConnector,
-        )
-
         with (
             patch("actions.move_turtle.connector.zenoh_remote.open_zenoh_session"),
             patch("actions.move_turtle.connector.zenoh_remote.ws.Client"),
@@ -114,11 +92,6 @@ class TestMoveZenohRemoteConnectorInit:
 
     def test_init_zenoh_error(self):
         """Test initialization when Zenoh fails."""
-        from actions.move_turtle.connector.zenoh_remote import (
-            MoveZenohRemoteConfig,
-            MoveZenohRemoteConnector,
-        )
-
         with (
             patch(
                 "actions.move_turtle.connector.zenoh_remote.open_zenoh_session"
@@ -177,7 +150,5 @@ class TestMoveZenohRemoteConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_is_noop(self, connector, mock_dependencies):
         """Test connect is a no-op (pass)."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)

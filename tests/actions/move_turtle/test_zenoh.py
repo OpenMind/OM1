@@ -1,16 +1,11 @@
 from queue import Queue
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from actions.base import MoveCommand
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _mock_zenoh_modules():
-    """Mock zenoh module to allow importing connector without real zenoh."""
-    with patch.dict("sys.modules", {"zenoh": MagicMock()}):
-        yield
+from actions.move_turtle.connector.zenoh import MoveZenohConfig, MoveZenohConnector
+from actions.move_turtle.interface import MoveInput, MovementAction
 
 
 @pytest.fixture
@@ -54,8 +49,6 @@ def mock_dependencies():
 @pytest.fixture
 def connector(mock_dependencies):
     """Create MoveZenohConnector with mocked dependencies."""
-    from actions.move_turtle.connector.zenoh import MoveZenohConfig, MoveZenohConnector
-
     config = MoveZenohConfig(URID="test_robot")
     return MoveZenohConnector(config)
 
@@ -64,14 +57,10 @@ class TestMoveZenohConfig:
     """Test MoveZenohConfig configuration."""
 
     def test_default_config(self):
-        from actions.move_turtle.connector.zenoh import MoveZenohConfig
-
         config = MoveZenohConfig()
         assert config.URID is None
 
     def test_custom_config(self):
-        from actions.move_turtle.connector.zenoh import MoveZenohConfig
-
         config = MoveZenohConfig(URID="my_robot")
         assert config.URID == "my_robot"
 
@@ -89,11 +78,6 @@ class TestMoveZenohConnectorInit:
 
     def test_init_without_urid(self):
         """Test initialization without URID aborts."""
-        from actions.move_turtle.connector.zenoh import (
-            MoveZenohConfig,
-            MoveZenohConnector,
-        )
-
         with (
             patch("actions.move_turtle.connector.zenoh.open_zenoh_session"),
             patch("actions.move_turtle.connector.zenoh.TurtleBot4RPLidarProvider"),
@@ -109,11 +93,6 @@ class TestMoveZenohConnectorInit:
 
     def test_init_zenoh_error(self):
         """Test initialization when Zenoh fails."""
-        from actions.move_turtle.connector.zenoh import (
-            MoveZenohConfig,
-            MoveZenohConnector,
-        )
-
         with (
             patch(
                 "actions.move_turtle.connector.zenoh.open_zenoh_session"
@@ -135,8 +114,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_stand_still(self, connector, mock_dependencies):
         """Test stand still does nothing."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         move_input = MoveInput(action=MovementAction.STAND_STILL)
         await connector.connect(move_input)
         assert connector.pending_movements.qsize() == 0
@@ -144,8 +121,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_turn_left(self, connector, mock_dependencies):
         """Test turn left adds pending movement."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         move_input = MoveInput(action=MovementAction.TURN_LEFT)
         await connector.connect(move_input)
         assert connector.pending_movements.qsize() == 1
@@ -155,8 +130,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_turn_right(self, connector, mock_dependencies):
         """Test turn right adds pending movement."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         move_input = MoveInput(action=MovementAction.TURN_RIGHT)
         await connector.connect(move_input)
         assert connector.pending_movements.qsize() == 1
@@ -164,8 +137,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_move_forwards(self, connector, mock_dependencies):
         """Test move forwards adds pending movement."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)
         assert connector.pending_movements.qsize() == 1
@@ -175,8 +146,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_move_forwards_blocked(self, connector, mock_dependencies):
         """Test move forwards when path is blocked."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         mock_dependencies["lidar"].valid_paths = []
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)
@@ -185,8 +154,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_pending_movement_queued(self, connector, mock_dependencies):
         """Test connect when movement is already pending."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         connector.pending_movements.put(
             MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0)
         )
@@ -197,8 +164,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_emergency_active(self, connector, mock_dependencies):
         """Test connect when emergency is active."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         connector.emergency = 90.0
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)
@@ -207,8 +172,6 @@ class TestMoveZenohConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_waiting_odom(self, connector, mock_dependencies):
         """Test connect when waiting for odom data."""
-        from actions.move_turtle.interface import MoveInput, MovementAction
-
         mock_dependencies["odom"].x = 0.0
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         await connector.connect(move_input)
