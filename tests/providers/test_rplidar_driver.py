@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
 
-from providers.rplidar_driver import RPDriver
+import pytest
+
+from providers.rplidar_driver import RPDriver, RPLidarException
 
 
 def test_rplidar_driver_initialization():
@@ -72,6 +74,52 @@ def test_rplidar_driver_start():
         driver.start(scan_type="normal")
         assert driver.scanning[0] is True
         assert driver.scanning[2] == "normal"
+
+
+def test_rplidar_driver_get_health_wrong_reply_length():
+    """Test get_health raises exception on wrong reply length."""
+    with (
+        patch("providers.rplidar_driver.serial.Serial") as mock_serial,
+        patch("providers.rplidar_driver.time.sleep"),
+    ):
+        mock_serial_instance = MagicMock()
+        mock_serial.return_value = mock_serial_instance
+        mock_serial_instance.inWaiting.return_value = 0
+
+        driver = RPDriver(port="/dev/ttyUSB0")
+
+        # descriptor with wrong dsize (99 instead of HEALTH_LEN=3)
+        bad_descriptor = b"\xa5\x5a\x63\x00\x00\x00\x06"
+        mock_serial_instance.read.side_effect = [bad_descriptor]
+
+        with pytest.raises(RPLidarException, match="Wrong get_health reply length"):
+            driver.get_health()
+
+
+def test_rplidar_driver_start_wrong_scan_reply_length():
+    """Test start raises exception on wrong scan reply length."""
+    with (
+        patch("providers.rplidar_driver.serial.Serial") as mock_serial,
+        patch("providers.rplidar_driver.time.sleep"),
+    ):
+        mock_serial_instance = MagicMock()
+        mock_serial.return_value = mock_serial_instance
+        mock_serial_instance.inWaiting.side_effect = [0, 7, 3, 7]
+
+        driver = RPDriver(port="/dev/ttyUSB0")
+
+        health_descriptor = b"\xa5\x5a\x03\x00\x00\x00\x06"
+        health_response = b"\x00\x00\x00"  # Good health
+        # scan descriptor with wrong dsize (99 instead of 5)
+        bad_scan_descriptor = b"\xa5\x5a\x63\x00\x00\x01\x81"
+        mock_serial_instance.read.side_effect = [
+            health_descriptor,
+            health_response,
+            bad_scan_descriptor,
+        ]
+
+        with pytest.raises(RPLidarException, match="Wrong start scan reply length"):
+            driver.start(scan_type="normal")
 
 
 def test_rplidar_driver_stop():
