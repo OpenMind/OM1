@@ -109,13 +109,14 @@ Stay tuned!
 
 ## Full Autonomy Guidance
 
-We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
+We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services:
 
 - **om1**
-- **OM1-ros2-sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities for the Unitree Go2 robot using an RPLiDAR sensor, the SLAM Toolbox and the Nav2 stack.
-- **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
-- **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
-- **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
+- **OM1-ros2-sdk** – A ROS 2 package that provides SLAM (Simultaneous Localization and Mapping) capabilities.
+- **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system.
+- **om1-video-processor** – The OM1 Video Processor is a Docker-based solution that enables real-time video streaming.
+- **om1-system-setup** – Tooling to set up WiFi and monitor and manage Docker containers.
+
 
 ## Detailed Documentation
 
@@ -127,4 +128,4 @@ Please make sure to read the [Contributing Guide](./CONTRIBUTING.md) before maki
 
 ## License
 
-This project is licensed under the terms of the MIT License, which is a permissive free software license that allows users to freely use, modify, and distribute the software. The MIT License is a widely used and well-established license that is known for its simplicity and flexibility. By using the MIT License, this project aims to encourage collaboration, modification, and distribution of the software.
+This project is licensed under the terms of the MIT License, which is a permissive free software license.
