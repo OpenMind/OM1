@@ -1,26 +1,14 @@
 import concurrent.futures
-import sys
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from actions.move_ub.interface import MoveInput, MovementAction
-
-_mock_ubtech = MagicMock()
-_ubtech_mocks = {
-    "ubtech": _mock_ubtech,
-    "ubtech.ubtechapi": _mock_ubtech.ubtechapi,
-}
-sys.modules.update(_ubtech_mocks)
-
-from actions.move_ub.connector.yanshee_motion import (  # noqa: E402
+from actions.move_ub.connector.yanshee_motion import (
     Motion,
     MoveYansheeConfig,
     MoveYansheeConnector,
 )
-
-for _k in _ubtech_mocks:
-    sys.modules.pop(_k, None)
+from actions.move_ub.interface import MoveInput, MovementAction
 
 
 class TestMotion:

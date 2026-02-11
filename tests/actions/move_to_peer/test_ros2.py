@@ -1,9 +1,9 @@
-import sys
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 from actions.base import ActionConfig
+from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector
 from actions.move_to_peer.interface import MoveToPeerAction, MoveToPeerInput
 
 _mock_unitree = MagicMock()
@@ -20,12 +20,6 @@ _unitree_mocks = {
         _mock_unitree.unitree_sdk2py.go2.sport.sport_client
     ),
 }
-sys.modules.update(_unitree_mocks)
-
-from actions.move_to_peer.connector.ros2 import MoveToPeerRos2Connector  # noqa: E402
-
-for _k in _unitree_mocks:
-    sys.modules.pop(_k, None)
 
 
 @pytest.fixture

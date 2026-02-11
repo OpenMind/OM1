@@ -1,29 +1,12 @@
-import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-from actions.move_go2_action.interface import Action, ActionInput
-
-_mock_unitree = MagicMock()
-_unitree_mocks = {
-    "unitree": _mock_unitree,
-    "unitree.unitree_sdk2py": _mock_unitree.unitree_sdk2py,
-    "unitree.unitree_sdk2py.go2": _mock_unitree.unitree_sdk2py.go2,
-    "unitree.unitree_sdk2py.go2.sport": _mock_unitree.unitree_sdk2py.go2.sport,
-    "unitree.unitree_sdk2py.go2.sport.sport_client": (
-        _mock_unitree.unitree_sdk2py.go2.sport.sport_client
-    ),
-}
-sys.modules.update(_unitree_mocks)
-
-from actions.move_go2_action.connector.unitree_sdk import (  # noqa: E402
+from actions.move_go2_action.connector.unitree_sdk import (
     ActionUnitreeSDKConfig,
     ActionUnitreeSDKConnector,
 )
-
-for _k in _unitree_mocks:
-    sys.modules.pop(_k, None)
+from actions.move_go2_action.interface import Action, ActionInput
 
 
 @pytest.fixture

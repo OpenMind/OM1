@@ -1,23 +1,12 @@
-import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-_mock_om1_utils = MagicMock()
-_om1_utils_mocks = {
-    "om1_utils": _mock_om1_utils,
-    "om1_utils.ws": _mock_om1_utils.ws,
-}
-sys.modules.update(_om1_utils_mocks)
-
-from actions.move_turtle.connector.zenoh_remote import (  # noqa: E402
+from actions.move_turtle.connector.zenoh_remote import (
     MoveZenohRemoteConfig,
     MoveZenohRemoteConnector,
 )
-from actions.move_turtle.interface import MoveInput, MovementAction  # noqa: E402
-
-for _k in _om1_utils_mocks:
-    sys.modules.pop(_k, None)
+from actions.move_turtle.interface import MoveInput, MovementAction
 
 
 @pytest.fixture
