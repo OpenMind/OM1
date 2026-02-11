@@ -4,7 +4,6 @@ Tests JSON storage utilities for conversation history.
 """
 
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,11 +30,8 @@ class TestHistoryStorage(unittest.TestCase):
 
     def tearDown(self):
         """Clean up after tests."""
-        if HISTORY_FILE.exists():
-            try:
-                os.remove(HISTORY_FILE)
-            except (OSError, PermissionError):
-                pass
+        # HISTORY_FILE is redirected to tmp_path by conftest mock_history_path fixture.
+        # pytest handles tmp_path cleanup automatically.
 
     def test_save_history_success(self):
         """Test successful save of history data."""
@@ -324,4 +320,5 @@ class TestHistoryStorage(unittest.TestCase):
         self.assertIsNotNone(HISTORY_FILE)
         self.assertIsInstance(HISTORY_FILE, Path)
         self.assertTrue(str(HISTORY_FILE).endswith(".json"))
-        self.assertEqual(str(HISTORY_FILE), "data/conversation_history.json")
+        self.assertTrue(str(HISTORY_FILE).endswith("data/conversation_history.json"))
+        self.assertTrue(HISTORY_FILE.is_absolute())
