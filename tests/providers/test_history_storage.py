@@ -1,7 +1,4 @@
-"""
-Unit tests for history_storage module.
-Tests JSON storage utilities for conversation history.
-"""
+"""Unit tests for history_storage module."""
 
 import json
 import tempfile
@@ -27,11 +24,6 @@ class TestHistoryStorage(unittest.TestCase):
             {"role": "assistant", "content": "Hi there!"},
         ]
         self.test_json = json.dumps(self.test_data, indent=2, ensure_ascii=False)
-
-    def tearDown(self):
-        """Clean up after tests."""
-        # HISTORY_FILE is redirected to tmp_path by conftest mock_history_path fixture.
-        # pytest handles tmp_path cleanup automatically.
 
     def test_save_history_success(self):
         """Test successful save of history data."""

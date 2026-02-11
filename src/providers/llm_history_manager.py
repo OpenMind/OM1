@@ -1,3 +1,5 @@
+"""Manages the history of interactions for LLMs, including summarization."""
+
 import asyncio
 import atexit
 import functools
@@ -17,9 +19,7 @@ R = TypeVar("R")
 
 @dataclass
 class ChatMessage:
-    """
-    Represents a chat message with role and content.
-    """
+    """Represents a chat message with role and content."""
 
     role: str
     content: str
@@ -33,9 +33,7 @@ ACTION_MAP = {
 
 
 class LLMHistoryManager:
-    """
-    Manages the history of interactions for LLMs, including summarization.
-    """
+    """Manages the history of interactions for LLMs, including summarization."""
 
     def __init__(
         self,
@@ -67,8 +65,6 @@ class LLMHistoryManager:
             Set to False in testing to avoid test pollution. (default: True)
         """
         self.client = client
-
-        # configuration
         self.config = config
         self.agent_name = self.config.agent_name
         self.system_prompt = (
@@ -81,14 +77,9 @@ class LLMHistoryManager:
             if self.agent_name
             else summary_command
         )
-
-        # frame index
         self.frame_index = 0
-
-        # task executor
         self._summary_task: Optional[asyncio.Task] = None
 
-        # history buffer - load from disk if enabled
         if load_existing_history:
             loaded_messages = load_history()
             if loaded_messages:
@@ -104,10 +95,7 @@ class LLMHistoryManager:
         else:
             self.history: List[ChatMessage] = []
 
-        # Register cleanup handler for graceful shutdown
         atexit.register(self.persist_history)
-
-        # io provider
         self.io_provider = IOProvider()
 
     def reset(self):
@@ -140,8 +128,7 @@ class LLMHistoryManager:
         openai.APIError
             If there's an error with the OpenAI API.
         """
-        # Set timeout for API call
-        timeout = 10.0  # seconds
+        timeout = 10.0
 
         try:
             if not messages:
@@ -153,11 +140,7 @@ class LLMHistoryManager:
             summary_prompt = ""
 
             if len(messages) == 4:
-                # the normal case - previous summary and new data
-                # the previous summary
                 summary_prompt += f"{messages[0].content}\n"
-                # actions - already part of the summary - no need to add
-                # summary_prompt += f"{messages[1].content}\n"
                 summary_prompt += "\nNow, the following new information has arrived. "
                 summary_prompt += f"{messages[2].content}\n"
                 summary_prompt += f"{messages[3].content}\n"
@@ -166,8 +149,6 @@ class LLMHistoryManager:
                     summary_prompt += f"{msg.content}\n"
 
             summary_prompt += self.summary_command
-
-            # insert actual robot name
             summary_prompt = (
                 summary_prompt.replace("****", self.agent_name)
                 if self.agent_name
@@ -355,7 +336,6 @@ class LLMHistoryManager:
                     return response
 
                 self.agent_name = self._config.agent_name
-
                 cycle = self.history_manager.frame_index
                 logging.debug(f"LLM Tasking cycle debug tracker: {cycle}")
 
@@ -377,12 +357,10 @@ class LLMHistoryManager:
 
                 messages = self.history_manager.get_messages()
                 logging.debug(f"messages:\n{messages}")
-                # this advances the frame index
                 response = await func(self, prompt, messages, *args, **kwargs)
                 logging.debug(f"Response to parse:\n{response}")
 
                 if response is not None:
-
                     action_message = (
                         "Given that information, **** took these actions: "
                         + (
@@ -420,10 +398,10 @@ class LLMHistoryManager:
                         )
                         self.history_manager.history.pop()
 
+                self.history_manager.frame_index += 1
+
                 if self.history_manager.frame_index % 5 == 0:
                     self.history_manager.persist_history()
-
-                self.history_manager.frame_index += 1
 
                 return response
 
