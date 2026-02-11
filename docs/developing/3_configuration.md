@@ -104,7 +104,7 @@ The runtime/version.py module handles:
 
     Adds support for multiple TTS.
 
-Note: Always use the latest supported version in your configuration files unless you have a specific reason to pin an older version.
+> **Note:** Always use the latest supported version in your configuration files unless you have a specific reason to pin an older version.
 
 ## Agent Inputs (`agent_inputs`)
 

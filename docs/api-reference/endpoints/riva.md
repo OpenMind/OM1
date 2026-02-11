@@ -297,4 +297,4 @@ for i in range(p.get_device_count()):
 p.terminate()
 ```
 
-<Note>OpenMind developed [om1_modules](https://github.com/OpenMind/OM1-modules) to simplify integration with VILA VLM and other services. For more details, visit [Our GitHub](https://github.com/OpenMind/OM1-modules).</Note>
+> **Note:** OpenMind developed [om1_modules](https://github.com/OpenMind/OM1-modules) to simplify integration with VILA VLM and other services. For more details, visit [Our GitHub](https://github.com/OpenMind/OM1-modules).
