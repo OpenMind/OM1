@@ -1,16 +1,25 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from actions.navigate_location.connector.unitree_g1_nav import (
-    UnitreeG1NavConfig,
-    UnitreeG1NavConnector,
-)
-from actions.navigate_location.connector.unitree_go2_nav import (
-    UnitreeGo2NavConfig,
-    UnitreeGo2NavConnector,
-)
 from actions.navigate_location.interface import NavigateLocationInput
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _mock_zenoh_modules():
+    """Mock zenoh and zenoh_msgs to prevent real zenoh import via connector."""
+    mock_zenoh = MagicMock()
+    mock_zenoh_msgs = MagicMock()
+    with patch.dict(
+        "sys.modules",
+        {
+            "zenoh": mock_zenoh,
+            "zenoh_msgs": mock_zenoh_msgs,
+            "zenoh_msgs.idl": mock_zenoh_msgs.idl,
+            "zenoh_msgs.session": mock_zenoh_msgs.session,
+        },
+    ):
+        yield
 
 
 class TestUnitreeG1NavConfig:
@@ -18,6 +27,10 @@ class TestUnitreeG1NavConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
+        from actions.navigate_location.connector.unitree_g1_nav import (
+            UnitreeG1NavConfig,
+        )
+
         config = UnitreeG1NavConfig()
         assert config.base_url == "http://localhost:5000/maps/locations/list"
         assert config.timeout == 5
@@ -25,6 +38,10 @@ class TestUnitreeG1NavConfig:
 
     def test_custom_config(self):
         """Test custom configuration values."""
+        from actions.navigate_location.connector.unitree_g1_nav import (
+            UnitreeG1NavConfig,
+        )
+
         config = UnitreeG1NavConfig(
             base_url="http://custom:8080/locations",
             timeout=10,
@@ -40,6 +57,11 @@ class TestUnitreeG1NavConnectorInit:
 
     def test_init(self):
         """Test successful initialization."""
+        from actions.navigate_location.connector.unitree_g1_nav import (
+            UnitreeG1NavConfig,
+            UnitreeG1NavConnector,
+        )
+
         with (
             patch(
                 "actions.navigate_location.connector.unitree_g1_nav.UnitreeG1LocationsProvider"
@@ -69,6 +91,11 @@ class TestUnitreeG1NavConnectorConnect:
     @pytest.fixture
     def g1_connector(self):
         """Create G1 nav connector with mocked dependencies."""
+        from actions.navigate_location.connector.unitree_g1_nav import (
+            UnitreeG1NavConfig,
+            UnitreeG1NavConnector,
+        )
+
         with (
             patch(
                 "actions.navigate_location.connector.unitree_g1_nav.UnitreeG1LocationsProvider"
@@ -180,6 +207,10 @@ class TestUnitreeGo2NavConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
+        from actions.navigate_location.connector.unitree_go2_nav import (
+            UnitreeGo2NavConfig,
+        )
+
         config = UnitreeGo2NavConfig()
         assert config.base_url == "http://localhost:5000/maps/locations/list"
         assert config.timeout == 5
@@ -187,6 +218,10 @@ class TestUnitreeGo2NavConfig:
 
     def test_custom_config(self):
         """Test custom configuration values."""
+        from actions.navigate_location.connector.unitree_go2_nav import (
+            UnitreeGo2NavConfig,
+        )
+
         config = UnitreeGo2NavConfig(
             base_url="http://go2:9090/locations",
             timeout=15,
@@ -202,6 +237,11 @@ class TestUnitreeGo2NavConnectorInit:
 
     def test_init(self):
         """Test successful initialization."""
+        from actions.navigate_location.connector.unitree_go2_nav import (
+            UnitreeGo2NavConfig,
+            UnitreeGo2NavConnector,
+        )
+
         with (
             patch(
                 "actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2LocationsProvider"
@@ -230,6 +270,11 @@ class TestUnitreeGo2NavConnectorConnect:
     @pytest.fixture
     def go2_connector(self):
         """Create Go2 nav connector with mocked dependencies."""
+        from actions.navigate_location.connector.unitree_go2_nav import (
+            UnitreeGo2NavConfig,
+            UnitreeGo2NavConnector,
+        )
+
         with (
             patch(
                 "actions.navigate_location.connector.unitree_go2_nav.UnitreeGo2LocationsProvider"
