@@ -206,16 +206,21 @@ def validate_config(
         if verbose:
             print("JSON5 syntax valid")
 
-        raw_config = normalize_to_multi_mode(raw_config)
-
+        # Schema validation
+        is_multi_mode = "modes" in raw_config and "default_mode" in raw_config
+        schema_file = (
+            "multi_mode_schema.json" if is_multi_mode else "single_mode_schema.json"
+        )
         schema_path = os.path.join(
-            os.path.dirname(__file__), "../config/schema", "multi_mode_schema.json"
+            os.path.dirname(__file__), "../config/schema", schema_file
         )
 
         with open(schema_path, "r") as f:
             schema = json.load(f)
 
         validate(instance=raw_config, schema=schema)
+
+        raw_config = normalize_to_multi_mode(raw_config)
 
         if verbose:
             print("Schema validation passed")

@@ -3,7 +3,7 @@ import logging
 
 def is_single_mode(raw_config: dict) -> bool:
     """Detect whether the configuration is in single-mode format."""
-    return "modes" not in raw_config
+    return "modes" not in raw_config or "default_mode" not in raw_config
 
 
 def normalize_to_multi_mode(raw_config: dict) -> dict:

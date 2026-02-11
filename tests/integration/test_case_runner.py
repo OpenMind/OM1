@@ -12,9 +12,14 @@ import openai
 import pytest
 from PIL import Image
 
+from actions import load_action
+from backgrounds import load_background
+from inputs import load_input
+from llm import load_llm
 from llm.output_model import Action, CortexOutputModel
-from runtime.single_mode.config import build_runtime_config_from_test_case
-from runtime.single_mode.cortex import CortexRuntime
+from runtime.multi_mode.config import RuntimeConfig, add_meta
+from runtime.multi_mode.cortex import ModeCortexRuntime
+from simulators import load_simulator
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_image_provider,
     load_test_images,
@@ -39,6 +44,85 @@ TEST_CASES_DIR = DATA_DIR / "test_cases"
 
 # Global client to be created once for all test cases
 _llm_client = None
+
+
+def build_runtime_config_from_test_case(config: dict) -> RuntimeConfig:
+    """Build a RuntimeConfig from a test case dictionary."""
+    api_key = config.get("api_key")
+    g_ut_eth = config.get("unitree_ethernet")
+    g_URID = config.get("URID")
+    g_robot_ip = config.get("robot_ip")
+
+    backgrounds = [
+        load_background(
+            {
+                **bg,
+                "config": add_meta(
+                    bg.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
+        )
+        for bg in config.get("backgrounds", [])
+    ]
+    agent_inputs = [
+        load_input(
+            {
+                **inp,
+                "config": add_meta(
+                    inp.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
+        )
+        for inp in config.get("agent_inputs", [])
+    ]
+    simulators = [
+        load_simulator(
+            {
+                **sim,
+                "config": add_meta(
+                    sim.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
+        )
+        for sim in config.get("simulators", [])
+    ]
+    agent_actions = [
+        load_action(
+            {
+                **action,
+                "config": add_meta(
+                    action.get("config", {}), api_key, g_ut_eth, g_URID, g_robot_ip
+                ),
+            }
+        )
+        for action in config.get("agent_actions", [])
+    ]
+    cortex_llm = load_llm(
+        {
+            **config["cortex_llm"],
+            "config": add_meta(
+                config["cortex_llm"].get("config", {}),
+                api_key,
+                g_ut_eth,
+                g_URID,
+                g_robot_ip,
+            ),
+        },
+        available_actions=agent_actions,
+    )
+    return RuntimeConfig(
+        version=config.get("version", "v1.0.2"),
+        hertz=config.get("hertz", 1),
+        name=config.get("name", "TestAgent"),
+        system_prompt_base=config.get("system_prompt_base", ""),
+        system_governance=config.get("system_governance", ""),
+        system_prompt_examples=config.get("system_prompt_examples", ""),
+        agent_inputs=agent_inputs,
+        cortex_llm=cortex_llm,
+        simulators=simulators,
+        agent_actions=agent_actions,
+        backgrounds=backgrounds,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -92,9 +176,6 @@ def mock_confige_provider_components():
     with (
         patch("providers.config_provider.ConfigProvider") as mock_config_provider,
         patch(
-            "runtime.single_mode.cortex.ConfigProvider"
-        ) as mock_cortex_config_provider,
-        patch(
             "runtime.multi_mode.cortex.ConfigProvider"
         ) as mock_multi_cortex_config_provider,
     ):
@@ -103,7 +184,6 @@ def mock_confige_provider_components():
         mock_config_provider_instance.session = None
         mock_config_provider_instance.stop = MagicMock()
         mock_config_provider.return_value = mock_config_provider_instance
-        mock_cortex_config_provider.return_value = mock_config_provider_instance
         mock_multi_cortex_config_provider.return_value = mock_config_provider_instance
 
         yield
@@ -337,8 +417,25 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Build a runtime config from the test case config
     runtime_config = build_runtime_config_from_test_case(config)
 
-    # Create a CortexRuntime instance
-    cortex = CortexRuntime(runtime_config, "test_config", hot_reload=False)
+    # Create a ModeCortexRuntime with a mock ModeSystemConfig
+    mock_mode_config = MagicMock()
+    mock_mode_config.name = "test_config"
+    mock_mode_config.default_mode = "default"
+    mock_mode_config.modes = {}
+    cortex = ModeCortexRuntime(mock_mode_config, "test_config", hot_reload=False)
+
+    # Manually initialize the runtime components (bypass _initialize_mode)
+    from actions.orchestrator import ActionOrchestrator
+    from backgrounds.orchestrator import BackgroundOrchestrator
+    from fuser import Fuser
+    from simulators.orchestrator import SimulatorOrchestrator
+
+    cortex.current_config = runtime_config
+    cortex.fuser = Fuser(runtime_config)
+    cortex.action_orchestrator = ActionOrchestrator(runtime_config)
+    cortex.simulator_orchestrator = SimulatorOrchestrator(runtime_config)
+    cortex.background_orchestrator = BackgroundOrchestrator(runtime_config)
+    cortex._mode_initialized = True
 
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}
@@ -363,7 +460,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     cortex.action_orchestrator.promise = mock_action_promise
 
     # Mock LLM ask method to capture raw response
-    original_llm_ask = cortex.config.cortex_llm.ask
+    original_llm_ask = cortex.current_config.cortex_llm.ask
 
     async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
         logging.info(
@@ -387,14 +484,14 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
             )
             return _create_mock_llm_response(config.get("expected", {}))
 
-    cortex.config.cortex_llm.ask = mock_llm_ask
+    cortex.current_config.cortex_llm.ask = mock_llm_ask
 
     # Initialize inputs manually for testing
     # This step is needed because we're not starting the full runtime
-    await initialize_mock_inputs(cortex.config.agent_inputs)
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
 
     # Set cortex runtime reference for MockRPLidar cleanup
-    for input_obj in cortex.config.agent_inputs:
+    for input_obj in cortex.current_config.agent_inputs:
         if hasattr(input_obj, "set_cortex_runtime"):
             input_obj.set_cortex_runtime(cortex)  # type: ignore
 
@@ -402,7 +499,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     await cortex._tick()
 
     # Clean up inputs after test completion
-    await cleanup_mock_inputs(cortex.config.agent_inputs)
+    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
 
     # The output includes detection results and commands
     return output_results

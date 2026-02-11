@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from fuser import Fuser
 from inputs.base import Sensor, SensorConfig
 from providers.io_provider import IOProvider
-from runtime.single_mode.config import RuntimeConfig
+from runtime.multi_mode.config import RuntimeConfig
 
 
 @dataclass
