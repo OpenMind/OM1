@@ -22,7 +22,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
+          submodules: false
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
