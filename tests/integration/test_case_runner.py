@@ -119,13 +119,14 @@ def mock_avatar_components():
 
 @pytest.fixture(autouse=True)
 def mock_confige_provider_components():
-    """Mock all config provider to prevent Zenoh session creation"""
+    """Mock ConfigProvider and Zenoh to prevent session creation"""
 
     with (
         patch("providers.config_provider.ConfigProvider") as mock_config_provider,
         patch(
             "runtime.multi_mode.cortex.ConfigProvider"
         ) as mock_multi_cortex_config_provider,
+        patch("runtime.multi_mode.manager.open_zenoh_session"),
     ):
         mock_config_provider_instance = MagicMock()
         mock_config_provider_instance.running = False
@@ -366,6 +367,10 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     mode_system_config = build_mode_system_config_from_test_case(config)
     cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
     await cortex._initialize_mode("default")
+
+    assert cortex.current_config is not None
+    assert cortex.simulator_orchestrator is not None
+    assert cortex.action_orchestrator is not None
 
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}
