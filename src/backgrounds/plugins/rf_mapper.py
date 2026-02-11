@@ -71,6 +71,8 @@ class RFmapper(Background[RFmapperConfig]):
         self.thread = threading.Thread(target=self._scan_task)
         self.running = False
 
+        # Shared between scan thread and main run loop
+        self.scan_lock = threading.Lock()
         self.scan_results: List[RFData] = []
         self.scan_idx = 0
         self.scan_last_sent = 0
@@ -112,8 +114,6 @@ class RFmapper(Background[RFmapperConfig]):
         self.fds = FabricDataSubmitter(api_key=self.api_key, write_to_local_file=True)
 
         self.seen_devices: Dict[str, RFData] = {}
-
-        self.seen_names: List[str] = []
 
         self.start()
 
@@ -217,7 +217,8 @@ class RFmapper(Background[RFmapperConfig]):
                 final_list.append(device)
         logging.debug(f"Scan...{final_list}")
 
-        self.scan_idx += 1
+        with self.scan_lock:
+            self.scan_idx += 1
 
         return final_list
 
@@ -229,9 +230,13 @@ class RFmapper(Background[RFmapperConfig]):
         logging.info("Starting RF scan thread...")
         self.running = True
         while self.running:
-            self.scan_results = self.loop.run_until_complete(self.scan())
-            logging.info(f"RF scan index: {self.scan_idx}")
-            logging.info(f"RF scan last sent: {self.scan_last_sent}")
+            scan_results = self.loop.run_until_complete(self.scan())
+            with self.scan_lock:
+                self.scan_results = scan_results
+                scan_idx = self.scan_idx
+                scan_last_sent = self.scan_last_sent
+            logging.info(f"RF scan index: {scan_idx}")
+            logging.info(f"RF scan last sent: {scan_last_sent}")
             time.sleep(0.5)
 
     def start(self):
@@ -245,8 +250,7 @@ class RFmapper(Background[RFmapperConfig]):
         Stop the background process.
         """
         self.running = False
-        time.sleep(1)
-        self.thread.join()
+        self.thread.join(timeout=1.0)
 
     def run(self) -> None:
         """
@@ -259,14 +263,24 @@ class RFmapper(Background[RFmapperConfig]):
                 logging.info(f"Sending to fabric: payload {self.payload_idx}")
 
                 # add scan results if they are new
-                logging.info(f"RF scan index: {self.scan_idx}")
-                logging.info(f"RF scan last sent: {self.scan_last_sent}")
-                fresh_scan_results = []
-                if self.scan_results and self.scan_idx > self.scan_last_sent:
-                    fresh_scan_results = self.scan_results
-                    self.scan_last_sent = self.scan_idx
-                    self.scan_results = []
-                    logging.info(f"RF scan sending new payload: {self.scan_last_sent}")
+                with self.scan_lock:
+                    scan_idx = self.scan_idx
+                    scan_last_sent = self.scan_last_sent
+                    scan_results = list(self.scan_results)
+
+                logging.info(f"RF scan index: {scan_idx}")
+                logging.info(f"RF scan last sent: {scan_last_sent}")
+
+                fresh_scan_results: List[RFData] = []
+                with self.scan_lock:
+                    if self.scan_results and self.scan_idx > self.scan_last_sent:
+                        fresh_scan_results = list(self.scan_results)
+                        self.scan_last_sent = self.scan_idx
+                        self.scan_results = []
+                        scan_last_sent = self.scan_last_sent
+
+                if fresh_scan_results:
+                    logging.info(f"RF scan sending new payload: {scan_last_sent}")
 
                 # basic gps data and occasional scan results
                 try:
@@ -347,7 +361,7 @@ class RFmapper(Background[RFmapperConfig]):
                 except Exception as e:
                     logging.error(f"Error sharing to Fabric: {e}")
 
-                self.sleep(1)  # we should send a payload every second
+                time.sleep(1.0)  # we should send a payload every second
 
         except KeyboardInterrupt:
             logging.info("Stopping RF scanner...")
