@@ -199,21 +199,6 @@ def test_check_api_key_openmind_free_shows_warning(capsys):
         assert "Warning: No API key configured" in captured.out
 
 
-def test_print_config_summary_single_mode(capsys):
-    """Test printing summary for single-mode config."""
-    raw_config = {
-        "name": "Test Config",
-        "hertz": 10.0,
-        "agent_inputs": [{"type": "input1"}],
-        "agent_actions": [{"name": "action1"}],
-    }
-    _print_config_summary(raw_config, is_multi_mode=False)
-    captured = capsys.readouterr()
-    assert "Type: Single-mode" in captured.out
-    assert "Test Config" in captured.out
-    assert "10.0 Hz" in captured.out
-
-
 def test_print_config_summary_multi_mode(capsys):
     """Test printing summary for multi-mode config."""
     raw_config = {
@@ -222,9 +207,8 @@ def test_print_config_summary_multi_mode(capsys):
         "modes": {"mode1": {}, "mode2": {}},
         "transition_rules": [{"from": "mode1", "to": "mode2"}],
     }
-    _print_config_summary(raw_config, is_multi_mode=True)
+    _print_config_summary(raw_config)
     captured = capsys.readouterr()
-    assert "Type: Multi-mode" in captured.out
     assert "Multi Mode Config" in captured.out
     assert "Default Mode: mode1" in captured.out
     assert "Modes: 2" in captured.out
@@ -333,20 +317,6 @@ def test_validate_mode_components_backgrounds():
         mock_background.assert_called_once_with("TestBackground")
 
 
-def test_validate_components_single_mode():
-    """Test validating single-mode configuration."""
-    with patch("cli._validate_mode_components") as mock_validate_mode:
-        mock_validate_mode.return_value = ([], [])
-
-        raw_config = {
-            "agent_inputs": [],
-            "agent_actions": [],
-        }
-
-        _validate_components(raw_config, is_multi_mode=False, verbose=False)
-        mock_validate_mode.assert_called_once()
-
-
 def test_validate_components_multi_mode():
     """Test validating multi-mode configuration."""
     with (
@@ -365,7 +335,7 @@ def test_validate_components_multi_mode():
             },
         }
 
-        _validate_components(raw_config, is_multi_mode=True, verbose=False)
+        _validate_components(raw_config, verbose=False)
         assert mock_validate_mode.call_count == 2
 
 
@@ -377,7 +347,7 @@ def test_validate_components_with_errors():
         raw_config = {"modes": {"mode1": {}}}
 
         with pytest.raises(ValueError, match="Component validation failed"):
-            _validate_components(raw_config, is_multi_mode=True, verbose=False)
+            _validate_components(raw_config, verbose=False)
 
 
 def test_validate_components_with_warnings(capsys):
@@ -387,7 +357,7 @@ def test_validate_components_with_warnings(capsys):
 
         raw_config = {"modes": {"mode1": {}}}
 
-        _validate_components(raw_config, is_multi_mode=True, verbose=False)
+        _validate_components(raw_config, verbose=False)
         captured = capsys.readouterr()
         assert "Warning 1" in captured.out
 
@@ -416,8 +386,9 @@ def test_list_configs_categorizes_correctly(capsys):
 
         list_configs()
         captured = capsys.readouterr()
-        assert "Mode-Aware Configurations:" in captured.out
-        assert "Standard Configurations:" in captured.out
+        assert "Configurations:" in captured.out
+        assert "mode_config" in captured.out
+        assert "single_config" in captured.out
 
 
 def test_modes_displays_config_info(capsys):
@@ -464,6 +435,7 @@ def test_validate_config_success(capsys):
         patch("cli._resolve_config_path") as mock_resolve,
         patch("builtins.open", new_callable=mock_open, read_data='{"name": "test"}'),
         patch("cli.validate"),
+        patch("cli.convert_to_multi_mode"),
         patch("cli._validate_components"),
         patch("cli._check_api_key"),
     ):
