@@ -15,7 +15,6 @@ import threading
 import time
 import base64
 import os
-import sys
 import io
 from queue import Empty, Queue
 from typing import List, Optional
@@ -34,13 +33,16 @@ from providers.io_provider import IOProvider
 # Initialize logger with standard naming
 logger = logging.getLogger(__name__)
 
+
 class ConsoleInputConfig(SensorConfig):
     """
     Configuration for the ConsoleInput plugin.
     """
+
     input_name: str = Field(default="User", description="Name of the input source")
     prompt: str = Field(default="You", description="Prompt string displayed in terminal") 
     image_path: str = Field(default="view.jpg", description="Path to the local image file for simulated vision")
+
 
 class ConsoleInput(FuserInput[ConsoleInputConfig, Optional[str]]):
     """
@@ -91,11 +93,13 @@ class ConsoleInput(FuserInput[ConsoleInputConfig, Optional[str]]):
             logger.error(f"ConsoleInput: Image {self.config.image_path} not found.")
             return None
             
-        if Image is None: return None
+        if Image is None:
+            return None
 
         try:
             with Image.open(self.config.image_path) as img:
-                if img.mode != 'RGB': img = img.convert('RGB')
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
                 img.thumbnail((512, 512))
                 buffer = io.BytesIO()
                 img.save(buffer, format="JPEG", quality=60)
@@ -108,7 +112,8 @@ class ConsoleInput(FuserInput[ConsoleInputConfig, Optional[str]]):
         await asyncio.sleep(0.1)
         try:
             text = self.input_queue.get_nowait()
-            if not text: return None
+            if not text:
+                return None
 
             keywords = ["see", "look", "view", "what is this", "picture", "image"]
             if any(k in text.lower() for k in keywords):
@@ -122,11 +127,14 @@ class ConsoleInput(FuserInput[ConsoleInputConfig, Optional[str]]):
             return None
 
     async def raw_to_text(self, raw_input: Optional[str]):
+        """Convert raw input to message object."""
         if raw_input: 
             self.messages.append(Message(timestamp=time.time(), message=raw_input))
 
     def formatted_latest_buffer(self) -> Optional[str]:
-        if len(self.messages) == 0: return None
+        """Format the latest buffer for LLM consumption."""
+        if len(self.messages) == 0:
+            return None
         content = self.messages[-1].message
         self.messages = []
         
