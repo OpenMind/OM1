@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from runtime.multi_mode.config import ModeConfig, ModeSystemConfig
-from runtime.multi_mode.cortex import ModeCortexRuntime
+from runtime.config import ModeConfig, ModeSystemConfig
+from runtime.cortex import ModeCortexRuntime
 
 
 @pytest.fixture
@@ -73,11 +73,9 @@ def mock_orchestrators():
 def cortex_runtime(mock_system_config):
     """ModeCortexRuntime instance for testing."""
     with (
-        patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-        patch("runtime.multi_mode.cortex.IOProvider") as mock_io_provider_class,
-        patch(
-            "runtime.multi_mode.cortex.SleepTickerProvider"
-        ) as mock_sleep_provider_class,
+        patch("runtime.cortex.ModeManager") as mock_manager_class,
+        patch("runtime.cortex.IOProvider") as mock_io_provider_class,
+        patch("runtime.cortex.SleepTickerProvider") as mock_sleep_provider_class,
     ):
         mock_manager = Mock()
         mock_manager.current_mode_name = "default"
@@ -112,9 +110,9 @@ class TestModeCortexRuntime:
     def test_initialization(self, mock_system_config):
         """Test cortex runtime initialization."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -143,14 +141,10 @@ class TestModeCortexRuntime:
         runtime, mocks = cortex_runtime
 
         with (
-            patch("runtime.multi_mode.cortex.Fuser") as mock_fuser_class,
-            patch("runtime.multi_mode.cortex.ActionOrchestrator") as mock_action_class,
-            patch(
-                "runtime.multi_mode.cortex.SimulatorOrchestrator"
-            ) as mock_simulator_class,
-            patch(
-                "runtime.multi_mode.cortex.BackgroundOrchestrator"
-            ) as mock_background_class,
+            patch("runtime.cortex.Fuser") as mock_fuser_class,
+            patch("runtime.cortex.ActionOrchestrator") as mock_action_class,
+            patch("runtime.cortex.SimulatorOrchestrator") as mock_simulator_class,
+            patch("runtime.cortex.BackgroundOrchestrator") as mock_background_class,
         ):
             mock_fuser = Mock()
             mock_action_orch = Mock()
@@ -354,9 +348,9 @@ class TestModeCortexRuntimeHotReload:
     def test_hot_reload_initialization_enabled(self, mock_system_config):
         """Test hot reload initialization when enabled."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
             patch("os.path.exists", return_value=True),
             patch("os.path.getmtime", return_value=1234567890.0),
         ):
@@ -379,9 +373,9 @@ class TestModeCortexRuntimeHotReload:
     def test_hot_reload_initialization_disabled(self, mock_system_config):
         """Test hot reload initialization when disabled."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -400,9 +394,9 @@ class TestModeCortexRuntimeHotReload:
     def test_get_file_mtime_existing_file(self, mock_system_config, temp_config_file):
         """Test getting modification time of existing file."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -422,9 +416,9 @@ class TestModeCortexRuntimeHotReload:
     def test_get_file_mtime_nonexistent_file(self, mock_system_config):
         """Test getting modification time of non-existent file."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -447,9 +441,9 @@ class TestModeCortexRuntimeHotReload:
     ):
         """Test config change detection when file is modified."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -480,9 +474,9 @@ class TestModeCortexRuntimeHotReload:
     async def test_check_config_changes_no_change(self, mock_system_config):
         """Test config change detection when file is not modified."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
             patch("os.path.exists", return_value=True),
             patch("os.path.getmtime", return_value=1234567890.0),
         ):
@@ -514,9 +508,9 @@ class TestModeCortexRuntimeHotReload:
     async def test_check_config_changes_nonexistent_file(self, mock_system_config):
         """Test config change detection with non-existent file."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -547,10 +541,10 @@ class TestModeCortexRuntimeHotReload:
     async def test_reload_config_success(self, mock_system_config):
         """Test successful config reload."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
-            patch("runtime.multi_mode.cortex.load_mode_config") as mock_load_config,
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -593,10 +587,10 @@ class TestModeCortexRuntimeHotReload:
     async def test_reload_config_mode_not_found(self, mock_system_config):
         """Test config reload when current mode is not in new config."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
-            patch("runtime.multi_mode.cortex.load_mode_config") as mock_load_config,
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -632,11 +626,11 @@ class TestModeCortexRuntimeHotReload:
     async def test_reload_config_failure(self, mock_system_config):
         """Test config reload failure handling."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
             patch(
-                "runtime.multi_mode.cortex.load_mode_config",
+                "runtime.cortex.load_mode_config",
                 side_effect=Exception("Load failed"),
             ),
         ):
@@ -662,9 +656,9 @@ class TestModeCortexRuntimeHotReload:
     async def test_run_with_hot_reload_enabled(self, mock_system_config):
         """Test run method with hot reload enabled."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -718,9 +712,9 @@ class TestModeCortexRuntimeHotReload:
     async def test_cleanup_tasks_with_config_watcher(self, mock_system_config):
         """Test cleanup includes config watcher task when hot reload is enabled."""
         with (
-            patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-            patch("runtime.multi_mode.cortex.IOProvider"),
-            patch("runtime.multi_mode.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
         ):
             mock_manager = Mock()
             mock_manager.add_transition_callback = Mock()
@@ -744,3 +738,70 @@ class TestModeCortexRuntimeHotReload:
 
                 mock_config_watcher.cancel.assert_called_once()
                 mock_gather.assert_called_once()
+
+
+class TestHotReloadMultiToSingle:
+    """Test hot reload from multi-mode config to single-mode config."""
+
+    @pytest.mark.asyncio
+    async def test_reload_multi_to_single_mode(self, mock_system_config):
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "mode_1"
+            mock_manager.state = Mock()
+            mock_manager.state.transition_history = []
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            mock_system_config.modes = {
+                "mode_1": Mock(),
+                "mode_2": Mock(),
+            }
+            mock_system_config.default_mode = "mode_1"
+
+            single_mode_mock = Mock(spec=ModeConfig)
+            single_mode_mock.name = "single_mode"
+            single_mode_mock.display_name = "single_mode"
+
+            new_single_config = Mock(spec=ModeSystemConfig)
+            new_single_config.default_mode = "single_mode"
+            new_single_config.modes = {"single_mode": single_mode_mock}
+            mock_load_config.return_value = new_single_config
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+            runtime._run_cortex_loop = AsyncMock()
+
+            await runtime._reload_config()
+
+            runtime._initialize_mode.assert_called_once_with("single_mode")
+            assert runtime.mode_manager.state.current_mode == "single_mode"
+
+            assert runtime.mode_config == new_single_config
+            assert runtime.mode_manager.config == new_single_config
+
+            runtime._stop_current_orchestrators.assert_called_once()
+            runtime._start_orchestrators.assert_called_once()
+
+            assert len(runtime.mode_manager.state.transition_history) == 1
+            assert (
+                "config_reload->single_mode:hot_reload"
+                in runtime.mode_manager.state.transition_history[0]
+            )
+
+            assert len(new_single_config.modes) == 1
+            assert "single_mode" in new_single_config.modes

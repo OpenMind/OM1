@@ -73,7 +73,7 @@ curl -X POST https://api.openmind.org/api/core/api_keys/create \
 }
 ```
 
-<Note>The returned `api_key` is only shown once. Store it securely as you won't be able to retrieve it again.</Note>
+> **Note:** The returned `api_key` is only shown once. Store it securely as you won't be able to retrieve it again.
 
 ## Delete API Key
 
@@ -189,12 +189,11 @@ curl -X GET https://api.openmind.org/api/core/account/balance \
 }
 ```
 
-<Note>
-Note the following about your account balance:
-- `omcu_balance` represents your total available credits, including both monthly subscription credits and any prepaid/unused credits from previous periods
-- Monthly credits reset at the start of each billing period
-- Unused prepaid credits do not expire and carry over between billing periods
-</Note>
+> **Note:** Note the following about your account balance:
+> - `omcu_balance` represents your total available credits, including both monthly subscription credits and any prepaid/unused credits from previous periods
+> - Monthly credits reset at the start of each billing period
+> - Unused prepaid credits do not expire and carry over between billing periods
+
 
 ## List API Keys
 
@@ -269,12 +268,11 @@ Each API key object contains:
 }
 ```
 
-<Note>
-Note the following about the API keys listed:
-- Only active (non-deleted) API keys are returned.
-- The actual secret portion of the API key is never returned in this endpoint.
-- The `hashed_key` field is stored in the database but not exposed in the API response for security.
-</Note>
+> **Note:**
+> Note the following about the API keys listed:
+> - Only active (non-deleted) API keys are returned.
+> - The actual secret portion of the API key is never returned in this endpoint.
+> - The `hashed_key` field is stored in the database but not exposed in the API response for security.
 
 ## Authentication
 
