@@ -164,18 +164,12 @@ Step 2: Install all the necessary dependencies:
 
 ```bash
 cd OM1-ros2-sdk
-uv venv
+uv venv --python 3.10
 sudo rosdep init
 rosdep update
 rosdep install --from-paths . --ignore-src -r -y
 source .venv/bin/activate
 uv pip install .
-```
-
-Export the python path to your virtual environment
-
-```bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
 ```
 
 Step 3: Build all the packages:
@@ -205,6 +199,7 @@ This will bring up the `om/path` topic, enabling OM1 to understand the surroundi
 Step 6: Open a new terminal and run:
 
 ```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
 source install/setup.bash
 ros2 launch orchestrator orchestrator.py use_sim:=true
 ```
