@@ -913,3 +913,142 @@ class TestLLMResultParser:
         await orchestrator.flush_promises()
 
         assert len(MockConnector.execution_order) == 1
+
+
+class TestActionOrchestratorHotReload:
+    """Test hot-reload functionality via update_config method."""
+
+    @pytest.fixture
+    def mock_runtime_config(self):
+        """Create a mock RuntimeConfig for testing."""
+        config = MagicMock(spec=RuntimeConfig)
+        config.action_execution_mode = "concurrent"
+        config.action_dependencies = {}
+        config.agent_actions = []  # Required by __init__
+        config.cortex_llm = MagicMock()
+        config.cortex_llm.model = "gpt-4"
+        return config
+
+    def test_update_config_changes_internal_reference(self, mock_runtime_config):
+        """Test that update_config updates the internal config reference."""
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        # Verify initial config
+        assert orchestrator._config == mock_runtime_config
+        assert orchestrator._config.cortex_llm.model == "gpt-4"
+
+        # Create new config with different model
+        new_config = MagicMock(spec=RuntimeConfig)
+        new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "claude-3-opus"
+
+        # Update config
+        orchestrator.update_config(new_config)
+
+        # Verify config was updated
+        assert orchestrator._config == new_config
+        assert orchestrator._config.cortex_llm.model == "claude-3-opus"
+
+    def test_update_config_logs_model_change(self, mock_runtime_config, caplog):
+        """Test that update_config logs the model change."""
+        import logging
+
+        caplog.set_level(logging.INFO)  # Enable INFO level logging
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        new_config = MagicMock(spec=RuntimeConfig)
+        new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "gpt-3.5-turbo"
+
+        orchestrator.update_config(new_config)
+
+        # Verify logging
+        assert "ActionOrchestrator updating internal config" in caplog.text
+        assert "LLM model changed from" in caplog.text
+        assert "gpt-4" in caplog.text
+        assert "gpt-3.5-turbo" in caplog.text
+
+    def test_update_config_handles_missing_model_attribute(self, caplog):
+        """Test update_config when model attribute is missing."""
+        import logging
+
+        caplog.set_level(logging.INFO)
+
+        # Config without model attribute - but with agent_actions
+        old_config = MagicMock(spec=RuntimeConfig)
+        old_config.agent_actions = []  # Required
+        old_config.action_execution_mode = "concurrent"
+        old_config.action_dependencies = {}
+        old_config.cortex_llm = MagicMock(spec=[])  # No model attribute
+
+        orchestrator = ActionOrchestrator(old_config)
+
+        new_config = MagicMock(spec=RuntimeConfig)
+        new_config.cortex_llm = MagicMock(spec=[])  # No model attribute
+
+        # Should not crash, should use "unknown"
+        orchestrator.update_config(new_config)
+
+        assert "unknown" in caplog.text
+        assert orchestrator._config == new_config
+
+    def test_update_config_with_same_model(self, mock_runtime_config, caplog):
+        """Test update_config when model doesn't change."""
+        import logging
+
+        caplog.set_level(logging.INFO)
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        # Create new config with same model
+        new_config = MagicMock(spec=RuntimeConfig)
+        new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "gpt-4"  # Same as original
+
+        orchestrator.update_config(new_config)
+
+        assert "gpt-4" in caplog.text
+        assert orchestrator._config == new_config
+
+    def test_update_config_preserves_orchestrator_state(
+        self, mock_runtime_config, create_agent_action
+    ):
+        """Test that update_config doesn't reset orchestrator state."""
+        action = create_agent_action("test_action", "test_action")
+        mock_runtime_config.agent_actions = [action]
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+        orchestrator.start()
+
+        # Update config
+        new_config = MagicMock(spec=RuntimeConfig)
+        new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "claude-3"
+
+        orchestrator.update_config(new_config)
+
+        # Orchestrator should still be running
+        assert not orchestrator._stop_event.is_set()
+
+        # Cleanup
+        orchestrator.stop()
+
+    def test_update_config_different_provider(self, mock_runtime_config, caplog):
+        """Test config update with different LLM provider."""
+        import logging
+
+        caplog.set_level(logging.INFO)
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        # Update to different provider
+        new_config = MagicMock(spec=RuntimeConfig)
+        new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "claude-3-5-sonnet-20241022"
+
+        orchestrator.update_config(new_config)
+
+        assert "gpt-4" in caplog.text
+        assert "claude-3-5-sonnet-20241022" in caplog.text
+        assert orchestrator._config.cortex_llm.model == "claude-3-5-sonnet-20241022"
