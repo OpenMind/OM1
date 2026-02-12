@@ -258,7 +258,7 @@ def test_message_handler_create_elevenlabs_provider():
             elevenlabs_api_key=None,
             voice_id="JBFqnCBsd6RMkjVDRZzb",
             model_id="eleven_flash_v2_5",
-            output_format="mp3_44100_128",
+            output_format="pcm_16000",
             enable_tts_interrupt=False,
         )
 
