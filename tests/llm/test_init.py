@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from llm import LLM, LLMConfig, find_module_with_class, load_llm
 from providers.io_provider import IOProvider
-from runtime.single_mode.config import add_meta
+from runtime.config import add_meta
 
 
 class DummyOutputModel(BaseModel):
