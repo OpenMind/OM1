@@ -320,4 +320,4 @@ finally:
     # WebSocket context manager handles cleanup automatically
 ```
 
-<Note>OpenMind developed [om1_modules](https://github.com/OpenMind/OM1-modules) to simplify integration with VILA VLM and other services. For more details, visit [Our GitHub](https://github.com/OpenMind/OM1-modules).</Note>
+> **Note:** OpenMind developed [om1_modules](https://github.com/OpenMind/OM1-modules) to simplify integration with VILA VLM and other services. For more details, visit [Our GitHub](https://github.com/OpenMind/OM1-modules).

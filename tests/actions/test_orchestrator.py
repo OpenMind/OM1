@@ -10,7 +10,7 @@ import pytest
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 from actions.orchestrator import ActionOrchestrator
 from llm.output_model import Action
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 
 
 @dataclass
