@@ -13,8 +13,8 @@ import pytest
 from PIL import Image
 
 from llm.output_model import Action, CortexOutputModel
-from runtime.single_mode.config import build_runtime_config_from_test_case
-from runtime.single_mode.cortex import CortexRuntime
+from runtime.config import ModeConfig, ModeSystemConfig
+from runtime.cortex import ModeCortexRuntime
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_image_provider,
     load_test_images,
@@ -39,6 +39,38 @@ TEST_CASES_DIR = DATA_DIR / "test_cases"
 
 # Global client to be created once for all test cases
 _llm_client = None
+
+
+def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
+    """Build a ModeSystemConfig from a test case dictionary.
+
+    Stores raw config dicts so that ModeConfig.load_components() handles
+    the actual component loading through the standard initialization path.
+    """
+    mode_config = ModeConfig(
+        version=config.get("version", "v1.0.2"),
+        name="default",
+        display_name="Default",
+        description="Integration test mode",
+        system_prompt_base=config.get("system_prompt_base", ""),
+        hertz=config.get("hertz", 1),
+        _raw_inputs=config.get("agent_inputs", []),
+        _raw_llm=config.get("cortex_llm"),
+        _raw_simulators=config.get("simulators", []),
+        _raw_actions=config.get("agent_actions", []),
+        _raw_backgrounds=config.get("backgrounds", []),
+    )
+    return ModeSystemConfig(
+        version=config.get("version", "v1.0.2"),
+        name=config.get("name", "TestAgent"),
+        default_mode="default",
+        config_name="test_config",
+        mode_memory_enabled=False,
+        api_key=config.get("api_key"),
+        system_governance=config.get("system_governance", ""),
+        system_prompt_examples=config.get("system_prompt_examples", ""),
+        modes={"default": mode_config},
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -87,23 +119,18 @@ def mock_avatar_components():
 
 @pytest.fixture(autouse=True)
 def mock_confige_provider_components():
-    """Mock all config provider to prevent Zenoh session creation"""
+    """Mock ConfigProvider and Zenoh to prevent session creation"""
 
     with (
         patch("providers.config_provider.ConfigProvider") as mock_config_provider,
-        patch(
-            "runtime.single_mode.cortex.ConfigProvider"
-        ) as mock_cortex_config_provider,
-        patch(
-            "runtime.multi_mode.cortex.ConfigProvider"
-        ) as mock_multi_cortex_config_provider,
+        patch("runtime.cortex.ConfigProvider") as mock_multi_cortex_config_provider,
+        patch("runtime.manager.open_zenoh_session"),
     ):
         mock_config_provider_instance = MagicMock()
         mock_config_provider_instance.running = False
         mock_config_provider_instance.session = None
         mock_config_provider_instance.stop = MagicMock()
         mock_config_provider.return_value = mock_config_provider_instance
-        mock_cortex_config_provider.return_value = mock_config_provider_instance
         mock_multi_cortex_config_provider.return_value = mock_config_provider_instance
 
         yield
@@ -334,11 +361,14 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # No need to modify config - the input_registry will handle mapping
     # the real input types to their mock equivalents
 
-    # Build a runtime config from the test case config
-    runtime_config = build_runtime_config_from_test_case(config)
+    # Build a ModeSystemConfig and initialize the runtime
+    mode_system_config = build_mode_system_config_from_test_case(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    await cortex._initialize_mode("default")
 
-    # Create a CortexRuntime instance
-    cortex = CortexRuntime(runtime_config, "test_config", hot_reload=False)
+    assert cortex.current_config is not None
+    assert cortex.simulator_orchestrator is not None
+    assert cortex.action_orchestrator is not None
 
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}
@@ -363,7 +393,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     cortex.action_orchestrator.promise = mock_action_promise
 
     # Mock LLM ask method to capture raw response
-    original_llm_ask = cortex.config.cortex_llm.ask
+    original_llm_ask = cortex.current_config.cortex_llm.ask
 
     async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
         logging.info(
@@ -387,14 +417,14 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
             )
             return _create_mock_llm_response(config.get("expected", {}))
 
-    cortex.config.cortex_llm.ask = mock_llm_ask
+    cortex.current_config.cortex_llm.ask = mock_llm_ask
 
     # Initialize inputs manually for testing
     # This step is needed because we're not starting the full runtime
-    await initialize_mock_inputs(cortex.config.agent_inputs)
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
 
     # Set cortex runtime reference for MockRPLidar cleanup
-    for input_obj in cortex.config.agent_inputs:
+    for input_obj in cortex.current_config.agent_inputs:
         if hasattr(input_obj, "set_cortex_runtime"):
             input_obj.set_cortex_runtime(cortex)  # type: ignore
 
@@ -402,7 +432,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     await cortex._tick()
 
     # Clean up inputs after test completion
-    await cleanup_mock_inputs(cortex.config.agent_inputs)
+    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
 
     # The output includes detection results and commands
     return output_results
