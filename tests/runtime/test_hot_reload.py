@@ -7,7 +7,7 @@ categorization, and application of configuration changes.
 
 import pytest
 
-from runtime.single_mode.hot_reload import (
+from runtime.hot_reload import (
     ConfigChange,
     HotReloadManager,
     ReloadStrategy,

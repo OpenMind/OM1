@@ -17,6 +17,7 @@ from runtime.config import (
     RuntimeConfig,
     load_mode_config,
 )
+from runtime.hot_reload import HotReloadManager
 from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
 
@@ -68,6 +69,8 @@ class ModeCortexRuntime:
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
+
+        self.hot_reload_manager = HotReloadManager()
 
         # Hot-reload configuration
         self.hot_reload = hot_reload
@@ -651,8 +654,8 @@ class ModeCortexRuntime:
         """
         Reload the mode configuration when runtime config file changes.
 
-        The runtime config file serves as a trigger - when it changes, we reload
-        from the original configuration source and then regenerate the runtime config.
+        Uses selective hot-reload: only fields marked HOT_RELOAD or VALIDATE_FIRST
+        are updated in-place. Fields marked RESTART_REQUIRED trigger a full restart.
         """
         try:
             logging.info(
@@ -663,37 +666,93 @@ class ModeCortexRuntime:
 
             current_mode = self.mode_manager.current_mode_name
 
-            await self._stop_current_orchestrators()
-
             logging.info("Loading configuration from the new runtime file")
             new_mode_config = load_mode_config(
                 self.mode_config_name,
                 mode_source_path=self.mode_manager._get_runtime_config_path(),
             )
 
+            # Get current and new mode config as dicts for change detection
+            current_mode_config = self.mode_config.modes.get(current_mode)
+            new_mode_config_entry = new_mode_config.modes.get(current_mode)
+
+            if not current_mode_config or not new_mode_config_entry:
+                logging.warning(
+                    f"Mode '{current_mode}' not found in configs, doing full restart"
+                )
+                await self._full_restart_reload(new_mode_config, current_mode)
+                return
+
+            from runtime.config import mode_config_to_dict
+
+            old_dict = mode_config_to_dict(self.mode_config)
+            new_dict = mode_config_to_dict(new_mode_config)
+
+            detected_changes = self.hot_reload_manager.detect_changes(
+                old_dict, new_dict
+            )
+
+            if not detected_changes:
+                logging.info("Config file changed, no registered fields modified.")
+                self.mode_config = new_mode_config
+                self.mode_manager.config = new_mode_config
+                return
+
+            categorized = self.hot_reload_manager.categorize_changes(detected_changes)
+
+            from runtime.hot_reload import ReloadStrategy
+
+            restart_changes = categorized[ReloadStrategy.RESTART_REQUIRED]
+            validate_changes = categorized[ReloadStrategy.VALIDATE_FIRST]
+            hot_changes = categorized[ReloadStrategy.HOT_RELOAD]
+
+            if restart_changes:
+                logging.warning(
+                    "Restart required for changes: %s",
+                    [c.field_path for c in restart_changes],
+                )
+                await self._full_restart_reload(new_mode_config, current_mode)
+                return
+
+            # Validate first
+            if validate_changes:
+                validation_results = self.hot_reload_manager.validate_changes(
+                    validate_changes
+                )
+                if not all(validation_results.values()):
+                    invalid = [f for f, v in validation_results.items() if not v]
+                    logging.error(
+                        "Validation failed: %s. Aborting hot-reload.", invalid
+                    )
+                    return
+
+            # Apply selective changes
+            for change in validate_changes + hot_changes:
+                self.hot_reload_manager.track_change(change)
+                logging.info(
+                    "Hot-reloaded: %s = %s", change.field_path, change.new_value
+                )
+
+            # Update fuser if system_prompt changed
+            if any(
+                "system_prompt" in c.field_path for c in validate_changes + hot_changes
+            ):
+                if self.current_config:
+                    self.fuser = Fuser(self.current_config)
+                    logging.info("Fuser updated.")
+
+            # Update action orchestrator if LLM config changed
+            if any(
+                "cortex_llm.config" in c.field_path
+                for c in validate_changes + hot_changes
+            ):
+                if self.action_orchestrator and self.current_config:
+                    self.action_orchestrator.update_config(self.current_config)
+                    logging.info("ActionOrchestrator LLM config updated.")
+
             self.mode_config = new_mode_config
             self.mode_manager.config = new_mode_config
-
-            if current_mode not in new_mode_config.modes:
-                logging.warning(
-                    f"Current mode '{current_mode}' not found in reloaded config, switching to default mode '{new_mode_config.default_mode}'"
-                )
-                current_mode = new_mode_config.default_mode
-
-            self.mode_manager.state.current_mode = current_mode
-            self.mode_manager.state.mode_start_time = time.time()
-            self.mode_manager.state.last_transition_time = time.time()
-            self.mode_manager.state.transition_history.append(
-                f"config_reload->{current_mode}:hot_reload"
-            )
-
-            await self._initialize_mode(current_mode)
-
-            await self._start_orchestrators()
-
-            logging.info(
-                f"Mode configuration reloaded successfully, active mode: {current_mode}"
-            )
+            logging.info("Selective hot-reload completed.")
 
         except Exception as e:
             logging.error(f"Failed to reload mode configuration: {e}")
@@ -701,3 +760,33 @@ class ModeCortexRuntime:
 
         finally:
             self._is_reloading = False
+
+    async def _full_restart_reload(
+        self, new_mode_config: ModeSystemConfig, current_mode: str
+    ) -> None:
+        """
+        Perform a full restart reload - stop all orchestrators and reinitialize.
+        """
+        await self._stop_current_orchestrators()
+
+        self.mode_config = new_mode_config
+        self.mode_manager.config = new_mode_config
+
+        if current_mode not in new_mode_config.modes:
+            logging.warning(
+                f"Current mode '{current_mode}' not found in reloaded config, "
+                f"switching to default mode '{new_mode_config.default_mode}'"
+            )
+            current_mode = new_mode_config.default_mode
+
+        self.mode_manager.state.current_mode = current_mode
+        self.mode_manager.state.mode_start_time = time.time()
+        self.mode_manager.state.last_transition_time = time.time()
+        self.mode_manager.state.transition_history.append(
+            f"config_reload->{current_mode}:hot_reload"
+        )
+
+        await self._initialize_mode(current_mode)
+        await self._start_orchestrators()
+
+        logging.info(f"Full restart reload completed, active mode: {current_mode}")

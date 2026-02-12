@@ -650,7 +650,9 @@ class TestModeCortexRuntimeHotReload:
 
             await runtime._reload_config()
 
-            runtime._stop_current_orchestrators.assert_called_once()
+            # When load_mode_config fails, orchestrators should NOT be stopped
+            # so the system continues running with the previous configuration
+            runtime._stop_current_orchestrators.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_run_with_hot_reload_enabled(self, mock_system_config):
