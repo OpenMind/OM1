@@ -210,8 +210,18 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         if self.have_cam and self.cap is not None:
 
             ret, frame = self.cap.read()
-            self.frame_index += 1
-            timestamp = time.time()
+self.frame_index += 1
+
+if not ret or frame is None:
+    logging.warning(
+        "YOLO camera frame read failed (camera_index=%s, frame=%s)",
+        self.camera_index,
+        self.frame_index,
+    )
+    return None
+
+timestamp = time.time()
+
 
             try:
                 o = self.odom.position
