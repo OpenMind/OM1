@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from runtime.multi_mode.config import (
+from runtime.config import (
     ModeConfig,
     ModeSystemConfig,
     TransitionRule,
     TransitionType,
 )
-from runtime.multi_mode.manager import ModeManager, ModeState
+from runtime.manager import ModeManager, ModeState
 
 
 @pytest.fixture
@@ -149,8 +149,8 @@ def sample_system_config(sample_mode_configs, sample_transition_rules):
 def mode_manager(sample_system_config):
     """Mode manager instance for testing."""
     with (
-        patch("runtime.multi_mode.manager.open_zenoh_session"),
-        patch("runtime.multi_mode.manager.ModeManager._load_mode_state"),
+        patch("runtime.manager.open_zenoh_session"),
+        patch("runtime.manager.ModeManager._load_mode_state"),
     ):
         return ModeManager(sample_system_config)
 
@@ -199,7 +199,7 @@ class TestModeManager:
         """Test initialization with invalid default mode raises error."""
         sample_system_config.default_mode = "nonexistent"
 
-        with patch("runtime.multi_mode.manager.open_zenoh_session"):
+        with patch("runtime.manager.open_zenoh_session"):
             with pytest.raises(
                 ValueError, match="Default mode 'nonexistent' not found"
             ):
@@ -1037,10 +1037,10 @@ class TestModeManager:
         """Test that Zenoh init failure sets _zenoh_mode_status_response_pub to None."""
         with (
             patch(
-                "runtime.multi_mode.manager.open_zenoh_session",
+                "runtime.manager.open_zenoh_session",
                 side_effect=Exception("Zenoh connection failed"),
             ),
-            patch("runtime.multi_mode.manager.ModeManager._load_mode_state"),
+            patch("runtime.manager.ModeManager._load_mode_state"),
         ):
             manager = ModeManager(sample_system_config)
 
@@ -1052,10 +1052,10 @@ class TestModeManager:
         """Test that publishing with null publisher doesn't raise error."""
         with (
             patch(
-                "runtime.multi_mode.manager.open_zenoh_session",
+                "runtime.manager.open_zenoh_session",
                 side_effect=Exception("Zenoh connection failed"),
             ),
-            patch("runtime.multi_mode.manager.ModeManager._load_mode_state"),
+            patch("runtime.manager.ModeManager._load_mode_state"),
         ):
             manager = ModeManager(sample_system_config)
 

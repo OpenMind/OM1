@@ -3,13 +3,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from runtime.multi_mode.config import (
+from runtime.config import (
     ModeConfig,
     ModeSystemConfig,
     TransitionRule,
     TransitionType,
 )
-from runtime.multi_mode.cortex import ModeCortexRuntime
+from runtime.cortex import ModeCortexRuntime
 
 
 @pytest.fixture
@@ -182,11 +182,9 @@ def cortex_runtime_with_mode_transition(
 ):
     """ModeCortexRuntime instance configured for mode transition testing."""
     with (
-        patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-        patch("runtime.multi_mode.cortex.IOProvider") as mock_io_provider_class,
-        patch(
-            "runtime.multi_mode.cortex.SleepTickerProvider"
-        ) as mock_sleep_provider_class,
+        patch("runtime.cortex.ModeManager") as mock_manager_class,
+        patch("runtime.cortex.IOProvider") as mock_io_provider_class,
+        patch("runtime.cortex.SleepTickerProvider") as mock_sleep_provider_class,
     ):
         mock_manager_class.return_value = mock_mode_manager
         mock_io_provider_class.return_value = mock_io_provider
@@ -225,9 +223,9 @@ def cortex_runtime_with_mode_transition(
 def cortex_runtime(mock_system_config, mock_io_provider, mock_mode_manager):
     """Create a cortex runtime instance for basic testing."""
     with (
-        patch("runtime.multi_mode.cortex.ModeManager") as mock_manager_class,
-        patch("runtime.multi_mode.cortex.IOProvider") as mock_io_class,
-        patch("runtime.multi_mode.cortex.SleepTickerProvider") as mock_sleep_class,
+        patch("runtime.cortex.ModeManager") as mock_manager_class,
+        patch("runtime.cortex.IOProvider") as mock_io_class,
+        patch("runtime.cortex.SleepTickerProvider") as mock_sleep_class,
     ):
         mock_manager_class.return_value = mock_mode_manager
         mock_io_class.return_value = mock_io_provider
