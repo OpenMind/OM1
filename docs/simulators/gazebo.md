@@ -246,7 +246,9 @@ uv run src/run.py simulation
 
 Step 9: Teleoperate the robot in simulation
 
-You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
+You can also use teleoperation to control the robot through your keyboard.
+
+Switch back to `OM1-ros2-sdk` in a new terminal and run the following commands
 
 ```bash
 source install/setup.bash
