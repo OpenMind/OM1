@@ -11,13 +11,13 @@ from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
-from runtime.multi_mode.config import (
+from runtime.config import (
     LifecycleHookType,
     ModeSystemConfig,
     RuntimeConfig,
     load_mode_config,
 )
-from runtime.multi_mode.manager import ModeManager
+from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
 
 
