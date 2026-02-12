@@ -23,11 +23,14 @@ def check_webcam():
     Checks if a webcam is available and returns True if found, False otherwise.
     """
     cap = cv2.VideoCapture(0)  # 0 is the default camera index
-    if not cap.isOpened():
-        logging.info("No webcam found")
-        return False
-    logging.info("Found cam(0)")
-    return True
+if not cap.isOpened():
+    logging.info("No webcam found")
+    cap.release()
+    return False
+cap.release()
+logging.info("Found cam(0)")
+return True
+
 
 
 class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]]):
@@ -87,7 +90,11 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         # Capture a frame every 500 ms
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
-            return frame
+if not ret or frame is None:
+    logging.warning("FaceEmotion camera frame read failed")
+    return None
+return frame
+
 
     async def _raw_to_text(
         self, raw_input: Optional[cv2.typing.MatLike]
