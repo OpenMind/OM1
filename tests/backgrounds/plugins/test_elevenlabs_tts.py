@@ -13,7 +13,7 @@ class TestElevenLabsTTSConfig:
         assert config.elevenlabs_api_key is None
         assert config.voice_id == "JBFqnCBsd6RMkjVDRZzb"
         assert config.model_id == "eleven_flash_v2_5"
-        assert config.output_format == "mp3_44100_128"
+        assert config.output_format == "pcm_16000"
 
     def test_custom_api_key(self):
         """Test custom api_key configuration."""
@@ -165,7 +165,7 @@ class TestElevenLabsTTS:
             elevenlabs_api_key=None,
             voice_id="JBFqnCBsd6RMkjVDRZzb",
             model_id="eleven_flash_v2_5",
-            output_format="mp3_44100_128",
+            output_format="pcm_16000",
         )
 
     @patch("backgrounds.plugins.elevenlabs_tts.ElevenLabsTTSProvider")
