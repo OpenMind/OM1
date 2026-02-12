@@ -8,7 +8,7 @@ icon: robot
 
 | Component| Minimum                                   | Good                                   | Ideal                                    |
 |----------|-------------------------------------------|----------------------------------------|------------------------------------------|
-| OS       | Ubuntu 20.04 / 22.04.                     | Ubuntu 20.04 / 22.04                   | Ubuntu 20.04 / 22.04                     |
+| OS       | Ubuntu 20.04 / 22.04                      | Ubuntu 20.04 / 22.04                   | Ubuntu 20.04 / 22.04                     |
 | CPU      | Intel Core i7 (7th Gen)<br>AMD Ryzen 5    | Intel Core i7 (9th Gen)<br>AMD Ryzen 7 | Intel Core i9, X-series or higher<br>AMD Ryzen 9, Threadripper or higher |
 | Cores    | 4                                         | 8                                      | 16                                       |
 | RAM      | 32 GB                                     | 64 GB                                  | 64 GB                                    |
@@ -190,10 +190,10 @@ colcon build
 
 Step 4: Install Isaac Sim
 
-Open a new terminal window and switch to `unitree/isaac_sim` directory
+Open a new terminal window and switch to `unitree/isaac_sim` directory within `OM1-ros2-sdk`
 
 ```bash
-cd unitree/isaac_sim
+cd OM1-ros2-sdk/unitree/isaac_sim
 
 uv venv --python 3.11 --seed env_isaacsim
 
@@ -245,7 +245,7 @@ You'll now be able to see Isaac Sim running on your system.
 
 ![ ](../assets/isaac-sim.png)
 
-Step 6: Open a new terminal and run:
+Step 6: Open a new terminal , switch to base directory `OM1-ros2-sdk` and run:
 
 ```bash
 source install/setup.bash
@@ -302,7 +302,7 @@ Now, run the simulation agent
 uv run src/run.py simulation
 ```
 
-> **Note**: Update you agent name depending on robot type.
+> **Note**: Update your agent name depending on robot type.
 
 Congratulations! You have launched Isaac Sim with OM1 successfully.
 
