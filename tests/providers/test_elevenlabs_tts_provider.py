@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 mock_om1_speech = MagicMock()
-mock_om1_speech.AudioOutputStream = MagicMock()
+mock_om1_speech.AudioOutputLiveStream = MagicMock()
 sys.modules["om1_speech"] = mock_om1_speech
 
 mock_pyaudio = MagicMock()
@@ -112,6 +112,16 @@ def test_configure_restart_needed_output_format_change():
         mock_stop.assert_called_once()
 
 
+def test_configure_restart_needed_rate_change():
+    """Test restart is triggered when rate changes."""
+    provider = ElevenLabsTTSProvider(rate=16000)
+    provider.running = True
+
+    with patch.object(provider, "stop") as mock_stop:
+        provider.configure(rate=44100)
+        mock_stop.assert_called_once()
+
+
 def test_configure_no_restart_when_same_parameters():
     """Test no restart when all parameters remain the same."""
     url = "https://api.openmind.org/api/core/elevenlabs/tts"
@@ -123,7 +133,7 @@ def test_configure_no_restart_when_same_parameters():
 
     mock_audio_stream = MagicMock()
     mock_audio_stream._url = url
-    mock_om1_speech.AudioOutputStream.return_value = mock_audio_stream
+    mock_om1_speech.AudioOutputLiveStream.return_value = mock_audio_stream
 
     provider = ElevenLabsTTSProvider(
         url=url,
