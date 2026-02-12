@@ -73,7 +73,7 @@ sudo apt-get update
 sudo apt-get install ffmpeg
 ```
 
-To install Rust and Cargo (required for building SDKs like cdpsdk), follow the steps below
+To install Rust and Cargo (required for building SDKs like cdp-sdk), follow the steps below
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
