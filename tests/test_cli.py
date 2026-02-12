@@ -435,7 +435,7 @@ def test_validate_config_success(capsys):
         patch("cli._resolve_config_path") as mock_resolve,
         patch("builtins.open", new_callable=mock_open, read_data='{"name": "test"}'),
         patch("cli.validate"),
-        patch("cli.normalize_to_multi_mode"),
+        patch("cli.convert_to_multi_mode"),
         patch("cli._validate_components"),
         patch("cli._check_api_key"),
     ):

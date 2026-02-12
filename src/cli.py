@@ -10,7 +10,8 @@ import json5
 import typer
 from jsonschema import ValidationError, validate
 
-from runtime.config import load_mode_config, normalize_to_multi_mode
+from runtime.config import load_mode_config
+from runtime.converter import convert_to_multi_mode
 
 app = typer.Typer()
 
@@ -219,7 +220,7 @@ def validate_config(
 
         validate(instance=raw_config, schema=schema)
 
-        raw_config = normalize_to_multi_mode(raw_config)
+        raw_config = convert_to_multi_mode(raw_config)
 
         if verbose:
             print("Schema validation passed")

@@ -204,25 +204,6 @@ class TestModeConfig:
         with pytest.raises(ValueError, match="No LLM configured for mode test_mode"):
             sample_mode_config.to_runtime_config(sample_system_config)
 
-    def test_is_loaded_false(self, sample_mode_config):
-        """Test is_loaded() returns False when components are not loaded."""
-        assert sample_mode_config.is_loaded() is False
-
-    def test_is_loaded_true_with_inputs(self, sample_mode_config, mock_sensor):
-        """Test is_loaded() returns True when inputs are loaded."""
-        sample_mode_config.agent_inputs = [mock_sensor]
-        assert sample_mode_config.is_loaded() is True
-
-    def test_is_loaded_true_with_llm(self, sample_mode_config, mock_llm):
-        """Test is_loaded() returns True when LLM is loaded."""
-        sample_mode_config.cortex_llm = mock_llm
-        assert sample_mode_config.is_loaded() is True
-
-    def test_is_loaded_true_with_actions(self, sample_mode_config, mock_action):
-        """Test is_loaded() returns True when actions are loaded."""
-        sample_mode_config.agent_actions = [mock_action]
-        assert sample_mode_config.is_loaded() is True
-
     @patch("runtime.config._load_mode_components")
     def test_load_components(
         self, mock_load_components, sample_mode_config, sample_system_config

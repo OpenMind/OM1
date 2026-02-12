@@ -2,10 +2,9 @@ import copy
 
 import pytest
 
-from runtime.config import (
-    _validate_normalized,
-    is_single_mode,
-    normalize_to_multi_mode,
+from runtime.converter import (
+    ConfigConverter,
+    convert_to_multi_mode,
 )
 
 SINGLE_MODE_CONFIG = {
@@ -54,31 +53,31 @@ MULTI_MODE_CONFIG = {
 
 class TestIsSingleMode:
     def test_single_mode_detected(self):
-        assert is_single_mode(SINGLE_MODE_CONFIG) is True
+        assert ConfigConverter.is_single_mode(SINGLE_MODE_CONFIG) is True
 
     def test_multi_mode_detected(self):
-        assert is_single_mode(MULTI_MODE_CONFIG) is False
+        assert ConfigConverter.is_single_mode(MULTI_MODE_CONFIG) is False
 
     def test_partial_keys_treated_as_single(self):
         """Config with 'modes' but no 'default_mode' is still single-mode."""
         partial = {"modes": {}, "name": "partial"}
-        assert is_single_mode(partial) is True
+        assert ConfigConverter.is_single_mode(partial) is True
 
     def test_empty_config_is_single(self):
-        assert is_single_mode({}) is True
+        assert ConfigConverter.is_single_mode({}) is True
 
 
-class TestNormalizeToMultiMode:
+class TestConvertToMultiMode:
     def test_multi_mode_passthrough(self):
         """Multi-mode configs should be returned unchanged."""
         original = copy.deepcopy(MULTI_MODE_CONFIG)
-        result = normalize_to_multi_mode(MULTI_MODE_CONFIG)
+        result = convert_to_multi_mode(MULTI_MODE_CONFIG)
         assert result == original
         assert result is MULTI_MODE_CONFIG
 
     def test_single_mode_conversion(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
 
         # Top-level structure
         assert "modes" in result
@@ -88,7 +87,7 @@ class TestNormalizeToMultiMode:
 
     def test_global_fields_promoted(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
 
         assert result["api_key"] == "test_key"
         assert result["robot_ip"] == "192.168.1.1"
@@ -99,7 +98,7 @@ class TestNormalizeToMultiMode:
 
     def test_mode_fields_nested(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
         mode = result["modes"]["test_robot"]
 
         assert mode["hertz"] == 2.0
@@ -113,7 +112,7 @@ class TestNormalizeToMultiMode:
 
     def test_cortex_llm_at_both_levels(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
 
         assert result["cortex_llm"] == {"type": "TestLLM", "model": "test-model"}
         assert result["modes"]["test_robot"]["cortex_llm"] == {
@@ -123,20 +122,20 @@ class TestNormalizeToMultiMode:
 
     def test_manual_switching_disabled(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
 
         assert result["allow_manual_switching"] is False
         assert result["mode_memory_enabled"] is False
 
     def test_transition_rules_empty(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
 
         assert result["transition_rules"] == []
 
     def test_default_name_fallback(self):
         config = {"version": "0.1.0"}
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
 
         assert result["default_mode"] == "default"
         assert "default" in result["modes"]
@@ -146,7 +145,7 @@ class TestNormalizeToMultiMode:
             "name": "minimal",
             "version": "0.1.0",
         }
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
         mode = result["modes"]["minimal"]
 
         # Global defaults
@@ -167,35 +166,35 @@ class TestNormalizeToMultiMode:
         assert mode["action_dependencies"] == {}
 
 
-class TestValidateNormalized:
+class TestValidateConverted:
     def test_valid_config_passes(self):
         config = copy.deepcopy(SINGLE_MODE_CONFIG)
-        result = normalize_to_multi_mode(config)
+        result = convert_to_multi_mode(config)
         # Should not raise
-        _validate_normalized(result, "test_robot")
+        ConfigConverter._validate(result, "test_robot")
 
     def test_missing_modes_raises(self):
         with pytest.raises(ValueError, match="modes"):
-            _validate_normalized({"default_mode": "x"}, "x")
+            ConfigConverter._validate({"default_mode": "x"}, "x")
 
     def test_missing_default_mode_raises(self):
         with pytest.raises(ValueError, match="default_mode"):
-            _validate_normalized({"modes": {"x": {}}}, "x")
+            ConfigConverter._validate({"modes": {"x": {}}}, "x")
 
     def test_mode_name_mismatch_raises(self):
         with pytest.raises(ValueError, match="not in modes"):
-            _validate_normalized({"modes": {"a": {}}, "default_mode": "b"}, "b")
+            ConfigConverter._validate({"modes": {"a": {}}, "default_mode": "b"}, "b")
 
     def test_missing_display_name_raises(self):
         with pytest.raises(ValueError, match="display_name"):
-            _validate_normalized(
+            ConfigConverter._validate(
                 {"modes": {"x": {"description": "test"}}, "default_mode": "x"},
                 "x",
             )
 
     def test_missing_description_raises(self):
         with pytest.raises(ValueError, match="description"):
-            _validate_normalized(
+            ConfigConverter._validate(
                 {"modes": {"x": {"display_name": "X"}}, "default_mode": "x"},
                 "x",
             )
