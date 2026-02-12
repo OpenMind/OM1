@@ -246,18 +246,26 @@ class LLMHistoryManager:
                         logging.error(
                             f"Summarization failed: {summary_message.content}"
                         )
-                        messages.pop(0) if messages else None
-                        messages.pop(0) if messages else None
+                        target_length = self.config.history_length
+                        if target_length is not None and len(messages) > target_length:
+                            excess = len(messages) - target_length
+                            del messages[:excess]
+                            logging.warning(
+                                f"Truncated {excess} oldest messages to maintain history_length={target_length}"
+                            )
                     else:
                         logging.warning(f"Unexpected summary result: {summary_message}")
-                except asyncio.CancelledError:
-                    logging.warning("Summary task callback cancelled")
                 except Exception as e:
                     logging.error(
                         f"Error in summary task callback: {type(e).__name__}: {e}"
                     )
-                    messages.pop(0) if messages else None
-                    messages.pop(0) if messages else None
+                    target_length = self.config.history_length
+                    if target_length is not None and len(messages) > target_length:
+                        excess = len(messages) - target_length
+                        del messages[:excess]
+                        logging.warning(
+                            f"Truncated {excess} oldest messages after exception"
+                        )
 
             self._summary_task.add_done_callback(callback)
 
@@ -360,6 +368,15 @@ class LLMHistoryManager:
                         await self.history_manager.start_summary_task(
                             self.history_manager.history
                         )
+                else:
+                    if (
+                        self.history_manager.history
+                        and self.history_manager.history[-1].role == "user"
+                    ):
+                        logging.warning(
+                            "LLM response failed, removing unpaired user message"
+                        )
+                        self.history_manager.history.pop()
 
                 self.history_manager.frame_index += 1
 

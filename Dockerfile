@@ -79,7 +79,9 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'echo "Audio device default_output_aec is ready."' >> /entrypoint.sh && \
     echo 'echo "Starting main command..."' >> /entrypoint.sh && \
-    echo 'if [ -f "/app/OM1/config/memory/.runtime.json5" ]; then' >> /entrypoint.sh && \
+    echo 'if [ -n "${OM1_COMMAND}" ]; then' >> /entrypoint.sh && \
+    echo '  exec python src/run.py "${OM1_COMMAND}"' >> /entrypoint.sh && \
+    echo 'elif [ -f "/app/OM1/config/memory/.runtime.json5" ]; then' >> /entrypoint.sh && \
     echo '  exec python src/run.py' >> /entrypoint.sh && \
     echo 'else' >> /entrypoint.sh && \
     echo '  exec python src/run.py "$@"' >> /entrypoint.sh && \
