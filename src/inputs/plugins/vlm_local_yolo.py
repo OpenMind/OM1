@@ -87,13 +87,16 @@ def check_webcam(index_to_check):
     """
     cap = cv2.VideoCapture(index_to_check)
     if not cap.isOpened():
-        logging.error(f"YOLO did not find cam: {index_to_check}")
-        return 0, 0
+    logging.error(f"YOLO did not find cam: {index_to_check}")
+    cap.release()
+    return 0, 0
 
-    # Set the best available resolution
-    width, height = set_best_resolution(cap, RESOLUTIONS)
-    logging.info(f"YOLO found cam: {index_to_check} set to {width}{height}")
-    return width, height
+# Set the best available resolution
+width, height = set_best_resolution(cap, RESOLUTIONS)
+cap.release()
+logging.info(f"YOLO found cam: {index_to_check} set to {width}x{height}")
+return width, height
+
 
 
 class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
