@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Chat Watcher Utility
-====================
+Chat Watcher Utility.
 
 A standalone script to filter, colorize, and rotate logs from the OM1 runtime.
 Designed to be used with the ConsoleInput plugin for a clean "chat-like" experience
@@ -12,9 +11,7 @@ Usage:
 """
 
 import sys
-import re
 import os
-import shutil
 from datetime import datetime
 
 # Configuration
