@@ -83,7 +83,7 @@ class TestSpeakElevenLabsTTSConfig:
         assert config.elevenlabs_api_key is None
         assert config.voice_id == "JBFqnCBsd6RMkjVDRZzb"
         assert config.model_id == "eleven_flash_v2_5"
-        assert config.output_format == "mp3_44100_128"
+        assert config.output_format == "pcm_16000"
         assert config.silence_rate == 0
 
     def test_custom_config(self):

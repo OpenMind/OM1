@@ -72,13 +72,15 @@ class ZenohListenerProvider:
         """
         Stop the listener provider and clean up resources.
 
-        Stops the background thread and closes the Zenoh session.
-
-        Notes
-        -----
-        The thread join operation uses a 5-second timeout to prevent hanging.
+        Closes the Zenoh session safely with error handling.
         """
         self.running = False
 
         if self.session is not None:
-            self.session.close()
+            try:
+                self.session.close()
+                logging.info("Zenoh Listener Provider stopped")
+            except Exception as e:
+                logging.error(f"Error closing Zenoh session: {e}")
+            finally:
+                self.session = None
