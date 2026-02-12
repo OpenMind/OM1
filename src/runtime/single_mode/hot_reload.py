@@ -349,6 +349,54 @@ class HotReloadManager:
             if len(self._change_history) > self._max_history:
                 self._change_history = self._change_history[-self._max_history :]
 
+    def apply_changes(
+        self, config: Dict[str, Any], changes: List[ConfigChange]
+    ) -> Dict[str, bool]:
+        """
+        Apply validated hot-reloadable changes to configuration.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration dictionary to modify in-place
+        changes : List[ConfigChange]
+            List of validated changes to apply
+
+        Returns
+        -------
+        Dict[str, bool]
+            Map of field_path -> success status
+        """
+        results = {}
+
+        for change in changes:
+            if change.strategy == ReloadStrategy.RESTART_REQUIRED:
+                results[change.field_path] = False
+                logging.warning(
+                    f"Cannot hot-reload '{change.field_path}': restart required"
+                )
+                continue
+
+            try:
+                # Use lock only for individual operations
+                with self._lock:
+                    self._set_nested_value(config, change.field_path, change.new_value)
+
+                # Track change separately (it has its own lock)
+                self.track_change(change)
+
+                results[change.field_path] = True
+                logging.info(
+                    f"Applied hot-reload: {change.field_path} = {change.new_value}"
+                )
+            except Exception as e:
+                logging.error(
+                    f"Failed to apply hot-reload for '{change.field_path}': {e}"
+                )
+                results[change.field_path] = False
+
+        return results
+
     def get_change_history(self, limit: int = 10) -> List[ConfigChange]:
         """
         Get recent change history.
@@ -395,26 +443,26 @@ class HotReloadManager:
 
         return value
 
-    # Reserved for future dynamic config updates
-    # def _set_nested_value(self, config: Dict[str, Any], path: str, value: Any):
-    #     """
-    #     Set a value in nested dictionary using dot notation.
-    #
-    #     Parameters
-    #     ----------
-    #     config : dict
-    #         Configuration dictionary to modify
-    #     path : str
-    #         Dot-separated path
-    #     value : Any
-    #         Value to set
-    #     """
-    #     keys = path.split(".")
-    #     current = config
-    #
-    #     for key in keys[:-1]:
-    #         if key not in current:
-    #             current[key] = {}
-    #         current = current[key]
-    #
-    #     current[keys[-1]] = value
+    def _set_nested_value(self, config: Dict[str, Any], path: str, value: Any):
+        """
+        Set a value in nested dictionary using dot notation.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration dictionary to modify
+        path : str
+            Dot-separated path
+        value : Any
+            Value to set
+        """
+        keys = path.split(".")
+        current = config
+
+        for key in keys[:-1]:
+            if key not in current:
+                current[key] = {}
+            current = current[key]
+
+        current[keys[-1]] = value
+        logging.debug(f"Set nested value: {path} = {value}")
