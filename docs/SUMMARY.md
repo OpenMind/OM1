@@ -36,6 +36,7 @@
 ## Simulators <a href="#simulators" id="simulators"></a>
 
 * [Gazebo](simulators/gazebo.md)
+* [Isaac Sim](simulators/isaac-sim.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
 
