@@ -4,7 +4,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
-from runtime.multi_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 
 
 class BackgroundOrchestrator:

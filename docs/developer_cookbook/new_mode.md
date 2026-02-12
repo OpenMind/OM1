@@ -112,8 +112,8 @@ Add to the transition_rules section:
 
 If "new_mode" should be the starting mode, define
 
-    ```bash
-    "default_mode": "new_mode"
-    ```
+```bash
+"default_mode": "new_mode"
+```
 
 Now, your new mode is ready to be tested. Deploy it directly on your robot or configure it through the docker_compose file!
