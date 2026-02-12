@@ -655,6 +655,289 @@ class TestModeCortexRuntimeHotReload:
             runtime._stop_current_orchestrators.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_reload_config_no_changes_detected(self, mock_system_config, caplog):
+        """Test reload when no registered fields changed - returns early."""
+        import logging
+
+        mock_mode = Mock()
+        mock_system_config.modes = {"test_mode": mock_mode}
+
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+            patch("runtime.config.mode_config_to_dict", return_value={}),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            new_mock_config = Mock(spec=ModeSystemConfig)
+            new_mock_config.modes = {"test_mode": mock_mode}
+            mock_load_config.return_value = new_mock_config
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.hot_reload_manager = Mock()
+            runtime.hot_reload_manager.detect_changes = Mock(return_value=[])
+            runtime._stop_current_orchestrators = AsyncMock()
+
+            with caplog.at_level(logging.INFO):
+                await runtime._reload_config()
+
+            assert "no registered fields modified" in caplog.text.lower()
+            runtime._stop_current_orchestrators.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_reload_config_selective_hot_reload(self, mock_system_config, caplog):
+        """Test selective hot-reload for system_prompt change."""
+        import logging
+
+        mock_system_config.modes = {"test_mode": Mock()}
+        from runtime.hot_reload import ConfigChange, ReloadStrategy
+
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+            patch("runtime.config.mode_config_to_dict", return_value={}),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            new_mock_config = Mock(spec=ModeSystemConfig)
+            new_mock_config.modes = {"test_mode": Mock()}
+            mock_load_config.return_value = new_mock_config
+
+            change = ConfigChange(
+                field_path="system_prompt_base",
+                old_value="old prompt",
+                new_value="new prompt",
+                strategy=ReloadStrategy.HOT_RELOAD,
+            )
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.hot_reload_manager = Mock()
+            runtime.hot_reload_manager.detect_changes = Mock(return_value=[change])
+            runtime.hot_reload_manager.categorize_changes = Mock(
+                return_value={
+                    ReloadStrategy.RESTART_REQUIRED: [],
+                    ReloadStrategy.VALIDATE_FIRST: [],
+                    ReloadStrategy.HOT_RELOAD: [change],
+                }
+            )
+            runtime.hot_reload_manager.track_change = Mock()
+
+            mock_current_config = Mock()
+            runtime.current_config = mock_current_config
+
+            with patch("runtime.cortex.Fuser") as mock_fuser_class:
+                with caplog.at_level(logging.INFO):
+                    await runtime._reload_config()
+
+            mock_fuser_class.assert_called_once_with(mock_current_config)
+            runtime.hot_reload_manager.track_change.assert_called_once_with(change)
+            assert "selective hot-reload completed" in caplog.text.lower()
+
+    @pytest.mark.asyncio
+    async def test_reload_config_validate_first_success(self, mock_system_config):
+        """Test selective hot-reload with VALIDATE_FIRST strategy passing."""
+        mock_system_config.modes = {"test_mode": Mock()}
+        from runtime.hot_reload import ConfigChange, ReloadStrategy
+
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+            patch("runtime.config.mode_config_to_dict", return_value={}),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            new_mock_config = Mock(spec=ModeSystemConfig)
+            new_mock_config.modes = {"test_mode": Mock()}
+            mock_load_config.return_value = new_mock_config
+
+            change = ConfigChange(
+                field_path="cortex_llm.config.temperature",
+                old_value=0.7,
+                new_value=0.9,
+                strategy=ReloadStrategy.VALIDATE_FIRST,
+            )
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.hot_reload_manager = Mock()
+            runtime.hot_reload_manager.detect_changes = Mock(return_value=[change])
+            runtime.hot_reload_manager.categorize_changes = Mock(
+                return_value={
+                    ReloadStrategy.RESTART_REQUIRED: [],
+                    ReloadStrategy.VALIDATE_FIRST: [change],
+                    ReloadStrategy.HOT_RELOAD: [],
+                }
+            )
+            runtime.hot_reload_manager.validate_changes = Mock(
+                return_value={"cortex_llm.config.temperature": True}
+            )
+            runtime.hot_reload_manager.track_change = Mock()
+
+            mock_action_orch = Mock()
+            mock_action_orch.update_config = Mock()
+            runtime.action_orchestrator = mock_action_orch
+            runtime.current_config = Mock()
+
+            await runtime._reload_config()
+
+            mock_action_orch.update_config.assert_called_once()
+            runtime.hot_reload_manager.track_change.assert_called_once_with(change)
+
+    @pytest.mark.asyncio
+    async def test_reload_config_validate_first_failure(
+        self, mock_system_config, caplog
+    ):
+        """Test selective hot-reload aborts when validation fails."""
+        import logging
+
+        mock_system_config.modes = {"test_mode": Mock()}
+        from runtime.hot_reload import ConfigChange, ReloadStrategy
+
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+            patch("runtime.config.mode_config_to_dict", return_value={}),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            new_mock_config = Mock(spec=ModeSystemConfig)
+            new_mock_config.modes = {"test_mode": Mock()}
+            mock_load_config.return_value = new_mock_config
+
+            change = ConfigChange(
+                field_path="cortex_llm.config.temperature",
+                old_value=0.7,
+                new_value=5.0,
+                strategy=ReloadStrategy.VALIDATE_FIRST,
+            )
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.hot_reload_manager = Mock()
+            runtime.hot_reload_manager.detect_changes = Mock(return_value=[change])
+            runtime.hot_reload_manager.categorize_changes = Mock(
+                return_value={
+                    ReloadStrategy.RESTART_REQUIRED: [],
+                    ReloadStrategy.VALIDATE_FIRST: [change],
+                    ReloadStrategy.HOT_RELOAD: [],
+                }
+            )
+            runtime.hot_reload_manager.validate_changes = Mock(
+                return_value={"cortex_llm.config.temperature": False}
+            )
+            runtime._stop_current_orchestrators = AsyncMock()
+
+            with caplog.at_level(logging.ERROR):
+                await runtime._reload_config()
+
+            assert "validation failed" in caplog.text.lower()
+            runtime._stop_current_orchestrators.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_reload_config_restart_required(self, mock_system_config, caplog):
+        """Test reload triggers full restart when RESTART_REQUIRED changes detected."""
+        import logging
+
+        mock_system_config.modes = {"test_mode": Mock()}
+        from runtime.hot_reload import ConfigChange, ReloadStrategy
+
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+            patch("runtime.config.mode_config_to_dict", return_value={}),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager.state = Mock()
+            mock_manager.state.transition_history = []
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            new_mock_config = Mock(spec=ModeSystemConfig)
+            new_mock_config.default_mode = "test_mode"
+            new_mock_config.modes = {"test_mode": Mock()}
+            mock_load_config.return_value = new_mock_config
+
+            change = ConfigChange(
+                field_path="hertz",
+                old_value=10,
+                new_value=20,
+                strategy=ReloadStrategy.RESTART_REQUIRED,
+            )
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.hot_reload_manager = Mock()
+            runtime.hot_reload_manager.detect_changes = Mock(return_value=[change])
+            runtime.hot_reload_manager.categorize_changes = Mock(
+                return_value={
+                    ReloadStrategy.RESTART_REQUIRED: [change],
+                    ReloadStrategy.VALIDATE_FIRST: [],
+                    ReloadStrategy.HOT_RELOAD: [],
+                }
+            )
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+
+            with caplog.at_level(logging.WARNING):
+                await runtime._reload_config()
+
+            assert "restart required" in caplog.text.lower()
+            runtime._stop_current_orchestrators.assert_called_once()
+            runtime._initialize_mode.assert_called_once()
+            runtime._start_orchestrators.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_run_with_hot_reload_enabled(self, mock_system_config):
         """Test run method with hot reload enabled."""
         with (
