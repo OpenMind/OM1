@@ -22,7 +22,7 @@ class ConfigConverter:
         return "modes" not in raw_config or "default_mode" not in raw_config
 
     @staticmethod
-    def convert(raw_config: dict) -> dict:
+    def convert_to_multi_mode(raw_config: dict) -> dict:
         """Convert a single-mode config to multi-mode format.
 
         If the config is already multi-mode, return it unchanged.
@@ -153,4 +153,4 @@ class ConfigConverter:
         logging.info(f"Conversion validated: config '{mode_name}'")
 
 
-convert_to_multi_mode = ConfigConverter.convert
+convert_to_multi_mode = ConfigConverter.convert_to_multi_mode
