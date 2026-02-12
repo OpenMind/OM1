@@ -201,7 +201,7 @@ Lidar:
 uv run system_hw_test/go2_lidar.py en0
 ```
 
-Note - the internal Go2 LIDAR is currently not used - a separate RPLIDAR mounted to the top of the dog's head is used instead.
+> **Note**: the internal Go2 LIDAR is currently not used - a separate RPLIDAR mounted to the top of the dog's head is used instead.
 
 ## Minimal Quadruped Functionality
 
