@@ -23,8 +23,8 @@ class ElevenLabsTTSProvider:
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
-        output_format: Optional[str] = "mp3_44100_128",
-        rate: int = 44100,
+        output_format: Optional[str] = "pcm_16000",
+        rate: Optional[int] = 16000,
         enable_tts_interrupt: bool = False,
     ):
         """
@@ -52,8 +52,11 @@ class ElevenLabsTTSProvider:
             The ID/name of the model to use for TTS synthesis.
             Defaults to "eleven_flash_v2_5".
         output_format : str, optional
-            The desired audio output format (e.g., mp3_44100_128, wav).
-            Defaults to "mp3_44100_128".
+            The desired audio output format (e.g., pcm_16000, wav).
+            Defaults to "pcm_16000".
+        rate : int, optional
+            The audio sample rate in Hz.
+            Defaults to 16000.
         enable_tts_interrupt : bool, optional
             If True, enables the ability to interrupt ongoing TTS playback when ASR
             detects new speech input. Defaults to False.
@@ -72,7 +75,11 @@ class ElevenLabsTTSProvider:
             rate=rate,
             api_key=api_key,
             enable_tts_interrupt=enable_tts_interrupt,
-            extra_headers={"x-elevenlabs-api-key": self.elevenlabs_api_key} if self.elevenlabs_api_key else None,
+            extra_body=(
+                {"elevenlabs_api_key": self.elevenlabs_api_key}
+                if self.elevenlabs_api_key
+                else None
+            ),
         )
 
         # Set Eleven Labs TTS parameters
@@ -88,8 +95,8 @@ class ElevenLabsTTSProvider:
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
-        output_format: Optional[str] = "mp3_44100_128",
-        rate: Optional[int] = 44100,
+        output_format: Optional[str] = "pcm_16000",
+        rate: Optional[int] = 16000,
         enable_tts_interrupt: bool = False,
     ):
         """
@@ -109,6 +116,8 @@ class ElevenLabsTTSProvider:
             The name of the model for Eleven Labs TTS service.
         output_format : str, optional
             The output format for the audio stream.
+        rate : int, optional
+            The audio sample rate in Hz. If None, it inferred from output_format.
         enable_tts_interrupt : bool
             If True, enables TTS interrupt when ASR detects speech.
         """
@@ -145,7 +154,11 @@ class ElevenLabsTTSProvider:
             rate=rate,
             enable_tts_interrupt=enable_tts_interrupt,
             api_key=api_key,
-            extra_headers={"x-elevenlabs-api-key": self.elevenlabs_api_key} if self.elevenlabs_api_key else None,
+            extra_body=(
+                {"elevenlabs_api_key": self.elevenlabs_api_key}
+                if self.elevenlabs_api_key
+                else None
+            ),
         )
         self._audio_stream.start()
 

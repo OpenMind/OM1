@@ -298,7 +298,7 @@ class MessageHookHandler(LifecycleHookHandler):
                 elevenlabs_api_key=self.config.elevenlabs_api_key,
                 voice_id=self.config.voice_id or "JBFqnCBsd6RMkjVDRZzb",
                 model_id=self.config.model_id or "eleven_flash_v2_5",
-                output_format=self.config.output_format or "mp3_44100_128",
+                output_format=self.config.output_format or "pcm_16000",
                 enable_tts_interrupt=self.config.enable_tts_interrupt,
             )
         elif provider_type == "kokoro":

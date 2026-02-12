@@ -53,7 +53,7 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
         description="ElevenLabs model ID",
     )
     output_format: str = Field(
-        default="mp3_44100_128",
+        default="pcm_16000",
         description="ElevenLabs output format",
     )
     silence_rate: int = Field(
