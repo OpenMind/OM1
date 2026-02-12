@@ -108,7 +108,7 @@ def test_configure_restart_needed_output_format_change():
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
-        provider.configure(output_format="pcm_16000")
+        provider.configure(output_format="pcm_44100")
         mock_stop.assert_called_once()
 
 

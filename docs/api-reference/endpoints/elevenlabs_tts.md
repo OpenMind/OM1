@@ -41,7 +41,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 | `input` | string | Yes | - | The text to convert to speech |
 | `voice` | string or object | No | `JBFqnCBsd6RMkjVDRZzb` | ElevenLabs voice ID (string) or voice object |
 | `model` | string | No | `eleven_flash_v2_5` | ElevenLabs model ID to use for synthesis |
-| `response_format` | string | No | `mp3_44100_128` | Audio output format specification (Note: "sse" is not supported) |
+| `response_format` | string | No | `mp3_44100_128` | Audio output format specification |
 | `speed` | float | No | `1.0` | Speech speed multiplier (0.5 - 2.0) |
 | `elevenlabs_api_key` | string | No | - | Optional ElevenLabs API key override |
 

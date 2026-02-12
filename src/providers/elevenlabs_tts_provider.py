@@ -69,16 +69,16 @@ class ElevenLabsTTSProvider:
         self.running: bool = False
         self._audio_stream: AudioOutputLiveStream = AudioOutputLiveStream(
             url=url,
-            tts_model=model_id,
-            tts_voice=voice_id,
-            response_format=output_format,
-            rate=rate,
+            tts_model=model_id or "eleven_flash_v2_5",
+            tts_voice=voice_id or "JBFqnCBsd6RMkjVDRZzb",
+            response_format=output_format or "pcm_16000",
+            rate=rate or 16000,
             api_key=api_key,
             enable_tts_interrupt=enable_tts_interrupt,
             extra_body=(
                 {"elevenlabs_api_key": self.elevenlabs_api_key}
                 if self.elevenlabs_api_key
-                else None
+                else {}
             ),
         )
 
@@ -117,7 +117,8 @@ class ElevenLabsTTSProvider:
         output_format : str, optional
             The output format for the audio stream.
         rate : int, optional
-            The audio sample rate in Hz. If None, it inferred from output_format.
+            The audio sample rate in Hz.
+            Defaults to 16000.
         enable_tts_interrupt : bool
             If True, enables TTS interrupt when ASR detects speech.
         """
@@ -148,16 +149,16 @@ class ElevenLabsTTSProvider:
 
         self._audio_stream: AudioOutputLiveStream = AudioOutputLiveStream(
             url=url,
-            tts_model=model_id,
-            tts_voice=voice_id,
-            response_format=output_format,
-            rate=rate,
+            tts_model=model_id or "eleven_flash_v2_5",
+            tts_voice=voice_id or "JBFqnCBsd6RMkjVDRZzb",
+            response_format=output_format or "pcm_16000",
+            rate=rate or 16000,
             enable_tts_interrupt=enable_tts_interrupt,
             api_key=api_key,
             extra_body=(
                 {"elevenlabs_api_key": self.elevenlabs_api_key}
                 if self.elevenlabs_api_key
-                else None
+                else {}
             ),
         )
         self._audio_stream.start()
