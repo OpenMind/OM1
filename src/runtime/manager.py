@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional
 import json5
 import zenoh
 
-from runtime.multi_mode.config import (
+from runtime.config import (
     LifecycleHookType,
     ModeConfig,
     ModeSystemConfig,
@@ -125,7 +125,7 @@ class ModeManager:
             The absolute path to the runtime config file
         """
         memory_folder_path = os.path.join(
-            os.path.dirname(__file__), "../../../config", "memory"
+            os.path.dirname(__file__), "../../config", "memory"
         )
         if not os.path.exists(memory_folder_path):
             os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)
@@ -858,7 +858,7 @@ class ModeManager:
             The absolute path to the state file
         """
         memory_folder_path = os.path.join(
-            os.path.dirname(__file__), "../../../config", "memory"
+            os.path.dirname(__file__), "../../config", "memory"
         )
         if not os.path.exists(memory_folder_path):
             os.makedirs(memory_folder_path, mode=0o755, exist_ok=True)

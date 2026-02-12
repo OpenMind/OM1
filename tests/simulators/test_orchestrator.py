@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from llm.output_model import Action
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 from simulators.base import Simulator, SimulatorConfig
 from simulators.orchestrator import SimulatorOrchestrator
 
