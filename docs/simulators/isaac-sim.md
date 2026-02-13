@@ -259,7 +259,7 @@ Step 7: Open a new terminal and run:
 ```bash
 export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
 source install/setup.bash
-ros2 launch orchestrator orchestrator.py use_sim:=true
+ros2 launch orchestrator orchestrator_launch.py use_sim:=true
 ```
 
 This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
