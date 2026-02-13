@@ -38,18 +38,6 @@
 * [Gazebo](simulators/gazebo.md)
 * [Isaac Sim](simulators/isaac-sim.md)
 
-## API References <a href="#api-reference" id="api-reference"></a>
-
-* [API Reference](api-reference/introduction.md)
-* [Subscription Plans](api-reference/api_pricing.md)
-* [API Endpoints](api-reference/endpoints/google_asr.md)
-    * [Google ASR](api-reference/endpoints/google_asr.md)
-    * [Account & Key Management](api-reference/endpoints/account_and_key_management.md)
-    * [ElevenLabs TTS](api-reference/endpoints/elevenlabs_tts.md)
-    * [LLM](api-reference/endpoints/llm.md)
-    * [Riva](api-reference/endpoints/riva.md)
-    * [ViLA VLM](api-reference/endpoints/vila_vlm.md)
-
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
@@ -63,6 +51,18 @@
     * [Transition Rules](full_autonomy_guidelines/transition_rules.md)
     * [Lifecycle](full_autonomy_guidelines/lifecycle.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
+
+## API References <a href="#api-reference" id="api-reference"></a>
+
+* [API Reference](api-reference/introduction.md)
+* [Subscription Plans](api-reference/api_pricing.md)
+* [API Endpoints](api-reference/endpoints/google_asr.md)
+    * [Google ASR](api-reference/endpoints/google_asr.md)
+    * [Account & Key Management](api-reference/endpoints/account_and_key_management.md)
+    * [ElevenLabs TTS](api-reference/endpoints/elevenlabs_tts.md)
+    * [LLM](api-reference/endpoints/llm.md)
+    * [Riva](api-reference/endpoints/riva.md)
+    * [ViLA VLM](api-reference/endpoints/vila_vlm.md)
 
 ## Release Notes <a href="#release-notes" id="release-notes"></a>
 
