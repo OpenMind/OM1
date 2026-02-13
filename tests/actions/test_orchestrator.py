@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -30,10 +30,6 @@ class MockInterface(Interface[MockInput, MockOutput]):
 
 
 class MockConnector(ActionConnector[ActionConfig, MockInput]):
-    """
-    Mock connector that tracks execution order and timing.
-    """
-
     execution_order: List[str] = []
     execution_times: Dict[str, float] = {}
 
@@ -44,30 +40,24 @@ class MockConnector(ActionConnector[ActionConfig, MockInput]):
         self.tick_count = 0
 
     async def connect(self, output_interface: MockInput) -> None:
-        """Record when this action executes."""
         MockConnector.execution_order.append(self.action_name)
         MockConnector.execution_times[self.action_name] = (
             asyncio.get_event_loop().time()
         )
-
         self.connected_values.append(output_interface.action)
-
         await asyncio.sleep(0.01)
 
     def tick(self):
-        """Background connector tick."""
         self.tick_count += 1
 
     @classmethod
     def reset(cls):
-        """Reset class-level tracking."""
         cls.execution_order = []
         cls.execution_times = {}
 
 
 @pytest.fixture
 def mock_runtime_config():
-    """Create a mock RuntimeConfig for testing."""
     config = MagicMock(spec=RuntimeConfig)
     config.action_execution_mode = "concurrent"
     config.action_dependencies = {}
@@ -77,8 +67,6 @@ def mock_runtime_config():
 
 @pytest.fixture
 def create_agent_action():
-    """Factory to create test agent actions."""
-
     def _create(name: str, llm_label: str) -> AgentAction:
         connector = MockConnector(ActionConfig(), name)
         return AgentAction(
@@ -93,22 +81,17 @@ def create_agent_action():
 
 
 class TestActionOrchestratorConcurrent:
-    """Test concurrent execution mode (default)."""
-
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Reset mock connector state before each test."""
         MockConnector.reset()
 
     @pytest.mark.asyncio
     async def test_concurrent_execution_all_start_together(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that concurrent mode starts all actions at the same time."""
         action1 = create_agent_action("move", "move")
         action2 = create_agent_action("speak", "speak")
         action3 = create_agent_action("gesture", "gesture")
-
         mock_runtime_config.agent_actions = [action1, action2, action3]
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
@@ -117,7 +100,6 @@ class TestActionOrchestratorConcurrent:
             Action(type="speak", value="hello"),
             Action(type="gesture", value="wave"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
@@ -128,10 +110,8 @@ class TestActionOrchestratorConcurrent:
     async def test_concurrent_execution_timing(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that concurrent actions start almost simultaneously."""
         action1 = create_agent_action("action1", "action1")
         action2 = create_agent_action("action2", "action2")
-
         mock_runtime_config.agent_actions = [action1, action2]
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
@@ -139,7 +119,6 @@ class TestActionOrchestratorConcurrent:
             Action(type="action1", value="test1"),
             Action(type="action2", value="test2"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
@@ -150,25 +129,19 @@ class TestActionOrchestratorConcurrent:
 
 
 class TestActionOrchestratorSequential:
-    """Test sequential execution mode."""
-
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Reset mock connector state before each test."""
         MockConnector.reset()
 
     @pytest.mark.asyncio
     async def test_sequential_execution_order(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that sequential mode executes actions in order."""
         action1 = create_agent_action("first", "first")
         action2 = create_agent_action("second", "second")
         action3 = create_agent_action("third", "third")
-
         mock_runtime_config.agent_actions = [action1, action2, action3]
         mock_runtime_config.action_execution_mode = "sequential"
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [
@@ -176,7 +149,6 @@ class TestActionOrchestratorSequential:
             Action(type="second", value="2"),
             Action(type="third", value="3"),
         ]
-
         await orchestrator.promise(actions)
 
         assert MockConnector.execution_order == ["first", "second", "third"]
@@ -185,20 +157,16 @@ class TestActionOrchestratorSequential:
     async def test_sequential_execution_timing(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that sequential actions execute one after another."""
         action1 = create_agent_action("action1", "action1")
         action2 = create_agent_action("action2", "action2")
-
         mock_runtime_config.agent_actions = [action1, action2]
         mock_runtime_config.action_execution_mode = "sequential"
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [
             Action(type="action1", value="test1"),
             Action(type="action2", value="test2"),
         ]
-
         await orchestrator.promise(actions)
 
         time1 = MockConnector.execution_times["action1"]
@@ -209,12 +177,9 @@ class TestActionOrchestratorSequential:
     async def test_sequential_with_single_action(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test sequential mode with just one action."""
         action = create_agent_action("solo", "solo")
-
         mock_runtime_config.agent_actions = [action]
         mock_runtime_config.action_execution_mode = "sequential"
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [Action(type="solo", value="alone")]
@@ -224,32 +189,25 @@ class TestActionOrchestratorSequential:
 
 
 class TestActionOrchestratorDependencies:
-    """Test dependency-based execution mode."""
-
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Reset mock connector state before each test."""
         MockConnector.reset()
 
     @pytest.mark.asyncio
     async def test_simple_dependency_chain(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test simple dependency: B depends on A."""
         action_a = create_agent_action("action_a", "action_a")
         action_b = create_agent_action("action_b", "action_b")
-
         mock_runtime_config.agent_actions = [action_a, action_b]
         mock_runtime_config.action_execution_mode = "dependencies"
         mock_runtime_config.action_dependencies = {"action_b": ["action_a"]}
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [
             Action(type="action_b", value="second"),
             Action(type="action_a", value="first"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
@@ -261,15 +219,12 @@ class TestActionOrchestratorDependencies:
     async def test_multiple_dependencies(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test action waiting for multiple dependencies."""
         action_a = create_agent_action("action_a", "action_a")
         action_b = create_agent_action("action_b", "action_b")
         action_c = create_agent_action("action_c", "action_c")
-
         mock_runtime_config.agent_actions = [action_a, action_b, action_c]
         mock_runtime_config.action_execution_mode = "dependencies"
         mock_runtime_config.action_dependencies = {"action_c": ["action_a", "action_b"]}
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [
@@ -277,14 +232,12 @@ class TestActionOrchestratorDependencies:
             Action(type="action_b", value="middle"),
             Action(type="action_a", value="first"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
         c_index = MockConnector.execution_order.index("action_c")
         a_index = MockConnector.execution_order.index("action_a")
         b_index = MockConnector.execution_order.index("action_b")
-
         assert c_index > a_index
         assert c_index > b_index
 
@@ -292,15 +245,12 @@ class TestActionOrchestratorDependencies:
     async def test_parallel_with_dependencies(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that independent actions can run in parallel while respecting dependencies."""
         action_a = create_agent_action("action_a", "action_a")
         action_b = create_agent_action("action_b", "action_b")
         action_c = create_agent_action("action_c", "action_c")
-
         mock_runtime_config.agent_actions = [action_a, action_b, action_c]
         mock_runtime_config.action_execution_mode = "dependencies"
         mock_runtime_config.action_dependencies = {"action_c": ["action_b"]}
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [
@@ -308,14 +258,12 @@ class TestActionOrchestratorDependencies:
             Action(type="action_b", value="prerequisite"),
             Action(type="action_c", value="dependent"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
         time_a = MockConnector.execution_times["action_a"]
         time_b = MockConnector.execution_times["action_b"]
         time_c = MockConnector.execution_times["action_c"]
-
         assert abs(time_a - time_b) < 0.001
         assert time_c > time_b + 0.009
 
@@ -323,19 +271,16 @@ class TestActionOrchestratorDependencies:
     async def test_complex_dependency_graph(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test complex dependency graph: finale depends on gesture, gesture depends on speak."""
         speak = create_agent_action("speak", "speak")
         gesture = create_agent_action("gesture", "gesture")
         move = create_agent_action("move", "move")
         finale = create_agent_action("finale", "finale")
-
         mock_runtime_config.agent_actions = [speak, gesture, move, finale]
         mock_runtime_config.action_execution_mode = "dependencies"
         mock_runtime_config.action_dependencies = {
             "gesture": ["speak"],
             "finale": ["gesture", "move"],
         }
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [
@@ -344,7 +289,6 @@ class TestActionOrchestratorDependencies:
             Action(type="move", value="forward"),
             Action(type="speak", value="hello"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
@@ -357,21 +301,17 @@ class TestActionOrchestratorDependencies:
     async def test_no_dependencies_acts_like_concurrent(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that dependency mode with no dependencies acts like concurrent mode."""
         action1 = create_agent_action("action1", "action1")
         action2 = create_agent_action("action2", "action2")
-
         mock_runtime_config.agent_actions = [action1, action2]
         mock_runtime_config.action_execution_mode = "dependencies"
-        mock_runtime_config.action_dependencies = {}  # No dependencies
-
+        mock_runtime_config.action_dependencies = {}
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [
             Action(type="action1", value="test1"),
             Action(type="action2", value="test2"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
@@ -381,18 +321,13 @@ class TestActionOrchestratorDependencies:
 
 
 class TestActionOrchestratorEdgeCases:
-    """Test edge cases and error handling."""
-
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Reset mock connector state before each test."""
         MockConnector.reset()
 
     @pytest.mark.asyncio
     async def test_nonexistent_action(self, mock_runtime_config, create_agent_action):
-        """Test that nonexistent actions are handled gracefully."""
         action = create_agent_action("real_action", "real_action")
-
         mock_runtime_config.agent_actions = [action]
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
@@ -400,7 +335,6 @@ class TestActionOrchestratorEdgeCases:
             Action(type="real_action", value="exists"),
             Action(type="fake_action", value="does not exist"),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
@@ -408,9 +342,7 @@ class TestActionOrchestratorEdgeCases:
 
     @pytest.mark.asyncio
     async def test_action_normalization(self, mock_runtime_config, create_agent_action):
-        """Test that action shortcuts are normalized correctly."""
         move_action = create_agent_action("move", "move")
-
         mock_runtime_config.agent_actions = [move_action]
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
@@ -419,7 +351,6 @@ class TestActionOrchestratorEdgeCases:
             Action(type="turn left", value=""),
             Action(type="move forwards", value=""),
         ]
-
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
@@ -430,9 +361,7 @@ class TestActionOrchestratorEdgeCases:
 
     @pytest.mark.asyncio
     async def test_empty_action_list(self, mock_runtime_config):
-        """Test handling of empty action list."""
         orchestrator = ActionOrchestrator(mock_runtime_config)
-
         await orchestrator.promise([])
         done, pending = await orchestrator.flush_promises()
 
@@ -443,10 +372,8 @@ class TestActionOrchestratorEdgeCases:
     async def test_promise_queue_tracking(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that promise queue correctly tracks pending and completed actions."""
         action = create_agent_action("test", "test")
         mock_runtime_config.agent_actions = [action]
-
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         actions = [Action(type="test", value=f"action{i}") for i in range(3)]
@@ -459,40 +386,33 @@ class TestActionOrchestratorEdgeCases:
         assert len(pending) == 0
 
     def test_orchestrator_stop(self, mock_runtime_config):
-        """Test that orchestrator stops cleanly."""
         orchestrator = ActionOrchestrator(mock_runtime_config)
         orchestrator.start()
         orchestrator.stop()
-
         assert orchestrator._stop_event.is_set()
 
 
 class TestActionOrchestratorModeComparison:
-    """Compare behavior across different execution modes."""
-
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Reset mock connector state before each test."""
         MockConnector.reset()
 
     @pytest.mark.asyncio
     async def test_same_result_different_order(self, create_agent_action):
-        """Test that all modes produce the same result, just in different order."""
         config_concurrent = MagicMock(spec=RuntimeConfig)
         action1 = create_agent_action("action1", "action1")
         action2 = create_agent_action("action2", "action2")
         config_concurrent.agent_actions = [action1, action2]
         config_concurrent.action_execution_mode = "concurrent"
         config_concurrent.action_dependencies = {}
-
         orchestrator = ActionOrchestrator(config_concurrent)
+
         actions = [
             Action(type="action1", value="test1"),
             Action(type="action2", value="test2"),
         ]
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
-
         concurrent_executed = set(MockConnector.execution_order)
 
         MockConnector.reset()
@@ -502,26 +422,20 @@ class TestActionOrchestratorModeComparison:
         config_sequential.agent_actions = [action1, action2]
         config_sequential.action_execution_mode = "sequential"
         config_sequential.action_dependencies = {}
-
         orchestrator = ActionOrchestrator(config_sequential)
         await orchestrator.promise(actions)
-
         sequential_executed = set(MockConnector.execution_order)
 
         assert concurrent_executed == sequential_executed == {"action1", "action2"}
 
 
 class TestLLMResultParser:
-    """Test the LLM result parser in _promise_action."""
-
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Reset mock connector state before each test."""
         MockConnector.reset()
 
     @pytest.fixture
     def mock_runtime_config(self):
-        """Create a mock RuntimeConfig for testing."""
         config = MagicMock(spec=RuntimeConfig)
         config.action_execution_mode = "concurrent"
         config.action_dependencies = {}
@@ -530,8 +444,6 @@ class TestLLMResultParser:
 
     @pytest.fixture
     def create_typed_action(self):
-        """Factory to create test agent actions with different input types."""
-
         def _create(name: str, llm_label: str, input_type) -> AgentAction:
             connector = MockConnector(ActionConfig(), name)
 
@@ -563,8 +475,6 @@ class TestLLMResultParser:
     async def test_parse_simple_string_value(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test parsing a simple string value (non-JSON)."""
-
         @dataclass
         class StringInput:
             action: str
@@ -584,8 +494,6 @@ class TestLLMResultParser:
     async def test_parse_json_string_value(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test parsing a JSON string value."""
-
         @dataclass
         class JsonInput:
             action: str
@@ -605,8 +513,6 @@ class TestLLMResultParser:
     async def test_parse_json_non_dict_value(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test parsing a JSON value that's not a dictionary."""
-
         @dataclass
         class SimpleInput:
             action: str
@@ -626,8 +532,6 @@ class TestLLMResultParser:
     async def test_parse_multiple_parameters(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test parsing multiple parameters from JSON."""
-
         @dataclass
         class MultiParamInput:
             speed: float
@@ -649,8 +553,6 @@ class TestLLMResultParser:
     async def test_parse_float_conversion(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test automatic type conversion for float."""
-
         @dataclass
         class FloatInput:
             speed: float
@@ -668,8 +570,6 @@ class TestLLMResultParser:
 
     @pytest.mark.asyncio
     async def test_parse_int_conversion(self, mock_runtime_config, create_typed_action):
-        """Test automatic type conversion for int."""
-
         @dataclass
         class IntInput:
             count: int
@@ -689,8 +589,6 @@ class TestLLMResultParser:
     async def test_parse_bool_conversion_true(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test automatic type conversion for bool (true values)."""
-
         @dataclass
         class BoolInput:
             enabled: bool
@@ -699,7 +597,6 @@ class TestLLMResultParser:
         mock_runtime_config.agent_actions = [action]
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
-        # Test various true representations
         for true_val in ["true", "True", "1", "yes", "YES"]:
             MockConnector.reset()
             json_value = json.dumps({"enabled": true_val})
@@ -712,8 +609,6 @@ class TestLLMResultParser:
     async def test_parse_bool_conversion_false(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test automatic type conversion for bool (false values)."""
-
         @dataclass
         class BoolInput:
             enabled: bool
@@ -734,8 +629,6 @@ class TestLLMResultParser:
     async def test_parse_enum_conversion(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test automatic type conversion for Enum."""
-
         class Direction(Enum):
             NORTH = "north"
             SOUTH = "south"
@@ -759,8 +652,6 @@ class TestLLMResultParser:
 
     @pytest.mark.asyncio
     async def test_parse_mixed_types(self, mock_runtime_config, create_typed_action):
-        """Test parsing mixed parameter types."""
-
         class Mode(Enum):
             FAST = "fast"
             SLOW = "slow"
@@ -794,8 +685,6 @@ class TestLLMResultParser:
 
     @pytest.mark.asyncio
     async def test_parse_invalid_json(self, mock_runtime_config, create_typed_action):
-        """Test handling of invalid JSON (should fall back to simple string)."""
-
         @dataclass
         class StringInput:
             action: str
@@ -813,8 +702,6 @@ class TestLLMResultParser:
 
     @pytest.mark.asyncio
     async def test_parse_empty_string(self, mock_runtime_config, create_typed_action):
-        """Test handling of empty string value."""
-
         @dataclass
         class StringInput:
             action: str
@@ -834,8 +721,6 @@ class TestLLMResultParser:
     async def test_parse_extra_parameters_ignored(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test that extra parameters not in type hints are safely ignored."""
-
         @dataclass
         class SimpleInput:
             action: str
@@ -857,8 +742,6 @@ class TestLLMResultParser:
     async def test_parse_only_valid_parameters(
         self, mock_runtime_config, create_typed_action
     ):
-        """Test that when only valid parameters are provided, parsing succeeds."""
-
         @dataclass
         class SimpleInput:
             action: str
@@ -877,8 +760,6 @@ class TestLLMResultParser:
 
     @pytest.mark.asyncio
     async def test_parse_none_value(self, mock_runtime_config, create_typed_action):
-        """Test handling of None/null values."""
-
         @dataclass
         class StringInput:
             action: str
@@ -896,11 +777,9 @@ class TestLLMResultParser:
 
     @pytest.mark.asyncio
     async def test_parse_nested_json(self, mock_runtime_config, create_typed_action):
-        """Test handling of nested JSON structures."""
-
         @dataclass
         class NestedInput:
-            config: str  # Will receive JSON string
+            config: str
 
         action = create_typed_action("move", "move", NestedInput)
         mock_runtime_config.agent_actions = [action]
@@ -916,101 +795,76 @@ class TestLLMResultParser:
 
 
 class TestActionOrchestratorHotReload:
-    """Test hot-reload functionality via update_config method."""
-
     @pytest.fixture
     def mock_runtime_config(self):
-        """Create a mock RuntimeConfig for testing."""
         config = MagicMock(spec=RuntimeConfig)
         config.action_execution_mode = "concurrent"
         config.action_dependencies = {}
-        config.agent_actions = []  # Required by __init__
+        config.agent_actions = []
         config.cortex_llm = MagicMock()
-        config.cortex_llm.model = "test-model"
         config.cortex_llm.model = "gpt-4"
         return config
 
     def test_update_config_changes_internal_reference(self, mock_runtime_config):
-        """Test that update_config updates the internal config reference."""
         orchestrator = ActionOrchestrator(mock_runtime_config)
-
-        # Verify initial config
         assert orchestrator._config == mock_runtime_config
-        assert orchestrator._config.cortex_llm.model == "gpt-4"  # type: ignore[attr-defined]
+        assert orchestrator._config.cortex_llm.model == "gpt-4"
 
-        # Create new config with different model
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
-        new_config.cortex_llm.model = "test-model"
         new_config.cortex_llm.model = "claude-3-opus"
-
-        # Update config
         orchestrator.update_config(new_config)
 
-        # Verify config was updated
         assert orchestrator._config == new_config
-        assert orchestrator._config.cortex_llm.model == "claude-3-opus"  # type: ignore[attr-defined]
+        assert orchestrator._config.cortex_llm.model == "claude-3-opus"
 
     def test_update_config_logs_model_change(self, mock_runtime_config, caplog):
-        """Test that update_config logs the model change."""
         import logging
 
-        caplog.set_level(logging.INFO)  # Enable INFO level logging
+        caplog.set_level(logging.INFO)
 
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
-        new_config.cortex_llm.model = "test-model"
         new_config.cortex_llm.model = "gpt-3.5-turbo"
-
         orchestrator.update_config(new_config)
 
-        # Verify logging
         assert "ActionOrchestrator updating internal config" in caplog.text
         assert "LLM model changed from" in caplog.text
         assert "gpt-4" in caplog.text
         assert "gpt-3.5-turbo" in caplog.text
 
     def test_update_config_handles_missing_model_attribute(self, caplog):
-        """Test update_config when model attribute is missing."""
         import logging
 
         caplog.set_level(logging.INFO)
 
-        # Config without model attribute - but with agent_actions
         old_config = MagicMock(spec=RuntimeConfig)
-        old_config.agent_actions = []  # Required
+        old_config.agent_actions = []
         old_config.action_execution_mode = "concurrent"
         old_config.action_dependencies = {}
-        old_config.cortex_llm = MagicMock(spec=[])  # No model attribute
+        old_config.cortex_llm = MagicMock(spec=[])
 
         orchestrator = ActionOrchestrator(old_config)
 
         new_config = MagicMock(spec=RuntimeConfig)
-        new_config.cortex_llm = MagicMock(spec=[])  # No model attribute
-
-        # Should not crash, should use "unknown"
+        new_config.cortex_llm = MagicMock(spec=[])
         orchestrator.update_config(new_config)
 
         assert "unknown" in caplog.text
         assert orchestrator._config == new_config
 
     def test_update_config_with_same_model(self, mock_runtime_config, caplog):
-        """Test update_config when model doesn't change."""
         import logging
 
         caplog.set_level(logging.INFO)
 
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
-        # Create new config with same model
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
-        new_config.cortex_llm.model = "test-model"
-        new_config.cortex_llm = MagicMock()
-        new_config.cortex_llm.model = "gpt-4"  # Same as original
-
+        new_config.cortex_llm.model = "gpt-4"
         orchestrator.update_config(new_config)
 
         assert "gpt-4" in caplog.text
@@ -1019,45 +873,62 @@ class TestActionOrchestratorHotReload:
     def test_update_config_preserves_orchestrator_state(
         self, mock_runtime_config, create_agent_action
     ):
-        """Test that update_config doesn't reset orchestrator state."""
         action = create_agent_action("test_action", "test_action")
         mock_runtime_config.agent_actions = [action]
 
         orchestrator = ActionOrchestrator(mock_runtime_config)
         orchestrator.start()
 
-        # Update config
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
-        new_config.cortex_llm.model = "test-model"
-        new_config.cortex_llm = MagicMock()
         new_config.cortex_llm.model = "claude-3"
-
         orchestrator.update_config(new_config)
 
-        # Orchestrator should still be running
         assert not orchestrator._stop_event.is_set()
-
-        # Cleanup
         orchestrator.stop()
 
     def test_update_config_different_provider(self, mock_runtime_config, caplog):
-        """Test config update with different LLM provider."""
         import logging
 
         caplog.set_level(logging.INFO)
 
         orchestrator = ActionOrchestrator(mock_runtime_config)
 
-        # Update to different provider
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
-        new_config.cortex_llm.model = "test-model"
-        new_config.cortex_llm = MagicMock()
         new_config.cortex_llm.model = "claude-3-5-sonnet-20241022"
-
         orchestrator.update_config(new_config)
 
         assert "gpt-4" in caplog.text
         assert "claude-3-5-sonnet-20241022" in caplog.text
-        assert orchestrator._config.cortex_llm.model == "claude-3-5-sonnet-20241022"  # type: ignore[attr-defined]
+        assert orchestrator._config.cortex_llm.model == "claude-3-5-sonnet-20241022"
+
+
+class TestConnectorLoopExceptionHandling:
+    def test_connector_tick_exception_handled(
+        self, mock_runtime_config, create_agent_action
+    ):
+        import threading
+        import time
+
+        action = create_agent_action("failing", "failing")
+
+        def bad_tick():
+            raise ValueError("Test tick error")
+
+        action.connector.tick = bad_tick
+
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+        thread = threading.Thread(
+            target=orchestrator._run_connector_loop, args=(action,)
+        )
+        thread.daemon = True
+
+        with patch("logging.error") as mock_log:
+            thread.start()
+            time.sleep(0.15)
+            orchestrator._stop_event.set()
+            thread.join(timeout=1.0)
+
+            mock_log.assert_called()
+            assert not thread.is_alive()
