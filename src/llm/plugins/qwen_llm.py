@@ -72,7 +72,7 @@ class QwenLLMConfig(LLMConfig):
         Enable reasoning mode with more detailed thought processes in responses (default: False).
     """
 
-    base_url : T.Optional[str] = Field(
+    base_url: T.Optional[str] = Field(
         default="http://127.0.0.1:8860/v1", description="Base URL for local Qwen API"
     )
     api_key: T.Optional[str] = Field(
@@ -85,6 +85,7 @@ class QwenLLMConfig(LLMConfig):
         default=False,
         description="Enable reasoning mode with more detailed thought processes in responses",
     )
+
 
 class QwenLLM(LLM[R]):
     """
