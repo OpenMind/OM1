@@ -75,11 +75,6 @@ class ElevenLabsTTSProvider:
             rate=rate or 16000,
             api_key=api_key,
             enable_tts_interrupt=enable_tts_interrupt,
-            extra_body=(
-                {"elevenlabs_api_key": self.elevenlabs_api_key}
-                if self.elevenlabs_api_key
-                else {}
-            ),
         )
 
         # Set Eleven Labs TTS parameters
@@ -155,11 +150,6 @@ class ElevenLabsTTSProvider:
             rate=rate or 16000,
             enable_tts_interrupt=enable_tts_interrupt,
             api_key=api_key,
-            extra_body=(
-                {"elevenlabs_api_key": self.elevenlabs_api_key}
-                if self.elevenlabs_api_key
-                else {}
-            ),
         )
         self._audio_stream.start()
 
