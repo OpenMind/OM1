@@ -15,6 +15,7 @@ The ElevenLabs TTS API converts text into natural-sounding speech using ElevenLa
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/elevenlabs/tts` | Generate speech from text using ElevenLabs TTS |
+| POST | `/elevenlabs/tts/audio/speech` | Stream speech from text using ElevenLabs TTS |
 
 ## Generate Speech
 
@@ -29,7 +30,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
-    "text": "Hello, this is a test of the ElevenLabs text to speech API."
+    "input": "Hello, this is a test of the ElevenLabs text to speech API."
   }'
 ```
 
@@ -37,10 +38,10 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `text` | string | Yes | - | The text to convert to speech |
-| `voice_id` | string | No | `JBFqnCBsd6RMkjVDRZzb` | ElevenLabs voice ID for the desired voice |
-| `model_id` | string | No | `eleven_flash_v2_5` | ElevenLabs model ID to use for synthesis |
-| `output_format` | string | No | `mp3_44100_128` | Audio output format specification |
+| `input` | string | Yes | - | The text to convert to speech |
+| `voice` | string or object | No | `JBFqnCBsd6RMkjVDRZzb` | ElevenLabs voice ID (string) or voice object |
+| `model` | string | No | `eleven_flash_v2_5` | ElevenLabs model ID to use for synthesis |
+| `response_format` | string | No | `mp3_44100_128` | Audio output format specification |
 | `speed` | float | No | `1.0` | Speech speed multiplier (0.5 - 2.0) |
 | `elevenlabs_api_key` | string | No | - | Optional ElevenLabs API key override |
 
@@ -50,6 +51,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 
 ```json
 {
+  "text": "Hello, this is a test of the ElevenLabs text to speech API.",
   "response": "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAA...",
   "format": "mp3_44100_128"
 }
@@ -59,6 +61,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `text` | string | The original input text |
 | `response` | string | Base64-encoded audio data ready for decoding and playback |
 | `format` | string | Audio format of the returned data (e.g., "mp3_44100_128") |
 
@@ -82,11 +85,34 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
 
 // 500 Internal Server Error
 {
-  "error": "Failed to read response"
+  "error": "Failed to read response body"
 }
 ```
 
 > **Note:** The returned audio is base64-encoded. You must decode it before playback or saving to a file.
+
+## Stream Speech
+
+Convert text to speech and stream the audio directly. This endpoint is ideal for real-time applications where low latency is critical.
+
+**Endpoint:** `POST /elevenlabs/tts/audio/speech`
+
+### Request
+
+The request body parameters are identical to the `/elevenlabs/tts` endpoint.
+
+### Response
+
+**Success (200 OK):**
+
+The response is a binary stream of the audio file.
+
+**Headers:**
+* `Content-Type`: `audio/mpeg` (depending on requested format)
+
+**Error Responses:**
+
+See Error Responses for `/elevenlabs/tts`.
 
 ## Usage Examples
 
@@ -99,7 +125,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
-    "text": "Welcome to OpenMind AGI. This is a demonstration of text to speech conversion."
+    "input": "Welcome to OpenMind AGI. This is a demonstration of text to speech conversion."
   }'
 ```
 
@@ -112,8 +138,8 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
-    "text": "This speech is faster than normal and uses a custom voice.",
-    "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+    "input": "This speech is faster than normal and uses a custom voice.",
+    "voice": "JBFqnCBsd6RMkjVDRZzb",
     "speed": 1.3
   }'
 ```
@@ -127,10 +153,10 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
-    "text": "Fully customized text to speech with all parameters specified.",
-    "voice_id": "your_voice_id",
-    "model_id": "eleven_flash_v2_5",
-    "output_format": "mp3_44100_128",
+    "input": "Fully customized text to speech with all parameters specified.",
+    "voice": "your_voice_id",
+    "model": "eleven_flash_v2_5",
+    "response_format": "mp3_44100_128",
     "speed": 0.9,
     "elevenlabs_api_key": "your_elevenlabs_api_key"
   }'
@@ -145,7 +171,7 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d '{
-    "text": "This audio will be saved to a file on your local machine."
+    "input": "This audio will be saved to a file on your local machine."
   }' | jq -r '.response' | base64 -d > output.mp3
 ```
 
@@ -163,10 +189,23 @@ curl -X POST https://api.openmind.org/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \
   -d "{
-    \"text\": \"Using environment variables for configuration.\",
-    \"voice_id\": \"$TTS_VOICE_ID\",
+    \"input\": \"Using environment variables for configuration.\",
+    \"voice\": \"$TTS_VOICE_ID\",
     \"speed\": $TTS_SPEED
   }"
+```
+
+### Stream to File
+
+Stream the audio directly to a file using the streaming endpoint:
+
+```bash
+curl -X POST https://api.openmind.org/elevenlabs/tts/audio/speech \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -d '{
+    "input": "This is a streaming response."
+  }' > stream_output.mp3
 ```
 
 ## Voice Configuration
@@ -177,7 +216,7 @@ The default voice ID is `JBFqnCBsd6RMkjVDRZzb`. This voice provides clear, natur
 
 ### Custom Voices
 
-You can use any ElevenLabs voice ID by specifying it in the `voice_id` parameter. Visit the [ElevenLabs Voice Library](https://elevenlabs.io/voice-library) to explore available voices.
+You can use any ElevenLabs voice ID by specifying it in the `voice` parameter. Visit the [ElevenLabs Voice Library](https://elevenlabs.io/voice-library) to explore available voices.
 
 ### Speed Control
 
@@ -189,12 +228,7 @@ The `speed` parameter accepts values between 0.5 (half speed) and 2.0 (double sp
 
 ## Output Formats
 
-The default output format is `mp3_44100_128`, which provides high-quality audio at a reasonable file size. The format string indicates:
-- Codec: MP3
-- Sample Rate: 44,100 Hz
-- Bitrate: 128 kbps
-
-Other formats may be supported depending on your ElevenLabs API configuration. Consult the ElevenLabs documentation for available format options.
+The default output format is `mp3_44100_128`. The `response_format` parameter allows you to specify other formats if needed.
 
 ## Error Handling
 
@@ -205,7 +239,7 @@ All endpoints follow consistent error response patterns:
 | Code | Description |
 |------|-------------|
 | 200 | Success - Audio generated successfully |
-| 400 | Bad Request - Missing required fields or invalid JSON |
+| 400 | Bad Request - Missing required fields, invalid JSON, or unsupported format |
 | 503 | Service Unavailable - ElevenLabs API unavailable or not configured |
 | 500 | Internal Server Error - Server-side processing error |
 
@@ -219,9 +253,9 @@ All endpoints follow consistent error response patterns:
 
 ### Common Error Scenarios
 
-**Missing Text Field:**
+**Missing Input Field:**
 ```bash
-# This will fail - text is required
+# This will fail - input is required
 curl -X POST https://api.openmind.org/elevenlabs/tts \
   -H "Content-Type: application/json" \
   -H "x-api-key: YOUR_API_KEY" \

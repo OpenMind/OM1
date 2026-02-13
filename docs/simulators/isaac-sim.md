@@ -6,9 +6,9 @@ icon: robot
 
 ## System Requirements
 
-| Component| Minimum                                   | Good                                   | Ideal                                   |
+| Component| Minimum                                   | Good                                   | Ideal                                    |
 |----------|-------------------------------------------|----------------------------------------|------------------------------------------|
-| OS       | Ubuntu 20.04 / 22.04<br>Windows 10 / 11    | Ubuntu 20.04 / 22.04<br>Windows 10 / 11 | Ubuntu 20.04 / 22.04<br>Windows 10 / 11 |
+| OS       | Ubuntu 20.04 / 22.04                      | Ubuntu 20.04 / 22.04                   | Ubuntu 20.04 / 22.04                     |
 | CPU      | Intel Core i7 (7th Gen)<br>AMD Ryzen 5    | Intel Core i7 (9th Gen)<br>AMD Ryzen 7 | Intel Core i9, X-series or higher<br>AMD Ryzen 9, Threadripper or higher |
 | Cores    | 4                                         | 8                                      | 16                                       |
 | RAM      | 32 GB                                     | 64 GB                                  | 64 GB                                    |
@@ -172,18 +172,14 @@ Step 2: Install all the necessary dependencies:
 
 ```bash
 cd OM1-ros2-sdk
-uv venv
+uv venv --python 3.10
+
 sudo rosdep init
 rosdep update
 rosdep install --from-paths . --ignore-src -r -y
+
 source .venv/bin/activate
 uv pip install .
-```
-
-Export the python path to your virtual environment
-
-```bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
 ```
 
 Step 3: Build all the packages:
@@ -194,8 +190,10 @@ colcon build
 
 Step 4: Install Isaac Sim
 
+Open a new terminal window and switch to `unitree/isaac_sim` directory within `OM1-ros2-sdk`
+
 ```bash
-cd unitree/isaac_sim
+cd OM1-ros2-sdk/unitree/isaac_sim
 
 uv venv --python 3.11 --seed env_isaacsim
 
@@ -222,11 +220,10 @@ To run the script, export the following
 
 ```bash
 export ROS_DISTRO=humble
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_VENV/env_isaaclab/lib/python3.11/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib
 ```
 
-> **Note:** Make sure to replace PATH_TO_VENV with the actual path to your virtual environment
+> **Note:** Make sure to replace PATH_TO_VENV with the actual path to your virtual environment. We use `env_isaacsim` (Python 3.11) for Isaac Sim and `.venv` (Python 3.10) for other services like orchestrator due to compatibility requirements.
 
 We support Isaac Sim for Unitree Go2 and G1. To run the simulation for Go2, run
 
@@ -248,7 +245,7 @@ You'll now be able to see Isaac Sim running on your system.
 
 ![ ](../assets/isaac-sim.png)
 
-Step 6: Open a new terminal and run:
+Step 6: Open a new terminal , switch to base directory `OM1-ros2-sdk` and run:
 
 ```bash
 source install/setup.bash
@@ -260,6 +257,7 @@ This will bring up the `om/path` topic, enabling OM1 to understand the surroundi
 Step 7: Open a new terminal and run:
 
 ```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
 source install/setup.bash
 ros2 launch orchestrator orchestrator.py use_sim:=true
 ```
@@ -303,6 +301,8 @@ Now, run the simulation agent
 ```bash
 uv run src/run.py simulation
 ```
+
+> **Note**: Update your agent name depending on robot type.
 
 Congratulations! You have launched Isaac Sim with OM1 successfully.
 
