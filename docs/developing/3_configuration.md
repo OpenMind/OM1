@@ -172,14 +172,14 @@ The runtime/version.py module handles:
 Example configuration for the agent_inputs section:
 
 ```python
-  "agent_inputs": [
+  agent_inputs: [
     {
-      "type": "GovernanceEthereum"
+      type: "GovernanceEthereum"
     },
     {
-      "type": "VLM_COCO_Local",
-      "config": {
-        "camera_index": 0
+      type: "VLM_COCO_Local",
+      config: {
+        camera_index: 0
       }
     }
   ]
@@ -208,13 +208,13 @@ The `cortex_llm` field allows you to configure the Large Language Model (LLM) us
 Here is an example configuration of the `cortex_llm` showing use of a single LLM to generate decisions:
 
 ```python
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "base_url": "",       // Optional: URL of the LLM endpoint
-      "api_key": "...",     // Optional: Override the default API key
-      "agent_name": "Iris", // Optional: Name of the agent
-      "history_length": 10
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      base_url: "",       // Optional: URL of the LLM endpoint
+      api_key: "...",     // Optional: Override the default API key
+      agent_name: "Iris", // Optional: Name of the agent
+      history_length: 10
     }
   }
 ```
@@ -235,15 +235,15 @@ You can implement your own LLM endpoints or use more sophisticated approaches su
 Lists the simulation modules used by the agent. Here is an example configuration for the `simulators` section:
 
 ```python
-  "simulators": [
+  simulators: [
     {
-      "type": "WebSim",
-      "config": {
-        "host": "0.0.0.0",
-        "port": 8000,
-        "tick_rate": 100,
-        "auto_reconnect": true,
-        "debug_mode": false
+      type: "WebSim",
+      config: {
+        host: "0.0.0.0",
+        port: 8000,
+        tick_rate: 100,
+        auto_reconnect: true,
+        debug_mode: false
       }
     }
   ]
@@ -254,22 +254,48 @@ Lists the simulation modules used by the agent. Here is an example configuration
 Defines the agent's available capabilities, including action names, their implementation, and the connector used to execute them. Here is an example configuration for the `agent_actions` section:
 
 ```python
-  "agent_actions": [
+  agent_actions: [
     {
-      "name": "move",
-      "llm_label": "move",
-      "implementation": "passthrough",
-      "connector": "ros2"
+      name: "move",
+      llm_label: "move",
+      implementation: "passthrough",
+      connector: "ros2"
     },
     {
-      "name": "speak",
-      "llm_label": "speak",
-      "implementation": "passthrough",
-      "connector": "ros2"
-    }
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "ros2"
+      config: {
+        voice_id: "TbMNBJ27fH2U0VgpSNko",
+        silence_rate: 0,
+      },
+  }
   ]
 ```
 
 You can customize the actions following the [Action Plugin Guide](6_actions.md)
+
+## Transition rules
+
+Transition rules define how and when the robot switches between operational modes.
+
+```python
+    {
+      from_mode: "<current_mode>",
+      to_mode: "welcome",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "reset",
+        "start over",
+        "welcome mode",
+        "restart",
+        "initialize",
+      ],
+      priority: 5,
+      cooldown_seconds: 10.0,
+    }
+```
+To understand transition rules in depth, refer the documentation [here](../full_autonomy_guidelines/transition_rules.md)
 
 To introduce a new mode in your config, refer [introduce new mode](../developer_cookbook/new_mode.md)
