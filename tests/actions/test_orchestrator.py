@@ -926,6 +926,7 @@ class TestActionOrchestratorHotReload:
         config.action_dependencies = {}
         config.agent_actions = []  # Required by __init__
         config.cortex_llm = MagicMock()
+        config.cortex_llm.model = "test-model"
         config.cortex_llm.model = "gpt-4"
         return config
 
@@ -935,11 +936,12 @@ class TestActionOrchestratorHotReload:
 
         # Verify initial config
         assert orchestrator._config == mock_runtime_config
-        assert orchestrator._config.cortex_llm.model == "gpt-4"
+        assert orchestrator._config.cortex_llm.model == "gpt-4"  # type: ignore[attr-defined]
 
         # Create new config with different model
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "test-model"
         new_config.cortex_llm.model = "claude-3-opus"
 
         # Update config
@@ -947,7 +949,7 @@ class TestActionOrchestratorHotReload:
 
         # Verify config was updated
         assert orchestrator._config == new_config
-        assert orchestrator._config.cortex_llm.model == "claude-3-opus"
+        assert orchestrator._config.cortex_llm.model == "claude-3-opus"  # type: ignore[attr-defined]
 
     def test_update_config_logs_model_change(self, mock_runtime_config, caplog):
         """Test that update_config logs the model change."""
@@ -959,6 +961,7 @@ class TestActionOrchestratorHotReload:
 
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "test-model"
         new_config.cortex_llm.model = "gpt-3.5-turbo"
 
         orchestrator.update_config(new_config)
@@ -1004,6 +1007,8 @@ class TestActionOrchestratorHotReload:
         # Create new config with same model
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "test-model"
+        new_config.cortex_llm = MagicMock()
         new_config.cortex_llm.model = "gpt-4"  # Same as original
 
         orchestrator.update_config(new_config)
@@ -1023,6 +1028,8 @@ class TestActionOrchestratorHotReload:
 
         # Update config
         new_config = MagicMock(spec=RuntimeConfig)
+        new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "test-model"
         new_config.cortex_llm = MagicMock()
         new_config.cortex_llm.model = "claude-3"
 
@@ -1045,10 +1052,12 @@ class TestActionOrchestratorHotReload:
         # Update to different provider
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
+        new_config.cortex_llm.model = "test-model"
+        new_config.cortex_llm = MagicMock()
         new_config.cortex_llm.model = "claude-3-5-sonnet-20241022"
 
         orchestrator.update_config(new_config)
 
         assert "gpt-4" in caplog.text
         assert "claude-3-5-sonnet-20241022" in caplog.text
-        assert orchestrator._config.cortex_llm.model == "claude-3-5-sonnet-20241022"
+        assert orchestrator._config.cortex_llm.model == "claude-3-5-sonnet-20241022"  # type: ignore[attr-defined]
