@@ -9,18 +9,6 @@ It tells OM1 which modules to load, how the robot should behave, and which modes
 
 To ensure your configuration is valid, follow the format defined [here](https://github.com/OpenMind/OM1/tree/main/config/schema).
 
-OpenMind supports two configuration schemas:
-
-### Step 1. Single-Mode Schema
-
-Use this when your robot only needs to run one dedicated mode. For example, a pure conversation agent or a navigation-only setup.
-The entire agent is optimized around a single use case.
-
-### Step 2. Multi-Mode Schema
-
-Use this when you want the robot to switch between multiple modes at runtime based on user choice or context.
-You can configure any subset of the available five modes, just two, or all five, depending on your application.
-
 #### Steps to build a new config file
 
 1. Start with getting your API key from [OpenMind Portal](https://portal.openmind.org/). Copy it and save it, you'll paste it into the config later.
@@ -31,6 +19,9 @@ You can configure any subset of the available five modes, just two, or all five,
 | `version`                | `string` | Yes      | The version of the configuration format. Example: `"v1.0.0"`                     |
 | `hertz`                  | `number` | Yes      | How often (in Hz) the agent runs its update loop. Example: `0.01`                |
 | `name`                   | `string` | Yes      | The name of the agent. Example: `"conversation"`                                 |
+| `default_mode`           | `string` | Yes      | The default_mode defines the mode robot starts in. Example: `"welcome"`          |
+| `allow_manual_switching` | `bool`   | Yes      | Defines if manual mode switching is allowed. Example: `true`                     |
+| `mode_memory_enabled`    | `bool`   | Yes      | Enables or disables mode memory. Example: `true`                                 |
 | `api_key`                | `string` | Yes      | API key used to authenticate the agent. Example: `"openmind_free"`               |
 | `system_prompt_base`     | `string` | Yes      | Defines the agent's core personality and behavior. Serves as the primary system prompt for the LLM. |
 | `system_governance`      | `string` | Yes      | The laws or constraints that the agent must follow during operation. Modeled similarly to Asimov's laws. |
@@ -81,6 +72,27 @@ You can configure any subset of the available five modes, just two, or all five,
 | `implementation` | `string` | No       | Defines the business logic. If none defined, defaults to `"passthrough"`. Example: `"passthrough"`                         |
 | `connector`      | `string` | Yes      | Name of the connector. This is the Python file name defined under `actions/action_name/connector`. Example: `"elevenlabs_tts"` |
 
-### Step 7. Validate the config
+### Step 7: Add modes
+
+Add `modes` section in your config file and introduce the modes you'd like to configure for you agent.
+
+| Field                  | Type      | Required | Description                                                                                                   |
+| ---------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `display_name`         | `string`  | Yes      | The human-readable name shown in the UI for this mode. Example: `"Your New Mode"`                             |
+| `description`          | `string`  | Yes      | Brief description explaining what this mode does and its purpose.                                             |
+| `system_prompt_base`   | `string`  | Yes      | The foundational system prompt that defines the agent's behavior and purpose in this mode.                    |
+| `hertz`                | `float`   | Yes      | The frequency (in Hz) at which the agent operates or processes information. Example: `1.0`                    |
+| `timeout_seconds`      | `integer` | Yes      | Maximum duration (in seconds) before the agent times out during execution. Example: `300`                     |
+| `remember_locations`   | `boolean` | Yes      | Whether the agent should persist and recall location data across interactions. Example: `false`               |
+| `save_interactions`    | `boolean` | Yes      | Whether to save conversation history and interactions for this mode. Example: `true`                          |
+| `agent_inputs`         | `array`   | Yes      | List of input sources or data types the agent can accept in this mode.                                        |
+| `agent_actions`        | `array`   | Yes      | List of actions or capabilities the agent can perform in this mode.                                           |
+| `lifecycle_hooks`      | `array`   | Yes      | Event handlers triggered at specific points in the agent's lifecycle (startup, shutdown, etc.).               |
+| `simulators`           | `array`   | Yes      | List of simulation environments or tools available to the agent in this mode.                                 |
+| `cortex_llm`           | `object`  | Yes      | Configuration object for the language model powering the agent's cortex.                                      |
+
+For a better understanding of how modes are configured, refer the documentation [here](new_mode.md)
+
+### Step 8. Validate the config
 
     Before using the file: Check for JSON errors, make sure commas, quotes, and braces are correct and confirm that correct API key is configured.

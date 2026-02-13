@@ -5,7 +5,7 @@ import time
 import typing as T
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -56,29 +56,45 @@ def _parse_qwen_tool_calls(text: str) -> list:
     return tool_calls
 
 
+class QwenLLMConfig(LLMConfig):
+    """
+    Configuration for Qwen LLM.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for local Qwen API (default: http://127.0.0.1:8860/v1).
+    api_key: str
+        API key for local Qwen API (if required, default: "placeholder").
+    model : str
+        Qwen model name (e.g., "RedHatAI/Qwen3-30B-A3B-quantized.w4a16").
+    enable_reasoning : bool
+        Enable reasoning mode with more detailed thought processes in responses (default: False).
+    """
+
+    base_url: T.Optional[str] = Field(
+        default="http://127.0.0.1:8860/v1", description="Base URL for local Qwen API"
+    )
+    api_key: T.Optional[str] = Field(
+        default="placeholder", description="API key for local Qwen API (if required)"
+    )
+    model: T.Optional[str] = Field(
+        default="RedHatAI/Qwen3-30B-A3B-quantized.w4a16", description="Qwen model name"
+    )
+    enable_reasoning: bool = Field(
+        default=False,
+        description="Enable reasoning mode with more detailed thought processes in responses",
+    )
+
+
 class QwenLLM(LLM[R]):
     """
     Local Qwen LLM implementation using OpenAI-compatible API.
-
-    Config example:
-        "cortex_llm": {
-            "type": "QwenLLM",
-            "config": {
-                "model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
-            }
-        }
-
-    Attributes
-    ----------
-    _client : openai.AsyncClient
-        Async client connected to local server at http://127.0.0.1:8000/v1.
-    _extra_body : dict
-        Extra parameters for Qwen (disables thinking mode).
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: QwenLLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
@@ -89,19 +105,23 @@ class QwenLLM(LLM[R]):
 
         Parameters
         ----------
-        config : LLMConfig
+        config : QwenLLMConfig
             Configuration settings for the LLM, including the model name.
         available_actions : list, optional
             List of available actions for function call generation.
         """
         super().__init__(config, available_actions)
 
-        if not config.model:
-            self._config.model = "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
+        self._config: QwenLLMConfig = config
+
+        self._base_url = self._config.base_url
+        self._api_key = self._config.api_key
+        self._model = self._config.model
+        self._enable_reasoning = self._config.enable_reasoning
 
         self._client = openai.AsyncClient(
-            base_url="http://127.0.0.1:8860/v1",
-            api_key="placeholder_key",
+            base_url=self._base_url,
+            api_key=self._api_key,
         )
 
         self._extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
@@ -140,12 +160,11 @@ class QwenLLM(LLM[R]):
                 {"role": m.get("role", "user"), "content": m.get("content", "")}
                 for m in messages
             ]
-            formatted.append({"role": "user", "content": prompt})
-
-            model = self._config.model or "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
+            user_content = prompt if self._enable_reasoning else f"{prompt} /no_think"
+            formatted.append({"role": "user", "content": user_content})
 
             request_params: dict[str, T.Any] = {
-                "model": model,
+                "model": self._model,
                 "messages": formatted,
                 "timeout": self._config.timeout,
                 "extra_body": self._extra_body,
