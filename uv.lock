@@ -2729,7 +2729,7 @@ requires-dist = [
     { name = "matplotlib", specifier = "==3.10.1" },
     { name = "nest-asyncio", specifier = "==1.6.0" },
     { name = "numpy", specifier = "==2.0.2" },
-    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=eedbb2be598299a2bece21a2f14d0302dce4b5fb" },
+    { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=8502244d94e9592816f3cad9f3df61a903315b35" },
     { name = "openai", specifier = "==1.60.1" },
     { name = "opencv-python", specifier = "==4.11.0.86" },
     { name = "osascript", marker = "extra == 'macos'" },
@@ -2770,7 +2770,7 @@ dev = [
 [[package]]
 name = "om1-modules"
 version = "0.1.0"
-source = { git = "https://github.com/OpenMind/om1-modules.git?rev=eedbb2be598299a2bece21a2f14d0302dce4b5fb#eedbb2be598299a2bece21a2f14d0302dce4b5fb" }
+source = { git = "https://github.com/OpenMind/om1-modules.git?rev=8502244d94e9592816f3cad9f3df61a903315b35#8502244d94e9592816f3cad9f3df61a903315b35" }
 dependencies = [
     { name = "av" },
     { name = "eclipse-zenoh" },
