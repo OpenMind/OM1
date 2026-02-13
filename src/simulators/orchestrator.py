@@ -12,8 +12,6 @@ from simulators.base import Simulator
 class SimulatorOrchestrator:
     """
     Manages data flow to one or more simulators.
-
-    Note: It is important that the simulators do not block the event loop.
     """
 
     promise_queue: T.List[asyncio.Task[T.Any]]
@@ -24,14 +22,6 @@ class SimulatorOrchestrator:
     _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
-        """
-        Initialize the Simulator Orchestrator.
-
-        Parameters
-        ----------
-        config : RuntimeConfig
-            Runtime configuration containing simulator settings.
-        """
         self._config = config
         self.promise_queue = []
         self._simulator_workers = (
@@ -44,9 +34,7 @@ class SimulatorOrchestrator:
         self._stop_event = threading.Event()
 
     def start(self):
-        """
-        Start simulators in separate threads.
-        """
+        """Start simulators in separate threads."""
         for simulator in self._config.simulators:
             if simulator.name in self._submitted_simulators:
                 logging.warning(
@@ -55,21 +43,12 @@ class SimulatorOrchestrator:
                 continue
 
             simulator.set_stop_event(self._stop_event)
-
             self._simulator_executor.submit(self._run_simulator_loop, simulator)
             self._submitted_simulators.add(simulator.name)
 
         return asyncio.Future()
 
     def _run_simulator_loop(self, simulator: Simulator):
-        """
-        Thread-based simulator loop.
-
-        Parameters
-        ----------
-        simulator : Simulator
-            The simulator to run
-        """
         while not self._stop_event.is_set():
             try:
                 simulator.tick()
@@ -78,14 +57,7 @@ class SimulatorOrchestrator:
                 self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
-        """
-        Flushes the promise queue and returns the completed promises and the pending promises.
-
-        Returns
-        -------
-        tuple[list[Any], list[asyncio.Task[Any]]]
-            A tuple containing the completed promises and the pending promises
-        """
+        """Flush promise queue and return completed and pending promises."""
         done_promises = []
         for promise in self.promise_queue:
             if promise.done():
@@ -95,14 +67,7 @@ class SimulatorOrchestrator:
         return done_promises, self.promise_queue
 
     async def promise(self, actions: T.List[Action]) -> None:
-        """
-        Send actions to all simulators.
-
-        Parameters
-        ----------
-        actions : list[Action]
-            List of actions to send to the simulators
-        """
+        """Send actions to all simulators."""
         for simulator in self._config.simulators:
             simulator_response = asyncio.create_task(
                 self._promise_simulator(simulator, actions)
@@ -112,34 +77,23 @@ class SimulatorOrchestrator:
     async def _promise_simulator(
         self, simulator: Simulator, actions: T.List[Action]
     ) -> T.Any:
-        """
-        Send actions to a single simulator.
-
-        Parameters
-        ----------
-        simulator : Simulator
-            The simulator to send actions to
-        actions : list[Action]
-            List of actions to send to the simulator
-
-        Returns
-        -------
-        Any
-            The result of the simulator's response
-        """
         logging.debug(f"Calling simulator {simulator.name} with actions {actions}")
         simulator.sim(actions)
         return None
 
+    def update_config(self, new_config: RuntimeConfig):
+        """
+        Update the internal config reference.
+        Currently does not dynamically reconfigure running simulators.
+        """
+        self._config = new_config
+        logging.info("SimulatorOrchestrator config reference updated.")
+
     def stop(self):
-        """
-        Stop the simulator executor and wait for all tasks to complete.
-        """
+        """Stop simulator executor and wait for tasks to complete."""
         self._stop_event.set()
         self._simulator_executor.shutdown(wait=True)
 
     def __del__(self):
-        """
-        Clean up the SimulatorOrchestrator by stopping the executor.
-        """
+        """Clean up executor on deletion."""
         self.stop()

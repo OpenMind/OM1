@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import time
 from typing import List, Optional, Union
 
@@ -16,10 +15,12 @@ from runtime.config import (
     ModeSystemConfig,
     RuntimeConfig,
     load_mode_config,
+    mode_config_to_dict,
 )
-from runtime.hot_reload import HotReloadManager
+from runtime.hot_reload import HotReloadManager, ReloadStrategy
 from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+from utils.config_watcher import ConfigFileWatcher
 
 
 class ModeCortexRuntime:
@@ -49,20 +50,6 @@ class ModeCortexRuntime:
         hot_reload: bool = True,
         check_interval: float = 60,
     ):
-        """
-        Initialize the mode-aware cortex runtime.
-
-        Parameters
-        ----------
-        mode_config : ModeSystemConfig
-            The complete mode system configuration
-        mode_config_name : str
-            The name of the configuration file (used for logging purposes)
-        hot_reload : bool, optional
-            Enable hot-reload of configuration files (default: True)
-        check_interval : float, optional
-            Interval in seconds to check for config file changes (default: 60)
-        """
         self.mode_config = mode_config
         self.mode_config_name = mode_config_name
         self.mode_manager = ModeManager(mode_config)
@@ -71,22 +58,22 @@ class ModeCortexRuntime:
         self.config_provider = ConfigProvider()
 
         self.hot_reload_manager = HotReloadManager()
-
-        # Hot-reload configuration
         self.hot_reload = hot_reload
-        self.check_interval = check_interval
-        self.config_watcher_task: Optional[asyncio.Task] = None
-        self.last_modified: Optional[float] = None
 
-        # Initialize hot-reload if enabled
+        self.config_watcher: Optional[ConfigFileWatcher] = None
         if self.hot_reload:
-            self.config_path = self.mode_manager._get_runtime_config_path()
-            self.last_modified = self._get_file_mtime()
-            logging.info(
-                f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
+            self.config_path = self.mode_manager.runtime_config_path
+            self.config_watcher = ConfigFileWatcher(
+                config_path=self.config_path,
+                on_change_callback=self._reload_config,
+                debounce_seconds=0.5,
             )
+            logging.info(
+                f"Hot-reload enabled with watchdog for: {self.config_path} (debounce: 0.5s)"
+            )
+        else:
+            self.config_path = None
 
-        # Current runtime components
         self.current_config: Optional[RuntimeConfig] = None
         self.fuser: Optional[Fuser] = None
         self.action_orchestrator: Optional[ActionOrchestrator] = None
@@ -94,7 +81,6 @@ class ModeCortexRuntime:
         self.background_orchestrator: Optional[BackgroundOrchestrator] = None
         self.input_orchestrator: Optional[InputOrchestrator] = None
 
-        # Tasks for orchestrators
         self.input_listener_task: Optional[asyncio.Task] = None
         self.simulator_task: Optional[asyncio.Future] = None
         self.action_task: Optional[asyncio.Future] = None
@@ -102,31 +88,16 @@ class ModeCortexRuntime:
         self.cortex_loop_task: Optional[asyncio.Task] = None
         self.mode_transition_task: Optional[asyncio.Task] = None
 
-        # Setup transition callback
         self.mode_manager.add_transition_callback(self._on_mode_transition)
 
-        # Flag to track if mode is initialized
         self._mode_initialized = False
-
-        # Flag to track if a reload is in progress
         self._is_reloading = False
-
-        # Event for handling mode transitions
         self._mode_transition_event = asyncio.Event()
         self._pending_mode_transition: Optional[str] = None
         self._pending_transition_reason: Optional[str] = None
 
     async def _initialize_mode(self, mode_name: str):
-        """
-        Initialize the runtime with a specific mode.
-
-        Parameters
-        ----------
-        mode_name : str
-            The name of the mode to initialize
-        """
         mode_config = self.mode_config.modes[mode_name]
-
         mode_config.load_components(self.mode_config)
 
         self.current_config = mode_config.to_runtime_config(self.mode_config)
@@ -134,8 +105,6 @@ class ModeCortexRuntime:
         logging.info(f"Initializing mode: {mode_config.display_name}")
 
         self.mode_manager.state.user_context.clear()
-
-        logging.info("Setting up cortex components for mode")
 
         self.fuser = Fuser(self.current_config)
         self.action_orchestrator = ActionOrchestrator(self.current_config)
@@ -145,11 +114,6 @@ class ModeCortexRuntime:
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
     async def _handle_mode_transitions(self):
-        """
-        Handle mode transitions asynchronously, separate from the cortex loop.
-
-        This prevents the cortex loop from cancelling itself during transitions.
-        """
         while True:
             try:
                 await self._mode_transition_event.wait()
@@ -186,87 +150,48 @@ class ModeCortexRuntime:
                 await asyncio.sleep(1.0)
 
     async def _on_mode_transition(self, from_mode: str, to_mode: str):
-        """
-        Handle mode transitions by gracefully stopping current components and starting new ones for the target mode.
-
-        Parameters
-        ----------
-        from_mode : str
-            The name of the mode being transitioned from
-        to_mode : str
-            The name of the mode being transitioned to
-        """
         logging.info(f"Handling mode transition: {from_mode} -> {to_mode}")
 
         try:
-            # Set reloading flag
             self._is_reloading = True
-
-            # Stop current orchestrators
             await self._stop_current_orchestrators()
-
-            # Load new mode configuration
             await self._initialize_mode(to_mode)
-
-            # Start new orchestrators
             await self._start_orchestrators()
-
             logging.info(f"Successfully transitioned to mode: {to_mode}")
-
         except Exception as e:
             logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
             raise
         finally:
             self._is_reloading = False
 
     async def _stop_current_orchestrators(self) -> None:
-        """
-        Stop all current orchestrator tasks gracefully.
-        """
         logging.debug("Stopping current orchestrators...")
 
         self.sleep_ticker_provider.skip_sleep = True
 
         if self.background_orchestrator:
             self.background_orchestrator.stop()
-
         if self.simulator_orchestrator:
-            logging.debug("Stopping simulator orchestrator")
             self.simulator_orchestrator.stop()
-
         if self.action_orchestrator:
-            logging.debug("Stopping action orchestrator")
             self.action_orchestrator.stop()
 
         tasks_to_cancel = {}
-
         if self.cortex_loop_task and not self.cortex_loop_task.done():
-            logging.debug("Cancelling cortex loop task")
             tasks_to_cancel["cortex_loop"] = self.cortex_loop_task
-
         if self.input_listener_task and not self.input_listener_task.done():
-            logging.debug("Cancelling input listener task")
             tasks_to_cancel["input_listener"] = self.input_listener_task
-
         if self.simulator_task and not self.simulator_task.done():
-            logging.debug("Cancelling simulator task")
             tasks_to_cancel["simulator"] = self.simulator_task
-
         if self.action_task and not self.action_task.done():
-            logging.debug("Cancelling action task")
             tasks_to_cancel["action"] = self.action_task
-
         if self.background_task and not self.background_task.done():
-            logging.debug("Cancelling background task")
             tasks_to_cancel["background"] = self.background_task
 
-        # Cancel all tasks
         for name, task in tasks_to_cancel.items():
             task.cancel()
             logging.debug(f"Cancelled task: {name}")
 
-        # Wait for cancellations to complete with timeout
         if tasks_to_cancel:
             try:
                 done, pending = await asyncio.wait(
@@ -280,35 +205,13 @@ class ModeCortexRuntime:
                         for name, task in tasks_to_cancel.items()
                         if task in pending
                     ]
-                    completed_names = [
-                        name for name, task in tasks_to_cancel.items() if task in done
-                    ]
-
                     logging.warning(
                         f"Abandoning {len(pending)} unresponsive tasks: {pending_names}"
                     )
-                    logging.info(
-                        f"Successfully cancelled {len(done)} tasks: {completed_names}"
-                    )
-                    logging.info(
-                        "Continuing with reload without waiting for unresponsive tasks"
-                    )
                 else:
                     logging.info(f"All {len(done)} tasks cancelled successfully!")
-                    for name, task in tasks_to_cancel.items():
-                        try:
-                            task.result()
-                            logging.info(f"  {name}: Completed normally")
-                        except asyncio.CancelledError:
-                            logging.info(f"  {name}: Successfully cancelled")
-                        except Exception as e:
-                            logging.warning(
-                                f"  {name}: Exception - {type(e).__name__}: {e}"
-                            )
-
             except Exception as e:
                 logging.warning(f"Error during task cancellation: {e}")
-                logging.info("Continuing with reload despite cancellation errors")
 
         self.cortex_loop_task = None
         self.input_listener_task = None
@@ -317,20 +220,14 @@ class ModeCortexRuntime:
         self.background_task = None
 
     async def _start_orchestrators(self):
-        """
-        Start orchestrators for the current mode.
-        """
         if not self.current_config:
             raise RuntimeError("No current config available")
 
-        # Re-enable sleep operations
         self.sleep_ticker_provider.skip_sleep = False
 
-        # Start input listener
         self.input_orchestrator = InputOrchestrator(self.current_config.agent_inputs)
         self.input_listener_task = asyncio.create_task(self.input_orchestrator.listen())
 
-        # Start other orchestrators
         if self.simulator_orchestrator:
             self.simulator_task = self.simulator_orchestrator.start()
         if self.action_orchestrator:
@@ -338,10 +235,8 @@ class ModeCortexRuntime:
         if self.background_orchestrator:
             self.background_task = self.background_orchestrator.start()
 
-        # Start cortex task
         self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
 
-        # Start mode transition task
         if not self.mode_transition_task or self.mode_transition_task.done():
             self.mode_transition_task = asyncio.create_task(
                 self._handle_mode_transitions()
@@ -350,13 +245,8 @@ class ModeCortexRuntime:
         logging.debug("Orchestrators started successfully")
 
     async def _cleanup_tasks(self):
-        """
-        Cleanup all running tasks gracefully.
-        """
         tasks_to_cancel = []
 
-        if self.config_watcher_task and not self.config_watcher_task.done():
-            tasks_to_cancel.append(self.config_watcher_task)
         if self.cortex_loop_task and not self.cortex_loop_task.done():
             tasks_to_cancel.append(self.cortex_loop_task)
         if self.mode_transition_task and not self.mode_transition_task.done():
@@ -370,47 +260,41 @@ class ModeCortexRuntime:
         if self.background_task and not self.background_task.done():
             tasks_to_cancel.append(self.background_task)
 
-        # Cancel all tasks
         for task in tasks_to_cancel:
             task.cancel()
 
-        # Wait for cancellations to complete
         if tasks_to_cancel:
             try:
                 await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
             except Exception as e:
                 logging.warning(f"Error during final cleanup: {e}")
 
-        # Stop ConfigProvider
-        self.config_provider.stop()
+        if self.config_watcher:
+            self.config_watcher.stop()
+            self.config_watcher = None
 
+        self.config_provider.stop()
         logging.debug("Tasks cleaned up successfully")
 
     async def run(self) -> None:
-        """
-        Start the mode-aware runtime's main execution loop.
-        """
+        """Start the mode-aware runtime's main execution loop."""
         try:
             self.mode_manager.set_event_loop(asyncio.get_event_loop())
 
             if not self._mode_initialized:
-                # Execute global startup hooks
                 startup_context = {
                     "system_name": self.mode_config.name,
                     "initial_mode": self.mode_manager.current_mode_name,
                     "timestamp": asyncio.get_event_loop().time(),
                 }
 
-                startup_success = await self.mode_config.execute_global_lifecycle_hooks(
+                await self.mode_config.execute_global_lifecycle_hooks(
                     LifecycleHookType.ON_STARTUP, startup_context
                 )
-                if not startup_success:
-                    logging.warning("Some global startup hooks failed")
 
                 await self._initialize_mode(self.mode_manager.current_mode_name)
                 self._mode_initialized = True
 
-                # Execute initial mode startup hooks
                 initial_mode_config = self.mode_config.modes[
                     self.mode_manager.current_mode_name
                 ]
@@ -420,10 +304,9 @@ class ModeCortexRuntime:
 
             await self._start_orchestrators()
 
-            if self.hot_reload and self.config_path:
-                self.config_watcher_task = asyncio.create_task(
-                    self._check_config_changes()
-                )
+            if self.hot_reload and self.config_watcher:
+                loop = asyncio.get_event_loop()
+                self.config_watcher.start(loop)
 
             while True:
                 try:
@@ -435,8 +318,6 @@ class ModeCortexRuntime:
                         and not self.mode_transition_task.done()
                     ):
                         awaitables.append(self.mode_transition_task)
-                    if self.config_watcher_task and not self.config_watcher_task.done():
-                        awaitables.append(self.config_watcher_task)
                     if self.input_listener_task and not self.input_listener_task.done():
                         awaitables.append(self.input_listener_task)
                     if self.simulator_task and not self.simulator_task.done():
@@ -452,9 +333,7 @@ class ModeCortexRuntime:
                     logging.debug(
                         "Tasks cancelled during mode transition, continuing..."
                     )
-
                     await asyncio.sleep(0.1)
-
                 except Exception as e:
                     logging.error(f"Error in orchestrator tasks: {e}")
                     await asyncio.sleep(1.0)
@@ -463,14 +342,12 @@ class ModeCortexRuntime:
             logging.error(f"Error in mode-aware cortex runtime: {e}")
             raise
         finally:
-            # Execute shutdown hooks before cleanup
             shutdown_context = {
                 "system_name": self.mode_config.name,
                 "final_mode": self.mode_manager.current_mode_name,
                 "timestamp": asyncio.get_event_loop().time(),
             }
 
-            # Execute current mode shutdown hooks
             current_config = self.mode_config.modes.get(
                 self.mode_manager.current_mode_name
             )
@@ -479,7 +356,6 @@ class ModeCortexRuntime:
                     LifecycleHookType.ON_SHUTDOWN, shutdown_context
                 )
 
-            # Execute global shutdown hooks
             await self.mode_config.execute_global_lifecycle_hooks(
                 LifecycleHookType.ON_SHUTDOWN, shutdown_context
             )
@@ -487,9 +363,6 @@ class ModeCortexRuntime:
             await self._cleanup_tasks()
 
     async def _run_cortex_loop(self) -> None:
-        """
-        Execute the main cortex processing loop with mode awareness.
-        """
         current_mode = self.mode_manager.current_mode_name
         logging.info(f"Starting cortex loop for mode: {current_mode}")
 
@@ -502,9 +375,7 @@ class ModeCortexRuntime:
                 if not skip_status and self.current_config:
                     await self.sleep_ticker_provider.sleep(sleep_duration)
 
-                # Helper to yield control to event loop
                 await asyncio.sleep(0)
-
                 await self._tick()
                 self.sleep_ticker_provider.skip_sleep = False
         except asyncio.CancelledError:
@@ -519,9 +390,6 @@ class ModeCortexRuntime:
             raise
 
     async def _tick(self) -> None:
-        """
-        Execute a single tick of the mode-aware cortex processing cycle.
-        """
         if not self.current_config or not self.fuser or not self.action_orchestrator:
             logging.warning("Cortex not properly initialized, skipping tick")
             return
@@ -546,8 +414,6 @@ class ModeCortexRuntime:
         transition_result = await self.mode_manager.process_tick(last_input)
         if transition_result:
             new_mode, transition_reason = transition_result
-
-            # Schedule the transition asynchronously
             self._pending_mode_transition = new_mode
             self._pending_transition_reason = transition_reason
             self._mode_transition_event.set()
@@ -571,36 +437,15 @@ class ModeCortexRuntime:
         await self.action_orchestrator.promise(output.actions)
 
     def get_mode_info(self) -> dict:
-        """
-        Get information about the current mode and available transitions.
-        """
+        """Get information about current mode and available transitions."""
         return self.mode_manager.get_mode_info()
 
     async def request_mode_change(self, target_mode: str) -> bool:
-        """
-        Request a manual mode change.
-
-        Parameters
-        ----------
-        target_mode : str
-            The name of the target mode
-
-        Returns
-        -------
-        bool
-            True if the transition was successful, False otherwise
-        """
+        """Request manual mode change."""
         return await self.mode_manager.request_transition(target_mode, "manual")
 
     def get_available_modes(self) -> dict:
-        """
-        Get information about all available modes.
-
-        Returns
-        -------
-        dict
-            Dictionary mapping mode names to their display information
-        """
+        """Get information about all available modes."""
         return {
             name: {
                 "display_name": config.display_name,
@@ -610,111 +455,57 @@ class ModeCortexRuntime:
             for name, config in self.mode_config.modes.items()
         }
 
-    def _get_file_mtime(self) -> float:
-        """
-        Get the modification time of the config file.
+    async def _reload_config(self, changed_path: Optional[str] = None) -> None:
+        if self._is_reloading:
+            logging.debug("Reload already in progress, skipping")
+            return
 
-        Returns
-        -------
-        float
-            The modification time as a timestamp
-        """
-        if self.config_path and os.path.exists(self.config_path):
-            return os.path.getmtime(self.config_path)
-        return 0.0
-
-    async def _check_config_changes(self) -> None:
-        """
-        Periodically check for config file changes and reload if necessary.
-        """
-        while True:
-            try:
-                await asyncio.sleep(self.check_interval)
-
-                if not self.config_path or not os.path.exists(self.config_path):
-                    continue
-
-                current_mtime = self._get_file_mtime()
-
-                if self.last_modified and current_mtime > self.last_modified:
-                    logging.info(
-                        f"Runtime config file changed, reloading: {self.config_path}"
-                    )
-                    await self._reload_config()
-                    self.last_modified = current_mtime
-
-            except asyncio.CancelledError:
-                logging.debug("Config watcher cancelled")
-                break
-            except Exception as e:
-                logging.error(f"Error checking config changes: {e}")
-                await asyncio.sleep(10)  # Wait before retrying
-
-    async def _reload_config(self) -> None:
-        """
-        Reload the mode configuration when runtime config file changes.
-
-        Uses selective hot-reload: only fields marked HOT_RELOAD or VALIDATE_FIRST
-        are updated in-place. Fields marked RESTART_REQUIRED trigger a full restart.
-        """
         try:
-            logging.info(
-                f"Runtime config file changed, triggering reload: {self.config_path}"
-            )
-
+            logging.info(f"Config file changed, triggering reload: {self.config_path}")
             self._is_reloading = True
 
             current_mode = self.mode_manager.current_mode_name
 
-            logging.info("Loading configuration from the new runtime file")
             new_mode_config = load_mode_config(
                 self.mode_config_name,
-                mode_source_path=self.mode_manager._get_runtime_config_path(),
+                mode_source_path=self.config_path,
             )
 
-            # Get current and new mode config as dicts for change detection
             current_mode_config = self.mode_config.modes.get(current_mode)
             new_mode_config_entry = new_mode_config.modes.get(current_mode)
 
             if not current_mode_config or not new_mode_config_entry:
                 logging.warning(
-                    f"Mode '{current_mode}' not found in configs, doing full restart"
+                    f"Mode '{current_mode}' not found in reloaded config, doing full restart"
                 )
                 await self._full_restart_reload(new_mode_config, current_mode)
                 return
-
-            from runtime.config import mode_config_to_dict
 
             old_dict = mode_config_to_dict(self.mode_config)
             new_dict = mode_config_to_dict(new_mode_config)
 
-            detected_changes = self.hot_reload_manager.detect_changes(
-                old_dict, new_dict
-            )
+            changes = self.hot_reload_manager.detect_changes(old_dict, new_dict)
 
-            if not detected_changes:
-                logging.info("Config file changed, no registered fields modified.")
+            if not changes:
+                logging.info("Config file changed, but no registered fields modified.")
                 self.mode_config = new_mode_config
                 self.mode_manager.config = new_mode_config
                 return
 
-            categorized = self.hot_reload_manager.categorize_changes(detected_changes)
+            categorized = self.hot_reload_manager.categorize_changes(changes)
 
-            from runtime.hot_reload import ReloadStrategy
-
-            restart_changes = categorized[ReloadStrategy.RESTART_REQUIRED]
-            validate_changes = categorized[ReloadStrategy.VALIDATE_FIRST]
-            hot_changes = categorized[ReloadStrategy.HOT_RELOAD]
-
-            if restart_changes:
+            if categorized[ReloadStrategy.RESTART_REQUIRED]:
                 logging.warning(
                     "Restart required for changes: %s",
-                    [c.field_path for c in restart_changes],
+                    [
+                        c.field_path
+                        for c in categorized[ReloadStrategy.RESTART_REQUIRED]
+                    ],
                 )
                 await self._full_restart_reload(new_mode_config, current_mode)
                 return
 
-            # Validate first
+            validate_changes = categorized[ReloadStrategy.VALIDATE_FIRST]
             if validate_changes:
                 validation_results = self.hot_reload_manager.validate_changes(
                     validate_changes
@@ -722,51 +513,71 @@ class ModeCortexRuntime:
                 if not all(validation_results.values()):
                     invalid = [f for f, v in validation_results.items() if not v]
                     logging.error(
-                        "Validation failed: %s. Aborting hot-reload.", invalid
+                        "Validation failed for fields: %s. Aborting hot-reload.",
+                        invalid,
                     )
                     return
 
-            # Apply selective changes
-            for change in validate_changes + hot_changes:
-                self.hot_reload_manager.track_change(change)
-                logging.info(
-                    "Hot-reloaded: %s = %s", change.field_path, change.new_value
-                )
-
-            # Update fuser if system_prompt changed
-            if any(
-                "system_prompt" in c.field_path for c in validate_changes + hot_changes
-            ):
-                if self.current_config:
-                    self.fuser = Fuser(self.current_config)
-                    logging.info("Fuser updated.")
-
-            # Update action orchestrator if LLM config changed
-            if any(
-                "cortex_llm.config" in c.field_path
-                for c in validate_changes + hot_changes
-            ):
-                if self.action_orchestrator and self.current_config:
-                    self.action_orchestrator.update_config(self.current_config)
-                    logging.info("ActionOrchestrator LLM config updated.")
-
             self.mode_config = new_mode_config
             self.mode_manager.config = new_mode_config
-            logging.info("Selective hot-reload completed.")
+
+            self.current_config = self.mode_config.modes[
+                current_mode
+            ].to_runtime_config(self.mode_config)
+
+            self.fuser = Fuser(self.current_config)
+            logging.info("Fuser updated with new config.")
+
+            if self.action_orchestrator:
+                self.action_orchestrator.update_config(self.current_config)
+                logging.info("ActionOrchestrator config updated.")
+
+            if self.background_orchestrator:
+                if hasattr(self.background_orchestrator, "update_config"):
+                    self.background_orchestrator.update_config(self.current_config)
+                else:
+                    logging.warning(
+                        "BackgroundOrchestrator does not support dynamic config update."
+                    )
+
+            if self.simulator_orchestrator:
+                if hasattr(self.simulator_orchestrator, "update_config"):
+                    self.simulator_orchestrator.update_config(self.current_config)
+                else:
+                    logging.warning(
+                        "SimulatorOrchestrator does not support dynamic config update."
+                    )
+
+            if self.input_orchestrator:
+                if hasattr(self.input_orchestrator, "update_config"):
+                    self.input_orchestrator.update_config(self.current_config)
+                else:
+                    logging.warning(
+                        "InputOrchestrator does not support dynamic config update."
+                    )
+
+            if hasattr(self.config_provider, "update_runtime_config"):
+                self.config_provider.update_runtime_config(new_dict)
+                logging.info("ConfigProvider persisted updated configuration.")
+            else:
+                logging.warning(
+                    "ConfigProvider does not support persisting config updates."
+                )
+
+            for change in validate_changes + categorized[ReloadStrategy.HOT_RELOAD]:
+                self.hot_reload_manager.track_change(change)
+                logging.info(f"Hot-reloaded: {change.field_path} = {change.new_value}")
+
+            logging.info("Selective hot-reload completed successfully.")
 
         except Exception as e:
-            logging.error(f"Failed to reload mode configuration: {e}")
-            logging.error("Continuing with previous configuration")
-
+            logging.error(f"Failed to reload configuration: {e}", exc_info=True)
         finally:
             self._is_reloading = False
 
     async def _full_restart_reload(
         self, new_mode_config: ModeSystemConfig, current_mode: str
     ) -> None:
-        """
-        Perform a full restart reload - stop all orchestrators and reinitialize.
-        """
         await self._stop_current_orchestrators()
 
         self.mode_config = new_mode_config
@@ -783,7 +594,7 @@ class ModeCortexRuntime:
         self.mode_manager.state.mode_start_time = time.time()
         self.mode_manager.state.last_transition_time = time.time()
         self.mode_manager.state.transition_history.append(
-            f"config_reload->{current_mode}:hot_reload"
+            f"config_reload->{current_mode}:full_restart"
         )
 
         await self._initialize_mode(current_mode)
