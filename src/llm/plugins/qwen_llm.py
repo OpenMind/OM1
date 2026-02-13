@@ -113,10 +113,10 @@ class QwenLLM(LLM[R]):
 
         self._config: QwenLLMConfig = config
 
-        self._base_url = self._config.base_url or "http://127.0.0.1:8860/v1"
-        self._api_key = self._config.api_key or "placeholder"
-        self._model = self._config.model or "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
-        self._enable_reasoning = self._config.enable_reasoning or False
+        self._base_url = self._config.base_url
+        self._api_key = self._config.api_key
+        self._model = self._config.model
+        self._enable_reasoning = self._config.enable_reasoning
 
         self._client = openai.AsyncClient(
             base_url=self._base_url,

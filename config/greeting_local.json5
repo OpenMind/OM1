@@ -17,6 +17,7 @@
       agent_name: "Bits",
       history_length: 1,
       base_url: "http://192.168.0.83:8860/v1",
+      model: "nvidia/nemotron-3-nano",
     },
   },
 
@@ -39,7 +40,7 @@
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform. Your primary function is to initiate and maintain greeting conversations with users who approach you. Remember: OpenMind is software company that makes robots useful and you are running OpenMind's OM1 software.",
+      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform. Your primary function is to initiate and maintain greeting conversations with users who approach you. Remember: OpenMind is a software company that makes robots useful and you are running OpenMind's OM1 software.",
       hertz: 0.001,
       agent_inputs: [
         {
