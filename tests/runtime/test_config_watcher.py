@@ -20,6 +20,7 @@ class TestConfigWatcherAsyncCallback:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             config_path = Path(f.name)
 
+        watcher = None
         try:
             loop = asyncio.get_running_loop()
             watcher = ConfigFileWatcher(
@@ -37,5 +38,6 @@ class TestConfigWatcherAsyncCallback:
             await asyncio.wait_for(callback_executed.wait(), timeout=1.0)
             assert callback_executed.is_set()
         finally:
-            watcher.stop()
+            if watcher is not None:
+                watcher.stop()
             config_path.unlink(missing_ok=True)

@@ -808,7 +808,7 @@ class TestActionOrchestratorHotReload:
     def test_update_config_changes_internal_reference(self, mock_runtime_config):
         orchestrator = ActionOrchestrator(mock_runtime_config)
         assert orchestrator._config == mock_runtime_config
-        assert orchestrator._config.cortex_llm.model == "gpt-4"
+        assert orchestrator._config.cortex_llm.model == "gpt-4"  # type: ignore[attr-defined]
 
         new_config = MagicMock(spec=RuntimeConfig)
         new_config.cortex_llm = MagicMock()
@@ -816,7 +816,7 @@ class TestActionOrchestratorHotReload:
         orchestrator.update_config(new_config)
 
         assert orchestrator._config == new_config
-        assert orchestrator._config.cortex_llm.model == "claude-3-opus"
+        assert orchestrator._config.cortex_llm.model == "claude-3-opus"  # type: ignore[attr-defined]
 
     def test_update_config_logs_model_change(self, mock_runtime_config, caplog):
         import logging
@@ -901,7 +901,7 @@ class TestActionOrchestratorHotReload:
 
         assert "gpt-4" in caplog.text
         assert "claude-3-5-sonnet-20241022" in caplog.text
-        assert orchestrator._config.cortex_llm.model == "claude-3-5-sonnet-20241022"
+        assert orchestrator._config.cortex_llm.model == "claude-3-5-sonnet-20241022"  # type: ignore[attr-defined]
 
 
 class TestConnectorLoopExceptionHandling:
