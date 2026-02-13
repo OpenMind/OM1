@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -322,7 +323,7 @@ class TestModeCortexRuntimeHotReload:
             assert runtime.hot_reload is True
             assert runtime.config_watcher is not None
             mock_watcher_class.assert_called_once_with(
-                config_path="/fake/path/test_config.json5",
+                config_path=Path("/fake/path/test_config.json5"),
                 on_change_callback=runtime._reload_config,
                 debounce_seconds=0.5,
             )
