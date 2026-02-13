@@ -164,18 +164,12 @@ Step 2: Install all the necessary dependencies:
 
 ```bash
 cd OM1-ros2-sdk
-uv venv
+uv venv --python 3.10
 sudo rosdep init
 rosdep update
 rosdep install --from-paths . --ignore-src -r -y
 source .venv/bin/activate
 uv pip install .
-```
-
-Export the python path to your virtual environment
-
-```bash
-export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
 ```
 
 Step 3: Build all the packages:
@@ -205,6 +199,7 @@ This will bring up the `om/path` topic, enabling OM1 to understand the surroundi
 Step 6: Open a new terminal and run:
 
 ```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
 source install/setup.bash
 ros2 launch orchestrator orchestrator.py use_sim:=true
 ```
@@ -251,7 +246,9 @@ uv run src/run.py simulation
 
 Step 9: Teleoperate the robot in simulation
 
-You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
+You can also use teleoperation to control the robot through your keyboard.
+
+Switch back to `OM1-ros2-sdk` in a new terminal and run the following commands
 
 ```bash
 source install/setup.bash
