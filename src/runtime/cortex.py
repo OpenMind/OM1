@@ -456,7 +456,7 @@ class ModeCortexRuntime:
             for name, config in self.mode_config.modes.items()
         }
 
-    async def _reload_config(self, changed_path: Optional[str] = None) -> None:
+    async def _reload_config(self, _: Optional[str] = None) -> None:
         if self._is_reloading:
             logging.debug("Reload already in progress, skipping")
             return
