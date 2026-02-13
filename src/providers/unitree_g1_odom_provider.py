@@ -140,6 +140,7 @@ class UnitreeG1OdomProvider(OdomProviderBase):
         This overrides the base class method to handle G1-specific message format.
         """
         import math
+
         from .odom_provider_base import rad_to_deg
 
         while not self._stop_event.is_set():
@@ -149,7 +150,9 @@ class UnitreeG1OdomProvider(OdomProviderBase):
                 continue
 
             # Extract timestamp
-            self.odom_rockchip_ts = sport_data.stamp.sec + sport_data.stamp.nanosec * 1e-9
+            self.odom_rockchip_ts = (
+                sport_data.stamp.sec + sport_data.stamp.nanosec * 1e-9
+            )
             self.odom_subscriber_ts = time.time()
 
             # Extract position from the array [x, y, z]

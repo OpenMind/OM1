@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from actions.base import AgentAction
 from llm.output_model import Action
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 
 
 class ActionOrchestrator:
@@ -99,8 +99,8 @@ class ActionOrchestrator:
         while not self._stop_event.is_set():
             try:
                 action.connector.tick()
-            except Exception as e:
-                logging.error(f"Error in connector {action.llm_label}: {e}")
+            except Exception:
+                logging.exception(f"Error in connector {action.llm_label}")
                 self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
