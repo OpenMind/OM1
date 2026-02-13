@@ -82,7 +82,7 @@ class MessageHookConfig(HookConfig):
         The message to log or announce. Supports {variable} formatting.
     tts_provider : str
         The TTS provider to use ('elevenlabs', 'kokoro', 'riva'). Defaults to 'elevenlabs'.
-    url : Optional[str]
+    base_url : Optional[str]
         The URL endpoint for the TTS service. Provider-specific defaults apply.
     api_key : Optional[str]
         OpenMind API key for TTS service.
@@ -108,7 +108,7 @@ class MessageHookConfig(HookConfig):
         default="elevenlabs",
         description="The TTS provider to use ('elevenlabs', 'kokoro', 'riva')",
     )
-    url: Optional[str] = Field(
+    base_url: Optional[str] = Field(
         default=None,
         description="The URL endpoint for the TTS service. Provider-specific defaults apply.",
     )
@@ -292,7 +292,7 @@ class MessageHookHandler(LifecycleHookHandler):
 
         if provider_type == "elevenlabs":
             return ElevenLabsTTSProvider(
-                url=self.config.url
+                url=self.config.base_url
                 or "https://api.openmind.org/api/core/elevenlabs/tts",
                 api_key=self.config.api_key,
                 elevenlabs_api_key=self.config.elevenlabs_api_key,
@@ -303,7 +303,7 @@ class MessageHookHandler(LifecycleHookHandler):
             )
         elif provider_type == "kokoro":
             return KokoroTTSProvider(
-                url=self.config.url or "http://127.0.0.1:8880/v1",
+                url=self.config.base_url or "http://127.0.0.1:8880/v1",
                 api_key=self.config.api_key,
                 voice_id=self.config.voice_id or "af_bella",
                 model_id=self.config.model_id or "kokoro",
@@ -313,7 +313,7 @@ class MessageHookHandler(LifecycleHookHandler):
             )
         elif provider_type == "riva":
             return RivaTTSProvider(
-                url=self.config.url or "http://127.0.0.1:50051",
+                url=self.config.base_url or "http://127.0.0.1:50051",
                 api_key=self.config.api_key,
             )
         else:

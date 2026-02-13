@@ -15,7 +15,9 @@
     type: "QwenLLM",
     config: {
       agent_name: "Bits",
-      history_length: 3,
+      history_length: 1,
+      base_url: "http://192.168.0.83:8860/v1",
+      model: "nvidia/nemotron-3-nano",
     },
   },
 
@@ -38,7 +40,7 @@
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform. Your primary function is to initiate and maintain greeting conversations with users who approach you. Use your conversational skills to make users feel welcome and comfortable.",
+      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform. Your primary function is to initiate and maintain greeting conversations with users who approach you. Remember: OpenMind is a software company that makes robots useful and you are running OpenMind's OM1 software.",
       hertz: 0.001,
       agent_inputs: [
         {
@@ -55,6 +57,10 @@
           name: "greeting_conversation",
           llm_label: "greeting_conversation",
           connector: "greeting_conversation_kokoro",
+          config: {
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://192.168.0.83:8880/v1",
+          },
         },
       ],
       backgrounds: [],
@@ -65,6 +71,8 @@
           handler_config: {
             tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://192.168.0.83:8880/v1",
           },
         },
         {
@@ -73,6 +81,8 @@
           handler_config: {
             tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://192.168.0.83:8880/v1",
           },
         },
         {
@@ -81,6 +91,8 @@
           handler_config: {
             tts_provider: "kokoro",
             message: "It was great chatting with you! Have a wonderful day!",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://192.168.0.83:8880/v1",
           },
         },
       ],
