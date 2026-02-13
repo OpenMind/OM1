@@ -20,7 +20,7 @@ config/
 └── your_robot_modes.json5    # Mode configuration file
 ```
 
-> **Note:** Single mode is now deprecated. Any legacy single-mode config will now be converted into the multi-mode format, simplifying the runtime and CLI logic
+> **Note:** Single mode is now deprecated. Any legacy single-mode config will now be converted into the multi-mode format, simplifying the runtime and CLI logic.
 
 ## Configuration
 
