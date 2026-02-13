@@ -72,6 +72,14 @@ brew install ffmpeg
 sudo apt-get update
 sudo apt-get install ffmpeg
 ```
+
+To install Rust and Cargo (required for building SDKs like cdp-sdk), follow the steps below
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+```
+
 ## CLI
 
 OM1 provides a command-line interface (CLI). The main entry point is `src/run.py` which provides the following commands:
@@ -237,4 +245,4 @@ If you configure a custom agent, replace `<agent_name>` with your agent and run 
 uv run src/run.py <agent_name>
 ```
 
-To get started with development, refer [here](https://docs.openmind.org/developer_cookbook/introduction)
+To get started with development, refer [here](../developer_cookbook/introduction.md)
