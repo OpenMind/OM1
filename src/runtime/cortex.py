@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from pathlib import Path
 from typing import List, Optional, Union
 
 from actions.orchestrator import ActionOrchestrator
@@ -64,7 +65,7 @@ class ModeCortexRuntime:
         if self.hot_reload:
             self.config_path = self.mode_manager.runtime_config_path
             self.config_watcher = ConfigFileWatcher(
-                config_path=(self.config_path),
+                config_path=Path(self.config_path),
                 on_change_callback=self._reload_config,
                 debounce_seconds=0.5,
             )
