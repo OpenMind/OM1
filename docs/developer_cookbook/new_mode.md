@@ -14,7 +14,7 @@ src/runtime/
 ├── manager.py         # ModeManager for transitions
 ├── cortex.py          # ModeCortexRuntime for execution
 ├── hook.py            # Lifecycle hooks
-└── converter.py            # Lifecycle hooks
+└── converter.py       # Converts legacy single mode configs to multimode config
 
 config/
 └── your_robot_modes.json5    # Mode configuration file

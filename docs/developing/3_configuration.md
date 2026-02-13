@@ -10,59 +10,117 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 ```python
 {
-  "version": "v1.0.2",
-  "hertz": 0.5,
-  "name": "agent_name",
-  "api_key": "openmind_free",
-  "URID": "default",
-  "system_prompt_base": "...",
-  "system_governance": "...",
-  "system_prompt_examples": "...",
-  "agent_inputs": [
-    {
-      "type": "GovernanceEthereum"
+  version: "v1.0.2",
+  default_mode: "welcome",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "openmind_free",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 10,
     },
-    {
-      "type": "VLM_COCO_Local",
-      "config": {
-        "camera_index": 0
-      }
-    }
-  ],
-  "cortex_llm": {
-    "type": "OpenAILLM",
-    "config": {
-      "base_url": "",       // Optional: URL of the LLM endpoint
-      "agent_name": "Iris", // Optional: Name of the agent
-      "history_length": 10
-    }
   },
-  "simulators": [
-    {
-      "type": "WebSim",
-      "config": {
-        "host": "0.0.0.0",
-        "port": 8000,
-        "tick_rate": 100,
-        "auto_reconnect": true,
-        "debug_mode": false
-      }
-    }
-  ],
-  "agent_actions": [
-    {
-      "name": "move",
-      "llm_label": "move",
-      "implementation": "passthrough",
-      "connector": "ros2"
+
+  modes: {
+    welcome: {
+      display_name: "Welcome Mode",
+      description: "Initial greeting and user information gathering",
+      system_prompt_base: "You are Bits, a friendly robotic dog meeting someone for the first time. Your goal is to:\n1. Introduce yourself warmly\n2. Ask for the user's name and basic preferences\n3. Explain your capabilities\n4. Ask what they'd like to do together\n\nBe enthusiastic, friendly, and helpful. Keep responses concise but warm.",
+      hertz: 0.01,
+      agent_inputs: [
+        {
+          type: "VLM_COCO_Local",
+          config: {
+            camera_index: 0,
+          },
+        },
+        {
+          type: "GoogleASRInput",
+        },
+      ],
+      agent_actions: [
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 0,
+          },
+        },
+      ],
     },
+
+    conversation: {
+      display_name: "Social Interaction",
+      description: "Focused conversation and social interaction mode",
+      system_prompt_base: "You are Bits in conversation mode. Focus on:\n1. Engaging in meaningful dialogue\n2. Answering questions thoughtfully\n3. Showing interest in the user\n4. Being a good companion\n5. Responding to emotional cues\n\nBe attentive, empathetic, and engaging. Use appropriate body language and expressions to enhance communication.",
+      save_interactions: true,
+      hertz: 1,
+      agent_inputs: [
+        {
+          type: "GoogleASRInput",
+        },
+        {
+          type: "VLM_COCO_Local",
+          config: {
+            camera_index: 0,
+          },
+        },
+      ],
+      agent_actions: [
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "TbMNBJ27fH2U0VgpSNko",
+            silence_rate: 10,
+          },
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    // From welcome mode
     {
-      "name": "speak",
-      "llm_label": "speak",
-      "implementation": "passthrough",
-      "connector": "ros2"
-    }
-  ]
+      from_mode: "welcome",
+      to_mode: "conversation",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "talk",
+        "chat",
+        "conversation",
+        "tell me",
+        "ask you",
+        "discuss",
+      ],
+      priority: 2,
+      cooldown_seconds: 3.0,
+    },
+
+    // Universal transitions (from any mode)
+    {
+      from_mode: "*",
+      to_mode: "welcome",
+      transition_type: "input_triggered",
+      trigger_keywords: [
+        "reset",
+        "start over",
+        "welcome mode",
+        "restart",
+        "initialize",
+      ],
+      priority: 5,
+      cooldown_seconds: 10.0,
+    },
+  ],
 }
 ```
 
@@ -75,6 +133,9 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 * **system_prompt_base** Defines the agent's personality and behavior.
 * **system_governance** The agent's laws and constitution.
 * **system_prompt_examples** The agent's example inputs/actions.
+* **default_mode** The default mode for the robot to start in.
+* **allow_manual_switching** To decide if manual switching of mode is allowed or not.
+* **mode_memory_enabled** Whether mode memory is enabled.
 
 ## version
 
@@ -96,11 +157,11 @@ The runtime/version.py module handles:
 
     Initial stable configuration version.
 
-  - `v1.0.2`
+  - `v1.0.1`
 
     Adds support for context-aware mode for full autonomy.
 
-  - `v1.0.3` (latest)
+  - `v1.0.2` (latest)
 
     Adds support for multiple TTS.
 
@@ -211,4 +272,4 @@ Defines the agent's available capabilities, including action names, their implem
 
 You can customize the actions following the [Action Plugin Guide](6_actions.md)
 
-To introduce multimode config, refer [introduce new mode](https://docs.openmind.org/developer_cookbook/new_mode)
+To introduce a new mode in your config, refer [introduce new mode](../developer_cookbook/new_mode.md)
