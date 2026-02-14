@@ -5,7 +5,7 @@ import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
 from llm.output_model import Action
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 from simulators.base import Simulator
 
 
@@ -24,6 +24,14 @@ class SimulatorOrchestrator:
     _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
+        """
+        Initialize the Simulator Orchestrator.
+
+        Parameters
+        ----------
+        config : RuntimeConfig
+            Runtime configuration containing simulator settings.
+        """
         self._config = config
         self.promise_queue = []
         self._simulator_workers = (

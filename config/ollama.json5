@@ -15,7 +15,7 @@
   //   - llava (multimodal - supports images)
   //   - codellama (code-focused)
 
-  version: "v1.0.1",
+  version: "v1.0.2",
   hertz: 0.5,
   name: "ollama",
   api_key: "openmind_free",
