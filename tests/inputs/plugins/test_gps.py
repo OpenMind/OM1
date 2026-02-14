@@ -188,3 +188,81 @@ def test_formatted_latest_buffer_empty():
 
         result = sensor.formatted_latest_buffer()
         assert result is None
+
+@pytest.mark.asyncio
+async def test_raw_to_text_with_incomplete_data():
+    """Ensure incomplete GPS payload does not crash."""
+    with (
+        patch("inputs.plugins.gps.GpsProvider"),
+        patch("inputs.plugins.gps.IOProvider"),
+    ):
+        sensor = Gps(config=SensorConfig())
+
+        gps_data = {
+            "gps_lat": 37.7749  # missing lon, alt, quality
+        }
+
+        result = await sensor._raw_to_text(gps_data)
+
+        assert result is None
+
+@pytest.mark.asyncio
+async def test_raw_to_text_with_invalid_types():
+    """Ensure invalid GPS types do not crash system."""
+    with (
+        patch("inputs.plugins.gps.GpsProvider"),
+        patch("inputs.plugins.gps.IOProvider"),
+    ):
+        sensor = Gps(config=SensorConfig())
+
+        gps_data = {
+            "gps_lat": "invalid",
+            "gps_lon": None,
+            "gps_alt": "bad",
+            "gps_qua": 1,
+        }
+
+        result = await sensor._raw_to_text(gps_data)
+
+        assert result is None
+
+@pytest.mark.asyncio
+async def test_poll_with_empty_dict():
+    """Ensure empty provider data does not crash."""
+    with (
+        patch("inputs.plugins.gps.GpsProvider") as mock_provider_class,
+        patch("inputs.plugins.gps.IOProvider"),
+    ):
+        mock_provider = MagicMock()
+        mock_provider.data = {}
+        mock_provider_class.return_value = mock_provider
+
+        sensor = Gps(config=SensorConfig())
+
+        with patch("inputs.plugins.gps.asyncio.sleep", new=AsyncMock()):
+            result = await sensor._poll()
+
+        assert result is None or result == {}
+
+@pytest.mark.asyncio
+async def test_raw_to_text_with_zero_coordinates():
+    """Ensure zero GPS coordinates are handled correctly."""
+    with (
+        patch("inputs.plugins.gps.GpsProvider"),
+        patch("inputs.plugins.gps.IOProvider"),
+    ):
+        sensor = Gps(config=SensorConfig())
+
+        gps_data = {
+            "gps_lat": 0.0,
+            "gps_lon": 0.0,
+            "gps_alt": 0.0,
+            "gps_qua": 1,
+        }
+
+        with patch("inputs.plugins.gps.time.time", return_value=1000.0):
+            result = await sensor._raw_to_text(gps_data)
+
+        assert result is not None
+        assert "0.0" in result.message
+
