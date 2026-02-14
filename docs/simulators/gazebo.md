@@ -4,7 +4,7 @@ description: "Quadruped Simulation and Control"
 icon: robot
 ---
 
-## Minimum System Requirements
+## System Requirements
 
 | Component | Minimum | Good/Recommended | Ideal |
 |-----------|---------|------------------|-------|
@@ -24,7 +24,7 @@ To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds an
 Install cyclonedds from this [link](https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html) or follow the instructions below.
 
 ```bash
-apt-get install git cmake gcc
+sudo apt-get install git cmake gcc
 ```
 
 ```bash
@@ -156,108 +156,113 @@ Once you've successfully completed above steps, follow the following steps to st
 
 Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repository:
 
-    ```bash
-    git clone https://github.com/OpenMind/OM1-ros2-sdk.git
-    ```
+```bash
+git clone https://github.com/OpenMind/OM1-ros2-sdk.git
+```
 
 Step 2: Install all the necessary dependencies:
 
-    ```bash
-    cd OM1-ros2-sdk
-    uv venv
-    sudo rosdep init
-    rosdep update
-    rosdep install --from-paths . --ignore-src -r -y
-    source .venv/bin/activate
-    uv pip install .
-    ```
-
-    Export the python path to your virtual environment
-
-    ```bash
-    export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
-    ```
+```bash
+cd OM1-ros2-sdk
+uv venv --python 3.10
+sudo rosdep init
+rosdep update
+rosdep install --from-paths . --ignore-src -r -y
+source .venv/bin/activate
+uv pip install .
+```
 
 Step 3: Build all the packages:
 
-    ```bash
-    colcon build
-    ```
+```bash
+colcon build
+```
 
-    Now you should be able to launch the **Gazebo Simulator**.
+Now you should be able to launch the **Gazebo Simulator**.
 
 Step 4: Open a terminal and run the following commands. You'll now be able to see the Gazebo and RViZ windows launch on your system.
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_gazebo_sim go2_launch.py
-    ```
+```bash
+source install/setup.bash
+ros2 launch go2_gazebo_sim go2_launch.py
+```
 
 Step 5: Open a new terminal and run:
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_sdk sensor_launch.py use_sim:=true
-    ```
+```bash
+source install/setup.bash
+ros2 launch go2_sdk sensor_launch.py use_sim:=true
+```
 
-    This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
+This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
-Step 6: Run Zenoh Ros2 Bridge
+Step 6: Open a new terminal and run:
 
-    To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd)/.venv/lib/python3.10/site-packages
+source install/setup.bash
+ros2 launch orchestrator orchestrator_launch.py use_sim:=true
+```
 
-    After installing the Zenoh ROS 2 bridge, you can run it with the following command:
+This will bring up the `orchestrator`, to consume data collected by `om1_sensor` for SLAM and Navigation.
 
-    ```bash
-    zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
-    ```
+Step 7: Run Zenoh Ros2 Bridge
 
-Step 7: Start SLAM mode
+To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
 
-    Open a new terminal and run the following to start the SLAM mode for the robot to start mapping the area. Our Gazebo setup includes auto mapping feature, this will let the robot to generate a 2D map for the area which can then be utilised at later stage to make the robot move from point A to point B.
+After installing the Zenoh ROS 2 bridge, you can run it with the following command:
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_sdk slam_launch.py use_sim:=true
-    ```
+```bash
+zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
+```
 
-Step 8: Save the map
+Step 8: Start OM1
 
-    After the SLAM mode is complete, you can save the map by using the following command. Replace `<my_map>` with the name you prefer for saving the map.
+Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
 
-    ```bash
-    source install/setup.bash
-    ros2 run nav2_map_server map_saver_cli -f my_map
-    ```
+Then add the optional Python CycloneDDS module to OM1, run
 
-Step 9: Navigate the robot across the map
+```bash
+uv pip install -r pyproject.toml --extra dds
+```
 
-    Once you successfully save the map, you can run the following command in a new terminal to enable navigation. After running the command, simply head over to RViz window and press **2D goal pose**. Now click at any new location on the map to make the robot start navigating towards it.
+Setup your API key in `.bashrc` file and run your simulation agent:
 
-    Make sure the map name is same as the one you set up in the previous step.
+Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
 
-    ```bash
-    source install/setup.bash
-    ros2 launch go2_sdk nav2_launch.py use_sim:=true map_yaml_file:=my_map.yaml
-    ```
+```bash
+vi ~/.bashrc
+```
 
-Step 10: Teleoperate the robot in simulation
+```bash
+export OM_API_KEY="<your_api_key>"
+```
 
-    You can also use teleoperation to control the robot through your keyboard using the following commands in a new terminal.
+Now, run the simulation agent
 
-    ```bash
-    source install/setup.bash
-    ros2 run teleop_twist_keyboard teleop_twist_keyboard
-    ```
+```bash
+uv run src/run.py simulation
+```
 
-    Use the keyboard controls displayed in the terminal to move the robot:
-    ```
-    i - Move forward
-    , - Move backward
-    j - Turn left
-    l - Turn right
-    k - Stop
-    U/O/M/> - Move diagonally
-    ```
+Step 9: Teleoperate the robot in simulation
 
-Note: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
+You can also use teleoperation to control the robot through your keyboard.
+
+Switch back to `OM1-ros2-sdk` in a new terminal and run the following commands
+
+```bash
+source install/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
+
+Use the keyboard controls displayed in the terminal to move the robot:
+```
+i - Move forward
+, - Move backward
+j - Turn left
+l - Turn right
+k - Stop
+U/O/M/> - Move diagonally
+```
+
+> **Note**: We don't have auto charging feature supported with Gazebo but it will be launched soon. Stay tuned!
