@@ -44,9 +44,6 @@ def connector():
     return HomeAssistantRESTConnector(config)
 
 
-# --- Universal commands (on/off/toggle) ---
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "command,expected_service",
@@ -83,9 +80,6 @@ async def test_command_case_insensitive(connector):
         service="turn_on",
         entity_id="light.living_room",
     )
-
-
-# --- Legacy "set" command ---
 
 
 @pytest.mark.asyncio
@@ -136,9 +130,6 @@ async def test_set_generic_domain(connector):
         entity_id="fan.garage",
         value=50.0,
     )
-
-
-# --- Light commands ---
 
 
 @pytest.mark.asyncio
@@ -210,9 +201,6 @@ async def test_set_color_without_mode_logs_error(connector):
     mock_logger.error.assert_called_once()
     assert "requires a mode" in mock_logger.error.call_args[0][0]
     connector.provider.call_service.assert_not_called()
-
-
-# --- Climate commands ---
 
 
 @pytest.mark.asyncio
@@ -287,9 +275,6 @@ async def test_set_preset_command(connector):
     )
 
 
-# --- Lock commands ---
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "command,expected_service",
@@ -310,9 +295,6 @@ async def test_lock_commands(connector, command, expected_service):
         service=expected_service,
         entity_id="lock.front_door",
     )
-
-
-# --- Cover commands ---
 
 
 @pytest.mark.asyncio
@@ -352,9 +334,6 @@ async def test_cover_set_position(connector):
         entity_id="cover.blinds",
         position=50.0,
     )
-
-
-# --- Media player commands ---
 
 
 @pytest.mark.asyncio
@@ -435,9 +414,6 @@ async def test_media_select_source(connector):
     )
 
 
-# --- Fan commands ---
-
-
 @pytest.mark.asyncio
 async def test_fan_set_percentage(connector):
     """Test fan set_percentage sends percentage."""
@@ -479,9 +455,6 @@ async def test_fan_oscillate(connector, command, expected_oscillating):
     )
 
 
-# --- Vacuum commands ---
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "command,expected_service",
@@ -506,9 +479,6 @@ async def test_vacuum_commands(connector, command, expected_service):
     )
 
 
-# --- Scene commands ---
-
-
 @pytest.mark.asyncio
 async def test_scene_activate(connector):
     """Test scene activate calls turn_on."""
@@ -522,9 +492,6 @@ async def test_scene_activate(connector):
         service="turn_on",
         entity_id="scene.movie_mode",
     )
-
-
-# --- Alarm commands ---
 
 
 @pytest.mark.asyncio
@@ -551,9 +518,6 @@ async def test_alarm_commands(connector, command, expected_service):
     )
 
 
-# --- Script commands ---
-
-
 @pytest.mark.asyncio
 async def test_script_run(connector):
     """Test script run calls turn_on."""
@@ -567,9 +531,6 @@ async def test_script_run(connector):
         service="turn_on",
         entity_id="script.morning_routine",
     )
-
-
-# --- Domain-aware "stop" command ---
 
 
 @pytest.mark.asyncio
@@ -600,9 +561,6 @@ async def test_stop_vacuum_domain(connector):
         service="stop",
         entity_id="vacuum.roomba",
     )
-
-
-# --- Error cases ---
 
 
 @pytest.mark.asyncio
@@ -698,9 +656,6 @@ async def test_provider_runtime_error_logged(connector):
     assert "HTTP 500" in mock_logger.error.call_args[0][0]
 
 
-# --- Entity resolution ---
-
-
 def test_resolve_entity_success(connector):
     """Test successful entity resolution from alias."""
     assert connector._resolve_entity("living_room_light") == "light.living_room"
@@ -713,9 +668,6 @@ def test_resolve_entity_unknown_raises(connector):
     """Test that unknown alias raises ValueError."""
     with pytest.raises(ValueError, match="Unknown device alias"):
         connector._resolve_entity("nonexistent")
-
-
-# --- RGB color parsing ---
 
 
 def test_parse_rgb_color_with_hash():
@@ -740,9 +692,6 @@ def test_parse_rgb_color_mixed_case():
     """Test parsing hex color with mixed case."""
     assert _parse_rgb_color("#ff8800") == [255, 136, 0]
     assert _parse_rgb_color("#Ff8800") == [255, 136, 0]
-
-
-# --- Service call resolution (direct unit tests) ---
 
 
 def test_get_service_call_on():

@@ -27,9 +27,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# --- Mock Home Assistant Server ---
-
-
 class MockHomeAssistant:
     """
     Mock Home Assistant REST API server.
@@ -310,9 +307,6 @@ def reset_singleton():
     HomeAssistantProvider.reset()  # type: ignore
 
 
-# --- E2E Tests ---
-
-
 @pytest.mark.asyncio
 async def test_e2e_turn_on_light(mock_ha_server):
     """Simulate: User says 'turn on the living room light'."""
@@ -558,9 +552,6 @@ async def test_e2e_full_scenario(mock_ha_server):
     assert "brightness" in change_buffer
 
 
-# --- Error handling scenarios ---
-
-
 @pytest.mark.asyncio
 async def test_e2e_unknown_device(mock_ha_server):
     """Simulate: LLM outputs a device alias not in config."""
@@ -653,9 +644,6 @@ async def test_e2e_entity_not_found(mock_ha_server):
 
     with pytest.raises(RuntimeError, match="Failed to get state"):
         await provider.get_state("light.nonexistent_room")
-
-
-# --- Additional coverage scenarios ---
 
 
 @pytest.mark.asyncio
@@ -764,8 +752,6 @@ async def test_e2e_state_polling_climate_format(mock_ha_server):
     assert "Thermostat: cool" in buffer
     assert "current temperature 26.0" in buffer
 
-
-# --- New device type e2e scenarios ---
 
 ALL_DEVICES = {
     "living_room_light": "light.living_room",

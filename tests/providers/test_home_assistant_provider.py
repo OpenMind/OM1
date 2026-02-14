@@ -46,9 +46,6 @@ def create_aiohttp_mock(status=200, json_data=None, text_data="OK"):
     return mock_session_cm, mock_session
 
 
-# --- Singleton behavior ---
-
-
 def test_singleton_returns_same_instance():
     """Test that multiple calls return the same instance."""
     p1 = HomeAssistantProvider(base_url="http://ha.local:8123", token="tok1")
@@ -64,9 +61,6 @@ def test_singleton_reset_creates_new_instance():
     p2 = HomeAssistantProvider(base_url="http://ha.local:9999", token="tok2")
     assert p1 is not p2
     assert p2.base_url == "http://ha.local:9999"
-
-
-# --- Token resolution ---
 
 
 def test_get_token_from_env(provider):
@@ -102,9 +96,6 @@ def test_get_token_raises_when_missing():
         finally:
             if env_backup is not None:
                 os.environ["NONEXISTENT_TOKEN_VAR_12345"] = env_backup
-
-
-# --- get_state ---
 
 
 @pytest.mark.asyncio
@@ -144,9 +135,6 @@ async def test_get_state_http_error(provider):
     ):
         with pytest.raises(RuntimeError, match="Failed to get state"):
             await provider.get_state("light.nonexistent")
-
-
-# --- get_states ---
 
 
 @pytest.mark.asyncio
@@ -201,9 +189,6 @@ async def test_get_states_http_error(provider):
             await provider.get_states(["light.living_room"])
 
 
-# --- call_service ---
-
-
 @pytest.mark.asyncio
 async def test_call_service_success(provider):
     """Test successful service call with correct payload."""
@@ -243,9 +228,6 @@ async def test_call_service_http_error(provider):
                 service="turn_on",
                 entity_id="light.living_room",
             )
-
-
-# --- URL construction ---
 
 
 def test_base_url_trailing_slash_stripped():

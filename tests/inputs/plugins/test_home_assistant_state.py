@@ -36,9 +36,6 @@ def state_input(config):
     return HomeAssistantStateInput(config)
 
 
-# --- Initialization ---
-
-
 def test_init_descriptor(state_input):
     """Test that descriptor_for_LLM is set correctly."""
     assert state_input.descriptor_for_LLM == "Home Status"
@@ -64,9 +61,6 @@ def test_init_empty_entities_warns():
         HomeAssistantStateInput(config)
     mock_logger.warning.assert_called_once()
     assert "No entities configured" in mock_logger.warning.call_args[0][0]
-
-
-# --- Polling ---
 
 
 @pytest.mark.asyncio
@@ -125,9 +119,6 @@ async def test_poll_returns_none_when_no_entities():
     assert result is None
 
 
-# --- Deduplication ---
-
-
 @pytest.mark.asyncio
 async def test_deduplication_same_state_not_reported(state_input):
     """Test that the same state is not reported twice."""
@@ -173,9 +164,6 @@ async def test_state_change_is_reported(state_input):
     msg2 = await state_input._raw_to_text(states_off)
     assert msg2 is not None
     assert "off" in msg2.message
-
-
-# --- Formatting ---
 
 
 def test_format_entity_state_basic(state_input):
@@ -237,9 +225,6 @@ def test_format_entity_state_climate_with_temperature(state_input):
     assert "current temperature 21.0" in result
 
 
-# --- raw_to_text ---
-
-
 @pytest.mark.asyncio
 async def test_raw_to_text_appends_to_messages(state_input):
     """Test that raw_to_text appends new messages to the buffer."""
@@ -260,9 +245,6 @@ async def test_raw_to_text_none_input_no_append(state_input):
     """Test that None input does not append to messages."""
     await state_input.raw_to_text(None)
     assert len(state_input.messages) == 0
-
-
-# --- formatted_latest_buffer ---
 
 
 def test_formatted_latest_buffer_empty_returns_none(state_input):
