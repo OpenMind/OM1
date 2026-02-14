@@ -192,7 +192,7 @@ class HomeAssistantStateInput(
         text = "\n".join(changed_lines)
         return Message(timestamp=time.time(), message=text)
 
-    async def raw_to_text(self, raw_input: Optional[Dict[str, Any]]) -> None:
+    async def raw_to_text(self, raw_input: Optional[Dict[str, Any]]):
         """
         Process polled state data and buffer changed states.
 
