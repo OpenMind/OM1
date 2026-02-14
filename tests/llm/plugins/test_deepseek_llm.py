@@ -191,7 +191,7 @@ async def test_ask_empty_choices(llm):
     """Test handling when API returns empty choices"""
     empty_response = MagicMock()
     empty_response.choices = []
-    
+
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
             llm._client.chat.completions,
@@ -208,18 +208,16 @@ async def test_ask_with_multiple_tool_calls(llm):
     tool_call_1 = MagicMock()
     tool_call_1.function.name = "function_1"
     tool_call_1.function.arguments = '{"arg1": "value1"}'
-    
+
     tool_call_2 = MagicMock()
     tool_call_2.function.name = "function_2"
     tool_call_2.function.arguments = '{"arg2": "value2"}'
-    
+
     response = MagicMock()
     response.choices = [
-        MagicMock(
-            message=MagicMock(tool_calls=[tool_call_1, tool_call_2])
-        )
+        MagicMock(message=MagicMock(tool_calls=[tool_call_1, tool_call_2]))
     ]
-    
+
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
             llm._client.chat.completions,
@@ -235,14 +233,14 @@ async def test_ask_with_multiple_tool_calls(llm):
 async def test_ask_timeout_configuration(llm, mock_response):
     """Test that timeout configuration is passed to API"""
     llm._config.timeout = 30
-    
+
     with pytest.MonkeyPatch.context() as m:
         mock_create = AsyncMock(return_value=mock_response)
         m.setattr(llm._client.chat.completions, "create", mock_create)
-        
+
         await llm.ask("test prompt")
-        
-        assert mock_create.call_args.kwargs['timeout'] == 30
+
+        assert mock_create.call_args.kwargs["timeout"] == 30
 
 
 @pytest.mark.asyncio
