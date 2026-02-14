@@ -223,3 +223,32 @@ def test_session_none_handling(mock_dependencies):
 
         assert provider.session is None
         assert provider.ai_status_pub is None
+
+
+def test_is_navigating_default(mock_dependencies):
+    """Test is_navigating property returns False by default."""
+    provider = UnitreeG1NavigationProvider()
+    assert provider.is_navigating is False
+
+
+def test_is_navigating_when_active(mock_dependencies):
+    """Test is_navigating property returns True when navigation is in progress."""
+    provider = UnitreeG1NavigationProvider()
+    provider._nav_in_progress = True
+    assert provider.is_navigating is True
+
+
+def test_navigation_state_default(mock_dependencies):
+    """Test navigation_state property returns UNKNOWN by default."""
+    provider = UnitreeG1NavigationProvider()
+    assert provider.navigation_state == "UNKNOWN"
+
+
+def test_navigation_state_after_update(mock_dependencies):
+    """Test navigation_state property after status update."""
+    provider = UnitreeG1NavigationProvider()
+    provider.navigation_status = "NAVIGATING"
+    assert provider.navigation_state == "NAVIGATING"
+
+    provider.navigation_status = "SUCCEEDED"
+    assert provider.navigation_state == "SUCCEEDED"

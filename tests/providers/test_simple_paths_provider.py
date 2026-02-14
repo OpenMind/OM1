@@ -1,3 +1,6 @@
+import multiprocessing as mp
+import threading
+
 import pytest
 
 from providers.simple_paths_provider import SimplePathsProvider
@@ -14,6 +17,8 @@ def simple_paths_provider():
     provider.turn_right = []
     provider.advance = []
     provider.retreat = False
+    provider._valid_paths = []
+    provider._lidar_string = ""
     return provider
 
 
@@ -92,3 +97,70 @@ def test_generate_movement_string_none_paths(simple_paths_provider):
     expected_surrounded = "You are surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
     result_surrounded = simple_paths_provider._generate_movement_string([])
     assert result_surrounded == expected_surrounded
+
+
+def test_valid_paths_default(simple_paths_provider):
+    """Test valid_paths property returns default empty list."""
+    assert simple_paths_provider.valid_paths == []
+
+
+def test_valid_paths_populated(simple_paths_provider):
+    """Test valid_paths property after setting values."""
+    simple_paths_provider._valid_paths = [0, 3, 4, 5]
+    assert simple_paths_provider.valid_paths == [0, 3, 4, 5]
+
+
+def test_valid_paths_none(simple_paths_provider):
+    """Test valid_paths property when set to None."""
+    simple_paths_provider._valid_paths = None
+    assert simple_paths_provider.valid_paths is None
+
+
+def test_lidar_string_default(simple_paths_provider):
+    """Test lidar_string property returns default empty string."""
+    assert simple_paths_provider.lidar_string == ""
+
+
+def test_lidar_string_after_set(simple_paths_provider):
+    """Test lidar_string property after setting a value."""
+    simple_paths_provider._lidar_string = "Path clear ahead"
+    assert simple_paths_provider.lidar_string == "Path clear ahead"
+
+
+def test_movement_options(simple_paths_provider):
+    """Test movement_options property returns correct dict structure."""
+    simple_paths_provider.turn_left = [0, 1]
+    simple_paths_provider.advance = [3, 4, 5]
+    simple_paths_provider.turn_right = [7, 8]
+    simple_paths_provider.retreat = True
+
+    result = simple_paths_provider.movement_options
+    assert result == {
+        "turn_left": [0, 1],
+        "advance": [3, 4, 5],
+        "turn_right": [7, 8],
+        "retreat": True,
+    }
+
+
+def test_movement_options_empty(simple_paths_provider):
+    """Test movement_options property with default empty values."""
+    result = simple_paths_provider.movement_options
+    assert result == {
+        "turn_left": [],
+        "advance": [],
+        "turn_right": [],
+        "retreat": False,
+    }
+
+
+def test_stop(simple_paths_provider):
+    """Test stop method sets stop event, sends STOP to queue, and joins threads."""
+    simple_paths_provider._stop_event = threading.Event()
+    simple_paths_provider.control_queue = mp.Queue()
+    simple_paths_provider._simple_paths_processor_thread = None
+    simple_paths_provider._simple_paths_derived_thread = None
+
+    simple_paths_provider.stop()
+
+    assert simple_paths_provider._stop_event.is_set()
