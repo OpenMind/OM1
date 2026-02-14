@@ -2,14 +2,20 @@
 Test script for Booster robot movement commands via Zenoh to ROS2 service.
 This script sends movement commands through Zenoh bridge to /booster_rpc_service.
 
-The Zenoh bridge translates Zenoh messages to ROS2 service calls.
-Service topic pattern: /booster_rpc_service (ROS2) -> rt/booster_rpc_service (Zenoh)
+The Zenoh bridge maps ROS 2 services using a pub/sub pattern:
+- Request topic: rq/booster_rpc_service/<client_id>/Request
+- Reply topic: rr/booster_rpc_service/<client_id>/Reply
+
+The script subscribes to the reply topic, publishes to the request topic,
+and receives responses via a callback function.
 """
 
 import asyncio
 import json
 import os
 import sys
+import threading
+import uuid
 
 # Add src directory to path to import local zenoh_msgs
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -29,9 +35,26 @@ class BoosterMoveZenohClient:
         self.session = open_zenoh_session()
         print(f"Connected to Zenoh: {self.session}\n")
 
-        # Zenoh service call topic (maps to ROS2 /booster_rpc_service)
-        # The zenoh-bridge-ros2dds translates rt/service_name to /service_name
-        self.service_topic = "rt/booster_rpc_service"
+        # Generate unique client ID for this session
+        self.client_id = str(uuid.uuid4())
+        print(f"Client ID: {self.client_id}\n")
+
+        # Zenoh service call topics for ROS2 service through bridge
+        # Request topic: rq/<service_name>/<client_id>/Request
+        # Reply topic: rr/<service_name>/<client_id>/Reply
+        self.request_topic = f"rq/booster_rpc_service/{self.client_id}/Request"
+        self.reply_topic = f"rr/booster_rpc_service/{self.client_id}/Reply"
+
+        # Response handling
+        self.last_response = None
+        self.response_event = threading.Event()
+
+        # Subscribe to reply topic
+        print(f"Subscribing to reply topic: {self.reply_topic}")
+        self.subscriber = self.session.declare_subscriber(
+            self.reply_topic, self._reply_callback
+        )
+        print("Ready to send commands\n")
 
     def create_service_request(self, vx: float, vy: float, vyaw: float) -> bytes:
         """
@@ -59,6 +82,20 @@ class BoosterMoveZenohClient:
         # Serialize to CDR format for Zenoh bridge
         return request.serialize()
 
+    def _reply_callback(self, sample):
+        """Callback function to handle service replies."""
+        try:
+            # Decode the response payload
+            response_data = sample.payload.to_bytes().decode("utf-8")
+            self.last_response = json.loads(response_data)
+            print(f"Service response received: {self.last_response}")
+        except Exception as e:
+            print(f"Error processing reply: {e}")
+            self.last_response = {"error": str(e)}
+        finally:
+            # Signal that response was received
+            self.response_event.set()
+
     async def send_move_command(
         self, vx: float, vy: float, vyaw: float, duration: float = 1.0
     ):
@@ -78,25 +115,23 @@ class BoosterMoveZenohClient:
         """
         print(f"Sending command: vx={vx}, vy={vy}, vyaw={vyaw}")
 
-        # Create and send the service request
+        # Create the service request
         request_payload = self.create_service_request(vx, vy, vyaw)
 
-        # Use Zenoh query for service call (request/response pattern)
-        # The bridge will translate this to a ROS2 service call
-        try:
-            replies = self.session.get(
-                self.service_topic,
-                payload=request_payload,
-                timeout=5.0,  # 5 second timeout
-            )
+        # Clear previous response
+        self.last_response = None
+        self.response_event.clear()
 
-            # Process the reply
-            for reply in replies:
-                if reply.ok:
-                    response = json.loads(reply.ok.payload.to_bytes().decode("utf-8"))
-                    print(f"Service response: {response}")
-                else:
-                    print(f"Service error: {reply.err}")
+        try:
+            # Publish request to request topic
+            self.session.put(self.request_topic, request_payload)
+            print("Request published, waiting for reply...")
+
+            # Wait for reply with timeout (5 seconds)
+            if self.response_event.wait(timeout=5.0):
+                print(f"Command acknowledged: {self.last_response}")
+            else:
+                print("Warning: No response received within timeout")
 
         except Exception as e:
             print(f"Error calling service: {e}")
@@ -108,15 +143,20 @@ class BoosterMoveZenohClient:
         print("Sending STOP command")
         request_payload = self.create_service_request(0.0, 0.0, 0.0)
 
-        try:
-            replies = self.session.get(
-                self.service_topic, payload=request_payload, timeout=5.0
-            )
+        # Clear previous response
+        self.last_response = None
+        self.response_event.clear()
 
-            for reply in replies:
-                if reply.ok:
-                    response = json.loads(reply.ok.payload.to_bytes().decode("utf-8"))
-                    print(f"Stop response: {response}")
+        try:
+            # Publish stop request
+            self.session.put(self.request_topic, request_payload)
+            print("Stop request published, waiting for reply...")
+
+            # Wait for reply with timeout
+            if self.response_event.wait(timeout=5.0):
+                print(f"Stop acknowledged: {self.last_response}")
+            else:
+                print("Warning: No stop response received within timeout")
 
         except Exception as e:
             print(f"Error stopping robot: {e}")
