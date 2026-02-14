@@ -71,3 +71,74 @@ def test_formatted_latest_buffer():
         assert "// START" in result
         assert "// END" in result
         assert len(sensor.messages) == 0
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_none_skips_sleep_when_buffer_has_messages():
+    """Test raw_to_text with None sets skip_sleep when messages exist."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+        sensor.messages = ["existing message"]
+
+        await sensor.raw_to_text(None)
+        assert sensor.global_sleep_ticker_provider.skip_sleep is True
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_concatenates_messages():
+    """Test raw_to_text concatenates when messages already exist."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        await sensor.raw_to_text("hello")
+        await sensor.raw_to_text("world")
+        assert len(sensor.messages) == 1
+        assert sensor.messages[0] == "hello world"
+
+
+def test_stop():
+    """Test stop method stops ASR provider and closes Zenoh session."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+
+        sensor.stop()
+        sensor.asr.stop.assert_called_once()  # type: ignore[union-attr]
+        sensor.session.close.assert_called_once()  # type: ignore[union-attr]
+
+
+def test_stop_no_session():
+    """Test stop method when session is None."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider"),
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        config = GoogleASRSensorConfig()
+        sensor = GoogleASRInput(config=config)
+        sensor.session = None
+
+        sensor.stop()
+        sensor.asr.stop.assert_called_once()  # type: ignore[union-attr]
