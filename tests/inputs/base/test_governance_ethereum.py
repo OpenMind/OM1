@@ -1,10 +1,12 @@
 import asyncio
-from unittest.mock import patch
+import sys
+from unittest.mock import Mock, patch
 
 import pytest
 
 from inputs.base import SensorConfig
 from inputs.plugins.ethereum_governance import GovernanceEthereum
+
 
 
 class MockResponse:
@@ -141,21 +143,25 @@ def test_governance_initialization():
 
 
 def test_decode_eth_response_valid():
+    def test_decode_eth_response_uses_web3_codec(monkeypatch):
+    """Test decode path via a fake web3 codec implementation."""
     governance = GovernanceEthereum(config=SensorConfig())
 
-    # Encoded "Hello" string
-    hex_response = (
-        "0x"
-        + "0" * 64  # offset
-        + "0" * 64  # padding
-        + "0" * 64  # padding
-        + "0000000000000000000000000000000000000000000000000000000000000005"  # length=5
-        + "48656c6c6f"
-        + "0" * 54  # "Hello" + padding
-    )
+    class FakeCodec:
+        def decode(self, types, payload):
+            assert types == ["string"]
+            assert isinstance(payload, bytes)
+            return ("Hello",)
 
-    result = governance.decode_eth_response(hex_response)
+    fake_web3_class = Mock(return_value=Mock(codec=FakeCodec()))
+    fake_web3_module = Mock(Web3=fake_web3_class)
+
+    monkeypatch.setitem(sys.modules, "web3", fake_web3_module)
+
+    result = governance.decode_eth_response("0x" + "00" * 64)
     assert result == "Hello"
+    assert fake_web3_class.called
+
 
 
 def test_decode_eth_response_invalid():
