@@ -24,7 +24,8 @@
     approaching: {
       display_name: "Approaching Person Mode",
       description: "Robot approaches detected humans autonomously.",
-      system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform. Your primary function is to autonomously approach detected humans in your environment while ensuring safety and smooth navigation. Use your sensors to identify humans and navigate towards them in a polite manner.",
+      system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform.",
+      hertz: 0.001,
       hertz: 1,
       agent_inputs: [],
       action_execution_mode: "concurrent",
