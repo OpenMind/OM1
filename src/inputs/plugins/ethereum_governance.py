@@ -86,41 +86,79 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         return None
 
     def decode_eth_response(self, hex_response: str) -> Optional[str]:
-        """
-        Decodes an Ethereum eth_call response.
+    """
+    Decode an Ethereum ``eth_call`` response using ``web3.py`` ABI codec.
 
-        Parameters
-        ----------
-        hex_response : str
-            Hexadecimal string response from Ethereum eth_call.
+    Parameters
+    ----------
+    hex_response : str
+        Hexadecimal string response from Ethereum eth_call.
 
-        Returns
-        -------
-        Optional[str]
-            Decoded string, or None on error.
-        """
-        if hex_response.startswith("0x"):
-            hex_response = hex_response[2:]
+    Returns
+    -------
+    Optional[str]
+        Decoded string, or None on error.
+    """
+    normalized_hex = hex_response[2:] if hex_response.startswith("0x") else hex_response
 
+    if len(normalized_hex) == 0:
+        return None
+
+    if len(normalized_hex) % 2 != 0:
+        logging.error("Decoding error: hex response has odd length")
+        return None
+
+    try:
+        response_bytes = bytes.fromhex(normalized_hex)
+    except ValueError as e:
+        logging.error(f"Decoding error: {e}")
+        return None
+
+    def _clean(decoded_value: str) -> str:
+        return "".join(ch for ch in decoded_value if ch.isprintable())
+
+    try:
+        from web3 import Web3  # Imported lazily for test/runtime environments
+
+        decoded_value = Web3().codec.decode(["string"], response_bytes)[0]
+        return _clean(decoded_value)
+    except Exception as first_error:
+        # Backward-compatible path for legacy/non-canonical payload layout used
+        # in older tests and historical data where string length/data are found
+        # at byte offsets 96/128.
         try:
-            response_bytes = bytes.fromhex(hex_response)
+            if len(response_bytes) < 128:
+                logging.error(f"Decoding error: {first_error}")
+                return None
 
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
-            string_length = int.from_bytes(response_bytes[96:128], "big")
+            legacy_length = int.from_bytes(response_bytes[96:128], "big")
+            legacy_data_end = 128 + legacy_length
+            if legacy_data_end > len(response_bytes):
+                logging.error(f"Decoding error: {first_error}")
+                return None
 
-            # Extract and decode string
-            string_bytes = response_bytes[128 : 128 + string_length]
-            decoded_string = string_bytes.decode("utf-8")
+            legacy_data = response_bytes[128:legacy_data_end]
 
-            # Remove unexpected control characters (like \x19)
-            cleaned_string = "".join(ch for ch in decoded_string if ch.isprintable())
+            from web3 import Web3
 
-            return cleaned_string
-
-        except Exception as e:
-            logging.error(f"Decoding error: {e}")
+            # Rebuild canonical ABI bytes: [offset=32][length][data padded to 32]
+            data_padding = (32 - (legacy_length % 32)) % 32
+            canonical_payload = (
+                (32).to_bytes(32, "big")
+                + legacy_length.to_bytes(32, "big")
+                + legacy_data
+                + (b"\x00" * data_padding)
+            )
+            decoded_value = Web3().codec.decode(["string"], canonical_payload)[0]
+            return _clean(decoded_value)
+        except Exception as second_error:
+            logging.error(
+                "Decoding error: %s (fallback failed: %s)",
+                first_error,
+                second_error,
+            )
             return None
+
 
     def __init__(self, config: SensorConfig):
         """
