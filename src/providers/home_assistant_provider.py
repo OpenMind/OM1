@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 
-from providers.singleton import singleton
+from .singleton import singleton
 
 logger = logging.getLogger(__name__)
 
