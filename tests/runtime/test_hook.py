@@ -268,7 +268,7 @@ def test_message_handler_create_elevenlabs_provider_with_custom_config():
     config = MessageHookConfig(
         message="test",
         tts_provider="elevenlabs",
-        url="https://custom.url/tts",
+        base_url="https://custom.url/tts",
         api_key="test_api_key",
         elevenlabs_api_key="test_elevenlabs_key",
         voice_id="custom_voice",
@@ -317,7 +317,7 @@ def test_message_handler_create_kokoro_provider_with_custom_config():
     config = MessageHookConfig(
         message="test",
         tts_provider="kokoro",
-        url="http://custom.host:8880/v1",
+        base_url="http://custom.host:8880/v1",
         api_key="test_api_key",
         voice_id="af_sky",
         model_id="kokoro_v2",
@@ -361,7 +361,7 @@ def test_message_handler_create_riva_provider_with_custom_config():
     config = MessageHookConfig(
         message="test",
         tts_provider="riva",
-        url="http://custom.host:50051",
+        base_url="http://custom.host:50051",
         api_key="test_api_key",
     )
     handler = MessageHookHandler(config)
