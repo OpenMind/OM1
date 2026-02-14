@@ -254,12 +254,20 @@ def test_movement_options_default(mock_rplidar_dependencies):
 
 
 def test_stop(mock_rplidar_dependencies):
-    """Test stop method sets running to False."""
+    """Test stop method sets running to False, sends STOP to queue, and joins threads."""
     provider = UnitreeGo2RPLidarProvider()
     provider.running = True
-    provider._rplidar_processor_thread = None
-    provider._serial_processor_thread = None
+
+    mock_rplidar_thread = MagicMock()
+    mock_serial_thread = MagicMock()
+    mock_queue = MagicMock()
+    provider._rplidar_processor_thread = mock_rplidar_thread
+    provider._serial_processor_thread = mock_serial_thread
+    provider.control_queue = mock_queue
 
     provider.stop()
 
     assert provider.running is False
+    mock_queue.put.assert_called_once_with("STOP")
+    mock_rplidar_thread.join.assert_called_once_with(timeout=5)
+    mock_serial_thread.join.assert_called_once_with(timeout=5)

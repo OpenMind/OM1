@@ -162,7 +162,7 @@ def test_get_location_empty_label(mock_dependencies):
 
 
 def test_get_location_none_label(mock_dependencies):
-    """Test get_location returns None for None-like empty string."""
+    """Test get_location returns None for None label."""
     provider = UnitreeGo2LocationsProvider()
-    result = provider.get_location("")
+    result = provider.get_location(None)  # type: ignore[arg-type]
     assert result is None
