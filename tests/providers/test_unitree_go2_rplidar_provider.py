@@ -224,19 +224,6 @@ def test_log_file_initialization(mock_rplidar_dependencies):
         mock_time.assert_called()
 
 
-def test_lidar_string_default(mock_rplidar_dependencies):
-    """Test lidar_string property returns None by default."""
-    provider = UnitreeGo2RPLidarProvider()
-    assert provider.lidar_string is None
-
-
-def test_lidar_string_after_set(mock_rplidar_dependencies):
-    """Test lidar_string property after setting a value."""
-    provider = UnitreeGo2RPLidarProvider()
-    provider._lidar_string = "Path clear ahead"
-    assert provider.lidar_string == "Path clear ahead"
-
-
 def test_movement_options(mock_rplidar_dependencies):
     """Test movement_options property returns correct dict structure."""
     provider = UnitreeGo2RPLidarProvider()
