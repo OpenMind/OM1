@@ -27,7 +27,6 @@
       description: "Robot approaches detected humans autonomously.",
       system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform.",
       hertz: 0.001,
-      hertz: 1,
       agent_inputs: [],
       action_execution_mode: "concurrent",
       agent_actions: [],
