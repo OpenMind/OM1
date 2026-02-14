@@ -12,6 +12,8 @@ from .idl import (
     AvatarFaceRequest,
     AvatarFaceResponse,
     BatteryState,
+    BoosterApiReqMsg,
+    BoosterApiRespMsg,
     CameraInfo,
     CameraStatus,
     ChargingStatus,
@@ -81,6 +83,8 @@ __all__ = [
     # booster_interface
     "Odometer",
     "RemoteControllerState",
+    "BoosterApiReqMsg",
+    "BoosterApiRespMsg",
     # status_msgs
     "AudioStatus",
     "CameraStatus",

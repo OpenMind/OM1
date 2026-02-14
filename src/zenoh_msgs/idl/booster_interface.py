@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from pycdr2 import IdlStruct
-from pycdr2.types import float32, int16, int32
+from pycdr2.types import float32, int16, int32, int64
 
 
 @dataclass
@@ -17,6 +17,30 @@ class Odometer(IdlStruct, typename="Odometer"):
     x: float32 = 0.0
     y: float32 = 0.0
     theta: float32 = 0.0
+
+
+@dataclass
+class BoosterApiReqMsg(IdlStruct, typename="BoosterApiReqMsg"):
+    """
+    Booster API Request Message for RPC service.
+
+    Used in /booster_rpc_service to send commands to the robot.
+    """
+
+    api_id: int64 = 0
+    body: str = ""
+
+
+@dataclass
+class BoosterApiRespMsg(IdlStruct, typename="BoosterApiRespMsg"):
+    """
+    Booster API Response Message for RPC service.
+
+    Response from /booster_rpc_service after processing a request.
+    """
+
+    status: int64 = 0
+    body: str = ""
 
 
 @dataclass
