@@ -9,9 +9,9 @@ from providers.home_assistant_provider import HomeAssistantProvider
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Reset the singleton instance before each test."""
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     yield
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ def test_singleton_returns_same_instance():
 def test_singleton_reset_creates_new_instance():
     """Test that reset allows a new instance to be created."""
     p1 = HomeAssistantProvider(base_url="http://ha.local:8123", token="tok1")
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     p2 = HomeAssistantProvider(base_url="http://ha.local:9999", token="tok2")
     assert p1 is not p2
     assert p2.base_url == "http://ha.local:9999"
@@ -88,7 +88,7 @@ def test_get_token_from_config(provider):
 
 def test_get_token_raises_when_missing():
     """Test that ValueError is raised when no token is available."""
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     p = HomeAssistantProvider(
         base_url="http://ha.local:8123",
         token="",
@@ -250,6 +250,6 @@ async def test_call_service_http_error(provider):
 
 def test_base_url_trailing_slash_stripped():
     """Test that trailing slash is stripped from base_url."""
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     p = HomeAssistantProvider(base_url="http://ha.local:8123/", token="tok")
     assert p.base_url == "http://ha.local:8123"

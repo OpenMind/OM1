@@ -13,9 +13,9 @@ def reset_provider_singleton():
     """Reset HomeAssistantProvider singleton between tests."""
     from providers.home_assistant_provider import HomeAssistantProvider
 
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     yield
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
 
 
 @pytest.fixture
@@ -113,7 +113,7 @@ async def test_poll_returns_none_when_no_entities():
     """Test that _poll returns None when no entities are configured."""
     from providers.home_assistant_provider import HomeAssistantProvider
 
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
 
     config = HomeAssistantStateConfig(
         token="test-token",

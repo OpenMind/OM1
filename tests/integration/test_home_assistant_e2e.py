@@ -305,9 +305,9 @@ async def mock_ha_server():
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Reset provider singleton between tests."""
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     yield
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
 
 
 # --- E2E Tests ---
@@ -361,7 +361,7 @@ async def test_e2e_turn_off_light(mock_ha_server):
     assert mock_ha.states["light.bedroom"]["state"] == "on"
 
     # Turn off
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="bedroom_light", command="off"))
     assert mock_ha.states["light.bedroom"]["state"] == "off"
@@ -439,7 +439,7 @@ async def test_e2e_toggle_light(mock_ha_server):
     assert mock_ha.states["switch.garage_door"]["state"] == "on"
 
     # Toggle: on -> off
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="garage_door", command="toggle"))
     assert mock_ha.states["switch.garage_door"]["state"] == "off"
@@ -482,7 +482,7 @@ async def test_e2e_state_polling(mock_ha_server):
     mock_ha.states["light.living_room"]["attributes"]["brightness"] = 200
 
     # Third poll - should detect the change
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     state_input.provider = HomeAssistantProvider(base_url=base_url, token="test-token")
     raw = await state_input._poll()
     await state_input.raw_to_text(raw)
@@ -522,7 +522,7 @@ async def test_e2e_full_scenario(mock_ha_server):
         poll_interval=0.01,
     )
 
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     state_input = HomeAssistantStateInput(state_config)
 
     # --- Step 1: Initial state poll ---
@@ -533,7 +533,7 @@ async def test_e2e_full_scenario(mock_ha_server):
     assert "Living Room Light: off" in initial_buffer
 
     # --- Step 2: User command -> LLM -> Action ---
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(action_config)
     llm_output = HomeAssistantInput(
         device="living_room_light", command="set", value=80.0
@@ -547,7 +547,7 @@ async def test_e2e_full_scenario(mock_ha_server):
     )
 
     # --- Step 3: Next poll detects the change ---
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     state_input.provider = HomeAssistantProvider(base_url=base_url, token="test-token")
     raw = await state_input._poll()
     await state_input.raw_to_text(raw)
@@ -628,7 +628,7 @@ async def test_e2e_auth_failure(mock_ha_server):
     """Simulate: Provider uses wrong/empty token -> 401 from server."""
     base_url, mock_ha = mock_ha_server
 
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     provider = HomeAssistantProvider(
         base_url=base_url,
         token="",
@@ -645,7 +645,7 @@ async def test_e2e_entity_not_found(mock_ha_server):
     """Simulate: Provider requests a non-existent entity -> 404."""
     base_url, mock_ha = mock_ha_server
 
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     provider = HomeAssistantProvider(
         base_url=base_url,
         token="test-token",
@@ -688,7 +688,7 @@ async def test_e2e_multiple_state_changes(mock_ha_server):
     mock_ha.states["sensor.temperature"]["state"] = "25.3"
 
     # Second poll - should detect all 3 changes
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     state_input.provider = HomeAssistantProvider(base_url=base_url, token="test-token")
     raw = await state_input._poll()
     await state_input.raw_to_text(raw)
@@ -754,7 +754,7 @@ async def test_e2e_state_polling_climate_format(mock_ha_server):
     mock_ha.states["climate.thermostat"]["attributes"]["current_temperature"] = 26.0
 
     # Second poll - detect change
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     state_input.provider = HomeAssistantProvider(base_url=base_url, token="test-token")
     raw = await state_input._poll()
     await state_input.raw_to_text(raw)
@@ -799,7 +799,7 @@ async def test_e2e_lock_unlock(mock_ha_server):
     assert mock_ha.states["lock.front_door"]["state"] == "unlocked"
 
     # Lock again
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="front_door", command="lock"))
     assert mock_ha.states["lock.front_door"]["state"] == "locked"
@@ -823,13 +823,13 @@ async def test_e2e_cover_open_close_stop(mock_ha_server):
     assert mock_ha.states["cover.blinds"]["attributes"]["current_position"] == 100
 
     # Stop mid-way
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="blinds", command="stop"))
     assert mock_ha.states["cover.blinds"]["state"] == "stopped"
 
     # Close
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="blinds", command="close"))
     assert mock_ha.states["cover.blinds"]["state"] == "closed"
@@ -873,13 +873,13 @@ async def test_e2e_media_player_full_flow(mock_ha_server):
     assert mock_ha.states["media_player.tv"]["state"] == "on"
 
     # Play
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="tv", command="play"))
     assert mock_ha.states["media_player.tv"]["state"] == "playing"
 
     # Volume set to 30%
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(
         HomeAssistantInput(device="tv", command="volume_set", value=30.0)
@@ -887,7 +887,7 @@ async def test_e2e_media_player_full_flow(mock_ha_server):
     assert mock_ha.states["media_player.tv"]["attributes"]["volume_level"] == 0.3
 
     # Select source
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(
         HomeAssistantInput(device="tv", command="select_source", mode="Netflix")
@@ -895,25 +895,25 @@ async def test_e2e_media_player_full_flow(mock_ha_server):
     assert mock_ha.states["media_player.tv"]["attributes"]["source"] == "Netflix"
 
     # Mute
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="tv", command="volume_mute"))
     assert mock_ha.states["media_player.tv"]["attributes"]["is_volume_muted"] is True
 
     # Unmute
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="tv", command="volume_unmute"))
     assert mock_ha.states["media_player.tv"]["attributes"]["is_volume_muted"] is False
 
     # Pause
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="tv", command="pause"))
     assert mock_ha.states["media_player.tv"]["state"] == "paused"
 
     # Stop
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="tv", command="media_stop"))
     assert mock_ha.states["media_player.tv"]["state"] == "idle"
@@ -936,19 +936,19 @@ async def test_e2e_vacuum_full_flow(mock_ha_server):
     assert mock_ha.states["vacuum.roomba"]["state"] == "cleaning"
 
     # Pause
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="roomba", command="vacuum_pause"))
     assert mock_ha.states["vacuum.roomba"]["state"] == "paused"
 
     # Stop
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="roomba", command="stop"))
     assert mock_ha.states["vacuum.roomba"]["state"] == "idle"
 
     # Return to base
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(
         HomeAssistantInput(device="roomba", command="return_to_base")
@@ -975,19 +975,19 @@ async def test_e2e_alarm_full_flow(mock_ha_server):
     assert mock_ha.states["alarm_control_panel.home"]["state"] == "armed_home"
 
     # Arm away
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="alarm", command="arm_away"))
     assert mock_ha.states["alarm_control_panel.home"]["state"] == "armed_away"
 
     # Arm night
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="alarm", command="arm_night"))
     assert mock_ha.states["alarm_control_panel.home"]["state"] == "armed_night"
 
     # Disarm
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(HomeAssistantInput(device="alarm", command="disarm"))
     assert mock_ha.states["alarm_control_panel.home"]["state"] == "disarmed"
@@ -1121,7 +1121,7 @@ async def test_e2e_fan_oscillate(mock_ha_server):
     assert mock_ha.states["fan.ceiling"]["attributes"]["oscillating"] is True
 
     # Stop oscillation
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     connector = HomeAssistantRESTConnector(config)
     await connector.connect(
         HomeAssistantInput(device="ceiling_fan", command="stop_oscillate")

@@ -15,9 +15,9 @@ def reset_provider_singleton():
     """Reset HomeAssistantProvider singleton between tests."""
     from providers.home_assistant_provider import HomeAssistantProvider
 
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
     yield
-    HomeAssistantProvider.reset()
+    HomeAssistantProvider.reset()  # type: ignore
 
 
 @pytest.fixture
