@@ -1,5 +1,3 @@
-"""Tests for the Move Game Controller action interface."""
-
 from actions.move_game_controller.interface import GameController, IDLEInput
 
 
