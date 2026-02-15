@@ -594,11 +594,9 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     if has_lidar_inputs:
         await load_test_lidar_data(config)
 
-    # Load ASR text data
     if has_asr_inputs:
         load_test_asr_data(config)
 
-    # Load state data (battery, odometry, GPS)
     if has_battery_inputs:
         load_test_state_data(config, "battery")
 
@@ -1483,7 +1481,6 @@ async def test_from_config(test_case_path: Path):
     lidar_provider = get_lidar_provider()
     lidar_provider.clear()
 
-    # Reset text and state providers
     clear_text_provider()
     clear_state_provider()
 
