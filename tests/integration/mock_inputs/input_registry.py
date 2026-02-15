@@ -89,7 +89,6 @@ def unregister_mock_inputs():
     global _original_classes
 
     if _original_classes:
-        # Restore original classes
         import inputs.plugins.google_asr
         import inputs.plugins.gps
         import inputs.plugins.unitree_go2_battery
@@ -100,26 +99,29 @@ def unregister_mock_inputs():
         import inputs.plugins.vlm_openai
         import inputs.plugins.vlm_vila
 
-        # Restore original classes
+        # Map class names to (module, attribute) for restoration
+        class_to_module = {
+            "VLM_COCO_Local": (inputs.plugins.vlm_coco_local, "VLM_COCO_Local"),
+            "VLMOpenAI": (inputs.plugins.vlm_openai, "VLMOpenAI"),
+            "VLMGemini": (inputs.plugins.vlm_gemini, "VLMGemini"),
+            "VLMVila": (inputs.plugins.vlm_vila, "VLMVila"),
+            "UnitreeGo2RPLidar": (
+                inputs.plugins.unitree_go2_rplidar,
+                "UnitreeGo2RPLidar",
+            ),
+            "GoogleASRInput": (inputs.plugins.google_asr, "GoogleASRInput"),
+            "UnitreeGo2Battery": (
+                inputs.plugins.unitree_go2_battery,
+                "UnitreeGo2Battery",
+            ),
+            "UnitreeGo2Odom": (inputs.plugins.unitree_go2_odom, "UnitreeGo2Odom"),
+            "Gps": (inputs.plugins.gps, "Gps"),
+        }
+
         for plugin_name, original_class in _original_classes.items():
-            if plugin_name == "VLM_COCO_Local":
-                inputs.plugins.vlm_coco_local.VLM_COCO_Local = original_class
-            elif plugin_name == "VLMOpenAI":
-                inputs.plugins.vlm_openai.VLMOpenAI = original_class
-            elif plugin_name == "VLMGemini":
-                inputs.plugins.vlm_gemini.VLMGemini = original_class
-            elif plugin_name == "VLMVila":
-                inputs.plugins.vlm_vila.VLMVila = original_class
-            elif plugin_name == "UnitreeGo2RPLidar":
-                inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidar = original_class
-            elif plugin_name == "GoogleASRInput":
-                inputs.plugins.google_asr.GoogleASRInput = original_class
-            elif plugin_name == "UnitreeGo2Battery":
-                inputs.plugins.unitree_go2_battery.UnitreeGo2Battery = original_class
-            elif plugin_name == "UnitreeGo2Odom":
-                inputs.plugins.unitree_go2_odom.UnitreeGo2Odom = original_class
-            elif plugin_name == "Gps":
-                inputs.plugins.gps.Gps = original_class
+            if plugin_name in class_to_module:
+                module, attr = class_to_module[plugin_name]
+                setattr(module, attr, original_class)
 
         # Remove mock modules
         mock_modules = [

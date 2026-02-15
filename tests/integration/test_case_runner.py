@@ -189,7 +189,7 @@ def mock_avatar_components():
 
 
 @pytest.fixture(autouse=True)
-def mock_confige_provider_components():
+def mock_config_provider_components():
     """Mock ConfigProvider and Zenoh to prevent session creation"""
 
     with (
@@ -239,6 +239,47 @@ STATE_MOVE_TYPES = {
 }
 
 EMOTION_TYPES = {"happy", "confused", "curious", "excited", "sad", "think"}
+
+
+def normalize_expected_value(value):
+    """Normalize an expected value to always be a list."""
+    if value is None:
+        return []
+    elif isinstance(value, list):
+        return value
+    else:
+        return [value]
+
+
+def _detect_input_type(config: Optional[Dict[str, Any]]) -> str:
+    """Detect input type from test case config for logging."""
+    if not config:
+        return "unknown"
+    input_section = config.get("input", {})
+    if "lidar" in input_section:
+        return "LIDAR"
+    elif "asr" in input_section:
+        return "ASR"
+    elif "battery" in input_section or "odometry" in input_section:
+        return "State"
+    elif "gps" in input_section:
+        return "GPS"
+    elif "images" in input_section:
+        return "VLM/Image"
+    return "unknown"
+
+
+def _extract_emotion(actions: List) -> str:
+    """Extract emotion from action commands."""
+    if actions:
+        for command in actions:
+            if hasattr(command, "type"):
+                if command.type in EMOTION_TYPES:
+                    return command.type
+                elif command.type == "emotion" and hasattr(command, "value"):
+                    if command.value in EMOTION_TYPES:
+                        return command.value
+    return "unknown"
 
 
 def process_env_vars(config_dict):
@@ -592,14 +633,16 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Mock LLM ask method to capture raw response
     original_llm_ask = cortex.current_config.cortex_llm.ask
 
-    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
         logging.info(
             f"Generated prompt: {prompt[:200]}..."
         )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
         try:
-            response = await original_llm_ask(prompt, messages)
+            response = await original_llm_ask(prompt, messages or [])
             # If response is None (API error), create a mock response
             if response is None:
                 logging.warning(
@@ -807,22 +850,7 @@ def _build_llm_evaluation_prompts(
     • 0.6-0.8: Mostly correct; two criteria match
     • 0.8-1.0: Perfect match; all criteria match"""
     elif criteria_count == 2:  # Two criteria
-        if has_movement and has_keywords:
-            rating_description = """Rate on a scale of 0.0 to 1.0:
-    • 0.0-0.2: Completely mismatched; both criteria are wrong
-    • 0.2-0.4: Mostly incorrect; one criterion is wrong
-    • 0.4-0.6: Partially correct; one criterion matches
-    • 0.6-0.8: Mostly correct; both criteria match
-    • 0.8-1.0: Perfect match; both criteria match exactly"""
-        elif has_movement and has_emotion:
-            rating_description = """Rate on a scale of 0.0 to 1.0:
-    • 0.0-0.2: Completely mismatched; both criteria are wrong
-    • 0.2-0.4: Mostly incorrect; one criterion is wrong
-    • 0.4-0.6: Partially correct; one criterion matches
-    • 0.6-0.8: Mostly correct; both criteria match
-    • 0.8-1.0: Perfect match; both criteria match exactly"""
-        else:  # keywords and emotion
-            rating_description = """Rate on a scale of 0.0 to 1.0:
+        rating_description = """Rate on a scale of 0.0 to 1.0:
     • 0.0-0.2: Completely mismatched; both criteria are wrong
     • 0.2-0.4: Mostly incorrect; one criterion is wrong
     • 0.4-0.6: Partially correct; one criterion matches
@@ -1012,21 +1040,7 @@ async def evaluate_with_llm(
     # Get appropriate movement types for this test case
     movement_types = get_movement_types_for_config(config) if config else VLM_MOVE_TYPES
 
-    # Log which movement types are being used for debugging
-    input_type = "unknown"
-    if config:
-        input_section = config.get("input", {})
-        if "lidar" in input_section:
-            input_type = "LIDAR"
-        elif "asr" in input_section:
-            input_type = "ASR"
-        elif "battery" in input_section or "odometry" in input_section:
-            input_type = "State"
-        elif "gps" in input_section:
-            input_type = "GPS"
-        elif "images" in input_section:
-            input_type = "VLM/Image"
-
+    input_type = _detect_input_type(config)
     logging.info(f"Using {input_type} movement types: {movement_types}")
 
     # Format actual and expected results for evaluation
@@ -1042,32 +1056,8 @@ async def evaluate_with_llm(
                 for result in actual_output.get("raw_response", [])
             )
         ],
-        "emotion": next(
-            (
-                cmd.type if cmd.type in EMOTION_TYPES else cmd.value
-                for cmd in actual_output.get("actions", [])
-                if hasattr(cmd, "type")
-                and (
-                    cmd.type in EMOTION_TYPES
-                    or (
-                        cmd.type == "emotion"
-                        and hasattr(cmd, "value")
-                        and cmd.value in EMOTION_TYPES
-                    )
-                )
-            ),
-            "unknown",
-        ),
+        "emotion": _extract_emotion(actual_output.get("actions", [])),
     }
-
-    # Normalize expected values to always be lists for consistent handling
-    def normalize_expected_value(value):
-        if value is None:
-            return []
-        elif isinstance(value, list):
-            return value
-        else:
-            return [value]
 
     formatted_expected = {
         "movement": normalize_expected_value(expected_output.get("movement")),
@@ -1161,33 +1151,10 @@ async def evaluate_test_results(
     # Get appropriate movement types for this test case
     movement_types = get_movement_types_for_config(config) if config else VLM_MOVE_TYPES
 
-    # Log which movement types are being used for debugging
-    input_type = "unknown"
-    if config:
-        input_section = config.get("input", {})
-        if "lidar" in input_section:
-            input_type = "LIDAR"
-        elif "asr" in input_section:
-            input_type = "ASR"
-        elif "battery" in input_section or "odometry" in input_section:
-            input_type = "State"
-        elif "gps" in input_section:
-            input_type = "GPS"
-        elif "images" in input_section:
-            input_type = "VLM/Image"
-
+    input_type = _detect_input_type(config)
     logging.info(
         f"Heuristic evaluation using {input_type} movement types: {movement_types}"
     )
-
-    # Normalize expected values to always be lists for consistent handling
-    def normalize_expected_value(value):
-        if value is None:
-            return []
-        elif isinstance(value, list):
-            return value
-        else:
-            return [value]
 
     # Extract movement from commands using context-aware movement types
     movement = extract_movement_from_actions(results.get("actions", []), movement_types)
@@ -1227,23 +1194,7 @@ async def evaluate_test_results(
         evaluation_components.append("keywords")
 
     if has_emotion:
-        # Extract emotion from commands if available
-        actual_emotion = None
-        if "actions" in results and results["actions"]:
-            for command in results["actions"]:
-                if hasattr(command, "type"):
-                    if command.type in EMOTION_TYPES:
-                        actual_emotion = command.type
-                        break
-                    elif command.type == "emotion" and hasattr(command, "value"):
-                        if command.value in EMOTION_TYPES:
-                            actual_emotion = command.value
-                            break
-
-        # Assign a default if still not found
-        if not actual_emotion:
-            actual_emotion = "unknown"
-
+        actual_emotion = _extract_emotion(results.get("actions", []))
         expected_emotions = normalize_expected_value(expected["emotion"])
         # If expected_emotions is empty, we expect no emotion
         if not expected_emotions:
@@ -1298,18 +1249,7 @@ async def evaluate_test_results(
         )
 
     if has_emotion:
-        # Re-extract emotion for display (could be optimized by storing earlier)
-        actual_emotion = "unknown"
-        if "actions" in results and results["actions"]:
-            for command in results["actions"]:
-                if hasattr(command, "type"):
-                    if command.type in EMOTION_TYPES:
-                        actual_emotion = command.type
-                        break
-                    elif command.type == "emotion" and hasattr(command, "value"):
-                        if command.value in EMOTION_TYPES:
-                            actual_emotion = command.value
-                            break
+        actual_emotion = _extract_emotion(results.get("actions", []))
         expected_emotions = normalize_expected_value(expected["emotion"])
         if len(expected_emotions) == 1:
             details.append(
@@ -1590,12 +1530,6 @@ async def test_from_config(test_case_path: Path):
 
     except Exception as e:
         logging.error(f"Error running test case {test_case_path}: {e}")
-        # Even on error, try to clean up
-        try:
-            # Cleanup is now handled by MockRPLidar's async_cleanup method
-            pass
-        except Exception as cleanup_error:
-            logging.error(f"Error during cleanup after exception: {cleanup_error}")
         raise
 
 
@@ -1655,9 +1589,11 @@ def get_movement_types_for_config(config: Dict[str, Any]) -> set:
     if "asr" in input_section and "images" not in input_section:
         return ASR_MOVE_TYPES
 
-    # State-based tests (battery, odometry) without images
+    # State-based tests (battery, odometry, GPS) without images
     if (
-        "battery" in input_section or "odometry" in input_section
+        "battery" in input_section
+        or "odometry" in input_section
+        or "gps" in input_section
     ) and "images" not in input_section:
         return STATE_MOVE_TYPES
 
@@ -1740,7 +1676,9 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
     transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
 
     # Mock LLM to return a simple response (we don't care about LLM output here)
-    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
         return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
     cortex.current_config.cortex_llm.ask = mock_llm_ask
@@ -1858,7 +1796,9 @@ async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, An
 
     transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
 
-    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
         return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
     cortex.current_config.cortex_llm.ask = mock_llm_ask
@@ -1934,7 +1874,9 @@ async def test_cooldown_prevents_transition():
 
     transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
 
-    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
         return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
     cortex.current_config.cortex_llm.ask = mock_llm_ask
