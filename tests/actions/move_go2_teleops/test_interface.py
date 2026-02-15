@@ -1,5 +1,3 @@
-"""Tests for the Move Go2 Teleops action interface."""
-
 from actions.move_go2_teleops.interface import Move, MoveInput, MovementAction
 
 
