@@ -1,6 +1,7 @@
 ---
 title: Apple Mac for Robotics
 description: "Apple Mac for Robotics"
+icon: computer
 ---
 
 ## Hardware

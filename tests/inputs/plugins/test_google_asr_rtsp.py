@@ -248,9 +248,9 @@ async def test_poll_has_delay(
     ):
         instance = GoogleASRRTSPInput(config=config)
 
-    with patch("asyncio.sleep") as mock_sleep:
+    with patch("inputs.plugins.google_asr_rtsp.asyncio.sleep") as mock_sleep:
         await instance._poll()
-        mock_sleep.assert_called_once_with(0.1)
+        mock_sleep.assert_called_once_with(0.01)
 
 
 def test_handle_asr_message_processes_valid_json_with_asr_reply_longer_than_one_word(

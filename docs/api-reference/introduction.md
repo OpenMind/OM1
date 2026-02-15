@@ -102,9 +102,7 @@ For developer walkthrough and support reach out to: support@openmind.org
 | x-ai/grok-4-fast                      | 2000 OMCU                   | 5000 OMCU                    |
 | meta-llama/llama-3.3-70b-instruct     | 9000 OMCU                   | 9000 OMCU                    |
 
-<Note>
-For free local inference, [Ollama](https://ollama.ai) supports models like llama3.2, mistral, and phi3 with no API costs.
-</Note>
+> **Note:** For free local inference, [Ollama](https://ollama.ai) supports models like llama3.2, mistral, and phi3 with no API costs.
 
 ### TTS Models (Text to Speech)
 

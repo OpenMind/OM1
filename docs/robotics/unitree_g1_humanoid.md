@@ -1,7 +1,7 @@
 ---
 title: Unitree G1 Humanoid
 description: "Unitree G1 Humanoid"
-icon: robot
+icon: user-robot
 ---
 
 ## Useful links and Reading
@@ -134,7 +134,7 @@ Then add the optional Python CycloneDDS module to OM1:
 uv pip install -r pyproject.toml --extra dds
 ```
 
-Note: on first invocation, the system sometimes cannot find the Unitree libraries. This should resolve by itself quickly.
+> **Note:** on first invocation, the system sometimes cannot find the Unitree libraries. This should resolve by itself quickly.
 
 ## ORIN System Description
 
