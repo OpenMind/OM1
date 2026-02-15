@@ -12,6 +12,20 @@ from tests.integration.mock_inputs.data_providers.mock_text_provider import (
 )
 
 
+class _MockConversationProvider:
+    """Lightweight stand-in for TeleopsConversationProvider.
+
+    The real provider needs an API key and network access.
+    This mock silently accepts store_user_message calls so that
+    MockGoogleASR.formatted_latest_buffer matches upstream behavior.
+    """
+
+    def store_user_message(self, message: str) -> None:
+        logging.debug(
+            f"MockConversationProvider: stored message ({len(message)} chars)"
+        )
+
+
 class MockGoogleASR(GoogleASRInput):
     """
     Mock implementation of GoogleASRInput that uses the central text provider.
@@ -38,6 +52,7 @@ class MockGoogleASR(GoogleASRInput):
         self.io_provider = IOProvider()
         self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
 
+        self.conversation_provider = _MockConversationProvider()
         self.running = True
         self.texts_processed = False
 
@@ -89,6 +104,7 @@ class MockGoogleASR(GoogleASRInput):
             self.descriptor_for_LLM, self.messages[-1], time.time()
         )
         self.io_provider.add_mode_transition_input(self.messages[-1])
+        self.conversation_provider.store_user_message(self.messages[-1])
 
         self.messages = []
         return result

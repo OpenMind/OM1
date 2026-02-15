@@ -487,6 +487,9 @@ def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
     """
     Load state data (battery, odometry, GPS) from JSON files into MockStateProvider.
 
+    Collects all entries from multiple files before loading them at once,
+    so that multiple files are appended rather than overwritten.
+
     Parameters
     ----------
     config : Dict[str, Any]
@@ -500,6 +503,7 @@ def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
 
     base_dir = TEST_CASES_DIR
     state_provider = get_state_provider()
+    collected_entries: list = []
 
     for data_path in data_files:
         file_path = Path(data_path)
@@ -516,22 +520,30 @@ def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
                 data = raw.get("data", raw)
 
                 if data_type == "battery":
-                    battery_entry = [
-                        data.get("percent", 0.0),
-                        data.get("voltage", 0.0),
-                        data.get("amperes", 0.0),
-                    ]
-                    state_provider.load_battery_data([battery_entry])
-                    logging.info(f"Loaded battery data: {battery_entry}")
-                elif data_type == "odometry":
-                    state_provider.load_odometry_data([data])
-                    logging.info(f"Loaded odometry data: {data}")
-                elif data_type == "gps":
-                    state_provider.load_gps_data([data])
-                    logging.info(f"Loaded GPS data: {data}")
+                    collected_entries.append(
+                        [
+                            data.get("percent", 0.0),
+                            data.get("voltage", 0.0),
+                            data.get("amperes", 0.0),
+                        ]
+                    )
+                elif data_type in ("odometry", "gps"):
+                    collected_entries.append(data)
 
         except Exception as e:
             logging.error(f"Failed to load {data_type} data {file_path}: {e}")
+
+    if not collected_entries:
+        return
+
+    if data_type == "battery":
+        state_provider.load_battery_data(collected_entries)
+    elif data_type == "odometry":
+        state_provider.load_odometry_data(collected_entries)
+    elif data_type == "gps":
+        state_provider.load_gps_data(collected_entries)
+
+    logging.info(f"Loaded {len(collected_entries)} {data_type} data entries")
 
 
 async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -1632,6 +1644,63 @@ def extract_movement_from_actions(actions: List, movement_types: set) -> str:
     return "unknown"
 
 
+def _setup_mode_transition_mocks(
+    cortex: ModeCortexRuntime,
+) -> asyncio.Task:  # type: ignore[type-arg]
+    """Set up common mocks for mode transition tests.
+
+    Mocks _start_orchestrators (prevents infinite loop) and LLM (returns
+    a simple action). Starts the mode transition handler task.
+
+    Parameters
+    ----------
+    cortex : ModeCortexRuntime
+        The runtime instance to mock
+
+    Returns
+    -------
+    asyncio.Task
+        The transition handler task (must be cancelled during cleanup)
+    """
+
+    async def noop_start_orchestrators():
+        logging.info("_start_orchestrators skipped (test mock)")
+
+    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
+
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
+        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
+
+    cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
+
+    return asyncio.create_task(cortex._handle_mode_transitions())
+
+
+async def _cleanup_mode_transition_test(
+    cortex: ModeCortexRuntime,
+    transition_handler_task: asyncio.Task,  # type: ignore[type-arg]
+) -> None:
+    """Clean up after a mode transition test.
+
+    Parameters
+    ----------
+    cortex : ModeCortexRuntime
+        The runtime instance
+    transition_handler_task : asyncio.Task
+        The transition handler task to cancel
+    """
+    transition_handler_task.cancel()
+    try:
+        await transition_handler_task
+    except asyncio.CancelledError:
+        pass
+
+    await cleanup_mock_inputs(cortex.current_config.agent_inputs)  # type: ignore[union-attr]
+    clear_text_provider()
+
+
 async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
     """Run a mode transition integration test.
 
@@ -1664,26 +1733,8 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
     initial_prompt = cortex.current_config.system_prompt_base
     logging.info(f"Mode transition test: initial_mode={initial_mode}")
 
-    # Mock only _start_orchestrators to prevent infinite cortex loops.
-    # The real _on_mode_transition callback still runs: _stop_current_orchestrators()
-    # and _initialize_mode() execute normally, testing the actual transition.
-    async def noop_start_orchestrators():
-        logging.info("_start_orchestrators skipped (test mock)")
+    transition_handler_task = _setup_mode_transition_mocks(cortex)
 
-    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
-
-    # Start the mode transition handler task so transitions can be processed
-    transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
-
-    # Mock LLM to return a simple response (we don't care about LLM output here)
-    async def mock_llm_ask(
-        prompt: str, messages: Optional[List[Dict[str, str]]] = None
-    ):
-        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
-
-    cortex.current_config.cortex_llm.ask = mock_llm_ask
-
-    # Tick 1: Poll input -> formatted_latest_buffer() -> add_mode_transition_input()
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
     await cortex._tick()
 
@@ -1697,15 +1748,7 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
     )
     logging.info(f"Mode transition test: final_mode={final_mode}")
 
-    # Clean up
-    transition_handler_task.cancel()
-    try:
-        await transition_handler_task
-    except asyncio.CancelledError:
-        pass
-
-    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
-    clear_text_provider()
+    await _cleanup_mode_transition_test(cortex, transition_handler_task)
 
     return {
         "initial_mode": initial_mode,
@@ -1789,19 +1832,7 @@ async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, An
     initial_mode = cortex.mode_manager.state.current_mode
     logging.info(f"Time-based transition test: initial_mode={initial_mode}")
 
-    async def noop_start_orchestrators():
-        logging.info("_start_orchestrators skipped (test mock)")
-
-    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
-
-    transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
-
-    async def mock_llm_ask(
-        prompt: str, messages: Optional[List[Dict[str, str]]] = None
-    ):
-        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
-
-    cortex.current_config.cortex_llm.ask = mock_llm_ask
+    transition_handler_task = _setup_mode_transition_mocks(cortex)
 
     # Wait for the mode timeout to expire
     timeout = cortex.mode_config.modes[default_mode].timeout_seconds or 0.1
@@ -1817,14 +1848,7 @@ async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, An
     final_mode = cortex.mode_manager.state.current_mode
     logging.info(f"Time-based transition test: final_mode={final_mode}")
 
-    transition_handler_task.cancel()
-    try:
-        await transition_handler_task
-    except asyncio.CancelledError:
-        pass
-
-    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
-    clear_text_provider()
+    await _cleanup_mode_transition_test(cortex, transition_handler_task)
 
     return {"initial_mode": initial_mode, "final_mode": final_mode}
 
@@ -1867,19 +1891,7 @@ async def test_cooldown_prevents_transition():
 
     assert cortex.current_config is not None
 
-    async def noop_start_orchestrators():
-        logging.info("_start_orchestrators skipped (test mock)")
-
-    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
-
-    transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
-
-    async def mock_llm_ask(
-        prompt: str, messages: Optional[List[Dict[str, str]]] = None
-    ):
-        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
-
-    cortex.current_config.cortex_llm.ask = mock_llm_ask
+    transition_handler_task = _setup_mode_transition_mocks(cortex)
 
     # First transition: calm -> alert (should succeed)
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
@@ -1899,10 +1911,17 @@ async def test_cooldown_prevents_transition():
     cortex.mode_manager.state.current_mode = "calm"
     cortex.mode_manager.state.mode_start_time = time.time()
 
-    # Reload ASR data and reinitialize inputs for second attempt
+    # Reload ASR data and reinitialize inputs for second attempt.
+    # Re-apply LLM mock since _initialize_mode creates a new config.
     load_test_asr_data(config)
     await cortex._initialize_mode("calm")
-    cortex.current_config.cortex_llm.ask = mock_llm_ask
+
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
+        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
+
+    cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
 
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
     await cortex._tick()
@@ -1919,11 +1938,5 @@ async def test_cooldown_prevents_transition():
         f"expected {config['expected']['second_transition_mode']}"
     )
 
-    transition_handler_task.cancel()
-    try:
-        await transition_handler_task
-    except asyncio.CancelledError:
-        pass
-
-    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
+    await _cleanup_mode_transition_test(cortex, transition_handler_task)
     clear_text_provider()
