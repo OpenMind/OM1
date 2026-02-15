@@ -104,11 +104,11 @@ def test_configure_restart_needed_model_id_change():
 
 def test_configure_restart_needed_output_format_change():
     """Test restart is triggered when output format changes."""
-    provider = ElevenLabsTTSProvider(output_format="mp3_44100_128")
+    provider = ElevenLabsTTSProvider(output_format="pcm_16000")
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
-        provider.configure(output_format="mp3_22050_64")
+        provider.configure(output_format="pcm_44100")
         mock_stop.assert_called_once()
 
 
