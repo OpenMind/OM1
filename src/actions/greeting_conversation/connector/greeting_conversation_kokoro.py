@@ -19,6 +19,8 @@ class SpeakKokoroTTSConfig(ActionConfig):
 
     Parameters
     ----------
+    base_url : str
+        Base URL for Kokoro TTS API.
     voice_id : str
         Kokoro voice ID.
     model_id : str
@@ -33,6 +35,10 @@ class SpeakKokoroTTSConfig(ActionConfig):
         Number of responses to skip before speaking.
     """
 
+    base_url: str = Field(
+        default="http://127.0.0.1:8880/v1",
+        description="Base URL for Kokoro TTS API",
+    )
     voice_id: str = Field(
         default="af_bella",
         description="Kokoro voice ID",
@@ -87,6 +93,7 @@ class GreetingConversationConnector(
         api_key = getattr(self.config, "api_key", None)
 
         # Kokoro TTS configuration
+        base_url = self.config.base_url
         voice_id = self.config.voice_id
         model_id = self.config.model_id
         output_format = self.config.output_format
@@ -95,7 +102,7 @@ class GreetingConversationConnector(
 
         # TTS Setup
         self.tts = KokoroTTSProvider(
-            url="http://127.0.0.1:8880/v1",
+            url=base_url,
             api_key=api_key,
             voice_id=voice_id,
             model_id=model_id,
