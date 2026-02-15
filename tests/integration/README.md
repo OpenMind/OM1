@@ -132,7 +132,7 @@ These are automatically detected and routed to the mode transition test runner.
       system_prompt_base: "You are a calm and relaxed robot.",
       hertz: 1,
       // timeout_seconds: 0.1,        // For time-based transitions
-      agent_inputs: [{type: "GoogleASRInput", config: {}}],
+      agent_inputs: [{type: "GoogleASRInput"}],
       cortex_llm: {type: "OpenAILLM", config: {agent_name: "Buddy"}},
       agent_actions: [
         {name: "move", llm_label: "move", connector: "ros2"},
@@ -145,7 +145,7 @@ These are automatically detected and routed to the mode transition test runner.
       description: "Alert mode for emergencies",
       system_prompt_base: "You are now in alert mode.",
       hertz: 1,
-      agent_inputs: [{type: "GoogleASRInput", config: {}}],
+      agent_inputs: [{type: "GoogleASRInput"}],
       cortex_llm: {type: "OpenAILLM", config: {agent_name: "Buddy"}},
       agent_actions: [
         {name: "move", llm_label: "move", connector: "ros2"},
