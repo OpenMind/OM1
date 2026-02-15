@@ -129,7 +129,9 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
 
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
-            # logging.info(f"VLM_COCO_Local frame: {frame}")
+            if not ret or frame is None:
+                logging.warning("COCO: Failed to read frame from camera, skipping")
+                return None
             return frame
 
         return None

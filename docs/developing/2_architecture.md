@@ -70,7 +70,7 @@ Feedback Loop:
 
 ### Hardware Abstraction Layer (HAL)
 
-This layer translates high-level AI decisions into actionable commands for robot hardware. It's responsible for converting a high level decision such as "pick up the red apple with your left hand" into the succession of gripper arm servo commands that results in the apple being picked up. Typical `action` modules handle:
+This layer translates high-level AI decisions into actionable commands for robot hardware. It's responsible for converting a high level decision such as "pick up the red apple with your left hand" into the sequence of gripper arm servo commands that results in the apple being picked up. Typical `action` modules handle:
 
 - Move: Controls robot movement.
 - Sound: Generates auditory signals.
