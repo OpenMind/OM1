@@ -86,7 +86,7 @@ anthropic/claude-sonnet-4.5
 anthropic/claude-opus-4.1
 ```
 
-<Note>Model names are validated using prefix matching. For example, "gpt-4o" will match "gpt-4o", "gpt-4o-2024-08-06", etc.</Note>
+> **Note:** Model names are validated using prefix matching. For example, "gpt-4o" will match "gpt-4o", "gpt-4o-2024-08-06", etc.
 
 ## Chat Completions
 
@@ -804,6 +804,5 @@ Rate limits vary by provider and your OpenMind subscription plan. Monitor your u
 
 ## Multi-Agent System
 
-<Note>
-For advanced robotics applications, OpenMind also provides a multi-agent system that coordinates multiple LLMs for complex robotics tasks. This endpoint fuses sensor data and routes requests to specialized agents. For more information about the multi-agent robotics endpoint, please refer to the developing documentation.
-</Note>
+> **Note:**
+> For advanced robotics applications, OpenMind also provides a multi-agent system that coordinates multiple LLMs for complex robotics tasks. This endpoint fuses sensor data and routes requests to specialized agents. For more information about the multi-agent robotics endpoint, please refer to the developing documentation.
