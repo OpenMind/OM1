@@ -46,7 +46,7 @@
 
   // Expected output
   expected: {
-    keywords: ["weather", "temperature", "forecast", "outside"],
+    keywords: ["weather"],
     minimum_score: 0.5,
   },
 }

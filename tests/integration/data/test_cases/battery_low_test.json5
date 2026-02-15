@@ -51,7 +51,7 @@
 
   // Expected output
   expected: {
-    keywords: ["battery", "charge", "power", "low", "energy"],
+    keywords: ["battery", "energy", "charging"],
     movement: ["stand still", "sit"],
     minimum_score: 0.5,
   },

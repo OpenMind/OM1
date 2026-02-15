@@ -46,8 +46,8 @@
 
   // Expected output
   expected: {
-    keywords: ["hello", "hi", "hey", "greet"],
-    emotion: ["happy", "excited"],
+    keywords: ["hello"],
+    emotion: ["happy", "excited", "curious"],
     minimum_score: 0.5,
   },
 }

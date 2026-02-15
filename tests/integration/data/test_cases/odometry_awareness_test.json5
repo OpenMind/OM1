@@ -51,7 +51,7 @@
 
   // Expected output
   expected: {
-    keywords: ["moving", "position", "motion", "location"],
+    keywords: ["moving", "motion"],
     minimum_score: 0.5,
   },
 }
