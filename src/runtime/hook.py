@@ -95,7 +95,7 @@ class MessageHookConfig(HookConfig):
     output_format : str
         Audio output format.
     rate : Optional[int]
-        Audio sample rate in Hz (only for 'kokoro' provider).
+        Audio sample rate in Hz.
     enable_tts_interrupt : bool
         Enable TTS interrupt capability.
     """
@@ -134,7 +134,7 @@ class MessageHookConfig(HookConfig):
     )
     rate: Optional[int] = Field(
         default=None,
-        description="Audio sample rate in Hz (only for 'kokoro' provider)",
+        description="Audio sample rate in Hz",
     )
     enable_tts_interrupt: bool = Field(
         default=False,
@@ -299,6 +299,7 @@ class MessageHookHandler(LifecycleHookHandler):
                 voice_id=self.config.voice_id or "JBFqnCBsd6RMkjVDRZzb",
                 model_id=self.config.model_id or "eleven_flash_v2_5",
                 output_format=self.config.output_format or "pcm_16000",
+                rate=self.config.rate or 16000,
                 enable_tts_interrupt=self.config.enable_tts_interrupt,
             )
         elif provider_type == "kokoro":

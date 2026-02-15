@@ -67,3 +67,77 @@ def test_formatted_latest_buffer():
         assert "// START" in result
         assert "// END" in result
         assert len(sensor.messages) == 0
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_with_detections():
+    """Test raw_to_text with YOLO detections adds message to buffer."""
+    with (
+        patch("inputs.plugins.vlm_local_yolo.IOProvider"),
+        patch("inputs.plugins.vlm_local_yolo.YOLO"),
+        patch("inputs.plugins.vlm_local_yolo.check_webcam", return_value=(640, 480)),
+        patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture"),
+    ):
+        config = VLM_Local_YOLOConfig()
+        sensor = VLM_Local_YOLO(config=config)
+
+        detections = [
+            {"class": "person", "confidence": 0.95, "bbox": [100, 50, 300, 400]},
+            {"class": "cat", "confidence": 0.80, "bbox": [400, 100, 500, 300]},
+        ]
+        await sensor.raw_to_text(detections)
+        assert len(sensor.messages) == 1
+        assert "person" in sensor.messages[0].message
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_empty_detections():
+    """Test raw_to_text with empty detections does not add message."""
+    with (
+        patch("inputs.plugins.vlm_local_yolo.IOProvider"),
+        patch("inputs.plugins.vlm_local_yolo.YOLO"),
+        patch("inputs.plugins.vlm_local_yolo.check_webcam", return_value=(640, 480)),
+        patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture"),
+    ):
+        config = VLM_Local_YOLOConfig()
+        sensor = VLM_Local_YOLO(config=config)
+
+        await sensor.raw_to_text([])
+        assert len(sensor.messages) == 0
+
+
+def test_get_top_detection_with_detections():
+    """Test get_top_detection returns highest confidence detection."""
+    with (
+        patch("inputs.plugins.vlm_local_yolo.IOProvider"),
+        patch("inputs.plugins.vlm_local_yolo.YOLO"),
+        patch("inputs.plugins.vlm_local_yolo.check_webcam", return_value=(640, 480)),
+        patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture"),
+    ):
+        config = VLM_Local_YOLOConfig()
+        sensor = VLM_Local_YOLO(config=config)
+
+        detections = [
+            {"class": "cat", "confidence": 0.80, "bbox": [10, 20, 30, 40]},
+            {"class": "person", "confidence": 0.95, "bbox": [100, 200, 300, 400]},
+            {"class": "dog", "confidence": 0.70, "bbox": [50, 60, 70, 80]},
+        ]
+        label, bbox = sensor.get_top_detection(detections)
+        assert label == "person"
+        assert bbox == [100, 200, 300, 400]
+
+
+def test_get_top_detection_empty():
+    """Test get_top_detection with empty list returns (None, None)."""
+    with (
+        patch("inputs.plugins.vlm_local_yolo.IOProvider"),
+        patch("inputs.plugins.vlm_local_yolo.YOLO"),
+        patch("inputs.plugins.vlm_local_yolo.check_webcam", return_value=(640, 480)),
+        patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture"),
+    ):
+        config = VLM_Local_YOLOConfig()
+        sensor = VLM_Local_YOLO(config=config)
+
+        label, bbox = sensor.get_top_detection([])
+        assert label is None
+        assert bbox is None
