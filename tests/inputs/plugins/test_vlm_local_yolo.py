@@ -141,3 +141,58 @@ def test_get_top_detection_empty():
         label, bbox = sensor.get_top_detection([])
         assert label is None
         assert bbox is None
+
+
+@pytest.mark.asyncio
+async def test_poll_returns_none_on_failed_frame_read():
+    """Test that _poll returns None when cap.read() fails."""
+    mock_cap = MagicMock()
+    mock_cap.read.return_value = (False, None)
+
+    with (
+        patch("inputs.plugins.vlm_local_yolo.IOProvider"),
+        patch("inputs.plugins.vlm_local_yolo.YOLO"),
+        patch("inputs.plugins.vlm_local_yolo.check_webcam", return_value=(640, 480)),
+        patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture", return_value=mock_cap),
+        patch("inputs.plugins.vlm_local_yolo.asyncio.sleep", new=AsyncMock()),
+    ):
+        config = VLM_Local_YOLOConfig()
+        sensor = VLM_Local_YOLO(config=config)
+
+        result = await sensor._poll()
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_poll_returns_none_on_none_frame():
+    """Test that _poll returns None when cap.read() returns True but frame is None."""
+    mock_cap = MagicMock()
+    mock_cap.read.return_value = (True, None)
+
+    with (
+        patch("inputs.plugins.vlm_local_yolo.IOProvider"),
+        patch("inputs.plugins.vlm_local_yolo.YOLO"),
+        patch("inputs.plugins.vlm_local_yolo.check_webcam", return_value=(640, 480)),
+        patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture", return_value=mock_cap),
+        patch("inputs.plugins.vlm_local_yolo.asyncio.sleep", new=AsyncMock()),
+    ):
+        config = VLM_Local_YOLOConfig()
+        sensor = VLM_Local_YOLO(config=config)
+
+        result = await sensor._poll()
+        assert result is None
+
+
+def test_cam_third_initialized_without_camera():
+    """Test that cam_third has a safe default when no camera is available."""
+    with (
+        patch("inputs.plugins.vlm_local_yolo.IOProvider"),
+        patch("inputs.plugins.vlm_local_yolo.YOLO"),
+        patch("inputs.plugins.vlm_local_yolo.check_webcam", return_value=(0, 0)),
+        patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture"),
+    ):
+        config = VLM_Local_YOLOConfig()
+        sensor = VLM_Local_YOLO(config=config)
+
+        assert hasattr(sensor, "cam_third")
+        assert sensor.cam_third == 0

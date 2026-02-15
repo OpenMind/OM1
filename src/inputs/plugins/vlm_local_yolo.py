@@ -147,12 +147,9 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
 
         self.width, self.height = check_webcam(self.camera_index)
 
-        self.have_cam = False
-
-        if self.width > 0:
-            self.have_cam = True
-
+        self.have_cam = self.width > 0
         self.frame_index = 0
+        self.cam_third = int(self.width / 3) if self.width > 0 else 0
 
         # Start capturing video, if we have a webcam
         self.cap = None
@@ -219,6 +216,10 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         if self.have_cam and self.cap is not None:
 
             ret, frame = self.cap.read()
+            if not ret or frame is None:
+                logging.warning("YOLO: Failed to read frame from camera, skipping")
+                return None
+
             self.frame_index += 1
             timestamp = time.time()
 
