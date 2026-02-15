@@ -245,3 +245,43 @@ def test_thread_safety(mock_dependencies):
         t.join()
 
     assert True
+
+
+def test_get_location_exact_match(mock_dependencies):
+    """Test get_location with exact lowercase match."""
+    provider = UnitreeG1LocationsProvider()
+    provider._locations = {
+        "home": {"name": "Home", "pose": {"x": 0.0, "y": 0.0}},
+    }
+
+    result = provider.get_location("home")
+    assert result == {"name": "Home", "pose": {"x": 0.0, "y": 0.0}}
+
+
+def test_get_location_case_insensitive(mock_dependencies):
+    """Test get_location with case-insensitive lookup."""
+    provider = UnitreeG1LocationsProvider()
+    provider._locations = {
+        "kitchen": {"name": "Kitchen", "pose": {"x": 5.0, "y": 5.0}},
+    }
+
+    result = provider.get_location("Kitchen")
+    assert result == {"name": "Kitchen", "pose": {"x": 5.0, "y": 5.0}}
+
+
+def test_get_location_missing_key(mock_dependencies):
+    """Test get_location returns None for missing key."""
+    provider = UnitreeG1LocationsProvider()
+    provider._locations = {
+        "home": {"name": "Home", "pose": {}},
+    }
+
+    result = provider.get_location("office")
+    assert result is None
+
+
+def test_get_location_empty_label(mock_dependencies):
+    """Test get_location returns None for empty label."""
+    provider = UnitreeG1LocationsProvider()
+    result = provider.get_location("")
+    assert result is None

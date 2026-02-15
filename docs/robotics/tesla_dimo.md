@@ -32,9 +32,8 @@ Go to the [Tesla Virtual Key](https://www.tesla.com/_ak/auth.drivedimo.com) page
 
 If everything is set up correctly, you should be able to view your Tesla data in the DIMO app and control your Tesla via the DIMO API.
 
-<Note>
-If you encounter any issues, please refer to the [DIMO documentation](https://docs.dimo.org/developer-platform/developer-guide/dimo-developer-sdks/data-sdk).
-</Note>
+> **Note:** If you encounter any issues, please refer to the [DIMO documentation](https://docs.dimo.org/developer-platform/developer-guide/dimo-developer-sdks/data-sdk).
+
 
 ## Basic Commands
 

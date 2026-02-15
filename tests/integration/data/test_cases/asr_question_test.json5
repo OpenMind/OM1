@@ -1,0 +1,51 @@
+{
+  // Test case metadata
+  version: "v1.0.2",
+  name: "asr_question_test",
+  description: "Test ASR input with a question about the weather",
+  hertz: 1,
+  system_prompt_base: "You are a helpful robot assistant. When someone asks you a question, provide a thoughtful response. You should address the topic of the question in your speech.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If someone asks about the weather, you might:\n Move: 'stand still'\n Speak: {{'I don\\'t have weather sensors, but I hope it\\'s nice out!'}}\n Emotion: 'think'\n\n2. If someone asks a general question, you might:\n Move: 'stand still'\n Speak: {{'That\\'s a great question, let me think about that.'}}\n Emotion: 'curious'",
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Buddy",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "move",
+      llm_label: "move",
+      connector: "ros2",
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "ros2",
+    },
+  ],
+  api_key: "openmind_free",
+
+  // Input data
+  input: {
+    asr: ["../asr/weather_question.json"],
+  },
+
+  // Expected output
+  expected: {
+    keywords: ["weather"],
+    minimum_score: 0.5,
+  },
+}

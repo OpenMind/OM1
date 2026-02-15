@@ -87,6 +87,11 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         # Capture a frame every 500 ms
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
+            if not ret or frame is None:
+                logging.warning(
+                    "FaceEmotion: Failed to read frame from camera, skipping"
+                )
+                return None
             return frame
 
     async def _raw_to_text(
