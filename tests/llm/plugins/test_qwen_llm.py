@@ -3,9 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from llm import LLMConfig
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.qwen_llm import QwenLLM, _parse_qwen_tool_calls
+from llm.plugins.qwen_llm import QwenLLM, QwenLLMConfig, _parse_qwen_tool_calls
 
 
 class DummyOutputModel(BaseModel):
@@ -120,7 +119,7 @@ class TestParseQwenToolCalls:
 @pytest.fixture
 def config():
     """Fixture providing a basic LLM configuration."""
-    return LLMConfig(model="test-qwen-model")
+    return QwenLLMConfig(model="test-qwen-model")
 
 
 @pytest.fixture
@@ -217,7 +216,7 @@ class TestQwenLLMInit:
 
     def test_init_default_model(self):
         """Test default model is set when not provided."""
-        config = LLMConfig()
+        config = QwenLLMConfig()
         llm = QwenLLM(config, available_actions=None)
         assert llm._config.model is not None
         assert "Qwen" in llm._config.model
@@ -228,7 +227,7 @@ class TestQwenLLMInit:
 
     def test_init_placeholder_api_key(self, llm):
         """Test that a placeholder API key is used for local server."""
-        assert llm._client.api_key == "placeholder_key"
+        assert llm._client.api_key == "placeholder"
 
     def test_init_with_available_actions(self, config):
         """Test initialization with available actions generates function schemas."""
@@ -316,7 +315,8 @@ class TestQwenLLMAsk:
             formatted_messages = call_args.kwargs.get("messages", [])
             assert len(formatted_messages) >= 1
             assert formatted_messages[-1]["role"] == "user"
-            assert formatted_messages[-1]["content"] == "test prompt"
+            # When enable_reasoning is False (default), /no_think is appended
+            assert formatted_messages[-1]["content"] == "test prompt /no_think"
 
     @pytest.mark.asyncio
     async def test_io_provider_timing(self, llm, mock_response):
