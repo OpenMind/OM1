@@ -1,4 +1,6 @@
 import asyncio
+import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -622,22 +624,15 @@ def test_save_history_creates_file(persist_config, temp_history_dir):
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
 
-    # Add some history
     manager.history = [
         ChatMessage(role="user", content="Hello"),
         ChatMessage(role="assistant", content="Hi there!"),
     ]
     manager.frame_index = 5
-
-    # Save history
     manager._save_history()
 
-    # Verify file was created
     history_file = Path(persist_config.history_storage_path)
     assert history_file.exists()
-
-    # Verify content
-    import json
 
     with open(history_file) as f:
         data = json.load(f)
@@ -654,9 +649,7 @@ def test_save_history_creates_file(persist_config, temp_history_dir):
 
 def test_load_history_restores_state(persist_config, temp_history_dir):
     """Test that _load_history correctly restores history from disk."""
-    import json
 
-    # Create a history file
     history_file = Path(persist_config.history_storage_path)
     data = {
         "version": 1,
@@ -670,11 +663,9 @@ def test_load_history_restores_state(persist_config, temp_history_dir):
     with open(history_file, "w") as f:
         json.dump(data, f)
 
-    # Create manager (should auto-load)
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
 
-    # Verify history was loaded
     assert len(manager.history) == 2
     assert manager.history[0].role == "user"
     assert manager.history[0].content == "Previous message"
@@ -688,23 +679,19 @@ def test_load_history_handles_missing_file(persist_config):
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
 
-    # Should start with empty history
     assert len(manager.history) == 0
     assert manager.frame_index == 0
 
 
 def test_load_history_handles_corrupted_file(persist_config, temp_history_dir):
     """Test that _load_history handles corrupted JSON gracefully."""
-    # Create a corrupted history file
     history_file = Path(persist_config.history_storage_path)
     with open(history_file, "w") as f:
         f.write("{ invalid json }")
 
-    # Create manager (should handle error gracefully)
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
 
-    # Should start fresh after error
     assert len(manager.history) == 0
     assert manager.frame_index == 0
 
@@ -736,20 +723,16 @@ def test_clear_history_resets_state(persist_config, temp_history_dir):
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
 
-    # Add some history
     manager.history = [
         ChatMessage(role="user", content="Test"),
     ]
     manager.frame_index = 5
     manager._save_history()
 
-    # Clear without deleting file
     manager.clear_history(delete_file=False)
 
     assert len(manager.history) == 0
     assert manager.frame_index == 0
-
-    # File should still exist
     assert Path(persist_config.history_storage_path).exists()
 
 
@@ -758,13 +741,11 @@ def test_clear_history_deletes_file(persist_config, temp_history_dir):
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
 
-    # Add some history and save
     manager.history = [
         ChatMessage(role="user", content="Test"),
     ]
     manager._save_history()
 
-    # Clear with file deletion
     manager.clear_history(delete_file=True)
 
     assert len(manager.history) == 0
@@ -773,7 +754,6 @@ def test_clear_history_deletes_file(persist_config, temp_history_dir):
 
 def test_atomic_write_preserves_original_on_error(persist_config, temp_history_dir):
     """Test that a failed write doesn't corrupt the existing history file."""
-    import json
 
     client = AsyncMock()
     manager = LLMHistoryManager(persist_config, client)
@@ -810,7 +790,6 @@ def test_get_history_storage_path_sanitizes_agent_name(no_persist_config):
     client = AsyncMock()
     manager = LLMHistoryManager(no_persist_config, client)
 
-    # Path should use sanitized name
     expected_name = "Test_Bot_With_Special_Chars"
     assert expected_name in str(manager._history_storage_path)
 
@@ -829,20 +808,14 @@ def test_custom_storage_path(tmp_path):
     client = AsyncMock()
     manager = LLMHistoryManager(config, client)
 
-    # Add and save history
     manager.history = [ChatMessage(role="user", content="Test")]
     manager._save_history()
 
-    # File should be at custom location
     assert custom_path.exists()
 
 
 def test_version_compatibility_warning(persist_config, temp_history_dir, caplog):
     """Test that loading a newer version file logs a warning."""
-    import json
-    import logging
-
-    # Create a history file with a future version
     history_file = Path(persist_config.history_storage_path)
     data = {
         "version": 999,
@@ -853,15 +826,11 @@ def test_version_compatibility_warning(persist_config, temp_history_dir, caplog)
     with open(history_file, "w") as f:
         json.dump(data, f)
 
-    # Create manager
     client = AsyncMock()
     with caplog.at_level(logging.WARNING):
         manager = LLMHistoryManager(persist_config, client)
 
-    # Should log a warning about version
     assert any("version" in record.message.lower() for record in caplog.records)
-
-    # But should still load the data
     assert len(manager.history) == 1
 
 
@@ -934,8 +903,6 @@ async def test_update_history_decorator_persists_to_disk(tmp_path):
     await provider.process("test prompt")
 
     assert history_file.exists()
-
-    import json
 
     with open(history_file) as f:
         data = json.load(f)
