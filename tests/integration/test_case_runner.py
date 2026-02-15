@@ -13,7 +13,7 @@ import pytest
 from PIL import Image
 
 from llm.output_model import Action, CortexOutputModel
-from runtime.config import ModeConfig, ModeSystemConfig
+from runtime.config import ModeConfig, ModeSystemConfig, TransitionRule, TransitionType
 from runtime.cortex import ModeCortexRuntime
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_image_provider,
@@ -23,6 +23,14 @@ from tests.integration.mock_inputs.data_providers.mock_lidar_scan_provider impor
     clear_lidar_provider,
     get_lidar_provider,
     load_test_scans_from_files,
+)
+from tests.integration.mock_inputs.data_providers.mock_state_provider import (
+    clear_state_provider,
+    get_state_provider,
+)
+from tests.integration.mock_inputs.data_providers.mock_text_provider import (
+    clear_text_provider,
+    get_text_provider,
 )
 from tests.integration.mock_inputs.input_registry import (
     register_mock_inputs,
@@ -70,6 +78,67 @@ def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
         system_governance=config.get("system_governance", ""),
         system_prompt_examples=config.get("system_prompt_examples", ""),
         modes={"default": mode_config},
+    )
+
+
+def build_multi_mode_config(config: Dict[str, Any]) -> ModeSystemConfig:
+    """Build a ModeSystemConfig with multiple modes and transition rules.
+
+    Used for mode transition integration tests where the config defines
+    separate modes under a 'modes' key and transition rules.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration with 'modes' and 'transition_rules' keys
+
+    Returns
+    -------
+    ModeSystemConfig
+        Complete multi-mode system configuration
+    """
+    modes: Dict[str, ModeConfig] = {}
+    for mode_name, mode_data in config.get("modes", {}).items():
+        mode_config = ModeConfig(
+            version=config.get("version", "v1.0.2"),
+            name=mode_name,
+            display_name=mode_data.get("display_name", mode_name),
+            description=mode_data.get("description", ""),
+            system_prompt_base=mode_data.get("system_prompt_base", ""),
+            hertz=mode_data.get("hertz", 1),
+            _raw_inputs=mode_data.get("agent_inputs", []),
+            _raw_llm=mode_data.get("cortex_llm"),
+            _raw_simulators=mode_data.get("simulators", []),
+            _raw_actions=mode_data.get("agent_actions", []),
+            _raw_backgrounds=mode_data.get("backgrounds", []),
+        )
+        modes[mode_name] = mode_config
+
+    transition_rules: List[TransitionRule] = []
+    for rule_data in config.get("transition_rules", []):
+        rule = TransitionRule(
+            from_mode=rule_data["from_mode"],
+            to_mode=rule_data["to_mode"],
+            transition_type=TransitionType(rule_data["transition_type"]),
+            trigger_keywords=rule_data.get("trigger_keywords", []),
+            priority=rule_data.get("priority", 1),
+            cooldown_seconds=rule_data.get("cooldown_seconds", 0.0),
+            timeout_seconds=rule_data.get("timeout_seconds"),
+            context_conditions=rule_data.get("context_conditions", {}),
+        )
+        transition_rules.append(rule)
+
+    return ModeSystemConfig(
+        version=config.get("version", "v1.0.2"),
+        name=config.get("name", "TestAgent"),
+        default_mode=config.get("default_mode", "calm"),
+        config_name="test_config",
+        mode_memory_enabled=False,
+        api_key=config.get("api_key"),
+        system_governance=config.get("system_governance", ""),
+        system_prompt_examples=config.get("system_prompt_examples", ""),
+        modes=modes,
+        transition_rules=transition_rules,
     )
 
 
@@ -150,6 +219,22 @@ VLM_MOVE_TYPES = {
 }
 
 LIDAR_MOVE_TYPES = {"turn left", "turn right", "move forwards", "stand still"}
+
+ASR_MOVE_TYPES = {
+    "stand still",
+    "sit",
+    "shake paw",
+    "wag tail",
+    "dance",
+}
+
+STATE_MOVE_TYPES = {
+    "stand still",
+    "sit",
+    "walk",
+    "walk back",
+    "run",
+}
 
 EMOTION_TYPES = {"happy", "confused", "curious", "excited", "sad", "think"}
 
@@ -314,6 +399,107 @@ def _create_mock_llm_response(expected_outputs: Dict[str, Any]) -> CortexOutputM
     return CortexOutputModel(actions=actions)
 
 
+def load_test_asr_data(config: Dict[str, Any]) -> None:
+    """
+    Load ASR text data from JSON files into MockTextProvider.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration containing ASR data paths
+    """
+    asr_files = config.get("input", {}).get("asr", [])
+    if not asr_files:
+        return
+
+    base_dir = TEST_CASES_DIR
+    texts = []
+
+    for asr_path in asr_files:
+        file_path = Path(asr_path)
+        if not file_path.is_absolute():
+            file_path = base_dir / file_path
+
+        if not file_path.exists():
+            logging.warning(f"ASR data file not found: {file_path}")
+            continue
+
+        try:
+            with open(file_path, "r") as f:
+                import json
+
+                data = json.load(f)
+                text = data.get("text", "")
+                if text:
+                    texts.append(text)
+                    logging.info(f"Loaded ASR text: {text}")
+        except Exception as e:
+            logging.error(f"Failed to load ASR data {file_path}: {e}")
+
+    if texts:
+        text_provider = get_text_provider()
+        text_provider.load_texts(texts)
+        logging.info(f"Loaded {len(texts)} ASR text entries")
+
+
+def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
+    """
+    Load state data (battery, odometry, GPS) from JSON files into MockStateProvider.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration containing state data paths
+    data_type : str
+        Type of state data: "battery", "odometry", or "gps"
+    """
+    import json
+
+    data_files = config.get("input", {}).get(data_type, [])
+    if not data_files:
+        return
+
+    # GPS data is in a separate directory
+    if data_type == "gps":
+        base_dir = TEST_CASES_DIR
+    else:
+        base_dir = TEST_CASES_DIR
+
+    state_provider = get_state_provider()
+
+    for data_path in data_files:
+        file_path = Path(data_path)
+        if not file_path.is_absolute():
+            file_path = base_dir / file_path
+
+        if not file_path.exists():
+            logging.warning(f"State data file not found: {file_path}")
+            continue
+
+        try:
+            with open(file_path, "r") as f:
+                raw = json.load(f)
+                data = raw.get("data", raw)
+
+                if data_type == "battery":
+                    battery_entry = [
+                        data.get("percent", 0.0),
+                        data.get("voltage", 0.0),
+                        data.get("amperes", 0.0),
+                    ]
+                    state_provider.load_battery_data([battery_entry])
+                    logging.info(f"Loaded battery data: {battery_entry}")
+                elif data_type == "odometry":
+                    state_provider.load_odometry_data([data])
+                    logging.info(f"Loaded odometry data: {data}")
+                elif data_type == "gps":
+                    state_provider.load_gps_data([data])
+                    logging.info(f"Loaded GPS data: {data}")
+
+        except Exception as e:
+            logging.error(f"Failed to load {data_type} data {file_path}: {e}")
+
+
 async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run a test case using the CortexRuntime with mocked inputs.
@@ -336,6 +522,10 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     inputs = config.get("input", {})
     has_image_inputs = "images" in inputs
     has_lidar_inputs = "lidar" in inputs
+    has_asr_inputs = "asr" in inputs
+    has_battery_inputs = "battery" in inputs
+    has_odometry_inputs = "odometry" in inputs
+    has_gps_inputs = "gps" in inputs
 
     # Load image data only if the test case uses image-based inputs
     if has_image_inputs:
@@ -357,6 +547,20 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Load lidar data if the test case uses RPLidar inputs
     if has_lidar_inputs:
         await load_test_lidar_data(config)
+
+    # Load ASR text data
+    if has_asr_inputs:
+        load_test_asr_data(config)
+
+    # Load state data (battery, odometry, GPS)
+    if has_battery_inputs:
+        load_test_state_data(config, "battery")
+
+    if has_odometry_inputs:
+        load_test_state_data(config, "odometry")
+
+    if has_gps_inputs:
+        load_test_state_data(config, "gps")
 
     # No need to modify config - the input_registry will handle mapping
     # the real input types to their mock equivalents
@@ -678,7 +882,7 @@ def _build_llm_evaluation_prompts(
             )
     if has_keywords:
         comparison_sections.append(
-            f'- Should detect keywords: {formatted_expected["keywords"]}'
+            f"- Should detect keywords: {formatted_expected['keywords']}"
         )
     if has_emotion:
         emotion_list = formatted_expected["emotion"]
@@ -697,7 +901,7 @@ def _build_llm_evaluation_prompts(
         actual_sections.append(f'- Movement command: "{formatted_actual["movement"]}"')
     if has_keywords:
         actual_sections.append(
-            f'- Keywords successfully detected: {formatted_actual["keywords_found"]}'
+            f"- Keywords successfully detected: {formatted_actual['keywords_found']}"
         )
     if has_emotion:
         actual_sections.append(f'- Actual emotion: "{formatted_actual["emotion"]}"')
@@ -821,6 +1025,12 @@ async def evaluate_with_llm(
         input_section = config.get("input", {})
         if "lidar" in input_section:
             input_type = "LIDAR"
+        elif "asr" in input_section:
+            input_type = "ASR"
+        elif "battery" in input_section or "odometry" in input_section:
+            input_type = "State"
+        elif "gps" in input_section:
+            input_type = "GPS"
         elif "images" in input_section:
             input_type = "VLM/Image"
 
@@ -964,6 +1174,12 @@ async def evaluate_test_results(
         input_section = config.get("input", {})
         if "lidar" in input_section:
             input_type = "LIDAR"
+        elif "asr" in input_section:
+            input_type = "ASR"
+        elif "battery" in input_section or "odometry" in input_section:
+            input_type = "State"
+        elif "gps" in input_section:
+            input_type = "GPS"
         elif "images" in input_section:
             input_type = "VLM/Image"
 
@@ -1152,9 +1368,32 @@ class TestCategory:
         return len(self.test_cases)
 
 
+def _is_multi_mode_config(config: Dict[str, Any]) -> bool:
+    """Check if a test case config defines multiple modes.
+
+    Multi-mode configs have a 'modes' key with mode definitions and require
+    a different test runner (run_mode_transition_test) than standard configs
+    (run_test_case).
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Parsed test case configuration
+
+    Returns
+    -------
+    bool
+        True if this is a multi-mode configuration
+    """
+    return "modes" in config and isinstance(config["modes"], dict)
+
+
 def discover_test_cases() -> Dict[str, TestCategory]:
     """
-    Discover all test case configuration files organized by category.
+    Discover standard (single-mode) test case configurations organized by category.
+
+    Multi-mode configs are excluded because they require a different test runner.
+    Use discover_mode_transition_test_cases() for those.
 
     Returns
     -------
@@ -1167,6 +1406,10 @@ def discover_test_cases() -> Dict[str, TestCategory]:
     for test_file in TEST_CASES_DIR.glob("*.json5"):
         try:
             config = load_test_case(test_file)
+
+            if _is_multi_mode_config(config):
+                continue
+
             category_name = config.get("category", "uncategorized")
 
             if category_name not in categories:
@@ -1187,11 +1430,39 @@ def discover_test_cases() -> Dict[str, TestCategory]:
 
             for test_file in category_dir.glob("*.json5"):
                 try:
+                    config = load_test_case(test_file)
+                    if _is_multi_mode_config(config):
+                        continue
                     categories[category_name].add_test_case(test_file)
                 except Exception as e:
                     logging.error(f"Error loading test case {test_file}: {e}")
 
     return categories
+
+
+def discover_mode_transition_test_cases() -> List[Path]:
+    """
+    Discover multi-mode test case configurations for mode transition testing.
+
+    These configs define multiple modes under a 'modes' key and transition
+    rules, requiring run_mode_transition_test() instead of run_test_case().
+
+    Returns
+    -------
+    List[Path]
+        List of paths to multi-mode test case configurations
+    """
+    test_cases: List[Path] = []
+
+    for test_file in TEST_CASES_DIR.glob("*.json5"):
+        try:
+            config = load_test_case(test_file)
+            if _is_multi_mode_config(config):
+                test_cases.append(test_file)
+        except Exception as e:
+            logging.error(f"Error loading test case {test_file}: {e}")
+
+    return test_cases
 
 
 def get_test_cases_by_tags(tags: Optional[List[str]] = None) -> List[Path]:
@@ -1252,6 +1523,10 @@ async def test_from_config(test_case_path: Path):
     lidar_provider = get_lidar_provider()
     lidar_provider.clear()
 
+    # Reset text and state providers
+    clear_text_provider()
+    clear_state_provider()
+
     # Add a small delay to reduce race conditions between parallel tests
     await asyncio.sleep(0.1)
 
@@ -1274,6 +1549,18 @@ async def test_from_config(test_case_path: Path):
             logging.info(
                 f"Expected lidar files for test: {len(input_section['lidar'])}"
             )
+        if "asr" in input_section:
+            logging.info(f"Expected ASR files for test: {len(input_section['asr'])}")
+        if "battery" in input_section:
+            logging.info(
+                f"Expected battery files for test: {len(input_section['battery'])}"
+            )
+        if "odometry" in input_section:
+            logging.info(
+                f"Expected odometry files for test: {len(input_section['odometry'])}"
+            )
+        if "gps" in input_section:
+            logging.info(f"Expected GPS files for test: {len(input_section['gps'])}")
 
         # Run the test case
         results = await run_test_case(config)
@@ -1287,9 +1574,9 @@ async def test_from_config(test_case_path: Path):
         logging.info(f"Test results for {config['name']}:\n{message}")
 
         # Assert test passed
-        assert (
-            passed
-        ), f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
+        assert passed, (
+            f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
+        )
 
         logging.info(f"test_from_config: Test {config['name']} completed successfully")
 
@@ -1356,6 +1643,16 @@ def get_movement_types_for_config(config: Dict[str, Any]) -> set:
     if "lidar" in input_section:
         return LIDAR_MOVE_TYPES
 
+    # ASR-only tests (no images)
+    if "asr" in input_section and "images" not in input_section:
+        return ASR_MOVE_TYPES
+
+    # State-based tests (battery, odometry) without images
+    if (
+        "battery" in input_section or "odometry" in input_section
+    ) and "images" not in input_section:
+        return STATE_MOVE_TYPES
+
     # Check if this is an image/VLM-based test
     if "images" in input_section:
         return VLM_MOVE_TYPES
@@ -1389,3 +1686,99 @@ def extract_movement_from_actions(actions: List, movement_types: set) -> str:
                     return command.value
 
     return "unknown"
+
+
+async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a mode transition integration test.
+
+    This function tests that an input-triggered mode transition works
+    correctly by running a single tick of the cortex loop:
+    - fuser.fuse() calls formatted_latest_buffer() -> add_mode_transition_input()
+    - process_tick() detects keyword and schedules transition
+    - _handle_mode_transitions() executes the transition asynchronously
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration with modes and transition_rules
+
+    Returns
+    -------
+    Dict[str, Any]
+        Results containing initial_mode and final_mode
+    """
+    load_test_asr_data(config)
+
+    mode_system_config = build_multi_mode_config(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    default_mode = config.get("default_mode", "calm")
+    await cortex._initialize_mode(default_mode)
+
+    assert cortex.current_config is not None
+
+    initial_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Mode transition test: initial_mode={initial_mode}")
+
+    # Replace the transition callback with a no-op to prevent _start_orchestrators()
+    # from launching infinite cortex loops. The state update in _execute_transition()
+    # happens before the callback, so we can still verify the mode changed.
+    async def noop_transition_callback(from_mode: str, to_mode: str):
+        logging.info(f"Mode transition callback (no-op): {from_mode} -> {to_mode}")
+
+    cortex.mode_manager._transition_callbacks = [noop_transition_callback]
+
+    # Start the mode transition handler task so transitions can be processed
+    transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
+
+    # Mock LLM to return a simple response (we don't care about LLM output here)
+    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+        return CortexOutputModel(
+            actions=[Action(type="move", value="stand still")]
+        )
+
+    cortex.current_config.cortex_llm.ask = mock_llm_ask
+
+    # Tick 1: Poll input -> formatted_latest_buffer() -> add_mode_transition_input()
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    # If a transition was scheduled, wait for the handler to process it
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    final_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Mode transition test: final_mode={final_mode}")
+
+    # Clean up
+    transition_handler_task.cancel()
+    try:
+        await transition_handler_task
+    except asyncio.CancelledError:
+        pass
+
+    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
+    clear_text_provider()
+
+    return {"initial_mode": initial_mode, "final_mode": final_mode}
+
+
+@pytest.mark.parametrize("test_case_path", discover_mode_transition_test_cases())
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_mode_transition(test_case_path: Path):
+    """Test input-triggered mode transitions discovered from test_cases/."""
+    clear_text_provider()
+
+    config = load_test_case(test_case_path)
+    logging.info(f"Running mode transition test: {config['name']}")
+
+    results = await run_mode_transition_test(config)
+
+    assert results["initial_mode"] == config["expected"]["initial_mode"], (
+        f"Initial mode mismatch: got {results['initial_mode']}, "
+        f"expected {config['expected']['initial_mode']}"
+    )
+    assert results["final_mode"] == config["expected"]["final_mode"], (
+        f"Final mode mismatch: got {results['final_mode']}, "
+        f"expected {config['expected']['final_mode']}"
+    )

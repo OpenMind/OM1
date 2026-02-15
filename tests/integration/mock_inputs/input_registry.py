@@ -2,6 +2,10 @@ import logging
 import sys
 from types import ModuleType
 
+from tests.integration.mock_inputs.mock_battery import MockUnitreeGo2Battery
+from tests.integration.mock_inputs.mock_google_asr import MockGoogleASR
+from tests.integration.mock_inputs.mock_gps import MockGps
+from tests.integration.mock_inputs.mock_odometry import MockUnitreeGo2Odom
 from tests.integration.mock_inputs.mock_unitree_go2_rplidar import MockUnitreeGo2RPLidar
 from tests.integration.mock_inputs.mock_vlm_coco import MockVLM_COCO
 from tests.integration.mock_inputs.mock_vlm_gemini import MockVLM_Gemini
@@ -19,6 +23,10 @@ def register_mock_inputs():
     This approach is more direct and reliable than patching the load_input function.
     """
     # Import all the modules we need to modify
+    import inputs.plugins.google_asr
+    import inputs.plugins.gps
+    import inputs.plugins.unitree_go2_battery
+    import inputs.plugins.unitree_go2_odom
     import inputs.plugins.unitree_go2_rplidar
     import inputs.plugins.vlm_coco_local
     import inputs.plugins.vlm_gemini
@@ -33,6 +41,10 @@ def register_mock_inputs():
         "VLMGemini": inputs.plugins.vlm_gemini.VLMGemini,
         "VLMVila": inputs.plugins.vlm_vila.VLMVila,
         "UnitreeGo2RPLidar": inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidar,
+        "GoogleASRInput": inputs.plugins.google_asr.GoogleASRInput,
+        "UnitreeGo2Battery": inputs.plugins.unitree_go2_battery.UnitreeGo2Battery,
+        "UnitreeGo2Odom": inputs.plugins.unitree_go2_odom.UnitreeGo2Odom,
+        "Gps": inputs.plugins.gps.Gps,
     }
 
     # Replace with mock classes
@@ -41,6 +53,10 @@ def register_mock_inputs():
     inputs.plugins.vlm_gemini.VLMGemini = MockVLM_Gemini
     inputs.plugins.vlm_vila.VLMVila = MockVLM_Vila
     inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidar = MockUnitreeGo2RPLidar
+    inputs.plugins.google_asr.GoogleASRInput = MockGoogleASR
+    inputs.plugins.unitree_go2_battery.UnitreeGo2Battery = MockUnitreeGo2Battery
+    inputs.plugins.unitree_go2_odom.UnitreeGo2Odom = MockUnitreeGo2Odom
+    inputs.plugins.gps.Gps = MockGps
 
     # Add mock modules to namespace for discoverability
     mock_modules = {
@@ -51,6 +67,10 @@ def register_mock_inputs():
         "inputs.plugins.mock_unitree_go2_rplidar": {
             "MockUnitreeGo2RPLidar": MockUnitreeGo2RPLidar
         },
+        "inputs.plugins.mock_google_asr": {"MockGoogleASR": MockGoogleASR},
+        "inputs.plugins.mock_battery": {"MockUnitreeGo2Battery": MockUnitreeGo2Battery},
+        "inputs.plugins.mock_odometry": {"MockUnitreeGo2Odom": MockUnitreeGo2Odom},
+        "inputs.plugins.mock_gps": {"MockGps": MockGps},
     }
 
     for module_name, mock_classes in mock_modules.items():
@@ -70,6 +90,10 @@ def unregister_mock_inputs():
 
     if _original_classes:
         # Restore original classes
+        import inputs.plugins.google_asr
+        import inputs.plugins.gps
+        import inputs.plugins.unitree_go2_battery
+        import inputs.plugins.unitree_go2_odom
         import inputs.plugins.unitree_go2_rplidar
         import inputs.plugins.vlm_coco_local
         import inputs.plugins.vlm_gemini
@@ -86,8 +110,17 @@ def unregister_mock_inputs():
                 inputs.plugins.vlm_gemini.VLMGemini = original_class
             elif plugin_name == "VLMVila":
                 inputs.plugins.vlm_vila.VLMVila = original_class
-            elif plugin_name == "RPLidar":
+            elif plugin_name == "UnitreeGo2RPLidar":
                 inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidar = original_class
+            elif plugin_name == "GoogleASRInput":
+                inputs.plugins.google_asr.GoogleASRInput = original_class
+            elif plugin_name == "UnitreeGo2Battery":
+                inputs.plugins.unitree_go2_battery.UnitreeGo2Battery = original_class
+            elif plugin_name == "UnitreeGo2Odom":
+                inputs.plugins.unitree_go2_odom.UnitreeGo2Odom = original_class
+            elif plugin_name == "Gps":
+                inputs.plugins.gps.Gps = original_class
+
         # Remove mock modules
         mock_modules = [
             "inputs.plugins.mock_vlm_coco",
@@ -95,6 +128,10 @@ def unregister_mock_inputs():
             "inputs.plugins.mock_vlm_gemini",
             "inputs.plugins.mock_vlm_vila",
             "inputs.plugins.mock_unitree_go2_rplidar",
+            "inputs.plugins.mock_google_asr",
+            "inputs.plugins.mock_battery",
+            "inputs.plugins.mock_odometry",
+            "inputs.plugins.mock_gps",
         ]
         for module in mock_modules:
             sys.modules.pop(module, None)

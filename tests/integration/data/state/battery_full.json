@@ -1,0 +1,11 @@
+{
+  "metadata": {
+    "description": "Full battery state - normal operation",
+    "sensor_type": "battery"
+  },
+  "data": {
+    "percent": 95,
+    "voltage": 25.2,
+    "amperes": 1.2
+  }
+}
