@@ -36,6 +36,22 @@
 ## Simulators <a href="#simulators" id="simulators"></a>
 
 * [Gazebo](simulators/gazebo.md)
+* [Isaac Sim](simulators/isaac-sim.md)
+
+## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
+
+* [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
+* [Overview](full_autonomy_guidelines/architecture_overview.md)
+* [Setup Instructions](full_autonomy_guidelines/setup_system.md)
+    * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
+    * [System Config](full_autonomy_guidelines/system_config.md)
+    * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
+* [Modes and Lifecycle](full_autonomy_guidelines/modes.md)
+    * [Modes](full_autonomy_guidelines/modes.md)
+    * [Mode Selection](full_autonomy_guidelines/mode_selection.md)
+    * [Transition Rules](full_autonomy_guidelines/transition_rules.md)
+    * [Lifecycle](full_autonomy_guidelines/lifecycle.md)
+* [NVIDIA Thor](robotics/nvidia_thor.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
 
@@ -48,20 +64,6 @@
     * [LLM](api-reference/endpoints/llm.md)
     * [Riva](api-reference/endpoints/riva.md)
     * [ViLA VLM](api-reference/endpoints/vila_vlm.md)
-
-## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
-
-* [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
-* [Architecture Overview](full_autonomy_guidelines/architecture_overview.md)
-    * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
-    * [System Config](full_autonomy_guidelines/system_config.md)
-    * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
-* [Modes and Lifecycle](full_autonomy_guidelines/modes.md)
-    * [Modes](full_autonomy_guidelines/modes.md)
-    * [Mode Selection](full_autonomy_guidelines/mode_selection.md)
-    * [Transition Rules](full_autonomy_guidelines/transition_rules.md)
-    * [Lifecycle](full_autonomy_guidelines/lifecycle.md)
-* [NVIDIA Thor](robotics/nvidia_thor.md)
 
 ## Release Notes <a href="#release-notes" id="release-notes"></a>
 

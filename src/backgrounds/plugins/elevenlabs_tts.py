@@ -33,9 +33,7 @@ class ElevenLabsTTSConfig(BackgroundConfig):
         default="JBFqnCBsd6RMkjVDRZzb", description="Voice ID for TTS"
     )
     model_id: str = Field(default="eleven_flash_v2_5", description="Model ID for TTS")
-    output_format: str = Field(
-        default="mp3_44100_128", description="Output audio format"
-    )
+    output_format: str = Field(default="pcm_16000", description="Output audio format")
 
 
 class ElevenLabsTTS(Background[ElevenLabsTTSConfig]):
@@ -65,7 +63,7 @@ class ElevenLabsTTS(Background[ElevenLabsTTSConfig]):
             - Eleven Labs API key for TTS service access
             - Voice ID specifying the voice to use for synthesis
             - Model ID determining the TTS model (e.g., "eleven_flash_v2_5")
-            - Output format defining audio encoding (e.g., "mp3_44100_128")
+            - Output format defining audio encoding (e.g., "pcm_16000")
         """
         super().__init__(config)
 
