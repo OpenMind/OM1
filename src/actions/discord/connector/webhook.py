@@ -109,6 +109,8 @@ class DiscordWebhookConnector(ActionConnector[DiscordWebhookConfig, DiscordInput
                             message=error_text,
                         )
 
+        except aiohttp.ClientResponseError:
+            raise
         except aiohttp.ClientError as e:
             logging.error(f"Network error sending Discord message: {str(e)}")
             raise
