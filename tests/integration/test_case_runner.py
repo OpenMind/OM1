@@ -1582,9 +1582,9 @@ async def test_from_config(test_case_path: Path):
         logging.info(f"Test results for {config['name']}:\n{message}")
 
         # Assert test passed
-        assert passed, (
-            f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
-        )
+        assert (
+            passed
+        ), f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
 
         logging.info(f"test_from_config: Test {config['name']} completed successfully")
 
@@ -1741,9 +1741,7 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
 
     # Mock LLM to return a simple response (we don't care about LLM output here)
     async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
-        return CortexOutputModel(
-            actions=[Action(type="move", value="stand still")]
-        )
+        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
     cortex.current_config.cortex_llm.ask = mock_llm_ask
 
@@ -1816,13 +1814,13 @@ async def test_mode_transition(test_case_path: Path):
             f"Runtime config not reinitialized: prompt is '{results['final_prompt']}', "
             f"expected '{expected_final_prompt}'"
         )
-        assert results["final_prompt"] != results["initial_prompt"], (
-            "System prompt did not change after mode transition"
-        )
+        assert (
+            results["final_prompt"] != results["initial_prompt"]
+        ), "System prompt did not change after mode transition"
     else:
-        assert results["final_prompt"] == results["initial_prompt"], (
-            "System prompt changed when no transition was expected"
-        )
+        assert (
+            results["final_prompt"] == results["initial_prompt"]
+        ), "System prompt changed when no transition was expected"
 
 
 async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -1861,9 +1859,7 @@ async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, An
     transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
 
     async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
-        return CortexOutputModel(
-            actions=[Action(type="move", value="stand still")]
-        )
+        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
     cortex.current_config.cortex_llm.ask = mock_llm_ask
 
@@ -1939,9 +1935,7 @@ async def test_cooldown_prevents_transition():
     transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
 
     async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
-        return CortexOutputModel(
-            actions=[Action(type="move", value="stand still")]
-        )
+        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
     cortex.current_config.cortex_llm.ask = mock_llm_ask
 

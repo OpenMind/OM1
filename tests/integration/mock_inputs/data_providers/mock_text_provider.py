@@ -58,6 +58,7 @@ class MockTextProvider:
         self.texts = []
         self.current_index = 0
 
+
 def get_text_provider() -> MockTextProvider:
     """Get the singleton text provider instance."""
     return MockTextProvider()

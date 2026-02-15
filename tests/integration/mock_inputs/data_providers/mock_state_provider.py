@@ -24,7 +24,6 @@ class MockStateProvider:
             logging.info("Initialized MockStateProvider singleton")
         return cls._instance
 
-
     def load_battery_data(self, data: List[List[float]]):
         """
         Load battery state data.
@@ -54,7 +53,6 @@ class MockStateProvider:
         self.battery_index += 1
         return data
 
-
     def load_odometry_data(self, data: List[Dict]):
         """
         Load odometry state data.
@@ -83,7 +81,6 @@ class MockStateProvider:
         data = self.odometry_data[self.odometry_index]
         self.odometry_index += 1
         return data
-
 
     def load_gps_data(self, data: List[Dict]):
         """
