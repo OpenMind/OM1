@@ -1,37 +1,52 @@
+import importlib
 import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-mock_om1_speech = MagicMock()
-mock_om1_speech.AudioOutputStream = MagicMock()
-sys.modules["om1_speech"] = mock_om1_speech
 
-mock_pyaudio = MagicMock()
-mock_pyaudio.PyAudio = MagicMock()
-mock_instance = MagicMock()
-mock_instance.get_default_output_device_info.return_value = {
-    "name": "Mock Speaker",
-    "index": 0,
-}
-mock_pyaudio.PyAudio.return_value = mock_instance
-sys.modules["pyaudio"] = mock_pyaudio
+@pytest.fixture
+def mock_external_modules(monkeypatch):
+    """Mock external modules before importing the provider module."""
+    mock_om1_speech = MagicMock()
+    mock_om1_speech.AudioOutputStream = MagicMock()
 
-# Import after mocking
-from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider  # noqa: E402
+    mock_pyaudio = MagicMock()
+    mock_pyaudio.PyAudio = MagicMock()
+    mock_instance = MagicMock()
+    mock_instance.get_default_output_device_info.return_value = {
+        "name": "Mock Speaker",
+        "index": 0,
+    }
+    mock_pyaudio.PyAudio.return_value = mock_instance
+
+    monkeypatch.setitem(sys.modules, "om1_speech", mock_om1_speech)
+    monkeypatch.setitem(sys.modules, "pyaudio", mock_pyaudio)
+
+    return {
+        "om1_speech": mock_om1_speech,
+        "pyaudio": mock_pyaudio,
+    }
+
+
+@pytest.fixture
+def provider_module(mock_external_modules):
+    """Import the provider module after mocking external deps."""
+    sys.modules.pop("providers.elevenlabs_tts_provider", None)
+    return importlib.import_module("providers.elevenlabs_tts_provider")
 
 
 @pytest.fixture(autouse=True)
-def reset_singleton():
+def reset_singleton(provider_module):
     """Reset singleton instances between tests."""
-    ElevenLabsTTSProvider.reset()  # type: ignore
+    provider_module.ElevenLabsTTSProvider.reset()  # type: ignore
     yield
-    ElevenLabsTTSProvider.reset()  # type: ignore
+    provider_module.ElevenLabsTTSProvider.reset()  # type: ignore
 
 
-def test_configure_no_restart_needed_when_not_running():
+def test_configure_no_restart_needed_when_not_running(provider_module):
     """Test configure doesn't call stop when provider is not running."""
-    provider = ElevenLabsTTSProvider()
+    provider = provider_module.ElevenLabsTTSProvider()
     provider.running = False
 
     with patch.object(provider, "stop") as mock_stop:
@@ -39,9 +54,9 @@ def test_configure_no_restart_needed_when_not_running():
         mock_stop.assert_not_called()
 
 
-def test_configure_restart_needed_when_running():
+def test_configure_restart_needed_when_running(provider_module):
     """Test configure calls stop when running and parameters change."""
-    provider = ElevenLabsTTSProvider(api_key="original_key")
+    provider = provider_module.ElevenLabsTTSProvider(api_key="original_key")
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
@@ -49,12 +64,12 @@ def test_configure_restart_needed_when_running():
         mock_stop.assert_called_once()
 
 
-def test_configure_restart_needed_url_change():
+def test_configure_restart_needed_url_change(provider_module):
     """Test restart is triggered when URL changes."""
     original_url = "https://original.api.com"
     new_url = "https://new.api.com"
 
-    provider = ElevenLabsTTSProvider(url=original_url)
+    provider = provider_module.ElevenLabsTTSProvider(url=original_url)
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
@@ -62,9 +77,9 @@ def test_configure_restart_needed_url_change():
         mock_stop.assert_called_once()
 
 
-def test_configure_restart_needed_api_key_change():
+def test_configure_restart_needed_api_key_change(provider_module):
     """Test restart is triggered when API key changes."""
-    provider = ElevenLabsTTSProvider(api_key="original_key")
+    provider = provider_module.ElevenLabsTTSProvider(api_key="original_key")
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
@@ -72,9 +87,9 @@ def test_configure_restart_needed_api_key_change():
         mock_stop.assert_called_once()
 
 
-def test_configure_restart_needed_elevenlabs_api_key_change():
+def test_configure_restart_needed_elevenlabs_api_key_change(provider_module):
     """Test restart is triggered when ElevenLabs API key changes."""
-    provider = ElevenLabsTTSProvider(elevenlabs_api_key="original_key")
+    provider = provider_module.ElevenLabsTTSProvider(elevenlabs_api_key="original_key")
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
@@ -82,9 +97,9 @@ def test_configure_restart_needed_elevenlabs_api_key_change():
         mock_stop.assert_called_once()
 
 
-def test_configure_restart_needed_voice_id_change():
+def test_configure_restart_needed_voice_id_change(provider_module):
     """Test restart is triggered when voice ID changes."""
-    provider = ElevenLabsTTSProvider(voice_id="original_voice")
+    provider = provider_module.ElevenLabsTTSProvider(voice_id="original_voice")
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
@@ -92,9 +107,9 @@ def test_configure_restart_needed_voice_id_change():
         mock_stop.assert_called_once()
 
 
-def test_configure_restart_needed_model_id_change():
+def test_configure_restart_needed_model_id_change(provider_module):
     """Test restart is triggered when model ID changes."""
-    provider = ElevenLabsTTSProvider(model_id="original_model")
+    provider = provider_module.ElevenLabsTTSProvider(model_id="original_model")
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
@@ -102,9 +117,9 @@ def test_configure_restart_needed_model_id_change():
         mock_stop.assert_called_once()
 
 
-def test_configure_restart_needed_output_format_change():
+def test_configure_restart_needed_output_format_change(provider_module):
     """Test restart is triggered when output format changes."""
-    provider = ElevenLabsTTSProvider(output_format="pcm_16000")
+    provider = provider_module.ElevenLabsTTSProvider(output_format="pcm_16000")
     provider.running = True
 
     with patch.object(provider, "stop") as mock_stop:
@@ -112,7 +127,9 @@ def test_configure_restart_needed_output_format_change():
         mock_stop.assert_called_once()
 
 
-def test_configure_no_restart_when_same_parameters():
+def test_configure_no_restart_when_same_parameters(
+    provider_module, mock_external_modules
+):
     """Test no restart when all parameters remain the same."""
     url = "https://api.openmind.org/api/core/elevenlabs/tts"
     api_key = "same_key"
@@ -123,9 +140,11 @@ def test_configure_no_restart_when_same_parameters():
 
     mock_audio_stream = MagicMock()
     mock_audio_stream._url = url
-    mock_om1_speech.AudioOutputStream.return_value = mock_audio_stream
+    mock_external_modules["om1_speech"].AudioOutputStream.return_value = (
+        mock_audio_stream
+    )
 
-    provider = ElevenLabsTTSProvider(
+    provider = provider_module.ElevenLabsTTSProvider(
         url=url,
         api_key=api_key,
         elevenlabs_api_key=elevenlabs_key,
@@ -149,9 +168,9 @@ def test_configure_no_restart_when_same_parameters():
         mock_stop.assert_not_called()
 
 
-def test_start_stop():
+def test_start_stop(provider_module):
     """Test start and stop functionality."""
-    provider = ElevenLabsTTSProvider(url="test_url")
+    provider = provider_module.ElevenLabsTTSProvider(url="test_url")
     provider.start()
     assert provider.running is True
 

@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "description": "Robot is currently moving forward",
+    "sensor_type": "odometry"
+  },
+  "data": {
+    "x": 1.5,
+    "y": 0.3,
+    "yaw": 45.0,
+    "moving": true,
+    "body_attitude": "STANDING"
+  }
+}

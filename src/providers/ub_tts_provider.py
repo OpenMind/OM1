@@ -44,7 +44,7 @@ class UbTtsProvider:
         timestamp : int
             A timestamp to identify the TTS request.
         """
-        self.executor.submit(self._speak_workder, message, interrupt, timestamp)
+        self.executor.submit(self._speak_worker, message, interrupt, timestamp)
 
     def stop(self):
         """
@@ -52,7 +52,7 @@ class UbTtsProvider:
         """
         self.executor.shutdown(wait=True)
 
-    def _speak_workder(
+    def _speak_worker(
         self, message: str, interrupt: bool = True, timestamp: int = 0
     ) -> bool:
         """

@@ -329,3 +329,39 @@ class TestTurtleBot4RPLidarProvider:
         assert provider.rplidar_config.max_buf_meas == 50
         assert provider.rplidar_config.min_len == 8
         assert provider.rplidar_config.max_distance_mm == 8000
+
+    def test_movement_options(self, mock_rplidar_dependencies):
+        """Test movement_options property returns correct dict structure."""
+        provider = TurtleBot4RPLidarProvider()
+        provider.turn_left = [0, 1, 2]
+        provider.advance = [4, 5]
+        provider.turn_right = [7, 8]
+        provider.retreat = True
+
+        result = provider.movement_options
+        assert result == {
+            "turn_left": [0, 1, 2],
+            "advance": [4, 5],
+            "turn_right": [7, 8],
+            "retreat": True,
+        }
+
+    def test_movement_options_default(self, mock_rplidar_dependencies):
+        """Test movement_options property with default empty values."""
+        provider = TurtleBot4RPLidarProvider()
+        result = provider.movement_options
+        assert result == {
+            "turn_left": [],
+            "advance": [],
+            "turn_right": [],
+            "retreat": False,
+        }
+
+    def test_stop(self, mock_rplidar_dependencies):
+        """Test stop method sets running to False."""
+        provider = TurtleBot4RPLidarProvider()
+        provider.running = True
+
+        provider.stop()
+
+        assert provider.running is False

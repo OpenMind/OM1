@@ -1,0 +1,52 @@
+{
+  name: "mode_time_based_test",
+  description: "Test time-based mode transition after timeout expires",
+  version: "v1.0.2",
+  api_key: "openmind_free",
+  default_mode: "patrol",
+  modes: {
+    patrol: {
+      display_name: "Patrol",
+      description: "Patrol mode with short timeout",
+      system_prompt_base: "You are patrolling the area.",
+      hertz: 1,
+      timeout_seconds: 0.1,
+      agent_inputs: [{ type: "GoogleASRInput" }],
+      cortex_llm: { type: "OpenAILLM", config: { agent_name: "Buddy" } },
+      agent_actions: [
+        { name: "move", llm_label: "move", connector: "ros2" },
+        { name: "speak", llm_label: "speak", connector: "ros2" },
+        { name: "face", llm_label: "emotion", connector: "ros2" },
+      ],
+    },
+    idle: {
+      display_name: "Idle",
+      description: "Idle mode after patrol timeout",
+      system_prompt_base: "You are now idle. Stand by.",
+      hertz: 1,
+      agent_inputs: [{ type: "GoogleASRInput" }],
+      cortex_llm: { type: "OpenAILLM", config: { agent_name: "Buddy" } },
+      agent_actions: [
+        { name: "move", llm_label: "move", connector: "ros2" },
+        { name: "speak", llm_label: "speak", connector: "ros2" },
+        { name: "face", llm_label: "emotion", connector: "ros2" },
+      ],
+    },
+  },
+  transition_rules: [
+    {
+      from_mode: "patrol",
+      to_mode: "idle",
+      transition_type: "time_based",
+      priority: 1,
+      cooldown_seconds: 0,
+    },
+  ],
+  input: {
+    asr: ["../asr/greeting.json"],
+  },
+  expected: {
+    initial_mode: "patrol",
+    final_mode: "idle",
+  },
+}

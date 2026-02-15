@@ -1,0 +1,55 @@
+{
+  // Test case metadata
+  version: "v1.0.2",
+  name: "odometry_awareness_test",
+  description: "Test odometry input - robot should be aware of its position and movement state",
+  hertz: 1,
+  system_prompt_base: "You are a smart robot that is aware of your body position and movement state. When you receive odometry data, acknowledge your current state. If you are moving, mention that you are in motion. If standing still, consider what to do next.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If you are currently moving, you might:\n Move: 'stand still'\n Speak: {{'I\\'m currently in motion, let me finish my path.'}}\n Emotion: 'think'\n\n2. If you are standing still, you might:\n Move: 'walk'\n Speak: {{'I\\'m standing still, maybe I should explore.'}}\n Emotion: 'curious'",
+  agent_inputs: [
+    {
+      type: "VLMOpenAI",
+    },
+    {
+      type: "UnitreeGo2Odom",
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "move",
+      llm_label: "move",
+      connector: "ros2",
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "ros2",
+    },
+  ],
+  api_key: "openmind_free",
+
+  // Input data
+  input: {
+    images: ["../images/indoor_1.jpg"],
+    odometry: ["../state/odometry_moving.json"],
+  },
+
+  // Expected output
+  expected: {
+    keywords: ["moving", "motion"],
+    minimum_score: 0.5,
+  },
+}
