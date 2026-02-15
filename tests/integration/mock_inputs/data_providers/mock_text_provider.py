@@ -58,26 +58,9 @@ class MockTextProvider:
         self.texts = []
         self.current_index = 0
 
-    @property
-    def text_count(self) -> int:
-        """Return the total number of loaded texts."""
-        return len(self.texts)
-
-    @property
-    def remaining_texts(self) -> int:
-        """Return the number of remaining texts."""
-        return max(0, len(self.texts) - self.current_index)
-
-
 def get_text_provider() -> MockTextProvider:
     """Get the singleton text provider instance."""
     return MockTextProvider()
-
-
-def load_test_texts(texts: List[str]):
-    """Load test texts into the provider."""
-    provider = get_text_provider()
-    provider.load_texts(texts)
 
 
 def get_next_text() -> Optional[str]:

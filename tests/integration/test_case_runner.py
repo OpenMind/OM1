@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import re
@@ -427,8 +428,6 @@ def load_test_asr_data(config: Dict[str, Any]) -> None:
 
         try:
             with open(file_path, "r") as f:
-                import json
-
                 data = json.load(f)
                 text = data.get("text", "")
                 if text:
@@ -454,8 +453,6 @@ def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
     data_type : str
         Type of state data: "battery", "odometry", or "gps"
     """
-    import json
-
     data_files = config.get("input", {}).get(data_type, [])
     if not data_files:
         return

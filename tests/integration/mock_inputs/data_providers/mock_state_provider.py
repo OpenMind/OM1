@@ -24,7 +24,6 @@ class MockStateProvider:
             logging.info("Initialized MockStateProvider singleton")
         return cls._instance
 
-    # Battery methods
 
     def load_battery_data(self, data: List[List[float]]):
         """
@@ -55,7 +54,6 @@ class MockStateProvider:
         self.battery_index += 1
         return data
 
-    # Odometry methods
 
     def load_odometry_data(self, data: List[Dict]):
         """
@@ -86,7 +84,6 @@ class MockStateProvider:
         self.odometry_index += 1
         return data
 
-    # GPS methods
 
     def load_gps_data(self, data: List[Dict]):
         """
@@ -116,14 +113,6 @@ class MockStateProvider:
         data = self.gps_data[self.gps_index]
         self.gps_index += 1
         return data
-
-    # Reset methods
-
-    def reset_all(self):
-        """Reset all indices to start from the beginning."""
-        self.battery_index = 0
-        self.odometry_index = 0
-        self.gps_index = 0
 
     def clear_all(self):
         """Clear all loaded data and reset all indices."""
