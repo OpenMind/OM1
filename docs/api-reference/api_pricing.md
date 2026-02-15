@@ -6,78 +6,57 @@ icon: bolt
 
 The APIs now support a new unit for billing, **OMCU (OpenMind Computational Unit)**. See details below for our free, standard, builder, pro, and enterprise plans.
 
-Note: Each subscription plan includes all features offered in the lower-tier plans
+> **Note:** Each subscription plan includes all features offered in the lower-tier plans
 
-<Card title="Free" icon="coin">
-$0 per month
+## Plan Comparison
 
-Restricted to 1 API Key generation
+### Free Plan
+- **Cost:** $0/month
+- **API Keys:** 1 key
+- **Rate Limit:** 1 request/second
+- **OMCU:** 50 units
 
-Limits to 1 request/per second
+### Standard Plan
+- **Cost:** $5/month
+- **API Keys:** Unlimited
+- **Rate Limit:** 5 requests/second
+- **Memory:** Session memory (short-term)
+- **OMCU:** 2.5K units
+- All features in **Free** plan
 
-50 OMCU
-</Card>
+### Builder Plan
+- **Cost:** $25/month
+- **Rate Limit:** 20 requests/second
+- **Memory:** Long-term memory (ships March)
+- **Support:** Email support
+- **OMCU:** 15K units
+- **Features:** Priority queue, App Store publishing
+- All features in **Standard** plan
 
-<Card title="Standard" icon="coin">
-$5 per month
+### Pro Plan
+- **Cost:** $99/month
+- **Rate Limit:** 40 requests/second
+- **Memory:** Advanced memory controls (ships June)
+- **Support:** Slack/Private support channel
+- **OMCU:** 100K units
+- All features in **Builder** plan
 
-Unlimited API key
+### Enterprise Plan
+- **Cost:** $999/month
+- **Rate Limit:** 100 requests/second
+- **Support:** Custom integration support
+- **Features:**
+  - Dedicated capacity/GPU pools (ships later this year)
+  - Private model access (ships later this year)
+- **OMCU:** 1.5M units
+- All features in **Pro** plan
 
-5 requests / second
+### Custom Plan
+For custom pricing, quotas, or special requirements, please [contact our support team](mailto:support@openmind.org?subject=Inquiry&body=Hello>)
 
-Session memory (short-term)
+## Getting Started
 
-Short-term memory
-
-2.5K OMCU
-</Card>
-
-<Card title="Builder" icon="coin">
-$25 per month
-
-Higher rate limits
-
-20 requests/per second
-
-priority queue
-
-Long-term memory (ships March)
-
-Email Support
-
-App Store publishing
-
-15K OMCU
-</Card>
-
-<Card title="Pro" icon="coin">
-$99 per month
-
-40 requests/per second
-
-Advanced memory controls (ships June)
-
-Slack/Private support channel
-
-100K OMCU
-</Card>
-
-<Card title="Enterprise" icon="coin">
-$999 per month
-
-100 requests/per second
-
-Dedicated capacity / GPU pools (ships later this year)
-
-Custom integration support
-
-Private model access (ships later this year)
-
-1.5M OMCU
-</Card>
-
-<Card title="Custom" icon="coin">
-For custom plans, contact support
-
-<a href="mailto:support@openmind.org?subject=Inquiry&body=Hello">Contact Us</a>
-</Card>
+1. Choose a plan that fits your needs
+2. Create an account at [portal.openmind.org](https://portal.openmind.org/)
+3. Generate your API key
+4. Start building with the OM1 APIs
