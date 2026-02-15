@@ -6,14 +6,11 @@ import shutil
 from typing import Optional, Tuple
 
 import dotenv
-import json5
 import typer
 
+from runtime.config import load_mode_config
+from runtime.cortex import ModeCortexRuntime
 from runtime.logging import setup_logging
-from runtime.multi_mode.config import load_mode_config
-from runtime.multi_mode.cortex import ModeCortexRuntime
-from runtime.single_mode.config import load_config
-from runtime.single_mode.cortex import CortexRuntime
 
 app = typer.Typer()
 
@@ -98,29 +95,16 @@ def start(
     setup_logging(config_name, log_level, log_to_file)
 
     try:
-        with open(config_path, "r") as f:
-            raw_config = json5.load(f)
-
-        if "modes" in raw_config and "default_mode" in raw_config:
-            mode_config = load_mode_config(config_name)
-            runtime = ModeCortexRuntime(
-                mode_config,
-                config_name,
-                hot_reload=hot_reload,
-                check_interval=check_interval,
-            )
-            logging.info(f"Starting OM1 with mode-aware configuration: {config_name}")
-            logging.info(f"Available modes: {list(mode_config.modes.keys())}")
-            logging.info(f"Default mode: {mode_config.default_mode}")
-        else:
-            config = load_config(config_name)
-            runtime = CortexRuntime(
-                config,
-                config_name,
-                hot_reload=hot_reload,
-                check_interval=check_interval,
-            )
-            logging.info(f"Starting OM1 with standard configuration: {config_name}")
+        mode_config = load_mode_config(config_name)
+        runtime = ModeCortexRuntime(
+            mode_config,
+            config_name,
+            hot_reload=hot_reload,
+            check_interval=check_interval,
+        )
+        logging.info(f"Starting OM1 with configuration: {config_name}")
+        logging.info(f"Available modes: {list(mode_config.modes.keys())}")
+        logging.info(f"Default mode: {mode_config.default_mode}")
 
         if hot_reload:
             logging.info(

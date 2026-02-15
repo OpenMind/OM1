@@ -3,7 +3,7 @@ title: Introduction
 description: "OpenMind builds open-source software that helps machines think, learn, and collaborate"
 icon: brain
 ---
-![Logo](../assets/openmind-intro-cover.png)
+![ ](../assets/openmind-intro-cover.png)
 
 ## What is OM1?
 
@@ -30,4 +30,4 @@ Whether you're just getting started with OM1 or looking to optimize an existing 
 | Preconfigured endpoints                  | Text-to-Speech, OpenAI's `gpt-4o`, DeepSeek, Gemini, Openrouter, Near AI, Ollama (local), and multiple VLMs. |
 | Simulators                               | Gazebo, Isaac Sim (Coming Soon)
 
-To get started with OM1, head over to [Installation Guide](1_get-started).
+To get started with OM1, head over to [Installation Guide](1_get-started.md).

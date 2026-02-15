@@ -1,6 +1,7 @@
 ---
 title: x402 Integration
 description: "x402 - An open protocol for internet-native micropayments"
+icon: coin
 ---
 
 ## Overview

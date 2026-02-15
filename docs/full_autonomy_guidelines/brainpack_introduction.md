@@ -12,8 +12,8 @@ icon: backpack
 - These BrainPacks provide NVIDIA Thor to Unitree dogs and humanoids. Each of them comes with an open reference design, speakers, and connectivity to other sensors via Ethernet and USB, with multiple power options.
 - The BrainPack supports modern and future NVIDIA hardware(NVIDIA Thor) and software (JetPack 7.05), current and future versions of ROS2, and is robot agnostic to control different form factors.
 
-![Architecture Diagram](../assets/brainpack.png)
-![Architecture Diagram](../assets/brainpack_2.png)
+![ ](../assets/brainpack.png)
+![ ](../assets/brainpack_2.png)
 
 ## Next steps
 We'll shortly be releasing the **BOM** so that you can build your own BrainPack and details on **DIY** guideline for it.
