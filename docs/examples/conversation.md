@@ -1,6 +1,7 @@
 ---
 title: Conversation
 description: "Using Cloud Endpoints for Voice Inputs and Text to Speech"
+icon: circle
 ---
 
 This section provides various examples for integrating and using multiple cloud-based AI endpoints, such as OpenAI, DeepSeek, and others, for voice input processing, text-to-speech (TTS) and emotion detection. Whether you need to convert spoken language into text (ASR) or generate natural-sounding speech from text, these examples will help you interact with different cloud providers seamlessly.
