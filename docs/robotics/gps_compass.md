@@ -82,7 +82,7 @@ and you should see it. If you're not sure which tty device is the Arduino board,
 screen /dev/ttyACM0 115200
 ```
 
-Note: on a typical TurtleBot4, the RPLIDAR uses `/dev/ttyUSB0`. The TurtleBot4 **assumes** that the RPLIDAR is accessible at `/dev/ttyUSB0`. If you change which USB port the LIDAR is plugged into, the LIDAR will fail.
+> **Note:** on a typical TurtleBot4, the RPLIDAR uses `/dev/ttyUSB0`. The TurtleBot4 **assumes** that the RPLIDAR is accessible at `/dev/ttyUSB0`. If you change which USB port the LIDAR is plugged into, the LIDAR will fail.
 
 ### Finding the Arduino GPS Feather on Mac
 
