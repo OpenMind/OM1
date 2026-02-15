@@ -10,11 +10,9 @@
   agent_inputs: [
     {
       type: "VLMOpenAI",
-      config: {},
     },
     {
       type: "UnitreeGo2Battery",
-      config: {},
     },
   ],
   cortex_llm: {

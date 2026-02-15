@@ -10,7 +10,6 @@
   agent_inputs: [
     {
       type: "GoogleASRInput",
-      config: {},
     },
   ],
   cortex_llm: {
