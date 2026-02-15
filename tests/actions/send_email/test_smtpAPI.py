@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import aiosmtplib
 import pytest
 
 from actions.send_email.connector.smtpAPI import SMTPConfig, SMTPConnector
@@ -281,7 +282,6 @@ class TestSMTPConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_handles_auth_error(self, connector_with_credentials):
         """Test that connect handles authentication errors."""
-        import aiosmtplib
 
         with patch("actions.send_email.connector.smtpAPI.aiosmtplib.send") as mock_send:
             mock_send.side_effect = aiosmtplib.SMTPAuthenticationError(
@@ -304,7 +304,6 @@ class TestSMTPConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_handles_smtp_exception(self, connector_with_credentials):
         """Test that connect handles generic SMTP errors."""
-        import aiosmtplib
 
         with patch("actions.send_email.connector.smtpAPI.aiosmtplib.send") as mock_send:
             mock_send.side_effect = aiosmtplib.SMTPException("Connection refused")
