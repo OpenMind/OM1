@@ -1,0 +1,55 @@
+{
+  // Test case metadata
+  version: "v1.0.2",
+  name: "gps_location_test",
+  description: "Test GPS input - robot should be aware of its geographic location",
+  hertz: 1,
+  system_prompt_base: "You are a robot with GPS capabilities. When you receive GPS location data, acknowledge where you are. Mention your coordinates or general location area in your speech.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If you receive GPS coordinates, you might:\n Move: 'stand still'\n Speak: {{'I can see my GPS location, I\\'m at these coordinates.'}}\n Emotion: 'curious'\n\n2. If you are at a known location, you might:\n Move: 'stand still'\n Speak: {{'According to my GPS, I\\'m in a specific area.'}}\n Emotion: 'think'",
+  agent_inputs: [
+    {
+      type: "VLMOpenAI",
+    },
+    {
+      type: "Gps",
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "move",
+      llm_label: "move",
+      connector: "ros2",
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "ros2",
+    },
+  ],
+  api_key: "openmind_free",
+
+  // Input data
+  input: {
+    images: ["../images/indoor_1.jpg"],
+    gps: ["../gps/outdoor_location.json"],
+  },
+
+  // Expected output
+  expected: {
+    keywords: ["location", "GPS", "coordinates", "north", "west"],
+    minimum_score: 0.5,
+  },
+}

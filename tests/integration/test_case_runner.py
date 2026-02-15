@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import re
@@ -13,7 +14,7 @@ import pytest
 from PIL import Image
 
 from llm.output_model import Action, CortexOutputModel
-from runtime.config import ModeConfig, ModeSystemConfig
+from runtime.config import ModeConfig, ModeSystemConfig, TransitionRule, TransitionType
 from runtime.cortex import ModeCortexRuntime
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (
     get_image_provider,
@@ -23,6 +24,14 @@ from tests.integration.mock_inputs.data_providers.mock_lidar_scan_provider impor
     clear_lidar_provider,
     get_lidar_provider,
     load_test_scans_from_files,
+)
+from tests.integration.mock_inputs.data_providers.mock_state_provider import (
+    clear_state_provider,
+    get_state_provider,
+)
+from tests.integration.mock_inputs.data_providers.mock_text_provider import (
+    clear_text_provider,
+    get_text_provider,
 )
 from tests.integration.mock_inputs.input_registry import (
     register_mock_inputs,
@@ -73,6 +82,68 @@ def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
     )
 
 
+def build_multi_mode_config(config: Dict[str, Any]) -> ModeSystemConfig:
+    """Build a ModeSystemConfig with multiple modes and transition rules.
+
+    Used for mode transition integration tests where the config defines
+    separate modes under a 'modes' key and transition rules.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration with 'modes' and 'transition_rules' keys
+
+    Returns
+    -------
+    ModeSystemConfig
+        Complete multi-mode system configuration
+    """
+    modes: Dict[str, ModeConfig] = {}
+    for mode_name, mode_data in config.get("modes", {}).items():
+        mode_config = ModeConfig(
+            version=config.get("version", "v1.0.2"),
+            name=mode_name,
+            display_name=mode_data.get("display_name", mode_name),
+            description=mode_data.get("description", ""),
+            system_prompt_base=mode_data.get("system_prompt_base", ""),
+            hertz=mode_data.get("hertz", 1),
+            timeout_seconds=mode_data.get("timeout_seconds"),
+            _raw_inputs=mode_data.get("agent_inputs", []),
+            _raw_llm=mode_data.get("cortex_llm"),
+            _raw_simulators=mode_data.get("simulators", []),
+            _raw_actions=mode_data.get("agent_actions", []),
+            _raw_backgrounds=mode_data.get("backgrounds", []),
+        )
+        modes[mode_name] = mode_config
+
+    transition_rules: List[TransitionRule] = []
+    for rule_data in config.get("transition_rules", []):
+        rule = TransitionRule(
+            from_mode=rule_data["from_mode"],
+            to_mode=rule_data["to_mode"],
+            transition_type=TransitionType(rule_data["transition_type"]),
+            trigger_keywords=rule_data.get("trigger_keywords", []),
+            priority=rule_data.get("priority", 1),
+            cooldown_seconds=rule_data.get("cooldown_seconds", 0.0),
+            timeout_seconds=rule_data.get("timeout_seconds"),
+            context_conditions=rule_data.get("context_conditions", {}),
+        )
+        transition_rules.append(rule)
+
+    return ModeSystemConfig(
+        version=config.get("version", "v1.0.2"),
+        name=config.get("name", "TestAgent"),
+        default_mode=config.get("default_mode", "calm"),
+        config_name="test_config",
+        mode_memory_enabled=False,
+        api_key=config.get("api_key"),
+        system_governance=config.get("system_governance", ""),
+        system_prompt_examples=config.get("system_prompt_examples", ""),
+        modes=modes,
+        transition_rules=transition_rules,
+    )
+
+
 @pytest.fixture(autouse=True)
 def mock_avatar_components():
     """Mock all avatar and IO components to prevent Zenoh session creation"""
@@ -118,7 +189,7 @@ def mock_avatar_components():
 
 
 @pytest.fixture(autouse=True)
-def mock_confige_provider_components():
+def mock_config_provider_components():
     """Mock ConfigProvider and Zenoh to prevent session creation"""
 
     with (
@@ -151,7 +222,64 @@ VLM_MOVE_TYPES = {
 
 LIDAR_MOVE_TYPES = {"turn left", "turn right", "move forwards", "stand still"}
 
+ASR_MOVE_TYPES = {
+    "stand still",
+    "sit",
+    "shake paw",
+    "wag tail",
+    "dance",
+}
+
+STATE_MOVE_TYPES = {
+    "stand still",
+    "sit",
+    "walk",
+    "walk back",
+    "run",
+}
+
 EMOTION_TYPES = {"happy", "confused", "curious", "excited", "sad", "think"}
+
+
+def normalize_expected_value(value):
+    """Normalize an expected value to always be a list."""
+    if value is None:
+        return []
+    elif isinstance(value, list):
+        return value
+    else:
+        return [value]
+
+
+def _detect_input_type(config: Optional[Dict[str, Any]]) -> str:
+    """Detect input type from test case config for logging."""
+    if not config:
+        return "unknown"
+    input_section = config.get("input", {})
+    if "lidar" in input_section:
+        return "LIDAR"
+    elif "asr" in input_section:
+        return "ASR"
+    elif "battery" in input_section or "odometry" in input_section:
+        return "State"
+    elif "gps" in input_section:
+        return "GPS"
+    elif "images" in input_section:
+        return "VLM/Image"
+    return "unknown"
+
+
+def _extract_emotion(actions: List) -> str:
+    """Extract emotion from action commands."""
+    if actions:
+        for command in actions:
+            if hasattr(command, "type"):
+                if command.type in EMOTION_TYPES:
+                    return command.type
+                elif command.type == "emotion" and hasattr(command, "value"):
+                    if command.value in EMOTION_TYPES:
+                        return command.value
+    return "unknown"
 
 
 def process_env_vars(config_dict):
@@ -314,6 +442,110 @@ def _create_mock_llm_response(expected_outputs: Dict[str, Any]) -> CortexOutputM
     return CortexOutputModel(actions=actions)
 
 
+def load_test_asr_data(config: Dict[str, Any]) -> None:
+    """
+    Load ASR text data from JSON files into MockTextProvider.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration containing ASR data paths
+    """
+    asr_files = config.get("input", {}).get("asr", [])
+    if not asr_files:
+        return
+
+    base_dir = TEST_CASES_DIR
+    texts = []
+
+    for asr_path in asr_files:
+        file_path = Path(asr_path)
+        if not file_path.is_absolute():
+            file_path = base_dir / file_path
+
+        if not file_path.exists():
+            logging.warning(f"ASR data file not found: {file_path}")
+            continue
+
+        try:
+            with open(file_path, "r") as f:
+                data = json.load(f)
+                text = data.get("text", "")
+                if text:
+                    texts.append(text)
+                    logging.info(f"Loaded ASR text: {text}")
+        except Exception as e:
+            logging.error(f"Failed to load ASR data {file_path}: {e}")
+
+    if texts:
+        text_provider = get_text_provider()
+        text_provider.load_texts(texts)
+        logging.info(f"Loaded {len(texts)} ASR text entries")
+
+
+def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
+    """
+    Load state data (battery, odometry, GPS) from JSON files into MockStateProvider.
+
+    Collects all entries from multiple files before loading them at once,
+    so that multiple files are appended rather than overwritten.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration containing state data paths
+    data_type : str
+        Type of state data: "battery", "odometry", or "gps"
+    """
+    data_files = config.get("input", {}).get(data_type, [])
+    if not data_files:
+        return
+
+    base_dir = TEST_CASES_DIR
+    state_provider = get_state_provider()
+    collected_entries: list = []
+
+    for data_path in data_files:
+        file_path = Path(data_path)
+        if not file_path.is_absolute():
+            file_path = base_dir / file_path
+
+        if not file_path.exists():
+            logging.warning(f"State data file not found: {file_path}")
+            continue
+
+        try:
+            with open(file_path, "r") as f:
+                raw = json.load(f)
+                data = raw.get("data", raw)
+
+                if data_type == "battery":
+                    collected_entries.append(
+                        [
+                            data.get("percent", 0.0),
+                            data.get("voltage", 0.0),
+                            data.get("amperes", 0.0),
+                        ]
+                    )
+                elif data_type in ("odometry", "gps"):
+                    collected_entries.append(data)
+
+        except Exception as e:
+            logging.error(f"Failed to load {data_type} data {file_path}: {e}")
+
+    if not collected_entries:
+        return
+
+    if data_type == "battery":
+        state_provider.load_battery_data(collected_entries)
+    elif data_type == "odometry":
+        state_provider.load_odometry_data(collected_entries)
+    elif data_type == "gps":
+        state_provider.load_gps_data(collected_entries)
+
+    logging.info(f"Loaded {len(collected_entries)} {data_type} data entries")
+
+
 async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Run a test case using the CortexRuntime with mocked inputs.
@@ -336,6 +568,10 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     inputs = config.get("input", {})
     has_image_inputs = "images" in inputs
     has_lidar_inputs = "lidar" in inputs
+    has_asr_inputs = "asr" in inputs
+    has_battery_inputs = "battery" in inputs
+    has_odometry_inputs = "odometry" in inputs
+    has_gps_inputs = "gps" in inputs
 
     # Load image data only if the test case uses image-based inputs
     if has_image_inputs:
@@ -357,6 +593,18 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Load lidar data if the test case uses RPLidar inputs
     if has_lidar_inputs:
         await load_test_lidar_data(config)
+
+    if has_asr_inputs:
+        load_test_asr_data(config)
+
+    if has_battery_inputs:
+        load_test_state_data(config, "battery")
+
+    if has_odometry_inputs:
+        load_test_state_data(config, "odometry")
+
+    if has_gps_inputs:
+        load_test_state_data(config, "gps")
 
     # No need to modify config - the input_registry will handle mapping
     # the real input types to their mock equivalents
@@ -395,14 +643,16 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Mock LLM ask method to capture raw response
     original_llm_ask = cortex.current_config.cortex_llm.ask
 
-    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
         logging.info(
             f"Generated prompt: {prompt[:200]}..."
         )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
         try:
-            response = await original_llm_ask(prompt, messages)
+            response = await original_llm_ask(prompt, messages or [])
             # If response is None (API error), create a mock response
             if response is None:
                 logging.warning(
@@ -610,22 +860,7 @@ def _build_llm_evaluation_prompts(
     • 0.6-0.8: Mostly correct; two criteria match
     • 0.8-1.0: Perfect match; all criteria match"""
     elif criteria_count == 2:  # Two criteria
-        if has_movement and has_keywords:
-            rating_description = """Rate on a scale of 0.0 to 1.0:
-    • 0.0-0.2: Completely mismatched; both criteria are wrong
-    • 0.2-0.4: Mostly incorrect; one criterion is wrong
-    • 0.4-0.6: Partially correct; one criterion matches
-    • 0.6-0.8: Mostly correct; both criteria match
-    • 0.8-1.0: Perfect match; both criteria match exactly"""
-        elif has_movement and has_emotion:
-            rating_description = """Rate on a scale of 0.0 to 1.0:
-    • 0.0-0.2: Completely mismatched; both criteria are wrong
-    • 0.2-0.4: Mostly incorrect; one criterion is wrong
-    • 0.4-0.6: Partially correct; one criterion matches
-    • 0.6-0.8: Mostly correct; both criteria match
-    • 0.8-1.0: Perfect match; both criteria match exactly"""
-        else:  # keywords and emotion
-            rating_description = """Rate on a scale of 0.0 to 1.0:
+        rating_description = """Rate on a scale of 0.0 to 1.0:
     • 0.0-0.2: Completely mismatched; both criteria are wrong
     • 0.2-0.4: Mostly incorrect; one criterion is wrong
     • 0.4-0.6: Partially correct; one criterion matches
@@ -678,7 +913,7 @@ def _build_llm_evaluation_prompts(
             )
     if has_keywords:
         comparison_sections.append(
-            f'- Should detect keywords: {formatted_expected["keywords"]}'
+            f"- Should detect keywords: {formatted_expected['keywords']}"
         )
     if has_emotion:
         emotion_list = formatted_expected["emotion"]
@@ -697,7 +932,7 @@ def _build_llm_evaluation_prompts(
         actual_sections.append(f'- Movement command: "{formatted_actual["movement"]}"')
     if has_keywords:
         actual_sections.append(
-            f'- Keywords successfully detected: {formatted_actual["keywords_found"]}'
+            f"- Keywords successfully detected: {formatted_actual['keywords_found']}"
         )
     if has_emotion:
         actual_sections.append(f'- Actual emotion: "{formatted_actual["emotion"]}"')
@@ -815,15 +1050,7 @@ async def evaluate_with_llm(
     # Get appropriate movement types for this test case
     movement_types = get_movement_types_for_config(config) if config else VLM_MOVE_TYPES
 
-    # Log which movement types are being used for debugging
-    input_type = "unknown"
-    if config:
-        input_section = config.get("input", {})
-        if "lidar" in input_section:
-            input_type = "LIDAR"
-        elif "images" in input_section:
-            input_type = "VLM/Image"
-
+    input_type = _detect_input_type(config)
     logging.info(f"Using {input_type} movement types: {movement_types}")
 
     # Format actual and expected results for evaluation
@@ -839,32 +1066,8 @@ async def evaluate_with_llm(
                 for result in actual_output.get("raw_response", [])
             )
         ],
-        "emotion": next(
-            (
-                cmd.type if cmd.type in EMOTION_TYPES else cmd.value
-                for cmd in actual_output.get("actions", [])
-                if hasattr(cmd, "type")
-                and (
-                    cmd.type in EMOTION_TYPES
-                    or (
-                        cmd.type == "emotion"
-                        and hasattr(cmd, "value")
-                        and cmd.value in EMOTION_TYPES
-                    )
-                )
-            ),
-            "unknown",
-        ),
+        "emotion": _extract_emotion(actual_output.get("actions", [])),
     }
-
-    # Normalize expected values to always be lists for consistent handling
-    def normalize_expected_value(value):
-        if value is None:
-            return []
-        elif isinstance(value, list):
-            return value
-        else:
-            return [value]
 
     formatted_expected = {
         "movement": normalize_expected_value(expected_output.get("movement")),
@@ -958,27 +1161,10 @@ async def evaluate_test_results(
     # Get appropriate movement types for this test case
     movement_types = get_movement_types_for_config(config) if config else VLM_MOVE_TYPES
 
-    # Log which movement types are being used for debugging
-    input_type = "unknown"
-    if config:
-        input_section = config.get("input", {})
-        if "lidar" in input_section:
-            input_type = "LIDAR"
-        elif "images" in input_section:
-            input_type = "VLM/Image"
-
+    input_type = _detect_input_type(config)
     logging.info(
         f"Heuristic evaluation using {input_type} movement types: {movement_types}"
     )
-
-    # Normalize expected values to always be lists for consistent handling
-    def normalize_expected_value(value):
-        if value is None:
-            return []
-        elif isinstance(value, list):
-            return value
-        else:
-            return [value]
 
     # Extract movement from commands using context-aware movement types
     movement = extract_movement_from_actions(results.get("actions", []), movement_types)
@@ -1018,23 +1204,7 @@ async def evaluate_test_results(
         evaluation_components.append("keywords")
 
     if has_emotion:
-        # Extract emotion from commands if available
-        actual_emotion = None
-        if "actions" in results and results["actions"]:
-            for command in results["actions"]:
-                if hasattr(command, "type"):
-                    if command.type in EMOTION_TYPES:
-                        actual_emotion = command.type
-                        break
-                    elif command.type == "emotion" and hasattr(command, "value"):
-                        if command.value in EMOTION_TYPES:
-                            actual_emotion = command.value
-                            break
-
-        # Assign a default if still not found
-        if not actual_emotion:
-            actual_emotion = "unknown"
-
+        actual_emotion = _extract_emotion(results.get("actions", []))
         expected_emotions = normalize_expected_value(expected["emotion"])
         # If expected_emotions is empty, we expect no emotion
         if not expected_emotions:
@@ -1089,18 +1259,7 @@ async def evaluate_test_results(
         )
 
     if has_emotion:
-        # Re-extract emotion for display (could be optimized by storing earlier)
-        actual_emotion = "unknown"
-        if "actions" in results and results["actions"]:
-            for command in results["actions"]:
-                if hasattr(command, "type"):
-                    if command.type in EMOTION_TYPES:
-                        actual_emotion = command.type
-                        break
-                    elif command.type == "emotion" and hasattr(command, "value"):
-                        if command.value in EMOTION_TYPES:
-                            actual_emotion = command.value
-                            break
+        actual_emotion = _extract_emotion(results.get("actions", []))
         expected_emotions = normalize_expected_value(expected["emotion"])
         if len(expected_emotions) == 1:
             details.append(
@@ -1152,9 +1311,32 @@ class TestCategory:
         return len(self.test_cases)
 
 
+def _is_multi_mode_config(config: Dict[str, Any]) -> bool:
+    """Check if a test case config defines multiple modes.
+
+    Multi-mode configs have a 'modes' key with mode definitions and require
+    a different test runner (run_mode_transition_test) than standard configs
+    (run_test_case).
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Parsed test case configuration
+
+    Returns
+    -------
+    bool
+        True if this is a multi-mode configuration
+    """
+    return "modes" in config and isinstance(config["modes"], dict)
+
+
 def discover_test_cases() -> Dict[str, TestCategory]:
     """
-    Discover all test case configuration files organized by category.
+    Discover standard (single-mode) test case configurations organized by category.
+
+    Multi-mode configs are excluded because they require a different test runner.
+    Use discover_mode_transition_test_cases() for those.
 
     Returns
     -------
@@ -1167,6 +1349,10 @@ def discover_test_cases() -> Dict[str, TestCategory]:
     for test_file in TEST_CASES_DIR.glob("*.json5"):
         try:
             config = load_test_case(test_file)
+
+            if _is_multi_mode_config(config):
+                continue
+
             category_name = config.get("category", "uncategorized")
 
             if category_name not in categories:
@@ -1187,11 +1373,54 @@ def discover_test_cases() -> Dict[str, TestCategory]:
 
             for test_file in category_dir.glob("*.json5"):
                 try:
+                    config = load_test_case(test_file)
+                    if _is_multi_mode_config(config):
+                        continue
                     categories[category_name].add_test_case(test_file)
                 except Exception as e:
                     logging.error(f"Error loading test case {test_file}: {e}")
 
     return categories
+
+
+def discover_mode_transition_test_cases() -> List[Path]:
+    """
+    Discover input-triggered mode transition test cases.
+
+    Returns only multi-mode configs suitable for run_mode_transition_test().
+    Configs with dedicated test functions (cooldown, time-based) are excluded
+    since they hardcode their own config paths.
+
+    Returns
+    -------
+    List[Path]
+        List of paths to input-triggered mode transition test configs
+    """
+    test_cases: List[Path] = []
+
+    for test_file in TEST_CASES_DIR.glob("*.json5"):
+        try:
+            config = load_test_case(test_file)
+            if not _is_multi_mode_config(config):
+                continue
+
+            # Cooldown configs have dedicated test_cooldown_prevents_transition()
+            if "first_transition_mode" in config.get("expected", {}):
+                continue
+
+            # Time-based configs have dedicated test_time_based_transition()
+            has_time_based_rules = any(
+                r.get("transition_type") == "time_based"
+                for r in config.get("transition_rules", [])
+            )
+            if has_time_based_rules:
+                continue
+
+            test_cases.append(test_file)
+        except Exception as e:
+            logging.error(f"Error loading test case {test_file}: {e}")
+
+    return test_cases
 
 
 def get_test_cases_by_tags(tags: Optional[List[str]] = None) -> List[Path]:
@@ -1252,6 +1481,9 @@ async def test_from_config(test_case_path: Path):
     lidar_provider = get_lidar_provider()
     lidar_provider.clear()
 
+    clear_text_provider()
+    clear_state_provider()
+
     # Add a small delay to reduce race conditions between parallel tests
     await asyncio.sleep(0.1)
 
@@ -1274,6 +1506,18 @@ async def test_from_config(test_case_path: Path):
             logging.info(
                 f"Expected lidar files for test: {len(input_section['lidar'])}"
             )
+        if "asr" in input_section:
+            logging.info(f"Expected ASR files for test: {len(input_section['asr'])}")
+        if "battery" in input_section:
+            logging.info(
+                f"Expected battery files for test: {len(input_section['battery'])}"
+            )
+        if "odometry" in input_section:
+            logging.info(
+                f"Expected odometry files for test: {len(input_section['odometry'])}"
+            )
+        if "gps" in input_section:
+            logging.info(f"Expected GPS files for test: {len(input_section['gps'])}")
 
         # Run the test case
         results = await run_test_case(config)
@@ -1295,12 +1539,6 @@ async def test_from_config(test_case_path: Path):
 
     except Exception as e:
         logging.error(f"Error running test case {test_case_path}: {e}")
-        # Even on error, try to clean up
-        try:
-            # Cleanup is now handled by MockRPLidar's async_cleanup method
-            pass
-        except Exception as cleanup_error:
-            logging.error(f"Error during cleanup after exception: {cleanup_error}")
         raise
 
 
@@ -1356,6 +1594,18 @@ def get_movement_types_for_config(config: Dict[str, Any]) -> set:
     if "lidar" in input_section:
         return LIDAR_MOVE_TYPES
 
+    # ASR-only tests (no images)
+    if "asr" in input_section and "images" not in input_section:
+        return ASR_MOVE_TYPES
+
+    # State-based tests (battery, odometry, GPS) without images
+    if (
+        "battery" in input_section
+        or "odometry" in input_section
+        or "gps" in input_section
+    ) and "images" not in input_section:
+        return STATE_MOVE_TYPES
+
     # Check if this is an image/VLM-based test
     if "images" in input_section:
         return VLM_MOVE_TYPES
@@ -1389,3 +1639,301 @@ def extract_movement_from_actions(actions: List, movement_types: set) -> str:
                     return command.value
 
     return "unknown"
+
+
+def _setup_mode_transition_mocks(
+    cortex: ModeCortexRuntime,
+) -> asyncio.Task:  # type: ignore[type-arg]
+    """Set up common mocks for mode transition tests.
+
+    Mocks _start_orchestrators (prevents infinite loop) and LLM (returns
+    a simple action). Starts the mode transition handler task.
+
+    Parameters
+    ----------
+    cortex : ModeCortexRuntime
+        The runtime instance to mock
+
+    Returns
+    -------
+    asyncio.Task
+        The transition handler task (must be cancelled during cleanup)
+    """
+
+    async def noop_start_orchestrators():
+        logging.info("_start_orchestrators skipped (test mock)")
+
+    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
+
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
+        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
+
+    cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
+
+    return asyncio.create_task(cortex._handle_mode_transitions())
+
+
+async def _cleanup_mode_transition_test(
+    cortex: ModeCortexRuntime,
+    transition_handler_task: asyncio.Task,  # type: ignore[type-arg]
+) -> None:
+    """Clean up after a mode transition test.
+
+    Parameters
+    ----------
+    cortex : ModeCortexRuntime
+        The runtime instance
+    transition_handler_task : asyncio.Task
+        The transition handler task to cancel
+    """
+    transition_handler_task.cancel()
+    try:
+        await transition_handler_task
+    except asyncio.CancelledError:
+        pass
+
+    await cleanup_mock_inputs(cortex.current_config.agent_inputs)  # type: ignore[union-attr]
+    clear_text_provider()
+
+
+async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a mode transition integration test.
+
+    This function tests that an input-triggered mode transition works
+    correctly by running a single tick of the cortex loop:
+    - fuser.fuse() calls formatted_latest_buffer() -> add_mode_transition_input()
+    - process_tick() detects keyword and schedules transition
+    - _handle_mode_transitions() executes the transition asynchronously
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration with modes and transition_rules
+
+    Returns
+    -------
+    Dict[str, Any]
+        Results containing initial_mode and final_mode
+    """
+    load_test_asr_data(config)
+
+    mode_system_config = build_multi_mode_config(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    default_mode = config.get("default_mode", "calm")
+    await cortex._initialize_mode(default_mode)
+
+    assert cortex.current_config is not None
+
+    initial_mode = cortex.mode_manager.state.current_mode
+    initial_prompt = cortex.current_config.system_prompt_base
+    logging.info(f"Mode transition test: initial_mode={initial_mode}")
+
+    transition_handler_task = _setup_mode_transition_mocks(cortex)
+
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    # If a transition was scheduled, wait for the handler to process it
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    final_mode = cortex.mode_manager.state.current_mode
+    final_prompt = (
+        cortex.current_config.system_prompt_base if cortex.current_config else None
+    )
+    logging.info(f"Mode transition test: final_mode={final_mode}")
+
+    await _cleanup_mode_transition_test(cortex, transition_handler_task)
+
+    return {
+        "initial_mode": initial_mode,
+        "final_mode": final_mode,
+        "initial_prompt": initial_prompt,
+        "final_prompt": final_prompt,
+    }
+
+
+@pytest.mark.parametrize("test_case_path", discover_mode_transition_test_cases())
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_mode_transition(test_case_path: Path):
+    """Test mode transitions discovered from test_cases/.
+
+    Handles both positive (transition expected) and negative (no transition)
+    cases based on the expected initial and final modes in the config.
+    """
+    clear_text_provider()
+
+    config = load_test_case(test_case_path)
+    test_name = config["name"]
+
+    logging.info(f"Running mode transition test: {test_name}")
+
+    results = await run_mode_transition_test(config)
+
+    expected_initial = config["expected"]["initial_mode"]
+    expected_final = config["expected"]["final_mode"]
+
+    assert results["initial_mode"] == expected_initial, (
+        f"Initial mode mismatch: got {results['initial_mode']}, "
+        f"expected {expected_initial}"
+    )
+    assert results["final_mode"] == expected_final, (
+        f"Final mode mismatch: got {results['final_mode']}, "
+        f"expected {expected_final}"
+    )
+
+    # Only verify config reinitialization when a transition actually occurred
+    if expected_initial != expected_final:
+        expected_final_prompt = config["modes"][expected_final]["system_prompt_base"]
+        assert results["final_prompt"] == expected_final_prompt, (
+            f"Runtime config not reinitialized: prompt is '{results['final_prompt']}', "
+            f"expected '{expected_final_prompt}'"
+        )
+        assert (
+            results["final_prompt"] != results["initial_prompt"]
+        ), "System prompt did not change after mode transition"
+    else:
+        assert (
+            results["final_prompt"] == results["initial_prompt"]
+        ), "System prompt changed when no transition was expected"
+
+
+async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a time-based mode transition integration test.
+
+    Initializes the runtime and waits for the mode timeout to expire,
+    then runs a tick to trigger the time-based transition.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration with modes having timeout_seconds
+
+    Returns
+    -------
+    Dict[str, Any]
+        Results containing initial_mode and final_mode
+    """
+    load_test_asr_data(config)
+
+    mode_system_config = build_multi_mode_config(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    default_mode = config.get("default_mode", "patrol")
+    await cortex._initialize_mode(default_mode)
+
+    assert cortex.current_config is not None
+
+    initial_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Time-based transition test: initial_mode={initial_mode}")
+
+    transition_handler_task = _setup_mode_transition_mocks(cortex)
+
+    # Wait for the mode timeout to expire
+    timeout = cortex.mode_config.modes[default_mode].timeout_seconds or 0.1
+    await asyncio.sleep(timeout + 0.1)
+
+    # Initialize inputs and run tick - process_tick() will detect timeout
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    final_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Time-based transition test: final_mode={final_mode}")
+
+    await _cleanup_mode_transition_test(cortex, transition_handler_task)
+
+    return {"initial_mode": initial_mode, "final_mode": final_mode}
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_time_based_transition():
+    """Test time-based mode transition after timeout expires."""
+    clear_text_provider()
+
+    config = load_test_case(TEST_CASES_DIR / "mode_time_based_test.json5")
+    logging.info(f"Running time-based transition test: {config['name']}")
+
+    results = await run_time_based_transition_test(config)
+
+    assert results["initial_mode"] == config["expected"]["initial_mode"], (
+        f"Initial mode mismatch: got {results['initial_mode']}, "
+        f"expected {config['expected']['initial_mode']}"
+    )
+    assert results["final_mode"] == config["expected"]["final_mode"], (
+        f"Final mode mismatch: got {results['final_mode']}, "
+        f"expected {config['expected']['final_mode']}"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_cooldown_prevents_transition():
+    """Test that cooldown prevents repeated transitions."""
+    clear_text_provider()
+
+    config = load_test_case(TEST_CASES_DIR / "mode_cooldown_test.json5")
+    logging.info(f"Running cooldown test: {config['name']}")
+
+    load_test_asr_data(config)
+
+    mode_system_config = build_multi_mode_config(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    await cortex._initialize_mode("calm")
+
+    assert cortex.current_config is not None
+
+    transition_handler_task = _setup_mode_transition_mocks(cortex)
+
+    # First transition: calm -> alert (should succeed)
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    first_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Cooldown test: after first transition: {first_mode}")
+    assert first_mode == config["expected"]["first_transition_mode"], (
+        f"First transition failed: got {first_mode}, "
+        f"expected {config['expected']['first_transition_mode']}"
+    )
+
+    # Manually reset mode back to calm to test cooldown
+    cortex.mode_manager.state.current_mode = "calm"
+    cortex.mode_manager.state.mode_start_time = time.time()
+
+    # Reload ASR data and reinitialize inputs for second attempt.
+    # Re-apply LLM mock since _initialize_mode creates a new config.
+    load_test_asr_data(config)
+    await cortex._initialize_mode("calm")
+
+    async def mock_llm_ask(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
+        return CortexOutputModel(actions=[Action(type="move", value="stand still")])
+
+    cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
+
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    second_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Cooldown test: after second attempt: {second_mode}")
+
+    # Should still be calm because cooldown (60s) hasn't expired
+    assert second_mode == config["expected"]["second_transition_mode"], (
+        f"Cooldown failed: mode changed to {second_mode}, "
+        f"expected {config['expected']['second_transition_mode']}"
+    )
+
+    await _cleanup_mode_transition_test(cortex, transition_handler_task)
+    clear_text_provider()
