@@ -1717,15 +1717,16 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
     assert cortex.current_config is not None
 
     initial_mode = cortex.mode_manager.state.current_mode
+    initial_prompt = cortex.current_config.system_prompt_base
     logging.info(f"Mode transition test: initial_mode={initial_mode}")
 
-    # Replace the transition callback with a no-op to prevent _start_orchestrators()
-    # from launching infinite cortex loops. The state update in _execute_transition()
-    # happens before the callback, so we can still verify the mode changed.
-    async def noop_transition_callback(from_mode: str, to_mode: str):
-        logging.info(f"Mode transition callback (no-op): {from_mode} -> {to_mode}")
+    # Mock only _start_orchestrators to prevent infinite cortex loops.
+    # The real _on_mode_transition callback still runs: _stop_current_orchestrators()
+    # and _initialize_mode() execute normally, testing the actual transition.
+    async def noop_start_orchestrators():
+        logging.info("_start_orchestrators skipped (test mock)")
 
-    cortex.mode_manager._transition_callbacks = [noop_transition_callback]
+    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
 
     # Start the mode transition handler task so transitions can be processed
     transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
@@ -1747,6 +1748,9 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
         await asyncio.sleep(0.5)
 
     final_mode = cortex.mode_manager.state.current_mode
+    final_prompt = (
+        cortex.current_config.system_prompt_base if cortex.current_config else None
+    )
     logging.info(f"Mode transition test: final_mode={final_mode}")
 
     # Clean up
@@ -1759,7 +1763,12 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
     await cleanup_mock_inputs(cortex.current_config.agent_inputs)
     clear_text_provider()
 
-    return {"initial_mode": initial_mode, "final_mode": final_mode}
+    return {
+        "initial_mode": initial_mode,
+        "final_mode": final_mode,
+        "initial_prompt": initial_prompt,
+        "final_prompt": final_prompt,
+    }
 
 
 @pytest.mark.parametrize("test_case_path", discover_mode_transition_test_cases())
@@ -1774,11 +1783,24 @@ async def test_mode_transition(test_case_path: Path):
 
     results = await run_mode_transition_test(config)
 
-    assert results["initial_mode"] == config["expected"]["initial_mode"], (
+    expected_initial = config["expected"]["initial_mode"]
+    expected_final = config["expected"]["final_mode"]
+
+    assert results["initial_mode"] == expected_initial, (
         f"Initial mode mismatch: got {results['initial_mode']}, "
-        f"expected {config['expected']['initial_mode']}"
+        f"expected {expected_initial}"
     )
-    assert results["final_mode"] == config["expected"]["final_mode"], (
+    assert results["final_mode"] == expected_final, (
         f"Final mode mismatch: got {results['final_mode']}, "
-        f"expected {config['expected']['final_mode']}"
+        f"expected {expected_final}"
+    )
+
+    # Verify the runtime was reinitialized with the new mode's config
+    expected_final_prompt = config["modes"][expected_final]["system_prompt_base"]
+    assert results["final_prompt"] == expected_final_prompt, (
+        f"Runtime config not reinitialized: prompt is '{results['final_prompt']}', "
+        f"expected '{expected_final_prompt}'"
+    )
+    assert results["final_prompt"] != results["initial_prompt"], (
+        "System prompt did not change after mode transition"
     )
