@@ -9,7 +9,7 @@ class UbTtsProvider:
     """
     Provider for the Ubtech Text-to-Speech (TTS) service.
 
-    Attributes
+    Parameters
     ----------
     tts_url : str
         The URL of the Ubtech TTS service.
