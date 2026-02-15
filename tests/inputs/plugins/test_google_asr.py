@@ -1,4 +1,4 @@
-from queue import Queue
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -20,7 +20,8 @@ def test_initialization():
         sensor = GoogleASRInput(config=config)
 
         assert hasattr(sensor, "messages")
-        assert isinstance(sensor.message_buffer, Queue)
+        assert isinstance(sensor.message_buffer, asyncio.Queue)
+        assert sensor.messages == []
 
 
 @pytest.mark.asyncio
@@ -35,9 +36,9 @@ async def test_poll_with_message():
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
-        sensor.message_buffer.put("Test speech")
+        sensor.message_buffer.put_nowait("Test speech")
 
-        with patch("inputs.plugins.google_asr.asyncio.sleep", new=AsyncMock()):
+        with patch("asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result == "Test speech"
