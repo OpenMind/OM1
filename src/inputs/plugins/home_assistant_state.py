@@ -8,6 +8,7 @@ from pydantic import Field
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.home_assistant_provider import HomeAssistantProvider
+from providers.io_provider import IOProvider
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,10 @@ class HomeAssistantStateConfig(SensorConfig):
         default=10.0,
         description="Polling interval in seconds",
     )
+    timeout_seconds: int = Field(
+        default=10,
+        description="HTTP request timeout in seconds",
+    )
     verify_ssl: bool = Field(
         default=True,
         description="Whether to verify SSL certificates",
@@ -80,6 +85,7 @@ class HomeAssistantStateInput(
         super().__init__(config)
 
         self.descriptor_for_LLM = "Home Status"
+        self.io_provider = IOProvider()
         self.messages: List[Message] = []
         self.last_states: Dict[str, str] = {}
 
@@ -93,6 +99,7 @@ class HomeAssistantStateInput(
             base_url=config.base_url,
             token=config.token,
             token_env=config.token_env,
+            timeout_seconds=config.timeout_seconds,
             verify_ssl=config.verify_ssl,
         )
 
@@ -220,11 +227,12 @@ class HomeAssistantStateInput(
         latest_message = self.messages[-1]
 
         result = (
-            f"INPUT: {self.descriptor_for_LLM}\n"
-            f"// START\n"
-            f"{latest_message.message}\n"
-            f"// END"
+            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
+            f"{latest_message.message}\n// END\n"
         )
 
-        self.messages.clear()
+        self.io_provider.add_input(
+            self.__class__.__name__, latest_message.message, latest_message.timestamp
+        )
+        self.messages = []
         return result
