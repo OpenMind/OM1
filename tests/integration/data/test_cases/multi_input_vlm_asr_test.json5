@@ -1,0 +1,56 @@
+{
+  // Test case metadata
+  version: "v1.0.2",
+  name: "multi_input_vlm_asr_test",
+  description: "Test combined VLM and ASR inputs - robot sees and hears simultaneously",
+  hertz: 1,
+  system_prompt_base: "You are a smart, curious, and friendly dog. You can both see and hear. When you receive visual and voice inputs, respond to both. Acknowledge what you see and what you hear in your speech.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If you see a room and someone greets you, you might:\n Move: 'wag tail'\n Speak: {{'Hello! I can see we\\'re in a nice room!'}}\n Emotion: 'happy'\n\n2. If you see something interesting and hear a question, you might:\n Move: 'stand still'\n Speak: {{'I see some interesting things here, and I heard your question!'}}\n Emotion: 'curious'",
+  agent_inputs: [
+    {
+      type: "VLMOpenAI",
+    },
+    {
+      type: "GoogleASRInput",
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Spot",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "move",
+      llm_label: "move",
+      connector: "ros2",
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "ros2",
+    },
+  ],
+  api_key: "openmind_free",
+
+  // Input data
+  input: {
+    images: ["../images/indoor_1.jpg"],
+    asr: ["../asr/greeting.json"],
+  },
+
+  // Expected output
+  expected: {
+    keywords: ["see", "room", "hello"],
+    emotion: ["happy", "curious", "excited"],
+    minimum_score: 0.5,
+  },
+}

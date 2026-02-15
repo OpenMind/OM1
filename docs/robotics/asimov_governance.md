@@ -24,7 +24,7 @@ Here are the laws that govern your actions. Do not violate these laws. First Law
 
 ## Functions
 
-Note: Etherscan.io does not handle bytes[]/json well. Hence we use the following functions to load and decode rules from blockchain.
+> Note: Etherscan.io does not handle bytes[]/json well. Hence we use the following functions to load and decode rules from blockchain.
 
 ### Method: `load_rules_from_blockchain()`
 

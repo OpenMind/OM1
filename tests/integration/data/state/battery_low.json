@@ -1,0 +1,11 @@
+{
+  "metadata": {
+    "description": "Low battery state triggering warning",
+    "sensor_type": "battery"
+  },
+  "data": {
+    "percent": 12,
+    "voltage": 22.1,
+    "amperes": 0.5
+  }
+}
