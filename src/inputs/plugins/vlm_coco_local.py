@@ -51,7 +51,9 @@ def check_webcam(index_to_check):
     cap = cv2.VideoCapture(index_to_check)  # 0 is the default camera index
     if not cap.isOpened():
         logging.info(f"ERROR: COCO did not find cam: {index_to_check}")
+        cap.release()
         return False
+    cap.release()
     logging.info(f"COCO found cam: {index_to_check}")
     return True
 

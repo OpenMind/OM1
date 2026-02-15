@@ -69,3 +69,33 @@ def test_formatted_latest_buffer():
         assert "// START" in result
         assert "// END" in result
         assert len(sensor.messages) == 0
+
+
+def test_check_webcam_releases_on_success():
+    """Test that check_webcam releases VideoCapture on successful camera detection."""
+    from inputs.plugins.webcam_to_face_emotion import check_webcam
+
+    with patch("inputs.plugins.webcam_to_face_emotion.cv2.VideoCapture") as mock_cap_class:
+        mock_cap = MagicMock()
+        mock_cap.isOpened.return_value = True
+        mock_cap_class.return_value = mock_cap
+
+        result = check_webcam()
+
+        assert result is True
+        mock_cap.release.assert_called_once()
+
+
+def test_check_webcam_releases_on_failure():
+    """Test that check_webcam releases VideoCapture when camera is not found."""
+    from inputs.plugins.webcam_to_face_emotion import check_webcam
+
+    with patch("inputs.plugins.webcam_to_face_emotion.cv2.VideoCapture") as mock_cap_class:
+        mock_cap = MagicMock()
+        mock_cap.isOpened.return_value = False
+        mock_cap_class.return_value = mock_cap
+
+        result = check_webcam()
+
+        assert result is False
+        mock_cap.release.assert_called_once()
