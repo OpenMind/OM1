@@ -1,11 +1,8 @@
-from src.actions.navigate_location.interface import (
-    NavigateLocation,
-    NavigateLocationInput,
-)
+from actions.navigate_location.interface import NavigateLocation, NavigateLocationInput
 
 
 def test_interface_instantiation():
-    """Test that NavigateLocation can be instantiated with input and output."""
+    """Test that NavigateLocation can be instantiated with input/output."""
     action = NavigateLocation(
         input=NavigateLocationInput(action="kitchen"),
         output=NavigateLocationInput(action="kitchen"),
