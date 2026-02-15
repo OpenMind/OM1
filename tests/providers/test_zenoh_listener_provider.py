@@ -130,6 +130,7 @@ def test_stop():
         provider.stop()
 
         assert provider.running is False
+        assert provider.session is None
         mock_session.close.assert_called_once()
 
 
@@ -144,3 +145,22 @@ def test_stop_without_session():
         provider.stop()
 
         assert provider.running is False
+        assert provider.session is None
+
+
+def test_stop_with_session_close_exception():
+    """Test stopping when session.close() raises an exception."""
+    with patch("providers.zenoh_listener_provider.open_zenoh_session") as mock_zenoh:
+        mock_session = MagicMock()
+        mock_session.close.side_effect = Exception("Close failed")
+        mock_zenoh.return_value = mock_session
+
+        provider = ZenohListenerProvider()
+        provider.start()
+
+        # Should not raise exception, just log error
+        provider.stop()
+
+        assert provider.running is False
+        assert provider.session is None
+        mock_session.close.assert_called_once()
