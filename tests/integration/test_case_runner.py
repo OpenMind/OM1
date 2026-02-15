@@ -106,6 +106,7 @@ def build_multi_mode_config(config: Dict[str, Any]) -> ModeSystemConfig:
             description=mode_data.get("description", ""),
             system_prompt_base=mode_data.get("system_prompt_base", ""),
             hertz=mode_data.get("hertz", 1),
+            timeout_seconds=mode_data.get("timeout_seconds"),
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
             _raw_simulators=mode_data.get("simulators", []),
@@ -1775,11 +1776,30 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
 @pytest.mark.asyncio
 @pytest.mark.integration
 async def test_mode_transition(test_case_path: Path):
-    """Test input-triggered mode transitions discovered from test_cases/."""
+    """Test mode transitions discovered from test_cases/.
+
+    Handles both positive (transition expected) and negative (no transition)
+    cases based on the expected initial and final modes in the config.
+    """
     clear_text_provider()
 
     config = load_test_case(test_case_path)
-    logging.info(f"Running mode transition test: {config['name']}")
+    test_name = config["name"]
+
+    # Skip configs that need dedicated test functions
+    if "first_transition_mode" in config.get("expected", {}):
+        pytest.skip(f"Skipping {test_name}: uses dedicated cooldown test")
+        return
+
+    has_time_based_rules = any(
+        r.get("transition_type") == "time_based"
+        for r in config.get("transition_rules", [])
+    )
+    if has_time_based_rules:
+        pytest.skip(f"Skipping {test_name}: uses dedicated time-based test")
+        return
+
+    logging.info(f"Running mode transition test: {test_name}")
 
     results = await run_mode_transition_test(config)
 
@@ -1795,12 +1815,185 @@ async def test_mode_transition(test_case_path: Path):
         f"expected {expected_final}"
     )
 
-    # Verify the runtime was reinitialized with the new mode's config
-    expected_final_prompt = config["modes"][expected_final]["system_prompt_base"]
-    assert results["final_prompt"] == expected_final_prompt, (
-        f"Runtime config not reinitialized: prompt is '{results['final_prompt']}', "
-        f"expected '{expected_final_prompt}'"
+    # Only verify config reinitialization when a transition actually occurred
+    if expected_initial != expected_final:
+        expected_final_prompt = config["modes"][expected_final]["system_prompt_base"]
+        assert results["final_prompt"] == expected_final_prompt, (
+            f"Runtime config not reinitialized: prompt is '{results['final_prompt']}', "
+            f"expected '{expected_final_prompt}'"
+        )
+        assert results["final_prompt"] != results["initial_prompt"], (
+            "System prompt did not change after mode transition"
+        )
+    else:
+        assert results["final_prompt"] == results["initial_prompt"], (
+            "System prompt changed when no transition was expected"
+        )
+
+
+async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a time-based mode transition integration test.
+
+    Initializes the runtime and waits for the mode timeout to expire,
+    then runs a tick to trigger the time-based transition.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Test case configuration with modes having timeout_seconds
+
+    Returns
+    -------
+    Dict[str, Any]
+        Results containing initial_mode and final_mode
+    """
+    load_test_asr_data(config)
+
+    mode_system_config = build_multi_mode_config(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    default_mode = config.get("default_mode", "patrol")
+    await cortex._initialize_mode(default_mode)
+
+    assert cortex.current_config is not None
+
+    initial_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Time-based transition test: initial_mode={initial_mode}")
+
+    async def noop_start_orchestrators():
+        logging.info("_start_orchestrators skipped (test mock)")
+
+    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
+
+    transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
+
+    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+        return CortexOutputModel(
+            actions=[Action(type="move", value="stand still")]
+        )
+
+    cortex.current_config.cortex_llm.ask = mock_llm_ask
+
+    # Wait for the mode timeout to expire
+    timeout = cortex.mode_config.modes[default_mode].timeout_seconds or 0.1
+    await asyncio.sleep(timeout + 0.1)
+
+    # Initialize inputs and run tick - process_tick() will detect timeout
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    final_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Time-based transition test: final_mode={final_mode}")
+
+    transition_handler_task.cancel()
+    try:
+        await transition_handler_task
+    except asyncio.CancelledError:
+        pass
+
+    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
+    clear_text_provider()
+
+    return {"initial_mode": initial_mode, "final_mode": final_mode}
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_time_based_transition():
+    """Test time-based mode transition after timeout expires."""
+    clear_text_provider()
+
+    config = load_test_case(TEST_CASES_DIR / "mode_time_based_test.json5")
+    logging.info(f"Running time-based transition test: {config['name']}")
+
+    results = await run_time_based_transition_test(config)
+
+    assert results["initial_mode"] == config["expected"]["initial_mode"], (
+        f"Initial mode mismatch: got {results['initial_mode']}, "
+        f"expected {config['expected']['initial_mode']}"
     )
-    assert results["final_prompt"] != results["initial_prompt"], (
-        "System prompt did not change after mode transition"
+    assert results["final_mode"] == config["expected"]["final_mode"], (
+        f"Final mode mismatch: got {results['final_mode']}, "
+        f"expected {config['expected']['final_mode']}"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_cooldown_prevents_transition():
+    """Test that cooldown prevents repeated transitions."""
+    clear_text_provider()
+
+    config = load_test_case(TEST_CASES_DIR / "mode_cooldown_test.json5")
+    logging.info(f"Running cooldown test: {config['name']}")
+
+    load_test_asr_data(config)
+
+    mode_system_config = build_multi_mode_config(config)
+    cortex = ModeCortexRuntime(mode_system_config, "test_config", hot_reload=False)
+    await cortex._initialize_mode("calm")
+
+    assert cortex.current_config is not None
+
+    async def noop_start_orchestrators():
+        logging.info("_start_orchestrators skipped (test mock)")
+
+    cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
+
+    transition_handler_task = asyncio.create_task(cortex._handle_mode_transitions())
+
+    async def mock_llm_ask(prompt: str, messages: List[Dict[str, str]] = []):
+        return CortexOutputModel(
+            actions=[Action(type="move", value="stand still")]
+        )
+
+    cortex.current_config.cortex_llm.ask = mock_llm_ask
+
+    # First transition: calm -> alert (should succeed)
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    first_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Cooldown test: after first transition: {first_mode}")
+    assert first_mode == config["expected"]["first_transition_mode"], (
+        f"First transition failed: got {first_mode}, "
+        f"expected {config['expected']['first_transition_mode']}"
+    )
+
+    # Manually reset mode back to calm to test cooldown
+    cortex.mode_manager.state.current_mode = "calm"
+    cortex.mode_manager.state.mode_start_time = time.time()
+
+    # Reload ASR data and reinitialize inputs for second attempt
+    load_test_asr_data(config)
+    await cortex._initialize_mode("calm")
+    cortex.current_config.cortex_llm.ask = mock_llm_ask
+
+    await initialize_mock_inputs(cortex.current_config.agent_inputs)
+    await cortex._tick()
+
+    if cortex._mode_transition_event.is_set():
+        await asyncio.sleep(0.5)
+
+    second_mode = cortex.mode_manager.state.current_mode
+    logging.info(f"Cooldown test: after second attempt: {second_mode}")
+
+    # Should still be calm because cooldown (60s) hasn't expired
+    assert second_mode == config["expected"]["second_transition_mode"], (
+        f"Cooldown failed: mode changed to {second_mode}, "
+        f"expected {config['expected']['second_transition_mode']}"
+    )
+
+    transition_handler_task.cancel()
+    try:
+        await transition_handler_task
+    except asyncio.CancelledError:
+        pass
+
+    await cleanup_mock_inputs(cortex.current_config.agent_inputs)
+    clear_text_provider()
