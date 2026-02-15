@@ -55,19 +55,6 @@ uv run pytest -m "integration" -s --log-cli-level=INFO tests/integration/test_ca
 TEST_CASE="asr_greeting_test" uv run pytest -m "integration" tests/integration/test_case_runner.py::test_specific_case -v
 ```
 
-### Running Tests by Input Type
-
-```bash
-# ASR tests only
-uv run pytest -m "integration" tests/integration/test_case_runner.py -v -k "asr"
-
-# Battery/state tests only
-uv run pytest -m "integration" tests/integration/test_case_runner.py -v -k "battery"
-
-# Multi-input tests only
-uv run pytest -m "integration" tests/integration/test_case_runner.py -v -k "multi_input"
-```
-
 ### Running Mode Transition Tests
 
 ```bash
