@@ -94,3 +94,124 @@ def test_fuser_with_inputs_and_actions(mock_describe):
             io_provider.fuser_available_actions
             == "AVAILABLE ACTIONS:\naction description\n\naction description\n\n\n\nWhat will you do? Actions:"
         )
+
+
+@dataclass
+class MockSensorNone(Sensor[SensorConfig, Any]):
+    def __init__(self):
+        super().__init__(SensorConfig())
+
+    def formatted_latest_buffer(self):
+        return None
+
+
+@dataclass
+class MockSensorUniversalLaws(Sensor[SensorConfig, Any]):
+    def __init__(self):
+        super().__init__(SensorConfig())
+
+    def formatted_latest_buffer(self):
+        return "Universal Laws: Rule 1, Rule 2"
+
+
+@patch("fuser.describe_action")
+def test_fuse_skips_governance_when_universal_laws_in_inputs(mock_describe):
+    """Test that local governance rules are omitted when blockchain Universal Laws are present."""
+    mock_describe.return_value = "action description"
+    config = create_mock_config(
+        agent_actions=[MockAction("action1")],
+    )
+    inputs: list[Sensor[Any, Any]] = [MockSensorUniversalLaws()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+        assert "LAWS:\nsystem governance" not in result
+        assert "Universal Laws: Rule 1, Rule 2" in result
+
+
+@patch("fuser.describe_action")
+def test_fuse_includes_governance_when_no_universal_laws(mock_describe):
+    """Test that local governance rules are included when no Universal Laws in inputs."""
+    mock_describe.return_value = "action description"
+    config = create_mock_config(
+        agent_actions=[MockAction("action1")],
+    )
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+        assert "LAWS:\nsystem governance" in result
+
+
+def test_fuse_skips_examples_when_empty():
+    """Test that EXAMPLES section is omitted when system_prompt_examples is empty."""
+    config = create_mock_config()
+    config.system_prompt_examples = ""
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse([], [])
+
+        assert "EXAMPLES:" not in result
+        assert "BASIC CONTEXT:" in result
+        assert "LAWS:" in result
+
+
+def test_fuse_filters_none_inputs():
+    """Test that None values from sensor inputs are filtered out of the fused prompt."""
+    config = create_mock_config()
+    inputs: list[Sensor[Any, Any]] = [MockSensor(), MockSensorNone(), MockSensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+        assert "None" not in result
+        assert "test input test input" in result
+
+
+@patch("fuser.describe_action")
+def test_fuse_skips_excluded_actions(mock_describe):
+    """Test that actions with exclude_from_prompt=True are not included in prompt."""
+    mock_describe.side_effect = lambda name, label, exclude: (
+        None if exclude else f"{label} description"
+    )
+    config = create_mock_config(
+        agent_actions=[
+            MockAction("visible", llm_label="visible", exclude_from_prompt=False),
+            MockAction("hidden", llm_label="hidden", exclude_from_prompt=True),
+        ],
+    )
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse([], [])
+
+        assert "visible description" in result
+        assert "hidden description" not in result
+        assert mock_describe.call_count == 2
+
+
+def test_fuse_with_empty_inputs():
+    """Test fuse with no sensor inputs produces valid prompt structure."""
+    config = create_mock_config()
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse([], [])
+
+        assert "BASIC CONTEXT:" in result
+        assert "AVAILABLE INPUTS:" in result
+        assert "AVAILABLE ACTIONS:" in result
+        assert "What will you do? Actions:" in result
+        assert io_provider.fuser_inputs == ""
