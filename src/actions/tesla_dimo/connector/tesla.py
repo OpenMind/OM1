@@ -7,7 +7,7 @@ from dimo import DIMO
 from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
-from actions.dimo.interface import TeslaInput
+from actions.tesla_dimo.interface import TeslaInput
 from providers.io_provider import IOProvider
 
 
