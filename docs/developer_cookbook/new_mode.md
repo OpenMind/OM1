@@ -9,19 +9,18 @@ This guide walks you through creating a new mode for your robot system.
 ## Project Structure
 
 ```bash
-src/runtime/multi_mode/
+src/runtime/
 ├── config.py          # ModeConfig and ModeSystemConfig classes
 ├── manager.py         # ModeManager for transitions
 ├── cortex.py          # ModeCortexRuntime for execution
-└── hook.py            # Lifecycle hooks
-
-src/runtime/single_mode/
-├── config.py          # ModeConfig and ModeSystemConfig classes
-├── cortex.py           # ModeCortexRuntime for Execution
+├── hook.py            # Lifecycle hooks
+└── converter.py       # Converts legacy single mode configs to multimode config
 
 config/
 └── your_robot_modes.json5    # Mode configuration file
 ```
+
+> **Note:** Single mode is now deprecated. Any legacy single-mode config will now be converted into the multi-mode format, simplifying the runtime and CLI logic.
 
 ## Configuration
 
@@ -112,8 +111,8 @@ Add to the transition_rules section:
 
 If "new_mode" should be the starting mode, define
 
-    ```bash
-    "default_mode": "new_mode"
-    ```
+```bash
+"default_mode": "new_mode"
+```
 
 Now, your new mode is ready to be tested. Deploy it directly on your robot or configure it through the docker_compose file!

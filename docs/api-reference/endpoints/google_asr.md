@@ -85,12 +85,10 @@ Send audio data as JSON messages over the WebSocket connection:
 | `rate` | integer | No | `16000` | Audio sample rate in Hz |
 | `language_code` | string | No | `"en-US"` | Language code for recognition (e.g., "en-US", "es-ES", "fr-FR") |
 
-<Note>
-Note the following when sending audio data:
-- The `rate` and `language_code` parameters only need to be sent with the first message. Subsequent messages can contain only the `audio` field.
-- Audio must be LINEAR16 PCM encoded
-- Maximum streaming duration is 4 minutes (240 seconds) per session
-</Note>
+> **Note:** Note the following when sending audio data:
+> - The `rate` and `language_code` parameters only need to be sent with the first message. Subsequent messages can contain only the `audio` field.
+> - Audio must be LINEAR16 PCM encoded
+> - Maximum streaming duration is 4 minutes (240 seconds) per session
 
 ## Receiving Transcription Results
 
@@ -342,7 +340,7 @@ The ASR service supports multiple languages. Specify the language code in the fi
 | Korean | `ko-KR` |
 | Chinese (Mandarin) | `zh-CN` |
 
-<Note>For a complete list of supported languages, refer to the [Google Cloud Speech-to-Text documentation](https://cloud.google.com/speech-to-text/docs/languages).</Note>
+> **Note:** For a complete list of supported languages, refer to the [Google Cloud Speech-to-Text documentation](https://cloud.google.com/speech-to-text/docs/languages).
 
 ## Error Handling
 
@@ -444,12 +442,10 @@ cost_in_omcu = audio_duration_seconds × per_second_rate
 
 Usage is tracked and billed to the API key provided in the connection URL.
 
-<Note>
-Note the following about cost calculation:
-- Audio length is calculated automatically from the data sent
-- Only successfully processed audio is billed
-- Usage details are available in your OpenMind dashboard
-</Note>
+> **Note:** Note the following about cost calculation:
+> - Audio length is calculated automatically from the data sent
+> - Only successfully processed audio is billed
+> - Usage details are available in your OpenMind dashboard
 
 ## Best Practices
 
