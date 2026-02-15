@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -300,7 +301,6 @@ class TestCameraPropertyLogging:
 
     def test_logs_debug_when_buffer_size_setting_fails(self, caplog):
         """Test that debug log is emitted when setting buffer size fails."""
-        import logging
 
         with (
             patch("providers.unitree_realsense_dev_vlm_provider.cv2") as mock_cv2,
@@ -329,7 +329,6 @@ class TestCameraPropertyLogging:
 
     def test_logs_debug_when_fourcc_setting_fails(self, caplog):
         """Test that debug log is emitted when setting FOURCC codec fails."""
-        import logging
 
         with (
             patch("providers.unitree_realsense_dev_vlm_provider.cv2") as mock_cv2,
@@ -359,7 +358,6 @@ class TestCameraPropertyLogging:
 
     def test_no_debug_log_when_settings_succeed(self, caplog):
         """Test that no debug logs are emitted when all settings succeed."""
-        import logging
 
         with (
             patch("providers.unitree_realsense_dev_vlm_provider.cv2") as mock_cv2,
