@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 from collections import deque
 from queue import Empty, Queue
@@ -91,6 +92,9 @@ class GalleryIdentities(FuserInput[GalleryIdentitiesConfig, Optional[str]]):
         try:
             self.message_buffer.put_nowait(text_line)
         except Exception:
+            logging.debug(
+                "GalleryIdentities queue full; dropping oldest message to enqueue"
+            )
             try:
                 _ = self.message_buffer.get_nowait()
             except Empty:
@@ -98,6 +102,9 @@ class GalleryIdentities(FuserInput[GalleryIdentitiesConfig, Optional[str]]):
             try:
                 self.message_buffer.put_nowait(text_line)
             except Exception:
+                logging.warning(
+                    "GalleryIdentities queue still full; dropping latest message"
+                )
                 pass
 
     async def _poll(self) -> Optional[str]:
