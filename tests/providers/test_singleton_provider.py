@@ -1,7 +1,7 @@
 import threading
 import time
 
-from providers.singleton import singleton
+from src.providers.singleton import singleton
 
 
 def test_singleton_basic_functionality():
