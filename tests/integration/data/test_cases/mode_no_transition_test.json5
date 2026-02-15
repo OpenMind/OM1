@@ -1,0 +1,52 @@
+{
+  name: "mode_no_transition_test",
+  description: "Verify no transition occurs when input lacks trigger keywords",
+  version: "v1.0.2",
+  api_key: "openmind_free",
+  default_mode: "calm",
+  modes: {
+    calm: {
+      display_name: "Calm",
+      description: "Normal calm mode",
+      system_prompt_base: "You are a calm and relaxed robot.",
+      hertz: 1,
+      agent_inputs: [{ type: "GoogleASRInput" }],
+      cortex_llm: { type: "OpenAILLM", config: { agent_name: "Buddy" } },
+      agent_actions: [
+        { name: "move", llm_label: "move", connector: "ros2" },
+        { name: "speak", llm_label: "speak", connector: "ros2" },
+        { name: "face", llm_label: "emotion", connector: "ros2" },
+      ],
+    },
+    alert: {
+      display_name: "Alert",
+      description: "Alert mode for emergencies",
+      system_prompt_base: "You are now in alert mode. Be vigilant.",
+      hertz: 1,
+      agent_inputs: [{ type: "GoogleASRInput" }],
+      cortex_llm: { type: "OpenAILLM", config: { agent_name: "Buddy" } },
+      agent_actions: [
+        { name: "move", llm_label: "move", connector: "ros2" },
+        { name: "speak", llm_label: "speak", connector: "ros2" },
+        { name: "face", llm_label: "emotion", connector: "ros2" },
+      ],
+    },
+  },
+  transition_rules: [
+    {
+      from_mode: "calm",
+      to_mode: "alert",
+      transition_type: "input_triggered",
+      trigger_keywords: ["danger", "emergency", "help"],
+      priority: 1,
+      cooldown_seconds: 0,
+    },
+  ],
+  input: {
+    asr: ["../asr/greeting.json"],
+  },
+  expected: {
+    initial_mode: "calm",
+    final_mode: "calm",
+  },
+}

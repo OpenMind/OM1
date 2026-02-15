@@ -582,3 +582,32 @@ async def test_multiple_summarization_failures_prevent_unbounded_growth():
 
     # Final check: history should be at or below history_length
     assert len(history_manager.history) <= config.history_length
+
+
+def test_get_messages_empty(history_manager):
+    """Test get_messages returns empty list when no history."""
+    result = history_manager.get_messages()
+    assert result == []
+
+
+def test_get_messages_single(history_manager):
+    """Test get_messages with a single message in history."""
+    history_manager.history.append(ChatMessage(role="user", content="Hello"))
+    result = history_manager.get_messages()
+    assert result == [{"role": "user", "content": "Hello"}]
+
+
+def test_get_messages_multiple_roles(history_manager):
+    """Test get_messages with multiple messages of different roles."""
+    history_manager.history.extend(
+        [
+            ChatMessage(role="system", content="You are a robot"),
+            ChatMessage(role="user", content="Hello"),
+            ChatMessage(role="assistant", content="Hi there"),
+        ]
+    )
+    result = history_manager.get_messages()
+    assert len(result) == 3
+    assert result[0] == {"role": "system", "content": "You are a robot"}
+    assert result[1] == {"role": "user", "content": "Hello"}
+    assert result[2] == {"role": "assistant", "content": "Hi there"}

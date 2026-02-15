@@ -222,3 +222,52 @@ def test_log_file_initialization(mock_rplidar_dependencies):
         assert provider.write_to_local_file is True
         assert provider.filename_current == "dump/lidar_1234567890_123456Z.jsonl"
         mock_time.assert_called()
+
+
+def test_movement_options(mock_rplidar_dependencies):
+    """Test movement_options property returns correct dict structure."""
+    provider = UnitreeGo2RPLidarProvider()
+    provider.turn_left = [0, 1, 2]
+    provider.advance = [4, 5]
+    provider.turn_right = [7, 8]
+    provider.retreat = True
+
+    result = provider.movement_options
+    assert result == {
+        "turn_left": [0, 1, 2],
+        "advance": [4, 5],
+        "turn_right": [7, 8],
+        "retreat": True,
+    }
+
+
+def test_movement_options_default(mock_rplidar_dependencies):
+    """Test movement_options property with default empty values."""
+    provider = UnitreeGo2RPLidarProvider()
+    result = provider.movement_options
+    assert result == {
+        "turn_left": [],
+        "advance": [],
+        "turn_right": [],
+        "retreat": False,
+    }
+
+
+def test_stop(mock_rplidar_dependencies):
+    """Test stop method sets running to False, sends STOP to queue, and joins threads."""
+    provider = UnitreeGo2RPLidarProvider()
+    provider.running = True
+
+    mock_rplidar_thread = MagicMock()
+    mock_serial_thread = MagicMock()
+    mock_queue = MagicMock()
+    provider._rplidar_processor_thread = mock_rplidar_thread
+    provider._serial_processor_thread = mock_serial_thread
+    provider.control_queue = mock_queue
+
+    provider.stop()
+
+    assert provider.running is False
+    mock_queue.put.assert_called_once_with("STOP")
+    mock_rplidar_thread.join.assert_called_once_with(timeout=5)
+    mock_serial_thread.join.assert_called_once_with(timeout=5)
