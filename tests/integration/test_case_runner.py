@@ -460,12 +460,7 @@ def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
     if not data_files:
         return
 
-    # GPS data is in a separate directory
-    if data_type == "gps":
-        base_dir = TEST_CASES_DIR
-    else:
-        base_dir = TEST_CASES_DIR
-
+    base_dir = TEST_CASES_DIR
     state_provider = get_state_provider()
 
     for data_path in data_files:
