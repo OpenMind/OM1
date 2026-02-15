@@ -2,13 +2,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from actions.dimo.connector.tesla import DIMOTeslaConfig, DIMOTeslaConnector
+from actions.tesla_dimo.connector.tesla import DIMOTeslaConfig, DIMOTeslaConnector
 
 
 @pytest.fixture
 def mock_dimo():
     """Mock DIMO SDK."""
-    with patch("actions.dimo.connector.tesla.DIMO") as mock:
+    with patch("actions.tesla_dimo.connector.tesla.DIMO") as mock:
         mock_instance = Mock()
         mock_instance.auth.get_token.return_value = {"access_token": "test_dev_jwt"}
         mock_instance.token_exchange.exchange.return_value = {
@@ -71,9 +71,9 @@ async def test_lock_doors_case_insensitive(
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"),
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ),
     ):
@@ -103,9 +103,9 @@ async def test_unlock_doors_case_insensitive(
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"),
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ),
     ):
@@ -135,9 +135,9 @@ async def test_open_frunk_case_insensitive(
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"),
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ),
     ):
@@ -167,9 +167,9 @@ async def test_open_trunk_case_insensitive(
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"),
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ),
     ):
@@ -197,9 +197,9 @@ async def test_idle_case_insensitive(tesla_connector, action_input):
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"),
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ) as mock_client_session,
     ):
@@ -217,12 +217,12 @@ async def test_unknown_action_logs_error(tesla_connector):
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"),
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ) as mock_client_session,
-        patch("actions.dimo.connector.tesla.logging") as mock_logging,
+        patch("actions.tesla_dimo.connector.tesla.logging") as mock_logging,
     ):
         input_interface = Mock()
         input_interface.action = "invalid_action"
@@ -236,7 +236,7 @@ async def test_unknown_action_logs_error(tesla_connector):
 @pytest.mark.asyncio
 async def test_no_jwt_logs_error(mock_dimo):
     """Test that missing JWT is logged as error."""
-    with patch("actions.dimo.connector.tesla.logging") as mock_logging:
+    with patch("actions.tesla_dimo.connector.tesla.logging") as mock_logging:
         config = DIMOTeslaConfig(
             client_id="test_client_id",
             domain="test_domain",
@@ -260,9 +260,11 @@ async def test_uses_aiohttp_not_requests(tesla_connector):
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout") as mock_timeout,
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"
+        ) as mock_timeout,
+        patch(
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ) as mock_client_session,
     ):
@@ -277,7 +279,7 @@ async def test_uses_aiohttp_not_requests(tesla_connector):
 
 def test_requests_not_imported():
     """Verify blocking requests library is not imported in tesla module."""
-    from actions.dimo.connector import tesla
+    from actions.tesla_dimo.connector import tesla
 
     module_source = open(tesla.__file__).read()
     assert "import requests" not in module_source
@@ -290,12 +292,12 @@ async def test_http_error_status_logs_error(tesla_connector):
     mock_session_cm, mock_session = create_aiohttp_mock(status=500)
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout"),
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"),
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ),
-        patch("actions.dimo.connector.tesla.logging") as mock_logging,
+        patch("actions.tesla_dimo.connector.tesla.logging") as mock_logging,
     ):
         input_interface = Mock()
         input_interface.action = "lock doors"
@@ -313,9 +315,11 @@ async def test_timeout_is_configured(tesla_connector):
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch("actions.dimo.connector.tesla.aiohttp.ClientTimeout") as mock_timeout,
         patch(
-            "actions.dimo.connector.tesla.aiohttp.ClientSession",
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"
+        ) as mock_timeout,
+        patch(
+            "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
         ) as mock_client_session,
     ):
