@@ -1443,23 +1443,38 @@ def discover_test_cases() -> Dict[str, TestCategory]:
 
 def discover_mode_transition_test_cases() -> List[Path]:
     """
-    Discover multi-mode test case configurations for mode transition testing.
+    Discover input-triggered mode transition test cases.
 
-    These configs define multiple modes under a 'modes' key and transition
-    rules, requiring run_mode_transition_test() instead of run_test_case().
+    Returns only multi-mode configs suitable for run_mode_transition_test().
+    Configs with dedicated test functions (cooldown, time-based) are excluded
+    since they hardcode their own config paths.
 
     Returns
     -------
     List[Path]
-        List of paths to multi-mode test case configurations
+        List of paths to input-triggered mode transition test configs
     """
     test_cases: List[Path] = []
 
     for test_file in TEST_CASES_DIR.glob("*.json5"):
         try:
             config = load_test_case(test_file)
-            if _is_multi_mode_config(config):
-                test_cases.append(test_file)
+            if not _is_multi_mode_config(config):
+                continue
+
+            # Cooldown configs have dedicated test_cooldown_prevents_transition()
+            if "first_transition_mode" in config.get("expected", {}):
+                continue
+
+            # Time-based configs have dedicated test_time_based_transition()
+            has_time_based_rules = any(
+                r.get("transition_type") == "time_based"
+                for r in config.get("transition_rules", [])
+            )
+            if has_time_based_rules:
+                continue
+
+            test_cases.append(test_file)
         except Exception as e:
             logging.error(f"Error loading test case {test_file}: {e}")
 
@@ -1785,19 +1800,6 @@ async def test_mode_transition(test_case_path: Path):
 
     config = load_test_case(test_case_path)
     test_name = config["name"]
-
-    # Skip configs that need dedicated test functions
-    if "first_transition_mode" in config.get("expected", {}):
-        pytest.skip(f"Skipping {test_name}: uses dedicated cooldown test")
-        return
-
-    has_time_based_rules = any(
-        r.get("transition_type") == "time_based"
-        for r in config.get("transition_rules", [])
-    )
-    if has_time_based_rules:
-        pytest.skip(f"Skipping {test_name}: uses dedicated time-based test")
-        return
 
     logging.info(f"Running mode transition test: {test_name}")
 
