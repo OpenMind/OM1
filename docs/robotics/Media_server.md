@@ -83,7 +83,7 @@ ffmpeg -f avfoundation -video_size 640x480 -framerate 30 -i "0:0" -c:v libx264 -
 
 You can access the data using dozens of protocols or apps. For example, to use VLC and `rtsp`, install VLC, go to `File -> Open Network` and enter `rtsp://localhost:8554/live`.
 
-**Note** - it may take a few seconds for the stream to open. A typical delay is about 2 seconds.
+> **Note** - it may take a few seconds for the stream to open. A typical delay is about 2 seconds.
 
 You can also use WebRTC to view the video in your web browser by visiting http://localhost:8889/live.
 
@@ -97,7 +97,7 @@ ffmpeg -f avfoundation -video_size 1920x1080 -framerate 30 -i "0:0" \
   "rtmp://api-video-ingest.openmind.org:1935/<OM_API_KEY_ID>?api_key=<OM_API_KEY>"
 ```
 
-**Note:** **OM_API_KEY_ID** refers to the first 16 digits of your API key, excluding the **om_prod_ prefix**. You can also find your corresponding **OM_API_KEY_ID** in our [portal](https://portal.openmind.org).
+> **Note:** **OM_API_KEY_ID** refers to the first 16 digits of your API key, excluding the **om_prod_ prefix**. You can also find your corresponding **OM_API_KEY_ID** in our [portal](https://portal.openmind.org).
 
 You can view your video stream at:
 

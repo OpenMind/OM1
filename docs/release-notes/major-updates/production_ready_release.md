@@ -24,4 +24,4 @@ v1.0.0 marks the first production-ready release, delivering autonomous robotics 
 - Gazebo integration for Go2 with OM1
 - Pydantic-Based Configuration
 
-> Note: We're committed to continuous improvement and regular updates. Your feedback and contributions are invaluable in shaping the future of OM1. Join our community to stay updated on the latest developments!
+> **Note:** We're committed to continuous improvement and regular updates. Your feedback and contributions are invaluable in shaping the future of OM1. Join our community to stay updated on the latest developments!

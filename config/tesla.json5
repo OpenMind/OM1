@@ -55,7 +55,7 @@
       connector: "elevenlabs_tts",
     },
     {
-      name: "dimo",
+      name: "tesla_dimo",
       llm_label: "car control",
       implementation: "passthrough",
       connector: "tesla",
