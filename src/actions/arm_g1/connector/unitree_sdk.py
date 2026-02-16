@@ -29,6 +29,8 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
         super().__init__(config)
 
         try:
+            if G1ArmActionClient is None:
+                raise ImportError("Unitree SDK not installed")
             self.client = G1ArmActionClient()
             self.client.SetTimeout(10.0)
             self.client.Init()
