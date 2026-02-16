@@ -664,6 +664,7 @@ class ModeCortexRuntime:
         from the original configuration source and then regenerate the runtime config.
         """
         current_mode = self.mode_manager.current_mode_name
+        original_mode = current_mode
         previous_mode_config = self.mode_config
         previous_manager_config = self.mode_manager.config
         try:
@@ -710,13 +711,13 @@ class ModeCortexRuntime:
             logging.info("Restarting orchestrators with previous configuration")
             self.mode_config = previous_mode_config
             self.mode_manager.config = previous_manager_config
-            self.mode_manager.state.current_mode = current_mode
+            self.mode_manager.state.current_mode = original_mode
             try:
-                await self._initialize_mode(current_mode)
+                await self._initialize_mode(original_mode)
                 await self._start_orchestrators()
                 logging.info(
                     f"Successfully restarted with previous configuration, "
-                    f"mode: {current_mode}"
+                    f"mode: {original_mode}"
                 )
             except Exception as recovery_error:
                 logging.critical(
