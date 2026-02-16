@@ -1,5 +1,6 @@
 import time
 from typing import Optional
+from unittest.mock import patch
 
 import pytest
 
@@ -269,6 +270,14 @@ def test_tick_tracking_in_inputs(io_provider):
 def test_add_input_timestamp_nonexistent_key(io_provider):
     io_provider.add_input_timestamp("nonexistent", time.time())
     assert io_provider.get_input("nonexistent") is None
+
+
+def test_add_input_timestamp_nonexistent_key_logs_warning(io_provider):
+    with patch("providers.io_provider.logging.warning") as mock_warning:
+        io_provider.add_input_timestamp("nonexistent", time.time())
+        mock_warning.assert_called_once_with(
+            "add_input_timestamp called for missing key '%s'", "nonexistent"
+        )
 
 
 def test_inputs_property_returns_copy(io_provider):
