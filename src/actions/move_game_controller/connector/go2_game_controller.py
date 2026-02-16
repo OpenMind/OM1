@@ -9,8 +9,16 @@ from actions.base import ActionConfig, ActionConnector
 from actions.move_game_controller.interface import IDLEInput
 from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import AudioStatus, open_zenoh_session
+
+try:
+    from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+except (ImportError, ModuleNotFoundError):
+    logging.warning(
+        "Unitree SDK not found. SportClient will not be available. "
+        "Install cyclonedds to use Unitree Go2 connectors."
+    )
+    SportClient = None  # type: ignore
 
 try:
     import hid

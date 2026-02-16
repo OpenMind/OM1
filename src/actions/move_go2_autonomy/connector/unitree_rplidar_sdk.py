@@ -11,7 +11,15 @@ from actions.move_go2_autonomy.interface import MoveInput
 from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
 from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+
+try:
+    from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+except (ImportError, ModuleNotFoundError):
+    logging.warning(
+        "Unitree SDK not found. SportClient will not be available. "
+        "Install cyclonedds to use Unitree Go2 connectors."
+    )
+    SportClient = None  # type: ignore
 
 
 class MoveUnitreeRPLidarSDKConfig(ActionConfig):
