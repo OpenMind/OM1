@@ -162,40 +162,123 @@ async def test_load_rules_from_blockchain_exception(governance_instance, caplog)
     mock_session.post.assert_called_once()
 
 
-def test_decode_eth_response_valid_hex_returns_something(governance_instance):
-    """
-    Test that decode_eth_response handles a valid hex string without throwing an error.
-    It might return '', a string, or None depending on the internal logic, which is okay.
-    The key is that it doesn't crash.
-    """
-    valid_hex = "0x00" * 64
-    result = governance_instance.decode_eth_response(valid_hex)
-    assert isinstance(result, (str, type(None)))
+def _build_abi_response(text: str) -> str:
+    """Helper to build a valid ABI-encoded hex response containing a string."""
+    string_bytes = text.encode("utf-8")
+    string_length = len(string_bytes)
+    # 96 bytes of offset/padding + 32 bytes length + data (padded to 32)
+    response = b"\x00" * 96
+    response += string_length.to_bytes(32, "big")
+    response += string_bytes
+    # Pad data to 32-byte boundary
+    padding_needed = (32 - len(string_bytes) % 32) % 32
+    response += b"\x00" * padding_needed
+    return "0x" + response.hex()
+
+
+def test_decode_eth_response_valid_string(governance_instance):
+    """Test decoding a properly ABI-encoded string response."""
+    hex_response = _build_abi_response("Hello World")
+    result = governance_instance.decode_eth_response(hex_response)
+    assert result == "Hello World"
+
+
+def test_decode_eth_response_empty_string(governance_instance):
+    """Test decoding ABI-encoded empty string (valid, length=0)."""
+    hex_response = _build_abi_response("")
+    result = governance_instance.decode_eth_response(hex_response)
+    assert result == ""
+
+
+def test_decode_eth_response_strips_control_characters(governance_instance):
+    """Test that non-printable control characters are removed."""
+    text_with_control = "Rule\x19Set\x00Data"
+    string_bytes = text_with_control.encode("utf-8")
+    response = b"\x00" * 96
+    response += len(string_bytes).to_bytes(32, "big")
+    response += string_bytes
+    response += b"\x00" * ((32 - len(string_bytes) % 32) % 32)
+    hex_response = "0x" + response.hex()
+
+    result = governance_instance.decode_eth_response(hex_response)
+    assert result == "RuleSetData"
+
+
+def test_decode_eth_response_empty_hex_returns_none(governance_instance, caplog):
+    """Test that an empty hex response returns None with error."""
+    with caplog.at_level("ERROR"):
+        result = governance_instance.decode_eth_response("")
+    assert result is None
+    assert "Empty hex response" in caplog.text
+
+
+def test_decode_eth_response_empty_after_prefix_returns_none(
+    governance_instance, caplog
+):
+    """Test that '0x' with no data returns None with error."""
+    with caplog.at_level("ERROR"):
+        result = governance_instance.decode_eth_response("0x")
+    assert result is None
+    assert "Empty hex response" in caplog.text
 
 
 def test_decode_eth_response_invalid_hex_returns_none(governance_instance, caplog):
-    invalid_hex = "invalid_hex_string!"
-
+    """Test that non-hex characters return None with error."""
     with caplog.at_level("ERROR"):
-        result = governance_instance.decode_eth_response(invalid_hex)
-
+        result = governance_instance.decode_eth_response("invalid_hex_string!")
     assert result is None
-    assert "Decoding error" in caplog.text
+    assert "Invalid hex string" in caplog.text
 
 
-def test_decode_eth_response_short_hex_returns_something_or_none(
-    governance_instance, caplog
-):
-    """
-    Test with a short hex that might cause an error inside the try block.
-    This should ideally trigger the except clause.
-    """
-    short_hex = "0x00" * 8
+def test_decode_eth_response_short_response_returns_none(governance_instance, caplog):
+    """Test that a response shorter than 128 bytes returns None with error."""
+    short_hex = "0x" + ("00" * 64)  # 64 bytes, less than 128 required
 
     with caplog.at_level("ERROR"):
         result = governance_instance.decode_eth_response(short_hex)
 
-    assert isinstance(result, (str, type(None)))
+    assert result is None
+    assert "Response too short" in caplog.text
+
+
+def test_decode_eth_response_truncated_data_returns_none(governance_instance, caplog):
+    """Test that a response with string_length exceeding available data returns None."""
+    # 96 bytes padding + 32 bytes claiming length=100 + only 5 bytes of data
+    response = b"\x00" * 96
+    response += (100).to_bytes(32, "big")  # claims 100 bytes
+    response += b"Hello"  # only 5 bytes
+    hex_response = "0x" + response.hex()
+
+    with caplog.at_level("ERROR"):
+        result = governance_instance.decode_eth_response(hex_response)
+
+    assert result is None
+    assert "exceeds available data" in caplog.text
+
+
+def test_decode_eth_response_without_0x_prefix(governance_instance):
+    """Test that hex response without 0x prefix is handled correctly."""
+    hex_response = _build_abi_response("No Prefix")
+    # Remove the 0x prefix
+    result = governance_instance.decode_eth_response(hex_response[2:])
+    assert result == "No Prefix"
+
+
+def test_decode_eth_response_invalid_utf8_returns_none(governance_instance, caplog):
+    """Test that invalid UTF-8 in string data returns None."""
+    # Build response with invalid UTF-8 bytes
+    invalid_bytes = b"\xff\xfe"
+    response = b"\x00" * 96
+    response += len(invalid_bytes).to_bytes(32, "big")
+    response += invalid_bytes
+    response += b"\x00" * 30  # pad to 32 bytes
+    hex_response = "0x" + response.hex()
+
+    with caplog.at_level("ERROR"):
+        result = governance_instance.decode_eth_response(hex_response)
+
+    assert result is None
+    assert "Decoding error" in caplog.text
 
 
 def test_initialization_sets_defaults(governance_instance, mock_io_provider):

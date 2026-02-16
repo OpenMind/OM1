@@ -89,6 +89,12 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         """
         Decodes an Ethereum eth_call response.
 
+        Expects ABI-encoded bytes with the following layout:
+        - Bytes 0-31: offset to dynamic data
+        - Bytes 32-95: padding
+        - Bytes 96-127: string length
+        - Bytes 128+: string data
+
         Parameters
         ----------
         hex_response : str
@@ -102,12 +108,37 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         if hex_response.startswith("0x"):
             hex_response = hex_response[2:]
 
+        if not hex_response:
+            logging.error("Empty hex response received")
+            return None
+
         try:
             response_bytes = bytes.fromhex(hex_response)
+        except ValueError as e:
+            logging.error(f"Invalid hex string: {e}")
+            return None
 
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
+        try:
+            # ABI-encoded response requires at least 128 bytes:
+            # 32 (offset) + 32 (padding) + 32 (padding) + 32 (string length)
+            if len(response_bytes) < 128:
+                logging.error(
+                    f"Response too short for ABI decoding: "
+                    f"{len(response_bytes)} bytes (minimum 128 required)"
+                )
+                return None
+
+            # Read string length from ABI encoding
             string_length = int.from_bytes(response_bytes[96:128], "big")
+
+            # Validate string length against available data
+            available_data = len(response_bytes) - 128
+            if string_length > available_data:
+                logging.error(
+                    f"Declared string length ({string_length}) exceeds "
+                    f"available data ({available_data} bytes)"
+                )
+                return None
 
             # Extract and decode string
             string_bytes = response_bytes[128 : 128 + string_length]
