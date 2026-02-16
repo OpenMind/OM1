@@ -77,6 +77,7 @@ class ModeManager:
         self._main_event_loop: Optional[asyncio.AbstractEventLoop] = None
         self._transition_lock = asyncio.Lock()
         self._is_transitioning = False
+        self._pre_transition_snapshot: Optional[Dict] = None
 
         # Validate configuration
         if config.default_mode not in config.modes:
@@ -231,6 +232,31 @@ class ModeManager:
                     callback(from_mode, to_mode)
             except Exception as e:
                 logging.error(f"Error in transition callback: {e}")
+
+    def revert_transition_state(self) -> None:
+        """
+        Revert mode state to pre-transition values using the saved snapshot.
+
+        Called by the runtime when a transition callback fails and recovery
+        is performed. Restores all state fields that were modified by
+        _execute_transition and persists the reverted state to disk.
+        """
+        snapshot = self._pre_transition_snapshot
+        if not snapshot:
+            logging.warning("No pre-transition snapshot available for rollback")
+            return
+
+        self.state.current_mode = snapshot["current_mode"]
+        self.state.previous_mode = snapshot["previous_mode"]
+        self.state.mode_start_time = snapshot["mode_start_time"]
+        self.state.last_transition_time = snapshot["last_transition_time"]
+        self.state.transition_history = self.state.transition_history[
+            : snapshot["transition_history_len"]
+        ]
+        self._pre_transition_snapshot = None
+
+        self._save_mode_state()
+        logging.info("Reverted transition state to pre-transition values")
 
     async def check_time_based_transitions(self) -> Optional[str]:
         """
@@ -572,6 +598,15 @@ class ModeManager:
                 )
                 if not global_exit_success:
                     logging.warning("Some global exit hooks failed")
+
+                # Save state snapshot for potential rollback
+                self._pre_transition_snapshot = {
+                    "current_mode": self.state.current_mode,
+                    "previous_mode": self.state.previous_mode,
+                    "mode_start_time": self.state.mode_start_time,
+                    "last_transition_time": self.state.last_transition_time,
+                    "transition_history_len": len(self.state.transition_history),
+                }
 
                 # Update state
                 self.state.previous_mode = from_mode

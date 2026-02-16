@@ -212,8 +212,17 @@ class ModeCortexRuntime:
 
         except Exception as e:
             logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
-            raise
+            logging.info(f"Attempting to recover by restoring mode: {from_mode}")
+            try:
+                await self._initialize_mode(from_mode)
+                await self._start_orchestrators()
+                self.mode_manager.revert_transition_state()
+                logging.info(f"Successfully recovered to mode: {from_mode}")
+            except Exception as recovery_error:
+                logging.critical(
+                    f"Failed to recover to mode {from_mode}: {recovery_error}. "
+                    "Runtime has no active orchestrators."
+                )
         finally:
             self._is_reloading = False
 
