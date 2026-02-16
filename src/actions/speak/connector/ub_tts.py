@@ -34,8 +34,8 @@ class UbTtsConfig(ActionConfig):
         default=None,
         description="The IP address of the robot.",
     )
-    base_url: str = Field(
-        default=f"http://{robot_ip}:9090/v1/",
+    base_url: Optional[str] = Field(
+        default=None,
         description="The base URL for the UbTTS service.",
     )
 
@@ -57,7 +57,10 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         """
         super().__init__(config)
 
-        base_url = self.config.base_url
+        base_url = self.config.base_url or f"http://{self.config.robot_ip}:9090/v1/"
+
+        # TTS status
+        self.tts_enabled = True
 
         # Zenoh topics
         self.tts_status_request_topic = "om/tts/request"
