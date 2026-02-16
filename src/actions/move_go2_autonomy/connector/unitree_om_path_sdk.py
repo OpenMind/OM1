@@ -93,6 +93,8 @@ class MoveUnitreeOMPathSDKConnector(
         # create sport client
         self.sport_client = None
         try:
+            if SportClient is None:
+                raise ImportError("Unitree SDK not installed")
             self.sport_client = SportClient()
             self.sport_client.SetTimeout(10.0)
             self.sport_client.Init()
