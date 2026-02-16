@@ -64,6 +64,7 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         self.tts_status_response_topic = "om/tts/response"
 
         self.session = None
+        self.tts_enabled = True
 
         try:
             self.session = open_zenoh_session()

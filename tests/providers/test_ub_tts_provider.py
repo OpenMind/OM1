@@ -63,7 +63,7 @@ def test_adding_pending_message_submits_to_executor():
 
     executor_mock.submit.assert_called_once()
     args = executor_mock.submit.call_args[0]
-    assert args[0] == provider._speak_workder
+    assert args[0] == provider._speak_worker
     assert args[1] == "Hello world"
     assert args[2] is True  # interrupt default
     assert args[3] == 0  # timestamp default
@@ -81,7 +81,7 @@ def test_adding_pending_message_with_custom_parameters():
 
     executor_mock.submit.assert_called_once()
     args = executor_mock.submit.call_args[0]
-    assert args[0] == provider._speak_workder
+    assert args[0] == provider._speak_worker
     assert args[1] == "Custom message"
     assert args[2] is False  # interrupt=False
     assert args[3] == 12345  # timestamp=12345
@@ -116,7 +116,7 @@ def test_speak_worker_success():
     with patch(
         "providers.ub_tts_provider.requests.put", return_value=mock_response
     ) as mock_put:
-        result = provider._speak_workder("Hello world")
+        result = provider._speak_worker("Hello world")
 
         assert result is True
         mock_put.assert_called_once()
@@ -138,7 +138,7 @@ def test_speak_worker_with_parameters():
     with patch(
         "providers.ub_tts_provider.requests.put", return_value=mock_response
     ) as mock_put:
-        result = provider._speak_workder("Hello", interrupt=False, timestamp=12345)
+        result = provider._speak_worker("Hello", interrupt=False, timestamp=12345)
 
         assert result is True
         call_data = mock_put.call_args[1]["data"]
@@ -159,7 +159,7 @@ def test_speak_worker_default_parameters():
     with patch(
         "providers.ub_tts_provider.requests.put", return_value=mock_response
     ) as mock_put:
-        result = provider._speak_workder("Hello")
+        result = provider._speak_worker("Hello")
 
         assert result is True
         call_data = mock_put.call_args[1]["data"]
@@ -178,7 +178,7 @@ def test_speak_worker_failure_non_zero_code():
     mock_response.raise_for_status = MagicMock()
 
     with patch("providers.ub_tts_provider.requests.put", return_value=mock_response):
-        result = provider._speak_workder("Hello")
+        result = provider._speak_worker("Hello")
         assert result is False
 
     provider.stop()
@@ -196,7 +196,7 @@ def test_speak_worker_request_exception():
         ),
         patch("providers.ub_tts_provider.logging.error") as mock_log,
     ):
-        result = provider._speak_workder("Hello")
+        result = provider._speak_worker("Hello")
         assert result is False
         mock_log.assert_called_once()
         assert "Failed to send TTS command" in mock_log.call_args[0][0]
@@ -216,7 +216,7 @@ def test_speak_worker_timeout_exception():
         ),
         patch("providers.ub_tts_provider.logging.error") as mock_log,
     ):
-        result = provider._speak_workder("Hello")
+        result = provider._speak_worker("Hello")
         assert result is False
         mock_log.assert_called_once()
 

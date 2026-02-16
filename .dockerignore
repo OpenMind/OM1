@@ -38,46 +38,6 @@ logs/
 *.jsonl
 *.jpg
 /zenohdb
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-.ruff_cache/
-.pytest_cache/
-
-# Virtual environments
-.venv
-
-# Environment variables
-.env
-*.lock
-
-# IDE
-.vscode/
-
-# Debug files
-front_image.jpg
-turtlebot4_debug.jpg
-turtlebot.jpg
-
-# Mac specific lint
-.DS_Store
-config/iris_ai.json
-launch.sh
-
-# AI models
-*.pt
-
-# Logs
-logs/
-
-# Data files
-*.jsonl
-*.jpg
-/zenohdb
 
 # Config
 config/memory/

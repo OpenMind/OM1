@@ -26,6 +26,8 @@ class OpenAIModel(str, Enum):
     GPT_5 = "gpt-5"
     GPT_5_MINI = "gpt-5-mini"
     GPT_5_NANO = "gpt-5-nano"
+    GPT_5_1 = "gpt-5.1"
+    GPT_5_2 = "gpt-5.2"
 
 
 class OpenAIConfig(LLMConfig):
@@ -83,7 +85,7 @@ class OpenAILLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Send a prompt to the OpenAI API and get a structured response.
@@ -92,7 +94,7 @@ class OpenAILLM(LLM[R]):
         ----------
         prompt : str
             The input prompt to send to the model.
-        messages : List[Dict[str, str]]
+        messages : List[Dict[str, str]], optional
             List of message dictionaries to send to the model.
 
         Returns
@@ -101,6 +103,8 @@ class OpenAILLM(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
+        if messages is None:
+            messages = []
         try:
             logging.info(f"OpenAI input: {prompt}")
             logging.info(f"OpenAI messages: {messages}")

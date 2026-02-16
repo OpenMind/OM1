@@ -16,8 +16,8 @@ from providers.fabric_map_provider import (
     RFDataRaw,
 )
 from providers.gps_provider import GpsProvider
-from providers.odom_provider import OdomProvider
 from providers.rtk_provider import RtkProvider
+from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
 
 
 class RFmapperConfig(BackgroundConfig):
@@ -46,7 +46,7 @@ class RFmapperConfig(BackgroundConfig):
 
 class RFmapper(Background[RFmapperConfig]):
     """
-    Assemble location and BLE data.
+    Assemble location and BLE data with Unitree Go2 odometry and submit to Fabric.
     """
 
     def __init__(self, config: RFmapperConfig):
@@ -106,7 +106,7 @@ class RFmapper(Background[RFmapperConfig]):
         self.rtk_on = self.rtk.running
         logging.info(f"Mapper Rtk Provider: {self.rtk}")
 
-        self.odom = OdomProvider()
+        self.odom = UnitreeGo2OdomProvider()
         logging.info(f"Mapper Odom Provider: {self.odom}")
 
         self.fds = FabricDataSubmitter(api_key=self.api_key, write_to_local_file=True)
@@ -285,7 +285,7 @@ class RFmapper(Background[RFmapperConfig]):
                             self.ble_scan = g["ble_scan"]
                             logging.debug(f"RF scan results {self.ble_scan}")
                         else:
-                            logging.warn("No nRF52 scan results")
+                            logging.warning("No nRF52 scan results")
 
                 except Exception as e:
                     logging.error(f"Error parsing GPS: {e}")

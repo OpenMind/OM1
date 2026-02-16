@@ -51,7 +51,7 @@ class ActionConfig(BaseModel):
 @dataclass
 class Interface(T.Generic[IT, OT]):
     """
-    An interface for a action.
+    An interface for an action.
 
     Parameters
     ----------
@@ -129,12 +129,12 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
     @abstractmethod
     async def connect(self, output_interface: OT) -> None:
         """
-        Connect the input protocol to the action.
+        Connect the output interface to the action.
 
         Parameters
         ----------
         output_interface : OT
-            The input protocol containing the action details.
+            The output interface containing the action details.
         """
         pass
 

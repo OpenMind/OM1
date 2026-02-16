@@ -18,10 +18,15 @@ R = T.TypeVar("R", bound=BaseModel)
 class OpenRouterModel(str, Enum):
     """Available OpenRouter models."""
 
-    LLAMA_3_3_70B = "meta-llama/llama-3.3-70b-instruct"
-    LLAMA_3_1_70B = "meta-llama/llama-3.1-70b-instruct"
     ANTHROPIC_SONNET_4_5 = "anthropic/claude-sonnet-4.5"
-    ANTHROPIC_OPUS_4_1 = "anthropic/claude-opus-4.1"
+    ANTHROPIC_OPUS_4_5 = "anthropic/claude-opus-4.5"
+    ANTHROPIC_HAIKU_4_5 = "anthropic/claude-haiku-4.5"
+    MOONSHOT_KIMI_K2_5 = "moonshotai/kimi-k2.5"
+    MINIMAX_M2_1 = "minimax/minimax-m2.1"
+    Z_AI_GLM_4_7 = "z-ai/glm-4.7"
+    X_AI_GROK_4_FAST = "x-ai/grok-4-fast"
+    DEEPSEEK_V3_2 = "deepseek/deepseek-v3.2"
+    LLAMA_3_3_70B = "meta-llama/llama-3.3-70b-instruct"
 
 
 class OpenRouterConfig(LLMConfig):
@@ -32,7 +37,7 @@ class OpenRouterConfig(LLMConfig):
         description="Base URL for the OpenRouter API endpoint",
     )
     model: T.Optional[T.Union[OpenRouterModel, str]] = Field(
-        default=OpenRouterModel.LLAMA_3_3_70B,
+        default=OpenRouterModel.ANTHROPIC_SONNET_4_5,
         description="OpenRouter model to use",
     )
 
@@ -79,7 +84,7 @@ class OpenRouter(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Send a prompt to the OpenRouter API and get a structured response.
@@ -88,7 +93,7 @@ class OpenRouter(LLM[R]):
         ----------
         prompt : str
             The input prompt to send to the model.
-        messages : List[Dict[str, str]]
+        messages : List[Dict[str, str]], optional
             List of message dictionaries to send to the model.
 
         Returns
@@ -97,6 +102,8 @@ class OpenRouter(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
+        if messages is None:
+            messages = []
         try:
             logging.info(f"OpenRouter input: {prompt}")
             logging.info(f"OpenRouter messages: {messages}")

@@ -132,7 +132,7 @@ class TestNearAILLMInit:
         config = NearAIConfig(api_key="test_key")
         llm = NearAILLM(config, available_actions=None)
         assert llm._config.model is not None
-        assert "qwen" in llm._config.model.lower()
+        assert "gpt-oss-120b" in llm._config.model.lower()
 
     def test_init_requires_api_key(self):
         """Test that initialization fails without API key."""
@@ -333,3 +333,33 @@ class TestNearAILLMAsk:
 
             call_args = mock_parse.call_args
             assert "tools" in call_args.kwargs
+
+    @pytest.mark.asyncio
+    async def test_ask_with_empty_choices(self, llm):
+        """Test handling of empty choices in API response."""
+        mock_response = MagicMock()
+        mock_response.choices = []
+
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr(
+                llm._client.beta.chat.completions,
+                "parse",
+                AsyncMock(return_value=mock_response),
+            )
+
+            result = await llm.ask("test prompt")
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_ask_uses_configured_timeout(self, llm, mock_response):
+        """Test that ask() uses the timeout from config."""
+        llm._config.timeout = 30
+
+        with pytest.MonkeyPatch.context() as m:
+            mock_parse = AsyncMock(return_value=mock_response)
+            m.setattr(llm._client.beta.chat.completions, "parse", mock_parse)
+
+            await llm.ask("test prompt")
+
+            call_args = mock_parse.call_args
+            assert call_args.kwargs.get("timeout") == 30
