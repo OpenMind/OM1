@@ -8,6 +8,15 @@ import requests
 class UbTtsProvider:
     """
     Provider for the Ubtech Text-to-Speech (TTS) service.
+
+    Parameters
+    ----------
+    tts_url : str
+        The URL of the Ubtech TTS service.
+    executor : ThreadPoolExecutor
+        Executor for async TTS processing.
+    headers : dict
+        HTTP headers for requests.
     """
 
     def __init__(self, url: str):
@@ -44,7 +53,7 @@ class UbTtsProvider:
         timestamp : int
             A timestamp to identify the TTS request.
         """
-        self.executor.submit(self._speak_workder, message, interrupt, timestamp)
+        self.executor.submit(self._speak_worker, message, interrupt, timestamp)
 
     def stop(self):
         """
@@ -52,7 +61,7 @@ class UbTtsProvider:
         """
         self.executor.shutdown(wait=True)
 
-    def _speak_workder(
+    def _speak_worker(
         self, message: str, interrupt: bool = True, timestamp: int = 0
     ) -> bool:
         """

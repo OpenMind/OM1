@@ -295,7 +295,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
     ) -> R | None:
         """
         Send prompt to both LLMs and select the best response.
@@ -305,13 +305,15 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
         prompt : str
             The input prompt to send.
         messages : list of dict, optional
-            Conversation history (default: []).
+            Conversation history.
 
         Returns
         -------
         R or None
             Parsed response matching the output model, or None if failed.
         """
+        if messages is None:
+            messages = []
         try:
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)

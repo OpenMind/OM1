@@ -19,6 +19,12 @@ class EmotionAction(str, Enum):
 class EmotionInput:
     """
     Input interface for the Emotion action.
+
+    Parameters
+    ----------
+    action : EmotionAction
+        The emotion to express. Must be one of the predefined emotions from the
+        EmotionAction enumeration (e.g., HAPPY, SAD, MAD, CURIOUS).
     """
 
     action: EmotionAction
@@ -27,7 +33,15 @@ class EmotionInput:
 @dataclass
 class Emotion(Interface[EmotionInput, EmotionInput]):
     """
-    This action allows you to show your emotions.
+    Action interface for robot emotion expression.
+
+    This action enables the robot to express various emotional states through
+    its behavior and appearance. The specific emotion is determined by the
+    EmotionAction enum value provided in the input.
+
+    The emotion system allows the robot to communicate its internal state or
+    respond empathetically to user interactions, enhancing the naturalness
+    of human-robot communication.
     """
 
     input: EmotionInput

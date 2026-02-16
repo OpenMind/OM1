@@ -111,3 +111,94 @@ async def test_context_manager():
 
     async with TwitterInput(config=config) as sensor:
         assert sensor.session is not None
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_with_input():
+    """Test raw_to_text adds input to message_buffer and buffer."""
+    config = TwitterSensorConfig()
+    sensor = TwitterInput(config=config)
+
+    result = await sensor.raw_to_text("Test tweet content")
+    assert result == "Test tweet content"
+    assert "Test tweet content" in sensor.buffer
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_empty_returns_empty():
+    """Test raw_to_text with no input and empty buffer returns empty string."""
+    config = TwitterSensorConfig()
+    sensor = TwitterInput(config=config)
+
+    result = await sensor.raw_to_text()
+    assert result == ""
+
+
+@pytest.mark.asyncio
+async def test_start():
+    """Test start queries context and adds query to buffer."""
+    config = TwitterSensorConfig(query="AI news")
+    sensor = TwitterInput(config=config)
+
+    mock_response = MagicMock()
+    mock_response.status = 200
+    mock_response.json = AsyncMock(return_value={"results": []})
+
+    with patch("aiohttp.ClientSession.post", return_value=mock_response) as mock_post:
+        mock_post.return_value.__aenter__.return_value = mock_response
+        await sensor.start()
+
+    assert sensor.message_buffer.qsize() >= 1
+
+
+@pytest.mark.asyncio
+async def test_initialize_with_query():
+    """Test initialize_with_query adds query to buffer and queries context."""
+    config = TwitterSensorConfig()
+    sensor = TwitterInput(config=config)
+
+    mock_response = MagicMock()
+    mock_response.status = 200
+    mock_response.json = AsyncMock(return_value={"results": []})
+
+    with patch("aiohttp.ClientSession.post", return_value=mock_response) as mock_post:
+        mock_post.return_value.__aenter__.return_value = mock_response
+        await sensor.initialize_with_query("custom query")
+
+    assert not sensor.message_buffer.empty()
+    msg = sensor.message_buffer.get_nowait()
+    assert msg == "custom query"
+
+
+def test_formatted_latest_buffer_with_context():
+    """Test formatted_latest_buffer returns context when available."""
+    config = TwitterSensorConfig()
+    sensor = TwitterInput(config=config)
+
+    sensor.context = "Context about AI trends"
+
+    result = sensor.formatted_latest_buffer()
+    assert result is not None
+    assert "Context about AI trends" in result
+    assert "TwitterInput CONTEXT" in result
+
+
+def test_formatted_latest_buffer_with_buffer_fallback():
+    """Test formatted_latest_buffer falls back to buffer when no context."""
+    config = TwitterSensorConfig()
+    sensor = TwitterInput(config=config)
+
+    sensor.buffer.append("Latest tweet")
+
+    result = sensor.formatted_latest_buffer()
+    assert result is not None
+    assert "Latest tweet" in result
+
+
+def test_formatted_latest_buffer_empty():
+    """Test formatted_latest_buffer returns None when no content."""
+    config = TwitterSensorConfig()
+    sensor = TwitterInput(config=config)
+
+    result = sensor.formatted_latest_buffer()
+    assert result is None

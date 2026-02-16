@@ -132,7 +132,7 @@ class QwenLLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
     ) -> R | None:
         """
         Send prompt to local Qwen model and get structured response.
@@ -142,13 +142,15 @@ class QwenLLM(LLM[R]):
         prompt : str
             The input prompt to send.
         messages : list of dict, optional
-            Conversation history (default: []).
+            Conversation history.
 
         Returns
         -------
         R or None
             Parsed response with actions, or None if parsing fails.
         """
+        if messages is None:
+            messages = []
         try:
             logging.info(f"Qwen input: {prompt}")
             logging.info(f"Qwen messages: {messages}")

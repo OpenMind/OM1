@@ -48,10 +48,10 @@ class IdentitiesSnapshot:
         seen = set()
         ordered = []
         for n in self.names or []:
-            n = (n or "").strip()
-            if n and n not in seen:
-                seen.add(n)
-                ordered.append(n)
+            name = (n or "").strip()
+            if name and name not in seen:
+                seen.add(name)
+                ordered.append(name)
         return f"total={self.total} ids=[{', '.join(ordered)}]"
 
 
