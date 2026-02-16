@@ -1,15 +1,23 @@
+import sys
 from queue import Queue
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_om_path_sdk import (
+# Mock unitree modules before importing
+sys.modules["unitree"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.go2"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.go2.sport"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.go2.sport.sport_client"] = MagicMock()
+
+from actions.base import MoveCommand  # noqa: E402
+from actions.move_go2_autonomy.connector.unitree_om_path_sdk import (  # noqa: E402
     MoveUnitreeOMPathSDKConfig,
     MoveUnitreeOMPathSDKConnector,
 )
-from actions.move_go2_autonomy.interface import MoveInput, MovementAction
-from providers.unitree_go2_odom_provider import RobotState
+from actions.move_go2_autonomy.interface import MoveInput, MovementAction  # noqa: E402
+from providers.unitree_go2_odom_provider import RobotState  # noqa: E402
 
 
 @pytest.fixture

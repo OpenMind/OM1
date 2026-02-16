@@ -1,3 +1,4 @@
+import asyncio
 from typing import Type
 
 import pytest
@@ -100,3 +101,82 @@ def test_listen_signature(input_class: Type[FuserInput]):
     assert (
         base_params == impl_params
     ), f"{input_class.__name__} listen signature mismatch"
+
+
+class TestInputBaseInternals:
+    """Test internal methods for coverage."""
+
+    @pytest.mark.asyncio
+    async def test_fuser_input_super_init(self):
+        """Test FuserInput calls super().__init__ (line 26)."""
+        from inputs.base import SensorConfig
+        from inputs.base.loop import FuserInput
+
+        class TestConfig(SensorConfig):
+            test_field: str = "test"
+
+        class TestFuser(FuserInput[TestConfig, str]):
+            async def _poll(self):
+                return "data"
+
+        config = TestConfig(test_field="value")
+        fuser = TestFuser(config)
+        assert fuser.config == config
+        assert fuser.config.test_field == "value"
+
+    @pytest.mark.asyncio
+    async def test_fuser_input_listen_loop_polling(self):
+        """Test FuserInput._listen_loop polling (lines 37-38)."""
+        from inputs.base import SensorConfig
+        from inputs.base.loop import FuserInput
+
+        class TestConfig(SensorConfig):
+            pass
+
+        class TestFuser(FuserInput[TestConfig, str]):
+            def __init__(self, config):
+                super().__init__(config)
+                self.call_count = 0
+
+            async def _poll(self):
+                self.call_count += 1
+                await asyncio.sleep(0.001)
+                return f"poll_{self.call_count}"
+
+        fuser = TestFuser(TestConfig())
+        results = []
+        async for item in fuser._listen_loop():
+            results.append(item)
+            if len(results) >= 3:
+                break
+
+        assert results == ["poll_1", "poll_2", "poll_3"]
+        assert fuser.call_count == 3
+
+
+class TestSensorListenMethod:
+    """Test Sensor._listen to cover lines 127-128."""
+
+    @pytest.mark.asyncio
+    async def test_sensor_listen_iterates_listen_loop(self):
+        """Test Sensor._listen properly iterates over _listen_loop (lines 127-128)."""
+        from inputs.base import Sensor, SensorConfig
+
+        class TestConfig(SensorConfig):
+            pass
+
+        class TestSensor(Sensor[TestConfig, str]):
+            def __init__(self, config):
+                super().__init__(config)
+                self.events = ["event1", "event2", "event3"]
+
+            async def _listen_loop(self):
+                for event in self.events:
+                    yield event
+
+        sensor = TestSensor(TestConfig())
+        collected = []
+        async for event in sensor.listen():
+            collected.append(event)
+
+        assert collected == ["event1", "event2", "event3"]

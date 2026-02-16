@@ -1,12 +1,20 @@
-from unittest.mock import Mock, patch
+import sys
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from actions.emotion.connector.unitree_sdk import (
+# Mock unitree modules
+sys.modules["unitree"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.g1"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.g1.audio"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.g1.audio.g1_audio_client"] = MagicMock()
+
+from actions.emotion.connector.unitree_sdk import (  # noqa: E402
     EmotionUnitreeConfig,
     EmotionUnitreeConnector,
 )
-from actions.emotion.interface import EmotionAction, EmotionInput
+from actions.emotion.interface import EmotionAction, EmotionInput  # noqa: E402
 
 
 class TestEmotionUnitreeConfig:

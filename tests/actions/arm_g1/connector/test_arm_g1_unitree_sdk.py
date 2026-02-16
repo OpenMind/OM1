@@ -1,10 +1,18 @@
-from unittest.mock import Mock, patch
+import sys
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector
-from actions.arm_g1.interface import ArmAction, ArmInput
-from actions.base import ActionConfig
+# Mock unitree modules before importing
+sys.modules["unitree"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.g1"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.g1.arm"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.g1.arm.g1_arm_action_client"] = MagicMock()
+
+from actions.arm_g1.connector.unitree_sdk import ARMUnitreeSDKConnector  # noqa: E402
+from actions.arm_g1.interface import ArmAction, ArmInput  # noqa: E402
+from actions.base import ActionConfig  # noqa: E402
 
 
 @pytest.fixture

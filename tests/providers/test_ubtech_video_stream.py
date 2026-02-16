@@ -1,9 +1,16 @@
+import sys
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
+# Mock ubtech modules before imports
+sys.modules["ubtech"] = MagicMock()
+sys.modules["ubtech.ubtechapi"] = MagicMock()
 
-from providers.ubtech_video_stream import UbtechCameraVideoStream
+from unittest.mock import MagicMock, patch  # noqa: E402
+
+import pytest  # noqa: E402
+
+from providers.ubtech_video_stream import UbtechCameraVideoStream  # noqa: E402
 
 
 @pytest.fixture

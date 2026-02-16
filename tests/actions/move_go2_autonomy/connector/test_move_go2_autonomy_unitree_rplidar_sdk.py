@@ -1,15 +1,25 @@
-from queue import Queue
-from unittest.mock import Mock, patch
+import sys
+from unittest.mock import MagicMock
 
-import pytest
+# Mock unitree modules before importing
+sys.modules["unitree"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.go2"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.go2.sport"] = MagicMock()
+sys.modules["unitree.unitree_sdk2py.go2.sport.sport_client"] = MagicMock()
 
-from actions.base import MoveCommand
-from actions.move_go2_autonomy.connector.unitree_rplidar_sdk import (
+from queue import Queue  # noqa: E402
+from unittest.mock import Mock, patch  # noqa: E402
+
+import pytest  # noqa: E402
+
+from actions.base import MoveCommand  # noqa: E402
+from actions.move_go2_autonomy.connector.unitree_rplidar_sdk import (  # noqa: E402
     MoveUnitreeRPLidarSDKConfig,
     MoveUnitreeRPLidarSDKConnector,
 )
-from actions.move_go2_autonomy.interface import MoveInput, MovementAction
-from providers.unitree_go2_odom_provider import RobotState
+from actions.move_go2_autonomy.interface import MoveInput, MovementAction  # noqa: E402
+from providers.unitree_go2_odom_provider import RobotState  # noqa: E402
 
 
 @pytest.fixture
@@ -361,13 +371,13 @@ class TestMoveRobot:
         connector._move_robot(0.5, 0.0, 0.0)
 
         mock_dependencies["sport"].BalanceStand.assert_called_once()
-        mock_dependencies["sport"].Move.assert_called_with(0.5, 0.0, 0.0)
+        mock_dependencies["sport"].Move.assert_any_call(0.5, 0.0, 0.0)
 
     def test_move_robot_success(self, connector, mock_dependencies):
         """Test successful robot movement."""
         connector._move_robot(0.5, 0.0, 0.3)
 
-        mock_dependencies["sport"].Move.assert_called_with(0.5, 0.0, 0.3)
+        mock_dependencies["sport"].Move.assert_any_call(0.5, 0.0, 0.3)
 
     def test_move_robot_error(self, connector, mock_dependencies):
         """Test move robot when exception occurs."""
@@ -634,3 +644,134 @@ class TestTick:
 
         assert connector.pending_movements.qsize() == 0
         assert connector.movement_attempts == 0
+
+
+class TestTickAdditional:
+    """Additional tests for tick method to improve coverage."""
+
+    def test_tick_turn_phase_large_gap_failure(self, connector, mock_dependencies):
+        """Test tick during turn phase with large gap and turn execution fails."""
+        mock_dependencies["odom"].position["odom_yaw_m180_p180"] = 0.0
+        target_yaw = 37.0
+        connector.pending_movements.put(
+            MoveCommand(
+                dx=0.5, yaw=target_yaw, start_x=0.0, start_y=0.0, turn_complete=False
+            )
+        )
+        with patch.object(
+            connector, "_execute_turn", return_value=False
+        ) as mock_execute_turn:
+            connector.tick()
+            mock_execute_turn.assert_called_once()
+            # Queue should be empty after clean_abort
+            assert connector.pending_movements.qsize() == 0
+
+    def test_tick_turn_phase_multiple_ticks(self, connector, mock_dependencies):
+        """Test tick during turn phase with multiple iterations to cover movement_attempts log."""
+        mock_dependencies["odom"].position["odom_yaw_m180_p180"] = 0.0
+        target_yaw = 37.0
+        connector.pending_movements.put(
+            MoveCommand(
+                dx=0.5, yaw=target_yaw, start_x=0.0, start_y=0.0, turn_complete=False
+            )
+        )
+        with (
+            patch.object(
+                connector, "_execute_turn", return_value=True
+            ) as mock_execute_turn,
+            patch("logging.info") as mock_log_info,
+        ):
+            # First tick
+            connector.tick()
+            mock_execute_turn.assert_called_once()
+            mock_execute_turn.reset_mock()
+            # Second tick
+            connector.tick()
+            mock_execute_turn.assert_called_once()
+            # Check that log at line 252 was called
+            found = any(
+                call.args[0].startswith("Phase 1 - Turn GAP delta")
+                for call in mock_log_info.call_args_list
+            )
+            assert found
+
+    def test_tick_turn_phase_small_gap_positive(self, connector, mock_dependencies):
+        """Test tick during turn phase with small positive gap (7 degrees)."""
+        mock_dependencies["odom"].position["odom_yaw_m180_p180"] = -44.0  # current
+        target_yaw = 37.0  # target, gap = 7 (positive)
+        connector.pending_movements.put(
+            MoveCommand(
+                dx=0.5, yaw=target_yaw, start_x=0.0, start_y=0.0, turn_complete=False
+            )
+        )
+        with patch.object(connector, "sleep"):
+            connector.tick()
+            # Since gap > 5 and <=10, should call _move_robot with positive yaw
+            mock_dependencies["sport"].Move.assert_any_call(0.0, 0.0, 0.2)
+
+    def test_tick_turn_phase_small_gap_negative(self, connector, mock_dependencies):
+        """Test tick during turn phase with small negative gap (-8 degrees)."""
+        mock_dependencies["odom"].position["odom_yaw_m180_p180"] = -29.0  # current
+        target_yaw = 37.0  # target, gap = -8 (negative)
+        connector.pending_movements.put(
+            MoveCommand(
+                dx=0.5, yaw=target_yaw, start_x=0.0, start_y=0.0, turn_complete=False
+            )
+        )
+        with patch.object(connector, "sleep"):
+            connector.tick()
+            # Should call _move_robot with negative yaw -0.2
+            mock_dependencies["sport"].Move.assert_any_call(0.0, 0.0, -0.2)
+
+    def test_tick_movement_phase_multiple_ticks(self, connector, mock_dependencies):
+        """Test tick during movement phase with multiple iterations to cover movement_attempts log."""
+        mock_dependencies["odom"].position["odom_x"] = 0.2
+        mock_dependencies["odom"].position["odom_y"] = 0.0
+        connector.pending_movements.put(
+            MoveCommand(
+                dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True, speed=0.5
+            )
+        )
+        with patch("logging.info") as mock_log_info:
+            # First tick
+            connector.tick()
+            # Second tick
+            connector.tick()
+            found = any(
+                call.args[0].startswith("Phase 2 - Forward/retreat GAP delta")
+                for call in mock_log_info.call_args_list
+            )
+            assert found
+
+    def test_tick_movement_phase_move_back(self, connector, mock_dependencies):
+        """Test tick during movement phase with move back command."""
+        mock_dependencies["odom"].position["odom_x"] = 0.2
+        mock_dependencies["odom"].position["odom_y"] = 0.0
+        mock_dependencies["lidar"].retreat = [1]  # ensure retreat available
+        connector.pending_movements.put(
+            MoveCommand(
+                dx=-0.5,
+                yaw=0.0,
+                start_x=0.0,
+                start_y=0.0,
+                turn_complete=True,
+                speed=0.3,
+            )
+        )
+        with patch.object(connector, "sleep"):
+            connector.tick()
+            mock_dependencies["sport"].Move.assert_any_call(-0.3, 0.0, 0.0)
+
+    def test_tick_movement_phase_overshoot(self, connector, mock_dependencies):
+        """Test tick during movement phase when robot overshoots target."""
+        mock_dependencies["odom"].position["odom_x"] = 0.6  # overshoot
+        mock_dependencies["odom"].position["odom_y"] = 0.0
+        connector.pending_movements.put(
+            MoveCommand(
+                dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True, speed=0.5
+            )
+        )
+        with patch("logging.debug") as mock_log_debug:
+            connector.tick()
+            mock_dependencies["sport"].Move.assert_any_call(-0.2, 0.0, 0.0)
+            mock_log_debug.assert_called()

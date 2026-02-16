@@ -1,8 +1,14 @@
+import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
+# Mock ubtech modules before imports
+sys.modules["ubtech"] = MagicMock()
+sys.modules["ubtech.ubtechapi"] = MagicMock()
 
-from providers.ubtech_vlm_provider import UbtechVLMProvider
+
+import pytest  # noqa: E402
+
+from providers.ubtech_vlm_provider import UbtechVLMProvider  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
