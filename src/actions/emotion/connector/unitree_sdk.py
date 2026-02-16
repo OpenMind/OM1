@@ -4,7 +4,14 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.emotion.interface import EmotionInput
-from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
+
+try:
+    from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
+except ImportError:
+    logging.warning(
+        "Unitree SDK or CycloneDDS not found. AudioClient will not be available."
+    )
+    AudioClient = None  # type: ignore
 
 
 class EmotionUnitreeConfig(ActionConfig):
