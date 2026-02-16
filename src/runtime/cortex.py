@@ -216,7 +216,7 @@ class ModeCortexRuntime:
             try:
                 await self._initialize_mode(from_mode)
                 await self._start_orchestrators()
-                self.mode_manager.state.current_mode = from_mode
+                self.mode_manager.revert_transition_state()
                 logging.info(f"Successfully recovered to mode: {from_mode}")
             except Exception as recovery_error:
                 logging.critical(

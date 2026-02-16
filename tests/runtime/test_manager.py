@@ -1530,3 +1530,117 @@ class TestWildcardCooldown:
         manager.transition_cooldowns["calm->alert"] = time.time()
         result = manager._can_transition(specific_rule)
         assert result is False
+
+
+class TestRevertTransitionState:
+    """Tests that revert_transition_state correctly restores all mode state
+    fields to their pre-transition values using the saved snapshot."""
+
+    @pytest.fixture
+    def transition_manager(self):
+        """ModeManager with two modes for testing state rollback."""
+        mode_configs = {
+            "calm": ModeConfig(
+                version="v1.0.0",
+                name="calm",
+                display_name="Calm",
+                description="Calm mode",
+                system_prompt_base="Calm mode",
+            ),
+            "alert": ModeConfig(
+                version="v1.0.0",
+                name="alert",
+                display_name="Alert",
+                description="Alert mode",
+                system_prompt_base="Alert mode",
+            ),
+        }
+
+        system_config = ModeSystemConfig(
+            version="v1.0.2",
+            name="test",
+            default_mode="calm",
+            config_name="test_config",
+            api_key="test",
+        )
+        system_config.modes = mode_configs
+        system_config.transition_rules = []
+
+        with (
+            patch("runtime.manager.open_zenoh_session"),
+            patch("runtime.manager.ModeManager._load_mode_state"),
+        ):
+            return ModeManager(system_config)
+
+    def test_reverts_all_state_fields(self, transition_manager):
+        """All state fields should be restored to their snapshot values."""
+        manager = transition_manager
+
+        original_previous = manager.state.previous_mode
+        original_start_time = manager.state.mode_start_time
+        original_transition_time = manager.state.last_transition_time
+        original_history = list(manager.state.transition_history)
+
+        manager._pre_transition_snapshot = {
+            "current_mode": "calm",
+            "previous_mode": original_previous,
+            "mode_start_time": original_start_time,
+            "last_transition_time": original_transition_time,
+            "transition_history_len": len(original_history),
+        }
+
+        manager.state.current_mode = "alert"
+        manager.state.previous_mode = "calm"
+        manager.state.mode_start_time = time.time() + 100
+        manager.state.last_transition_time = time.time() + 100
+        manager.state.transition_history.append("calm->alert:test")
+
+        manager.revert_transition_state()
+
+        assert manager.state.current_mode == "calm"
+        assert manager.state.previous_mode == original_previous
+        assert manager.state.mode_start_time == original_start_time
+        assert manager.state.last_transition_time == original_transition_time
+        assert manager.state.transition_history == original_history
+
+    def test_clears_snapshot_after_revert(self, transition_manager):
+        """Snapshot should be cleared after a successful revert."""
+        manager = transition_manager
+
+        manager._pre_transition_snapshot = {
+            "current_mode": "calm",
+            "previous_mode": None,
+            "mode_start_time": manager.state.mode_start_time,
+            "last_transition_time": manager.state.last_transition_time,
+            "transition_history_len": 0,
+        }
+
+        manager.revert_transition_state()
+
+        assert manager._pre_transition_snapshot is None
+
+    def test_no_snapshot_logs_warning(self, transition_manager, caplog):
+        """Calling revert with no snapshot should log a warning and not crash."""
+        manager = transition_manager
+        manager._pre_transition_snapshot = None
+
+        with caplog.at_level(logging.WARNING):
+            manager.revert_transition_state()
+
+        assert "No pre-transition snapshot" in caplog.text
+
+    def test_persists_reverted_state(self, transition_manager):
+        """revert_transition_state should call _save_mode_state to persist."""
+        manager = transition_manager
+
+        manager._pre_transition_snapshot = {
+            "current_mode": "calm",
+            "previous_mode": None,
+            "mode_start_time": manager.state.mode_start_time,
+            "last_transition_time": manager.state.last_transition_time,
+            "transition_history_len": 0,
+        }
+
+        with patch.object(manager, "_save_mode_state") as mock_save:
+            manager.revert_transition_state()
+            mock_save.assert_called_once()

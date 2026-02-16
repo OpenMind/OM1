@@ -235,6 +235,7 @@ class TestModeCortexRuntime:
 
             mock_init.assert_called_once_with("from_mode")
             mock_start.assert_called_once()
+            mocks["mode_manager"].revert_transition_state.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_stop_current_orchestrators(self, cortex_runtime):
@@ -867,9 +868,7 @@ class TestModeTransitionRecovery:
             assert (
                 call_log[-1] == "start"
             ), "Orchestrators should be restarted after recovery"
-            assert (
-                mock_manager.state.current_mode == "default"
-            ), "Mode manager state should be reverted to previous mode"
+            mock_manager.revert_transition_state.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_start_failure_restarts_previous_mode(self, mock_system_config):
@@ -910,6 +909,7 @@ class TestModeTransitionRecovery:
             assert (
                 runtime._start_orchestrators.call_count >= 2
             ), "Should attempt to restart orchestrators after recovery"
+            mock_manager.revert_transition_state.assert_called_once()
 
 
 class TestHotReloadRecovery:
