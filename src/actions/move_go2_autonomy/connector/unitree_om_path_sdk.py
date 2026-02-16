@@ -10,8 +10,8 @@ from pydantic import Field
 from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_go2_autonomy.interface import MoveInput
 from providers.face_presence_provider import FacePresenceProvider
-from providers.odom_provider import OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
+from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
 from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
@@ -98,7 +98,7 @@ class MoveUnitreeOMPathSDKConnector(
         unitree_ethernet = self.config.unitree_ethernet
         if unitree_ethernet is None:
             raise ValueError("unitree_ethernet must be specified in the config")
-        self.odom = OdomProvider(channel=unitree_ethernet)
+        self.odom = UnitreeGo2OdomProvider(channel=unitree_ethernet)
 
         # Zenoh topic for AI control status
         self.ai_status_request = "om/ai/request"
@@ -148,10 +148,9 @@ class MoveUnitreeOMPathSDKConnector(
             logging.info("AI Control is disabled - disregarding AI command")
             return
 
-        if self.unitree_go2_state.state_code == 1002:
-            if self.sport_client:
-                logging.info("Robot is in jointLock state - issuing BalanceStand()")
-                self.sport_client.BalanceStand()
+        if self.unitree_go2_state.state_code == 1002 and self.sport_client:
+            logging.info("Robot is in jointLock state - issuing BalanceStand()")
+            self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
             logging.info(
@@ -160,13 +159,10 @@ class MoveUnitreeOMPathSDKConnector(
             return
 
         # fallback to the odom provider
-        if not self.unitree_go2_state.state_code:
-            if self.odom.position["moving"]:
-                # for example due to a teleops or game controller command
-                logging.info(
-                    "Disregard new AI movement command - robot is already moving"
-                )
-                return
+        if not self.unitree_go2_state.state_code and self.odom.position["moving"]:
+            # for example due to a teleops or game controller command
+            logging.info("Disregard new AI movement command - robot is already moving")
+            return
 
         if self.pending_movements.qsize() > 0:
             logging.info("Movement in progress: disregarding new AI command")
@@ -453,7 +449,7 @@ class MoveUnitreeOMPathSDKConnector(
                 yaw=target_yaw,
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
-                turn_complete=True if path_angle == 0 else False,
+                turn_complete=path_angle == 0,
             )
         )
 

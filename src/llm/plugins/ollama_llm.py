@@ -49,13 +49,6 @@ class OllamaLLM(LLM[R]):
 
     This class implements the LLM interface for local Ollama models,
     providing privacy-focused, cost-free, offline-capable inference.
-
-    Parameters
-    ----------
-    config : OllamaLLMConfig
-        Configuration object containing Ollama settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation.
     """
 
     def __init__(
@@ -119,7 +112,7 @@ class OllamaLLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Send a prompt to Ollama and get a structured response.
@@ -128,7 +121,7 @@ class OllamaLLM(LLM[R]):
         ----------
         prompt : str
             The input prompt to send to the model.
-        messages : List[Dict[str, str]]
+        messages : List[Dict[str, str]], optional
             List of message dictionaries for conversation history.
 
         Returns
@@ -137,6 +130,8 @@ class OllamaLLM(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
+        if messages is None:
+            messages = []
         try:
             logging.info(f"Ollama input: {prompt}")
             logging.debug(f"Ollama messages: {messages}")

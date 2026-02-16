@@ -15,6 +15,7 @@ services:
       - CYCLONEDDS_URI=file:///cyclonedds/cyclonedds.xml
       - CMAKE_PREFIX_PATH=/app/cyclonedds/install
       - OM_API_KEY=${OM_API_KEY}
+      - OM1_COMMAND=${OM1_COMMAND:-unitree_go2_modes}
       - VIRTUAL_ENV=/app/OM1/.venv
       - PATH=/app/OM1/.venv/bin:$PATH
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}

@@ -95,3 +95,21 @@ def test_formatted_latest_buffer():
         assert isinstance(result, str)
         assert "Tesla status update" in result
         assert len(sensor.messages) == 1
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_dedup():
+    """Test raw_to_text deduplicates identical messages."""
+    with (
+        patch("inputs.plugins.dimo_tesla.IOProvider"),
+        patch("inputs.plugins.dimo_tesla.DIMO"),
+    ):
+        config = DIMOTeslaConfig()
+        sensor = DIMOTesla(config=config)
+
+        await sensor.raw_to_text("Speed: 60 km/h")
+        await sensor.raw_to_text("Speed: 60 km/h")
+        assert len(sensor.messages) == 1
+
+        await sensor.raw_to_text("Speed: 80 km/h")
+        assert len(sensor.messages) == 2

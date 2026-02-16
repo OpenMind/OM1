@@ -95,14 +95,17 @@ class LLM(T.Generic[R]):
 
     Generic interface for implementing LLM clients with type-safe responses.
 
+    Type Parameters
+    ---------------
+    R
+        Type specification for model responses.
+
     Parameters
     ----------
-    output_model : Type[R]
-        Type specification for model responses
-    config : LLMConfig, optional
-        Configuration settings for the LLM
+    config : LLMConfig
+        Configuration settings for the LLM.
     available_actions : list, optional
-        List of available actions for function calling
+        List of available actions for function calling.
     """
 
     def __init__(
@@ -131,7 +134,7 @@ class LLM(T.Generic[R]):
         self._skip_state_management: bool = False
 
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Send a prompt to the LLM and receive a typed response.
@@ -274,7 +277,7 @@ def load_llm(
             raise ValueError(f"'{class_name}' is not a valid LLM subclass")
 
         config_class = None
-        for _, obj in module.__dict__.items():
+        for obj in module.__dict__.values():
             if (
                 isinstance(obj, type)
                 and issubclass(obj, LLMConfig)

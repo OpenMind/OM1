@@ -45,6 +45,7 @@ class TestKokoroTTSProviderInit:
         assert provider._voice_id == "af_bella"
         assert provider._model_id == "kokoro"
         assert provider._output_format == "pcm"
+        assert provider._rate == 24000
         assert provider._enable_tts_interrupt is False
 
         mock_audio_stream.assert_called_once_with(
@@ -74,6 +75,7 @@ class TestKokoroTTSProviderInit:
         assert provider._voice_id == "custom_voice"
         assert provider._model_id == "custom_model"
         assert provider._output_format == "wav"
+        assert provider._rate == 48000
         assert provider._enable_tts_interrupt is True
 
         mock_audio_stream.assert_called_once_with(
@@ -125,6 +127,16 @@ class TestKokoroTTSProviderConfigure:
         # Should stop and recreate stream
         assert provider.running is False
         provider._audio_stream.start.assert_called()
+
+    def test_configure_restart_needed_rate_change(self, provider, mock_audio_stream):
+        """Test restart is triggered when rate changes."""
+        provider.running = True
+
+        with patch.object(provider, "stop") as mock_stop:
+            provider.configure(rate=48000)
+            mock_stop.assert_called_once()
+
+        assert provider._rate == 48000
 
 
 class TestKokoroTTSProviderCallbacks:

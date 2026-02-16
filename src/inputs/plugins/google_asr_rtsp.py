@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import time
-from queue import Empty, Queue
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -90,8 +89,8 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         self.descriptor_for_LLM = "Voice"
         self.io_provider = IOProvider()
 
-        # Buffer for storing messages
-        self.message_buffer: Queue[str] = Queue()
+        # Message buffer for incoming ASR messages
+        self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
 
         # Initialize ASR provider
         api_key = self.config.api_key
@@ -159,7 +158,7 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
                 if len(asr_reply.split()) > 1:
-                    self.message_buffer.put(asr_reply)
+                    self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
             pass
@@ -173,11 +172,11 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         Optional[str]
             Message from the buffer if available, None otherwise
         """
-        await asyncio.sleep(0.1)
         try:
             message = self.message_buffer.get_nowait()
             return message
-        except Empty:
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(0.01)
             return None
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
