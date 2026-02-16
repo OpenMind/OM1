@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import serial
 
+from providers.fabric_map_provider import RFDataRaw
 from providers.gps_provider import GpsProvider
 
 
@@ -99,3 +100,64 @@ def test_data_properties(mock_serial):
     assert provider.yaw_mag_0_360 == 0.0
     assert provider.yaw_mag_cardinal == ""
     assert isinstance(provider.ble_scan, list)
+
+
+@pytest.mark.parametrize(
+    "degrees, expected",
+    [
+        (0.0, "North"),
+        (22.4, "North"),
+        (22.5, "North East"),
+        (45.0, "North East"),
+        (90.0, "East"),
+        (135.0, "South East"),
+        (180.0, "South"),
+        (225.0, "South West"),
+        (270.0, "West"),
+        (315.0, "North West"),
+        (359.9, "North"),
+        (360.0, "North"),
+        (382.5, "North East"),
+    ],
+)
+def test_compass_heading_to_direction(mock_serial, degrees, expected):
+    """Test compass heading to cardinal direction conversion."""
+    provider = GpsProvider("/dev/ttyUSB0")
+    assert provider.compass_heading_to_direction(degrees) == expected
+
+
+def test_parse_ble_triang_string_valid(mock_serial):
+    """Test parsing valid BLE triangulation string with multiple devices."""
+    provider = GpsProvider("/dev/ttyUSB0")
+    input_str = "BLE:AABBCCDDEEFF:-50:0102 112233445566:-70:ab"
+    result = provider.parse_ble_triang_string(input_str)
+
+    assert len(result) == 2
+    assert isinstance(result[0], RFDataRaw)
+    assert result[0].address == "AABBCCDDEEFF"
+    assert result[0].rssi == -50
+    assert result[0].packet == "0102"
+    assert result[1].address == "112233445566"
+    assert result[1].rssi == -70
+    assert result[1].packet == "ab"
+
+
+def test_parse_ble_triang_string_no_prefix(mock_serial):
+    """Test parsing string without BLE: prefix returns empty list."""
+    provider = GpsProvider("/dev/ttyUSB0")
+    result = provider.parse_ble_triang_string("AABBCCDDEEFF:-50:0102")
+    assert result == []
+
+
+def test_parse_ble_triang_string_empty(mock_serial):
+    """Test parsing empty BLE string returns empty list."""
+    provider = GpsProvider("/dev/ttyUSB0")
+    result = provider.parse_ble_triang_string("BLE:")
+    assert result == []
+
+
+def test_parse_ble_triang_string_invalid_format(mock_serial):
+    """Test parsing BLE string with invalid format returns empty list."""
+    provider = GpsProvider("/dev/ttyUSB0")
+    result = provider.parse_ble_triang_string("BLE:not-valid-data")
+    assert result == []

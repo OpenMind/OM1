@@ -64,7 +64,8 @@ class ZenohPublisherProvider:
 
         Parameters
         ----------
-        msg : The message to be published.
+        msg : dict
+            The message to be published.
         """
         # Attempt to write the message with a timeout of 0.5 seconds
 

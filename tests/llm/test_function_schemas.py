@@ -8,6 +8,7 @@ from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 from llm.function_schemas import (
     convert_function_calls_to_actions,
     generate_function_schema_from_action,
+    generate_function_schemas_from_actions,
 )
 
 
@@ -443,3 +444,76 @@ def test_convert_complex_nested_json_in_multiple_params():
     assert value["settings"]["speed"] == 1.5
     assert value["settings"]["direction"] == "north"
     assert value["enabled"] is True
+
+
+def test_generate_function_schemas_from_actions_valid(agent_action):
+    """Test generating schemas from valid actions list."""
+    agent_action.exclude_from_prompt = False
+    schemas = generate_function_schemas_from_actions([agent_action])
+
+    assert len(schemas) == 1
+    assert schemas[0]["type"] == "function"
+    assert schemas[0]["function"]["name"] == "test_llm_label"
+
+
+def test_generate_function_schemas_excludes_prompt(agent_action):
+    """Test that actions with exclude_from_prompt=True are skipped."""
+    agent_action.exclude_from_prompt = True
+    schemas = generate_function_schemas_from_actions([agent_action])
+
+    assert len(schemas) == 0
+
+
+def test_generate_function_schemas_mixed(test_connector):
+    """Test with mix of included and excluded actions."""
+    action_included = AgentAction(
+        name="move",
+        llm_label="move",
+        interface=SampleInterface,
+        connector=test_connector,
+        exclude_from_prompt=False,
+    )
+    action_excluded = AgentAction(
+        name="internal",
+        llm_label="internal",
+        interface=SampleInterface,
+        connector=test_connector,
+        exclude_from_prompt=True,
+    )
+
+    schemas = generate_function_schemas_from_actions([action_included, action_excluded])
+
+    assert len(schemas) == 1
+    assert schemas[0]["function"]["name"] == "move"
+
+
+def test_generate_function_schemas_empty_list():
+    """Test with empty actions list."""
+    schemas = generate_function_schemas_from_actions([])
+    assert schemas == []
+
+
+def test_generate_function_schemas_error_handling(test_connector):
+    """Test error handling when schema generation fails for one action."""
+    good_action = AgentAction(
+        name="move",
+        llm_label="move",
+        interface=SampleInterface,
+        connector=test_connector,
+        exclude_from_prompt=False,
+    )
+
+    # Create a bad action that will cause an error during schema generation
+    bad_action = AgentAction(
+        name="bad",
+        llm_label="bad",
+        interface=None,  # type: ignore[arg-type]
+        connector=test_connector,
+        exclude_from_prompt=False,
+    )
+
+    schemas = generate_function_schemas_from_actions([bad_action, good_action])
+
+    # Should still include the good action's schema
+    assert len(schemas) == 1
+    assert schemas[0]["function"]["name"] == "move"

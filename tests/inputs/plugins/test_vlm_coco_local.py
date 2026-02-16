@@ -91,3 +91,16 @@ def test_formatted_latest_buffer(vlm_coco_local):
 def test_formatted_latest_buffer_empty(vlm_coco_local):
     vlm_coco_local.messages = []
     assert vlm_coco_local.formatted_latest_buffer() is None
+
+
+@pytest.mark.asyncio
+async def test_poll_returns_none_on_failed_frame_read(
+    mock_model, mock_check_webcam, mock_cv2_video_capture
+):
+    """Test that _poll returns None when cap.read() fails."""
+    mock_cv2_video_capture.read.return_value = (False, None)
+    config = VLM_COCO_LocalConfig(camera_index=0)
+    sensor = VLM_COCO_Local(config=config)
+
+    result = await sensor._poll()
+    assert result is None

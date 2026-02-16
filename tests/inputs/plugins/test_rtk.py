@@ -63,3 +63,45 @@ def test_formatted_latest_buffer():
         assert "// START" in result
         assert "// END" in result
         assert len(sensor.messages) == 0
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_valid_dict():
+    """Test raw_to_text with valid GPS dict adds formatted message."""
+    with (
+        patch("inputs.plugins.rtk.IOProvider"),
+        patch("inputs.plugins.rtk.RtkProvider"),
+    ):
+        config = SensorConfig()
+        sensor = Rtk(config=config)
+
+        gps_data = {
+            "rtk_lat": 37.7749,
+            "rtk_lon": -122.4194,
+            "rtk_alt": 10.0,
+            "rtk_qua": 4,
+        }
+        await sensor.raw_to_text(gps_data)
+        assert len(sensor.messages) == 1
+        assert "37.7749 North" in sensor.messages[0].message
+        assert "122.4194 West" in sensor.messages[0].message
+
+
+@pytest.mark.asyncio
+async def test_raw_to_text_zero_quality():
+    """Test raw_to_text with zero quality does not add message."""
+    with (
+        patch("inputs.plugins.rtk.IOProvider"),
+        patch("inputs.plugins.rtk.RtkProvider"),
+    ):
+        config = SensorConfig()
+        sensor = Rtk(config=config)
+
+        gps_data = {
+            "rtk_lat": 37.7749,
+            "rtk_lon": -122.4194,
+            "rtk_alt": 10.0,
+            "rtk_qua": 0,
+        }
+        await sensor.raw_to_text(gps_data)
+        assert len(sensor.messages) == 0
