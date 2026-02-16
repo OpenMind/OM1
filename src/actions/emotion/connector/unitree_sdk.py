@@ -61,7 +61,9 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
                 f"Emotion system using {self.unitree_ethernet} as the network Ethernet adapter"
             )
             if AudioClient is None:
-                logging.warning("AudioClient unavailable because Unitree SDK is missing.")
+                logging.warning(
+                    "AudioClient unavailable because Unitree SDK is missing."
+                )
                 return
             self.ao_client = AudioClient()
             self.ao_client.SetTimeout(10.0)
