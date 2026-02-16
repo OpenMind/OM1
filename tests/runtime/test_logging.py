@@ -35,6 +35,15 @@ class TestSetupLogging:
         setup_logging("test_config", log_level="DEBUG")
         assert logging.getLogger().level == logging.DEBUG
 
+    def test_invalid_level_warns_and_falls_back_to_info(self):
+        with patch("runtime.logging.logging.warning") as mock_warning:
+            setup_logging("test_config", log_level="VERBOSE")
+            assert logging.getLogger().level == logging.INFO
+            mock_warning.assert_called_once_with(
+                "Invalid log level '%s'; falling back to INFO.",
+                "VERBOSE",
+            )
+
     def test_with_config_object(self):
         config_obj = LoggingConfig(log_level="WARNING", log_to_file=True)
         setup_logging("test_config", logging_config=config_obj)

@@ -52,7 +52,10 @@ def setup_logging(
         log_level = logging_config.log_level
         log_to_file = logging_config.log_to_file
 
-    level = getattr(logging, log_level.upper(), logging.INFO)
+    requested_level = (log_level or "INFO").upper()
+    allowed_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+    invalid_log_level = requested_level not in allowed_levels
+    level = getattr(logging, requested_level, logging.INFO)
 
     logging.getLogger().handlers.clear()
 
@@ -80,6 +83,12 @@ def setup_logging(
         handlers.append(file_handler)
 
     logging.basicConfig(level=level, handlers=handlers)
+
+    if invalid_log_level:
+        logging.warning(
+            "Invalid log level '%s'; falling back to INFO.",
+            log_level,
+        )
 
 
 def get_logging_config() -> LoggingConfig:
