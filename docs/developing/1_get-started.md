@@ -134,6 +134,8 @@ Run the following command to start the Spot Agent:
 uv run src/run.py spot
 ```
 
+> **macOS note:** If Spot cannot read webcam input, grant Camera access to your terminal/Python process in **System Settings → Privacy & Security → Camera**.
+
 > **Note:** Agent configuration names are only required when switching between different agents. Once an agent has been run, it becomes the default for subsequent executions.
 
 Spot is just an example agent configuration.
