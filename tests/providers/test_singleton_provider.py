@@ -54,3 +54,78 @@ def test_singleton_thread_safety():
     first_instance = instances[0]
     for inst in instances:
         assert inst is first_instance
+
+
+def test_singleton_with_arguments():
+    """Test singleton with constructor arguments - first call wins."""
+
+    @singleton
+    class ConfigManager:
+        def __init__(self, config_path):
+            self.config_path = config_path
+
+    config1 = ConfigManager("/path/to/config1")
+    config2 = ConfigManager("/path/to/config2")  # Should be ignored
+
+    assert config1 is config2
+    assert config1.config_path == "/path/to/config1"  # First call's value
+
+    # Cleanup
+    ConfigManager.reset()  # type: ignore
+
+
+def test_singleton_with_kwargs():
+    """Test singleton with keyword arguments."""
+
+    @singleton
+    class Settings:
+        def __init__(self, name="default", count=0):
+            self.name = name
+            self.count = count
+
+    settings = Settings(name="test", count=5)
+
+    assert settings.name == "test"
+    assert settings.count == 5
+
+    # Cleanup
+    Settings.reset()  # type: ignore
+
+
+def test_singleton_class_attribute():
+    """Test that singleton exposes the original class via _singleton_class."""
+
+    @singleton
+    class ServiceManager:
+        pass
+
+    assert hasattr(ServiceManager, "_singleton_class")
+    assert ServiceManager._singleton_class.__name__ == "ServiceManager"  # type: ignore
+
+    # Cleanup
+    ServiceManager.reset()  # type: ignore
+
+
+def test_multiple_singleton_classes_independent():
+    """Test that different singleton classes remain independent."""
+
+    @singleton
+    class CacheA:
+        def __init__(self):
+            self.label = "A"
+
+    @singleton
+    class CacheB:
+        def __init__(self):
+            self.label = "B"
+
+    a = CacheA()
+    b = CacheB()
+
+    assert a is not b
+    assert a.label == "A"
+    assert b.label == "B"
+
+    # Cleanup
+    CacheA.reset()  # type: ignore
+    CacheB.reset()  # type: ignore
