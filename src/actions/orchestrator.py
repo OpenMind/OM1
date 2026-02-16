@@ -355,7 +355,17 @@ class ActionOrchestrator:
                 if hasattr(expected_type, "__mro__") and any(
                     base.__name__ == "Enum" for base in expected_type.__mro__
                 ):
-                    converted_params[key] = expected_type(value)
+                    try:
+                        converted_params[key] = expected_type(value)
+                    except (ValueError, TypeError) as e:
+                        logging.warning(
+                            "Invalid enum value '%s' for parameter '%s' in action '%s': %s",
+                            value,
+                            key,
+                            agent_action.llm_label,
+                            e,
+                        )
+                        converted_params[key] = value
                 elif expected_type is float:
                     converted_params[key] = float(value)
                 elif expected_type is int:

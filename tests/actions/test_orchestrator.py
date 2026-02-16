@@ -758,6 +758,34 @@ class TestLLMResultParser:
         assert len(MockConnector.execution_order) == 1
 
     @pytest.mark.asyncio
+    async def test_parse_invalid_enum_value_falls_back_without_crash(
+        self, mock_runtime_config, create_typed_action
+    ):
+        """Test invalid enum value is handled gracefully and does not crash action flow."""
+
+        class Direction(Enum):
+            NORTH = "north"
+            SOUTH = "south"
+
+        @dataclass
+        class EnumInput:
+            direction: Direction
+
+        action = create_typed_action("move", "move", EnumInput)
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        json_value = json.dumps({"direction": "invalid"})
+        actions = [Action(type="move", value=json_value)]
+
+        await orchestrator.promise(actions)
+        done, pending = await orchestrator.flush_promises()
+
+        assert len(done) == 1
+        assert len(pending) == 0
+        assert len(MockConnector.execution_order) == 1
+
+    @pytest.mark.asyncio
     async def test_parse_mixed_types(self, mock_runtime_config, create_typed_action):
         """Test parsing mixed parameter types."""
 
