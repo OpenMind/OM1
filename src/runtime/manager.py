@@ -370,7 +370,10 @@ class ModeManager:
         """
         current_time = time.time()
 
-        transition_key = f"{rule.from_mode}->{rule.to_mode}"
+        # Use actual current mode for cooldown key to match what
+        # _execute_transition sets (it always uses the real from_mode).
+        from_mode = self.state.current_mode if rule.from_mode == "*" else rule.from_mode
+        transition_key = f"{from_mode}->{rule.to_mode}"
         if transition_key in self.transition_cooldowns:
             if (
                 current_time - self.transition_cooldowns[transition_key]

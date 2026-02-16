@@ -211,8 +211,8 @@ class TestModeCortexRuntime:
             await runtime._on_mode_transition("from_mode", "to_mode")
 
     @pytest.mark.asyncio
-    async def test_on_mode_transition_exception(self, cortex_runtime):
-        """Test mode transition with exception handling."""
+    async def test_on_mode_transition_exception_triggers_recovery(self, cortex_runtime):
+        """Test mode transition attempts recovery on failure."""
         runtime, mocks = cortex_runtime
 
         mock_from_mode = Mock()
@@ -222,11 +222,19 @@ class TestModeCortexRuntime:
             "to_mode": mock_to_mode,
         }
 
-        with patch.object(
-            runtime, "_stop_current_orchestrators", side_effect=Exception("Test error")
+        with (
+            patch.object(
+                runtime,
+                "_stop_current_orchestrators",
+                side_effect=Exception("Test error"),
+            ),
+            patch.object(runtime, "_initialize_mode") as mock_init,
+            patch.object(runtime, "_start_orchestrators") as mock_start,
         ):
-            with pytest.raises(Exception, match="Test error"):
-                await runtime._on_mode_transition("from_mode", "to_mode")
+            await runtime._on_mode_transition("from_mode", "to_mode")
+
+            mock_init.assert_called_once_with("from_mode")
+            mock_start.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_stop_current_orchestrators(self, cortex_runtime):
@@ -805,3 +813,188 @@ class TestHotReloadMultiToSingle:
 
             assert len(new_single_config.modes) == 1
             assert "single_mode" in new_single_config.modes
+
+
+class TestModeTransitionRecovery:
+    """Tests that _on_mode_transition recovers by falling back to the
+    previous mode when initialization or startup of the new mode fails."""
+
+    @pytest.mark.asyncio
+    async def test_init_failure_restarts_previous_mode(self, mock_system_config):
+        """After _initialize_mode fails, the runtime should recover by
+        restarting the previous mode's orchestrators."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(mock_system_config, "test_config")
+            runtime.mode_manager = mock_manager
+
+            call_log = []
+
+            async def log_stop():
+                call_log.append("stop")
+
+            async def log_init(mode):
+                call_log.append(f"init:{mode}")
+                if mode == "advanced":
+                    raise Exception("LLM plugin not found")
+
+            async def log_start():
+                call_log.append("start")
+
+            runtime._stop_current_orchestrators = AsyncMock(side_effect=log_stop)
+            runtime._initialize_mode = AsyncMock(side_effect=log_init)
+            runtime._start_orchestrators = AsyncMock(side_effect=log_start)
+
+            await runtime._on_mode_transition("default", "advanced")
+
+            assert "stop" in call_log
+            assert "init:advanced" in call_log
+            assert (
+                "init:default" in call_log
+            ), "Runtime should fall back to previous mode after init failure"
+            assert (
+                call_log[-1] == "start"
+            ), "Orchestrators should be restarted after recovery"
+
+    @pytest.mark.asyncio
+    async def test_start_failure_restarts_previous_mode(self, mock_system_config):
+        """After _start_orchestrators fails, the runtime should recover by
+        reinitializing and restarting the previous mode."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(mock_system_config, "test_config")
+            runtime.mode_manager = mock_manager
+
+            start_call_count = 0
+
+            async def fail_first_start():
+                nonlocal start_call_count
+                start_call_count += 1
+                if start_call_count == 1:
+                    raise Exception("Failed to start input orchestrator")
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock(side_effect=fail_first_start)
+
+            await runtime._on_mode_transition("default", "advanced")
+
+            assert (
+                runtime._initialize_mode.call_count >= 2
+            ), "Should reinitialize with previous mode after start failure"
+            assert (
+                runtime._start_orchestrators.call_count >= 2
+            ), "Should attempt to restart orchestrators after recovery"
+
+
+class TestHotReloadRecovery:
+    """Tests that _reload_config restarts orchestrators with the previous
+    configuration when loading or initializing the new config fails."""
+
+    @pytest.mark.asyncio
+    async def test_config_load_failure_restarts_orchestrators(self, mock_system_config):
+        """After load_mode_config fails, orchestrators should be restarted
+        with the previous configuration."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch(
+                "runtime.cortex.load_mode_config",
+                side_effect=Exception("Invalid JSON5 syntax"),
+            ),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "default"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            runtime._stop_current_orchestrators.assert_called_once()
+            assert (
+                runtime._start_orchestrators.call_count == 1
+            ), "Orchestrators should be restarted with previous config on failure"
+
+    @pytest.mark.asyncio
+    async def test_init_failure_during_reload_restarts_orchestrators(
+        self, mock_system_config
+    ):
+        """After _initialize_mode fails during reload, orchestrators should
+        be restarted with the previous configuration."""
+        new_mock_config = Mock(spec=ModeSystemConfig)
+        new_mock_config.default_mode = "default"
+        new_mock_config.modes = {"default": Mock(spec=ModeConfig)}
+
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config", return_value=new_mock_config),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "default"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+
+            init_call_count = 0
+
+            async def fail_first_init(mode):
+                nonlocal init_call_count
+                init_call_count += 1
+                if init_call_count == 1:
+                    raise Exception("Action connector not found")
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock(side_effect=fail_first_init)
+            runtime._start_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            runtime._stop_current_orchestrators.assert_called_once()
+            assert (
+                runtime._initialize_mode.call_count == 2
+            ), "Should call _initialize_mode twice: once for new config, once for recovery"
+            assert (
+                runtime._start_orchestrators.call_count == 1
+            ), "Orchestrators should be restarted with previous config on failure"

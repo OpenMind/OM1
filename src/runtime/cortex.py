@@ -212,8 +212,16 @@ class ModeCortexRuntime:
 
         except Exception as e:
             logging.error(f"Error during mode transition {from_mode} -> {to_mode}: {e}")
-            # TODO: Implement fallback/recovery mechanism
-            raise
+            logging.info(f"Attempting to recover by restoring mode: {from_mode}")
+            try:
+                await self._initialize_mode(from_mode)
+                await self._start_orchestrators()
+                logging.info(f"Successfully recovered to mode: {from_mode}")
+            except Exception as recovery_error:
+                logging.critical(
+                    f"Failed to recover to mode {from_mode}: {recovery_error}. "
+                    "Runtime has no active orchestrators."
+                )
         finally:
             self._is_reloading = False
 
@@ -654,14 +662,13 @@ class ModeCortexRuntime:
         The runtime config file serves as a trigger - when it changes, we reload
         from the original configuration source and then regenerate the runtime config.
         """
+        current_mode = self.mode_manager.current_mode_name
         try:
             logging.info(
                 f"Runtime config file changed, triggering reload: {self.config_path}"
             )
 
             self._is_reloading = True
-
-            current_mode = self.mode_manager.current_mode_name
 
             await self._stop_current_orchestrators()
 
@@ -697,7 +704,19 @@ class ModeCortexRuntime:
 
         except Exception as e:
             logging.error(f"Failed to reload mode configuration: {e}")
-            logging.error("Continuing with previous configuration")
+            logging.info("Restarting orchestrators with previous configuration")
+            try:
+                await self._initialize_mode(current_mode)
+                await self._start_orchestrators()
+                logging.info(
+                    f"Successfully restarted with previous configuration, "
+                    f"mode: {current_mode}"
+                )
+            except Exception as recovery_error:
+                logging.critical(
+                    f"Failed to restart with previous configuration: "
+                    f"{recovery_error}. Runtime has no active orchestrators."
+                )
 
         finally:
             self._is_reloading = False
