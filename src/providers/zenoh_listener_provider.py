@@ -41,7 +41,7 @@ class ZenohListenerProvider:
 
         Parameters
         ----------
-        message_callback : Callable
+        message_callback : Optional[Callable]
             The function that will be called with each incoming Zenoh sample.
         """
         if self.session is not None:
@@ -52,6 +52,11 @@ class ZenohListenerProvider:
     def start(self, message_callback: Optional[Callable] = None):
         """
         Start the listener provider by launching the background thread.
+
+        Parameters
+        ----------
+        message_callback : Optional[Callable]
+            Optional callback function that will be called with each incoming Zenoh sample.
         """
         if self.running:
             logging.warning("Zenoh Listener Provider is already running")
@@ -67,13 +72,15 @@ class ZenohListenerProvider:
         """
         Stop the listener provider and clean up resources.
 
-        Stops the background thread and closes the Zenoh session.
-
-        Notes
-        -----
-        The thread join operation uses a 5-second timeout to prevent hanging.
+        Closes the Zenoh session safely with error handling.
         """
         self.running = False
 
         if self.session is not None:
-            self.session.close()
+            try:
+                self.session.close()
+                logging.info("Zenoh Listener Provider stopped")
+            except Exception as e:
+                logging.error(f"Error closing Zenoh session: {e}")
+            finally:
+                self.session = None

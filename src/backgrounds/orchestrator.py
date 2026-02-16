@@ -4,7 +4,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
-from runtime.multi_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 
 
 class BackgroundOrchestrator:
@@ -80,8 +80,8 @@ class BackgroundOrchestrator:
         while not self._stop_event.is_set():
             try:
                 background.run()
-            except Exception as e:
-                logging.error(f"Error in background {background.name}: {e}")
+            except Exception:
+                logging.exception(f"Error in background {background.name}")
                 self._stop_event.wait(timeout=0.1)
 
     def stop(self):

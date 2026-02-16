@@ -84,13 +84,6 @@ class DualLLM(LLM[R]):
                 "cloud_llm_config": {"model": "gpt-4.1"}
             }
         }
-
-    Parameters
-    ----------
-    config : LLMConfig, optional
-        Configuration settings for the LLM.
-    available_actions : list[AgentAction], optional
-        List of available actions for function calling.
     """
 
     TIMEOUT_THRESHOLD = 3.2
@@ -205,7 +198,7 @@ class DualLLM(LLM[R]):
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
+        prompt : str
             Extracted user voice input for context.
 
         Returns
@@ -302,7 +295,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
     ) -> R | None:
         """
         Send prompt to both LLMs and select the best response.
@@ -312,13 +305,15 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
         prompt : str
             The input prompt to send.
         messages : list of dict, optional
-            Conversation history (default: []).
+            Conversation history.
 
         Returns
         -------
         R or None
             Parsed response matching the output model, or None if failed.
         """
+        if messages is None:
+            messages = []
         try:
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)

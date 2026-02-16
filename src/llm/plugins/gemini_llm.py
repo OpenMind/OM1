@@ -78,7 +78,7 @@ class GeminiLLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Execute LLM query and parse response.
@@ -87,7 +87,7 @@ class GeminiLLM(LLM[R]):
         ----------
         prompt : str
             The input prompt to send to the model.
-        messages : List[Dict[str, str]]
+        messages : List[Dict[str, str]], optional
             List of message dictionaries to send to the model.
 
         Returns
@@ -96,6 +96,8 @@ class GeminiLLM(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
+        if messages is None:
+            messages = []
         try:
             logging.debug(f"Gemini LLM input: {prompt}")
             logging.debug(f"Gemini LLM messages: {messages}")
@@ -141,7 +143,7 @@ class GeminiLLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
+                logging.info(f"Gemini LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None

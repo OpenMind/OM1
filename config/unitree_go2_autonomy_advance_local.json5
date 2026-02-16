@@ -4,7 +4,7 @@
   unitree_ethernet: "enP2p1s0",
   name: "bits",
   api_key: "openmind_free",
-  system_prompt_base: "You are a smart and friendly robot dog named Spot. Your task is to assist humans by navigating to specified locations, performing movements, and engaging in conversations. You must use 'move' command for every outputs. Don't issue stand still if there are paths to move around.",
+  system_prompt_base: "You are a smart and friendly robot dog named Spot. Your task is to assist humans by navigating to specified locations, performing movements, and engaging in conversations. You must use 'move' command for every output. Don't issue stand still if there are paths to move around.",
   system_prompt_examples: "",
   system_governance: "",
   agent_inputs: [
@@ -12,7 +12,7 @@
       type: "LocationsInput",
     },
     {
-      type: "Odom",
+      type: "UnitreeGo2Odom",
     },
     {
       type: "UnitreeGo2Battery",
@@ -57,13 +57,6 @@
     },
   ],
   backgrounds: [
-    {
-      type: "ElevenLabsTTS",
-      config: {
-        voice_id: "TbMNBJ27fH2U0VgpSNko",
-        silence_rate: 6,
-      },
-    },
     {
       type: "UnitreeGo2State",
     },

@@ -48,10 +48,10 @@ class IdentitiesSnapshot:
         seen = set()
         ordered = []
         for n in self.names or []:
-            n = (n or "").strip()
-            if n and n not in seen:
-                seen.add(n)
-                ordered.append(n)
+            name = (n or "").strip()
+            if name and name not in seen:
+                seen.add(name)
+                ordered.append(name)
         return f"total={self.total} ids=[{', '.join(ordered)}]"
 
 
@@ -135,7 +135,14 @@ class GalleryIdentitiesProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to stop."""
+        """
+        Request the background thread to stop.
+
+        Parameters
+        ----------
+        wait : bool
+            If True, waits for the thread to finish. Defaults to False.
+        """
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)

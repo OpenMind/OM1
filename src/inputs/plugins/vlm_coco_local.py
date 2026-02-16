@@ -31,12 +31,22 @@ class VLM_COCO_LocalConfig(SensorConfig):
 Detection = collections.namedtuple("Detection", "label, bbox, score")
 
 # if working on Mac, please disable continuity camera on your iphone
-# Settings > General > AirPlay & Continuity, and tunr off Continuity
+# Settings > General > AirPlay & Continuity, and turn off Continuity
 
 
 def check_webcam(index_to_check):
     """
     Checks if a webcam is available and returns True if found, False otherwise.
+
+    Parameters
+    ----------
+    index_to_check : int
+        The camera index to check.
+
+    Returns
+    -------
+    bool
+        True if the webcam is available, False otherwise.
     """
     cap = cv2.VideoCapture(index_to_check)  # 0 is the default camera index
     if not cap.isOpened():
@@ -119,7 +129,9 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
 
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
-            # logging.info(f"VLM_COCO_Local frame: {frame}")
+            if not ret or frame is None:
+                logging.warning("COCO: Failed to read frame from camera, skipping")
+                return None
             return frame
 
         return None

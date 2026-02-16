@@ -116,7 +116,7 @@ class VLMOpenAIRTSPProvider:
                 }
             ]
 
-            for i, frame in enumerate(frames):
+            for _i, frame in enumerate(frames):
                 content.append(
                     {
                         "type": "image_url",

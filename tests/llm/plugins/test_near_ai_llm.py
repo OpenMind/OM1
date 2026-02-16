@@ -132,7 +132,7 @@ class TestNearAILLMInit:
         config = NearAIConfig(api_key="test_key")
         llm = NearAILLM(config, available_actions=None)
         assert llm._config.model is not None
-        assert "qwen" in llm._config.model.lower()
+        assert "gpt-oss-120b" in llm._config.model.lower()
 
     def test_init_requires_api_key(self):
         """Test that initialization fails without API key."""
