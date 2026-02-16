@@ -1,7 +1,4 @@
 import logging
-from typing import Optional
-
-from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.recover_stand.interface import RecoverAction, RecoverInput
@@ -18,17 +15,9 @@ except ImportError:
 class RecoverStandUnitreeConfig(ActionConfig):
     """
     Configuration for RecoverStand Unitree Go2 connector.
-
-    Parameters
-    ----------
-    unitree_ethernet : Optional[str]
-        Ethernet channel for Unitree Go2.
     """
 
-    unitree_ethernet: Optional[str] = Field(
-        default=None,
-        description="Ethernet channel for Unitree Go2.",
-    )
+    pass
 
 
 class RecoverStandUnitreeConnector(

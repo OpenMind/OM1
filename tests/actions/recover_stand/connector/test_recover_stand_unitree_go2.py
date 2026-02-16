@@ -28,20 +28,6 @@ def connector(mock_sport_client):
     return RecoverStandUnitreeConnector(config)
 
 
-class TestRecoverStandUnitreeConfig:
-    """Test RecoverStandUnitreeConfig configuration."""
-
-    def test_default_config(self):
-        """Test default configuration values."""
-        config = RecoverStandUnitreeConfig()
-        assert config.unitree_ethernet is None
-
-    def test_custom_ethernet(self):
-        """Test custom ethernet configuration."""
-        config = RecoverStandUnitreeConfig(unitree_ethernet="eth0")
-        assert config.unitree_ethernet == "eth0"
-
-
 class TestRecoverStandUnitreeConnectorInit:
     """Test RecoverStandUnitreeConnector initialization."""
 
