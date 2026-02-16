@@ -1,0 +1,10 @@
+{
+  "metadata": {
+    "description": "Robot has fallen on its side - roll exceeds fall threshold",
+    "sensor_type": "imu"
+  },
+  "data": {
+    "roll_deg": 70.0,
+    "pitch_deg": 5.0
+  }
+}

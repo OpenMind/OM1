@@ -5,6 +5,7 @@ from types import ModuleType
 from tests.integration.mock_inputs.mock_battery import MockUnitreeGo2Battery
 from tests.integration.mock_inputs.mock_google_asr import MockGoogleASR
 from tests.integration.mock_inputs.mock_gps import MockGps
+from tests.integration.mock_inputs.mock_imu import MockUnitreeGo2IMU
 from tests.integration.mock_inputs.mock_odometry import MockUnitreeGo2Odom
 from tests.integration.mock_inputs.mock_unitree_go2_rplidar import MockUnitreeGo2RPLidar
 from tests.integration.mock_inputs.mock_vlm_coco import MockVLM_COCO
@@ -26,6 +27,7 @@ def register_mock_inputs():
     import inputs.plugins.google_asr
     import inputs.plugins.gps
     import inputs.plugins.unitree_go2_battery
+    import inputs.plugins.unitree_go2_imu
     import inputs.plugins.unitree_go2_odom
     import inputs.plugins.unitree_go2_rplidar
     import inputs.plugins.vlm_coco_local
@@ -45,6 +47,7 @@ def register_mock_inputs():
         "UnitreeGo2Battery": inputs.plugins.unitree_go2_battery.UnitreeGo2Battery,
         "UnitreeGo2Odom": inputs.plugins.unitree_go2_odom.UnitreeGo2Odom,
         "Gps": inputs.plugins.gps.Gps,
+        "UnitreeGo2IMU": inputs.plugins.unitree_go2_imu.UnitreeGo2IMU,
     }
 
     # Replace with mock classes
@@ -57,6 +60,7 @@ def register_mock_inputs():
     inputs.plugins.unitree_go2_battery.UnitreeGo2Battery = MockUnitreeGo2Battery
     inputs.plugins.unitree_go2_odom.UnitreeGo2Odom = MockUnitreeGo2Odom
     inputs.plugins.gps.Gps = MockGps
+    inputs.plugins.unitree_go2_imu.UnitreeGo2IMU = MockUnitreeGo2IMU
 
     # Add mock modules to namespace for discoverability
     mock_modules = {
@@ -71,6 +75,7 @@ def register_mock_inputs():
         "inputs.plugins.mock_battery": {"MockUnitreeGo2Battery": MockUnitreeGo2Battery},
         "inputs.plugins.mock_odometry": {"MockUnitreeGo2Odom": MockUnitreeGo2Odom},
         "inputs.plugins.mock_gps": {"MockGps": MockGps},
+        "inputs.plugins.mock_imu": {"MockUnitreeGo2IMU": MockUnitreeGo2IMU},
     }
 
     for module_name, mock_classes in mock_modules.items():
@@ -92,6 +97,7 @@ def unregister_mock_inputs():
         import inputs.plugins.google_asr
         import inputs.plugins.gps
         import inputs.plugins.unitree_go2_battery
+        import inputs.plugins.unitree_go2_imu
         import inputs.plugins.unitree_go2_odom
         import inputs.plugins.unitree_go2_rplidar
         import inputs.plugins.vlm_coco_local
@@ -116,6 +122,7 @@ def unregister_mock_inputs():
             ),
             "UnitreeGo2Odom": (inputs.plugins.unitree_go2_odom, "UnitreeGo2Odom"),
             "Gps": (inputs.plugins.gps, "Gps"),
+            "UnitreeGo2IMU": (inputs.plugins.unitree_go2_imu, "UnitreeGo2IMU"),
         }
 
         for plugin_name, original_class in _original_classes.items():
@@ -134,6 +141,7 @@ def unregister_mock_inputs():
             "inputs.plugins.mock_battery",
             "inputs.plugins.mock_odometry",
             "inputs.plugins.mock_gps",
+            "inputs.plugins.mock_imu",
         ]
         for module in mock_modules:
             sys.modules.pop(module, None)

@@ -5,7 +5,14 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.recover_stand.interface import RecoverAction, RecoverInput
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+
+try:
+    from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient  # type: ignore
+except ImportError:
+    SportClient = None  # type: ignore[assignment, misc]
+    logging.warning(
+        "Unitree SDK not found. RecoverStand connector will not be able to send commands."
+    )
 
 
 class RecoverStandUnitreeConfig(ActionConfig):

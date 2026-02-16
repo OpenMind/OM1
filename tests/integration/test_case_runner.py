@@ -260,7 +260,11 @@ def _detect_input_type(config: Optional[Dict[str, Any]]) -> str:
         return "LIDAR"
     elif "asr" in input_section:
         return "ASR"
-    elif "battery" in input_section or "odometry" in input_section:
+    elif (
+        "battery" in input_section
+        or "odometry" in input_section
+        or "imu" in input_section
+    ):
         return "State"
     elif "gps" in input_section:
         return "GPS"
@@ -527,7 +531,7 @@ def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
                             data.get("amperes", 0.0),
                         ]
                     )
-                elif data_type in ("odometry", "gps"):
+                elif data_type in ("odometry", "gps", "imu"):
                     collected_entries.append(data)
 
         except Exception as e:
@@ -542,6 +546,8 @@ def load_test_state_data(config: Dict[str, Any], data_type: str) -> None:
         state_provider.load_odometry_data(collected_entries)
     elif data_type == "gps":
         state_provider.load_gps_data(collected_entries)
+    elif data_type == "imu":
+        state_provider.load_imu_data(collected_entries)
 
     logging.info(f"Loaded {len(collected_entries)} {data_type} data entries")
 
@@ -572,6 +578,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     has_battery_inputs = "battery" in inputs
     has_odometry_inputs = "odometry" in inputs
     has_gps_inputs = "gps" in inputs
+    has_imu_inputs = "imu" in inputs
 
     # Load image data only if the test case uses image-based inputs
     if has_image_inputs:
@@ -605,6 +612,9 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
 
     if has_gps_inputs:
         load_test_state_data(config, "gps")
+
+    if has_imu_inputs:
+        load_test_state_data(config, "imu")
 
     # No need to modify config - the input_registry will handle mapping
     # the real input types to their mock equivalents
@@ -1518,6 +1528,8 @@ async def test_from_config(test_case_path: Path):
             )
         if "gps" in input_section:
             logging.info(f"Expected GPS files for test: {len(input_section['gps'])}")
+        if "imu" in input_section:
+            logging.info(f"Expected IMU files for test: {len(input_section['imu'])}")
 
         # Run the test case
         results = await run_test_case(config)
@@ -1531,9 +1543,9 @@ async def test_from_config(test_case_path: Path):
         logging.info(f"Test results for {config['name']}:\n{message}")
 
         # Assert test passed
-        assert (
-            passed
-        ), f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
+        assert passed, (
+            f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
+        )
 
         logging.info(f"test_from_config: Test {config['name']} completed successfully")
 
@@ -1598,11 +1610,12 @@ def get_movement_types_for_config(config: Dict[str, Any]) -> set:
     if "asr" in input_section and "images" not in input_section:
         return ASR_MOVE_TYPES
 
-    # State-based tests (battery, odometry, GPS) without images
+    # State-based tests (battery, odometry, GPS, IMU) without images
     if (
         "battery" in input_section
         or "odometry" in input_section
         or "gps" in input_section
+        or "imu" in input_section
     ) and "images" not in input_section:
         return STATE_MOVE_TYPES
 
@@ -1781,8 +1794,7 @@ async def test_mode_transition(test_case_path: Path):
         f"expected {expected_initial}"
     )
     assert results["final_mode"] == expected_final, (
-        f"Final mode mismatch: got {results['final_mode']}, "
-        f"expected {expected_final}"
+        f"Final mode mismatch: got {results['final_mode']}, expected {expected_final}"
     )
 
     # Only verify config reinitialization when a transition actually occurred
@@ -1792,13 +1804,13 @@ async def test_mode_transition(test_case_path: Path):
             f"Runtime config not reinitialized: prompt is '{results['final_prompt']}', "
             f"expected '{expected_final_prompt}'"
         )
-        assert (
-            results["final_prompt"] != results["initial_prompt"]
-        ), "System prompt did not change after mode transition"
+        assert results["final_prompt"] != results["initial_prompt"], (
+            "System prompt did not change after mode transition"
+        )
     else:
-        assert (
-            results["final_prompt"] == results["initial_prompt"]
-        ), "System prompt changed when no transition was expected"
+        assert results["final_prompt"] == results["initial_prompt"], (
+            "System prompt changed when no transition was expected"
+        )
 
 
 async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:

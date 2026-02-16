@@ -1,0 +1,10 @@
+{
+  "metadata": {
+    "description": "Robot is tilting dangerously - roll exceeds warning threshold",
+    "sensor_type": "imu"
+  },
+  "data": {
+    "roll_deg": 35.0,
+    "pitch_deg": 5.0
+  }
+}

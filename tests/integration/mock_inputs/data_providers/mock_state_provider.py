@@ -21,6 +21,8 @@ class MockStateProvider:
             cls._instance.odometry_index = 0
             cls._instance.gps_data = []
             cls._instance.gps_index = 0
+            cls._instance.imu_data = []
+            cls._instance.imu_index = 0
             logging.info("Initialized MockStateProvider singleton")
         return cls._instance
 
@@ -111,6 +113,35 @@ class MockStateProvider:
         self.gps_index += 1
         return data
 
+    def load_imu_data(self, data: List[Dict]):
+        """
+        Load IMU state data.
+
+        Parameters
+        ----------
+        data : List[Dict]
+            List of IMU dicts with roll_deg, pitch_deg keys
+        """
+        self.imu_data = data
+        self.imu_index = 0
+        logging.info(f"MockStateProvider loaded {len(data)} IMU data entries")
+
+    def get_next_imu(self) -> Optional[Dict]:
+        """
+        Get the next IMU state data.
+
+        Returns
+        -------
+        Optional[Dict]
+            Next IMU data dict or None
+        """
+        if not self.imu_data or self.imu_index >= len(self.imu_data):
+            return None
+
+        data = self.imu_data[self.imu_index]
+        self.imu_index += 1
+        return data
+
     def clear_all(self):
         """Clear all loaded data and reset all indices."""
         self.battery_data = []
@@ -119,6 +150,8 @@ class MockStateProvider:
         self.odometry_index = 0
         self.gps_data = []
         self.gps_index = 0
+        self.imu_data = []
+        self.imu_index = 0
 
 
 def get_state_provider() -> MockStateProvider:
@@ -139,6 +172,11 @@ def get_next_odometry() -> Optional[Dict]:
 def get_next_gps() -> Optional[Dict]:
     """Get the next GPS state data."""
     return get_state_provider().get_next_gps()
+
+
+def get_next_imu() -> Optional[Dict]:
+    """Get the next IMU state data."""
+    return get_state_provider().get_next_imu()
 
 
 def clear_state_provider():
