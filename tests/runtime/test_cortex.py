@@ -805,3 +805,100 @@ class TestHotReloadMultiToSingle:
 
             assert len(new_single_config.modes) == 1
             assert "single_mode" in new_single_config.modes
+
+
+class TestHotReloadRecovery:
+    """Tests that _reload_config restarts orchestrators with the previous
+    configuration when loading or initializing the new config fails."""
+
+    @pytest.mark.asyncio
+    async def test_config_load_failure_restarts_orchestrators(self, mock_system_config):
+        """After load_mode_config fails, orchestrators should be restarted
+        with the previous configuration."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch(
+                "runtime.cortex.load_mode_config",
+                side_effect=Exception("Invalid JSON5 syntax"),
+            ),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "default"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            runtime._stop_current_orchestrators.assert_called_once()
+            assert (
+                runtime._start_orchestrators.call_count == 1
+            ), "Orchestrators should be restarted with previous config on failure"
+
+    @pytest.mark.asyncio
+    async def test_init_failure_during_reload_restarts_orchestrators(
+        self, mock_system_config
+    ):
+        """After _initialize_mode fails during reload, orchestrators should
+        be restarted with the previous configuration."""
+        new_mock_config = Mock(spec=ModeSystemConfig)
+        new_mock_config.default_mode = "default"
+        new_mock_config.modes = {"default": Mock(spec=ModeConfig)}
+
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config", return_value=new_mock_config),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "default"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            original_mode_config = runtime.mode_config
+
+            init_call_count = 0
+
+            async def fail_first_init(mode):
+                nonlocal init_call_count
+                init_call_count += 1
+                if init_call_count == 1:
+                    raise Exception("Action connector not found")
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock(side_effect=fail_first_init)
+            runtime._start_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            runtime._stop_current_orchestrators.assert_called_once()
+            assert (
+                runtime._initialize_mode.call_count == 2
+            ), "Should call _initialize_mode twice: once for new config, once for recovery"
+            assert (
+                runtime._start_orchestrators.call_count == 1
+            ), "Orchestrators should be restarted with previous config on failure"
+            assert (
+                runtime.mode_config is original_mode_config
+            ), "Config should be restored to previous version after failure"
