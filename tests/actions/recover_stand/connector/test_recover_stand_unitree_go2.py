@@ -8,7 +8,6 @@ from actions.recover_stand.connector.unitree_go2 import (
 )
 from actions.recover_stand.interface import RecoverAction, RecoverInput
 
-
 MODULE = "actions.recover_stand.connector.unitree_go2"
 
 

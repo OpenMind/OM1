@@ -1543,9 +1543,9 @@ async def test_from_config(test_case_path: Path):
         logging.info(f"Test results for {config['name']}:\n{message}")
 
         # Assert test passed
-        assert passed, (
-            f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
-        )
+        assert (
+            passed
+        ), f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
 
         logging.info(f"test_from_config: Test {config['name']} completed successfully")
 
@@ -1793,9 +1793,9 @@ async def test_mode_transition(test_case_path: Path):
         f"Initial mode mismatch: got {results['initial_mode']}, "
         f"expected {expected_initial}"
     )
-    assert results["final_mode"] == expected_final, (
-        f"Final mode mismatch: got {results['final_mode']}, expected {expected_final}"
-    )
+    assert (
+        results["final_mode"] == expected_final
+    ), f"Final mode mismatch: got {results['final_mode']}, expected {expected_final}"
 
     # Only verify config reinitialization when a transition actually occurred
     if expected_initial != expected_final:
@@ -1804,13 +1804,13 @@ async def test_mode_transition(test_case_path: Path):
             f"Runtime config not reinitialized: prompt is '{results['final_prompt']}', "
             f"expected '{expected_final_prompt}'"
         )
-        assert results["final_prompt"] != results["initial_prompt"], (
-            "System prompt did not change after mode transition"
-        )
+        assert (
+            results["final_prompt"] != results["initial_prompt"]
+        ), "System prompt did not change after mode transition"
     else:
-        assert results["final_prompt"] == results["initial_prompt"], (
-            "System prompt changed when no transition was expected"
-        )
+        assert (
+            results["final_prompt"] == results["initial_prompt"]
+        ), "System prompt changed when no transition was expected"
 
 
 async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:

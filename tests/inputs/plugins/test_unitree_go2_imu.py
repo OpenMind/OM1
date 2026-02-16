@@ -9,7 +9,6 @@ from inputs.plugins.unitree_go2_imu import (
     UnitreeGo2IMUConfig,
 )
 
-
 MODULE = "inputs.plugins.unitree_go2_imu"
 
 
