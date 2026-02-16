@@ -1423,3 +1423,107 @@ class TestModeManager:
                 "Updated user context with" in record.message
                 for record in caplog.records
             )
+
+
+class TestWildcardCooldown:
+    """Tests that cooldown is correctly enforced for wildcard transition
+    rules (from_mode='*') by using the actual current mode for the
+    cooldown key lookup."""
+
+    @pytest.fixture
+    def wildcard_manager(self):
+        """ModeManager with a wildcard rule that has a 60-second cooldown."""
+        mode_configs = {
+            "calm": ModeConfig(
+                version="v1.0.0",
+                name="calm",
+                display_name="Calm",
+                description="Calm mode",
+                system_prompt_base="Calm mode",
+            ),
+            "alert": ModeConfig(
+                version="v1.0.0",
+                name="alert",
+                display_name="Alert",
+                description="Alert mode",
+                system_prompt_base="Alert mode",
+            ),
+        }
+
+        wildcard_rule = TransitionRule(
+            from_mode="*",
+            to_mode="alert",
+            transition_type=TransitionType.INPUT_TRIGGERED,
+            trigger_keywords=["danger", "emergency"],
+            priority=10,
+            cooldown_seconds=60.0,
+        )
+
+        system_config = ModeSystemConfig(
+            version="v1.0.2",
+            name="test",
+            default_mode="calm",
+            config_name="test_config",
+            api_key="test",
+        )
+        system_config.modes = mode_configs
+        system_config.transition_rules = [wildcard_rule]
+
+        with (
+            patch("runtime.manager.open_zenoh_session"),
+            patch("runtime.manager.ModeManager._load_mode_state"),
+        ):
+            return ModeManager(system_config), wildcard_rule
+
+    def test_wildcard_cooldown_is_enforced(self, wildcard_manager):
+        """After a wildcard transition executes, _can_transition should
+        return False during the cooldown period."""
+        manager, wildcard_rule = wildcard_manager
+
+        manager.transition_cooldowns["calm->alert"] = time.time()
+        manager.state.current_mode = "calm"
+
+        result = manager._can_transition(wildcard_rule)
+        assert (
+            result is False
+        ), "Wildcard rule cooldown should be enforced after recent transition"
+
+    def test_wildcard_cooldown_blocks_input_trigger(self, wildcard_manager):
+        """check_input_triggered_transitions should respect wildcard cooldown
+        and return None during the cooldown period."""
+        manager, _ = wildcard_manager
+
+        manager.transition_cooldowns["calm->alert"] = time.time()
+        manager.state.current_mode = "calm"
+
+        result = manager.check_input_triggered_transitions("danger nearby!")
+        assert (
+            result is None
+        ), "Wildcard transition should be blocked during cooldown period"
+
+    def test_wildcard_cooldown_allows_after_expiry(self, wildcard_manager):
+        """After cooldown expires, wildcard transition should be allowed."""
+        manager, wildcard_rule = wildcard_manager
+
+        manager.transition_cooldowns["calm->alert"] = time.time() - 120.0
+        manager.state.current_mode = "calm"
+
+        result = manager._can_transition(wildcard_rule)
+        assert result is True
+
+    def test_specific_rule_cooldown_works(self, wildcard_manager):
+        """Verify cooldown works correctly for non-wildcard rules as baseline."""
+        manager, _ = wildcard_manager
+
+        specific_rule = TransitionRule(
+            from_mode="calm",
+            to_mode="alert",
+            transition_type=TransitionType.INPUT_TRIGGERED,
+            trigger_keywords=["danger"],
+            priority=10,
+            cooldown_seconds=60.0,
+        )
+
+        manager.transition_cooldowns["calm->alert"] = time.time()
+        result = manager._can_transition(specific_rule)
+        assert result is False
