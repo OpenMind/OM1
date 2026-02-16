@@ -856,3 +856,38 @@ class TestZenohAIStatus:
 
             assert connector._zenoh_ai_status_response_pub is not None
             connector._zenoh_ai_status_response_pub.put.assert_called_once()
+
+
+def test_initialization_with_missing_sport_client_sdk():
+    """If SportClient is unavailable, OM path connector should log and continue."""
+    with (
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"
+        ) as mock_session,
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient", None
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging"
+        ) as mock_logging,
+    ):
+        mock_session.return_value = Mock(
+            declare_subscriber=Mock(), declare_publisher=Mock(return_value=Mock())
+        )
+        connector = MoveUnitreeOMPathSDKConnector(
+            MoveUnitreeOMPathSDKConfig(unitree_ethernet="eth0")
+        )
+        assert connector.sport_client is None
+        mock_logging.error.assert_called()

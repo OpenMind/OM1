@@ -134,3 +134,18 @@ class TestEmotionUnitreeConnectorTick:
         with patch.object(connector, "sleep") as mock_sleep:
             connector.tick()
             mock_sleep.assert_called_once_with(5)
+
+
+def test_init_with_ethernet_and_missing_audio_client():
+    """If AudioClient is unavailable, connector should warn and keep ao_client None."""
+    with (
+        patch("actions.emotion.connector.unitree_sdk.AudioClient", None),
+        patch("actions.emotion.connector.unitree_sdk.logging") as mock_logging,
+    ):
+        connector = EmotionUnitreeConnector(
+            EmotionUnitreeConfig(unitree_ethernet="eth0")
+        )
+        assert connector.ao_client is None
+        mock_logging.warning.assert_called_with(
+            "AudioClient unavailable because Unitree SDK is missing."
+        )

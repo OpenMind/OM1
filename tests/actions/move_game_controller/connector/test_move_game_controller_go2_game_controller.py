@@ -245,3 +245,33 @@ class TestGo2GameControllerConnector:
             connector = go2_module.Go2GameControllerConnector(default_config)
             # connect is a pass-through, should not raise
             await connector.connect(idle_input)
+
+
+def test_initialization_with_missing_sport_client_sdk(go2_module, default_config):
+    """If SportClient is unavailable, connector should log and keep sport_client None."""
+    with (
+        patch(
+            "actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"
+        ) as mock_session,
+        patch(
+            "actions.move_game_controller.connector.go2_game_controller.hid"
+        ) as mock_hid,
+        patch(
+            "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"
+        ),
+        patch(
+            "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"
+        ),
+        patch(
+            "actions.move_game_controller.connector.go2_game_controller.SportClient",
+            None,
+        ),
+        patch(
+            "actions.move_game_controller.connector.go2_game_controller.logging"
+        ) as mock_logging,
+    ):
+        mock_session.return_value = Mock(declare_subscriber=Mock())
+        mock_hid.enumerate.return_value = []
+        connector = go2_module.Go2GameControllerConnector(default_config)
+        assert connector.sport_client is None
+        mock_logging.error.assert_called()

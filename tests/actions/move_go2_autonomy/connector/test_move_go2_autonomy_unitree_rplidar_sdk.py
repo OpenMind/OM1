@@ -634,3 +634,27 @@ class TestTick:
 
         assert connector.pending_movements.qsize() == 0
         assert connector.movement_attempts == 0
+
+
+def test_initialization_with_missing_sport_client_sdk():
+    """If SportClient is unavailable, RPLidar connector should log and continue."""
+    with (
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2RPLidarProvider"
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2StateProvider"
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.UnitreeGo2OdomProvider"
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.SportClient", None
+        ),
+        patch(
+            "actions.move_go2_autonomy.connector.unitree_rplidar_sdk.logging"
+        ) as mock_logging,
+    ):
+        connector = MoveUnitreeRPLidarSDKConnector(MoveUnitreeRPLidarSDKConfig())
+        assert connector.sport_client is None
+        mock_logging.error.assert_called()

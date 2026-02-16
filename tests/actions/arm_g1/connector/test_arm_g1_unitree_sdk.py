@@ -120,3 +120,13 @@ class TestARMUnitreeSDKConnectorConnect:
             await connector.connect(arm_input)
             mock_logging.warning.assert_called_with("Unknown action: unknown")
             connector.client.ExecuteAction.assert_not_called()
+
+
+def test_init_handles_missing_unitree_sdk_client():
+    """When Unitree SDK import fallback sets client class to None, init should log error."""
+    with (
+        patch("actions.arm_g1.connector.unitree_sdk.G1ArmActionClient", None),
+        patch("actions.arm_g1.connector.unitree_sdk.logging") as mock_logging,
+    ):
+        ARMUnitreeSDKConnector(ActionConfig())
+        mock_logging.error.assert_called_once()

@@ -213,3 +213,19 @@ class TestActionUnitreeSDKConnectorConnect:
         connector.sport_client = None
         action_input = ActionInput(action=Action.SHAKE_PAW)
         await connector.connect(action_input)
+
+
+def test_initialization_with_missing_sport_client_sdk():
+    """If SportClient is unavailable, init should keep sport_client None and log error."""
+    with (
+        patch(
+            "actions.move_go2_action.connector.unitree_sdk.UnitreeGo2RPLidarProvider"
+        ),
+        patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2StateProvider"),
+        patch("actions.move_go2_action.connector.unitree_sdk.UnitreeGo2OdomProvider"),
+        patch("actions.move_go2_action.connector.unitree_sdk.SportClient", None),
+        patch("actions.move_go2_action.connector.unitree_sdk.logging") as mock_logging,
+    ):
+        connector = ActionUnitreeSDKConnector(ActionUnitreeSDKConfig())
+        assert connector.sport_client is None
+        mock_logging.error.assert_called()

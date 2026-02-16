@@ -89,3 +89,18 @@ def test_formatted_latest_buffer():
 
         result = sensor.formatted_latest_buffer()
         assert result is None
+
+
+def test_initialization_with_ethernet_and_missing_channel_subscriber():
+    """If Unitree SDK is unavailable, ethernet init should skip subscriber setup safely."""
+    with (
+        patch("inputs.plugins.unitree_g1_basic.ChannelSubscriber", None),
+        patch("inputs.plugins.unitree_g1_basic.IOProvider"),
+        patch("inputs.plugins.unitree_g1_basic.TeleopsStatusProvider"),
+        patch("inputs.plugins.unitree_g1_basic.logging") as mock_logging,
+    ):
+        sensor = UnitreeG1Basic(UnitreeG1BasicConfig(unitree_ethernet="eth0"))
+        assert sensor.battery_percentage == 0.0
+        mock_logging.warning.assert_any_call(
+            "Unitree SDK not available; skipping G1 lowstate/bms subscribers."
+        )

@@ -183,3 +183,19 @@ class TestMoveGo2RemoteConnector:
 
             connector = remote_module.MoveGo2RemoteConnector(default_config)
             await connector.connect(move_input_stand)
+
+
+def test_initialization_with_missing_sport_client_sdk(remote_module, default_config):
+    """If SportClient is unavailable, remote connector should still initialize websocket."""
+    with (
+        patch("actions.move_go2_teleops.connector.remote.ws") as mock_ws,
+        patch("actions.move_go2_teleops.connector.remote.UnitreeGo2StateProvider"),
+        patch("actions.move_go2_teleops.connector.remote.SportClient", None),
+        patch("actions.move_go2_teleops.connector.remote.logging") as mock_logging,
+    ):
+        mock_ws.Client.return_value = Mock(
+            register_message_callback=Mock(), start=Mock()
+        )
+        connector = remote_module.MoveGo2RemoteConnector(default_config)
+        assert connector.sport_client is None
+        mock_logging.error.assert_called()
