@@ -17,21 +17,21 @@ except ImportError:
         "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
     )
 
-    class BmsState_:
-        """
-        Placeholder for BmsState_ when Unitree SDK is not installed.
-        """
+    class dds_:
+        """Placeholder for dds_ namespace when Unitree SDK is not installed."""
 
-        def __init__(self):
+        class BmsState_:
+            """Placeholder for BmsState_."""
+
             pass
 
-    class LowState_:
-        """
-        Placeholder for LowState_ when Unitree SDK is not installed.
-        """
+        class LowState_:
+            """Placeholder for LowState_."""
 
-        def __init__(self):
             pass
+
+    BmsState_ = dds_.BmsState_
+    LowState_ = dds_.LowState_
 
 
 # Data structure documentation:
