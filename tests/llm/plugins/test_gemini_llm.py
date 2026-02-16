@@ -174,3 +174,47 @@ async def test_ask_invalid_json(llm):
 
         result = await llm.ask("test prompt")
         assert result == CortexOutputModel(actions=[])
+
+
+@pytest.mark.asyncio
+async def test_init_without_model():
+    """When the test model is None, use the default value"""
+    config = GeminiConfig(api_key="test_key", model=None)
+    llm = GeminiLLM(config)
+    assert llm._config.model == "gemini-2.5-flash"
+
+
+@pytest.mark.asyncio
+async def test_ask_empty_choices(llm):
+    """The test API returned empty choices."""
+    empty_response = MagicMock()
+    empty_response.choices = []
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(return_value=empty_response),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_messages_missing_fields(llm, mock_response):
+    """Preset values ​​when testing messages with missing fields"""
+    messages = [
+        {"role": "user"},  # Missing content
+        {"content": "test"},  # Missing role
+    ]
+
+    with pytest.MonkeyPatch.context() as m:
+        mock_create = AsyncMock(return_value=mock_response)
+        m.setattr(llm._client.chat.completions, "create", mock_create)
+
+        await llm.ask("test prompt", messages=messages)
+
+        call_args = mock_create.call_args
+        formatted = call_args.kwargs["messages"]
+        assert formatted[0]["content"] == ""  # default empty string
+        assert formatted[1]["role"] == "user"  # default user
