@@ -851,6 +851,8 @@ class TestModeTransitionRecovery:
             async def log_start():
                 call_log.append("start")
 
+            mock_manager.state.current_mode = "advanced"
+
             runtime._stop_current_orchestrators = AsyncMock(side_effect=log_stop)
             runtime._initialize_mode = AsyncMock(side_effect=log_init)
             runtime._start_orchestrators = AsyncMock(side_effect=log_start)
@@ -865,6 +867,9 @@ class TestModeTransitionRecovery:
             assert (
                 call_log[-1] == "start"
             ), "Orchestrators should be restarted after recovery"
+            assert (
+                mock_manager.state.current_mode == "default"
+            ), "Mode manager state should be reverted to previous mode"
 
     @pytest.mark.asyncio
     async def test_start_failure_restarts_previous_mode(self, mock_system_config):
@@ -976,6 +981,7 @@ class TestHotReloadRecovery:
                 mock_system_config, "test_config", hot_reload=True
             )
             runtime.mode_manager = mock_manager
+            original_mode_config = runtime.mode_config
 
             init_call_count = 0
 
@@ -998,3 +1004,6 @@ class TestHotReloadRecovery:
             assert (
                 runtime._start_orchestrators.call_count == 1
             ), "Orchestrators should be restarted with previous config on failure"
+            assert (
+                runtime.mode_config is original_mode_config
+            ), "Config should be restored to previous version after failure"

@@ -216,6 +216,7 @@ class ModeCortexRuntime:
             try:
                 await self._initialize_mode(from_mode)
                 await self._start_orchestrators()
+                self.mode_manager.state.current_mode = from_mode
                 logging.info(f"Successfully recovered to mode: {from_mode}")
             except Exception as recovery_error:
                 logging.critical(
@@ -663,6 +664,8 @@ class ModeCortexRuntime:
         from the original configuration source and then regenerate the runtime config.
         """
         current_mode = self.mode_manager.current_mode_name
+        previous_mode_config = self.mode_config
+        previous_manager_config = self.mode_manager.config
         try:
             logging.info(
                 f"Runtime config file changed, triggering reload: {self.config_path}"
@@ -705,6 +708,9 @@ class ModeCortexRuntime:
         except Exception as e:
             logging.error(f"Failed to reload mode configuration: {e}")
             logging.info("Restarting orchestrators with previous configuration")
+            self.mode_config = previous_mode_config
+            self.mode_manager.config = previous_manager_config
+            self.mode_manager.state.current_mode = current_mode
             try:
                 await self._initialize_mode(current_mode)
                 await self._start_orchestrators()
