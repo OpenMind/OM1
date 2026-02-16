@@ -1,6 +1,9 @@
 import importlib
+import logging
 import os
+import types
 from typing import Optional, Type
+from unittest.mock import patch
 
 import json5
 
@@ -80,7 +83,26 @@ def assert_action_classes_exist(action_config):
         assert (
             connector is not None
         ), f"No connector found for action {action_config['name']}"
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, ModuleNotFoundError) as exc:
+        missing_module = getattr(exc, "name", "") or ""
+        error_text = str(exc)
+        is_optional_dependency = any(
+            (
+                missing_module.startswith(prefix),
+                f"No module named '{prefix}" in error_text,
+                f"No module named '{prefix}." in error_text,
+            )
+            for prefix in ("unitree", "cyclonedds")
+        )
+
+        if is_optional_dependency:
+            logging.warning(
+                "Skipping connector import for action '%s' due to optional dependency: %s",
+                action_config["name"],
+                exc,
+            )
+            return
+
         assert False, f"Connector module not found for action {action_config['name']}"
 
 
@@ -94,3 +116,48 @@ def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:
         ):
             return obj
     return None
+
+
+def test_assert_action_classes_exist_skips_optional_dependency_import_error(caplog):
+    """Optional connector imports should warn instead of failing config tests."""
+
+    class DummyInterface(Interface):
+        pass
+
+    def _fake_import(module_name: str):
+        if module_name == "actions.fake_action.interface":
+            return types.SimpleNamespace(DummyInterface=DummyInterface)
+        if module_name == "actions.fake_action.connector.fake_connector":
+            raise ModuleNotFoundError("No module named 'unitree.unitree_sdk2py'")
+        raise AssertionError(f"Unexpected import path: {module_name}")
+
+    with patch("importlib.import_module", side_effect=_fake_import):
+        with caplog.at_level(logging.WARNING):
+            assert_action_classes_exist(
+                {"name": "fake_action", "connector": "fake_connector"}
+            )
+
+    assert "Skipping connector import for action 'fake_action'" in caplog.text
+
+
+def test_assert_action_classes_exist_still_fails_for_non_optional_import_error():
+    """Non-optional import errors should still fail the config test."""
+
+    class DummyInterface(Interface):
+        pass
+
+    def _fake_import(module_name: str):
+        if module_name == "actions.fake_action.interface":
+            return types.SimpleNamespace(DummyInterface=DummyInterface)
+        if module_name == "actions.fake_action.connector.fake_connector":
+            raise ModuleNotFoundError("No module named 'actions.fake_action.connector'")
+        raise AssertionError(f"Unexpected import path: {module_name}")
+
+    with patch("importlib.import_module", side_effect=_fake_import):
+        try:
+            assert_action_classes_exist(
+                {"name": "fake_action", "connector": "fake_connector"}
+            )
+            assert False, "Expected non-optional import error to fail"
+        except AssertionError as exc:
+            assert "Connector module not found for action fake_action" in str(exc)
