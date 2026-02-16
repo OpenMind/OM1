@@ -16,6 +16,12 @@ class RecoverAction(str, Enum):
 class RecoverInput:
     """
     Input interface for the RecoverStand action.
+
+    Parameters
+    ----------
+    action : RecoverAction
+        The recovery action to execute. Must be one of the predefined actions
+        from the RecoverAction enumeration (e.g., RECOVER).
     """
 
     action: RecoverAction
