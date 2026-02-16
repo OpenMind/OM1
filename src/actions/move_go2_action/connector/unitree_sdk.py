@@ -10,7 +10,14 @@ from actions.move_go2_action.interface import ActionInput
 from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
 from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+
+try:
+    from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+except ImportError:
+    logging.warning(
+        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
+    )
+    SportClient = None  # type: ignore[assignment]
 
 
 class ActionUnitreeSDKConfig(ActionConfig):

@@ -13,7 +13,6 @@ from providers.face_presence_provider import FacePresenceProvider
 from providers.simple_paths_provider import SimplePathsProvider
 from providers.unitree_go2_odom_provider import RobotState, UnitreeGo2OdomProvider
 from providers.unitree_go2_state_provider import UnitreeGo2StateProvider
-from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
 from zenoh_msgs import (
     AIStatusRequest,
     AIStatusResponse,
@@ -21,6 +20,14 @@ from zenoh_msgs import (
     open_zenoh_session,
     prepare_header,
 )
+
+try:
+    from unitree.unitree_sdk2py.go2.sport.sport_client import SportClient
+except ImportError:
+    logging.warning(
+        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
+    )
+    SportClient = None  # type: ignore[assignment]
 
 
 class MoveUnitreeOMPathSDKConfig(ActionConfig):

@@ -4,7 +4,14 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.emotion.interface import EmotionInput
-from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
+
+try:
+    from unitree.unitree_sdk2py.g1.audio.g1_audio_client import AudioClient
+except ImportError:
+    logging.warning(
+        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
+    )
+    AudioClient = None  # type: ignore[assignment]
 
 
 class EmotionUnitreeConfig(ActionConfig):
@@ -53,6 +60,9 @@ class EmotionUnitreeConnector(ActionConnector[EmotionUnitreeConfig, EmotionInput
             logging.info(
                 f"Emotion system using {self.unitree_ethernet} as the network Ethernet adapter"
             )
+            if AudioClient is None:
+                logging.warning("AudioClient unavailable because Unitree SDK is missing.")
+                return
             self.ao_client = AudioClient()
             self.ao_client.SetTimeout(10.0)
             self.ao_client.Init()
