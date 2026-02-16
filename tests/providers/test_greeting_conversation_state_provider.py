@@ -317,7 +317,7 @@ class TestGreetingConversationStateMachineProvider:
 
         state_machine.reset_state(ConversationState.IDLE)
 
-        assert state_machine.current_state == ConversationState.CONVERSING
+        assert state_machine.current_state == ConversationState.IDLE
         assert state_machine.turn_count == 0
         assert state_machine.last_user_utterance == ""
         assert state_machine.confidence_history == []

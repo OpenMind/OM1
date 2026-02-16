@@ -582,4 +582,3 @@ class GreetingConversationStateMachineProvider:
         self.turn_count = 0
         self.last_user_utterance = ""
         self.confidence_history = []
-        self.current_state = ConversationState.CONVERSING
