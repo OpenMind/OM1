@@ -340,6 +340,10 @@ class GreetingConversationStateMachineProvider:
         llm_conversation_state = confidence_result["factors"].conversation_state
         time_in_state = time.time() - self.state_entry_time
 
+        # From ENGAGING to CONVERSING
+        if self.current_state == ConversationState.ENGAGING:
+            return ConversationState.CONVERSING
+
         # From CONVERSING to CONCLUDING
         if self.current_state == ConversationState.CONVERSING:
             # LLM thinks we should conclude with high confidence
@@ -582,4 +586,3 @@ class GreetingConversationStateMachineProvider:
         self.turn_count = 0
         self.last_user_utterance = ""
         self.confidence_history = []
-        self.current_state = ConversationState.CONVERSING

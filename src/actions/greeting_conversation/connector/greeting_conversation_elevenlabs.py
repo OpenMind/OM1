@@ -132,7 +132,7 @@ class GreetingConversationConnector(
         response = self.greeting_state_provider.process_conversation(llm_output)
         logging.info(f"Greeting Conversation Response: {response}")
 
-        if response.get("current_state") == ConversationState.FINISHED:
+        if response.get("current_state") == ConversationState.FINISHED.value:
             logging.info("Greeting conversation has finished.")
             self.context_provider.update_context(
                 {"greeting_conversation_finished": True}
