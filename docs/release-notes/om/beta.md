@@ -1,6 +1,6 @@
 ---
 title: OM1 Beta Release
-description: "v1.0.0-beta.4"
+description: "v1.0.1-beta.2"
 icon: rectangle-beta
 ---
 
