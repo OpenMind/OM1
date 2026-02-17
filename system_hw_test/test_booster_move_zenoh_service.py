@@ -12,7 +12,6 @@ import asyncio
 import json
 import os
 import sys
-import uuid
 from typing import Optional
 
 # Add src directory to path to import local zenoh_msgs
@@ -39,19 +38,9 @@ class BoosterMoveZenohClient:
         self.session = open_zenoh_session()
         print(f"Connected to Zenoh: {self.session}\n")
 
-        # Generate unique client ID for service routing
-        self.client_id = str(uuid.uuid4())
-        print(f"Client ID: {self.client_id}")
-
-        # Service name
-        self.service_name = "booster_rpc_service"
-
-        # Topic patterns for ROS2 service through Zenoh bridge
-        self.request_topic = f"rq/{self.service_name}/{self.client_id}/Request"
-        self.reply_topic = f"rr/{self.service_name}/{self.client_id}/Reply"
-
-        print(f"Request topic: {self.request_topic}")
-        print(f"Reply topic: {self.reply_topic}\n")
+        # Zenoh key for ROS2 service (maps to /booster_rpc_service)
+        self.service_name = "/booster_rpc_service"
+        print(f"Service name: {self.service_name}\n")
 
     def create_service_request(self, vx: float, vy: float, vyaw: float) -> bytes:
         """
@@ -86,7 +75,7 @@ class BoosterMoveZenohClient:
         self, request_payload: bytes, timeout: float = 10.0
     ) -> Optional[BoosterApiRespMsg]:
         """
-        Call the ROS 2 service using the request/reply topic pattern.
+        Call the ROS 2 service using session.get().
 
         Parameters
         ----------
@@ -100,40 +89,34 @@ class BoosterMoveZenohClient:
         Optional[BoosterApiRespMsg]
             The response message, or None if timeout or error.
         """
-        future = asyncio.get_event_loop().create_future()
-
-        def callback(sample):
-            try:
-                # Deserialize to RpcServiceResponse wrapper first
-                service_response = RpcServiceResponse.deserialize(
-                    sample.payload.to_bytes()
-                )
-                if not future.done():
-                    # Return the inner msg (BoosterApiRespMsg)
-                    future.set_result(service_response.msg)
-            except Exception as e:
-                print(f"Error deserializing response in callback: {e}")
-                if not future.done():
-                    future.set_exception(e)
-
-        # 1. Subscribe to reply topic FIRST
-        sub = self.session.declare_subscriber(self.reply_topic, callback)
-
         try:
-            # 2. Then publish request
-            self.session.put(self.request_topic, request_payload)
+            # Use Zenoh query for ROS2 service call (request/reply pattern)
+            print(f"Sending query to: {self.service_name}")
+            replies = self.session.get(
+                self.service_name,
+                payload=request_payload,
+                timeout=timeout,
+            )
 
-            # 3. Wait for reply
-            return await asyncio.wait_for(future, timeout=timeout)
-        except asyncio.TimeoutError:
-            print(f"Timeout waiting for service response on {self.reply_topic}")
+            for reply in replies:
+                if reply.ok:
+                    try:
+                        # Deserialize to RpcServiceResponse wrapper
+                        service_response = RpcServiceResponse.deserialize(
+                            reply.ok.payload.to_bytes()
+                        )
+                        # Return the inner msg (BoosterApiRespMsg)
+                        return service_response.msg
+                    except Exception as e:
+                        print(f"Error deserializing response: {e}")
+                else:
+                    print(f"Service error: {reply.err}")
+
             return None
+
         except Exception as e:
-            print(f"Error during service call: {e}")
+            print(f"Service call failed: {e}")
             return None
-        finally:
-            # Clean up subscriber
-            sub.undeclare()
 
     async def send_move_command(
         self, vx: float, vy: float, vyaw: float, duration: float = 1.0
