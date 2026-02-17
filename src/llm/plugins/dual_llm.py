@@ -8,7 +8,7 @@ import typing as T
 import openai
 from pydantic import BaseModel, Field
 
-from llm import LLM, LLMConfig, get_llm_class
+from llm import LLM, LLMConfig, get_llm_class, get_llm_config_class
 from providers.avatar_llm_state_provider import AvatarLLMState
 from providers.llm_history_manager import LLMHistoryManager
 
@@ -120,11 +120,14 @@ class DualLLM(LLM[R]):
         LocalLLMClass = get_llm_class(local_type)
         CloudLLMClass = get_llm_class(cloud_type)
 
+        LocalConfigClass = get_llm_config_class(local_type)
+        CloudConfigClass = get_llm_config_class(cloud_type)
+
         self._local_llm: LLM = LocalLLMClass(
-            config=LLMConfig(**local_cfg), available_actions=available_actions
+            config=LocalConfigClass(**local_cfg), available_actions=available_actions
         )
         self._cloud_llm: LLM = CloudLLMClass(
-            config=LLMConfig(**cloud_cfg), available_actions=available_actions
+            config=CloudConfigClass(**cloud_cfg), available_actions=available_actions
         )
 
         self._local_llm._skip_state_management = True

@@ -240,6 +240,43 @@ def get_llm_class(class_name: str) -> T.Type[LLM]:
         )
 
 
+def get_llm_config_class(class_name: str) -> T.Type[LLMConfig]:
+    """
+    Get the LLMConfig subclass associated with an LLM class name.
+
+    Searches the same module that contains the LLM class for an LLMConfig
+    subclass. Falls back to base LLMConfig if none is found.
+
+    Parameters
+    ----------
+    class_name : str
+        The exact LLM class name (e.g., "QwenLLM", "OpenAILLM").
+
+    Returns
+    -------
+    T.Type[LLMConfig]
+        The config class for the LLM, or base LLMConfig as fallback.
+    """
+    module_name = find_module_with_class(class_name)
+
+    if module_name is None:
+        return LLMConfig
+
+    try:
+        module = importlib.import_module(f"llm.plugins.{module_name}")
+        for obj in module.__dict__.values():
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, LLMConfig)
+                and obj != LLMConfig
+            ):
+                return obj
+    except (ImportError, AttributeError):
+        pass
+
+    return LLMConfig
+
+
 def load_llm(
     llm_config: T.Dict[str, T.Any],
     available_actions: T.Optional[list] = None,
