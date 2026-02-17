@@ -23,8 +23,8 @@ def test_initialization_success():
         assert sensor.messages == []
 
 
-def test_initialization_connection_failure():
-    """Test initialization when Web3 connection fails."""
+def test_initialization_connection_failure(caplog):
+    """Test initialization when Web3 connection fails logs warning instead of crashing."""
     mock_web3 = MagicMock()
     mock_web3.is_connected.return_value = False
 
@@ -32,8 +32,10 @@ def test_initialization_connection_failure():
         patch("inputs.plugins.wallet_ethereum.Web3", return_value=mock_web3),
         patch("inputs.plugins.wallet_ethereum.IOProvider"),
     ):
-        with pytest.raises(Exception, match="Failed to connect to Ethereum"):
-            WalletEthereum(config=SensorConfig())
+        sensor = WalletEthereum(config=SensorConfig())
+
+        assert "Failed to connect to Ethereum RPC" in caplog.text
+        assert sensor.ETH_balance == 0
 
 
 def test_initialization_with_custom_address():

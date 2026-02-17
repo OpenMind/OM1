@@ -52,7 +52,11 @@ class WalletEthereum(FuserInput[SensorConfig, List[float]]):
         # Initialize Web3
         self.web3 = Web3(Web3.HTTPProvider(self.PROVIDER_URL))
         if not self.web3.is_connected():
-            raise Exception("Failed to connect to Ethereum")
+            logging.warning(
+                "Failed to connect to Ethereum RPC at %s. "
+                "Will retry on next poll cycle.",
+                self.PROVIDER_URL,
+            )
 
     async def _poll(self) -> List[float]:
         """
