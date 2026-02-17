@@ -12,6 +12,8 @@ import asyncio
 import json
 import os
 import sys
+import uuid
+from typing import Optional
 
 # Add src directory to path to import local zenoh_msgs
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -31,10 +33,19 @@ class BoosterMoveZenohClient:
         self.session = open_zenoh_session()
         print(f"Connected to Zenoh: {self.session}\n")
 
-        # Zenoh key for ROS2 service (maps to /booster_rpc_service)
-        # The bridge translates this to a ROS2 service call
-        self.service_key = "booster_rpc_service"
-        print(f"Service key: {self.service_key}\n")
+        # Generate unique client ID for service routing
+        self.client_id = str(uuid.uuid4())
+        print(f"Client ID: {self.client_id}")
+
+        # Service name
+        self.service_name = "booster_rpc_service"
+
+        # Topic patterns for ROS2 service through Zenoh bridge
+        self.request_topic = f"rq/{self.service_name}/{self.client_id}/Request"
+        self.reply_topic = f"rr/{self.service_name}/{self.client_id}/Reply"
+
+        print(f"Request topic: {self.request_topic}")
+        print(f"Reply topic: {self.reply_topic}\n")
 
     def create_service_request(self, vx: float, vy: float, vyaw: float) -> bytes:
         """
@@ -62,6 +73,55 @@ class BoosterMoveZenohClient:
         # Serialize to CDR format for Zenoh bridge
         return request.serialize()
 
+    async def _call_service(
+        self, request_payload: bytes, timeout: float = 5.0
+    ) -> Optional[BoosterApiRespMsg]:
+        """
+        Call the ROS 2 service using the request/reply topic pattern.
+
+        Parameters
+        ----------
+        request_payload : bytes
+            The serialized request payload.
+        timeout : float
+            Timeout in seconds.
+
+        Returns
+        -------
+        Optional[BoosterApiRespMsg]
+            The response message, or None if timeout or error.
+        """
+        future = asyncio.get_event_loop().create_future()
+
+        def callback(sample):
+            try:
+                response_msg = BoosterApiRespMsg.deserialize(sample.payload.to_bytes())
+                if not future.done():
+                    future.set_result(response_msg)
+            except Exception as e:
+                print(f"Error deserializing response in callback: {e}")
+                if not future.done():
+                    future.set_exception(e)
+
+        # 1. Subscribe to reply topic FIRST
+        sub = self.session.declare_subscriber(self.reply_topic, callback)
+
+        try:
+            # 2. Then publish request
+            self.session.put(self.request_topic, request_payload)
+
+            # 3. Wait for reply
+            return await asyncio.wait_for(future, timeout=timeout)
+        except asyncio.TimeoutError:
+            print(f"Timeout waiting for service response on {self.reply_topic}")
+            return None
+        except Exception as e:
+            print(f"Error during service call: {e}")
+            return None
+        finally:
+            # Clean up subscriber
+            sub.undeclare()
+
     async def send_move_command(
         self, vx: float, vy: float, vyaw: float, duration: float = 1.0
     ):
@@ -84,53 +144,19 @@ class BoosterMoveZenohClient:
         # Create the service request
         request_payload = self.create_service_request(vx, vy, vyaw)
 
-        try:
-            # Use Zenoh query for ROS2 service call (request/reply pattern)
-            print(f"Sending query to: {self.service_key}")
-            replies = self.session.get(
-                self.service_key,
-                payload=request_payload,
-                timeout=5.0,  # 5 second timeout
-            )
+        response_msg = await self._call_service(request_payload)
 
-            # Process the reply
-            reply_received = False
-            for reply in replies:
-                reply_received = True
-                if reply.ok:
-                    try:
-                        # Deserialize CDR response to BoosterApiRespMsg
-                        response_bytes = reply.ok.payload.to_bytes()
-                        response_msg = BoosterApiRespMsg.deserialize(response_bytes)
-                        print(f"Service response - status: {response_msg.status}")
-                        print(f"Service response - body: {response_msg.body}")
-
-                        # Parse body as JSON if it's not empty
-                        if response_msg.body:
-                            try:
-                                body_data = json.loads(response_msg.body)
-                                print(f"Parsed body: {body_data}")
-                            except json.JSONDecodeError:
-                                pass  # Body is not JSON, that's okay
-                    except Exception as e:
-                        print(f"Error deserializing response: {e}")
-                        print(
-                            f"Response payload (raw): {reply.ok.payload.to_bytes()[:100]}..."
-                        )
-                        import traceback
-
-                        traceback.print_exc()
-                else:
-                    print(f"Service error: {reply.err}")
-
-            if not reply_received:
-                print("Warning: No response received from service")
-
-        except Exception as e:
-            print(f"Error calling service: {e}")
-            import traceback
-
-            traceback.print_exc()
+        if response_msg:
+            print(f"Service response - status: {response_msg.status}")
+            print(f"Service response - body: {response_msg.body}")
+            if response_msg.body:
+                try:
+                    body_data = json.loads(response_msg.body)
+                    print(f"Parsed body: {body_data}")
+                except json.JSONDecodeError:
+                    pass
+        else:
+            print("Warning: No response received from service")
 
         await asyncio.sleep(duration)
 
@@ -139,37 +165,13 @@ class BoosterMoveZenohClient:
         print("Sending STOP command")
         request_payload = self.create_service_request(0.0, 0.0, 0.0)
 
-        try:
-            replies = self.session.get(
-                self.service_key, payload=request_payload, timeout=5.0
-            )
+        response_msg = await self._call_service(request_payload)
 
-            reply_received = False
-            for reply in replies:
-                reply_received = True
-                if reply.ok:
-                    try:
-                        # Deserialize CDR response to BoosterApiRespMsg
-                        response_bytes = reply.ok.payload.to_bytes()
-                        response_msg = BoosterApiRespMsg.deserialize(response_bytes)
-                        print(f"Stop response - status: {response_msg.status}")
-                        print(f"Stop response - body: {response_msg.body}")
-                    except Exception as e:
-                        print(f"Error deserializing stop response: {e}")
-                        import traceback
-
-                        traceback.print_exc()
-                else:
-                    print(f"Service error: {reply.err}")
-
-            if not reply_received:
-                print("Warning: No stop response received")
-
-        except Exception as e:
-            print(f"Error stopping robot: {e}")
-            import traceback
-
-            traceback.print_exc()
+        if response_msg:
+            print(f"Stop response - status: {response_msg.status}")
+            print(f"Stop response - body: {response_msg.body}")
+        else:
+            print("Warning: No stop response received")
 
     async def test_forward(self):
         """Test moving forward."""
