@@ -44,6 +44,24 @@ class BoosterApiRespMsg(IdlStruct, typename="BoosterApiRespMsg"):
 
 
 @dataclass
+class RpcServiceRequest(IdlStruct, typename="RpcServiceRequest"):
+    """
+    Wrapper for RPC service request.
+    """
+
+    msg: BoosterApiReqMsg
+
+
+@dataclass
+class RpcServiceResponse(IdlStruct, typename="RpcServiceResponse"):
+    """
+    Wrapper for RPC service response.
+    """
+
+    msg: BoosterApiRespMsg
+
+
+@dataclass
 class RemoteControllerState(IdlStruct, typename="RemoteControllerState"):
     """
     RemoteControllerState message for Booster robot control.

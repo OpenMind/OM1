@@ -18,7 +18,13 @@ from typing import Optional
 # Add src directory to path to import local zenoh_msgs
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from zenoh_msgs import BoosterApiReqMsg, BoosterApiRespMsg, open_zenoh_session
+from zenoh_msgs import (
+    BoosterApiReqMsg,
+    BoosterApiRespMsg,
+    RpcServiceRequest,
+    RpcServiceResponse,
+    open_zenoh_session,
+)
 
 
 class BoosterMoveZenohClient:
@@ -63,18 +69,21 @@ class BoosterMoveZenohClient:
         Returns
         -------
         bytes
-            Serialized service request payload (CDR format)
+            Serialized service request payload (CDR format, wrapped in RpcServiceRequest)
         """
-        # Create the request message using BoosterApiReqMsg
-        request = BoosterApiReqMsg(
+        # Create the inner request message using BoosterApiReqMsg
+        inner_request = BoosterApiReqMsg(
             api_id=self.API_MOVE, body=json.dumps({"vx": vx, "vy": vy, "vyaw": vyaw})
         )
+
+        # Wrap it in RpcServiceRequest to match ROS 2 service definition
+        request = RpcServiceRequest(msg=inner_request)
 
         # Serialize to CDR format for Zenoh bridge
         return request.serialize()
 
     async def _call_service(
-        self, request_payload: bytes, timeout: float = 5.0
+        self, request_payload: bytes, timeout: float = 10.0
     ) -> Optional[BoosterApiRespMsg]:
         """
         Call the ROS 2 service using the request/reply topic pattern.
@@ -95,9 +104,13 @@ class BoosterMoveZenohClient:
 
         def callback(sample):
             try:
-                response_msg = BoosterApiRespMsg.deserialize(sample.payload.to_bytes())
+                # Deserialize to RpcServiceResponse wrapper first
+                service_response = RpcServiceResponse.deserialize(
+                    sample.payload.to_bytes()
+                )
                 if not future.done():
-                    future.set_result(response_msg)
+                    # Return the inner msg (BoosterApiRespMsg)
+                    future.set_result(service_response.msg)
             except Exception as e:
                 print(f"Error deserializing response in callback: {e}")
                 if not future.done():

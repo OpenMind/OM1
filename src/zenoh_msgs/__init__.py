@@ -54,6 +54,8 @@ from .idl import (
     Quaternion,
     RegionOfInterest,
     RemoteControllerState,
+    RpcServiceRequest,
+    RpcServiceResponse,
     String,
     Time,
     TTSStatusRequest,
@@ -85,6 +87,8 @@ __all__ = [
     "RemoteControllerState",
     "BoosterApiReqMsg",
     "BoosterApiRespMsg",
+    "RpcServiceRequest",
+    "RpcServiceResponse",
     # status_msgs
     "AudioStatus",
     "CameraStatus",

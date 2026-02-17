@@ -3,6 +3,8 @@ from .booster_interface import (
     BoosterApiRespMsg,
     Odometer,
     RemoteControllerState,
+    RpcServiceRequest,
+    RpcServiceResponse,
 )
 from .geographic_msgs import GeoPoint, GeoPointStamped
 from .geometry_msgs import (
@@ -72,6 +74,8 @@ __all__ = [
     "RemoteControllerState",
     "BoosterApiReqMsg",
     "BoosterApiRespMsg",
+    "RpcServiceRequest",
+    "RpcServiceResponse",
     # status_msgs
     "AudioStatus",
     "CameraStatus",
