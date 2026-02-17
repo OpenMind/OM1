@@ -1,5 +1,10 @@
 import json
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from providers.safety_sandbox_provider import SafetySandboxProvider
+
 import os
 from dataclasses import dataclass, field
 from enum import Enum
@@ -130,6 +135,8 @@ class RuntimeConfig:
         Optional action execution mode (e.g., "concurrent", "sequential", "dependencies"). Defaults to "concurrent".
     action_dependencies : Optional[Dict[str, List[str]]]
         Optional mapping of action dependencies.
+    safety_sandbox : Optional["SafetySandboxProvider"]
+        Optional safety sandbox provider instance.
     """
 
     version: str
@@ -152,6 +159,7 @@ class RuntimeConfig:
     unitree_ethernet: Optional[str] = None
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    safety_sandbox: Optional["SafetySandboxProvider"] = None
 
 
 def add_meta(
@@ -185,7 +193,6 @@ def add_meta(
     dict
         The updated runtime configuration.
     """
-    # logging.info(f"config before {config}")
     if "api_key" not in config and g_api_key is not None:
         config["api_key"] = g_api_key
     if "unitree_ethernet" not in config and g_ut_eth is not None:
@@ -291,6 +298,12 @@ class ModeConfig:
         Execution mode for actions (e.g., "concurrent", "sequential", "dependencies"). Defaults to concurrent.
     action_dependencies : Optional[Dict[str, List[str]]], optional
         Dependencies between actions for execution order. Defaults to None.
+    safety_sandbox_config : Optional[Dict], optional
+        Raw configuration for safety sandbox.
+    safety_sandbox : Optional["SafetySandboxProvider"], optional
+        Instantiated safety sandbox provider.
+    _raw_safety_sandbox : Optional[Dict], optional
+        Raw safety sandbox configuration before loading.
     _raw_inputs : List[Dict], optional
         Raw input configurations before loading. Defaults to empty list.
     _raw_llm : Optional[Dict], optional
@@ -326,6 +339,9 @@ class ModeConfig:
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    safety_sandbox_config: Optional[Dict] = None
+    safety_sandbox: Optional["SafetySandboxProvider"] = None
+    _raw_safety_sandbox: Optional[Dict] = field(default_factory=dict)
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
@@ -369,6 +385,7 @@ class ModeConfig:
             unitree_ethernet=global_config.unitree_ethernet,
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
+            safety_sandbox=self.safety_sandbox,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -602,6 +619,10 @@ def load_mode_config(
     )
 
     for mode_name, mode_data in raw_config.get("modes", {}).items():
+        logging.info(f"mode_data keys for {mode_name}: {list(mode_data.keys())}")
+        # Read safety_sandbox config if present
+        safety_sandbox_config = mode_data.get("safety_sandbox", {})
+
         mode_config = ModeConfig(
             version=mode_data.get("version", "1.0.1"),
             name=mode_name,
@@ -617,6 +638,7 @@ def load_mode_config(
             save_interactions=mode_data.get("save_interactions", False),
             action_execution_mode=mode_data.get("action_execution_mode"),
             action_dependencies=mode_data.get("action_dependencies"),
+            _raw_safety_sandbox=safety_sandbox_config,
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
             _raw_simulators=mode_data.get("simulators", []),
@@ -752,6 +774,72 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     else:
         raise ValueError(f"No LLM configuration found for mode {mode_config.name}")
 
+    # Initialize safety sandbox provider if configured
+    logging.info(f"Safety sandbox raw config: {mode_config._raw_safety_sandbox}")
+    if mode_config._raw_safety_sandbox:
+        try:
+            from providers.safety_sandbox_provider import SafetySandboxProvider
+
+            mode_config.safety_sandbox = SafetySandboxProvider(
+                mode_config._raw_safety_sandbox
+            )
+            logging.info(f"Safety sandbox loaded for mode {mode_config.name}")
+        except Exception as e:
+            logging.error(
+                f"Failed to load safety sandbox for mode {mode_config.name}: {e}"
+            )
+            mode_config.safety_sandbox = None
+
+    # Initialize RobotStateProvider and EnvironmentModelProvider if safety sandbox is enabled
+    if mode_config.safety_sandbox and mode_config.safety_sandbox.enabled:
+        try:
+            from providers.environment_model_provider import EnvironmentModelProvider
+            from providers.robot_state_provider import RobotStateProvider
+            from providers.teleops_status_provider import TeleopsStatusProvider
+            from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
+            from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
+
+            robot_state_provider = RobotStateProvider()
+            odom_provider = None
+            state_provider = None
+            amcl_provider = None
+            lidar_provider = None
+            teleops_provider = TeleopsStatusProvider()
+
+            for bg in mode_config.backgrounds:
+                if hasattr(bg, "unitree_go2_odom_provider"):
+                    odom_provider = bg.unitree_go2_odom_provider  # type: ignore
+                if hasattr(bg, "unitree_go2_state_provider"):
+                    state_provider = bg.unitree_go2_state_provider  # type: ignore
+                if hasattr(bg, "unitree_go2_amcl_provider"):
+                    amcl_provider = bg.unitree_go2_amcl_provider  # type: ignore
+                if hasattr(bg, "unitree_go2_rplidar_provider"):
+                    lidar_provider = bg.unitree_go2_rplidar_provider  # type: ignore
+
+            for inp in mode_config.agent_inputs:
+                if hasattr(inp, "odom") and isinstance(inp.odom, UnitreeGo2OdomProvider):  # type: ignore
+                    odom_provider = inp.odom  # type: ignore
+                if hasattr(inp, "lidar") and isinstance(inp.lidar, UnitreeGo2RPLidarProvider):  # type: ignore
+                    lidar_provider = inp.lidar  # type: ignore
+
+            robot_state_provider.register_providers(
+                odom=odom_provider,
+                state_prov=state_provider,
+                amcl=amcl_provider,
+                lidar=lidar_provider,
+                teleops=teleops_provider,
+            )
+            robot_state_provider.start()
+
+            # Initialize EnvironmentModelProvider
+            env_provider = EnvironmentModelProvider()
+            env_provider.register_providers(lidar=lidar_provider, amcl=amcl_provider)
+            env_provider.start()
+            logging.info("EnvironmentModelProvider initialized and started")
+            logging.info("RobotStateProvider initialized and started")
+        except Exception as e:
+            logging.error(f"Failed to initialize RobotStateProvider: {e}")
+
 
 def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
     """
@@ -785,6 +873,8 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
                 "agent_actions": mode_config._raw_actions,
                 "backgrounds": mode_config._raw_backgrounds,
                 "lifecycle_hooks": mode_config._raw_lifecycle_hooks,
+                # Include safety_sandbox config for serialization
+                "safety_sandbox": mode_config._raw_safety_sandbox,
             }
 
         transition_rules = []

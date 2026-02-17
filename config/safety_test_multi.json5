@@ -1,0 +1,48 @@
+{
+  version: "v1.0.2",
+  default_mode: "safety_mode",
+  allow_manual_switching: true,
+  mode_memory_enabled: false,
+  api_key: "dummy", // pragma: allowlist secret
+  system_governance: "Be safe.",
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "dummy",
+      history_length: 2,
+    },
+  },
+  modes: {
+    safety_mode: {
+      display_name: "Safety Test Mode",
+      description: "Mode for testing safety sandbox",
+      hertz: 1,
+      system_prompt_base: "You are a test robot.",
+      safety_sandbox: {
+        enabled: true,
+        simulator: "WebSim",
+        simulation_timeout: 2.0,
+        obstacle_margin: 0.3,
+      },
+      agent_inputs: [
+        {
+          type: "MockInput",
+          config: {
+            mock_text: "Hello, this is a test input.",
+          },
+        },
+      ],
+      agent_actions: [
+        {
+          name: "speak",
+          llm_label: "speak",
+          connector: "elevenlabs_tts",
+          config: {
+            voice_id: "dummy",
+          },
+        },
+      ],
+      backgrounds: [],
+    },
+  },
+}

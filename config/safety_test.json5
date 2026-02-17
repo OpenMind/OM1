@@ -1,0 +1,41 @@
+{
+  version: "v1.0.2",
+  hertz: 1,
+  name: "safety_test",
+  api_key: "dummy", // pragma: allowlist secret
+  system_prompt_base: "You are a test robot.",
+  system_governance: "Be safe.",
+  system_prompt_examples: "",
+  safety_sandbox: {
+    enabled: true,
+    simulator: "websim",
+    simulation_timeout: 2.0,
+    obstacle_margin: 0.3,
+  },
+  agent_inputs: [
+    {
+      type: "MockInput",
+      config: {
+        mock_text: "Hello, this is a test input.",
+      },
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM", // ganti dengan yang pasti ada
+    config: {
+      agent_name: "Test",
+      history_length: 2,
+    },
+  },
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "elevenlabs_tts", // ganti dengan yang ada
+      config: {
+        voice_id: "dummy",
+      },
+    },
+  ],
+  backgrounds: [],
+}
