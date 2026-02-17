@@ -8,8 +8,11 @@ from simulators.base import Simulator
 
 
 class MockSimulator(Simulator):
-    def process_data(self):
-        pass
+    def sim(self, actions):
+        return None
+
+    def tick(self) -> None:
+        return None
 
 
 def test_load_simulator_success():
@@ -48,7 +51,14 @@ def test_load_simulator_multiple_plugins():
         patch("simulators.importlib.import_module") as mock_import,
     ):
         mock_find_module.return_value = "sim2"
-        Simulator2 = type("Simulator2", (Simulator,), {})
+        Simulator2 = type(
+            "Simulator2",
+            (Simulator,),
+            {
+                "sim": lambda self, actions: None,
+                "tick": lambda self: None,
+            },
+        )
         mock_module2 = types.ModuleType("sim2")
         setattr(mock_module2, "Simulator2", Simulator2)
         mock_import.return_value = mock_module2
@@ -79,6 +89,25 @@ def test_load_simulator_invalid_type():
             ValueError, match="'InvalidSimulator' is not a valid simulator subclass"
         ):
             load_simulator({"type": "InvalidSimulator"})
+
+
+def test_load_simulator_rejects_abstract_simulator():
+    with (
+        patch("simulators.find_module_with_class") as mock_find_module,
+        patch("simulators.importlib.import_module") as mock_import,
+    ):
+        mock_find_module.return_value = "abstract_simulator"
+
+        AbstractSim = type("AbstractSim", (Simulator,), {})
+        mock_module = types.ModuleType("abstract_simulator")
+        setattr(mock_module, "AbstractSim", AbstractSim)
+        mock_import.return_value = mock_module
+
+        with pytest.raises(
+            ValueError,
+            match="'AbstractSim' is an abstract simulator subclass and cannot be instantiated",
+        ):
+            load_simulator({"type": "AbstractSim"})
 
 
 def test_find_module_with_class_success():

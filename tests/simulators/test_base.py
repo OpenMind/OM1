@@ -1,23 +1,24 @@
 import threading
 import time
 
+import pytest
+
 from simulators.base import Simulator, SimulatorConfig
 
 
-def test_simulator_init():
-    """Test simulator initialization with config."""
+class DummySimulator(Simulator):
+    def sim(self, actions):
+        return None
+
+    def tick(self) -> None:
+        return None
+
+
+def test_simulator_is_abstract():
+    """Simulator should be abstract to enforce sim/tick implementation."""
     config = SimulatorConfig(name="test_sim")
-    simulator = Simulator(config)
-    assert simulator.name == "test_sim"
-    assert simulator.config == config
-
-
-def test_simulator_init_default_name():
-    """Test simulator initialization with default name."""
-    config = SimulatorConfig()
-    simulator = Simulator(config)
-    assert simulator.name == "Simulator"
-    assert simulator.config == config
+    with pytest.raises(TypeError):
+        Simulator(config)
 
 
 def test_simulator_config_kwargs():
@@ -34,7 +35,7 @@ def test_simulator_config_kwargs():
 def test_sleep_without_stop_event():
     """Test that sleep works normally when no stop event is set."""
     config = SimulatorConfig()
-    simulator = Simulator(config)
+    simulator = DummySimulator(config)
 
     start_time = time.time()
     result = simulator.sleep(0.1)
@@ -47,7 +48,7 @@ def test_sleep_without_stop_event():
 def test_sleep_with_stop_event_not_triggered():
     """Test that sleep completes normally when stop event is set but not triggered."""
     config = SimulatorConfig()
-    simulator = Simulator(config)
+    simulator = DummySimulator(config)
     stop_event = threading.Event()
     simulator.set_stop_event(stop_event)
 
@@ -62,7 +63,7 @@ def test_sleep_with_stop_event_not_triggered():
 def test_sleep_interrupted_by_stop_event():
     """Test that sleep is interrupted when stop event is set during sleep."""
     config = SimulatorConfig()
-    simulator = Simulator(config)
+    simulator = DummySimulator(config)
     stop_event = threading.Event()
     simulator.set_stop_event(stop_event)
 
@@ -88,7 +89,7 @@ def test_sleep_interrupted_by_stop_event():
 def test_sleep_already_stopped():
     """Test that sleep returns immediately when stop event is already set."""
     config = SimulatorConfig()
-    simulator = Simulator(config)
+    simulator = DummySimulator(config)
     stop_event = threading.Event()
     stop_event.set()
     simulator.set_stop_event(stop_event)
@@ -105,7 +106,7 @@ def test_sleep_already_stopped():
 def test_should_stop_without_event():
     """Test that should_stop returns False when no stop event is set."""
     config = SimulatorConfig()
-    simulator = Simulator(config)
+    simulator = DummySimulator(config)
 
     assert simulator.should_stop() is False
 
@@ -113,7 +114,7 @@ def test_should_stop_without_event():
 def test_should_stop_with_event_not_set():
     """Test that should_stop returns False when stop event exists but is not set."""
     config = SimulatorConfig()
-    simulator = Simulator(config)
+    simulator = DummySimulator(config)
     stop_event = threading.Event()
     simulator.set_stop_event(stop_event)
 
@@ -123,7 +124,7 @@ def test_should_stop_with_event_not_set():
 def test_should_stop_with_event_set():
     """Test that should_stop returns True when stop event is set."""
     config = SimulatorConfig()
-    simulator = Simulator(config)
+    simulator = DummySimulator(config)
     stop_event = threading.Event()
     simulator.set_stop_event(stop_event)
     stop_event.set()

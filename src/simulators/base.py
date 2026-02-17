@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import threading
 import time
 from typing import List, Optional
@@ -19,7 +20,7 @@ class SimulatorConfig(BaseModel):
     port: Optional[int] = Field(default=None, description="Port number for simulator")
 
 
-class Simulator:
+class Simulator(ABC):
     """
     Base class for simulation components.
     """
@@ -81,6 +82,7 @@ class Simulator:
 
         return not was_stopped
 
+    @abstractmethod
     def sim(self, actions: List[Action]) -> None:
         """
         Simulate the environment with the given actions.
@@ -90,13 +92,13 @@ class Simulator:
         actions : List[Action]
             List of actions to simulate in the environment.
         """
-        pass
+        raise NotImplementedError
 
+    @abstractmethod
     def tick(self) -> None:
         """
         Run the simulator for one tick.
 
         Note: This method should not block the event loop.
         """
-        self.sleep(60)
-        pass
+        raise NotImplementedError

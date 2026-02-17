@@ -80,6 +80,11 @@ def get_simulator_class(class_name: str) -> T.Type[Simulator]:
         ):
             raise ValueError(f"'{class_name}' is not a valid Simulator subclass")
 
+        if inspect.isabstract(simulator_class):
+            raise ValueError(
+                f"'{class_name}' is an abstract Simulator subclass and cannot be instantiated"
+            )
+
         logging.debug(f"Got Simulator class {class_name} from {module_name}.py")
         return simulator_class
 
@@ -123,6 +128,11 @@ def load_simulator(simulator_config: T.Dict[str, T.Any]) -> Simulator:
             and simulator_class != Simulator
         ):
             raise ValueError(f"'{class_name}' is not a valid simulator subclass")
+
+        if inspect.isabstract(simulator_class):
+            raise ValueError(
+                f"'{class_name}' is an abstract simulator subclass and cannot be instantiated"
+            )
 
         config_class = None
         for obj in module.__dict__.values():
