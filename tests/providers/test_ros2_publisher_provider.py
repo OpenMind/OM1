@@ -13,6 +13,9 @@ class FakeNode:
     def create_publisher(self, msg_type, topic, qos_profile):
         return Mock()
 
+    def destroy_node(self):
+        pass
+
 
 mock_rclpy = MagicMock()
 mock_rclpy.ok.return_value = True
@@ -42,6 +45,16 @@ def provider():
 def test_initialization(provider):
     assert provider is not None
     assert not provider.running
+
+
+def test_rclpy_init_called_when_not_initialized():
+    """Test that rclpy.init() is called when rclpy.ok() returns False."""
+    with patch("providers.ros2_publisher_provider.rclpy") as mock_rclpy_module:
+        mock_rclpy_module.ok.return_value = False
+
+        ROS2PublisherProvider("test_topic")
+
+        mock_rclpy_module.init.assert_called_once()
 
 
 def test_add_pending_message(provider):

@@ -9,8 +9,6 @@ import rclpy  # type: ignore
 from rclpy.node import Node  # type: ignore
 from std_msgs.msg import String  # type: ignore
 
-rclpy.init()
-
 
 class ROS2PublisherProvider(Node):
     """
@@ -31,6 +29,9 @@ class ROS2PublisherProvider(Node):
             The ROS 2 topic name to publish messages to. Defaults to
             "speak_topic". The publisher uses a queue size of 10.
         """
+        if not rclpy.ok():
+            rclpy.init()
+
         try:
             super().__init__("ROS2_publisher_provider")
         except Exception as e:
@@ -117,6 +118,7 @@ class ROS2PublisherProvider(Node):
         if self._thread:
             self._thread.join(timeout=5)
 
-        self.publisher_.Close()
+        self.destroy_node()
+        rclpy.shutdown()
 
         logging.info("ROS2 Publisher Provider stopped")
