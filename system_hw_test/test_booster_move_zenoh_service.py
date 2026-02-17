@@ -39,7 +39,7 @@ class BoosterMoveZenohClient:
         print(f"Connected to Zenoh: {self.session}\n")
 
         # Zenoh key for ROS2 service (maps to /booster_rpc_service)
-        self.service_name = "booster_rpc_service"
+        self.service_name = "rt/booster_rpc_service"
         print(f"Service name: {self.service_name}\n")
 
     def create_service_request(self, vx: float, vy: float, vyaw: float) -> bytes:
@@ -69,7 +69,9 @@ class BoosterMoveZenohClient:
         request = RpcServiceRequest(msg=inner_request)
 
         # Serialize to CDR format for Zenoh bridge
-        return request.serialize()
+        serialized_request = request.serialize()
+        print(f"Serialized request (hex): {serialized_request.hex()}")
+        return serialized_request
 
     async def _call_service(
         self, request_payload: bytes, timeout: float = 10.0
