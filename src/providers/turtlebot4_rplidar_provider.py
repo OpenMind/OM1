@@ -285,11 +285,9 @@ class TurtleBot4RPLidarProvider:
             # convert the angle from [0 to 360] to [-180 to +180] range
             adjusted_angle = adjusted_angle - 180.0
 
-            for b in self.angles_blanked:
-                if adjusted_angle >= b[0] and adjusted_angle <= b[1]:
-                    # this is a permanent robot reflection
-                    # disregard
-                    continue
+            if any(b[0] <= adjusted_angle <= b[1] for b in self.angles_blanked):
+                # this is a permanent robot reflection - disregard
+                continue
 
             # Convert angle to radians for trigonometric calculations
             # Note: angle is adjusted back to [0, 360] range
