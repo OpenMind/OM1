@@ -16,7 +16,7 @@
     config: {
       agent_name: "Bits",
       history_length: 1,
-      base_url: "http://192.168.0.83:8860/v1",
+      base_url: "http://omr2.local:8860/v1",
       model: "nvidia/nemotron-3-nano",
     },
   },
@@ -59,7 +59,7 @@
           connector: "greeting_conversation_kokoro",
           config: {
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "http://omr2.local:8880/v1",
           },
         },
       ],
@@ -72,7 +72,7 @@
             tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "http://omr2.local:8880/v1",
           },
         },
         {
@@ -82,7 +82,7 @@
             tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "http://omr2.local:8880/v1",
           },
         },
         {
@@ -92,7 +92,7 @@
             tts_provider: "kokoro",
             message: "It was great chatting with you! Have a wonderful day!",
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "http://omr2.local:8880/v1",
           },
         },
       ],
