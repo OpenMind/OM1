@@ -41,7 +41,7 @@ def generate_function_schema_from_action(action) -> dict:
             properties[field_name] = {
                 "type": "string",
                 "enum": enum_values,
-                "description": f"The {field_name} to perform. Must be one of: {', '.join(enum_values)}",
+                "description": f"The {field_name} to perform. Must be one of: {', '.join(str(v) for v in enum_values)}",
             }
         elif field_type is bool:
             properties[field_name] = {
