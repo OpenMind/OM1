@@ -84,9 +84,12 @@ class SleepTickerProvider:
             self._current_sleep_task = asyncio.create_task(asyncio.sleep(duration))
             await self._current_sleep_task
         except asyncio.CancelledError:
-            logging.warning("Sleep operation was cancelled.")
-            pass
+            logging.warning("Sleep operation was cancelled", extra={"duration": duration})
         except Exception as e:
-            logging.error(f"Error during sleep operation: {e}")
+            logging.error(
+                "Error during sleep operation",
+                exc_info=e,
+                extra={"duration": duration},
+            )
         finally:
             self._current_sleep_task = None
