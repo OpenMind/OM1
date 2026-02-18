@@ -2,6 +2,9 @@ import json
 
 import rclpy
 import zenoh
+
+# Import ROS 2 service type
+from booster_interface.srv import RpcService
 from rclpy.node import Node
 
 # Import your custom message wrappers
@@ -16,9 +19,13 @@ class BoosterZenohBridge(Node):
         # 1. Initialize ROS 2 Service Client
         # This bridge acts as a CLIENT to the real ROS 2 service
         self.ros2_service_name = "/booster_rpc_service"
-        # Note: Replace 'YourServiceType' with the actual ROS 2 .srv type
-        # from your_custom_interfaces.srv import YourServiceType
-        # self.cli = self.create_client(YourServiceType, self.ros2_service_name)
+        self.cli = self.create_client(RpcService, self.ros2_service_name)
+
+        # Wait for service to be available
+        print(f"Waiting for ROS 2 service: {self.ros2_service_name}")
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            print("Service not available, waiting...")
+        print(f"ROS 2 service {self.ros2_service_name} is ready")
 
         # 2. Initialize Zenoh Session
         print("Opening Zenoh session...")
@@ -44,17 +51,32 @@ class BoosterZenohBridge(Node):
             zenoh_req = RpcServiceRequest.deserialize(payload)
             inner_msg = zenoh_req.msg  # This is the BoosterApiReqMsg
 
-            print(f"Request API ID: {inner_msg.api_id}")
-            print(f"Request Body: {inner_msg.body}")
+            # Convert Zenoh request to ROS 2 service request
+            ros2_req = RpcService.Request()
+            ros2_req.msg.api_id = inner_msg.api_id
+            ros2_req.msg.body = inner_msg.body
 
-            # --- ROS 2 Integration Logic ---
-            # In a real scenario, you would convert inner_msg to a ROS 2 Service Request:
-            # ros2_req = YourServiceType.Request()
-            # ros2_req.data = inner_msg.body
+            # Call the ROS 2 service synchronously
+            print("Calling ROS 2 service...")
+            future = self.cli.call_async(ros2_req)
+            rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
 
-            # For this example, we simulate the ROS 2 service success:
-            response_body = json.dumps({"status": "success", "message": "Robot moved"})
-            api_resp = BoosterApiRespMsg(status=0, body=response_body)
+            if future.result() is not None:
+                ros2_resp = future.result()
+                print(
+                    f"ROS 2 Response - Status: {ros2_resp.msg.status}, Body: {ros2_resp.msg.body}"
+                )
+
+                # Convert ROS 2 response to Zenoh response
+                api_resp = BoosterApiRespMsg(
+                    status=ros2_resp.msg.status, body=ros2_resp.msg.body
+                )
+            else:
+                print("ROS 2 service call failed or timed out")
+                error_body = json.dumps(
+                    {"status": "error", "message": "ROS 2 service call failed"}
+                )
+                api_resp = BoosterApiRespMsg(status=-1, body=error_body)
 
             # Wrap back into the RpcServiceResponse expected by your client
             zenoh_resp = RpcServiceResponse(msg=api_resp)
