@@ -70,56 +70,13 @@ If you don't have uv installed, use the following command to install it on your 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Use this **CycloneDDS** configuration. It uses `lo` as the network interface. We recommend that you export this in your `.bashrc` or equivalent configuration file `cyclonedds.xml`.
-To add it to `cyclonedds.xml`:
-
-```bash
-cd cyclonedds
-vi cyclonedds.xml
-```
-
-Add the following, then save and exit.
-
-```xml
-<CycloneDDS>
-    <Domain>
-        <General>
-            <Interfaces>
-                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
-            </Interfaces>
-        </General>
-        <Discovery>
-            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
-        </Discovery>
-    </Domain>
-</CycloneDDS>
-```
-
-Open your bashrc file
+Configure **CycloneDDS** to use `lo` as the network interface. Add the following to your `~/.bashrc`:
 
 ```bash
 vi ~/.bashrc
 ```
 
-Add the following, replacing `/path/to/cyclonedds` with the actual path to your CycloneDDS installation:
-
-```bash
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI=/path/to/cyclonedds/cyclonedds.xml
-```
-
-Apply the changes
-```bash
-source ~/.bashrc
-```
-
-To add the config to your bashrc, run:
-
-```bash
-vim ~/.bashrc
-```
-
-And add the following, replacing `/path/to/cyclonedds` with the actual path to your CycloneDDS installation:
+Add the following lines at the end of the file:
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
@@ -138,12 +95,11 @@ export CYCLONEDDS_URI='
 </CycloneDDS>'
 ```
 
-Now run
+Apply the changes:
 
 ```bash
 source ~/.bashrc
 ```
-This will apply the latest changes in the current shell session.
 
 Check if you have rosdep installed by running `rosdep` or `rosdep --version`. If it is not installed, run the following:
 
@@ -162,9 +118,11 @@ Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repos
 
 Step 2: Install all the necessary dependencies:
 
+    > **Note:** Python 3.10 is required for compatibility with ROS 2 Humble.
+
     ```bash
     cd OM1-ros2-sdk
-    uv venv
+    uv venv --python 3.10
     sudo rosdep init
     rosdep update
     rosdep install --from-paths . --ignore-src -r -y
@@ -202,11 +160,23 @@ Step 5: Open a new terminal and run:
 
     This will bring up the `om/path` topic, enabling OM1 to understand the surrounding environment.
 
-Step 6: Run Zenoh Ros2 Bridge
+Step 6: Run Zenoh ROS 2 Bridge
 
-    To run the Zenoh bridge for the Unitree Go2, you need to have the Zenoh ROS 2 bridge installed. You can find the installation instructions in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+    Install the Zenoh ROS 2 bridge. You can find additional details in the [Zenoh ROS 2 Bridge documentation](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds).
 
-    After installing the Zenoh ROS 2 bridge, you can run it with the following command:
+    ```bash
+    sudo apt install ros-humble-rmw-zenoh-cpp
+    ```
+
+    Alternatively, you can install from the official Zenoh Debian repository:
+
+    ```bash
+    echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee /etc/apt/sources.list.d/zenoh.list > /dev/null
+    sudo apt update
+    sudo apt install zenoh-bridge-ros2dds
+    ```
+
+    After installing the Zenoh ROS 2 bridge, run it with the following command:
 
     ```bash
     zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
