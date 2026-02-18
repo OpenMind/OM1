@@ -123,7 +123,7 @@ def test_formatted_latest_buffer_with_message():
     assert "// END" in result
     assert len(sensor.messages) == 0
 
-    sensor.io_provider.add_input.assert_called_once_with(
+    sensor.io_provider.add_input.assert_called_once_with(  # type: ignore[union-attr]
         "DummyVLMPlugin", "I see a robot", 100.0
     )
 
