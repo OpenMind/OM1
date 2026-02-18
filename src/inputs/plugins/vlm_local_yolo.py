@@ -219,6 +219,8 @@ class VLM_Local_YOLO(FuserInput[VLM_Local_YOLOConfig, Optional[List]]):
         if self.have_cam and self.cap is not None:
 
             ret, frame = self.cap.read()
+            if not ret or frame is None:
+                return None
             self.frame_index += 1
             timestamp = time.time()
 

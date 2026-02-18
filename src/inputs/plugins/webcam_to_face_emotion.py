@@ -27,6 +27,7 @@ def check_webcam():
         logging.info("No webcam found")
         return False
     logging.info("Found cam(0)")
+    cap.release()
     return True
 
 
@@ -87,7 +88,9 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         # Capture a frame every 500 ms
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
-            return frame
+            if ret:
+                return frame
+        return None
 
     async def _raw_to_text(
         self, raw_input: Optional[cv2.typing.MatLike]
@@ -129,6 +132,7 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
             gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
         )
 
+        self.emotion = ""
         for x, y, w, h in faces:
             # Extract the face ROI (Region of Interest)
             face_roi = rgb_frame[y : y + h, x : x + w]
