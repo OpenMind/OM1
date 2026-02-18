@@ -560,11 +560,9 @@ def load_mode_config(
     g_robot_ip = raw_config.get("robot_ip")
     g_api_key = raw_config.get("api_key")
     g_URID = raw_config.get("URID")
-    g_ut_eth = raw_config.get("unitree_ethernet", None)
-    if g_ut_eth is None or g_ut_eth == "":
-        logging.info("No robot hardware ethernet port provided.")
-    else:
-        load_unitree(g_ut_eth)
+    g_ut_eth = raw_config.get("unitree_ethernet")
+
+    load_unitree(g_ut_eth)
 
     mode_system_config = ModeSystemConfig(
         version=config_version,

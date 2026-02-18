@@ -24,7 +24,7 @@ def load_unitree(unitree_ethernet: str):
         If initialization of the Unitree Ethernet channel fails.
 
     """
-    if unitree_ethernet is not None:
+    if unitree_ethernet:
         logging.info(
             f"Using {unitree_ethernet} as the Unitree Network Ethernet Adapter"
         )
