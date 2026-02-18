@@ -53,6 +53,7 @@ def check_webcam(index_to_check):
         logging.info(f"ERROR: COCO did not find cam: {index_to_check}")
         return False
     logging.info(f"COCO found cam: {index_to_check}")
+    cap.release()
     return True
 
 
