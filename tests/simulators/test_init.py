@@ -83,6 +83,7 @@ def test_load_simulator_invalid_type():
 
 def test_find_module_with_class_success():
     with (
+        patch("os.path.dirname") as mock_dirname,
         patch("os.path.join") as mock_join,
         patch("os.path.exists") as mock_exists,
         patch("os.listdir") as mock_listdir,
@@ -91,7 +92,8 @@ def test_find_module_with_class_success():
             mock_open(read_data="class TestSimulator(Simulator):\n    pass\n"),
         ),
     ):
-        mock_join.side_effect = lambda *args: "/".join(args)
+        mock_dirname.return_value = "/fake/path"
+        mock_join.side_effect = lambda *args: "/".join(str(arg) for arg in args)
         mock_exists.return_value = True
         mock_listdir.return_value = ["test_simulator.py"]
 

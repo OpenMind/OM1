@@ -1,3 +1,4 @@
+import threading
 import time
 import typing as T
 from abc import ABC, abstractmethod
@@ -50,7 +51,7 @@ class ActionConfig(BaseModel):
 @dataclass
 class Interface(T.Generic[IT, OT]):
     """
-    An interface for a action.
+    An interface for an action.
 
     Parameters
     ----------
@@ -79,16 +80,61 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
             Configuration for the action connector.
         """
         self.config: CT = config
+        self._stop_event: T.Optional[threading.Event] = None
+
+    def set_stop_event(self, stop_event: threading.Event) -> None:
+        """
+        Set the stop event for this action connector.
+
+        Parameters
+        ----------
+        stop_event : threading.Event
+            Event that signals when the connector should stop
+        """
+        self._stop_event = stop_event
+
+    def should_stop(self) -> bool:
+        """
+        Check if the connector should stop.
+
+        Returns
+        -------
+        bool
+            True if the connector should stop, False otherwise
+        """
+        return self._stop_event is not None and self._stop_event.is_set()
+
+    def sleep(self, duration: float) -> bool:
+        """
+        Sleep for the specified duration, but wake immediately if stop signal is received.
+
+        Parameters
+        ----------
+        duration : float
+            Total duration to sleep in seconds
+
+        Returns
+        -------
+        bool
+            True if sleep completed normally, False if interrupted by stop signal
+        """
+        if self._stop_event is None:
+            time.sleep(duration)
+            return True
+
+        was_stopped = self._stop_event.wait(timeout=duration)
+
+        return not was_stopped
 
     @abstractmethod
     async def connect(self, output_interface: OT) -> None:
         """
-        Connect the input protocol to the action.
+        Connect the output interface to the action.
 
         Parameters
         ----------
         output_interface : OT
-            The input protocol containing the action details.
+            The output interface containing the action details.
         """
         pass
 
@@ -96,7 +142,17 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         """
         Tick method for periodic updates.
         """
-        time.sleep(60)
+        self.sleep(60)
+
+    def stop(self) -> None:
+        """
+        Stop the connector and clean up resources.
+
+        This method should be overridden by subclasses that need to perform
+        cleanup operations (e.g., closing connections, releasing resources).
+        The base implementation does nothing.
+        """
+        pass
 
 
 @dataclass

@@ -1,0 +1,120 @@
+{
+  // Configuration version
+  version: "v1.0.2",
+
+  // Mode system configuration for Unitree Go2
+  default_mode: "greeting",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "openmind_free",
+  unitree_ethernet: "enP2p1s0",
+  system_governance: "",
+  cortex_llm: {
+    type: "QwenLLM",
+    config: {
+      agent_name: "Bits",
+      history_length: 1,
+      base_url: "http://omr2.local:8860/v1",
+      model: "nvidia/nemotron-3-nano",
+    },
+  },
+
+  modes: {
+    approaching: {
+      display_name: "Approaching Person Mode",
+      description: "Robot approaches detected humans autonomously.",
+      system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform.",
+      hertz: 0.001,
+      agent_inputs: [],
+      action_execution_mode: "concurrent",
+      agent_actions: [],
+      backgrounds: [
+        {
+          type: "ApproachingPerson",
+        },
+      ],
+      lifecycle_hooks: [],
+    },
+    greeting: {
+      display_name: "Greeting Conversation Mode",
+      description: "Robot engages in greeting conversations with users upon approach.",
+      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform. Your primary function is to initiate and maintain greeting conversations with users who approach you. Remember: OpenMind is a software company that makes robots useful and you are running OpenMind's OM1 software.",
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "RivaASRInput",
+          config: {
+            base_url: "ws://localhost:6790",
+            enable_tts_interrupt: false,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "greeting_conversation",
+          llm_label: "greeting_conversation",
+          connector: "greeting_conversation_kokoro",
+          config: {
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://omr2.local:8880/v1",
+          },
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            tts_provider: "kokoro",
+            message: "Hello! I'm Bits, how can I help you today?",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://omr2.local:8880/v1",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            tts_provider: "kokoro",
+            message: "Hello! I'm Bits, how can I help you today?",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://omr2.local:8880/v1",
+          },
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "message",
+          handler_config: {
+            tts_provider: "kokoro",
+            message: "It was great chatting with you! Have a wonderful day!",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://omr2.local:8880/v1",
+          },
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    {
+      from_mode: "approaching",
+      to_mode: "greeting",
+      transition_type: "context_aware",
+      context_conditions: { approaching_detected: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "greeting",
+      to_mode: "approaching",
+      transition_type: "context_aware",
+      context_conditions: { greeting_conversation_finished: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+  ],
+}

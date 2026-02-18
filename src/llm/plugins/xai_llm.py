@@ -1,9 +1,10 @@
 import logging
 import time
 import typing as T
+from enum import Enum
 
 import openai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm import LLM, LLMConfig
 from llm.function_schemas import convert_function_calls_to_actions
@@ -14,27 +15,49 @@ from providers.llm_history_manager import LLMHistoryManager
 R = T.TypeVar("R", bound=BaseModel)
 
 
+class XAIModel(str, Enum):
+    """Available XAI models."""
+
+    GROK_2_LATEST = "grok-2-latest"
+    GROK_3_BETA = "grok-3-beta"
+    GROK_4_LATEST = "grok-4-latest"
+    GROK_4 = "grok-4"
+
+
+class XAIConfig(LLMConfig):
+    """XAI-specific configuration with model enum."""
+
+    base_url: T.Optional[str] = Field(
+        default="https://api.openmind.org/api/core/xai",
+        description="Base URL for the XAI API endpoint",
+    )
+    model: T.Optional[T.Union[XAIModel, str]] = Field(
+        default=XAIModel.GROK_4_LATEST,
+        description="XAI model to use",
+    )
+
+
 class XAILLM(LLM[R]):
     """
     XAI LLM implementation using OpenAI-compatible API.
 
     Handles authentication and response parsing for XAI endpoints.
-
-    Parameters
-    ----------
-    config : LLMConfig
-        Configuration object containing API settings.
-    available_actions : list[AgentAction], optional
-        List of available actions for function call generation. If provided.
     """
 
     def __init__(
         self,
-        config: LLMConfig,
+        config: XAIConfig,
         available_actions: T.Optional[T.List] = None,
     ):
         """
         Initialize the XAI LLM instance.
+
+        Parameters
+        ----------
+        config : XAIConfig
+            Configuration settings for the LLM.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
         """
         super().__init__(config, available_actions)
 
@@ -54,7 +77,7 @@ class XAILLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Execute LLM query and parse response.
@@ -63,7 +86,7 @@ class XAILLM(LLM[R]):
         ----------
         prompt : str
             The input prompt to send to the model.
-        messages : List[Dict[str, str]]
+        messages : List[Dict[str, str]], optional
             List of message dictionaries to send to the model.
 
         Returns
@@ -72,6 +95,8 @@ class XAILLM(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
+        if messages is None:
+            messages = []
         try:
             logging.debug(f"XAI LLM input: {prompt}")
             logging.debug(f"XAI LLM messages: {messages}")
@@ -86,12 +111,16 @@ class XAILLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gemini-2.0-flash-exp",
+                model=self._config.model or "grok-4-latest",
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
                 timeout=self._config.timeout,
             )
+
+            if not response.choices:
+                logging.warning("xAI API returned empty choices")
+                return None
 
             message = response.choices[0].message
             self.io_provider.llm_end_time = time.time()
@@ -103,8 +132,8 @@ class XAILLM(LLM[R]):
                 function_call_data = [
                     {
                         "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "name": getattr(tc, "function").name,
+                            "arguments": getattr(tc, "function").arguments,
                         }
                     }
                     for tc in message.tool_calls
@@ -113,7 +142,7 @@ class XAILLM(LLM[R]):
                 actions = convert_function_calls_to_actions(function_call_data)
 
                 result = CortexOutputModel(actions=actions)
-                logging.info(f"OpenAI LLM function call output: {result}")
+                logging.info(f"XAI LLM function call output: {result}")
                 return T.cast(R, result)
 
             return None

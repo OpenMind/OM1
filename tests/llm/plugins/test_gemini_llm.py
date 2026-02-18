@@ -3,9 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from llm import LLMConfig
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.gemini_llm import GeminiLLM
+from llm.plugins.gemini_llm import GeminiConfig, GeminiLLM
 
 
 class DummyOutputModel(BaseModel):
@@ -14,7 +13,7 @@ class DummyOutputModel(BaseModel):
 
 @pytest.fixture
 def config():
-    return LLMConfig(base_url="test_url/", api_key="test_key", model="test_model")
+    return GeminiConfig(base_url="test_url/", api_key="test_key", model="test_model")
 
 
 @pytest.fixture
@@ -90,7 +89,7 @@ def llm(config):
 @pytest.mark.asyncio
 async def test_init_empty_key():
     """Test fallback API key when no credentials provided"""
-    config = LLMConfig(base_url="test_url")
+    config = GeminiConfig(base_url="test_url")
     with pytest.raises(ValueError, match="config file missing api_key"):
         GeminiLLM(config, available_actions=None)
 
@@ -175,3 +174,27 @@ async def test_ask_invalid_json(llm):
 
         result = await llm.ask("test prompt")
         assert result == CortexOutputModel(actions=[])
+
+
+@pytest.mark.asyncio
+async def test_init_without_model():
+    """When the test model is None, use the default value"""
+    config = GeminiConfig(api_key="test_key", model=None)
+    llm = GeminiLLM(config)
+    assert llm._config.model == "gemini-2.5-flash"
+
+
+@pytest.mark.asyncio
+async def test_ask_empty_choices(llm):
+    """The test API returned empty choices."""
+    empty_response = MagicMock()
+    empty_response.choices = []
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(
+            llm._client.chat.completions,
+            "create",
+            AsyncMock(return_value=empty_response),
+        )
+        result = await llm.ask("test prompt")
+        assert result is None

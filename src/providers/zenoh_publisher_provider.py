@@ -64,14 +64,15 @@ class ZenohPublisherProvider:
 
         Parameters
         ----------
-        msg : The message to be published.
+        msg : dict
+            The message to be published.
         """
         # Attempt to write the message with a timeout of 0.5 seconds
 
         if self.session is None:
             logging.info("No open Zenoh session, returning")
             return
-        logging.info("Publishing message: {} ".format(msg))
+        logging.info(f"Publishing message: {msg} ")
         payload = ZBytes(json.dumps(msg))
         self.session.put(self.pub_topic, payload)
 

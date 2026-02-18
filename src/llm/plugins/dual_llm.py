@@ -84,13 +84,6 @@ class DualLLM(LLM[R]):
                 "cloud_llm_config": {"model": "gpt-4.1"}
             }
         }
-
-    Parameters
-    ----------
-    config : LLMConfig, optional
-        Configuration settings for the LLM.
-    available_actions : list[AgentAction], optional
-        List of available actions for function calling.
     """
 
     TIMEOUT_THRESHOLD = 3.2
@@ -100,6 +93,19 @@ class DualLLM(LLM[R]):
         config: DualLLMConfig,
         available_actions: T.Optional[T.List] = None,
     ):
+        """
+        Initialize the DualLLM instance.
+
+        Sets up the local and cloud LLMs based on configuration, initializes
+        the evaluation client, and prepares the history manager.
+
+        Parameters
+        ----------
+        config : DualLLMConfig
+            Configuration settings for the Dual LLM, including local and cloud LLM details.
+        available_actions : list[AgentAction], optional
+            List of available actions for function calling.
+        """
         super().__init__(config, available_actions)
 
         self._config: DualLLMConfig
@@ -128,7 +134,7 @@ class DualLLM(LLM[R]):
         self._cloud_llm._skip_state_management = True
 
         self._eval_client = openai.AsyncClient(
-            base_url="http://127.0.0.1:8000/v1", api_key="local"
+            base_url="http://127.0.0.1:8860/v1", api_key="local"
         )
         self._eval_model = local_cfg.get(
             "model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
@@ -195,7 +201,7 @@ class DualLLM(LLM[R]):
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
+        prompt : str
             Extracted user voice input for context.
 
         Returns
@@ -241,12 +247,18 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
 
+            if not response.choices:
+                logging.warning("LLM evaluation returned empty choices")
+                return "local"
+
             content = response.choices[0].message.content
             if content is None:
                 return "local"
+
             result = content.strip().upper()
             return "local" if "A" in result else "cloud"
-        except Exception:
+        except Exception as e:
+            logging.warning(f"LLM quality evaluation failed, defaulting to local: {e}")
             return "local"
 
     async def _select_best(
@@ -261,8 +273,8 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             Result from local LLM.
         cloud_entry : dict
             Result from cloud LLM.
-        voice_input : str
-            Extracted user voice input for evaluation.
+        prompt : str
+            The prompt text for evaluation context.
 
         Returns
         -------
@@ -286,7 +298,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, T.Any]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
     ) -> R | None:
         """
         Send prompt to both LLMs and select the best response.
@@ -296,13 +308,15 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
         prompt : str
             The input prompt to send.
         messages : list of dict, optional
-            Conversation history (default: []).
+            Conversation history.
 
         Returns
         -------
         R or None
             Parsed response matching the output model, or None if failed.
         """
+        if messages is None:
+            messages = []
         try:
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
@@ -338,7 +352,10 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
                 for task in done:
                     result = task.result()
-                    if result["time"] <= self.TIMEOUT_THRESHOLD:
+                    if (
+                        result["time"] <= self.TIMEOUT_THRESHOLD
+                        and result["result"] is not None
+                    ):
                         in_time[result["source"]] = result
 
             # Both in time → select best

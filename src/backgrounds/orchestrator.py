@@ -1,11 +1,10 @@
 import asyncio
 import logging
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
-from runtime.multi_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 
 
 class BackgroundOrchestrator:
@@ -20,7 +19,7 @@ class BackgroundOrchestrator:
     _config: RuntimeConfig
     _background_workers: int
     _background_executor: ThreadPoolExecutor
-    _submitted_backgrounds: set[str]
+    _background_instances: list[Background]
     _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
@@ -39,7 +38,7 @@ class BackgroundOrchestrator:
         self._background_executor = ThreadPoolExecutor(
             max_workers=self._background_workers,
         )
-        self._submitted_backgrounds = set()
+        self._background_instances = []
         self._stop_event = threading.Event()
 
     def start(self) -> asyncio.Future:
@@ -56,13 +55,16 @@ class BackgroundOrchestrator:
             A future object for compatibility with async interfaces.
         """
         for background in self._config.backgrounds:
-            if background.name in self._submitted_backgrounds:
+            if any(bg.name == background.name for bg in self._background_instances):
                 logging.warning(
                     f"Background {background.name} already submitted, skipping."
                 )
                 continue
+
+            background.set_stop_event(self._stop_event)
+
             self._background_executor.submit(self._run_background_loop, background)
-            self._submitted_backgrounds.add(background.name)
+            self._background_instances.append(background)
 
         return asyncio.Future()
 
@@ -78,20 +80,29 @@ class BackgroundOrchestrator:
         while not self._stop_event.is_set():
             try:
                 background.run()
-            except Exception as e:
-                logging.error(f"Error in background {background.name}: {e}")
-                time.sleep(0.1)
+            except Exception:
+                logging.exception(f"Error in background {background.name}")
+                self._stop_event.wait(timeout=0.1)
 
     def stop(self):
         """
         Stop the background executor and wait for all tasks to complete.
 
         Sets the stop event to signal all background loops to terminate,
-        then shuts down the thread pool executor and waits for all running
-        tasks to finish gracefully.
+        calls stop() on each background instance for cleanup, then shuts
+        down the thread pool executor and waits for all running tasks to
+        finish gracefully.
         """
         self._stop_event.set()
+
+        for background in self._background_instances:
+            try:
+                background.stop()
+            except Exception as e:
+                logging.error(f"Error stopping background {background.name}: {e}")
+
         self._background_executor.shutdown(wait=True)
+        self._background_instances.clear()
 
     def __del__(self):
         """

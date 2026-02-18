@@ -1,7 +1,7 @@
 import logging
 from typing import Callable, Optional, Union
 
-from om1_speech import AudioOutputStream
+from om1_speech import AudioOutputLiveStream
 
 from .singleton import singleton
 
@@ -12,20 +12,8 @@ class ElevenLabsTTSProvider:
     Text-to-Speech Provider that manages an audio output stream.
 
     A singleton class that handles text-to-speech conversion and audio output
-    through a dedicated thread.
-
-    Parameters
-    ----------
-    url : str
-        The URL endpoint for the TTS service. (Default is https://api.openmind.org/api/core/elevenlabs/tts)
-    api_key : str
-        The API key for the TTS service
-    voice_id : str, optional
-        The name of the voice for Eleven Labs TTS service (default is JBFqnCBsd6RMkjVDRZzb)
-    model_id : str, optional
-        The name of the model for Eleven Labs TTS service (default is eleven_multilingual
-    output_format : str, optional
-        The output format for the audio stream (default is mp3_44100_128)
+    through a dedicated thread. It provides integration with Eleven Labs TTS service
+    for generating speech from text with configurable voice, model, and output format.
     """
 
     def __init__(
@@ -35,11 +23,43 @@ class ElevenLabsTTSProvider:
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
-        output_format: Optional[str] = "mp3_44100_128",
+        output_format: Optional[str] = "pcm_16000",
+        rate: Optional[int] = 16000,
         enable_tts_interrupt: bool = False,
     ):
         """
-        Initialize the TTS provider with given URL.
+        Initialize the ElevenLabsTTSProvider instance.
+
+        Sets up the configuration for the Eleven Labs TTS service, including API keys,
+        voice/model selection, output format, and interrupt settings. It initializes
+        the underlying audio output stream.
+
+        Parameters
+        ----------
+        url : str, optional
+            The URL endpoint for the TTS service.
+            Defaults to "https://api.openmind.org/api/core/elevenlabs/tts".
+        api_key : str, optional
+            The primary API key for the TTS service. If provided, it's used in the
+            request headers as "x-api-key". Defaults to None.
+        elevenlabs_api_key : str, optional
+            An alternative Eleven Labs specific API key. If provided, it's included
+            in the request payload for TTS generation. Defaults to None.
+        voice_id : str, optional
+            The ID/name of the voice to use for TTS synthesis.
+            Defaults to "JBFqnCBsd6RMkjVDRZzb".
+        model_id : str, optional
+            The ID/name of the model to use for TTS synthesis.
+            Defaults to "eleven_flash_v2_5".
+        output_format : str, optional
+            The desired audio output format (e.g., pcm_16000, wav).
+            Defaults to "pcm_16000".
+        rate : int, optional
+            The audio sample rate in Hz.
+            Defaults to 16000.
+        enable_tts_interrupt : bool, optional
+            If True, enables the ability to interrupt ongoing TTS playback when ASR
+            detects new speech input. Defaults to False.
         """
         self.api_key = api_key
         self.elevenlabs_api_key = elevenlabs_api_key
@@ -47,16 +67,26 @@ class ElevenLabsTTSProvider:
 
         # Initialize TTS provider
         self.running: bool = False
-        self._audio_stream: AudioOutputStream = AudioOutputStream(
+        self._audio_stream: AudioOutputLiveStream = AudioOutputLiveStream(
             url=url,
-            headers={"x-api-key": api_key} if api_key else None,
+            tts_model=model_id or "eleven_flash_v2_5",
+            tts_voice=voice_id or "JBFqnCBsd6RMkjVDRZzb",
+            response_format=output_format or "pcm_16000",
+            rate=rate or 16000,
+            api_key=api_key,
             enable_tts_interrupt=enable_tts_interrupt,
+            extra_body=(
+                {"elevenlabs_api_key": self.elevenlabs_api_key}
+                if self.elevenlabs_api_key
+                else {}
+            ),
         )
 
         # Set Eleven Labs TTS parameters
         self._voice_id = voice_id
         self._model_id = model_id
         self._output_format = output_format
+        self._rate = rate
 
     def configure(
         self,
@@ -65,7 +95,8 @@ class ElevenLabsTTSProvider:
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
         model_id: Optional[str] = "eleven_flash_v2_5",
-        output_format: Optional[str] = "mp3_44100_128",
+        output_format: Optional[str] = "pcm_16000",
+        rate: Optional[int] = 16000,
         enable_tts_interrupt: bool = False,
     ):
         """
@@ -77,12 +108,17 @@ class ElevenLabsTTSProvider:
             The URL endpoint for the TTS service.
         api_key : str
             The API key for the TTS service.
+        elevenlabs_api_key : Optional[str]
+            An alternative Eleven Labs specific API key.
         voice_id : str, optional
             The name of the voice for Eleven Labs TTS service.
         model_id : str, optional
             The name of the model for Eleven Labs TTS service.
         output_format : str, optional
             The output format for the audio stream.
+        rate : int, optional
+            The audio sample rate in Hz.
+            Defaults to 16000.
         enable_tts_interrupt : bool
             If True, enables TTS interrupt when ASR detects speech.
         """
@@ -94,6 +130,7 @@ class ElevenLabsTTSProvider:
             or model_id != self._model_id
             or output_format != self._output_format
             or enable_tts_interrupt != self._enable_tts_interrupt
+            or rate != self._rate
         )
 
         if not restart_needed:
@@ -108,11 +145,21 @@ class ElevenLabsTTSProvider:
         self._model_id = model_id
         self._output_format = output_format
         self._enable_tts_interrupt = enable_tts_interrupt
+        self._rate = rate
 
-        self._audio_stream: AudioOutputStream = AudioOutputStream(
+        self._audio_stream: AudioOutputLiveStream = AudioOutputLiveStream(
             url=url,
-            headers={"x-api-key": api_key} if api_key else None,
+            tts_model=model_id or "eleven_flash_v2_5",
+            tts_voice=voice_id or "JBFqnCBsd6RMkjVDRZzb",
+            response_format=output_format or "pcm_16000",
+            rate=rate or 16000,
             enable_tts_interrupt=enable_tts_interrupt,
+            api_key=api_key,
+            extra_body=(
+                {"elevenlabs_api_key": self.elevenlabs_api_key}
+                if self.elevenlabs_api_key
+                else {}
+            ),
         )
         self._audio_stream.start()
 
@@ -143,17 +190,11 @@ class ElevenLabsTTSProvider:
             A dictionary containing the TTS request parameters.
         """
         logging.info(f"audio_stream: {text}")
-        elevenlabs_api_key = (
-            {"elevenlabs_api_key": self.elevenlabs_api_key}
-            if self.elevenlabs_api_key
-            else {}
-        )
         return {
             "text": text,
             "voice_id": self._voice_id,
             "model_id": self._model_id,
             "output_format": self._output_format,
-            **elevenlabs_api_key,
         }
 
     def add_pending_message(self, message: Union[str, dict]):

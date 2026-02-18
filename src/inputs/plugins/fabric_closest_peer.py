@@ -4,7 +4,7 @@ import time
 from queue import Queue
 from typing import List, Optional
 
-import requests
+import aiohttp
 from pydantic import Field
 
 from inputs.base import SensorConfig
@@ -45,6 +45,16 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
     """
 
     def __init__(self, config: FabricClosestPeerConfig):
+        """
+        Initialize the FabricClosestPeer input handler.
+
+        Sets up the required providers and buffers for handling Fabric peer data.
+
+        Parameters
+        ----------
+        config : FabricClosestPeerConfig
+            Configuration for the sensor input.
+        """
         super().__init__(config)
 
         self.descriptor_for_LLM = "Closest Peer from Fabric"
@@ -73,11 +83,6 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
                 f"FabricClosestPeer (mock): fabricated peer {peer_lat:.6f},{peer_lon:.6f}"
             )
         else:
-            if requests is None:
-                logging.error(
-                    "FabricClosestPeer: requests not available and mock_mode=False"
-                )
-                return None
             try:
                 lat = self.io.get_dynamic_variable("latitude")
                 lon = self.io.get_dynamic_variable("longitude")
@@ -87,18 +92,19 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
                 logging.info(
                     f"FabricClosestPeer: fetching closest peer for {lat:.6f}, {lon:.6f}"
                 )
-                resp = requests.post(
-                    self.fabric_endpoint,
-                    json={
-                        "method": "omp2p_findClosestPeer",
-                        "params": [{"latitude": lat, "longitude": lon}],
-                        "id": 1,
-                        "jsonrpc": "2.0",
-                    },
-                    timeout=3.0,
-                    headers={"Content-Type": "application/json"},
-                )
-                data = resp.json()
+                timeout = aiohttp.ClientTimeout(total=3.0)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(
+                        self.fabric_endpoint,
+                        json={
+                            "method": "omp2p_findClosestPeer",
+                            "params": [{"latitude": lat, "longitude": lon}],
+                            "id": 1,
+                            "jsonrpc": "2.0",
+                        },
+                        headers={"Content-Type": "application/json"},
+                    ) as resp:
+                        data = await resp.json()
                 logging.debug(f"FabricClosestPeer response: {data}")
                 peer_info = (data.get("result") or [{}])[0].get("peer")
                 if not peer_info:

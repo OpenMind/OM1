@@ -1,13 +1,13 @@
 import asyncio
+import json
 import logging
 import threading
-import time
 import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
 from actions.base import AgentAction
 from llm.output_model import Action
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 
 
 class ActionOrchestrator:
@@ -26,7 +26,7 @@ class ActionOrchestrator:
     _config: RuntimeConfig
     _connector_workers: int
     _connector_executor: ThreadPoolExecutor
-    _submitted_connectors: T.Set[str]
+    _action_instances: T.List[AgentAction]
     _stop_event: threading.Event
     _execution_mode: str
     _action_dependencies: T.Dict[str, T.List[str]]
@@ -51,7 +51,7 @@ class ActionOrchestrator:
             max_workers=self._connector_workers,
             thread_name_prefix="action-orchestrator-connector-",
         )
-        self._submitted_connectors = set()
+        self._action_instances = []
         self._stop_event = threading.Event()
         self._execution_mode = config.action_execution_mode or "concurrent"
         self._action_dependencies = config.action_dependencies or {}
@@ -71,13 +71,19 @@ class ActionOrchestrator:
             A future object for compatibility with async interfaces.
         """
         for agent_action in self._config.agent_actions:
-            if agent_action.llm_label in self._submitted_connectors:
+            if any(
+                action.llm_label == agent_action.llm_label
+                for action in self._action_instances
+            ):
                 logging.warning(
                     f"Connector {agent_action.llm_label} already submitted, skipping."
                 )
                 continue
+
+            agent_action.connector.set_stop_event(self._stop_event)
+
             self._connector_executor.submit(self._run_connector_loop, agent_action)
-            self._submitted_connectors.add(agent_action.llm_label)
+            self._action_instances.append(agent_action)
 
         return asyncio.Future()  # Return future for compatibility
 
@@ -96,9 +102,9 @@ class ActionOrchestrator:
         while not self._stop_event.is_set():
             try:
                 action.connector.tick()
-            except Exception as e:
-                logging.error(f"Error in connector {action.llm_label}: {e}")
-                time.sleep(0.1)
+            except Exception:
+                logging.exception(f"Error in connector {action.llm_label}")
+                self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
@@ -157,14 +163,14 @@ class ActionOrchestrator:
         """
         for action in actions:
             logging.debug(f"Sending command: {action}")
-            action = self._normalize_action(action)
+            normalized_action = self._normalize_action(action)
 
-            agent_action = self._get_agent_action(action)
+            agent_action = self._get_agent_action(normalized_action)
             if agent_action is None:
                 continue
 
             action_response = asyncio.create_task(
-                self._promise_action(agent_action, action)
+                self._promise_action(agent_action, normalized_action)
             )
             self.promise_queue.append(action_response)
 
@@ -179,19 +185,19 @@ class ActionOrchestrator:
         """
         for action in actions:
             logging.debug(f"Sending command (sequential): {action}")
-            action = self._normalize_action(action)
+            normalized_action = self._normalize_action(action)
 
-            agent_action = self._get_agent_action(action)
+            agent_action = self._get_agent_action(normalized_action)
             if agent_action is None:
                 continue
 
             action_response = asyncio.create_task(
-                self._promise_action(agent_action, action)
+                self._promise_action(agent_action, normalized_action)
             )
             self.promise_queue.append(action_response)
             await action_response
 
-            action_label = action.type.lower()
+            action_label = normalized_action.type.lower()
             if action_label in self._completed_actions:
                 self._completed_actions[action_label].set()
 
@@ -207,14 +213,14 @@ class ActionOrchestrator:
         """
         for action in actions:
             logging.debug(f"Sending command (with dependencies): {action}")
-            action = self._normalize_action(action)
+            normalized_action = self._normalize_action(action)
 
-            agent_action = self._get_agent_action(action)
+            agent_action = self._get_agent_action(normalized_action)
             if agent_action is None:
                 continue
 
             action_response = asyncio.create_task(
-                self._promise_action_with_deps(agent_action, action)
+                self._promise_action_with_deps(agent_action, normalized_action)
             )
             self.promise_queue.append(action_response)
 
@@ -332,18 +338,68 @@ class ActionOrchestrator:
         logging.debug(
             f"Calling action {agent_action.llm_label} with type {action.type.lower()} and argument {action.value}"
         )
-        input_interface = T.get_type_hints(agent_action.interface)["input"](
-            **{"action": action.value}
-        )
+
+        try:
+            parsed_value = json.loads(action.value)
+            if isinstance(parsed_value, dict):
+                input_params = parsed_value
+            else:
+                input_params = {"action": action.value}
+        except (json.JSONDecodeError, TypeError):
+            input_params = {"action": action.value}
+
+        input_type = T.get_type_hints(agent_action.interface)["input"]
+        input_type_hints = T.get_type_hints(input_type)
+
+        converted_params = {}
+        for key, value in input_params.items():
+            if key in input_type_hints:
+                expected_type = input_type_hints[key]
+                if hasattr(expected_type, "__mro__") and any(
+                    base.__name__ == "Enum" for base in expected_type.__mro__
+                ):
+                    converted_params[key] = expected_type(value)
+                elif expected_type is float:
+                    converted_params[key] = float(value)
+                elif expected_type is int:
+                    converted_params[key] = int(value)
+                elif expected_type is bool:
+                    converted_params[key] = (
+                        bool(value)
+                        if not isinstance(value, str)
+                        else value.lower() in ("true", "1", "yes")
+                    )
+                else:
+                    converted_params[key] = value
+            else:
+                logging.warning(
+                    f"Parameter '{key}' not found in input type hints for action '{agent_action.llm_label}'"
+                )
+
+        input_interface = input_type(**converted_params)
+
         await agent_action.connector.connect(input_interface)
+
         return input_interface
 
     def stop(self):
         """
         Stop the action executor and wait for all tasks to complete.
+
+        Sets the stop event to signal all connector loops to terminate,
+        calls stop() on each connector for cleanup, then shuts down the
+        thread pool executor and waits for all running tasks to finish.
         """
         self._stop_event.set()
+
+        for agent_action in self._action_instances:
+            try:
+                agent_action.connector.stop()
+            except Exception as e:
+                logging.error(f"Error stopping connector {agent_action.llm_label}: {e}")
+
         self._connector_executor.shutdown(wait=True)
+        self._action_instances.clear()
 
     def __del__(self):
         """

@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import time
-from queue import Empty, Queue
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -45,8 +44,6 @@ class GoogleASRSensorConfig(SensorConfig):
         Chunk size.
     base_url : Optional[str]
         Base URL for the ASR service.
-    stream_base_url : Optional[str]
-        Stream Base URL.
     microphone_device_id : Optional[str]
         Microphone Device ID.
     microphone_name : Optional[str]
@@ -63,7 +60,6 @@ class GoogleASRSensorConfig(SensorConfig):
     base_url: Optional[str] = Field(
         default=None, description="Base URL for the ASR service"
     )
-    stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     microphone_device_id: Optional[int] = Field(
         default=None, description="Microphone Device ID"
     )
@@ -80,7 +76,7 @@ class GoogleASRSensorConfig(SensorConfig):
 
 class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
     """
-    Automatic Speech Recognition (ASR) input handler.
+    Google Automatic Speech Recognition (ASR) input handler.
 
     This class manages the input stream from an ASR service, buffering messages
     and providing text conversion capabilities.
@@ -88,7 +84,12 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 
     def __init__(self, config: GoogleASRSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize GoogleASRInput instance.
+
+        Parameters
+        ----------
+        config : GoogleASRSensorConfig
+            Configuration for the Google ASR input
         """
         super().__init__(config)
 
@@ -99,8 +100,8 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         self.descriptor_for_LLM = "Voice"
         self.io_provider = IOProvider()
 
-        # Buffer for storing messages
-        self.message_buffer: Queue[str] = Queue()
+        # Message buffer for incoming ASR messages
+        self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
 
         # Initialize ASR provider
         # Initialize ASR provider
@@ -110,10 +111,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         base_url = (
             self.config.base_url
             or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
-        )
-        stream_base_url = (
-            self.config.stream_base_url
-            or f"wss://api.openmind.org/api/core/teleops/stream/audio?api_key={api_key}"
         )
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
@@ -136,7 +133,6 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             rate=rate,
             chunk=chunk,
             ws_url=base_url,
-            stream_url=stream_base_url,
             device_id=microphone_device_id,
             microphone_name=microphone_name,
             language_code=language_code,
@@ -180,7 +176,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
                 if len(asr_reply.split()) > 1:
-                    self.message_buffer.put(asr_reply)
+                    self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
             pass
@@ -194,11 +190,11 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         Optional[str]
             Message from the buffer if available, None otherwise
         """
-        await asyncio.sleep(0.1)
         try:
             message = self.message_buffer.get_nowait()
             return message
-        except Empty:
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(0.01)
             return None
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:

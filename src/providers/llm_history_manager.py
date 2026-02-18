@@ -146,16 +146,30 @@ class LLMHistoryManager:
 
             logging.info(f"Information to summarize:\n{summary_prompt}")
 
-            response = await asyncio.wait_for(
-                self.client.chat.completions.create(  # type: ignore
-                    model=self.config.model or "gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": self.system_prompt},
-                        {"role": "user", "content": summary_prompt},
-                    ],
-                ),
-                timeout=timeout,
-            )
+            api_kwargs = {
+                "model": self.config.model or "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": summary_prompt},
+                ],
+            }
+
+            if isinstance(self.client, openai.AsyncClient):
+                response = await asyncio.wait_for(
+                    self.client.chat.completions.create(**api_kwargs),
+                    timeout=timeout,
+                )
+            else:
+                loop = asyncio.get_running_loop()
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            self.client.chat.completions.create, **api_kwargs
+                        ),
+                    ),
+                    timeout=timeout,
+                )
 
             if not response or not response.choices:
                 logging.error("Invalid API response format")
@@ -209,6 +223,7 @@ class LLMHistoryManager:
                 return
 
             messages_copy = messages.copy()
+            num_summarized = len(messages_copy)
             self._summary_task = asyncio.create_task(
                 self.summarize_messages(messages_copy)
             )
@@ -221,8 +236,8 @@ class LLMHistoryManager:
 
                     summary_message = task.result()
                     if summary_message.role == "assistant":
-                        messages.clear()
-                        messages.append(summary_message)
+                        del messages[:num_summarized]
+                        messages.insert(0, summary_message)
                         logging.info("Successfully summarized the state")
                     elif (
                         summary_message.role == "system"
@@ -231,18 +246,26 @@ class LLMHistoryManager:
                         logging.error(
                             f"Summarization failed: {summary_message.content}"
                         )
-                        messages.pop(0) if messages else None
-                        messages.pop(0) if messages else None
+                        target_length = self.config.history_length
+                        if target_length is not None and len(messages) > target_length:
+                            excess = len(messages) - target_length
+                            del messages[:excess]
+                            logging.warning(
+                                f"Truncated {excess} oldest messages to maintain history_length={target_length}"
+                            )
                     else:
                         logging.warning(f"Unexpected summary result: {summary_message}")
-                except asyncio.CancelledError:
-                    logging.warning("Summary task callback cancelled")
                 except Exception as e:
                     logging.error(
                         f"Error in summary task callback: {type(e).__name__}: {e}"
                     )
-                    messages.pop(0) if messages else None
-                    messages.pop(0) if messages else None
+                    target_length = self.config.history_length
+                    if target_length is not None and len(messages) > target_length:
+                        excess = len(messages) - target_length
+                        del messages[:excess]
+                        logging.warning(
+                            f"Truncated {excess} oldest messages after exception"
+                        )
 
             self._summary_task.add_done_callback(callback)
 
@@ -345,6 +368,15 @@ class LLMHistoryManager:
                         await self.history_manager.start_summary_task(
                             self.history_manager.history
                         )
+                else:
+                    if (
+                        self.history_manager.history
+                        and self.history_manager.history[-1].role == "user"
+                    ):
+                        logging.warning(
+                            "LLM response failed, removing unpaired user message"
+                        )
+                        self.history_manager.history.pop()
 
                 self.history_manager.frame_index += 1
 

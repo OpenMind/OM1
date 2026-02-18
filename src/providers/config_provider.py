@@ -104,7 +104,7 @@ class ConfigProvider:
         try:
             new_config = json5.loads(config_str)
 
-            temp_path = self.config_path + ".tmp"
+            temp_path = self.config_path + f".tmp.{uuid4()}"
             with open(temp_path, "w") as f:
                 json.dump(new_config, f, indent=2)
 
@@ -188,6 +188,14 @@ class ConfigProvider:
             return
 
         self.running = False
+
+        if self.config_request_subscriber:
+            self.config_request_subscriber.undeclare()
+            self.config_request_subscriber = None
+
+        if self.config_response_publisher:
+            self.config_response_publisher.undeclare()
+            self.config_response_publisher = None
 
         if self.session:
             self.session.close()

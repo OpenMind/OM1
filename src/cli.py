@@ -1,8 +1,8 @@
+import ast
 import json
 import logging
 import multiprocessing as mp
 import os
-import re
 import traceback
 
 import dotenv
@@ -10,7 +10,8 @@ import json5
 import typer
 from jsonschema import ValidationError, validate
 
-from runtime.multi_mode.config import load_mode_config
+from runtime.config import load_mode_config
+from runtime.converter import convert_to_multi_mode
 
 app = typer.Typer()
 
@@ -99,9 +100,6 @@ def list_configs() -> None:
     """
     List all available configuration files found in the '../config' directory.
 
-    It categorizes the files into 'Mode-Aware Configurations' (those containing
-    'modes' and 'default_mode' keys) and 'Standard Configurations' (all others).
-    This helps the user quickly identify configurations for the multi-mode runtime.
     """
     config_dir = os.path.join(os.path.dirname(__file__), "../config")
 
@@ -110,7 +108,6 @@ def list_configs() -> None:
         return
 
     configs = []
-    mode_configs = []
 
     for filename in os.listdir(config_dir):
         if filename.endswith(".json5"):
@@ -121,29 +118,16 @@ def list_configs() -> None:
                 with open(config_path, "r") as f:
                     raw_config = json5.load(f)
 
-                if "modes" in raw_config and "default_mode" in raw_config:
-                    mode_configs.append(
-                        (config_name, raw_config.get("name", config_name))
-                    )
-                else:
-                    configs.append((config_name, raw_config.get("name", config_name)))
+                display_name = raw_config.get("name", config_name)
+                configs.append((config_name, display_name))
             except Exception as _:
                 configs.append((config_name, "Invalid config"))
 
     print("-" * 32)
-    if mode_configs:
-        print("Mode-Aware Configurations:")
-        print("-" * 32)
-        for config_name, display_name in sorted(mode_configs):
-            print(f"• {config_name} - {display_name}")
-        print()
-
+    print("Configurations:")
     print("-" * 32)
-    if configs:
-        print("Standard Configurations:")
-        print("-" * 32)
-        for config_name, display_name in sorted(configs):
-            print(f"• {config_name} - {display_name}")
+    for config_name, display_name in sorted(configs):
+        print(f"• {config_name} - {display_name}")
 
 
 @app.command()
@@ -180,6 +164,19 @@ def validate_config(
     - API key configuration (warning only)
     - Component existence (with --check-components flag)
 
+    Parameters
+    ----------
+    config_name : str
+        Configuration file name or path (e.g., 'test' or 'config/test.json5').
+    verbose : bool
+        Show detailed validation information.
+    check_components : bool
+        Verify that all components (inputs, LLMs, actions) exist in codebase.
+    skip_inputs : bool
+        Skip input validation (useful for debugging).
+    allow_missing : bool
+        Allow missing components (only warn, don't fail).
+
     Examples
     --------
         uv run src/cli.py validate-config test
@@ -198,20 +195,19 @@ def validate_config(
             print("-" * 50)
 
         # Load and parse JSON5
-        with open(config_path, "r") as f:
-            raw_config = json5.load(f)
+        try:
+            with open(config_path, "r") as f:
+                raw_config = json5.load(f)
+        except ValueError as e:
+            print("Error: Invalid JSON5 syntax")
+            print(f"   {e}")
+            raise typer.Exit(1)
 
         if verbose:
             print("JSON5 syntax valid")
 
-        # Detect config type
-        is_multi_mode = "modes" in raw_config and "default_mode" in raw_config
-        config_type = "multi-mode" if is_multi_mode else "single-mode"
-
-        if verbose:
-            print(f"Detected {config_type} configuration")
-
         # Schema validation
+        is_multi_mode = "modes" in raw_config and "default_mode" in raw_config
         schema_file = (
             "multi_mode_schema.json" if is_multi_mode else "single_mode_schema.json"
         )
@@ -224,6 +220,8 @@ def validate_config(
 
         validate(instance=raw_config, schema=schema)
 
+        raw_config = convert_to_multi_mode(raw_config)
+
         if verbose:
             print("Schema validation passed")
 
@@ -235,9 +233,7 @@ def validate_config(
                     end="",
                     flush=True,
                 )
-            _validate_components(
-                raw_config, is_multi_mode, verbose, skip_inputs, allow_missing
-            )
+            _validate_components(raw_config, verbose, skip_inputs, allow_missing)
             if not verbose:
                 print("\rAll components validated successfully!           ")
 
@@ -251,7 +247,7 @@ def validate_config(
         print("=" * 50)
 
         if verbose:
-            _print_config_summary(raw_config, is_multi_mode)
+            _print_config_summary(raw_config)
 
     except FileNotFoundError as e:
         print("Error: Configuration file not found")
@@ -259,10 +255,7 @@ def validate_config(
         raise typer.Exit(1)
 
     except ValueError as e:
-        if "line" in str(e).lower() or "parse" in str(e).lower():
-            print("Error: Invalid JSON5 syntax")
-            print(f"   {e}")
-        elif "Component validation" in str(e):
+        if "Component validation" in str(e):
             pass  # Already printed by _validate_components
         else:
             print("Error: Unexpected validation error")
@@ -334,7 +327,6 @@ def _resolve_config_path(config_name: str) -> str:
 
 def _validate_components(
     raw_config: dict,
-    is_multi_mode: bool,
     verbose: bool,
     skip_inputs: bool = False,
     allow_missing: bool = False,
@@ -345,9 +337,7 @@ def _validate_components(
     Parameters
     ----------
     raw_config : dict
-        Raw configuration dictionary
-    is_multi_mode : bool
-        Whether this is a multi-mode configuration
+        Configuration dictionary
     verbose : bool
         Whether to print verbose output
     skip_inputs : bool
@@ -367,31 +357,22 @@ def _validate_components(
         print("Checking component existence...")
 
     try:
-        if is_multi_mode:
-            if "cortex_llm" in raw_config:
-                llm_type = raw_config["cortex_llm"].get("type")
-                if llm_type and verbose:
-                    print(f"  Checking global LLM: {llm_type}")
-                if llm_type and not _check_llm_exists(llm_type):
-                    msg = f"Global LLM type '{llm_type}' not found"
-                    if allow_missing:
-                        warnings.append(msg)
-                    else:
-                        errors.append(msg)
+        if "cortex_llm" in raw_config:
+            llm_type = raw_config["cortex_llm"].get("type")
+            if llm_type and verbose:
+                print(f"  Checking global LLM: {llm_type}")
+            if llm_type and not _check_llm_exists(llm_type):
+                msg = f"Global LLM type '{llm_type}' not found"
+                if allow_missing:
+                    warnings.append(msg)
+                else:
+                    errors.append(msg)
 
-            for mode_name, mode_data in raw_config.get("modes", {}).items():
-                if verbose:
-                    print(f"  Validating mode: {mode_name}")
-                mode_errors, mode_warnings = _validate_mode_components(
-                    mode_name, mode_data, verbose, skip_inputs, allow_missing
-                )
-                errors.extend(mode_errors)
-                warnings.extend(mode_warnings)
-        else:
+        for mode_name, mode_data in raw_config.get("modes", {}).items():
             if verbose:
-                print("  Validating single-mode configuration")
+                print(f"  Validating mode: {mode_name}")
             mode_errors, mode_warnings = _validate_mode_components(
-                "config", raw_config, verbose, skip_inputs, allow_missing
+                mode_name, mode_data, verbose, skip_inputs, allow_missing
             )
             errors.extend(mode_errors)
             warnings.extend(mode_warnings)
@@ -580,6 +561,39 @@ def _validate_mode_components(
     return errors, warnings
 
 
+def _check_class_in_dir(directory: str, class_name: str) -> bool:
+    """
+    Check if a class exists in any .py file in the given directory using AST.
+
+    Parameters
+    ----------
+    directory : str
+        Directory to search in
+    class_name : str
+        Name of the class to find
+
+    Returns
+    -------
+    bool
+        True if class exists, False otherwise
+    """
+    if not os.path.exists(directory):
+        return False
+
+    for filename in os.listdir(directory):
+        if filename.endswith(".py") and filename != "__init__.py":
+            filepath = os.path.join(directory, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    tree = ast.parse(f.read())
+                    for node in tree.body:
+                        if isinstance(node, ast.ClassDef) and node.name == class_name:
+                            return True
+            except Exception:
+                continue
+    return False
+
+
 def _check_input_exists(input_type: str) -> bool:
     """
     Check if input type exists by searching for class definition in plugin files.
@@ -597,24 +611,7 @@ def _check_input_exists(input_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "inputs", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(input_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, input_type)
 
 
 def _check_llm_exists(llm_type: str) -> bool:
@@ -634,24 +631,7 @@ def _check_llm_exists(llm_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "llm", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(llm_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, llm_type)
 
 
 def _check_simulator_exists(sim_type: str) -> bool:
@@ -671,24 +651,7 @@ def _check_simulator_exists(sim_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "simulators", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(sim_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, sim_type)
 
 
 def _check_action_exists(action_name: str) -> bool:
@@ -727,24 +690,7 @@ def _check_background_exists(bg_type: str) -> bool:
     src_dir = os.path.dirname(__file__)
     plugins_dir = os.path.join(src_dir, "backgrounds", "plugins")
 
-    if not os.path.exists(plugins_dir):
-        return False
-
-    # Search for class definition in all .py files
-    class_pattern = re.compile(rf"^class\s+{re.escape(bg_type)}\s*\(", re.MULTILINE)
-
-    for filename in os.listdir(plugins_dir):
-        if filename.endswith(".py") and filename != "__init__.py":
-            filepath = os.path.join(plugins_dir, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    if class_pattern.search(content):
-                        return True
-            except Exception:
-                continue
-
-    return False
+    return _check_class_in_dir(plugins_dir, bg_type)
 
 
 def _check_api_key(raw_config: dict, verbose: bool):
@@ -773,33 +719,22 @@ def _check_api_key(raw_config: dict, verbose: bool):
             print("API key configured")
 
 
-def _print_config_summary(raw_config: dict, is_multi_mode: bool):
+def _print_config_summary(raw_config: dict):
     """
     Print configuration summary.
 
     Parameters
     ----------
     raw_config : dict
-        Raw configuration dictionary
-    is_multi_mode : bool
-        Whether this is is a multi multi-mode configuration
+        Configuration dictionary
     """
     print()
     print("Configuration Summary:")
     print("-" * 50)
-
-    if is_multi_mode:
-        print("   Type: Multi-mode")
-        print(f"   Name: {raw_config.get('name', 'N/A')}")
-        print(f"   Default Mode: {raw_config.get('default_mode')}")
-        print(f"   Modes: {len(raw_config.get('modes', {}))}")
-        print(f"   Transition Rules: {len(raw_config.get('transition_rules', []))}")
-    else:
-        print("   Type: Single-mode")
-        print(f"   Name: {raw_config.get('name', 'N/A')}")
-        print(f"   Frequency: {raw_config.get('hertz', 'N/A')} Hz")
-        print(f"   Inputs: {len(raw_config.get('agent_inputs', []))}")
-        print(f"   Actions: {len(raw_config.get('agent_actions', []))}")
+    print(f"   Name: {raw_config.get('name', 'N/A')}")
+    print(f"   Default Mode: {raw_config.get('default_mode')}")
+    print(f"   Modes: {len(raw_config.get('modes', {}))}")
+    print(f"   Transition Rules: {len(raw_config.get('transition_rules', []))}")
 
 
 if __name__ == "__main__":

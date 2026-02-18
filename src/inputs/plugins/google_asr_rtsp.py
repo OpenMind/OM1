@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import time
-from queue import Empty, Queue
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -69,15 +68,17 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
 
 class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
     """
-    Automatic Speech Recognition (ASR) input handler.
-
-    This class manages the RTSP input stream from an ASR service, buffering messages
-    and providing text conversion capabilities.
+    Google ASR RTSP input handler for processing speech recognition from RTSP audio streams.
     """
 
     def __init__(self, config: GoogleASRRTSPSensorConfig):
         """
-        Initialize ASRInput instance.
+        Initialize the Google ASR RTSP input handler.
+
+        Parameters
+        ----------
+        config : GoogleASRRTSPSensorConfig
+            Configuration for the ASR RTSP input handler.
         """
         super().__init__(config)
 
@@ -88,8 +89,8 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         self.descriptor_for_LLM = "Voice"
         self.io_provider = IOProvider()
 
-        # Buffer for storing messages
-        self.message_buffer: Queue[str] = Queue()
+        # Message buffer for incoming ASR messages
+        self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
 
         # Initialize ASR provider
         api_key = self.config.api_key
@@ -145,19 +146,19 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
 
     def _handle_asr_message(self, raw_message: str):
         """
-        Process incoming ASR messages.
+        Process incoming ASR messages from the ASR provider.
 
         Parameters
         ----------
         raw_message : str
-            Raw message received from ASR service
+            The raw ASR message received from the provider
         """
         try:
             json_message: Dict = json.loads(raw_message)
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
                 if len(asr_reply.split()) > 1:
-                    self.message_buffer.put(asr_reply)
+                    self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
             pass
@@ -171,11 +172,11 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         Optional[str]
             Message from the buffer if available, None otherwise
         """
-        await asyncio.sleep(0.1)
         try:
             message = self.message_buffer.get_nowait()
             return message
-        except Empty:
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(0.01)
             return None
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:
@@ -260,7 +261,7 @@ INPUT: {self.descriptor_for_LLM}
 
     def stop(self):
         """
-        Stop the ASR input.
+        Stop the ASR input handler and clean up resources.
         """
         if self.asr:
             self.asr.stop()
