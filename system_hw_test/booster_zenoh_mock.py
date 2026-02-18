@@ -14,7 +14,7 @@ from zenoh_msgs import BoosterApiRespMsg, RpcServiceRequest, RpcServiceResponse
 class BoosterZenohMock:
     def __init__(self):
         print("Opening Zenoh session...")
-        self.zenoh_session = zenoh.open()
+        self.zenoh_session = zenoh.open(zenoh.Config())
         self.zenoh_key = "booster_rpc_service"
 
         # Register Zenoh Query Responder
