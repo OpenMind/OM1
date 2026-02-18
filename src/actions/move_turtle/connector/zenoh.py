@@ -52,6 +52,9 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
 
         self.pending_movements: Queue[Optional[MoveCommand]] = Queue()
 
+        self.gap_previous: float = 0.0
+        self.movement_attempts: int = 0
+
         self.hazard = None
         self.emergency = None
 
