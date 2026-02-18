@@ -401,10 +401,10 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
                     return
 
                 if remaining > self.distance_tolerance:
-                    if distance_traveled < goal_dx:  # keep advancing
+                    if distance_traveled < abs(goal_dx):  # keep advancing
                         logging.debug(f"keep moving. remaining:{remaining} ")
                         self.move(fb * 0.4, 0.0)
-                    elif distance_traveled > goal_dx:  # you moved too far
+                    elif distance_traveled > abs(goal_dx):  # you moved too far
                         logging.debug(
                             f"OVERSHOOT: move other way. remaining:{remaining} "
                         )
