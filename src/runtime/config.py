@@ -736,7 +736,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     llm_config = mode_config._raw_llm or system_config.global_cortex_llm
     if llm_config:
         llm_inner_config = add_meta(
-            llm_config.get("config", {}),
+            dict(llm_config.get("config", {})),
             g_api_key,
             g_ut_eth,
             g_URID,
