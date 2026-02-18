@@ -157,16 +157,7 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
-        patch("llm.plugins.openai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
-        patch("llm.plugins.openrouter.AvatarLLMState.trigger_thinking", mock_decorator),
-        patch("llm.plugins.gemini_llm.AvatarLLMState.trigger_thinking", mock_decorator),
-        patch(
-            "llm.plugins.near_ai_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
-        patch("llm.plugins.xai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch("llm.openai_compatible.AvatarLLMState.trigger_thinking", mock_decorator),
         patch(
             "providers.avatar_llm_state_provider.AvatarLLMState"
         ) as mock_avatar_state,
