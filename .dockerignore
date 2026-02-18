@@ -13,7 +13,9 @@ wheels/
 
 # Environment variables
 .env
+# Keep uv.lock for reproducible builds
 *.lock
+!uv.lock
 
 # IDE
 .vscode/

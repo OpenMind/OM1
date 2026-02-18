@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN python3 -m pip install --upgrade pip
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.21 /uv /uvx /usr/local/bin/
 
 RUN mkdir -p /etc/alsa && \
     ln -snf /usr/share/alsa/alsa.conf.d /etc/alsa/conf.d
@@ -53,7 +53,7 @@ RUN git submodule update --init --recursive
 RUN cp -r config config_defaults
 
 RUN uv venv /app/OM1/.venv && \
-    uv pip install -r pyproject.toml --extra dds
+    uv sync --frozen --extra dds
 
 ENV VIRTUAL_ENV=/app/OM1/.venv
 ENV PATH="/app/OM1/.venv/bin:$PATH"

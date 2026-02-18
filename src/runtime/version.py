@@ -39,28 +39,27 @@ def is_version_supported(version: Optional[str]) -> bool:
     try:
         supported_parts = [int(x) for x in supported_ver.split(".")]
         input_parts = [int(x) for x in input_ver.split(".")]
-
-        while len(supported_parts) < 3:
-            supported_parts.append(0)
-        while len(input_parts) < 3:
-            input_parts.append(0)
-
-        if supported_parts[0] != input_parts[0]:
-            raise ValueError(
-                f"Major version mismatch: expected {supported_parts[0]}, "
-                f"got {input_parts[0]}"
-            )
-
-        if supported_parts[1] != input_parts[1]:
-            logging.warning(
-                f"Version mismatch: expected minor version {supported_parts[1]}, "
-                f"got {input_parts[1]}. This may cause compatibility issues."
-            )
-
-        return True
-
     except (ValueError, IndexError):
         raise ValueError("Invalid version format")
+
+    while len(supported_parts) < 3:
+        supported_parts.append(0)
+    while len(input_parts) < 3:
+        input_parts.append(0)
+
+    if supported_parts[0] != input_parts[0]:
+        raise ValueError(
+            f"Major version mismatch: expected {supported_parts[0]}, "
+            f"got {input_parts[0]}"
+        )
+
+    if supported_parts[1] != input_parts[1]:
+        logging.warning(
+            f"Version mismatch: expected minor version {supported_parts[1]}, "
+            f"got {input_parts[1]}. This may cause compatibility issues."
+        )
+
+    return True
 
 
 def verify_runtime_version(

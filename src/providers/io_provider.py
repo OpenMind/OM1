@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 from contextlib import contextmanager
@@ -125,6 +126,8 @@ class IOProvider:
                     timestamp=timestamp,
                     tick=existing_input.tick,
                 )
+            else:
+                logging.warning("add_input_timestamp called for missing key '%s'", key)
 
     def get_input_timestamp(self, key: str) -> Optional[float]:
         """
