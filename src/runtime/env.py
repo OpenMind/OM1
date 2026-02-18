@@ -92,7 +92,7 @@ class EnvLoader:
                 return default_value
             else:
                 logging.warning(
-                    f"Environment variable '{env_var}' with no default value not found "
+                    f"Environment variable '{env_var}' not found and no default was provided"
                 )
                 return match.group(0)
 
