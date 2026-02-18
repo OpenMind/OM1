@@ -633,44 +633,35 @@ def persistence_config():
     return config
 
 
-@pytest.fixture
-def persistence_manager(persistence_config, openai_client, tmp_path):
-    """Create an LLMHistoryManager with save_interactions enabled, using a temp dir."""
+def _make_persistence_manager(config, client, tmp_path):
+    """Create an LLMHistoryManager with _get_history_file_path patched to tmp_path."""
+    history_file = tmp_path / ".test_mode.history.json"
     with patch.object(
         LLMHistoryManager,
         "_get_history_file_path",
-        return_value=tmp_path / ".test_mode.history.json",
+        return_value=history_file,
     ):
-        manager = LLMHistoryManager(persistence_config, openai_client)
-        # Keep the patch active for methods called later
-    manager._test_history_path = tmp_path / ".test_mode.history.json"
-    return manager
+        manager = LLMHistoryManager(config, client)
+    manager._get_history_file_path = lambda: history_file  # type: ignore[assignment]
+    return manager, history_file
 
 
-def _patch_path(manager):
-    """Return a patch that redirects _get_history_file_path to the test path."""
-    return patch.object(
-        manager,
-        "_get_history_file_path",
-        return_value=manager._test_history_path,
-    )
-
-
-def test_save_history_creates_file(persistence_manager):
+def test_save_history_creates_file(persistence_config, openai_client, tmp_path):
     """Test that _save_history creates a JSON file on disk."""
-    manager = persistence_manager
+    manager, history_file = _make_persistence_manager(
+        persistence_config, openai_client, tmp_path
+    )
     manager.history = [
         ChatMessage(role="user", content="Hello"),
         ChatMessage(role="assistant", content="Hi there"),
     ]
     manager.frame_index = 3
 
-    with _patch_path(manager):
-        manager._save_history()
+    manager._save_history()
 
-    assert manager._test_history_path.exists()
+    assert history_file.exists()
 
-    with open(manager._test_history_path, "r") as f:
+    with open(history_file, "r") as f:
         data = json.load(f)
 
     assert len(data["history"]) == 2
@@ -738,23 +729,24 @@ def test_load_history_corrupted_file(persistence_config, openai_client, tmp_path
     assert manager.frame_index == 0
 
 
-def test_save_history_atomic_write(persistence_manager):
+def test_save_history_atomic_write(persistence_config, openai_client, tmp_path):
     """Test that save uses atomic write (temp file + rename)."""
-    manager = persistence_manager
+    manager, history_file = _make_persistence_manager(
+        persistence_config, openai_client, tmp_path
+    )
     manager.history = [ChatMessage(role="user", content="test")]
     manager.frame_index = 1
 
-    with _patch_path(manager):
-        manager._save_history()
+    manager._save_history()
 
     # Verify file exists and is valid
-    assert manager._test_history_path.exists()
-    with open(manager._test_history_path, "r") as f:
+    assert history_file.exists()
+    with open(history_file, "r") as f:
         data = json.load(f)
     assert len(data["history"]) == 1
 
     # No leftover .tmp files
-    tmp_files = list(manager._test_history_path.parent.glob("*.tmp"))
+    tmp_files = list(history_file.parent.glob("*.tmp"))
     assert len(tmp_files) == 0
 
 
