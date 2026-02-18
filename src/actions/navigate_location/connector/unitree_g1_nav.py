@@ -62,6 +62,7 @@ class UnitreeG1NavConnector(ActionConnector[UnitreeG1NavConfig, NavigateLocation
         self.location_provider = UnitreeG1LocationsProvider(
             base_url, timeout, refresh_interval
         )
+        self.location_provider.start()
         self.navigation_provider = UnitreeG1NavigationProvider()
         self.io_provider = IOProvider()
 
