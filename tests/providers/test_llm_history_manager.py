@@ -23,6 +23,7 @@ def llm_config():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "Test Robot"
+    config.save_interactions = False
     return config
 
 
@@ -160,6 +161,7 @@ async def test_update_history_only_current_tick_inputs():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -223,6 +225,7 @@ async def test_update_history_no_inputs_for_current_tick():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -271,6 +274,7 @@ async def test_update_history_multiple_ticks():
     config.model = "gpt-4o"
     config.history_length = 10
     config.agent_name = "MultiTickBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -333,6 +337,7 @@ async def test_update_history_tick_boundary():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "BoundaryBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -450,6 +455,7 @@ async def test_llm_response_failure_removes_unpaired_user_message():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -489,6 +495,7 @@ async def test_llm_response_failure_with_existing_history():
     config.model = "gpt-4o"
     config.history_length = 10
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -544,6 +551,7 @@ async def test_multiple_summarization_failures_prevent_unbounded_growth():
     config.model = "gpt-4o"
     config.history_length = 6
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
