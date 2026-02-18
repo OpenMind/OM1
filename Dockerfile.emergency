@@ -1,0 +1,50 @@
+# Dockerfile for Emergency Call Plugin Simulation Environment
+#
+# This Dockerfile creates a containerized simulation environment for testing
+# the Emergency Call Plugin without requiring actual hardware.
+#
+# Build: docker build -f Dockerfile.emergency -t om1-emergency .
+# Run: docker run -p 8080:8080 om1-emergency
+
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy OM1 codebase
+COPY . /app/
+
+# Install OM1 in editable mode
+RUN pip install -e .
+
+# Create directories for emergency logs
+RUN mkdir -p /root/.om1/emergency_logs
+
+# Expose port for simulation API
+EXPOSE 8080
+
+# Environment variables for simulation
+ENV OM1_ENV=simulation
+ENV EMERGENCY_SIMULATION_MODE=true
+ENV EMERGENCY_LOG_LEVEL=DEBUG
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)"
+
+# Run emergency simulation server
+CMD ["python", "-m", "om1", "config/emergency_call.json5"]

@@ -1,0 +1,64 @@
+{
+  // Emergency Call Plugin Configuration
+  // This enables multi-modal emergency detection and tiered response
+
+  "emergency_call": {
+    // 🔐 Encryption key for securing emergency logs
+    // Generate a secure key and keep it secret!
+    "encryption_key": "YOUR_ENCRYPTION_KEY_HERE",
+
+    // ⏰ Auto-delete logs after N hours (default: 72)
+    "auto_delete_hours": 72,
+
+    // 📞 Twilio Configuration (optional, for phone calls)
+    // Get credentials from: https://www.twilio.com/console
+    "twilio_account_sid": "YOUR_TWILIO_ACCOUNT_SID",
+    "twilio_auth_token": "YOUR_TWILIO_AUTH_TOKEN",
+    "twilio_from_number": "+1234567890",
+
+    // 🚨 Emergency service number (default: 911)
+    "emergency_service_number": "911",
+
+    // 👨‍👩‍👧‍👦 Family Emergency Contacts
+    // Listed in priority order (1 = highest priority)
+    "family_contacts": [
+      {
+        "name": "Spouse",
+        "phone": "+1234567891",
+        "email": "spouse@example.com",
+        "relation": "spouse",
+        "priority": 1
+      },
+      {
+        "name": "Adult Child",
+        "phone": "+1234567892",
+        "email": "child@example.com",
+        "relation": "child",
+        "priority": 2
+      },
+      {
+        "name": "Emergency Contact",
+        "phone": "+1234567893",
+        "email": "emergency@example.com",
+        "relation": "emergency",
+        "priority": 3
+      }
+    ]
+  },
+
+  // System configuration
+  "system": {
+    // Rate limit: only 1 emergency call per second
+    "rate_limit": 1,
+    
+    // Tick rate: check triggers every 100ms
+    "tick_rate": 10,
+    
+    // Input/Output components
+    "input": ["emergency_triggers"],
+    "output": ["emergency_call"]
+  },
+
+  // Multi-agent mode disabled for safety
+  "multi_agent": false
+}
