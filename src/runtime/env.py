@@ -5,59 +5,55 @@ from typing import Any, Union
 
 
 class EnvLoader:
-    """
-    Load ${ENV_VAR} patterns in config.
-    """
+    """Load ${ENV_VAR} patterns in config."""
 
     @staticmethod
-    def load_env_vars(
-        config: Union[dict, list, str, Any],
-    ) -> Union[dict, list, str, Any]:
+    def load_env_vars(config: dict) -> dict:
         """
         Load environment variables into the configuration.
 
-        Warns about any missing variables without defaults,
-        then substitutes all ${ENV_VAR} patterns.
+        Substitutes all ${ENV_VAR} and ${ENV_VAR:-default} patterns.
 
         Parameters
         ----------
-        config : Union[dict, list, str, Any]
-            Configuration value to process.
+        config : dict
+            The raw configuration dictionary to process.
 
         Returns
         -------
-        Union[dict, list, str, Any]
+        dict
             Configuration with environment variables loaded.
         """
-        return EnvLoader.search_env(config)
+        return EnvLoader._process_load_value(config)  # type: ignore[return-value]
 
     @staticmethod
-    def search_env(
+    def _process_load_value(
         config: Union[dict, list, str, Any],
     ) -> Union[dict, list, str, Any]:
         """
-        Search the configuration for ${ENV_VAR} patterns and load them.
-
-        Recursively traverses dicts, lists, and strings.
+        Recursively process a config value, loading env vars in strings.
 
         Parameters
         ----------
         config : Union[dict, list, str, Any]
-            Configuration value to process.
+            A config value to process.
 
         Returns
         -------
         Union[dict, list, str, Any]
-            Configuration with environment variables loaded.
+            The config value with environment variables loaded.
         """
         if config is None:
             return config
 
         if isinstance(config, dict):
-            return {key: EnvLoader.search_env(value) for key, value in config.items()}
+            return {
+                key: EnvLoader._process_load_value(value)
+                for key, value in config.items()
+            }
 
         if isinstance(config, list):
-            return [EnvLoader.search_env(item) for item in config]
+            return [EnvLoader._process_load_value(item) for item in config]
 
         if isinstance(config, str):
             return EnvLoader.load_value(config)

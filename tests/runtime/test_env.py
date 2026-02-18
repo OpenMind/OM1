@@ -28,10 +28,10 @@ class TestLoadEnvVars:
             result = EnvLoader.load_env_vars(config)
             assert result == {"outer": {"inner": "v1", "deep": {"leaf": "v2"}}}
 
-    def test_list(self):
+    def test_list_in_dict(self):
         with patch.dict(os.environ, {"A": "x", "B": "y"}):
-            result = EnvLoader.load_env_vars(["${A}", "${B}", "literal"])
-            assert result == ["x", "y", "literal"]
+            result = EnvLoader.load_env_vars({"items": ["${A}", "${B}", "literal"]})
+            assert result == {"items": ["x", "y", "literal"]}
 
     def test_mixed_list_in_dict(self):
         with patch.dict(os.environ, {"VAR": "replaced"}):
@@ -42,18 +42,19 @@ class TestLoadEnvVars:
         config = {"count": 42, "rate": 3.14, "flag": True, "empty": None}
         assert EnvLoader.load_env_vars(config) == config
 
-    def test_none_input(self):
-        assert EnvLoader.load_env_vars(None) is None
+    def test_none_value_unchanged(self):
+        result = EnvLoader.load_env_vars({"key": None})
+        assert result == {"key": None}
 
     def test_mixed_string(self):
         with patch.dict(os.environ, {"HOST": "example.com"}):
-            result = EnvLoader.load_env_vars("https://${HOST}/api")
-            assert result == "https://example.com/api"
+            result = EnvLoader.load_env_vars({"url": "https://${HOST}/api"})
+            assert result == {"url": "https://example.com/api"}
 
     def test_multiple_vars_in_one_string(self):
         with patch.dict(os.environ, {"HOST": "example.com", "PORT": "8080"}):
-            result = EnvLoader.load_env_vars("${HOST}:${PORT}")
-            assert result == "example.com:8080"
+            result = EnvLoader.load_env_vars({"addr": "${HOST}:${PORT}"})
+            assert result == {"addr": "example.com:8080"}
 
     def test_missing_var_keeps_pattern(self):
         with patch.dict(os.environ, {}, clear=True):
