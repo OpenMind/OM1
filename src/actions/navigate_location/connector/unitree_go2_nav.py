@@ -64,6 +64,7 @@ class UnitreeGo2NavConnector(
         self.location_provider = UnitreeGo2LocationsProvider(
             base_url, timeout, refresh_interval
         )
+        self.location_provider.start()
         self.navigation_provider = UnitreeGo2NavigationProvider()
         self.io_provider = IOProvider()
         logging.info(
