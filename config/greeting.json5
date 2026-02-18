@@ -8,7 +8,7 @@
   mode_memory_enabled: true,
 
   // Global settings
-  api_key: "openmind_free",
+  api_key: "${OM_API_KEY:-openmind_free}",
   unitree_ethernet: "enP2p1s0",
   system_governance: "",
   cortex_llm: {

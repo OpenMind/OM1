@@ -348,16 +348,19 @@ class TestLoadModeConfig:
         with pytest.raises(FileNotFoundError):
             load_mode_config("non_existent_config")
 
+    @patch("runtime.config.validate_config_schema")
     @patch.dict(
         os.environ,
         {"ROBOT_IP": "env_robot_ip", "OM_API_KEY": "env_api_key", "URID": "env_urid"},
     )
-    def test_load_mode_config_env_fallback(self):
-        """Test that environment variables are used as fallback."""
+    def test_load_mode_config_env_loading(self, mock_validate):
+        """Test that ${ENV_VAR} patterns in config are resolved by load_env_vars."""
         config_data = {
             "version": "v1.0.2",
             "default_mode": "default",
-            "api_key": "openmind_free",
+            "api_key": "${OM_API_KEY:-openmind_free}",
+            "robot_ip": "${ROBOT_IP:-}",
+            "URID": "${URID:-default}",
             "system_governance": "Env governance",
             "modes": {
                 "default": {

@@ -2,7 +2,7 @@
   version: "v1.0.2",
   hertz: 1,
   name: "bits_mapper",
-  api_key: "openmind_free",
+  api_key: "${OM_API_KEY:-openmind_free}",
   URID: "om1_qwertyui",
   unitree_ethernet: "en0",
   system_prompt_base: "You are a smart, curious, and friendly dog.",
