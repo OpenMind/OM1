@@ -50,6 +50,67 @@ sudo apt-get update
 sudo apt-get install portaudio19-dev python3-dev ffmpeg
 ```
 
+For Windows
+
+⚠️ **Important Note for Windows Users**
+
+OM1 is primarily developed and tested on Linux and macOS. Some dependencies (particularly `tensorflow-io-gcs-filesystem`) do not have Windows wheels available.
+
+#### Recommended Approaches
+
+**Option 1: Docker (Recommended for Full System)**
+```powershell
+# Install Docker Desktop from https://www.docker.com/products/docker-desktop
+# Then run:
+docker-compose up
+```
+
+**Option 2: WSL (Windows Subsystem for Linux)**
+```powershell
+# Install WSL
+wsl --install
+
+# Then follow Linux installation instructions inside WSL
+```
+
+**Option 3: Minimal Setup (For Contributing Code/Documentation)**
+```powershell
+# Install uv
+pip install uv
+
+# Clone and setup
+git clone https://github.com/YOUR_USERNAME/OM1.git
+cd OM1
+git submodule update --init
+uv venv
+.\.venv\Scripts\Activate.ps1
+
+# Install only what you need
+uv pip install pytest pre-commit
+```
+
+#### Common Windows Issues
+
+**Issue 1: `tensorflow-io-gcs-filesystem` Error**
+```
+error: Distribution can't be installed because it doesn't have wheels for Windows
+```
+
+**Solution:** Use Docker/WSL for full system, or install only specific packages:
+```powershell
+uv pip install pytest  # For testing contributions
+```
+
+**Issue 2: PowerShell Execution Policy**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Issue 3: FFmpeg Installation**
+```powershell
+winget install --id=Gyan.FFmpeg -e
+```
+
 ### Obtain an OpenMind API Key
 
 Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp .env.example .env` and add your key to the `.env`.
