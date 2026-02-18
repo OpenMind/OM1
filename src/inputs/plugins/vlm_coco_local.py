@@ -53,6 +53,7 @@ def check_webcam(index_to_check):
         logging.info(f"ERROR: COCO did not find cam: {index_to_check}")
         return False
     logging.info(f"COCO found cam: {index_to_check}")
+    cap.release()
     return True
 
 
@@ -129,8 +130,8 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
 
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
-            # logging.info(f"VLM_COCO_Local frame: {frame}")
-            return frame
+            if ret:
+                return frame
 
         return None
 

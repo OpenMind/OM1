@@ -87,6 +87,8 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         # Capture a frame every 500 ms
         if self.have_cam and self.cap is not None:
             ret, frame = self.cap.read()
+            if not ret or frame is None:
+                return None
             return frame
 
     async def _raw_to_text(
@@ -128,6 +130,8 @@ class FaceEmotionCapture(FuserInput[SensorConfig, Optional[cv2.typing.MatLike]])
         faces = self.face_cascade.detectMultiScale(
             gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
         )
+
+        self.emotion = ""
 
         for x, y, w, h in faces:
             # Extract the face ROI (Region of Interest)
