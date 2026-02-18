@@ -10,8 +10,9 @@ from typing import List, Optional
 import cv2
 from om1_vlm import VideoStream
 
+from inputs.base import Message
 from inputs.base.loop import FuserInput
-from inputs.plugins.vlm_vila import Message, VLMVila, VLMVilaConfig
+from inputs.plugins.vlm_vila import VLMVila, VLMVilaConfig
 from providers.io_provider import IOProvider
 from providers.vlm_vila_provider import VLMVilaProvider
 from tests.integration.mock_inputs.data_providers.mock_image_provider import (

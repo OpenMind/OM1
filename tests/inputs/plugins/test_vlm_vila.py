@@ -9,7 +9,7 @@ from inputs.plugins.vlm_vila import VLMVila, VLMVilaConfig
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.vlm_vila.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila.VLMVilaProvider"),
     ):
         config = VLMVilaConfig()
@@ -21,7 +21,7 @@ def test_initialization():
 def test_initialization_with_custom_config():
     """Test initialization with custom configuration."""
     with (
-        patch("inputs.plugins.vlm_vila.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila.VLMVilaProvider"),
     ):
         config = VLMVilaConfig(
@@ -42,9 +42,9 @@ def test_initialization_with_custom_config():
 async def test_poll():
     """Test _poll method."""
     with (
-        patch("inputs.plugins.vlm_vila.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila.VLMVilaProvider"),
-        patch("inputs.plugins.vlm_vila.asyncio.sleep", new=AsyncMock()),
+        patch("inputs.vlm_provider_base.asyncio.sleep", new=AsyncMock()),
     ):
         config = VLMVilaConfig()
         sensor = VLMVila(config=config)
@@ -56,7 +56,7 @@ async def test_poll():
 def test_formatted_latest_buffer():
     """Test formatted_latest_buffer."""
     with (
-        patch("inputs.plugins.vlm_vila.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila.VLMVilaProvider"),
     ):
         config = VLMVilaConfig()

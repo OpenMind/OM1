@@ -9,7 +9,7 @@ from inputs.plugins.vlm_vila_rtsp import VLMVilaRTSP, VLMVilaRTSPConfig
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.vlm_vila_rtsp.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila_rtsp.VLMVilaRTSPProvider"),
     ):
         config = VLMVilaRTSPConfig()
@@ -21,7 +21,7 @@ def test_initialization():
 def test_initialization_with_custom_config():
     """Test initialization with custom configuration."""
     with (
-        patch("inputs.plugins.vlm_vila_rtsp.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila_rtsp.VLMVilaRTSPProvider"),
     ):
         config = VLMVilaRTSPConfig(
@@ -40,9 +40,9 @@ def test_initialization_with_custom_config():
 async def test_poll():
     """Test _poll method."""
     with (
-        patch("inputs.plugins.vlm_vila_rtsp.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila_rtsp.VLMVilaRTSPProvider"),
-        patch("inputs.plugins.vlm_vila_rtsp.asyncio.sleep", new=AsyncMock()),
+        patch("inputs.vlm_provider_base.asyncio.sleep", new=AsyncMock()),
     ):
         config = VLMVilaRTSPConfig()
         sensor = VLMVilaRTSP(config=config)
@@ -54,7 +54,7 @@ async def test_poll():
 def test_formatted_latest_buffer():
     """Test formatted_latest_buffer."""
     with (
-        patch("inputs.plugins.vlm_vila_rtsp.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_vila_rtsp.VLMVilaRTSPProvider"),
     ):
         config = VLMVilaRTSPConfig()
