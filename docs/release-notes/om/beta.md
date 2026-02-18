@@ -1,6 +1,6 @@
 ---
 title: OM1 Beta Release
-description: "v1.0.0-beta.4"
+description: "v1.0.1-beta.2"
 icon: rectangle-beta
 ---
 
@@ -9,6 +9,35 @@ icon: rectangle-beta
 Beta release for the Docker image openmindagi/om1, which provides the full setup of OM1 service in one go without having the user to install dependencies separately.
 
 ## Features
+
+### [v1.0.1-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.2-beta.2)
+- A huge performance improvement has been added.
+- Standardized the codebase to only support multimode configuration, removing the separate single-mode structure and related folders. Single-mode setups are still supported and are now automatically converted to multimode via the new runtime infrastructure.
+- Added support for monitoring and reporting the charging status of the Unitree Go2 robot.
+- Standardized generic sensor input types with robot-specific variants. New separate background processes added for Unitree G1, Go2 and Turtlebot4.
+- Docker now accepts OM_COMMAND to switch config.
+- Refactored ApproachingPerson background plugin to use Zenoh for person-approaching events.
+- Updated the ElevenLabs TTS integration to reduce latency by switching from JSON/base64 audio responses to a live audio streaming output, and changes the default ElevenLabs output format to PCM at 16kHz.
+- OM1 now supports Isaac Sim.
+- Improved test coverage across plugins.
+
+### [v1.0.1-beta.1](https://github.com/OpenMind/OM1/releases/tag/v1.0.1-beta.1)
+- Added support for LimX TRON
+- Ollama support added for local inference
+- Latest config version is now upgraded to v1.0.2
+- Documentation updates
+    - We've updated the full autonomy documentation for G1 and Go2
+    - Added documentation for Gazebo setup
+    - Fixed typos and broken links across documentation
+    - Refreshed docstrings throughout the codebase
+- Updated API endpoint documentation
+- Updated API pricing documentation and information regarding the new subscription plans
+- Introduced support for 'concurrent', 'sequential', and 'dependencies' action execution modes in orchestrator and configuration schemas
+- Added greeting conversation mode and state management
+- Added local support for Koroko and Riva model
+- Added person following mode
+- Improved unit test coverage for provider and input plugins
+
 
 ### [v1.0.0-beta.4](https://github.com/OpenMind/OM1/releases/tag/v1.0.0-beta.4)
 - Openrouter support for LLama and Anthropic: Added compatibility with OpenRouter API, enabling seamless access to more AI providers, including Meta’s LLaMA and Anthropic Claude models. This allows flexible model selection for natural language processing, reasoning, and control tasks depending on performance or cost preferences.
@@ -78,6 +107,6 @@ cd OM1
 docker-compose up om1 -d --no-build
 ```
 
-The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.0-beta.4).
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.2-beta.2).
 
 For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om).
