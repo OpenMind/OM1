@@ -387,7 +387,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
                 distance_traveled = math.sqrt(
                     (self.odom.x - s_x) ** 2 + (self.odom.y - s_y) ** 2
                 )
-                remaining = abs(goal_dx - distance_traveled)
+                remaining = abs(abs(goal_dx) - distance_traveled)
                 logging.info(f"remaining advance GAP: {round(remaining,2)}")
 
                 fb = 0
@@ -401,10 +401,10 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
                     return
 
                 if remaining > self.distance_tolerance:
-                    if distance_traveled < goal_dx:  # keep advancing
+                    if distance_traveled < abs(goal_dx):  # keep advancing
                         logging.debug(f"keep moving. remaining:{remaining} ")
                         self.move(fb * 0.4, 0.0)
-                    elif distance_traveled > goal_dx:  # you moved too far
+                    elif distance_traveled > abs(goal_dx):  # you moved too far
                         logging.debug(
                             f"OVERSHOOT: move other way. remaining:{remaining} "
                         )
