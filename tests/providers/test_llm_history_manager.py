@@ -777,7 +777,4 @@ def test_save_interactions_false_no_file(openai_client, tmp_path):
         manager = LLMHistoryManager(config, openai_client)
 
     manager.history = [ChatMessage(role="user", content="Hello")]
-
-    # _save_history should not be called, but even if called manually
-    # the decorator won't call it when save_interactions is False
     assert not history_file.exists()
