@@ -84,10 +84,9 @@ class GreetingConversationConnector(
         super().__init__(config)
 
         self.greeting_state_provider = GreetingConversationStateMachineProvider()
-        self.context_provider = ContextProvider()
+        self.greeting_state_provider.start_conversation()
 
-        # TODO: update the conversation state in the entry point
-        self.greeting_state_provider.current_state = ConversationState.CONVERSING
+        self.context_provider = ContextProvider()
 
         # OM API key
         api_key = getattr(self.config, "api_key", None)
@@ -140,7 +139,9 @@ class GreetingConversationConnector(
 
         # Estimate TTS duration based on text length (~100 words per minute speech rate)
         word_count = len(output_interface.response.split())
-        self.tts_duration = (word_count / 100.0) * 60.0  # Convert to seconds
+        self.tts_duration = (
+            word_count / 100.0
+        ) * 60.0 + 5  # Convert to seconds and add buffer
         self.tts_triggered_time = time.time()
 
         response = self.greeting_state_provider.process_conversation(llm_output)
