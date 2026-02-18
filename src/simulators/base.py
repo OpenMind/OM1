@@ -98,6 +98,7 @@ class Simulator:
 
         Note: This method should not block the event loop.
         """
+        self.sleep(60)
 
     def stop(self) -> None:
         """
@@ -107,6 +108,4 @@ class Simulator:
         cleanup operations (e.g., closing connections, releasing resources).
         The base implementation does nothing.
         """
-        pass
-        self.sleep(60)
         pass
