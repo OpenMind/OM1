@@ -86,7 +86,7 @@ class EnvLoader:
             if env_value is not None:
                 return env_value
             elif default_value is not None:
-                logging.debug(
+                logging.info(
                     f"Environment variable '{env_var}' not found, using default: '{default_value}'"
                 )
                 return default_value
