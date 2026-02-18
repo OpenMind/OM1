@@ -73,10 +73,9 @@ class GreetingConversationConnector(
         super().__init__(config)
 
         self.greeting_state_provider = GreetingConversationStateMachineProvider()
-        self.context_provider = ContextProvider()
+        self.greeting_state_provider.start_conversation()
 
-        # TODO: update the conversation state in the entry point
-        self.greeting_state_provider.current_state = ConversationState.CONVERSING
+        self.context_provider = ContextProvider()
 
         # OM API key
         api_key = getattr(self.config, "api_key", None)
@@ -99,7 +98,8 @@ class GreetingConversationConnector(
         self.tts.start()
 
         self.tts_triggered_time = time.time()
-        self.tts_duration = 0.0  # Estimated TTS duration in seconds
+        self.tts_duration = 0.0
+        self.conversation_finished_sent = False
 
     async def connect(self, output_interface: GreetingConversationInput) -> None:
         """
@@ -126,17 +126,23 @@ class GreetingConversationConnector(
 
         # Estimate TTS duration based on text length (~100 words per minute speech rate)
         word_count = len(output_interface.response.split())
-        self.tts_duration = (word_count / 100.0) * 60.0  # Convert to seconds
+        self.tts_duration = (
+            word_count / 100.0
+        ) * 60.0 + 5  # Convert to seconds and add buffer time
         self.tts_triggered_time = time.time()
 
         response = self.greeting_state_provider.process_conversation(llm_output)
         logging.info(f"Greeting Conversation Response: {response}")
 
-        if response.get("current_state") == ConversationState.FINISHED:
+        if (
+            response.get("current_state") == ConversationState.FINISHED
+            and not self.conversation_finished_sent
+        ):
             logging.info("Greeting conversation has finished.")
             self.context_provider.update_context(
                 {"greeting_conversation_finished": True}
             )
+            self.conversation_finished_sent = True
 
     def tick(self) -> None:
         """
@@ -158,11 +164,15 @@ class GreetingConversationConnector(
         state_update = self.greeting_state_provider.update_state_without_llm()
 
         # Check if conversation has finished
-        if state_update.get("current_state") == ConversationState.FINISHED.value:
+        if (
+            state_update.get("current_state") == ConversationState.FINISHED.value
+            and not self.conversation_finished_sent
+        ):
             logging.info("Greeting conversation has finished (detected in tick).")
             self.context_provider.update_context(
                 {"greeting_conversation_finished": True}
             )
+            self.conversation_finished_sent = True
 
         # Log the updated state
         logging.info(
