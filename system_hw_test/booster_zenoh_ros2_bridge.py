@@ -22,7 +22,7 @@ class BoosterZenohBridge(Node):
 
         # 2. Initialize Zenoh Session
         print("Opening Zenoh session...")
-        self.zenoh_session = zenoh.open()
+        self.zenoh_session = zenoh.open(zenoh.Config())
         self.zenoh_key = "booster_rpc_service"
 
         # 3. Register Zenoh Query Responder
