@@ -1,0 +1,18 @@
+{
+  // Home Assistant integration configuration
+  // Get your long-lived access token from Home Assistant profile page
+  
+  "home_assistant": {
+    "base_url": "http://homeassistant.local:8123",
+    "token": "YOUR_LONG_LIVED_ACCESS_TOKEN_HERE"
+  },
+  
+  "system": {
+    "rate_limit": 20,
+    "tick_rate": 10,
+    "input": ["home_assistant"],
+    "output": ["home_assistant"]
+  },
+  
+  "multi_agent": false
+}
