@@ -26,7 +26,7 @@ class ActionOrchestrator:
     _config: RuntimeConfig
     _connector_workers: int
     _connector_executor: ThreadPoolExecutor
-    _submitted_connectors: T.Set[str]
+    _action_instances: T.List[AgentAction]
     _stop_event: threading.Event
     _execution_mode: str
     _action_dependencies: T.Dict[str, T.List[str]]
@@ -51,7 +51,7 @@ class ActionOrchestrator:
             max_workers=self._connector_workers,
             thread_name_prefix="action-orchestrator-connector-",
         )
-        self._submitted_connectors = set()
+        self._action_instances = []
         self._stop_event = threading.Event()
         self._execution_mode = config.action_execution_mode or "concurrent"
         self._action_dependencies = config.action_dependencies or {}
@@ -71,7 +71,10 @@ class ActionOrchestrator:
             A future object for compatibility with async interfaces.
         """
         for agent_action in self._config.agent_actions:
-            if agent_action.llm_label in self._submitted_connectors:
+            if any(
+                action.llm_label == agent_action.llm_label
+                for action in self._action_instances
+            ):
                 logging.warning(
                     f"Connector {agent_action.llm_label} already submitted, skipping."
                 )
@@ -80,7 +83,7 @@ class ActionOrchestrator:
             agent_action.connector.set_stop_event(self._stop_event)
 
             self._connector_executor.submit(self._run_connector_loop, agent_action)
-            self._submitted_connectors.add(agent_action.llm_label)
+            self._action_instances.append(agent_action)
 
         return asyncio.Future()  # Return future for compatibility
 
@@ -382,9 +385,21 @@ class ActionOrchestrator:
     def stop(self):
         """
         Stop the action executor and wait for all tasks to complete.
+
+        Sets the stop event to signal all connector loops to terminate,
+        calls stop() on each connector for cleanup, then shuts down the
+        thread pool executor and waits for all running tasks to finish.
         """
         self._stop_event.set()
+
+        for agent_action in self._action_instances:
+            try:
+                agent_action.connector.stop()
+            except Exception as e:
+                logging.error(f"Error stopping connector {agent_action.llm_label}: {e}")
+
         self._connector_executor.shutdown(wait=True)
+        self._action_instances.clear()
 
     def __del__(self):
         """
