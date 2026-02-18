@@ -79,6 +79,9 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
         if self.mock_mode:
             peer_lat = self.config.mock_lat
             peer_lon = self.config.mock_lon
+            if peer_lat is None or peer_lon is None:
+                logging.warning("FabricClosestPeer: mock_lat and mock_lon must be set when mock_mode is enabled")
+                return None
             logging.info(
                 f"FabricClosestPeer (mock): fabricated peer {peer_lat:.6f},{peer_lon:.6f}"
             )
