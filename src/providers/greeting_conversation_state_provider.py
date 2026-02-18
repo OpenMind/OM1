@@ -86,11 +86,7 @@ class ConfidenceCalculator:
             Dictionary with overall confidence score and breakdown.
         """
         # LLM confidence
-        llm_state_value = (
-            factors.conversation_state.value
-            if hasattr(factors.conversation_state, "value")
-            else str(factors.conversation_state)
-        )
+        llm_state_value = factors.conversation_state.value
 
         if llm_state_value in [
             ConversationState.CONCLUDING.value,
@@ -173,9 +169,7 @@ class ConfidenceCalculator:
         llm_state = confidence_result["factors"].conversation_state
 
         # LLM explicitly wants to conclude with decent confidence
-        llm_state_value = (
-            llm_state.value if hasattr(llm_state, "value") else str(llm_state)
-        )
+        llm_state_value = llm_state.value
         llm_wants_to_conclude = llm_state_value in [
             ConversationState.CONCLUDING.value,
             ConversationState.FINISHED.value,
@@ -290,7 +284,13 @@ class GreetingConversationStateMachineProvider:
 
         last_user_utterance_length = len(self.last_user_utterance)
 
-        llm_state_str = llm_output.get("conversation_state", "conversing")
+        llm_state_raw = llm_output.get("conversation_state", "conversing")
+        llm_state_str = (
+            llm_state_raw.value
+            if hasattr(llm_state_raw, "value")
+            else str(llm_state_raw)
+        )
+
         try:
             conversation_state = ConversationState(llm_state_str)
         except (ValueError, KeyError):
