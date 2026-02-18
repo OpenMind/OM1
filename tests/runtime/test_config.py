@@ -350,14 +350,14 @@ class TestLoadModeConfig:
 
     @patch.dict(
         os.environ,
-        {"OM_API_KEY": "env_api_key"},
+        {"ROBOT_IP": "env_robot_ip", "OM_API_KEY": "env_api_key", "URID": "env_urid"},
     )
     def test_load_mode_config_env_fallback(self):
-        """Test that ${ENV_VAR} patterns in config are loaded."""
+        """Test that environment variables are used as fallback."""
         config_data = {
             "version": "v1.0.2",
             "default_mode": "default",
-            "api_key": "${OM_API_KEY}",
+            "api_key": "openmind_free",
             "system_governance": "Env governance",
             "modes": {
                 "default": {
@@ -384,7 +384,9 @@ class TestLoadModeConfig:
 
                 config = load_mode_config("env_test")
 
+                assert config.robot_ip == "env_robot_ip"
                 assert config.api_key == "env_api_key"
+                assert config.URID == "env_urid"
 
         finally:
             os.unlink(temp_file)
