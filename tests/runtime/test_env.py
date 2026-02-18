@@ -68,7 +68,7 @@ class TestLoadEnvVars:
             with patch.dict(os.environ, {}, clear=True):
                 EnvLoader.load_env_vars({"key": "${MISSING_VAR}"})
         assert "MISSING_VAR" in caplog.text
-        assert "no default value not found" in caplog.text
+        assert "no default was provided" in caplog.text
 
     def test_empty_env_var_used(self):
         with patch.dict(os.environ, {"EMPTY_VAR": ""}):
