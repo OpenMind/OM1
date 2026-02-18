@@ -1,8 +1,6 @@
 import asyncio
 import json
-import os
 from dataclasses import dataclass
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import openai
@@ -622,9 +620,6 @@ def test_get_messages_multiple_roles(history_manager):
     assert result[0] == {"role": "system", "content": "You are a robot"}
     assert result[1] == {"role": "user", "content": "Hello"}
     assert result[2] == {"role": "assistant", "content": "Hi there"}
-
-
-# --- Persistence Tests ---
 
 
 @pytest.fixture

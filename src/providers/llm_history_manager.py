@@ -345,8 +345,7 @@ class LLMHistoryManager:
 
             data = {
                 "history": [
-                    {"role": msg.role, "content": msg.content}
-                    for msg in self.history
+                    {"role": msg.role, "content": msg.content} for msg in self.history
                 ],
                 "frame_index": self.frame_index,
             }
