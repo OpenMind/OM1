@@ -29,10 +29,6 @@ class EnvLoader:
         Union[dict, list, str, Any]
             Configuration with environment variables loaded.
         """
-        missing = EnvLoader._find_missing(config)
-        if missing:
-            logging.warning(f"Missing env vars without defaults: {missing}")
-
         return EnvLoader.search_env(config)
 
     @staticmethod
@@ -95,53 +91,16 @@ class EnvLoader:
                 return env_value
             elif default_value is not None:
                 logging.debug(
-                    f"Environment variable '{env_var}' not found, "
-                    f"using default: '{default_value}'"
+                    f"Environment variable '{env_var}' not found, using default: '{default_value}'"
                 )
                 return default_value
             else:
                 logging.warning(
-                    f"Environment variable '{env_var}' not found "
-                    f"and no default provided, keeping original pattern"
+                    f"Environment variable '{env_var}' with no default value not found "
                 )
                 return match.group(0)
 
         return re.sub(pattern, replace_match, value)
-
-    @staticmethod
-    def _find_missing(config: Union[dict, list, str, Any]) -> list[str]:
-        """
-        Find missing environment variables that have no defaults set.
-
-        Parameters
-        ----------
-        config : Union[dict, list, str, Any]
-            Configuration to scan.
-
-        Returns
-        -------
-        list[str]
-            Sorted list of missing environment variable names.
-        """
-        missing_vars: set[str] = set()
-
-        def scan_value(val):
-            if isinstance(val, dict):
-                for v in val.values():
-                    scan_value(v)
-            elif isinstance(val, list):
-                for item in val:
-                    scan_value(item)
-            elif isinstance(val, str):
-                pattern = r"\$\{([^}:]+)(?::-([^}]*))?\}"
-                for match in re.finditer(pattern, val):
-                    env_var = match.group(1)
-                    has_default = match.group(2) is not None
-                    if not has_default and env_var not in os.environ:
-                        missing_vars.add(env_var)
-
-        scan_value(config)
-        return sorted(list(missing_vars))
 
 
 load_env_vars = EnvLoader.load_env_vars

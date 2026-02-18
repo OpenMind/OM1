@@ -60,6 +60,15 @@ class TestLoadEnvVars:
             result = EnvLoader.load_env_vars({"key": "${MISSING_VAR}"})
             assert result == {"key": "${MISSING_VAR}"}
 
+    def test_missing_var_logs_warning(self, caplog):
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            with patch.dict(os.environ, {}, clear=True):
+                EnvLoader.load_env_vars({"key": "${MISSING_VAR}"})
+        assert "MISSING_VAR" in caplog.text
+        assert "no default value not found" in caplog.text
+
     def test_empty_env_var_used(self):
         with patch.dict(os.environ, {"EMPTY_VAR": ""}):
             result = EnvLoader.load_env_vars({"key": "${EMPTY_VAR:-fallback}"})
@@ -78,30 +87,3 @@ class TestLoadValue:
     def test_empty_default(self):
         with patch.dict(os.environ, {}, clear=True):
             assert EnvLoader.load_value("${MISSING:-}") == ""
-
-
-class TestFindMissing:
-    """Test cases for EnvLoader._find_missing."""
-
-    def test_all_present(self):
-        with patch.dict(os.environ, {"A": "1", "B": "2"}):
-            assert EnvLoader._find_missing({"x": "${A}", "y": "${B}"}) == []
-
-    def test_missing_reported(self):
-        with patch.dict(os.environ, {}, clear=True):
-            result = EnvLoader._find_missing({"x": "${ZEBRA}", "y": "${ALPHA}"})
-            assert result == ["ALPHA", "ZEBRA"]
-
-    def test_defaults_not_reported(self):
-        with patch.dict(os.environ, {}, clear=True):
-            config = {"x": "${HAS_DEFAULT:-val}", "y": "${NO_DEFAULT}"}
-            assert EnvLoader._find_missing(config) == ["NO_DEFAULT"]
-
-    def test_nested(self):
-        with patch.dict(os.environ, {}, clear=True):
-            config = {"level1": {"level2": ["${DEEP_VAR}"]}}
-            assert EnvLoader._find_missing(config) == ["DEEP_VAR"]
-
-    def test_non_string_ignored(self):
-        config = {"num": 42, "flag": True, "items": [1, 2, None]}
-        assert EnvLoader._find_missing(config) == []
