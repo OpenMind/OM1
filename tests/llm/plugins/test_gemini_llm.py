@@ -59,9 +59,7 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.openai_compatible.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
+        patch("llm.openai_compatible.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.openai_compatible.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
         patch(

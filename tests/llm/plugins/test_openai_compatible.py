@@ -60,9 +60,7 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.openai_compatible.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
+        patch("llm.openai_compatible.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.openai_compatible.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
         patch(
@@ -157,9 +155,7 @@ def test_missing_api_key():
 @pytest.mark.asyncio
 async def test_call_api_method(llm, mock_response_with_tool_calls):
     """Test that _call_api is called during ask()."""
-    with patch.object(
-        llm, "_call_api", new_callable=AsyncMock
-    ) as mock_call_api:
+    with patch.object(llm, "_call_api", new_callable=AsyncMock) as mock_call_api:
         mock_call_api.return_value = mock_response_with_tool_calls
 
         result = await llm.ask("test prompt")
