@@ -1,7 +1,11 @@
 import asyncio
 import functools
+import json
 import logging
+import os
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 import openai
@@ -87,6 +91,10 @@ class LLMHistoryManager:
 
         # io provider
         self.io_provider = IOProvider()
+
+        # load persisted history if save_interactions is enabled
+        if getattr(self.config, "save_interactions", False):
+            self._load_history()
 
     async def summarize_messages(self, messages: List[ChatMessage]) -> ChatMessage:
         """
@@ -276,6 +284,89 @@ class LLMHistoryManager:
             messages.pop(0) if messages else None
             messages.pop(0) if messages else None
 
+    def _get_history_file_path(self) -> Path:
+        """
+        Get the file path for persisted history.
+
+        Returns
+        -------
+        Path
+            Path to the history JSON file in config/memory/.
+        """
+        mode = getattr(self.config, "mode", None) or self.agent_name or "default"
+        config_dir = Path(__file__).parent / "../../config/memory"
+        return config_dir / f".{mode}.history.json"
+
+    def _load_history(self) -> None:
+        """
+        Load persisted history from disk.
+
+        Restores history and frame_index from the JSON file.
+        If the file does not exist or is corrupted, starts with empty history.
+        """
+        history_file = self._get_history_file_path()
+        if not history_file.exists():
+            logging.info(f"No persisted history found at {history_file}")
+            return
+
+        try:
+            with open(history_file, "r") as f:
+                data = json.load(f)
+
+            saved_history = data.get("history", [])
+            for msg in saved_history:
+                self.history.append(
+                    ChatMessage(role=msg["role"], content=msg["content"])
+                )
+            self.frame_index = data.get("frame_index", 0)
+            logging.info(
+                f"Loaded {len(self.history)} messages from {history_file} "
+                f"(frame_index={self.frame_index})"
+            )
+        except (json.JSONDecodeError, KeyError) as e:
+            logging.warning(f"Corrupted history file {history_file}: {e}")
+            self.history = []
+            self.frame_index = 0
+        except Exception as e:
+            logging.warning(f"Failed to load history from {history_file}: {e}")
+            self.history = []
+            self.frame_index = 0
+
+    def _save_history(self) -> None:
+        """
+        Persist current history to disk using atomic write.
+
+        Writes to a temporary file first, then renames to ensure
+        the history file is never left in a corrupted state.
+        """
+        history_file = self._get_history_file_path()
+        try:
+            history_file.parent.mkdir(parents=True, exist_ok=True)
+
+            data = {
+                "history": [
+                    {"role": msg.role, "content": msg.content}
+                    for msg in self.history
+                ],
+                "frame_index": self.frame_index,
+            }
+
+            fd, temp_path = tempfile.mkstemp(
+                dir=str(history_file.parent), suffix=".tmp"
+            )
+            try:
+                with os.fdopen(fd, "w") as f:
+                    json.dump(data, f, indent=2)
+                os.rename(temp_path, str(history_file))
+                logging.debug(f"History saved to {history_file}")
+            except Exception:
+                # Clean up temp file on failure
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
+        except Exception as e:
+            logging.error(f"Failed to save history to {history_file}: {e}")
+
     def get_messages(self) -> List[dict]:
         """
         Get messages in format required by OpenAI API.
@@ -379,6 +470,9 @@ class LLMHistoryManager:
                         self.history_manager.history.pop()
 
                 self.history_manager.frame_index += 1
+
+                if getattr(self.history_manager.config, "save_interactions", False):
+                    self.history_manager._save_history()
 
                 return response
 

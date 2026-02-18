@@ -109,6 +109,7 @@ class ConfigConverter:
             "backgrounds": raw_config.get("backgrounds", []),
             "simulators": raw_config.get("simulators", []),
             "cortex_llm": raw_config.get("cortex_llm"),
+            "save_interactions": raw_config.get("save_interactions", False),
             "action_execution_mode": raw_config.get(
                 "action_execution_mode", "concurrent"
             ),

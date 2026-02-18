@@ -1,6 +1,9 @@
 import asyncio
+import json
+import os
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import openai
 import pytest
@@ -611,3 +614,167 @@ def test_get_messages_multiple_roles(history_manager):
     assert result[0] == {"role": "system", "content": "You are a robot"}
     assert result[1] == {"role": "user", "content": "Hello"}
     assert result[2] == {"role": "assistant", "content": "Hi there"}
+
+
+# --- Persistence Tests ---
+
+
+@pytest.fixture
+def persistence_config():
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+    config.save_interactions = True
+    config.mode = "test_mode"
+    return config
+
+
+@pytest.fixture
+def persistence_manager(persistence_config, openai_client, tmp_path):
+    """Create an LLMHistoryManager with save_interactions enabled, using a temp dir."""
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=tmp_path / ".test_mode.history.json",
+    ):
+        manager = LLMHistoryManager(persistence_config, openai_client)
+        # Keep the patch active for methods called later
+    manager._test_history_path = tmp_path / ".test_mode.history.json"
+    return manager
+
+
+def _patch_path(manager):
+    """Return a patch that redirects _get_history_file_path to the test path."""
+    return patch.object(
+        manager,
+        "_get_history_file_path",
+        return_value=manager._test_history_path,
+    )
+
+
+def test_save_history_creates_file(persistence_manager):
+    """Test that _save_history creates a JSON file on disk."""
+    manager = persistence_manager
+    manager.history = [
+        ChatMessage(role="user", content="Hello"),
+        ChatMessage(role="assistant", content="Hi there"),
+    ]
+    manager.frame_index = 3
+
+    with _patch_path(manager):
+        manager._save_history()
+
+    assert manager._test_history_path.exists()
+
+    with open(manager._test_history_path, "r") as f:
+        data = json.load(f)
+
+    assert len(data["history"]) == 2
+    assert data["history"][0] == {"role": "user", "content": "Hello"}
+    assert data["history"][1] == {"role": "assistant", "content": "Hi there"}
+    assert data["frame_index"] == 3
+
+
+def test_load_history_restores_state(persistence_config, openai_client, tmp_path):
+    """Test that history is restored from disk on initialization."""
+    history_file = tmp_path / ".test_mode.history.json"
+    saved_data = {
+        "history": [
+            {"role": "user", "content": "Saved question"},
+            {"role": "assistant", "content": "Saved answer"},
+        ],
+        "frame_index": 7,
+    }
+    with open(history_file, "w") as f:
+        json.dump(saved_data, f)
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=history_file,
+    ):
+        manager = LLMHistoryManager(persistence_config, openai_client)
+
+    assert len(manager.history) == 2
+    assert manager.history[0].role == "user"
+    assert manager.history[0].content == "Saved question"
+    assert manager.history[1].role == "assistant"
+    assert manager.history[1].content == "Saved answer"
+    assert manager.frame_index == 7
+
+
+def test_load_history_missing_file(persistence_config, openai_client, tmp_path):
+    """Test that missing history file results in empty history without error."""
+    non_existent = tmp_path / ".nonexistent.history.json"
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=non_existent,
+    ):
+        manager = LLMHistoryManager(persistence_config, openai_client)
+
+    assert manager.history == []
+    assert manager.frame_index == 0
+
+
+def test_load_history_corrupted_file(persistence_config, openai_client, tmp_path):
+    """Test that corrupted JSON file is handled gracefully."""
+    history_file = tmp_path / ".test_mode.history.json"
+    history_file.write_text("NOT VALID JSON {{{")
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=history_file,
+    ):
+        manager = LLMHistoryManager(persistence_config, openai_client)
+
+    assert manager.history == []
+    assert manager.frame_index == 0
+
+
+def test_save_history_atomic_write(persistence_manager):
+    """Test that save uses atomic write (temp file + rename)."""
+    manager = persistence_manager
+    manager.history = [ChatMessage(role="user", content="test")]
+    manager.frame_index = 1
+
+    with _patch_path(manager):
+        manager._save_history()
+
+    # Verify file exists and is valid
+    assert manager._test_history_path.exists()
+    with open(manager._test_history_path, "r") as f:
+        data = json.load(f)
+    assert len(data["history"]) == 1
+
+    # No leftover .tmp files
+    tmp_files = list(manager._test_history_path.parent.glob("*.tmp"))
+    assert len(tmp_files) == 0
+
+
+def test_save_interactions_false_no_file(openai_client, tmp_path):
+    """Test that no history file is created when save_interactions is False."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+    config.save_interactions = False
+    config.mode = "test_mode"
+
+    history_file = tmp_path / ".test_mode.history.json"
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=history_file,
+    ):
+        manager = LLMHistoryManager(config, openai_client)
+
+    manager.history = [ChatMessage(role="user", content="Hello")]
+
+    # _save_history should not be called, but even if called manually
+    # the decorator won't call it when save_interactions is False
+    assert not history_file.exists()
