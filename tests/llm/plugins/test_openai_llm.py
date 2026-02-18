@@ -54,8 +54,8 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch("llm.plugins.openai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
-        patch("llm.plugins.openai_llm.AvatarLLMState") as mock_avatar_state,
+        patch("llm.openai_compatible.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch("llm.openai_compatible.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
         patch(
             "providers.avatar_llm_state_provider.AvatarProvider"
@@ -100,7 +100,7 @@ async def test_ask_success_with_tool_calls(
     ) as mock_create:
         mock_create.return_value = mock_completion_response_with_tool_calls
         with patch(
-            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+            "llm.openai_compatible.convert_function_calls_to_actions"
         ) as mock_convert:
             expected_action = Action(type="test_function", value="value1")
             mock_convert.return_value = [expected_action]
@@ -125,7 +125,7 @@ async def test_ask_success_without_tool_calls(
     ) as mock_create:
         mock_create.return_value = mock_completion_response_without_tool_calls
         with patch(
-            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+            "llm.openai_compatible.convert_function_calls_to_actions"
         ) as mock_convert:
             result = await llm.ask("test prompt")
             mock_create.assert_called_once()
