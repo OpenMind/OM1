@@ -107,6 +107,6 @@ cd OM1
 docker-compose up om1 -d --no-build
 ```
 
-The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.0-beta.4).
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1/v1.0.2-beta.2).
 
 For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om).

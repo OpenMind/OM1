@@ -96,6 +96,6 @@ docker-compose up watchdog -d --no-build
 docker-compose up zenoh_bridge -d --no-build
 ```
 
-The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/OM1-ros2-sdk/v1.0.1-beta.1).
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/OM1-ros2-sdk/v1.0.1-beta.2).
 
 For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om1_ros2_sdk).
