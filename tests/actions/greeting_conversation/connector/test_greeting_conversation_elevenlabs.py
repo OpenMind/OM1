@@ -101,11 +101,8 @@ class TestGreetingConversationElevenLabsConnector:
 
     def test_init_sets_conversing_state(self, mock_providers, make_connector):
         """Test initialization sets state machine to CONVERSING."""
-        connector = make_connector()
-        assert (
-            connector.greeting_state_provider.current_state
-            is ConversationState.CONVERSING
-        )
+        make_connector()
+        mock_providers["state"].start_conversation.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_connect_adds_pending_message(
@@ -129,8 +126,8 @@ class TestGreetingConversationElevenLabsConnector:
             "current_state": ConversationState.CONVERSING
         }
         await connector.connect(greeting_input)
-        # "Hello! Nice to meet you." = 5 words -> (5/100) * 60 = 3.0 seconds
-        assert connector.tts_duration == pytest.approx(3.0)
+        # "Hello! Nice to meet you." = 5 words -> (5/100) * 60 = 3.0 seconds + 5 seconds buffer = 8.0 seconds total
+        assert connector.tts_duration == pytest.approx(8.0)
 
     @pytest.mark.asyncio
     async def test_connect_processes_conversation(
@@ -160,7 +157,7 @@ class TestGreetingConversationElevenLabsConnector:
             speech_clarity=0.9,
         )
         mock_providers["state"].process_conversation.return_value = {
-            "current_state": ConversationState.FINISHED
+            "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
         mock_providers["ctx"].update_context.assert_called_once_with(
