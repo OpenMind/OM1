@@ -1,7 +1,7 @@
 {
   name: "mode_no_transition_test",
   description: "Verify no transition occurs when input lacks trigger keywords",
-  version: "v1.0.2",
+  version: "v1.0.3",
   api_key: "openmind_free",
   default_mode: "calm",
   modes: {

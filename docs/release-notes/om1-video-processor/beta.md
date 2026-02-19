@@ -1,6 +1,6 @@
 ---
 title: Video Processor Beta Release
-description: "v1.0.0-beta.1"
+description: "v1.0.1-beta.2"
 icon: rectangle-beta
 ---
 
@@ -9,6 +9,15 @@ icon: rectangle-beta
 First beta release for OM1 video processor. This release introduces major foundational features that enable developers and integrators to build advanced streaming and analytics solutions with ease.
 
 ## Features
+
+### [v1.0.1-beta.2](https://github.com/OpenMind/OM1-video-processor/releases/tag/v1.0.1-beta.2)
+- The raw video stream is published to the local media MTX server at the URL /top_camera_raw for local usage.
+
+### [v1.0.1-beta.1](https://github.com/OpenMind/OM1-video-processor/releases/tag/v1.0.1-beta.1)
+- Switched the base Docker image from JetPack to CUDA 13.0.0 with Ubuntu 24.04
+- Updated the Python version from 3.10 to 3.12
+- CUDA driver mismatch issue fixed
+- Fixed TensorRT version
 
 ### [v1.0.0-beta.1](https://github.com/OpenMind/OM1-video-processor/releases/tag/v1.0.0-beta.1)
 
@@ -30,6 +39,6 @@ The video-processor is provided as a Docker image for easy setup.
 
 Follow the steps [here](https://docs.openmind.org/full_autonomy_guidelines/om1_video_processor), for complete setup.
 
-The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1_video_processor/v1.0.0-beta.1).
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/om1_video_processor/v1.0.1-beta.2).
 
 For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om1_video_processor).

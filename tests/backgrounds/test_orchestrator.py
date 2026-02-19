@@ -52,12 +52,13 @@ async def test_start_background(orchestrator):
             == orchestrator._background_workers
         )
 
-        assert len(orchestrator._submitted_backgrounds) == len(
+        assert len(orchestrator._background_instances) == len(
             orchestrator._config.backgrounds
         )
         assert isinstance(future, asyncio.Future)
 
         expected_background_names = {bg.name for bg in orchestrator._config.backgrounds}
-        assert orchestrator._submitted_backgrounds == expected_background_names
+        actual_background_names = {bg.name for bg in orchestrator._background_instances}
+        assert actual_background_names == expected_background_names
     finally:
         orchestrator.stop()
