@@ -8,7 +8,7 @@ from inputs.plugins.google_asr_rtsp import GoogleASRRTSPInput, GoogleASRRTSPSens
 
 @pytest.fixture
 def mock_io_provider():
-    with patch("inputs.plugins.google_asr_rtsp.IOProvider") as mock_class:
+    with patch("inputs.asr_provider_base.IOProvider") as mock_class:
         mock_instance = Mock()
         mock_class.return_value = mock_instance
         yield mock_instance
@@ -41,9 +41,9 @@ def mock_teleops_conversation_provider():
 @pytest.fixture
 def mock_zenoh():
     with (
-        patch("inputs.plugins.google_asr_rtsp.open_zenoh_session") as mock_open_session,
-        patch("inputs.plugins.google_asr_rtsp.ASRText") as mock_asr_text,
-        patch("inputs.plugins.google_asr_rtsp.prepare_header") as mock_prepare_header,
+        patch("inputs.asr_provider_base.open_zenoh_session") as mock_open_session,
+        patch("inputs.asr_provider_base.ASRText") as mock_asr_text,
+        patch("inputs.asr_provider_base.prepare_header") as mock_prepare_header,
     ):
         mock_session_instance = Mock()
         mock_publisher_instance = Mock()
@@ -82,21 +82,21 @@ def test_initialization_creates_providers_and_buffers(
 
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             new=mock_sleep_ticker_constructor,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             new=mock_teleops_conv_constructor,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -142,22 +142,22 @@ async def test_poll_returns_message_from_buffer(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -186,22 +186,22 @@ async def test_poll_returns_none_if_buffer_empty(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -227,28 +227,28 @@ async def test_poll_has_delay(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
         instance = GoogleASRRTSPInput(config=config)
 
-    with patch("inputs.plugins.google_asr_rtsp.asyncio.sleep") as mock_sleep:
+    with patch("inputs.asr_provider_base.asyncio.sleep") as mock_sleep:
         await instance._poll()
         mock_sleep.assert_called_once_with(0.01)
 
@@ -267,22 +267,22 @@ def test_handle_asr_message_processes_valid_json_with_asr_reply_longer_than_one_
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -312,22 +312,22 @@ def test_handle_asr_message_ignores_json_without_asr_reply(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -356,22 +356,22 @@ def test_handle_asr_message_ignores_json_with_asr_reply_shorter_than_two_words(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -400,22 +400,22 @@ def test_handle_asr_message_ignores_invalid_json(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -445,22 +445,22 @@ async def test_raw_to_text_converts_string_to_message(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -492,22 +492,22 @@ async def test_raw_to_text_returns_none_if_input_none(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -532,22 +532,22 @@ async def test_raw_to_text_adds_message_to_buffer(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -578,22 +578,22 @@ async def test_raw_to_text_appends_to_existing_message(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -623,22 +623,22 @@ async def test_raw_to_text_sets_skip_sleep_if_none_input_and_messages_exist(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -667,22 +667,22 @@ async def test_raw_to_text_does_not_set_skip_sleep_if_none_input_and_messages_em
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -710,22 +710,22 @@ def test_formatted_latest_buffer_empty(
     config = GoogleASRRTSPSensorConfig()
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):
@@ -750,22 +750,22 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     fixed_timestamp = 1234.0
     with (
         patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+            "inputs.asr_provider_base.IOProvider", return_value=mock_io_provider
         ),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            "inputs.asr_provider_base.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            "inputs.asr_provider_base.TeleopsConversationProvider",
             return_value=mock_teleops_conv_instance,
         ),
         patch(
-            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            "inputs.asr_provider_base.open_zenoh_session",
             mock_zenoh["open_session"],
         ),
     ):

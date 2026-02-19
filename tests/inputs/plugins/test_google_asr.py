@@ -9,11 +9,11 @@ from inputs.plugins.google_asr import GoogleASRInput, GoogleASRSensorConfig
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
-        patch("inputs.plugins.google_asr.SleepTickerProvider"),
-        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
-        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
@@ -27,17 +27,17 @@ def test_initialization():
 async def test_poll_with_message():
     """Test _poll with message in buffer."""
     with (
-        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
-        patch("inputs.plugins.google_asr.SleepTickerProvider"),
-        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
-        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
         sensor.message_buffer.put_nowait("Test speech")
 
-        with patch("asyncio.sleep", new=AsyncMock()):
+        with patch("inputs.asr_provider_base.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
 
         assert result == "Test speech"
@@ -46,11 +46,11 @@ async def test_poll_with_message():
 def test_formatted_latest_buffer():
     """Test formatted_latest_buffer."""
     with (
-        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
-        patch("inputs.plugins.google_asr.SleepTickerProvider"),
-        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
-        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
@@ -74,11 +74,11 @@ def test_formatted_latest_buffer():
 async def test_raw_to_text_none_skips_sleep_when_buffer_has_messages():
     """Test raw_to_text with None sets skip_sleep when messages exist."""
     with (
-        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
-        patch("inputs.plugins.google_asr.SleepTickerProvider"),
-        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
-        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
@@ -92,11 +92,11 @@ async def test_raw_to_text_none_skips_sleep_when_buffer_has_messages():
 async def test_raw_to_text_concatenates_messages():
     """Test raw_to_text concatenates when messages already exist."""
     with (
-        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
-        patch("inputs.plugins.google_asr.SleepTickerProvider"),
-        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
-        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
@@ -110,11 +110,11 @@ async def test_raw_to_text_concatenates_messages():
 def test_stop():
     """Test stop method stops ASR provider and closes Zenoh session."""
     with (
-        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
-        patch("inputs.plugins.google_asr.SleepTickerProvider"),
-        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
-        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
@@ -127,11 +127,11 @@ def test_stop():
 def test_stop_no_session():
     """Test stop method when session is None."""
     with (
-        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.google_asr.ASRProvider"),
-        patch("inputs.plugins.google_asr.SleepTickerProvider"),
-        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
-        patch("inputs.plugins.google_asr.open_zenoh_session"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)

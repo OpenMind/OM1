@@ -19,14 +19,23 @@ def mock_asr_provider():
 
 @pytest.fixture
 def mock_sleep_ticker():
-    with patch("inputs.plugins.google_asr.SleepTickerProvider") as mock:
+    with patch("inputs.asr_provider_base.SleepTickerProvider") as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_conversation():
-    with patch("inputs.plugins.google_asr.TeleopsConversationProvider") as mock:
+    with patch("inputs.asr_provider_base.TeleopsConversationProvider") as mock:
         yield mock
+
+
+@pytest.fixture(autouse=True)
+def mock_base_deps():
+    with (
+        patch("inputs.asr_provider_base.IOProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
+    ):
+        yield
 
 
 def test_language_code_map_contains_required_languages():

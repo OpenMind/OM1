@@ -9,9 +9,11 @@ from inputs.plugins.riva_asr import RivaASRInput, RivaASRSensorConfig
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.riva_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.riva_asr.ASRProvider") as mock_asr,
-        patch("inputs.plugins.riva_asr.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
 
         mock_asr_instance = MagicMock()
@@ -28,15 +30,17 @@ def test_initialization():
 async def test_poll():
     """Test _poll method."""
     with (
-        patch("inputs.plugins.riva_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.riva_asr.ASRProvider"),
-        patch("inputs.plugins.riva_asr.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
 
         config = RivaASRSensorConfig()
         sensor = RivaASRInput(config=config)
 
-        with patch("inputs.plugins.riva_asr.asyncio.sleep", new=AsyncMock()):
+        with patch("inputs.asr_provider_base.asyncio.sleep", new=AsyncMock()):
             result = await sensor._poll()
             assert result is None
 
@@ -44,9 +48,11 @@ async def test_poll():
 def test_formatted_latest_buffer():
     """Test formatted_latest_buffer."""
     with (
-        patch("inputs.plugins.riva_asr.IOProvider"),
+        patch("inputs.asr_provider_base.IOProvider"),
         patch("inputs.plugins.riva_asr.ASRProvider"),
-        patch("inputs.plugins.riva_asr.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.SleepTickerProvider"),
+        patch("inputs.asr_provider_base.TeleopsConversationProvider"),
+        patch("inputs.asr_provider_base.open_zenoh_session"),
     ):
 
         config = RivaASRSensorConfig()
