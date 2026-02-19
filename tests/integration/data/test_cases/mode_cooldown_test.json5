@@ -1,7 +1,7 @@
 {
   name: "mode_cooldown_test",
   description: "Verify cooldown prevents repeated transitions",
-  version: "v1.0.2",
+  version: "v1.0.3",
   api_key: "openmind_free",
   default_mode: "calm",
   modes: {

@@ -1,6 +1,6 @@
 {
   // Test case metadata
-  version: "v1.0.2",
+  version: "v1.0.3",
   name: "multi_input_vlm_asr_test",
   description: "Test combined VLM and ASR inputs - robot sees and hears simultaneously",
   hertz: 1,
