@@ -200,7 +200,7 @@ def test_run_publishes_switch_status():
         published_data = call_args[0][1]
         assert isinstance(published_data, bytes)
 
-        mock_sleep.assert_called_once_with(5)
+        mock_sleep.assert_called_once_with(20)
 
 
 def test_stop_closes_session(caplog):
