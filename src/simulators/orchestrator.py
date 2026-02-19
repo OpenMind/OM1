@@ -73,8 +73,8 @@ class SimulatorOrchestrator:
         while not self._stop_event.is_set():
             try:
                 simulator.tick()
-            except Exception as e:
-                logging.error(f"Error in simulator {simulator.name}: {e}")
+            except Exception:
+                logging.exception(f"Error in simulator {simulator.name}")
                 self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
@@ -145,8 +145,8 @@ class SimulatorOrchestrator:
         for simulator in self._simulator_instances:
             try:
                 simulator.stop()
-            except Exception as e:
-                logging.error(f"Error stopping simulator {simulator.name}: {e}")
+            except Exception:
+                logging.exception(f"Error stopping simulator {simulator.name}")
 
         self._simulator_executor.shutdown(wait=True)
         self._simulator_instances.clear()
