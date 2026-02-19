@@ -93,6 +93,7 @@ def test_on_person_greeting_approached(caplog):
             header=test_header,
             request_id=String(data="test-request-id"),
             status=PersonGreetingStatus.STATUS.APPROACHED.value,
+            message=String(data="Person is approaching"),
         )
 
         mock_payload.to_bytes.return_value = person_greeting_status.serialize()
@@ -147,6 +148,7 @@ def test_on_person_greeting_not_approached(caplog):
             header=test_header,
             request_id=String(data="test-request-id"),
             status=PersonGreetingStatus.STATUS.SWITCH.value,  # Not APPROACHED
+            message=String(data="Switching state"),
         )
 
         mock_payload.to_bytes.return_value = person_greeting_status.serialize()
