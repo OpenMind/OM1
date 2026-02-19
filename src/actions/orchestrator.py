@@ -4,10 +4,34 @@ import logging
 import threading
 import typing as T
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 
 from actions.base import AgentAction
 from llm.output_model import Action
 from runtime.config import RuntimeConfig
+
+
+@dataclass
+class ActionResult:
+    """
+    Result of an action execution, used to provide feedback to the LLM.
+
+    Parameters
+    ----------
+    action_type : str
+        The type/label of the action (e.g. "speak", "move").
+    action_value : str
+        The value/argument passed to the action.
+    success : bool
+        Whether the action executed successfully.
+    error : str, optional
+        Error description if the action failed.
+    """
+
+    action_type: str
+    action_value: str
+    success: bool
+    error: T.Optional[str] = None
 
 
 class ActionOrchestrator:
@@ -106,15 +130,18 @@ class ActionOrchestrator:
                 logging.exception(f"Error in connector {action.llm_label}")
                 self._stop_event.wait(timeout=0.1)
 
-    async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
+    async def flush_promises(
+        self,
+    ) -> tuple[list[ActionResult], list[asyncio.Task[T.Any]]]:
         """
         Flushes the promise queue by waiting for all tasks to complete.
-        Returns the completed promises and any remaining pending promises.
+        Extracts ActionResult from each completed task.
 
         Returns
         -------
-        tuple[list[T.Any], list[asyncio.Task[T.Any]]]
-            A tuple containing a list of completed promise results and a list of pending promise tasks.
+        tuple[list[ActionResult], list[asyncio.Task[T.Any]]]
+            A tuple containing a list of ActionResult objects and a list
+            of any remaining pending promise tasks.
         """
         if not self.promise_queue:
             return [], []
@@ -125,7 +152,16 @@ class ActionOrchestrator:
 
         self.promise_queue = []
 
-        return list(done), list(pending)
+        results: list[ActionResult] = []
+        for task in done:
+            try:
+                result = task.result()
+                if isinstance(result, ActionResult):
+                    results.append(result)
+            except Exception as e:
+                logging.warning(f"Failed to extract action result: {type(e).__name__}: {e}")
+
+        return results, list(pending)
 
     async def promise(self, actions: list[Action]) -> None:
         """
@@ -319,7 +355,9 @@ class ActionOrchestrator:
             )
         return agent_action
 
-    async def _promise_action(self, agent_action: AgentAction, action: Action) -> T.Any:
+    async def _promise_action(
+        self, agent_action: AgentAction, action: Action
+    ) -> ActionResult:
         """
         Promise a single action to its connector.
 
@@ -332,8 +370,8 @@ class ActionOrchestrator:
 
         Returns
         -------
-        T.Any
-            The result of the action execution.
+        ActionResult
+            The result of the action execution with success/failure status.
         """
         logging.debug(
             f"Calling action {agent_action.llm_label} with type {action.type.lower()} and argument {action.value}"
@@ -378,9 +416,23 @@ class ActionOrchestrator:
 
         input_interface = input_type(**converted_params)
 
-        await agent_action.connector.connect(input_interface)
-
-        return input_interface
+        try:
+            await agent_action.connector.connect(input_interface)
+            return ActionResult(
+                action_type=action.type.lower(),
+                action_value=action.value,
+                success=True,
+            )
+        except Exception as e:
+            logging.error(
+                f"Action '{agent_action.llm_label}' failed: {type(e).__name__}: {e}"
+            )
+            return ActionResult(
+                action_type=action.type.lower(),
+                action_value=action.value,
+                success=False,
+                error=f"{type(e).__name__}: {e}",
+            )
 
     def stop(self):
         """
