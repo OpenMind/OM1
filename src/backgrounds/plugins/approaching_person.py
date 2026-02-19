@@ -99,6 +99,7 @@ class ApproachingPerson(Background[BackgroundConfig]):
                 header=prepare_header(request_id),
                 request_id=String(data=request_id),
                 status=PersonGreetingStatus.STATUS.SWITCH.value,
+                message=String(data="Switching to next person"),
             ).serialize(),
         )
 
