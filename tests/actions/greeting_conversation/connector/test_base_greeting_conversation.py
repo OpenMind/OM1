@@ -227,14 +227,14 @@ class TestBaseGreetingConversationConnector:
         assert connector.greeting_status == ConversationState.CONCLUDING.value
 
     @pytest.mark.asyncio
-    async def test_connect_calls_report_time_clock(
+    async def test_connect_calls_publish_countdown_status(
         self, connector, greeting_input, mock_providers
     ):
-        """Test connect calls report_time_clock with current state."""
+        """Test connect calls publish_countdown_status with current state."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
         }
-        with patch.object(connector, "report_time_clock") as mock_report:
+        with patch.object(connector, "publish_countdown_status") as mock_report:
             await connector.connect(greeting_input)
             mock_report.assert_called_once_with(ConversationState.CONVERSING.value)
 
@@ -359,8 +359,8 @@ class TestBaseGreetingConversationConnector:
             connector.tick()
         assert connector.greeting_status == ConversationState.CONCLUDING.value
 
-    def test_tick_calls_report_time_clock(self, connector, mock_providers):
-        """Test tick calls report_time_clock with current state."""
+    def test_tick_calls_publish_countdown_status(self, connector, mock_providers):
+        """Test tick calls publish_countdown_status with current state."""
         connector.tts_triggered_time = 0.0
         connector.tts_duration = 0.0
         mock_providers["time"].time.return_value = 200.0
@@ -374,7 +374,7 @@ class TestBaseGreetingConversationConnector:
                 "actions.greeting_conversation.connector.base_greeting_conversation.logging"
             ),
             patch.object(connector, "sleep"),
-            patch.object(connector, "report_time_clock") as mock_report,
+            patch.object(connector, "publish_countdown_status") as mock_report,
         ):
             connector.tick()
             mock_report.assert_called_once_with(ConversationState.CONVERSING.value)
@@ -422,8 +422,10 @@ class TestBaseGreetingConversationConnector:
         # Should only be called once
         mock_providers["ctx"].update_context.assert_called_once()
 
-    def test_report_time_clock_conversing_state(self, connector, mock_providers):
-        """Test report_time_clock publishes 20 seconds for CONVERSING state."""
+    def test_publish_countdown_status_conversing_state(self, connector, mock_providers):
+        """Test publish_countdown_status publishes 20 seconds for CONVERSING state."""
+        # Reset mock before testing
+        mock_providers["session"].put.reset_mock()
         with (
             patch(
                 "actions.greeting_conversation.connector.base_greeting_conversation.logging"
@@ -444,14 +446,16 @@ class TestBaseGreetingConversationConnector:
             mock_status_cls.return_value = mock_status
             mock_header.return_value = "header"
 
-            connector.report_time_clock(ConversationState.CONVERSING.value)
+            connector.publish_countdown_status(ConversationState.CONVERSING.value)
 
             mock_providers["session"].put.assert_called_once()
             call_args = mock_providers["session"].put.call_args
             assert call_args[0][0] == "om/person_greeting"
 
-    def test_report_time_clock_concluding_state(self, connector, mock_providers):
-        """Test report_time_clock publishes 10 seconds for CONCLUDING state."""
+    def test_publish_countdown_status_concluding_state(self, connector, mock_providers):
+        """Test publish_countdown_status publishes 10 seconds for CONCLUDING state."""
+        # Reset mock before testing
+        mock_providers["session"].put.reset_mock()
         with (
             patch(
                 "actions.greeting_conversation.connector.base_greeting_conversation.logging"
@@ -471,31 +475,59 @@ class TestBaseGreetingConversationConnector:
             mock_status.serialize.return_value = b"serialized"
             mock_status_cls.return_value = mock_status
 
-            connector.report_time_clock(ConversationState.CONCLUDING.value)
+            connector.publish_countdown_status(ConversationState.CONCLUDING.value)
 
             mock_providers["session"].put.assert_called_once()
 
-    def test_report_time_clock_finished_state_no_publish(
+    def test_publish_countdown_status_finished_state_publishes_zero(
         self, connector, mock_providers
     ):
-        """Test report_time_clock does not publish for FINISHED state."""
+        """Test publish_countdown_status publishes 0 seconds for FINISHED state."""
+        # Reset mock before testing
+        mock_providers["session"].put.reset_mock()
+        with (
+            patch(
+                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
+            ),
+            patch(
+                "actions.greeting_conversation.connector.base_greeting_conversation.uuid4"
+            ) as mock_uuid,
+            patch(
+                "actions.greeting_conversation.connector.base_greeting_conversation.PersonGreetingStatus"
+            ) as mock_status_cls,
+            patch(
+                "actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"
+            ),
+        ):
+            mock_uuid.return_value = "test-uuid"
+            mock_status = Mock()
+            mock_status.serialize.return_value = b"serialized"
+            mock_status_cls.return_value = mock_status
+
+            connector.publish_countdown_status(ConversationState.FINISHED.value)
+
+            mock_providers["session"].put.assert_called_once()
+
+    def test_publish_countdown_status_no_session_no_publish(
+        self, connector, mock_providers
+    ):
+        """Test publish_countdown_status does not publish when session is None."""
+        connector.session = None
+        # Reset any previous calls
+        mock_providers["session"].put.reset_mock()
         with patch(
             "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
-            connector.report_time_clock(ConversationState.FINISHED.value)
+            connector.publish_countdown_status(ConversationState.CONVERSING.value)
+        # Should not be called since session is None
         mock_providers["session"].put.assert_not_called()
 
-    def test_report_time_clock_no_session_no_publish(self, connector, mock_providers):
-        """Test report_time_clock does not publish when session is None."""
-        connector.session = None
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
-            connector.report_time_clock(ConversationState.CONVERSING.value)
-        # No assertion needed, just ensure no exception is raised
-
-    def test_report_time_clock_handles_publish_error(self, connector, mock_providers):
-        """Test report_time_clock handles publishing errors gracefully."""
+    def test_publish_countdown_status_handles_publish_error(
+        self, connector, mock_providers
+    ):
+        """Test publish_countdown_status handles publishing errors gracefully."""
+        # Reset and configure mock to raise exception
+        mock_providers["session"].put.reset_mock()
         mock_providers["session"].put.side_effect = Exception("Publish failed")
         with (
             patch(
@@ -511,7 +543,7 @@ class TestBaseGreetingConversationConnector:
                 "actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"
             ),
         ):
-            connector.report_time_clock(ConversationState.CONVERSING.value)
+            connector.publish_countdown_status(ConversationState.CONVERSING.value)
             # Should log error
             assert any(
                 "Error publishing" in str(call)
