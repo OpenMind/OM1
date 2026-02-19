@@ -6,7 +6,7 @@ prometheus_client is not installed.
 
 Start the metrics HTTP server with ``start_metrics_server()``.
 The server port is controlled by the ``METRICS_PORT`` environment variable
-(default 9090).
+(default 9464).
 """
 
 import logging
@@ -133,7 +133,7 @@ try:
 
     def start_metrics_server() -> None:
         """Start the Prometheus metrics HTTP server."""
-        port = int(os.environ.get("METRICS_PORT", "9090"))
+        port = int(os.environ.get("METRICS_PORT", "9464"))
         try:
             start_http_server(port)
             logging.info(f"Metrics server started on port {port}")

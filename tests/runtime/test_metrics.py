@@ -124,7 +124,7 @@ class TestStartMetricsServer:
         mock_start = MagicMock()
         with patch("runtime.metrics.start_http_server", mock_start):
             start_metrics_server()
-        mock_start.assert_called_once_with(9090)
+        mock_start.assert_called_once_with(9464)
 
     def test_custom_port_from_env(self):
         mock_start = MagicMock()
