@@ -121,23 +121,27 @@ class TestStartMetricsServer:
     """Test start_metrics_server behavior."""
 
     def test_successful_start(self):
-        mock_start = MagicMock()
-        with patch("runtime.metrics.start_http_server", mock_start):
+        mock_server = MagicMock()
+        mock_cls = MagicMock(return_value=mock_server)
+        with patch("runtime.metrics.HTTPServer", mock_cls):
             start_metrics_server()
-        mock_start.assert_called_once_with(9464)
+        mock_cls.assert_called_once()
+        assert mock_cls.call_args[0][0] == ("", 9464)
+        mock_server.serve_forever.assert_called_once()
 
     def test_custom_port_from_env(self):
-        mock_start = MagicMock()
+        mock_server = MagicMock()
+        mock_cls = MagicMock(return_value=mock_server)
         with (
-            patch("runtime.metrics.start_http_server", mock_start),
+            patch("runtime.metrics.HTTPServer", mock_cls),
             patch.dict("os.environ", {"METRICS_PORT": "8888"}),
         ):
             start_metrics_server()
-        mock_start.assert_called_once_with(8888)
+        assert mock_cls.call_args[0][0] == ("", 8888)
 
     def test_port_in_use_logs_warning_not_crash(self):
-        mock_start = MagicMock(side_effect=OSError("Address already in use"))
-        with patch("runtime.metrics.start_http_server", mock_start):
+        mock_cls = MagicMock(side_effect=OSError("Address already in use"))
+        with patch("runtime.metrics.HTTPServer", mock_cls):
             # Should not raise
             start_metrics_server()
 
