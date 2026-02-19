@@ -1,0 +1,57 @@
+{
+  agent_name: "Smart Device Agent",
+
+  api_endpoint: "https://api.openmind.org/api/core/openai/chat/completions",
+  api_key: "openmind_free",
+
+  model: "gpt-4o",
+
+  system_prompt: "You are a smart home assistant integrated into a robot via OM1. \
+You have real-time visibility into the state of smart home devices. \
+When the user speaks or when device states change in a notable way, \
+respond naturally and take helpful actions — adjust lights, check temperatures, \
+lock doors, etc. Always confirm what you did after executing a command.",
+
+  agent_inputs: [
+    {
+      type: "SmartDeviceInput",
+      config: {
+        ha_url:          "http://homeassistant.local:8123",
+        ha_token:        "YOUR_LONG_LIVED_ACCESS_TOKEN",
+        poll_interval:   10,
+        request_timeout: 5,
+        entity_ids: [
+          "light.living_room",
+          "light.bedroom",
+          "climate.living_room_thermostat",
+          "binary_sensor.front_door",
+          "lock.front_door",
+          "sensor.living_room_temperature",
+          "switch.coffee_maker",
+          "media_player.living_room_speaker",
+        ],
+      },
+    },
+    {
+      type: "GoogleASRInput",
+    },
+  ],
+
+  agent_actions: [
+    {
+      name: "smart_device",
+      llm_label: "control_device",
+      connector: "SmartDeviceAction",
+      config: {},
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "elevenlabs_tts",
+      config: {
+        voice_id:     "i4CzbCVWoqvD0P1QJCUL",
+        silence_rate: 20,
+      },
+    },
+  ],
+}
