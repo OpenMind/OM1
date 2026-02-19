@@ -142,6 +142,10 @@ async def geeting_end_hook(context: Dict[str, Any]):
             provider.add_pending_message(
                 "It was nice talking to you! If you have any more questions, feel free to come back and chat with me again!"
             )
+        else:
+            provider.add_pending_message(
+                "No worries! If you have any questions or want to chat later, just come back and say hi!"
+            )
 
     except Exception as e:
         logging.error(f"Error in geeting_end_hook: {str(e)}")

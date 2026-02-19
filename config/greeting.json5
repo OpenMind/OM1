@@ -75,9 +75,13 @@
         },
         {
           hook_type: "on_exit",
-          handler_type: "message",
+          handler_type: "function",
           handler_config: {
-            message: "It was great chatting with you! Have a wonderful day!",
+            module_name: "greeting_hook",
+            function: "geeting_end_hook",
+            tts_provider: "kokoro",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "http://omr2.local:8880/v1",
           },
         },
       ],
