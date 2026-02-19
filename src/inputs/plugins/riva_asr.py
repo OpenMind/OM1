@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from pydantic import Field
@@ -76,5 +75,3 @@ class RivaASRInput(BaseASRFuserInput[RivaASRSensorConfig]):
         )
         self.asr.start()
         self.asr.register_message_callback(self._handle_asr_message)
-
-        logging.info("RivaASRInput initialized with base_url: %s", base_url)
