@@ -1,6 +1,6 @@
 {
   // Test case metadata
-  version: "v1.0.2",
+  version: "v1.0.3",
   name: "battery_low_test",
   description: "Test battery monitoring - low battery should trigger warning behavior",
   hertz: 1,

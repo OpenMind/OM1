@@ -131,7 +131,7 @@ def sample_transition_rules():
 def sample_system_config(sample_mode_configs, sample_transition_rules):
     """Sample system configuration for testing."""
     config = ModeSystemConfig(
-        version="v1.0.2",
+        version="v1.0.3",
         name="test_system",
         default_mode="default",
         config_name="test_config",

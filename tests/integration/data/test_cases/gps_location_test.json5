@@ -1,6 +1,6 @@
 {
   // Test case metadata
-  version: "v1.0.2",
+  version: "v1.0.3",
   name: "gps_location_test",
   description: "Test GPS input - robot should be aware of its geographic location",
   hertz: 1,
