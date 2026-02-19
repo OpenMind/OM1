@@ -86,7 +86,20 @@ class ConfidenceCalculator:
             Dictionary with overall confidence score and breakdown.
         """
         # LLM confidence
-        llm_score = factors.llm_confidence
+        llm_state_value = factors.conversation_state.value
+
+        if llm_state_value in [
+            ConversationState.CONCLUDING.value,
+            ConversationState.FINISHED.value,
+        ]:
+            # LLM wants to conclude - use confidence as-is
+            llm_score = factors.llm_confidence
+        elif llm_state_value == ConversationState.CONVERSING.value:
+            # LLM wants to continue - invert the confidence for "end" score
+            llm_score = round(1.0 - factors.llm_confidence, 3)
+        else:
+            # Other states (IDLE, APPROACHING, ENGAGING) - neutral
+            llm_score = 0.5
 
         # Silence factor
         if factors.silence_duration >= self.silence_threshold_hard:
@@ -156,9 +169,10 @@ class ConfidenceCalculator:
         llm_state = confidence_result["factors"].conversation_state
 
         # LLM explicitly wants to conclude with decent confidence
-        llm_wants_to_conclude = llm_state in [
-            ConversationState.CONCLUDING,
-            ConversationState.FINISHED,
+        llm_state_value = llm_state.value
+        llm_wants_to_conclude = llm_state_value in [
+            ConversationState.CONCLUDING.value,
+            ConversationState.FINISHED.value,
         ]
 
         if llm_wants_to_conclude and breakdown["llm"] >= 0.7:
@@ -270,10 +284,23 @@ class GreetingConversationStateMachineProvider:
 
         last_user_utterance_length = len(self.last_user_utterance)
 
+        llm_state_raw = llm_output.get("conversation_state", "conversing")
+        llm_state_str = (
+            llm_state_raw.value
+            if hasattr(llm_state_raw, "value")
+            else str(llm_state_raw)
+        )
+
+        try:
+            conversation_state = ConversationState(llm_state_str)
+        except (ValueError, KeyError):
+            logging.warning(
+                f"Invalid conversation_state from LLM: {llm_state_str}, defaulting to CONVERSING"
+            )
+            conversation_state = ConversationState.CONVERSING
+
         factors = ConfidenceFactors(
-            conversation_state=llm_output.get(
-                "conversation_state", ConversationState.CONVERSING
-            ),
+            conversation_state=conversation_state,
             llm_confidence=llm_output.get("confidence", 0.0),
             silence_duration=silence_duration,
             speech_clarity=llm_output.get("speech_clarity", 1.0),

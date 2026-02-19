@@ -137,10 +137,14 @@ class TestConfidenceCalculator:
     def test_should_transition_to_concluding_high_confidence(
         self, confidence_calculator
     ):
-        """Test transition to concluding with high overall confidence."""
+        """Test transition to concluding with high overall confidence.
+
+        This requires the LLM to actually want to conclude (CONCLUDING state)
+        with high confidence, OR very high silence/engagement scores.
+        """
         factors = ConfidenceFactors(
-            conversation_state=ConversationState.CONVERSING,
-            llm_confidence=0.9,
+            conversation_state=ConversationState.CONCLUDING,  # LLM wants to conclude
+            llm_confidence=0.9,  # High confidence to conclude
             silence_duration=5.0,
             speech_clarity=0.9,
             person_distance=3.0,
@@ -154,7 +158,7 @@ class TestConfidenceCalculator:
             result
         )
 
-        # High confidence should trigger transition
+        # High confidence to conclude should trigger transition
         assert should_transition is True
 
     def test_should_transition_to_concluding_llm_wants(self, confidence_calculator):
@@ -199,6 +203,85 @@ class TestConfidenceCalculator:
         )
 
         # Low confidence should not trigger transition
+        assert should_transition is False
+
+    def test_llm_confidence_inverted_when_conversing(self, confidence_calculator):
+        """Test that LLM confidence is inverted when state is CONVERSING.
+
+        When LLM says 'conversing' with high confidence (0.9), the llm_score
+        in breakdown should be low (0.1) because high confidence to continue
+        means low confidence to end.
+        """
+        factors = ConfidenceFactors(
+            conversation_state=ConversationState.CONVERSING,
+            llm_confidence=0.9,  # High confidence to continue
+            silence_duration=2.0,
+            speech_clarity=0.9,
+            person_distance=1.5,
+            conversation_duration=20.0,
+            turn_count=3,
+            last_user_utterance_length=10,
+        )
+
+        result = confidence_calculator.calculate_completion_confidence(factors)
+
+        # LLM score should be inverted: 1.0 - 0.9 = 0.1
+        assert result["breakdown"]["llm"] == pytest.approx(0.1, abs=0.01)
+        # Overall confidence to end should be low
+        assert result["overall"] < 0.5
+
+    def test_llm_confidence_not_inverted_when_concluding(self, confidence_calculator):
+        """Test that LLM confidence is NOT inverted when state is CONCLUDING.
+
+        When LLM says 'concluding' with high confidence (0.9), the llm_score
+        should remain 0.9 because it represents confidence to end.
+        """
+        factors = ConfidenceFactors(
+            conversation_state=ConversationState.CONCLUDING,
+            llm_confidence=0.9,  # High confidence to conclude
+            silence_duration=2.0,
+            speech_clarity=0.9,
+            person_distance=1.5,
+            conversation_duration=20.0,
+            turn_count=3,
+            last_user_utterance_length=10,
+        )
+
+        result = confidence_calculator.calculate_completion_confidence(factors)
+
+        # LLM score should NOT be inverted
+        assert result["breakdown"]["llm"] == pytest.approx(0.9, abs=0.01)
+        # Overall confidence to end should be relatively high
+        assert result["overall"] > 0.4
+
+    def test_high_confidence_to_converse_prevents_concluding_transition(
+        self, confidence_calculator
+    ):
+        """Test that high confidence to CONVERSING prevents transition to CONCLUDING.
+
+        This is a regression test for the bug where high LLM confidence value
+        was incorrectly treated as confidence to END, regardless of the state.
+        """
+        factors = ConfidenceFactors(
+            conversation_state=ConversationState.CONVERSING,
+            llm_confidence=0.85,  # LLM is 85% confident we should CONTINUE
+            silence_duration=3.0,  # Some silence
+            speech_clarity=0.9,
+            person_distance=1.5,
+            conversation_duration=25.0,
+            turn_count=3,
+            last_user_utterance_length=10,
+        )
+
+        result = confidence_calculator.calculate_completion_confidence(factors)
+        should_transition = confidence_calculator.should_transition_to_concluding(
+            result
+        )
+
+        # With high confidence to continue (0.85), and inverted llm_score (0.15),
+        # breakdown["llm"] should be 0.15, which is < 0.7 threshold
+        # So should NOT transition to concluding
+        assert result["breakdown"]["llm"] < 0.7
         assert should_transition is False
 
     def test_should_transition_to_finished_very_high_confidence(
@@ -405,12 +488,15 @@ class TestGreetingConversationStateMachineProvider:
         assert result["current_state"] == ConversationState.FINISHED.value
 
     def test_revert_to_conversing_from_concluding(self, state_machine):
-        """Test reverting to conversing from concluding."""
+        """Test reverting to conversing from concluding when LLM says conversing."""
         state_machine.start_conversation()
         state_machine.current_state = ConversationState.CONCLUDING
+        state_machine.state_entry_time = (
+            time.time() - 2.0
+        )  # Been concluding for 2 seconds
 
         llm_output = {
-            "conversation_state": ConversationState.CONVERSING,  # LLM says still conversing
+            "conversation_state": ConversationState.CONVERSING,  # LLM says still conversing (enum)
             "confidence": 0.5,
             "speech_clarity": 0.9,
         }
@@ -419,6 +505,66 @@ class TestGreetingConversationStateMachineProvider:
 
         # Should revert to conversing
         assert result["current_state"] == ConversationState.CONVERSING.value
+        assert state_machine.current_state == ConversationState.CONVERSING
+        assert state_machine.previous_state == ConversationState.CONCLUDING
+
+    def test_revert_to_conversing_from_concluding_with_string_state(
+        self, state_machine
+    ):
+        """Test reverting to conversing from concluding when LLM returns string state.
+
+        This tests the string-to-enum conversion that happens in process_conversation.
+        The LLM typically returns strings, not enum values.
+        """
+        state_machine.start_conversation()
+        state_machine.current_state = ConversationState.CONCLUDING
+        state_machine.state_entry_time = (
+            time.time() - 3.0
+        )  # Been concluding for 3 seconds
+
+        llm_output = {
+            "conversation_state": "conversing",  # LLM returns string, not enum
+            "confidence": 0.85,  # High confidence to continue conversing
+            "speech_clarity": 0.9,
+        }
+
+        result = state_machine.process_conversation(llm_output)
+
+        # Should convert string to enum and revert to conversing
+        assert result["current_state"] == ConversationState.CONVERSING.value
+        assert state_machine.current_state == ConversationState.CONVERSING
+        assert state_machine.previous_state == ConversationState.CONCLUDING
+
+    def test_revert_from_concluding_prevents_emergency_timeout(self, state_machine):
+        """Test that reverting from concluding prevents emergency timeout.
+
+        This is a regression test for the bug where state stayed in CONCLUDING
+        even when LLM said "conversing", causing emergency timeout after 15s.
+        """
+        state_machine.start_conversation()
+        state_machine.current_state = ConversationState.CONCLUDING
+        state_machine.state_entry_time = (
+            time.time() - 3.0
+        )  # Been concluding for only 3 seconds
+
+        llm_output = {
+            "conversation_state": "conversing",  # String from LLM
+            "confidence": 0.85,  # High confidence to continue
+            "speech_clarity": 0.9,
+        }
+
+        result = state_machine.process_conversation(llm_output)
+
+        assert result["current_state"] == ConversationState.CONVERSING.value
+        assert state_machine.current_state == ConversationState.CONVERSING
+
+        # Verify the state_entry_time was reset when transitioning back to conversing
+        # (within the last second)
+        assert time.time() - state_machine.state_entry_time < 1.0
+
+        # Process again with same LLM output - should stay in CONVERSING
+        result2 = state_machine.process_conversation(llm_output)
+        assert result2["current_state"] == ConversationState.CONVERSING.value
 
     def test_emergency_timeout(self, state_machine):
         """Test emergency timeout forces finish."""
