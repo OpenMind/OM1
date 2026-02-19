@@ -2672,6 +2672,7 @@ dependencies = [
     { name = "openai" },
     { name = "opencv-python" },
     { name = "pillow" },
+    { name = "prometheus-client" },
     { name = "py-mjpeg" },
     { name = "pyaudio" },
     { name = "pycdr2" },
@@ -2697,9 +2698,6 @@ dds = [
 ]
 macos = [
     { name = "osascript" },
-]
-metrics = [
-    { name = "prometheus-client" },
 ]
 
 [package.dev-dependencies]
@@ -2737,7 +2735,7 @@ requires-dist = [
     { name = "opencv-python", specifier = "==4.11.0.86" },
     { name = "osascript", marker = "extra == 'macos'" },
     { name = "pillow", specifier = "==12.1.1" },
-    { name = "prometheus-client", marker = "extra == 'metrics'", specifier = ">=0.20.0" },
+    { name = "prometheus-client", specifier = ">=0.20.0" },
     { name = "py-mjpeg", specifier = "==1.0.1" },
     { name = "pyaudio", specifier = "==0.2.14" },
     { name = "pycdr2", specifier = "==1.0.0" },
@@ -2756,7 +2754,7 @@ requires-dist = [
     { name = "web3", specifier = "==7.6.0" },
     { name = "websockets", specifier = "==13.1" },
 ]
-provides-extras = ["dds", "macos", "metrics"]
+provides-extras = ["dds", "macos"]
 
 [package.metadata.requires-dev]
 dev = [
