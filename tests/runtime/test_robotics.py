@@ -60,8 +60,10 @@ class TestLoadUnitree:
 
     @patch("src.runtime.robotics.logging")
     def test_load_unitree_with_none(self, mock_logging):
-        load_unitree(None)  # type: ignore
-        mock_logging.info.assert_not_called()
+        load_unitree(None)
+        mock_logging.info.assert_called_once_with(
+            "No robot hardware ethernet port provided."
+        )
         mock_logging.error.assert_not_called()
 
     @patch("src.runtime.robotics.logging")

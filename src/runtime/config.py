@@ -17,6 +17,7 @@ from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
 from runtime.converter import convert_to_multi_mode
+from runtime.env import load_env_vars
 from runtime.hook import (
     LifecycleHook,
     LifecycleHookType,
@@ -550,36 +551,18 @@ def load_mode_config(
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
+
+    raw_config = load_env_vars(raw_config)
+
     validate_config_schema(raw_config)
     raw_config = convert_to_multi_mode(raw_config)
 
-    g_robot_ip = raw_config.get("robot_ip", None)
-    if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
-        logging.warning("No robot ip found in mode config. Checking .env file.")
-        backup_key = os.environ.get("ROBOT_IP")
-        if backup_key:
-            g_robot_ip = backup_key
-            logging.info("Found ROBOT_IP in .env file.")
+    g_robot_ip = raw_config.get("robot_ip")
+    g_api_key = raw_config.get("api_key")
+    g_URID = raw_config.get("URID")
+    g_ut_eth = raw_config.get("unitree_ethernet")
 
-    g_api_key = raw_config.get("api_key", None)
-    if g_api_key is None or g_api_key == "" or g_api_key == "openmind_free":
-        logging.warning("No API key found in mode config. Checking .env file.")
-        backup_key = os.environ.get("OM_API_KEY")
-        if backup_key:
-            g_api_key = backup_key
-            logging.info("Found OM_API_KEY in .env file.")
-
-    g_URID = raw_config.get("URID", "default")
-    if g_URID == "default":
-        backup_URID = os.environ.get("URID")
-        if backup_URID:
-            g_URID = backup_URID
-
-    g_ut_eth = raw_config.get("unitree_ethernet", None)
-    if g_ut_eth is None or g_ut_eth == "":
-        logging.info("No robot hardware ethernet port provided.")
-    else:
-        load_unitree(g_ut_eth)
+    load_unitree(g_ut_eth)
 
     mode_system_config = ModeSystemConfig(
         version=config_version,
