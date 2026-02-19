@@ -1,6 +1,6 @@
 ---
 title: OM1 ROS2 SDK Beta Release
-description: "v1.0.1-beta.1"
+description: "v1.0.1-beta.2"
 icon: rectangle-beta
 ---
 
@@ -9,6 +9,9 @@ icon: rectangle-beta
 Beta release for the Docker image openmindagi/om1_ros2_sdk, which provides the full ROS2 system for running the Unitree Go2, G1 and Limx Tron SDK.
 
 ## Features
+
+## [v1.0.1-beta.2](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.1-beta.2)
+- This release introduces the camera/insta365/image_raw topic and adds integration with G1 for OM Path.
 
 ## [v1.0.1-beta.1](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.1-beta.1)
 - Support for the LimX Tron robot model, enabling advanced robotics applications with enhanced capabilities.
@@ -93,6 +96,6 @@ docker-compose up watchdog -d --no-build
 docker-compose up zenoh_bridge -d --no-build
 ```
 
-The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/OM1-ros2-sdk/v1.0.1-beta.1).
+The docker image is also available at [Docker Hub](https://hub.docker.com/layers/openmindagi/OM1-ros2-sdk/v1.0.1-beta.2).
 
 For more technical details, please refer to the [docs](https://docs.openmind.org/full_autonomy_guidelines/om1_ros2_sdk).

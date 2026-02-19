@@ -144,6 +144,16 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         """
         self.sleep(60)
 
+    def stop(self) -> None:
+        """
+        Stop the connector and clean up resources.
+
+        This method should be overridden by subclasses that need to perform
+        cleanup operations (e.g., closing connections, releasing resources).
+        The base implementation does nothing.
+        """
+        pass
+
 
 @dataclass
 class AgentAction:
