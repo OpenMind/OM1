@@ -1,9 +1,9 @@
 {
-  version: "v1.0.2",
+  version: "v1.0.3",
   hertz: 1,
-  unitree_ethernet: "enP2p1s0",
+  unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
   name: "bits",
-  api_key: "openmind_free",
+  api_key: "${OM_API_KEY:-openmind_free}",
   system_prompt_base: "You are a smart and friendly robot dog named Spot. Your task is to assist humans by navigating to specified locations, performing movements, and engaging in conversations. You must use 'move' command for every output. Don't issue stand still if there are paths to move around.",
   system_prompt_examples: "",
   system_governance: "",
