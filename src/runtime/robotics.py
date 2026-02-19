@@ -1,7 +1,8 @@
 import logging
+from typing import Optional
 
 
-def load_unitree(unitree_ethernet: str):
+def load_unitree(unitree_ethernet: Optional[str]):
     """
     Initialize the Unitree robot's network communication channel.
 
@@ -24,7 +25,7 @@ def load_unitree(unitree_ethernet: str):
         If initialization of the Unitree Ethernet channel fails.
 
     """
-    if unitree_ethernet is not None:
+    if unitree_ethernet:
         logging.info(
             f"Using {unitree_ethernet} as the Unitree Network Ethernet Adapter"
         )
@@ -37,3 +38,5 @@ def load_unitree(unitree_ethernet: str):
             logging.error(f"Failed to initialize Unitree Ethernet channel: {e}")
             # raise e
         logging.info("Booting Unitree and CycloneDDS")
+    else:
+        logging.info("No robot hardware ethernet port provided.")

@@ -1,6 +1,6 @@
 {
   // Configuration version
-  version: "v1.0.2",
+  version: "v1.0.3",
 
   // Mode system configuration for Unitree Go2
   default_mode: "greeting",
@@ -8,15 +8,15 @@
   mode_memory_enabled: true,
 
   // Global settings
-  api_key: "openmind_free",
-  unitree_ethernet: "enP2p1s0",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
   system_governance: "",
   cortex_llm: {
     type: "QwenLLM",
     config: {
       agent_name: "Bits",
       history_length: 1,
-      base_url: "http://192.168.0.83:8860/v1",
+      base_url: "${QWEN_BASE_URL:-http://omr2.local:8860/v1}",
       model: "nvidia/nemotron-3-nano",
     },
   },
@@ -59,7 +59,7 @@
           connector: "greeting_conversation_kokoro",
           config: {
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880/v1}",
           },
         },
       ],
@@ -72,7 +72,7 @@
             tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880/v1}",
           },
         },
         {
@@ -82,17 +82,18 @@
             tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880/v1}",
           },
         },
         {
           hook_type: "on_exit",
-          handler_type: "message",
+          handler_type: "function",
           handler_config: {
+            module_name: "greeting_hook",
+            function: "geeting_end_hook",
             tts_provider: "kokoro",
-            message: "It was great chatting with you! Have a wonderful day!",
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://192.168.0.83:8880/v1",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880/v1}",
           },
         },
       ],
