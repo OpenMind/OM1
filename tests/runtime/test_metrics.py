@@ -146,6 +146,136 @@ class TestStartMetricsServer:
             start_metrics_server()
 
 
+class TestRenderDashboard:
+    """Test the HTML dashboard renderer."""
+
+    def test_empty_dashboard(self):
+        from runtime.metrics import _render_dashboard
+
+        html = _render_dashboard()
+        assert "<!DOCTYPE html>" in html
+        assert "OM1 Metrics Dashboard" in html
+        assert "content='5'" in html
+
+    def test_dashboard_shows_status_dots(self):
+        from runtime.metrics import _render_dashboard
+
+        INPUT_STATUS.labels(name="cam").set(1)
+        INPUT_STATUS.labels(name="mic").set(-1)
+        INPUT_STATUS.labels(name="lidar").set(0)
+
+        html = _render_dashboard()
+        assert "dot green" in html
+        assert "running" in html
+        assert "dot red" in html
+        assert "failed" in html
+        assert "dot gray" in html
+        assert "stopped" in html
+
+    def test_dashboard_shows_counter_values(self):
+        from runtime.metrics import _render_dashboard
+
+        INPUT_EVENTS_TOTAL.labels(name="cam").inc()
+
+        html = _render_dashboard()
+        assert "cam" in html
+        assert "<h2>Inputs</h2>" in html
+
+    def test_dashboard_shows_histogram_count_and_sum(self):
+        from runtime.metrics import _render_dashboard
+
+        CORTEX_TICK_DURATION.observe(0.5)
+
+        html = _render_dashboard()
+        assert "Tick Duration (s) Count" in html
+        assert "Tick Duration (s) Sum" in html
+
+    def test_dashboard_filters_python_metrics(self):
+        from runtime.metrics import _render_dashboard
+
+        html = _render_dashboard()
+        assert "python_gc" not in html
+        assert "python_info" not in html
+
+    def test_dashboard_shows_all_categories(self):
+        from runtime.metrics import _render_dashboard
+
+        INPUT_STATUS.labels(name="x").set(1)
+        ACTION_STATUS.labels(name="x").set(1)
+        BACKGROUND_STATUS.labels(name="x").set(1)
+        SIMULATOR_STATUS.labels(name="x").set(1)
+        CORTEX_TICKS_TOTAL.inc()
+        MODE_CURRENT.labels(mode="x").set(1)
+
+        html = _render_dashboard()
+        for cat in ["Inputs", "Actions", "Backgrounds", "Simulators", "Cortex", "Mode"]:
+            assert f"<h2>{cat}</h2>" in html
+
+    def test_dashboard_formats_float_values(self):
+        from runtime.metrics import _render_dashboard
+
+        CORTEX_TICK_DURATION.observe(0.1234)
+
+        html = _render_dashboard()
+        assert "0.1234" in html or "Tick Duration" in html
+
+
+class TestMetricsHandler:
+    """Test the custom HTTP handler via a real server."""
+
+    def _start_server(self):
+        import threading
+        from http.server import HTTPServer
+
+        from runtime.metrics import _MetricsHandler
+
+        server = HTTPServer(("127.0.0.1", 0), _MetricsHandler)
+        port = server.server_address[1]
+        t = threading.Thread(target=server.serve_forever, daemon=True)
+        t.start()
+        return server, port
+
+    def test_metrics_endpoint(self):
+        import urllib.request
+
+        server, port = self._start_server()
+        try:
+            resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/metrics")
+            assert resp.status == 200
+            assert "text/plain" in resp.headers["Content-Type"]
+            body = resp.read().decode()
+            assert "om1_" in body
+        finally:
+            server.shutdown()
+
+    def test_dashboard_endpoint(self):
+        import urllib.request
+
+        server, port = self._start_server()
+        try:
+            resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/")
+            assert resp.status == 200
+            assert "text/html" in resp.headers["Content-Type"]
+            body = resp.read().decode()
+            assert "OM1 Metrics Dashboard" in body
+        finally:
+            server.shutdown()
+
+    def test_404_for_unknown_path(self):
+        import urllib.error
+        import urllib.request
+
+        server, port = self._start_server()
+        try:
+            try:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/unknown")
+                assert False, "Expected 404"
+            except urllib.error.HTTPError as e:
+                assert e.code == 404
+        finally:
+            server.shutdown()
+
+
 class TestNoOpFallback:
     """Test that when prometheus_client is missing, the module still loads."""
 
