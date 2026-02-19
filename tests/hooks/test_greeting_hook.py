@@ -2,15 +2,15 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from hooks.greeting_hook import GeetingEndHookContext, geeting_end_hook
+from hooks.greeting_hook import GreetingEndHookContext, greeting_end_hook
 
 
-class TestGeetingEndHookContext:
-    """Tests for GeetingEndHookContext model."""
+class TestGreetingEndHookContext:
+    """Tests for GreetingEndHookContext model."""
 
     def test_context_default_values(self):
         """Test context model with default values."""
-        context = GeetingEndHookContext()
+        context = GreetingEndHookContext()
         assert context.message == ""
         assert context.tts_provider == "elevenlabs"
         assert context.base_url is None
@@ -24,7 +24,7 @@ class TestGeetingEndHookContext:
 
     def test_context_custom_values(self):
         """Test context model with custom values."""
-        context = GeetingEndHookContext(
+        context = GreetingEndHookContext(
             message="Hello, world!",
             tts_provider="kokoro",
             base_url="http://localhost:8880",
@@ -49,7 +49,7 @@ class TestGeetingEndHookContext:
 
     def test_context_extra_fields_allowed(self):
         """Test that extra fields are allowed in the context."""
-        context = GeetingEndHookContext(
+        context = GreetingEndHookContext(
             message="Test", extra_field="extra_value"  # type: ignore
         )
         # Should not raise an error due to Config.extra = "allow"
@@ -100,8 +100,8 @@ def mock_greeting_state_provider():
         yield provider_instance
 
 
-class TestGeetingEndHook:
-    """Tests for geeting_end_hook function."""
+class TestGreetingEndHook:
+    """Tests for greeting_end_hook function."""
 
     @pytest.mark.asyncio
     async def test_hook_with_elevenlabs_default_params(
@@ -121,7 +121,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             mock_provider_class.assert_called_once()
             call_kwargs = mock_provider_class.call_args[1]
@@ -167,7 +167,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             call_kwargs = mock_provider_class.call_args[1]
             assert call_kwargs["url"] == "https://custom.api.com"
@@ -197,7 +197,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             call_kwargs = mock_provider_class.call_args[1]
             assert call_kwargs["url"] == "http://127.0.0.1:8880/v1"
@@ -236,7 +236,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             call_kwargs = mock_provider_class.call_args[1]
             assert call_kwargs["url"] == "http://localhost:9000"
@@ -265,7 +265,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             call_kwargs = mock_provider_class.call_args[1]
             assert call_kwargs["url"] == "http://127.0.0.1:50051"
@@ -294,7 +294,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             call_kwargs = mock_provider_class.call_args[1]
             assert call_kwargs["url"] == "http://riva-server:8000"
@@ -318,7 +318,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             mock_elevenlabs_provider.start.assert_called_once()
             mock_elevenlabs_provider.add_pending_message.assert_called_once()
@@ -345,7 +345,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             message = mock_kokoro_provider.add_pending_message.call_args[0][0]
             assert "enjoyed our conversation" in message.lower()
@@ -368,7 +368,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             mock_riva_provider.start.assert_called_once()
             message = mock_riva_provider.add_pending_message.call_args[0][0]
@@ -385,7 +385,7 @@ class TestGeetingEndHook:
         ) as mock_state_class:
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
     @pytest.mark.asyncio
     async def test_hook_provider_initialization_error(
@@ -406,7 +406,7 @@ class TestGeetingEndHook:
             )
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
     @pytest.mark.asyncio
     async def test_hook_provider_start_error(
@@ -426,7 +426,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
     @pytest.mark.asyncio
     async def test_hook_empty_context(
@@ -445,7 +445,7 @@ class TestGeetingEndHook:
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
             mock_provider_class.assert_called_once()
             mock_elevenlabs_provider.start.assert_called_once()
@@ -465,7 +465,7 @@ class TestGeetingEndHook:
             mock_provider_class.side_effect = ValueError("Test error")
             mock_state_class.return_value = mock_greeting_state_provider
 
-            await geeting_end_hook(context)
+            await greeting_end_hook(context)
 
-            assert "Error in geeting_end_hook" in caplog.text
+            assert "Error in greeting_end_hook" in caplog.text
             assert "Test error" in caplog.text

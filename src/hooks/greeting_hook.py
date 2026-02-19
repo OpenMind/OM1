@@ -11,9 +11,9 @@ from providers.kokoro_tts_provider import KokoroTTSProvider
 from providers.riva_tts_provider import RivaTTSProvider
 
 
-class GeetingEndHookContext(BaseModel):
+class GreetingEndHookContext(BaseModel):
     """
-    Configuration for geeting_end_hook.
+    Configuration for greeting_end_hook.
 
     Parameters
     ----------
@@ -83,7 +83,7 @@ class GeetingEndHookContext(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-async def geeting_end_hook(context: Dict[str, Any]):
+async def greeting_end_hook(context: Dict[str, Any]):
     """
     Hook to handle the end of a greeting conversation.
 
@@ -92,7 +92,7 @@ async def geeting_end_hook(context: Dict[str, Any]):
     context : Dict[str, Any]
         Context dictionary containing relevant information for the hook.
     """
-    ctx = GeetingEndHookContext(**context)
+    ctx = GreetingEndHookContext(**context)
 
     tts_provider = ctx.tts_provider.lower()
     provider = None
@@ -150,5 +150,5 @@ async def geeting_end_hook(context: Dict[str, Any]):
         return True
 
     except Exception:
-        logging.exception("Error in geeting_end_hook")
+        logging.exception("Error in greeting_end_hook")
         return False
