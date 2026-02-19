@@ -139,6 +139,16 @@ class TestStartMetricsServer:
             start_metrics_server()
         assert mock_cls.call_args[0][0] == ("", 8888)
 
+    def test_invalid_port_env_uses_default(self):
+        mock_server = MagicMock()
+        mock_cls = MagicMock(return_value=mock_server)
+        with (
+            patch("runtime.metrics.HTTPServer", mock_cls),
+            patch.dict("os.environ", {"METRICS_PORT": "not_a_number"}),
+        ):
+            start_metrics_server()
+        assert mock_cls.call_args[0][0] == ("", 9464)
+
     def test_port_in_use_logs_warning_not_crash(self):
         mock_cls = MagicMock(side_effect=OSError("Address already in use"))
         with patch("runtime.metrics.HTTPServer", mock_cls):

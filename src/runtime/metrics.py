@@ -16,6 +16,7 @@ Endpoints:
 import logging
 import os
 import threading
+from html import escape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Union
 
@@ -95,7 +96,7 @@ def _render_dashboard() -> str:
             for sample_name, col_label in matched:
                 for labels, value in samples[sample_name]:
                     label_parts = [v for k, v in sorted(labels.items()) if k != "le"]
-                    label_str = ", ".join(label_parts) if label_parts else "-"
+                    label_str = escape(", ".join(label_parts)) if label_parts else "-"
                     if is_status:
                         if value == 1:
                             val_cell = '<span class="dot green"></span> running'
@@ -108,7 +109,7 @@ def _render_dashboard() -> str:
                             f"{value:.4f}" if value != int(value) else str(int(value))
                         )
                     rows.append(
-                        f"<tr><td>{col_label}</td>"
+                        f"<tr><td>{escape(col_label)}</td>"
                         f"<td>{label_str}</td>"
                         f"<td>{val_cell}</td></tr>"
                     )
@@ -280,7 +281,11 @@ try:
 
     def start_metrics_server() -> None:
         """Start the metrics HTTP server with dashboard and Prometheus endpoints."""
-        port = int(os.environ.get("METRICS_PORT", "9464"))
+        try:
+            port = int(os.environ.get("METRICS_PORT", "9464"))
+        except ValueError:
+            logging.warning("Invalid METRICS_PORT value, using default 9464")
+            port = 9464
         try:
             server = HTTPServer(("", port), _MetricsHandler)
             t = threading.Thread(target=server.serve_forever, daemon=True)
