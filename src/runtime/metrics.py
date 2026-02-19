@@ -19,10 +19,6 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Union
 
-# ---------------------------------------------------------------------------
-# Metric category definitions for the HTML dashboard
-# ---------------------------------------------------------------------------
-
 _CATEGORIES: dict[str, dict[str, str]] = {
     "Inputs": {
         "om1_input_status": "Status",
@@ -54,10 +50,6 @@ _CATEGORIES: dict[str, dict[str, str]] = {
     },
 }
 
-# ---------------------------------------------------------------------------
-# HTML dashboard renderer
-# ---------------------------------------------------------------------------
-
 _STATUS_METRICS = {
     "om1_input_status",
     "om1_action_status",
@@ -66,7 +58,6 @@ _STATUS_METRICS = {
     "om1_mode_current",
 }
 
-# Suffixes to skip when collecting samples (histogram buckets, counter created)
 _SKIP_SUFFIXES = ("_bucket", "_created")
 
 
@@ -74,8 +65,6 @@ def _render_dashboard() -> str:
     """Collect metrics from the registry and return an HTML dashboard string."""
     from prometheus_client import REGISTRY
 
-    # Collect all om1_* samples keyed by sample name.
-    # Each entry: [(labels_dict, value), ...]
     samples: dict[str, list[tuple[dict[str, str], float]]] = {}
     for metric in REGISTRY.collect():
         for sample in metric.samples:
@@ -87,14 +76,10 @@ def _render_dashboard() -> str:
                 (dict(sample.labels), sample.value)
             )
 
-    # Build category sections
     sections: list[str] = []
     for cat_title, metric_map in _CATEGORIES.items():
         rows: list[str] = []
         for metric_name, display_name in metric_map.items():
-            # Resolve matching sample names.
-            # Gauges/Counters: direct match.
-            # Histograms: base name won't exist; look for _count and _sum.
             matched: list[tuple[str, str]] = []
             if metric_name in samples:
                 matched.append((metric_name, display_name))
@@ -158,11 +143,6 @@ def _render_dashboard() -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# No-op stub used when prometheus_client is not installed
-# ---------------------------------------------------------------------------
-
-
 class _NoOp:
     """Drop-in stub that silently ignores all metric operations."""
 
@@ -178,10 +158,6 @@ class _NoOp:
     def observe(self, _value: float) -> None:
         return None
 
-
-# ---------------------------------------------------------------------------
-# Metric definitions + HTTP server
-# ---------------------------------------------------------------------------
 
 try:
     from prometheus_client import Counter, Gauge, Histogram, generate_latest
