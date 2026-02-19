@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
-from actions.orchestrator import ActionOrchestrator
+from actions.orchestrator import ActionOrchestrator, ActionResult
 from llm.output_model import Action
 from runtime.config import RuntimeConfig
 
@@ -63,6 +63,16 @@ class MockConnector(ActionConnector[ActionConfig, MockInput]):
         """Reset class-level tracking."""
         cls.execution_order = []
         cls.execution_times = {}
+
+
+class FailingConnector(ActionConnector[ActionConfig, MockInput]):
+    """Connector that always raises an exception."""
+
+    async def connect(self, output_interface: MockInput) -> None:
+        raise TimeoutError("Connection timed out")
+
+    def tick(self):
+        pass
 
 
 @pytest.fixture
@@ -913,3 +923,147 @@ class TestLLMResultParser:
         await orchestrator.flush_promises()
 
         assert len(MockConnector.execution_order) == 1
+
+
+class TestActionResult:
+    """Test ActionResult dataclass."""
+
+    def test_success_result(self):
+        result = ActionResult(action_type="speak", action_value="hello", success=True)
+        assert result.action_type == "speak"
+        assert result.action_value == "hello"
+        assert result.success is True
+        assert result.error is None
+
+    def test_failure_result(self):
+        result = ActionResult(
+            action_type="move",
+            action_value="forward",
+            success=False,
+            error="TimeoutError: Connection timed out",
+        )
+        assert result.success is False
+        assert result.error is not None
+        assert "TimeoutError" in result.error
+
+
+class TestFlushPromisesActionResults:
+    """Test that flush_promises returns ActionResult objects."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        MockConnector.reset()
+
+    @pytest.mark.asyncio
+    async def test_successful_action_returns_action_result(self, mock_runtime_config):
+        connector = MockConnector(ActionConfig(), "speak")
+        action = AgentAction(
+            name="speak",
+            llm_label="speak",
+            interface=MockInterface,
+            connector=connector,
+            exclude_from_prompt=False,
+        )
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        await orchestrator.promise([Action(type="speak", value="hello")])
+        results, pending = await orchestrator.flush_promises()
+
+        assert len(results) == 1
+        assert isinstance(results[0], ActionResult)
+        assert results[0].action_type == "speak"
+        assert results[0].action_value == "hello"
+        assert results[0].success is True
+
+    @pytest.mark.asyncio
+    async def test_failed_action_returns_action_result_with_error(
+        self, mock_runtime_config
+    ):
+        connector = FailingConnector(ActionConfig())
+        action = AgentAction(
+            name="move",
+            llm_label="move",
+            interface=MockInterface,
+            connector=connector,
+            exclude_from_prompt=False,
+        )
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        await orchestrator.promise([Action(type="move", value="forward")])
+        results, pending = await orchestrator.flush_promises()
+
+        assert len(results) == 1
+        assert results[0].success is False
+        assert results[0].error is not None
+        assert "TimeoutError" in results[0].error
+
+    @pytest.mark.asyncio
+    async def test_mixed_success_and_failure(self, mock_runtime_config):
+        success_connector = MockConnector(ActionConfig(), "speak")
+        success_action = AgentAction(
+            name="speak",
+            llm_label="speak",
+            interface=MockInterface,
+            connector=success_connector,
+            exclude_from_prompt=False,
+        )
+        fail_connector = FailingConnector(ActionConfig())
+        fail_action = AgentAction(
+            name="move",
+            llm_label="move",
+            interface=MockInterface,
+            connector=fail_connector,
+            exclude_from_prompt=False,
+        )
+        mock_runtime_config.agent_actions = [success_action, fail_action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        await orchestrator.promise(
+            [
+                Action(type="speak", value="hello"),
+                Action(type="move", value="forward"),
+            ]
+        )
+        results, pending = await orchestrator.flush_promises()
+
+        assert len(results) == 2
+        success_results = [r for r in results if r.success]
+        fail_results = [r for r in results if not r.success]
+        assert len(success_results) == 1
+        assert len(fail_results) == 1
+
+    @pytest.mark.asyncio
+    async def test_empty_queue_returns_empty_lists(self, mock_runtime_config):
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        results, pending = await orchestrator.flush_promises()
+        assert results == []
+        assert pending == []
+
+    @pytest.mark.asyncio
+    async def test_input_parsing_error_returns_failed_action_result(
+        self, mock_runtime_config
+    ):
+        """Invalid LLM params should return ActionResult(success=False), not vanish."""
+        connector = MockConnector(ActionConfig(), "speak")
+        action = AgentAction(
+            name="speak",
+            llm_label="speak",
+            interface=MockInterface,
+            connector=connector,
+            exclude_from_prompt=False,
+        )
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        # Send JSON with wrong param name - MockInput expects "action", not "wrong"
+        await orchestrator.promise(
+            [Action(type="speak", value='{"wrong_param": "hello"}')]
+        )
+        results, pending = await orchestrator.flush_promises()
+
+        assert len(results) == 1
+        assert results[0].success is False
+        assert results[0].error is not None
