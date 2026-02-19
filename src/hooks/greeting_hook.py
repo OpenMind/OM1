@@ -92,7 +92,6 @@ async def geeting_end_hook(context: Dict[str, Any]):
     context : Dict[str, Any]
         Context dictionary containing relevant information for the hook.
     """
-    logging.info(f"Context keys: {context.keys()}")
     ctx = GeetingEndHookContext(**context)
 
     tts_provider = ctx.tts_provider.lower()
