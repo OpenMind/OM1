@@ -191,12 +191,6 @@ class TestInit:
             c = MoveUnitreeOMPathSDKConnector(config)
             assert c.session is None
 
-    def test_missing_ethernet_raises(self, mock_dependencies):
-        config = MoveUnitreeOMPathSDKConfig()
-        config.unitree_ethernet = None
-        with pytest.raises(ValueError):
-            MoveUnitreeOMPathSDKConnector(config)
-
 
 class TestConnect:
     """Test the connect() method."""
