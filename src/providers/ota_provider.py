@@ -50,7 +50,7 @@ class OTAProvider:
         try:
             from runtime.version import __version__  # type: ignore[import]
 
-            return __version__ # pragma: no cover
+            return __version__  # pragma: no cover
         except ImportError:
             version_file = Path(__file__).parent.parent / "runtime" / "version.py"
             if version_file.exists():
