@@ -149,3 +149,20 @@ class TestFlushPromisesActionResults:
         results, pending = await orchestrator.flush_promises()
         assert results == []
         assert pending == []
+
+    @pytest.mark.asyncio
+    async def test_input_parsing_error_returns_failed_action_result(self):
+        """Invalid LLM params should return ActionResult(success=False), not vanish."""
+        action = _make_agent_action("speak")
+        config = _make_config([action])
+        orchestrator = ActionOrchestrator(config)
+
+        # Send JSON with wrong param name - FeedbackMockInput expects "action", not "wrong"
+        await orchestrator.promise(
+            [Action(type="speak", value='{"wrong_param": "hello"}')]
+        )
+        results, pending = await orchestrator.flush_promises()
+
+        assert len(results) == 1
+        assert results[0].success is False
+        assert results[0].error is not None
