@@ -2698,6 +2698,9 @@ dds = [
 macos = [
     { name = "osascript" },
 ]
+metrics = [
+    { name = "prometheus-client" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -2734,6 +2737,7 @@ requires-dist = [
     { name = "opencv-python", specifier = "==4.11.0.86" },
     { name = "osascript", marker = "extra == 'macos'" },
     { name = "pillow", specifier = "==12.1.1" },
+    { name = "prometheus-client", marker = "extra == 'metrics'", specifier = ">=0.20.0" },
     { name = "py-mjpeg", specifier = "==1.0.1" },
     { name = "pyaudio", specifier = "==0.2.14" },
     { name = "pycdr2", specifier = "==1.0.0" },
@@ -2752,7 +2756,7 @@ requires-dist = [
     { name = "web3", specifier = "==7.6.0" },
     { name = "websockets", specifier = "==13.1" },
 ]
-provides-extras = ["dds", "macos"]
+provides-extras = ["dds", "macos", "metrics"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3116,6 +3120,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2a/13/b62d075317d8686071eb843f0bb1f195eb332f48869d3c31a4c6f1e063ac/pre_commit-4.1.0.tar.gz", hash = "sha256:ae3f018575a588e30dfddfab9a05448bfbd6b73d78709617b5a2b853549716d4", size = 193330, upload-time = "2025-01-20T18:31:48.681Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/43/b3/df14c580d82b9627d173ceea305ba898dca135feb360b6d84019d0803d3b/pre_commit-4.1.0-py2.py3-none-any.whl", hash = "sha256:d29e7cb346295bcc1cc75fc3e92e343495e3ea0196c9ec6ba53f49f10ab6ae7b", size = 220560, upload-time = "2025-01-20T18:31:47.319Z" },
+]
+
+[[package]]
+name = "prometheus-client"
+version = "0.24.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/58/a794d23feb6b00fc0c72787d7e87d872a6730dd9ed7c7b3e954637d8f280/prometheus_client-0.24.1.tar.gz", hash = "sha256:7e0ced7fbbd40f7b84962d5d2ab6f17ef88a72504dcf7c0b40737b43b2a461f9", size = 85616, upload-time = "2026-01-14T15:26:26.965Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/c3/24a2f845e3917201628ecaba4f18bab4d18a337834c1df2a159ee9d22a42/prometheus_client-0.24.1-py3-none-any.whl", hash = "sha256:150db128af71a5c2482b36e588fc8a6b95e498750da4b17065947c16070f4055", size = 64057, upload-time = "2026-01-14T15:26:24.42Z" },
 ]
 
 [[package]]

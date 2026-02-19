@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from actions.base import AgentAction
 from llm.output_model import Action
 from runtime.config import RuntimeConfig
+from runtime.metrics import ACTION_ERRORS_TOTAL, ACTION_EXECUTIONS_TOTAL, ACTION_STATUS
 
 
 class ActionOrchestrator:
@@ -99,12 +100,15 @@ class ActionOrchestrator:
         action : AgentAction
             The agent action whose connector should be run in the loop.
         """
+        ACTION_STATUS.labels(name=action.llm_label).set(1)
         while not self._stop_event.is_set():
             try:
                 action.connector.tick()
             except Exception:
+                ACTION_ERRORS_TOTAL.labels(name=action.llm_label).inc()
                 logging.exception(f"Error in connector {action.llm_label}")
                 self._stop_event.wait(timeout=0.1)
+        ACTION_STATUS.labels(name=action.llm_label).set(0)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
@@ -378,6 +382,7 @@ class ActionOrchestrator:
 
         input_interface = input_type(**converted_params)
 
+        ACTION_EXECUTIONS_TOTAL.labels(name=agent_action.llm_label).inc()
         await agent_action.connector.connect(input_interface)
 
         return input_interface
@@ -393,6 +398,7 @@ class ActionOrchestrator:
         self._stop_event.set()
 
         for agent_action in self._action_instances:
+            ACTION_STATUS.labels(name=agent_action.llm_label).set(0)
             try:
                 agent_action.connector.stop()
             except Exception:

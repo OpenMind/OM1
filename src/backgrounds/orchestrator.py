@@ -5,6 +5,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from backgrounds.base import Background
 from runtime.config import RuntimeConfig
+from runtime.metrics import (
+    BACKGROUND_ERRORS_TOTAL,
+    BACKGROUND_RUNS_TOTAL,
+    BACKGROUND_STATUS,
+)
 
 
 class BackgroundOrchestrator:
@@ -77,12 +82,16 @@ class BackgroundOrchestrator:
         background : Background
             The background task to run.
         """
+        BACKGROUND_STATUS.labels(name=background.name).set(1)
         while not self._stop_event.is_set():
             try:
+                BACKGROUND_RUNS_TOTAL.labels(name=background.name).inc()
                 background.run()
             except Exception:
+                BACKGROUND_ERRORS_TOTAL.labels(name=background.name).inc()
                 logging.exception(f"Error in background {background.name}")
                 self._stop_event.wait(timeout=0.1)
+        BACKGROUND_STATUS.labels(name=background.name).set(0)
 
     def stop(self):
         """
@@ -96,6 +105,7 @@ class BackgroundOrchestrator:
         self._stop_event.set()
 
         for background in self._background_instances:
+            BACKGROUND_STATUS.labels(name=background.name).set(0)
             try:
                 background.stop()
             except Exception:

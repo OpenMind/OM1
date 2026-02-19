@@ -6,6 +6,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from llm.output_model import Action
 from runtime.config import RuntimeConfig
+from runtime.metrics import (
+    SIMULATOR_ERRORS_TOTAL,
+    SIMULATOR_STATUS,
+    SIMULATOR_TICKS_TOTAL,
+)
 from simulators.base import Simulator
 
 
@@ -70,12 +75,16 @@ class SimulatorOrchestrator:
         simulator : Simulator
             The simulator to run
         """
+        SIMULATOR_STATUS.labels(name=simulator.name).set(1)
         while not self._stop_event.is_set():
             try:
+                SIMULATOR_TICKS_TOTAL.labels(name=simulator.name).inc()
                 simulator.tick()
             except Exception:
+                SIMULATOR_ERRORS_TOTAL.labels(name=simulator.name).inc()
                 logging.exception(f"Error in simulator {simulator.name}")
                 self._stop_event.wait(timeout=0.1)
+        SIMULATOR_STATUS.labels(name=simulator.name).set(0)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
         """
@@ -143,6 +152,7 @@ class SimulatorOrchestrator:
         self._stop_event.set()
 
         for simulator in self._simulator_instances:
+            SIMULATOR_STATUS.labels(name=simulator.name).set(0)
             try:
                 simulator.stop()
             except Exception:

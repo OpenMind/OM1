@@ -18,6 +18,12 @@ from runtime.config import (
     load_mode_config,
 )
 from runtime.manager import ModeManager
+from runtime.metrics import (
+    CORTEX_TICK_DURATION,
+    CORTEX_TICKS_TOTAL,
+    MODE_CURRENT,
+    MODE_TRANSITIONS_TOTAL,
+)
 from simulators.orchestrator import SimulatorOrchestrator
 
 
@@ -140,6 +146,7 @@ class ModeCortexRuntime:
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
+        MODE_CURRENT.labels(mode=mode_name).set(1)
 
     async def _handle_mode_transitions(self):
         """
@@ -208,6 +215,9 @@ class ModeCortexRuntime:
             # Start new orchestrators
             await self._start_orchestrators()
 
+            MODE_CURRENT.labels(mode=from_mode).set(0)
+            MODE_CURRENT.labels(mode=to_mode).set(1)
+            MODE_TRANSITIONS_TOTAL.labels(from_mode=from_mode, to_mode=to_mode).inc()
             logging.info(f"Successfully transitioned to mode: {to_mode}")
 
         except Exception as e:
@@ -527,45 +537,52 @@ class ModeCortexRuntime:
             logging.debug("Skipping tick during config reload")
             return
 
-        tick_num = self.io_provider.increment_tick()
-        logging.debug(f"Processing tick #{tick_num}")
+        tick_start = time.time()
+        try:
+            tick_num = self.io_provider.increment_tick()
+            CORTEX_TICKS_TOTAL.inc()
+            logging.debug(f"Processing tick #{tick_num}")
 
-        finished_promises, _ = await self.action_orchestrator.flush_promises()
+            finished_promises, _ = await self.action_orchestrator.flush_promises()
 
-        prompt = self.fuser.fuse(self.current_config.agent_inputs, finished_promises)
-        if prompt is None:
-            logging.debug("No prompt to fuse")
-            return
-
-        with self.io_provider.mode_transition_input():
-            last_input = self.io_provider.get_mode_transition_input()
-
-        transition_result = await self.mode_manager.process_tick(last_input)
-        if transition_result:
-            new_mode, transition_reason = transition_result
-
-            # Schedule the transition asynchronously
-            self._pending_mode_transition = new_mode
-            self._pending_transition_reason = transition_reason
-            self._mode_transition_event.set()
-            logging.info(
-                f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
+            prompt = self.fuser.fuse(
+                self.current_config.agent_inputs, finished_promises
             )
-            return
+            if prompt is None:
+                logging.debug("No prompt to fuse")
+                return
 
-        output = await self.current_config.cortex_llm.ask(prompt)
-        if output is None:
-            logging.debug("No output from LLM")
-            return
+            with self.io_provider.mode_transition_input():
+                last_input = self.io_provider.get_mode_transition_input()
 
-        if self._is_reloading:
-            logging.debug("Skipping tick during config reload")
-            return
+            transition_result = await self.mode_manager.process_tick(last_input)
+            if transition_result:
+                new_mode, transition_reason = transition_result
 
-        if self.simulator_orchestrator:
-            await self.simulator_orchestrator.promise(output.actions)
+                # Schedule the transition asynchronously
+                self._pending_mode_transition = new_mode
+                self._pending_transition_reason = transition_reason
+                self._mode_transition_event.set()
+                logging.info(
+                    f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
+                )
+                return
 
-        await self.action_orchestrator.promise(output.actions)
+            output = await self.current_config.cortex_llm.ask(prompt)
+            if output is None:
+                logging.debug("No output from LLM")
+                return
+
+            if self._is_reloading:
+                logging.debug("Skipping tick during config reload")
+                return
+
+            if self.simulator_orchestrator:
+                await self.simulator_orchestrator.promise(output.actions)
+
+            await self.action_orchestrator.promise(output.actions)
+        finally:
+            CORTEX_TICK_DURATION.observe(time.time() - tick_start)
 
     def get_mode_info(self) -> dict:
         """

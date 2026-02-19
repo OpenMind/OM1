@@ -47,6 +47,7 @@ dds = [
     "cyclonedds==0.10.2"
 ]
 macos = ["osascript"]
+metrics = ["prometheus-client>=0.20.0"]
 
 [dependency-groups]
 dev = [

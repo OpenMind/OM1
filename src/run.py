@@ -11,6 +11,7 @@ import typer
 from runtime.config import load_mode_config
 from runtime.cortex import ModeCortexRuntime
 from runtime.logging import setup_logging
+from runtime.metrics import start_metrics_server
 
 app = typer.Typer()
 
@@ -93,6 +94,7 @@ def start(
     """
     config_name, config_path = setup_config_file(config_name)
     setup_logging(config_name, log_level, log_to_file)
+    start_metrics_server()
 
     try:
         mode_config = load_mode_config(config_name)

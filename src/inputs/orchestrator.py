@@ -3,6 +3,7 @@ import logging
 from collections.abc import Sequence
 
 from inputs.base import Sensor
+from runtime.metrics import INPUT_ERRORS_TOTAL, INPUT_EVENTS_TOTAL, INPUT_STATUS
 
 
 class InputOrchestrator:
@@ -56,14 +57,19 @@ class InputOrchestrator:
             Input source to listen to
         """
         input_name = type(input).__name__
+        INPUT_STATUS.labels(name=input_name).set(1)
         try:
             async for event in input.listen():
                 try:
+                    INPUT_EVENTS_TOTAL.labels(name=input_name).inc()
                     await input.raw_to_text(event)
                 except Exception as e:
+                    INPUT_ERRORS_TOTAL.labels(name=input_name).inc()
                     logging.error(
                         f"Error processing event in {input_name}: {e}", exc_info=True
                     )
         except Exception as e:
+            INPUT_STATUS.labels(name=input_name).set(-1)
+            INPUT_ERRORS_TOTAL.labels(name=input_name).inc()
             logging.error(f"Input {input_name} listener failed: {e}", exc_info=True)
             raise
