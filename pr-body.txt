@@ -1,0 +1,19 @@
+Fixes #2323
+
+## Problem
+UbTTS base_url menggunakan f-string yang di-evaluate saat class definition, bukan saat runtime. Ini menyebabkan robot_ip (masih None) dievaluate, bukan actual value.
+
+## Fix
+- Gunakan model_validator(mode='after') untuk build base_url setelah field values resolved
+- base_url sekarang Optional dengan default None
+- Base URL dibangun dinamis berdasarkan robot_ip yang sudah punya value
+
+## Changes
+- src/actions/speak/connector/ub_tts.py: Tambah model validator
+
+## Testing
+- Unit tests pass
+- Integration tests pass
+
+## Checklist
+- [x] Bug fix (non-breaking)

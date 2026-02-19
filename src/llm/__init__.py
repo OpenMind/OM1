@@ -240,6 +240,66 @@ def get_llm_class(class_name: str) -> T.Type[LLM]:
         )
 
 
+def get_llm_config_class(class_name: str) -> T.Type[LLMConfig]:
+    """
+    Get the config class for an LLM by its class name.
+
+    Discovers the appropriate LLMConfig subclass from the LLM module,
+    e.g., QwenLLMConfig for QwenLLM, OpenAIConfig for OpenAILLM.
+
+    Parameters
+    ----------
+    class_name : str
+        The exact LLM class name
+
+    Returns
+    -------
+    T.Type[LLMConfig]
+        The config class for the LLM, or LLMConfig base class if not found
+
+    """
+    module_name = find_module_with_class(class_name)
+
+    if module_name is None:
+        raise ValueError(f"Class '{class_name}' not found in any LLM plugin module")
+
+    try:
+        module = importlib.import_module(f"llm.plugins.{module_name}")
+        llm_class = getattr(module, class_name)
+
+        if not (
+            inspect.isclass(llm_class)
+            and issubclass(llm_class, LLM)
+            and llm_class != LLM
+        ):
+            raise ValueError(f"'{class_name}' is not a valid LLM subclass")
+
+        # Find the config class in the module
+        for obj in module.__dict__.values():
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, LLMConfig)
+                and obj != LLMConfig
+            ):
+                logging.debug(
+                    f"Got config class {obj.__name__} for {class_name}"
+                )
+                return obj
+
+        # Fallback to base LLMConfig if no specific config found
+        logging.warning(
+            f"No specific config class found for {class_name}, using LLMConfig"
+        )
+        return LLMConfig
+
+    except ImportError as e:
+        raise ValueError(f"Could not import LLM module '{module_name}': {e}")
+    except AttributeError:
+        raise ValueError(
+            f"Class '{class_name}' not found in LLM module '{module_name}'"
+        )
+
+
 def load_llm(
     llm_config: T.Dict[str, T.Any],
     available_actions: T.Optional[list] = None,
