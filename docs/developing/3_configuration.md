@@ -296,6 +296,6 @@ Transition rules define how and when the robot switches between operational mode
       cooldown_seconds: 10.0,
     }
 ```
-To understand transition rules in depth, refer the documentation [here](../full_autonomy_guidelines/transition_rules.md)
+To understand transition rules in depth, refer to the documentation [here](../full_autonomy_guidelines/transition_rules.md)
 
-To introduce a new mode in your config, refer [introduce new mode](../developer_cookbook/new_mode.md)
+To introduce a new mode in your config, refer to [introduce new mode](../developer_cookbook/new_mode.md)

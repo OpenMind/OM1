@@ -245,4 +245,4 @@ If you configure a custom agent, replace `<agent_name>` with your agent and run 
 uv run src/run.py <agent_name>
 ```
 
-To get started with development, refer [here](../developer_cookbook/introduction.md)
+To get started with development, see [here](../developer_cookbook/introduction.md)
