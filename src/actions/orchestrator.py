@@ -159,7 +159,9 @@ class ActionOrchestrator:
                 if isinstance(result, ActionResult):
                     results.append(result)
             except Exception as e:
-                logging.warning(f"Failed to extract action result: {type(e).__name__}: {e}")
+                logging.warning(
+                    f"Failed to extract action result: {type(e).__name__}: {e}"
+                )
 
         return results, list(pending)
 

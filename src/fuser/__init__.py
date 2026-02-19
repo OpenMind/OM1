@@ -1,16 +1,11 @@
-from __future__ import annotations
-
 import logging
 import time
-import typing as T
 
 from actions import describe_action
+from actions.orchestrator import ActionResult
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
 from runtime.config import RuntimeConfig
-
-if T.TYPE_CHECKING:
-    from actions.orchestrator import ActionResult
 
 
 class Fuser:

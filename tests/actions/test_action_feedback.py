@@ -1,6 +1,4 @@
-import asyncio
 from dataclasses import dataclass
-from typing import List
 from unittest.mock import MagicMock
 
 import pytest
@@ -55,9 +53,7 @@ def _make_config(agent_actions: list) -> RuntimeConfig:
     return config
 
 
-def _make_agent_action(
-    name: str, connector_cls=SuccessConnector
-) -> AgentAction:
+def _make_agent_action(name: str, connector_cls=SuccessConnector) -> AgentAction:
     connector = connector_cls(ActionConfig())
     return AgentAction(
         name=name,
@@ -72,9 +68,7 @@ class TestActionResult:
     """Test ActionResult dataclass."""
 
     def test_success_result(self):
-        result = ActionResult(
-            action_type="speak", action_value="hello", success=True
-        )
+        result = ActionResult(action_type="speak", action_value="hello", success=True)
         assert result.action_type == "speak"
         assert result.action_value == "hello"
         assert result.success is True
@@ -129,10 +123,12 @@ class TestFlushPromisesActionResults:
         config = _make_config([success_action, fail_action])
         orchestrator = ActionOrchestrator(config)
 
-        await orchestrator.promise([
-            Action(type="speak", value="hello"),
-            Action(type="move", value="forward"),
-        ])
+        await orchestrator.promise(
+            [
+                Action(type="speak", value="hello"),
+                Action(type="move", value="forward"),
+            ]
+        )
         results, pending = await orchestrator.flush_promises()
 
         assert len(results) == 2
