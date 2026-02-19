@@ -20,7 +20,7 @@ class PersonFollowingStatusConfig(SensorConfig):
 
     Parameters
     ----------
-    person_follow_base_url : str
+    base_url : str
         Base URL for the person-following HTTP service.
     poll_interval : float
         Polling interval in seconds.
@@ -28,7 +28,7 @@ class PersonFollowingStatusConfig(SensorConfig):
         Interval in seconds between re-enrollment attempts when not tracking.
     """
 
-    person_follow_base_url: str = Field(
+    base_url: str = Field(
         default="http://localhost:8080",
         description="Base URL for the person-following HTTP service",
     )
@@ -72,7 +72,7 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
         self.io_provider = IOProvider()
         self.messages: Deque[Message] = deque(maxlen=50)
 
-        self.base_url = config.person_follow_base_url
+        self.base_url = config.base_url
         self.poll_interval = config.poll_interval
         self.enroll_retry_interval = config.enroll_retry_interval
         self.status_url = f"{self.base_url}/status"

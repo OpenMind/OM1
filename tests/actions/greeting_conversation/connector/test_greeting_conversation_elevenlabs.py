@@ -157,7 +157,7 @@ class TestGreetingConversationElevenLabsConnector:
             speech_clarity=0.9,
         )
         mock_providers["state"].process_conversation.return_value = {
-            "current_state": ConversationState.FINISHED
+            "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
         mock_providers["ctx"].update_context.assert_called_once_with(

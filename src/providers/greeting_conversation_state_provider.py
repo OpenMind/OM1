@@ -241,12 +241,13 @@ class ConfidenceCalculator:
 class GreetingConversationStateMachineProvider:
     """Manages greeting conversation state transitions based on confidence scores."""
 
-    def __init__(self):
+    def __init__(self, max_turn_count: int = 3) -> None:
         self.current_state = ConversationState.IDLE
         self.previous_state = None
         self.state_entry_time = time.time()
         self.conversation_start_time = None
         self.turn_count = 0
+        self.max_turn_count = max_turn_count
         self.last_user_utterance = ""
 
         self.confidence_calculator = ConfidenceCalculator()
@@ -346,6 +347,7 @@ class GreetingConversationStateMachineProvider:
             "command": command,
             "time_in_state": time.time() - self.state_entry_time,
             "confidence_trend": self._get_confidence_trend(),
+            "turn_count": self.turn_count,
         }
 
     def _determine_next_state(
@@ -366,6 +368,13 @@ class GreetingConversationStateMachineProvider:
         """
         llm_conversation_state = confidence_result["factors"].conversation_state
         time_in_state = time.time() - self.state_entry_time
+
+        # Force finish if we've had too many turns to prevent infinite conversations
+        if self.turn_count >= self.max_turn_count:
+            logging.info(
+                f"Maximum turn count ({self.max_turn_count}) reached - forcing finish"
+            )
+            return ConversationState.FINISHED
 
         # From CONVERSING to CONCLUDING
         if self.current_state == ConversationState.CONVERSING:

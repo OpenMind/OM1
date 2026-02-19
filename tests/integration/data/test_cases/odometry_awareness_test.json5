@@ -1,6 +1,6 @@
 {
   // Test case metadata
-  version: "v1.0.2",
+  version: "v1.0.3",
   name: "odometry_awareness_test",
   description: "Test odometry input - robot should be aware of its position and movement state",
   hertz: 1,

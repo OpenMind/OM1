@@ -407,10 +407,12 @@ class FunctionHookHandler(LifecycleHookHandler):
             if not func:
                 return False
 
+            merged_context = {**self.config.model_dump(), **context}
+
             if asyncio.iscoroutinefunction(func):
-                result = await func(context)
+                result = await func(merged_context)
             else:
-                result = func(context)
+                result = func(merged_context)
 
             return result is not False
 
@@ -436,7 +438,7 @@ class FunctionHookHandler(LifecycleHookHandler):
         """
         try:
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            hooks_dir = os.path.join(current_dir, "..", "..", "hooks")
+            hooks_dir = os.path.join(current_dir, "..", "hooks")
             hooks_dir = os.path.abspath(hooks_dir)
 
             if not os.path.exists(hooks_dir):
