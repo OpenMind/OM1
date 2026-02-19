@@ -1,6 +1,6 @@
 {
   // Configuration version
-  version: "v1.0.2",
+  version: "v1.0.3",
 
   // Mode system configuration for Unitree Go2
   default_mode: "slam",
@@ -8,8 +8,8 @@
   mode_memory_enabled: true,
 
   // Global settings
-  api_key: "openmind_free",
-  unitree_ethernet: "lo",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  unitree_ethernet: "${UNITREE_ETHERNET:-lo}",
   system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
   cortex_llm: {
     type: "OpenAILLM",
