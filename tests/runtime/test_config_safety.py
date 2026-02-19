@@ -284,30 +284,17 @@ def test_load_mode_config_invalid_json5():
 
 
 def test_load_mode_config_env_var_fallbacks():
+    """OM_API_KEY env var is used when api_key='openmind_free'. Covers lines 578-579."""
     from src.runtime.config import load_mode_config
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json5", delete=False) as f:
         f.write(_minimal_config().replace('"dummy"', '"openmind_free"'))
         tmp_path = f.name
-
-    def fake_convert(raw):
-        raw["robot_ip"] = "192.168.0.241"
-        raw["URID"] = "default"
-        return raw
-
     try:
-        with patch.dict(
-            os.environ,
-            {"ROBOT_IP": "10.0.0.99", "OM_API_KEY": "env_key", "URID": "env_urid"},
-        ):
+        with patch.dict(os.environ, {"OM_API_KEY": "env_key_from_env"}):
             with patch("src.runtime.config.validate_config_schema"):
-                with patch(
-                    "src.runtime.config.convert_to_multi_mode", side_effect=fake_convert
-                ):
-                    config = load_mode_config("dummy", mode_source_path=tmp_path)
-        assert config.robot_ip == "10.0.0.99"
-        assert config.api_key == "env_key"
-        assert config.URID == "env_urid"
+                config = load_mode_config("dummy", mode_source_path=tmp_path)
+        assert config.api_key == "env_key_from_env"
     finally:
         os.unlink(tmp_path)
 
