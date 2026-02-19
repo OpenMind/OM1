@@ -1,0 +1,58 @@
+name: "Node Runner Support"
+description: "Issues related to running OM1 nodes (startup, points, logs, environment)"
+title: "[Node] "
+labels: ["support", "node"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a node issue. Please fill out the details below.
+        If possible, attach a diagnostic report to help maintainers debug faster.
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / Environment
+      description: "e.g., Ubuntu 22.04 VPS, Debian 12, Windows (dev)"
+      placeholder: "Ubuntu 22.04 (VPS)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: "Describe the issue (what you expected vs what happened)."
+      placeholder: "Node not starting / points not increasing / etc."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: "Paste the most relevant logs here (last ~100-200 lines)."
+      render: shell
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Optional: Diagnostic report (recommended)
+        You can generate a structured report using the community tool **OM1 Doctor**:
+        - Tool: https://github.com/CMZS4/om1-doctor
+        - Run:
+          ```bash
+          om1-doctor report --md-out report.md
+          ```
+        Attach `report.md` to this issue or paste its contents below.
+
+  - type: textarea
+    id: doctor_report
+    attributes:
+      label: OM1 Doctor report (optional)
+      description: "Paste report.md contents here (or attach the file)."
+      render: markdown
+    validations:
+      required: false
