@@ -395,8 +395,8 @@ class ActionOrchestrator:
         for agent_action in self._action_instances:
             try:
                 agent_action.connector.stop()
-            except Exception as e:
-                logging.error(f"Error stopping connector {agent_action.llm_label}: {e}")
+            except Exception:
+                logging.exception(f"Error stopping connector {agent_action.llm_label}")
 
         self._connector_executor.shutdown(wait=True)
         self._action_instances.clear()
