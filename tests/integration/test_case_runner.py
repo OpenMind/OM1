@@ -57,7 +57,7 @@ def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
     the actual component loading through the standard initialization path.
     """
     mode_config = ModeConfig(
-        version=config.get("version", "v1.0.2"),
+        version=config.get("version", "v1.0.3"),
         name="default",
         display_name="Default",
         description="Integration test mode",
@@ -70,7 +70,7 @@ def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
         _raw_backgrounds=config.get("backgrounds", []),
     )
     return ModeSystemConfig(
-        version=config.get("version", "v1.0.2"),
+        version=config.get("version", "v1.0.3"),
         name=config.get("name", "TestAgent"),
         default_mode="default",
         config_name="test_config",
@@ -101,7 +101,7 @@ def build_multi_mode_config(config: Dict[str, Any]) -> ModeSystemConfig:
     modes: Dict[str, ModeConfig] = {}
     for mode_name, mode_data in config.get("modes", {}).items():
         mode_config = ModeConfig(
-            version=config.get("version", "v1.0.2"),
+            version=config.get("version", "v1.0.3"),
             name=mode_name,
             display_name=mode_data.get("display_name", mode_name),
             description=mode_data.get("description", ""),
@@ -131,7 +131,7 @@ def build_multi_mode_config(config: Dict[str, Any]) -> ModeSystemConfig:
         transition_rules.append(rule)
 
     return ModeSystemConfig(
-        version=config.get("version", "v1.0.2"),
+        version=config.get("version", "v1.0.3"),
         name=config.get("name", "TestAgent"),
         default_mode=config.get("default_mode", "calm"),
         config_name="test_config",
