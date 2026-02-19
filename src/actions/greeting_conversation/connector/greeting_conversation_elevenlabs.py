@@ -135,7 +135,7 @@ class GreetingConversationConnector(
         logging.info(f"Greeting Conversation Response: {response}")
 
         if (
-            response.get("current_state") == ConversationState.FINISHED
+            response.get("current_state") == ConversationState.FINISHED.value
             and not self.conversation_finished_sent
         ):
             logging.info("Greeting conversation has finished.")

@@ -790,6 +790,9 @@ class TestGreetingConversationStateIntegration:
         """Test a complete conversation flow from start to finish."""
         state_machine, mock_io = state_machine_with_mock_io
 
+        # Set higher max_turn_count to allow test flow without forcing FINISHED
+        state_machine.max_turn_count = 10
+
         # Start conversation
         state_machine.start_conversation()
         assert state_machine.current_state == ConversationState.CONVERSING
