@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
+PERSON_FOLLOW_BASE_URL = "http://localhost:8080"
+
 
 class StartPersonFollowHookContext(BaseModel):
     """
@@ -23,7 +25,7 @@ class StartPersonFollowHookContext(BaseModel):
     """
 
     base_url: str = Field(
-        default="http://localhost:8080",
+        default=PERSON_FOLLOW_BASE_URL,
         description="Base URL for the person following system",
     )
     enroll_timeout: float = Field(
@@ -49,7 +51,7 @@ class StopPersonFollowHookContext(BaseModel):
     """
 
     base_url: str = Field(
-        default="http://localhost:8080",
+        default=PERSON_FOLLOW_BASE_URL,
         description="Base URL for the person following system to send the clear command",
     )
 

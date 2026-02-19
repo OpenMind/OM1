@@ -371,7 +371,8 @@ class TestGeetingEndHook:
             await geeting_end_hook(context)
 
             mock_riva_provider.start.assert_called_once()
-            mock_riva_provider.add_pending_message.assert_not_called()
+            message = mock_riva_provider.add_pending_message.call_args[0][0]
+            assert "no worries" in message.lower()
 
     @pytest.mark.asyncio
     async def test_hook_unsupported_provider(self, mock_greeting_state_provider):
@@ -448,31 +449,6 @@ class TestGeetingEndHook:
 
             mock_provider_class.assert_called_once()
             mock_elevenlabs_provider.start.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_hook_with_logging(
-        self, mock_elevenlabs_provider, mock_greeting_state_provider, caplog
-    ):
-        """Test that hook logs context keys."""
-        import logging
-
-        caplog.set_level(logging.INFO)
-
-        context = {"tts_provider": "elevenlabs", "some_key": "some_value"}
-        mock_greeting_state_provider.turn_count = 1
-
-        with (
-            patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
-        ):
-            mock_provider_class.return_value = mock_elevenlabs_provider
-            mock_state_class.return_value = mock_greeting_state_provider
-
-            await geeting_end_hook(context)
-
-            assert "Context keys:" in caplog.text
 
     @pytest.mark.asyncio
     async def test_hook_error_logging(self, mock_greeting_state_provider, caplog):

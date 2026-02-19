@@ -13,7 +13,7 @@ from providers.riva_tts_provider import RivaTTSProvider
 
 class GeetingEndHookContext(BaseModel):
     """
-    Configuration for MessageHookHandler.
+    Configuration for geeting_end_hook.
 
     Parameters
     ----------
@@ -147,5 +147,8 @@ async def geeting_end_hook(context: Dict[str, Any]):
                 "No worries! If you have any questions or want to chat later, just come back and say hi!"
             )
 
-    except Exception as e:
-        logging.error(f"Error in geeting_end_hook: {str(e)}")
+        return True
+
+    except Exception:
+        logging.exception("Error in geeting_end_hook")
+        return False
