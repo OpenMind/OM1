@@ -24,7 +24,7 @@ For websocket connections, include the API key in the query string. For example:
 
 ## API Pricing
 
-Access our API, scale usage as needed, and stay in control of costs. For detailed API pricing, refer [here](./api_pricing)
+Access our API, scale usage as needed, and stay in control of costs. For detailed API pricing, see [here](./api_pricing)
 
 - High-speed requests
 - Cutting-edge large models
