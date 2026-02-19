@@ -680,7 +680,9 @@ async def execute_lifecycle_hooks(
                         )
                         return False
                     if hook.on_failure == "ignore":
-                        pass
+                        logging.warning(
+                            "Lifecycle hook failed but is configured to ignore failures; continuing execution"
+                        )
             else:
                 logging.error(
                     f"Failed to create handler for lifecycle hook: {hook.handler_type}"

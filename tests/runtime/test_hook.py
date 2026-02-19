@@ -1418,5 +1418,11 @@ class TestExecuteLifecycleHooks:
             "runtime.hook.create_hook_handler",
             side_effect=[mock_handler_success, mock_handler_failure],
         ):
-            result = await execute_lifecycle_hooks(hooks, LifecycleHookType.ON_ENTRY)
-            assert result is False
+            with patch("runtime.hook.logging") as mock_logging:
+                result = await execute_lifecycle_hooks(
+                    hooks, LifecycleHookType.ON_ENTRY
+                )
+                assert result is False
+                mock_logging.warning.assert_any_call(
+                    "Lifecycle hook failed but is configured to ignore failures; continuing execution"
+                )
