@@ -41,7 +41,9 @@ RUN printf '%s\n' \
   'ctl.!default { type pulse }' \
   > /etc/asound.conf
 
-RUN sed -i 's/hosts:.*/hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4/' /etc/nsswitch.conf
+RUN if ! grep -q 'mdns4_minimal' /etc/nsswitch.conf; then \
+      sed -i 's/^\(hosts:[[:space:]]*files\)\(.*\)$/\1 mdns4_minimal [NOTFOUND=return]\2/' /etc/nsswitch.conf; \
+    fi
 
 WORKDIR /app
 RUN git clone --branch releases/0.10.x https://github.com/eclipse-cyclonedds/cyclonedds
