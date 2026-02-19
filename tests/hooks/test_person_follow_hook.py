@@ -134,7 +134,7 @@ class TestStartPersonFollowHook:
     @pytest.mark.asyncio
     async def test_start_person_follow_custom_base_url(self, mock_elevenlabs_provider):
         """Test person follow with custom base URL."""
-        context = {"person_follow_base_url": "http://custom.robot:9000"}
+        context = {"base_url": "http://custom.robot:9000"}
 
         mock_enroll_response = create_mock_response(200)
         mock_status_response = create_mock_response(200, {"is_tracked": True})
@@ -301,7 +301,7 @@ class TestStopPersonFollowHook:
     @pytest.mark.asyncio
     async def test_stop_person_follow_success_custom_url(self):
         """Test successful person follow stop with custom URL."""
-        context = {"person_follow_base_url": "http://robot.custom:8888"}
+        context = {"base_url": "http://robot.custom:8888"}
 
         mock_response = create_mock_response(200)
 

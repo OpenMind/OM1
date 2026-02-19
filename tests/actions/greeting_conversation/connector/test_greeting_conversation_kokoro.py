@@ -23,18 +23,23 @@ def mock_providers():
             "actions.greeting_conversation.connector.greeting_conversation_kokoro.KokoroTTSProvider"
         ) as mock_tts_cls,
         patch(
-            "actions.greeting_conversation.connector.greeting_conversation_kokoro.GreetingConversationStateMachineProvider"
+            "actions.greeting_conversation.connector.base_greeting_conversation.GreetingConversationStateMachineProvider"
         ) as mock_state_cls,
         patch(
-            "actions.greeting_conversation.connector.greeting_conversation_kokoro.ContextProvider"
+            "actions.greeting_conversation.connector.base_greeting_conversation.ContextProvider"
         ) as mock_ctx_cls,
+        patch(
+            "actions.greeting_conversation.connector.base_greeting_conversation.open_zenoh_session"
+        ) as mock_zenoh,
     ):
         mock_tts = Mock()
         mock_state = Mock()
         mock_ctx = Mock()
+        mock_session = Mock()
         mock_tts_cls.return_value = mock_tts
         mock_state_cls.return_value = mock_state
         mock_ctx_cls.return_value = mock_ctx
+        mock_zenoh.return_value = mock_session
         yield {
             "tts_cls": mock_tts_cls,
             "tts": mock_tts,
@@ -42,6 +47,8 @@ def mock_providers():
             "state": mock_state,
             "ctx_cls": mock_ctx_cls,
             "ctx": mock_ctx,
+            "zenoh": mock_zenoh,
+            "session": mock_session,
         }
 
 
@@ -103,11 +110,8 @@ class TestGreetingConversationKokoroConnector:
 
     def test_init_sets_conversing_state(self, mock_providers, make_connector):
         """Test initialization sets state machine to CONVERSING."""
-        connector = make_connector()
-        assert (
-            connector.greeting_state_provider.current_state
-            is ConversationState.CONVERSING
-        )
+        make_connector()
+        mock_providers["state"].start_conversation.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_connect_adds_pending_message(
@@ -131,8 +135,8 @@ class TestGreetingConversationKokoroConnector:
             "current_state": ConversationState.CONVERSING
         }
         await connector.connect(greeting_input)
-        # "Hello! Nice to meet you." = 5 words -> (5/100) * 60 = 3.0 seconds
-        assert connector.tts_duration == pytest.approx(3.0)
+        # "Hello! Nice to meet you." = 5 words -> (5/100) * 60 = 3.0 seconds + 5 seconds buffer = 8.0 seconds total
+        assert connector.tts_duration == pytest.approx(8.0)
 
     @pytest.mark.asyncio
     async def test_connect_processes_conversation(
@@ -162,7 +166,7 @@ class TestGreetingConversationKokoroConnector:
             speech_clarity=0.9,
         )
         mock_providers["state"].process_conversation.return_value = {
-            "current_state": ConversationState.FINISHED
+            "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
         mock_providers["ctx"].update_context.assert_called_once_with(
@@ -185,7 +189,7 @@ class TestGreetingConversationKokoroConnector:
         connector.tts_triggered_time = float("inf")
         connector.tts_duration = 10.0
         with patch(
-            "actions.greeting_conversation.connector.greeting_conversation_kokoro.logging"
+            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
             connector.tick()
         mock_providers["state"].update_state_without_llm.assert_not_called()
@@ -200,7 +204,7 @@ class TestGreetingConversationKokoroConnector:
             "silence_duration": 2.0,
         }
         with patch(
-            "actions.greeting_conversation.connector.greeting_conversation_kokoro.logging"
+            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
             connector.tick()
         mock_providers["state"].update_state_without_llm.assert_called_once()
@@ -215,7 +219,7 @@ class TestGreetingConversationKokoroConnector:
             "silence_duration": 5.0,
         }
         with patch(
-            "actions.greeting_conversation.connector.greeting_conversation_kokoro.logging"
+            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
             connector.tick()
         mock_providers["ctx"].update_context.assert_called_once_with(
