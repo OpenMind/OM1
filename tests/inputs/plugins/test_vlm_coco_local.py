@@ -95,7 +95,7 @@ def test_formatted_latest_buffer_empty(vlm_coco_local):
 
 @pytest.mark.asyncio
 async def test_poll_returns_none_on_failed_frame_read(
-    mock_model, mock_check_webcam, mock_cv2_video_capture
+    mock_model, mock_check_webcam, mock_cv2_video_capture, caplog
 ):
     """Test that _poll returns None when cap.read() fails."""
     mock_cv2_video_capture.read.return_value = (False, None)
@@ -103,4 +103,15 @@ async def test_poll_returns_none_on_failed_frame_read(
     sensor = VLM_COCO_Local(config=config)
 
     result = await sensor._poll()
+    assert result is None
+    assert "Failed to read frame from camera" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_poll_returns_none_when_camera_handle_missing(vlm_coco_local):
+    """Guard path: when have_cam is true but cap handle is None, _poll returns None."""
+    vlm_coco_local.have_cam = True
+    vlm_coco_local.cap = None
+
+    result = await vlm_coco_local._poll()
     assert result is None
