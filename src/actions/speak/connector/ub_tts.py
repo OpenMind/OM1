@@ -3,7 +3,7 @@ import time
 from typing import Optional
 
 import zenoh
-from pydantic import Field
+from pydantic import Field, model_validator
 
 # Import the necessary base classes and YOUR existing SpeakInput interface
 from actions.base import ActionConfig, ActionConnector
@@ -34,10 +34,17 @@ class UbTtsConfig(ActionConfig):
         default=None,
         description="The IP address of the robot.",
     )
-    base_url: str = Field(
-        default=f"http://{robot_ip}:9090/v1/",
+    base_url: Optional[str] = Field(
+        default=None,
         description="The base URL for the UbTTS service.",
     )
+
+    @model_validator(mode="after")
+    def build_base_url(self) -> "UbTtsConfig":
+        """Build base_url after field values are resolved."""
+        if self.base_url is None and self.robot_ip is not None:
+            self.base_url = f"http://{self.robot_ip}:9090/v1/"
+        return self
 
 
 class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
