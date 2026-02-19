@@ -2,8 +2,51 @@ import logging
 from typing import Any, Dict
 
 import aiohttp
+from pydantic import BaseModel, ConfigDict, Field
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
+
+
+class StartSlamHookContext(BaseModel):
+    """
+    Context for starting SLAM hook.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the SLAM system.
+    """
+
+    base_url: str = Field(
+        default="http://localhost:5000",
+        description="Base URL for the SLAM system",
+    )
+
+    model_config = ConfigDict(extra="allow")
+
+
+class StopSlamHookContext(BaseModel):
+    """
+    Context for stopping SLAM hook.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the SLAM system to send the stop command.
+    map_name : str
+        Name of the map to save before stopping SLAM.
+    """
+
+    base_url: str = Field(
+        default="http://localhost:5000",
+        description="Base URL for the SLAM system to send the stop command",
+    )
+    map_name: str = Field(
+        default="map",
+        description="Name of the map to save before stopping SLAM",
+    )
+
+    model_config = ConfigDict(extra="allow")
 
 
 async def start_slam_hook(context: Dict[str, Any]):
@@ -15,7 +58,8 @@ async def start_slam_hook(context: Dict[str, Any]):
     context : Dict[str, Any]
         Context dictionary containing configuration parameters.
     """
-    base_url = context.get("base_url", "http://localhost:5000")
+    ctx = StartSlamHookContext(**context)
+    base_url = ctx.base_url
     slam_url = f"{base_url}/start/slam"
 
     try:
@@ -62,9 +106,9 @@ async def stop_slam_hook(context: Dict[str, Any]):
     context : Dict[str, Any]
         Context dictionary containing configuration parameters.
     """
-    base_url = context.get("base_url", "http://localhost:5000")
-
-    map_name = context.get("map_name", "map")
+    ctx = StopSlamHookContext(**context)
+    base_url = ctx.base_url
+    map_name = ctx.map_name
 
     save_slam_map_url = f"{base_url}/maps/save"
     stop_slam_url = f"{base_url}/stop/slam"
