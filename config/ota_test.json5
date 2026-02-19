@@ -1,0 +1,46 @@
+{
+  // Configuration version
+  version: "v1.0.2",
+  // Mode system configuration for OTA test
+  default_mode: "ota_mode",
+  allow_manual_switching: true,
+  mode_memory_enabled: false,
+  // Global settings
+  api_key: "dummy", // pragma: allowlist secret
+  system_governance: "",
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "test",
+      history_length: 2,
+      model: "gpt-4.1-mini",
+    },
+  },
+  modes: {
+    ota_mode: {
+      display_name: "OTA Test Mode",
+      description: "Mode for testing the OTA update manager background plugin.",
+      system_prompt_base: "You are a test robot.",
+      hertz: 1,
+      agent_inputs: [],
+      action_execution_mode: "concurrent",
+      agent_actions: [],
+      backgrounds: [
+        {
+          type: "OTAUpdateManager",
+          config: {
+            // Poll every 60 seconds during testing (production default: 3600)
+            check_interval: 60,
+            // Set to true to apply updates without manual confirmation
+            auto_update: false,
+            // Points to the local mock update server
+            update_url: "http://localhost:8000",
+            // Always verify OMCU balance before a paid update
+            require_balance_check: true,
+          },
+        },
+      ],
+      lifecycle_hooks: [],
+    },
+  },
+}
