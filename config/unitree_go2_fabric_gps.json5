@@ -1,5 +1,5 @@
 {
-  version: "v1.0.2",
+  version: "v1.0.3",
   hertz: 1,
   name: "fabric_gps",
   unitree_ethernet: "${UNITREE_ETHERNET:-en0}",

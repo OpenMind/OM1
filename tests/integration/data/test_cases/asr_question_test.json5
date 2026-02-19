@@ -1,6 +1,6 @@
 {
   // Test case metadata
-  version: "v1.0.2",
+  version: "v1.0.3",
   name: "asr_question_test",
   description: "Test ASR input with a question about the weather",
   hertz: 1,
