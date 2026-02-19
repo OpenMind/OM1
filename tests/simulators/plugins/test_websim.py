@@ -160,6 +160,9 @@ class TestWebSim:
         assert "inputs" in websim.state_dict
         mock_tick.assert_called_once()
 
+    @pytest.mark.filterwarnings(
+        "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited"
+    )
     def test_sim_not_initialized(self, websim):
         """Test sim does nothing if not initialized."""
         websim._initialized = False
