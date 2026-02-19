@@ -1,7 +1,7 @@
 {
   name: "mode_transition_test",
   description: "Test input-triggered mode transition from calm to alert",
-  version: "v1.0.2",
+  version: "v1.0.3",
   api_key: "openmind_free",
   default_mode: "calm",
   modes: {
