@@ -44,4 +44,10 @@ services:
       - apparmor:unconfined
     group_add:
       - audio
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 512M
     command: ["${OM1_COMMAND:-unitree_go2_modes}"]
