@@ -8,10 +8,6 @@ from actions.dock_charging.connector.unitree_g1_dock import (
 )
 from actions.dock_charging.interface import DockChargingInput
 
-# ---------------------------------------------------------------------------
-# Config tests
-# ---------------------------------------------------------------------------
-
 
 def test_connector_config_defaults():
     """Test UnitreeG1DockConfig default values."""
@@ -34,11 +30,6 @@ def test_connector_config_custom():
     assert config.timeout == 10
     assert config.refresh_interval == 60
     assert config.default_dock_location == "my_dock"
-
-
-# ---------------------------------------------------------------------------
-# Connector tests
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture

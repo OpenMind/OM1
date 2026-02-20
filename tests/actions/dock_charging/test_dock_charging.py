@@ -12,10 +12,6 @@ from actions.dock_charging.connector.unitree_go2_dock import (
 )
 from actions.dock_charging.interface import DockCharging, DockChargingInput
 
-# ---------------------------------------------------------------------------
-# Interface tests
-# ---------------------------------------------------------------------------
-
 
 def test_dock_charging_input_defaults():
     """Test DockChargingInput default values."""
@@ -36,11 +32,6 @@ def test_dock_charging_interface():
     interface = DockCharging(input=inp, output=inp)
     assert interface.input == inp
     assert interface.output == inp
-
-
-# ---------------------------------------------------------------------------
-# Go2 config tests
-# ---------------------------------------------------------------------------
 
 
 def test_go2_connector_config_defaults():
@@ -64,11 +55,6 @@ def test_go2_connector_config_custom():
     assert config.timeout == 10
     assert config.refresh_interval == 60
     assert config.default_dock_location == "my_dock"
-
-
-# ---------------------------------------------------------------------------
-# Go2 connector tests
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -192,11 +178,6 @@ async def test_go2_connect_handles_navigation_exception(mock_go2_connector):
     await mock_go2_connector.connect(inp)
 
 
-# ---------------------------------------------------------------------------
-# G1 config tests
-# ---------------------------------------------------------------------------
-
-
 def test_g1_connector_config_defaults():
     """Test UnitreeG1DockConfig default values."""
     config = UnitreeG1DockConfig()
@@ -218,11 +199,6 @@ def test_g1_connector_config_custom():
     assert config.timeout == 10
     assert config.refresh_interval == 60
     assert config.default_dock_location == "my_dock"
-
-
-# ---------------------------------------------------------------------------
-# G1 connector tests
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
