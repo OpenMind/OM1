@@ -39,7 +39,13 @@ class MoveUnitreeSDKConnector(ActionConnector[ActionConfig, MoveInput]):
         elif output_interface.action == "dance":
             new_msg["move"] = "dance"
         elif output_interface.action == "shake paw":
-            new_msg["move"] = "shake paw"
+    new_msg["move"] = "shake paw"
+    if self.sport_client:
+        try:
+            self.sport_client.Hello()
+        except Exception as e:
+            logging.error(f"Shake paw action failed: {e}")
+            
         elif output_interface.action == "walk":
             new_msg["move"] = "walk"
         elif output_interface.action == "walk back":
