@@ -235,12 +235,15 @@ class PersonGreetingStatus(IdlStruct, typename="PersonGreetingStatus"):
         APPROACHING: A person is approaching.
         APPROACHED: A person has approached.
         SWITCH: Switch state from the conversation to find the next person.
+        CONVERSATION: Currently in conversation with a person.
         """
 
         APPROACHING = 0
         APPROACHED = 1
         SWITCH = 2
+        CONVERSATION = 3
 
     header: Header
     request_id: String
     status: int8
+    message: String
