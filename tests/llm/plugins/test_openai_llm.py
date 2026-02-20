@@ -155,3 +155,124 @@ async def test_ask_api_error(llm):
 
         result = await llm.ask("test prompt")
         assert result is None
+
+
+def make_response(tool_calls=None, content="{}"):
+    """Helper to build a mock completion response."""
+    mock_message = MagicMock()
+    mock_message.content = content
+    mock_message.tool_calls = tool_calls
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    response = MagicMock()
+    response.choices = [mock_choice]
+    return response
+
+
+@pytest.mark.asyncio
+async def test_ask_without_messages_only_prompt(llm):
+    """When no messages are provided, sent_messages should contain only one user prompt."""
+    response = make_response(tool_calls=None)
+
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = response
+        await llm.ask("only prompt")
+
+        sent_messages = mock_create.call_args.kwargs["messages"]
+        assert len(sent_messages) == 1
+        assert sent_messages[0] == {"role": "user", "content": "only prompt"}
+
+
+@pytest.mark.asyncio
+async def test_init_model_none_falls_back_to_default():
+    """When model is None, it should fall back to 'gpt-4.1-mini'."""
+    config = OpenAIConfig(base_url="test_url/", api_key="test_key", model=None)
+    llm = OpenAILLM(config, available_actions=None)
+    assert llm._config.model == "gpt-4.1-mini"
+
+
+@pytest.mark.asyncio
+async def test_init_base_url_none_falls_back_to_default():
+    """When base_url is None, the client should use the default OpenMind URL."""
+    config = OpenAIConfig(base_url=None, api_key="test_key", model="gpt-4o")
+    llm = OpenAILLM(config, available_actions=None)
+    assert "openmind.org" in str(llm._client.base_url)
+
+
+@pytest.mark.asyncio
+async def test_ask_multiple_tool_calls(llm):
+    """When there are multiple tool calls, function_call_data should include all calls."""
+
+    def make_tool_call(name, args):
+        tc = MagicMock()
+        tc.function.name = name
+        tc.function.arguments = args
+        return tc
+
+    tool_calls = [
+        make_tool_call("action_one", '{"key": "val1"}'),
+        make_tool_call("action_two", '{"key": "val2"}'),
+        make_tool_call("action_three", '{"key": "val3"}'),
+    ]
+    response = make_response(tool_calls=tool_calls)
+
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = response
+        with patch(
+            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+        ) as mock_convert:
+            mock_convert.return_value = [
+                Action(type="action_one", value="val1"),
+                Action(type="action_two", value="val2"),
+                Action(type="action_three", value="val3"),
+            ]
+            result = await llm.ask("test")
+
+            # Verify that the function_call_data passed to convert contains three items
+            call_args = mock_convert.call_args[0][0]
+            assert len(call_args) == 3
+            assert call_args[0]["function"]["name"] == "action_one"
+            assert call_args[1]["function"]["name"] == "action_two"
+            assert call_args[2]["function"]["name"] == "action_three"
+
+            # Verify that the result contains three actions
+            assert isinstance(result, CortexOutputModel)
+            assert len(result.actions) == 3
+
+
+@pytest.mark.asyncio
+async def test_ask_tool_call_data_format(llm):
+    """Verify that each item passed to convert_function_calls_to_actions has the correct data format."""
+    tc = MagicMock()
+    tc.function.name = "my_action"
+    tc.function.arguments = '{"param": 42}'
+    response = make_response(tool_calls=[tc])
+
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = response
+        with patch(
+            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+        ) as mock_convert:
+            mock_convert.return_value = []
+            await llm.ask("test")
+
+            call_args = mock_convert.call_args[0][0]
+            assert len(call_args) == 1
+            item = call_args[0]
+            assert "function" in item
+            assert item["function"]["name"] == "my_action"
+            assert item["function"]["arguments"] == '{"param": 42}'
+
+
+def test_history_manager_update_history_applied(llm):
+    """A decorator usually leaves a marker on the function object, or we can verify
+    that LLMHistoryManager has been properly initialized.
+    """
+    assert hasattr(llm, "history_manager")
+    assert llm.history_manager is not None
