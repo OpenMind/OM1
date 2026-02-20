@@ -1,17 +1,13 @@
 import logging
-import time
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import Field
 
-from actions.base import ActionConfig, ActionConnector
-from actions.greeting_conversation.interface import GreetingConversationInput
-from providers.context_provider import ContextProvider
-from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
-from providers.greeting_conversation_state_provider import (
-    ConversationState,
-    GreetingConversationStateMachineProvider,
+from actions.base import ActionConfig
+from actions.greeting_conversation.connector.base_greeting_conversation import (
+    BaseGreetingConversationConnector,
 )
+from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 
 class SpeakElevenLabsTTSConfig(ActionConfig):
@@ -55,28 +51,21 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
 
 
 class GreetingConversationConnector(
-    ActionConnector[SpeakElevenLabsTTSConfig, GreetingConversationInput]
+    BaseGreetingConversationConnector[SpeakElevenLabsTTSConfig]
 ):
     """
-    Connector that manages greeting conversations for the robot.
+    Connector that manages greeting conversations using ElevenLabs TTS.
     """
 
-    def __init__(self, config: SpeakElevenLabsTTSConfig):
+    def create_tts_provider(self) -> Any:
         """
-        Initialize the GreetingConversationConnector.
+        Create and return the ElevenLabs TTS provider.
 
-        Parameters
-        ----------
-        config : ActionConfig
-            Configuration for the action connector.
+        Returns
+        -------
+        ElevenLabsTTSProvider
+            The instantiated ElevenLabs TTS provider.
         """
-        super().__init__(config)
-
-        self.greeting_state_provider = GreetingConversationStateMachineProvider()
-        self.greeting_state_provider.start_conversation()
-
-        self.context_provider = ContextProvider()
-
         # OM API key
         api_key = getattr(self.config, "api_key", None)
 
@@ -86,97 +75,12 @@ class GreetingConversationConnector(
         model_id = self.config.model_id
         output_format = self.config.output_format
 
-        # TTS Setup
-        self.tts = ElevenLabsTTSProvider(
+        logging.info("Creating ElevenLabs TTS provider")
+        return ElevenLabsTTSProvider(
             url="https://api.openmind.org/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
             model_id=model_id,
             output_format=output_format,
-        )
-        self.tts.start()
-
-        self.tts_triggered_time = time.time()
-        self.tts_duration = 0.0
-        self.conversation_finished_sent = False
-
-    async def connect(self, output_interface: GreetingConversationInput) -> None:
-        """
-        Connects to the greeting conversation system and processes the input.
-
-        Parameters
-        ----------
-        output_interface : GreetingConversationInput
-            The output interface containing the greeting conversation data.
-        """
-        logging.info(f"Conversation State: {output_interface.conversation_state}")
-        logging.info(f"Greeting Response: {output_interface.response}")
-        logging.info(f"Confidence Score: {output_interface.confidence}")
-        logging.info(f"Speech Clarity Score: {output_interface.speech_clarity}")
-
-        llm_output = {
-            "conversation_state": output_interface.conversation_state,
-            "response": output_interface.response,
-            "confidence": output_interface.confidence,
-            "speech_clarity": output_interface.speech_clarity,
-        }
-
-        self.tts.add_pending_message(output_interface.response)
-
-        # Estimate TTS duration based on text length (~100 words per minute speech rate)
-        word_count = len(output_interface.response.split())
-        self.tts_duration = (
-            word_count / 100.0
-        ) * 60.0 + 5  # Convert to seconds and add buffer time
-        self.tts_triggered_time = time.time()
-
-        response = self.greeting_state_provider.process_conversation(llm_output)
-        logging.info(f"Greeting Conversation Response: {response}")
-
-        if (
-            response.get("current_state") == ConversationState.FINISHED.value
-            and not self.conversation_finished_sent
-        ):
-            logging.info("Greeting conversation has finished.")
-            self.context_provider.update_context(
-                {"greeting_conversation_finished": True}
-            )
-            self.conversation_finished_sent = True
-
-    def tick(self) -> None:
-        """
-        Tick method for the connector.
-
-        Periodically updates the conversation state even without LLM input.
-        """
-        logging.info("GreetingConversationConnector tick called")
-
-        self.sleep(10)
-
-        if time.time() - self.tts_triggered_time < self.tts_duration:
-            logging.info(
-                f"Skipping tick update due to recent TTS activity (remaining: {self.tts_duration - (time.time() - self.tts_triggered_time):.1f}s)."
-            )
-            return
-
-        # Update state based on current factors (silence, time, etc.)
-        state_update = self.greeting_state_provider.update_state_without_llm()
-
-        # Check if conversation has finished
-        if (
-            state_update.get("current_state") == ConversationState.FINISHED.value
-            and not self.conversation_finished_sent
-        ):
-            logging.info("Greeting conversation has finished (detected in tick).")
-            self.context_provider.update_context(
-                {"greeting_conversation_finished": True}
-            )
-            self.conversation_finished_sent = True
-
-        # Log the updated state
-        logging.info(
-            f"State: {state_update.get('current_state')}, "
-            f"Confidence: {state_update.get('confidence', {}).get('overall', 0):.2f}, "
-            f"Silence: {state_update.get('silence_duration', 0):.1f}s"
         )
