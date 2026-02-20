@@ -87,8 +87,11 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     echo 'echo "Audio device default_output_aec is ready."' >> /entrypoint.sh && \
     echo 'echo "Starting mDNS..."' >> /entrypoint.sh && \
-    echo 'mkdir -p /var/run/dbus && dbus-daemon --system --fork 2>/dev/null || true' >> /entrypoint.sh && \
-    echo 'avahi-daemon --daemonize --no-chroot 2>/dev/null || true' >> /entrypoint.sh && \
+    echo 'mkdir -p /var/run/dbus' >> /entrypoint.sh && \
+    echo 'dbus-uuidgen > /etc/machine-id 2>/dev/null || true' >> /entrypoint.sh && \
+    echo 'dbus-daemon --system --fork 2>/dev/null || true' >> /entrypoint.sh && \
+    echo 'sleep 0.5' >> /entrypoint.sh && \
+    echo 'avahi-daemon --no-chroot -D 2>/dev/null || true' >> /entrypoint.sh && \
     echo 'sleep 1' >> /entrypoint.sh && \
     echo 'echo "Starting main command..."' >> /entrypoint.sh && \
     echo 'if [ -n "${OM1_COMMAND}" ]; then' >> /entrypoint.sh && \
