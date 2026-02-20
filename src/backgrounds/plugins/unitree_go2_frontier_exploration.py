@@ -51,7 +51,10 @@ class UnitreeGo2FrontierExploration(Background[UnitreeGo2FrontierExplorationConf
 
         try:
             context_aware_text = json.loads(context_aware_text)
-        except (json.JSONDecodeError, Exception) as e:
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding context_aware_text JSON: {e}")
+            context_aware_text = {"exploration_done": True}
+        except Exception as e:
             logging.error(f"Error decoding context_aware_text JSON: {e}")
             context_aware_text = {"exploration_done": True}
 

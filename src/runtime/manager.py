@@ -790,7 +790,9 @@ class ModeManager:
             else:
                 logging.warning(f"Invalid context data format: {context_data}")
 
-        except (json.JSONDecodeError, Exception) as e:
+        except json.JSONDecodeError as e:
+            logging.error(f"Error processing context update: {e}")
+        except Exception as e:
             logging.error(f"Error processing context update: {e}")
 
     async def _check_and_apply_context_transition(self):
