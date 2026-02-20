@@ -517,7 +517,7 @@ class GreetingConversationStateMachineProvider:
         else:
             return {"action": "wait", "track_current": True, "find_new_target": False}
 
-    def update_state_without_llm(self) -> Dict:
+    def update_state_without_llm(self) -> Dict[str, Any]:
         """
         Update conversation state based on current factors without requiring LLM input.
         This should be called periodically (e.g., in tick()) to handle timeouts and
