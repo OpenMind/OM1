@@ -93,5 +93,8 @@ RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'fi' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
+HEALTHCHECK --interval=60s --timeout=10s --start-period=120s --retries=3 \
+    CMD python -c "print('healthy')" || exit 1
+
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["spot"]
