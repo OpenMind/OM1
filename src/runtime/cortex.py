@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import List, Optional, Union
+from typing import List, Optional, Set, Union
 
 from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
@@ -13,12 +13,33 @@ from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.config import (
     LifecycleHookType,
+    ModeConfig,
     ModeSystemConfig,
     RuntimeConfig,
     load_mode_config,
 )
 from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+
+# Fields that can be updated in-place without restarting orchestrators.
+# These fields are read dynamically at each tick, so updating them on the
+# config object is sufficient for the change to take effect.
+_MODE_HOT_RELOAD_FIELDS: frozenset = frozenset(
+    {
+        "system_prompt_base",
+        "hertz",
+        "name",
+    }
+)
+
+_SYSTEM_HOT_RELOAD_FIELDS: frozenset = frozenset(
+    {
+        "system_governance",
+        "system_prompt_examples",
+    }
+)
+
+_ALL_HOT_RELOAD_FIELDS: frozenset = _MODE_HOT_RELOAD_FIELDS | _SYSTEM_HOT_RELOAD_FIELDS
 
 
 class ModeCortexRuntime:
@@ -647,12 +668,127 @@ class ModeCortexRuntime:
                 logging.error(f"Error checking config changes: {e}")
                 await asyncio.sleep(10)  # Wait before retrying
 
+    def _get_changed_fields(
+        self,
+        old_mode: ModeConfig,
+        new_mode: ModeConfig,
+        old_system: ModeSystemConfig,
+        new_system: ModeSystemConfig,
+    ) -> Set[str]:
+        """
+        Compare two configurations and return the set of changed field names.
+
+        Compares mode-level hot-reloadable fields (e.g., system_prompt_base),
+        system-level hot-reloadable fields (e.g., system_governance), and
+        structural fields (e.g., agent_inputs) to determine what has changed.
+
+        Parameters
+        ----------
+        old_mode : ModeConfig
+            The previous mode configuration.
+        new_mode : ModeConfig
+            The new mode configuration.
+        old_system : ModeSystemConfig
+            The previous system configuration.
+        new_system : ModeSystemConfig
+            The new system configuration.
+
+        Returns
+        -------
+        Set[str]
+            Set of field names that differ between the two configurations.
+        """
+        changed: Set[str] = set()
+
+        # Check mode-level hot-reloadable fields
+        for field_name in _MODE_HOT_RELOAD_FIELDS:
+            old_val = getattr(old_mode, field_name, None)
+            new_val = getattr(new_mode, field_name, None)
+            if old_val != new_val:
+                changed.add(field_name)
+
+        # Check system-level hot-reloadable fields
+        for field_name in _SYSTEM_HOT_RELOAD_FIELDS:
+            old_val = getattr(old_system, field_name, None)
+            new_val = getattr(new_system, field_name, None)
+            if old_val != new_val:
+                changed.add(field_name)
+
+        # Check structural fields via raw config comparison
+        structural_checks = {
+            "agent_inputs": ("_raw_inputs", "_raw_inputs"),
+            "cortex_llm": ("_raw_llm", "_raw_llm"),
+            "agent_actions": ("_raw_actions", "_raw_actions"),
+            "backgrounds": ("_raw_backgrounds", "_raw_backgrounds"),
+            "simulators": ("_raw_simulators", "_raw_simulators"),
+        }
+
+        for field_name, (old_attr, new_attr) in structural_checks.items():
+            old_val = getattr(old_mode, old_attr, None)
+            new_val = getattr(new_mode, new_attr, None)
+            if old_val != new_val:
+                changed.add(field_name)
+
+        return changed
+
+    def _apply_partial_reload(
+        self,
+        new_mode_config: ModeSystemConfig,
+        new_mode: ModeConfig,
+        changed_fields: Set[str],
+    ) -> None:
+        """
+        Apply in-place updates for hot-reloadable fields without restarting
+        orchestrators.
+
+        Updates the field values directly on the current ModeConfig,
+        ModeSystemConfig, and RuntimeConfig objects. Since these fields are
+        read dynamically at each tick (e.g., by the Fuser), the changes
+        take effect immediately.
+
+        Parameters
+        ----------
+        new_mode_config : ModeSystemConfig
+            The new complete system configuration.
+        new_mode : ModeConfig
+            The new mode configuration containing updated values.
+        changed_fields : Set[str]
+            Set of field names that were changed.
+        """
+        current_mode_name = self.mode_manager.current_mode_name
+        old_mode = self.mode_config.modes.get(current_mode_name)
+
+        for field_name in changed_fields:
+            # Determine the source of the new value
+            if field_name in _SYSTEM_HOT_RELOAD_FIELDS:
+                new_val = getattr(new_mode_config, field_name)
+                # Update system config
+                if hasattr(self.mode_config, field_name):
+                    setattr(self.mode_config, field_name, new_val)
+            else:
+                new_val = getattr(new_mode, field_name)
+                # Update current mode config
+                if old_mode and hasattr(old_mode, field_name):
+                    setattr(old_mode, field_name, new_val)
+
+            # Update current runtime config
+            if self.current_config and hasattr(self.current_config, field_name):
+                setattr(self.current_config, field_name, new_val)
+
+            logging.info(f"Hot-reloaded field '{field_name}'")
+
+        # Update the stored system config
+        self.mode_config = new_mode_config
+        self.mode_manager.config = new_mode_config
+
     async def _reload_config(self) -> None:
         """
         Reload the mode configuration when runtime config file changes.
 
-        The runtime config file serves as a trigger - when it changes, we reload
-        from the original configuration source and then regenerate the runtime config.
+        Performs selective (partial) reload when only hot-reloadable fields
+        have changed (e.g., system_prompt_base, hertz). For structural changes
+        that affect orchestrators (e.g., agent_inputs, cortex_llm), performs
+        a full reload by stopping and restarting all components.
         """
         try:
             logging.info(
@@ -663,13 +799,43 @@ class ModeCortexRuntime:
 
             current_mode = self.mode_manager.current_mode_name
 
-            await self._stop_current_orchestrators()
-
             logging.info("Loading configuration from the new runtime file")
             new_mode_config = load_mode_config(
                 self.mode_config_name,
                 mode_source_path=self.mode_manager._get_runtime_config_path(),
             )
+
+            # Attempt selective (partial) reload if possible
+            if (
+                current_mode in new_mode_config.modes
+                and current_mode in self.mode_config.modes
+                and self.current_config
+            ):
+                old_mode = self.mode_config.modes[current_mode]
+                new_mode = new_mode_config.modes[current_mode]
+                changed_fields = self._get_changed_fields(
+                    old_mode, new_mode, self.mode_config, new_mode_config
+                )
+
+                if not changed_fields:
+                    logging.info("No config changes detected, skipping reload")
+                    return
+
+                if changed_fields.issubset(_ALL_HOT_RELOAD_FIELDS):
+                    self._apply_partial_reload(
+                        new_mode_config, new_mode, changed_fields
+                    )
+                    logging.info(
+                        f"Partial hot-reload completed for fields: {changed_fields}"
+                    )
+                    return
+
+                logging.info(
+                    f"Structural changes detected in {changed_fields - _ALL_HOT_RELOAD_FIELDS}, performing full reload"
+                )
+
+            # Full reload: stop everything and reinitialize
+            await self._stop_current_orchestrators()
 
             self.mode_config = new_mode_config
             self.mode_manager.config = new_mode_config
@@ -692,7 +858,7 @@ class ModeCortexRuntime:
             await self._start_orchestrators()
 
             logging.info(
-                f"Mode configuration reloaded successfully, active mode: {current_mode}"
+                f"Full configuration reload completed, active mode: {current_mode}"
             )
 
         except Exception as e:
