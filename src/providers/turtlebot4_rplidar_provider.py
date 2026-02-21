@@ -343,7 +343,7 @@ class TurtleBot4RPLidarProvider:
         """
         Determine set of possible paths
         """
-        possible_paths = np.array([4])
+        possible_paths = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
         if array.ndim > 1:
             # we have valid LIDAR returns
