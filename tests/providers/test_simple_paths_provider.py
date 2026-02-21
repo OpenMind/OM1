@@ -1,3 +1,6 @@
+import threading
+from unittest.mock import MagicMock
+
 import pytest
 
 from providers.simple_paths_provider import SimplePathsProvider
@@ -14,6 +17,8 @@ def simple_paths_provider():
     provider.turn_right = []
     provider.advance = []
     provider.retreat = False
+    provider._valid_paths = []
+    provider._lidar_string = ""
     return provider
 
 
@@ -92,3 +97,49 @@ def test_generate_movement_string_none_paths(simple_paths_provider):
     expected_surrounded = "You are surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
     result_surrounded = simple_paths_provider._generate_movement_string([])
     assert result_surrounded == expected_surrounded
+
+
+def test_movement_options(simple_paths_provider):
+    """Test movement_options property returns correct dict structure."""
+    simple_paths_provider.turn_left = [0, 1]
+    simple_paths_provider.advance = [3, 4, 5]
+    simple_paths_provider.turn_right = [7, 8]
+    simple_paths_provider.retreat = True
+
+    result = simple_paths_provider.movement_options
+    assert result == {
+        "turn_left": [0, 1],
+        "advance": [3, 4, 5],
+        "turn_right": [7, 8],
+        "retreat": True,
+    }
+
+
+def test_movement_options_empty(simple_paths_provider):
+    """Test movement_options property with default empty values."""
+    result = simple_paths_provider.movement_options
+    assert result == {
+        "turn_left": [],
+        "advance": [],
+        "turn_right": [],
+        "retreat": False,
+    }
+
+
+def test_stop(simple_paths_provider):
+    """Test stop method sets stop event, sends STOP to queue, and joins threads."""
+    simple_paths_provider._stop_event = threading.Event()
+    mock_queue = MagicMock()
+    simple_paths_provider.control_queue = mock_queue
+
+    mock_processor_thread = MagicMock()
+    mock_derived_thread = MagicMock()
+    simple_paths_provider._simple_paths_processor_thread = mock_processor_thread
+    simple_paths_provider._simple_paths_derived_thread = mock_derived_thread
+
+    simple_paths_provider.stop()
+
+    assert simple_paths_provider._stop_event.is_set()
+    mock_queue.put.assert_called_once_with("STOP")
+    mock_processor_thread.join.assert_called_once()
+    mock_derived_thread.join.assert_called_once()

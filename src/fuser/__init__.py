@@ -5,7 +5,7 @@ import typing as T
 from actions import describe_action
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 
 
 class Fuser:
@@ -16,11 +16,6 @@ class Fuser:
     and command prompts into a coherent format for LLM processing.
 
     Parameters
-    ----------
-    config : RuntimeConfig
-        Runtime configuration containing system prompts and agent actions.
-
-    Attributes
     ----------
     config : RuntimeConfig
         Runtime configuration settings.

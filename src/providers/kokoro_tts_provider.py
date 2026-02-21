@@ -71,6 +71,7 @@ class KokoroTTSProvider:
         self._voice_id = voice_id
         self._model_id = model_id
         self._output_format = output_format
+        self._rate = rate
         self._enable_tts_interrupt = enable_tts_interrupt
 
     def configure(
@@ -111,6 +112,7 @@ class KokoroTTSProvider:
             or voice_id != self._voice_id
             or model_id != self._model_id
             or output_format != self._output_format
+            or rate != self._rate
             or enable_tts_interrupt != self._enable_tts_interrupt
         )
 
@@ -124,6 +126,7 @@ class KokoroTTSProvider:
         self._voice_id = voice_id
         self._model_id = model_id
         self._output_format = output_format
+        self._rate = rate
         self._enable_tts_interrupt = enable_tts_interrupt
 
         self._audio_stream: AudioOutputLiveStream = AudioOutputLiveStream(
@@ -208,7 +211,7 @@ class KokoroTTSProvider:
         Start the TTS provider and its audio stream.
         """
         if self.running:
-            logging.warning("Eleven Labs TTS provider is already running")
+            logging.warning("Kokoro TTS provider is already running")
             return
 
         self.running = True
@@ -219,7 +222,7 @@ class KokoroTTSProvider:
         Stop the TTS provider and cleanup resources.
         """
         if not self.running:
-            logging.warning("Eleven Labs TTS provider is not running")
+            logging.warning("Kokoro TTS provider is not running")
             return
 
         self.running = False

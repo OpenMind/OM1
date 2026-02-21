@@ -84,6 +84,11 @@ class Simulator:
     def sim(self, actions: List[Action]) -> None:
         """
         Simulate the environment with the given actions.
+
+        Parameters
+        ----------
+        actions : List[Action]
+            List of actions to simulate in the environment.
         """
         pass
 
@@ -94,4 +99,13 @@ class Simulator:
         Note: This method should not block the event loop.
         """
         self.sleep(60)
+
+    def stop(self) -> None:
+        """
+        Stop the simulator and clean up resources.
+
+        This method should be overridden by subclasses that need to perform
+        cleanup operations (e.g., closing connections, releasing resources).
+        The base implementation does nothing.
+        """
         pass

@@ -3,10 +3,59 @@ import logging
 from typing import Any, Dict
 
 import aiohttp
+from pydantic import BaseModel, ConfigDict, Field
 
 from providers.elevenlabs_tts_provider import ElevenLabsTTSProvider
 
 PERSON_FOLLOW_BASE_URL = "http://localhost:8080"
+
+
+class StartPersonFollowHookContext(BaseModel):
+    """
+    Context for starting person follow hook.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the person following system.
+    enroll_timeout : float
+        Time in seconds to wait for person enrollment before retrying.
+    max_retries : int
+        Maximum number of enrollment attempts before waiting for detection.
+    """
+
+    base_url: str = Field(
+        default=PERSON_FOLLOW_BASE_URL,
+        description="Base URL for the person following system",
+    )
+    enroll_timeout: float = Field(
+        default=3.0,
+        description="Time in seconds to wait for person enrollment before retrying",
+    )
+    max_retries: int = Field(
+        default=5,
+        description="Maximum number of enrollment attempts before waiting for detection",
+    )
+
+    model_config = ConfigDict(extra="allow")
+
+
+class StopPersonFollowHookContext(BaseModel):
+    """
+    Context for stopping person follow hook.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL for the person following system to send the clear command.
+    """
+
+    base_url: str = Field(
+        default=PERSON_FOLLOW_BASE_URL,
+        description="Base URL for the person following system to send the clear command",
+    )
+
+    model_config = ConfigDict(extra="allow")
 
 
 async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
@@ -18,9 +67,11 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     context : Dict[str, Any]
         Context dictionary containing configuration parameters.
     """
-    base_url = context.get("person_follow_base_url", PERSON_FOLLOW_BASE_URL)
-    enroll_timeout = context.get("enroll_timeout", 3.0)
-    max_retries = context.get("max_retries", 5)
+    ctx = StartPersonFollowHookContext(**context)
+
+    base_url = ctx.base_url
+    enroll_timeout = ctx.enroll_timeout
+    max_retries = ctx.max_retries
 
     elevenlabs_provider = ElevenLabsTTSProvider()
     enroll_url = f"{base_url}/enroll"
@@ -101,7 +152,8 @@ async def stop_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     context : Dict[str, Any]
         Context dictionary containing configuration parameters.
     """
-    base_url = context.get("person_follow_base_url", PERSON_FOLLOW_BASE_URL)
+    ctx = StopPersonFollowHookContext(**context)
+    base_url = ctx.base_url
     clear_url = f"{base_url}/clear"
 
     try:

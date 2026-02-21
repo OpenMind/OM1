@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "description": "Outdoor GPS location - San Francisco",
+    "sensor_type": "gps"
+  },
+  "data": {
+    "gps_lat": 37.7749,
+    "gps_lon": -122.4194,
+    "gps_alt": 10.0,
+    "gps_qua": 1
+  }
+}

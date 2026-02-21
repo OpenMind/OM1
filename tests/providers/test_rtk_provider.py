@@ -1,3 +1,6 @@
+import datetime
+from unittest.mock import patch
+
 import pytest
 
 from providers.rtk_provider import RtkProvider
@@ -82,3 +85,44 @@ def test_get_latest_gngga_message_malformed_time_field(rtk_provider):
     expected = "$GNGGA,123459.000,1234.5678,N,00123.4567,E,1,8,1.0,103.0,M,47.0,M,,*67"
     result = rtk_provider.get_latest_gngga_message(nmea_data)
     assert result == expected
+
+
+def test_utc_time_obj_to_unix_valid(rtk_provider):
+    """Test converting a valid UTC time object to Unix timestamp."""
+    utc_time = datetime.time(12, 30, 45)
+
+    with patch("providers.rtk_provider.datetime") as mock_dt:
+        mock_dt.time = datetime.time
+        mock_dt.date.today.return_value = datetime.date(2026, 1, 15)
+        mock_dt.datetime.combine = datetime.datetime.combine
+        mock_dt.timezone = datetime.timezone
+
+        result = rtk_provider.utc_time_obj_to_unix(utc_time)
+
+    assert isinstance(result, float)
+    assert result > 0
+
+
+def test_utc_time_obj_to_unix_midnight(rtk_provider):
+    """Test converting midnight UTC time."""
+    utc_time = datetime.time(0, 0, 0)
+
+    with patch("providers.rtk_provider.datetime") as mock_dt:
+        mock_dt.time = datetime.time
+        mock_dt.date.today.return_value = datetime.date(2026, 1, 15)
+        mock_dt.datetime.combine = datetime.datetime.combine
+        mock_dt.timezone = datetime.timezone
+
+        result = rtk_provider.utc_time_obj_to_unix(utc_time)
+
+    assert isinstance(result, float)
+    assert result > 0
+
+
+def test_utc_time_obj_to_unix_invalid_type(rtk_provider):
+    """Test that non-datetime.time input raises TypeError."""
+    with pytest.raises(TypeError, match="Expected a datetime.time object"):
+        rtk_provider.utc_time_obj_to_unix("12:30:45")
+
+    with pytest.raises(TypeError, match="Expected a datetime.time object"):
+        rtk_provider.utc_time_obj_to_unix(12345)

@@ -55,10 +55,10 @@ class PresenceSnapshot:
         seen = set()
         clean: List[str] = []
         for n in self.names or []:
-            n = (n or "").strip()
-            if n and n.lower() != "unknown" and n not in seen:
-                seen.add(n)
-                clean.append(n)
+            name = (n or "").strip()
+            if name and name.lower() != "unknown" and name not in seen:
+                seen.add(name)
+                clean.append(name)
 
         k = len(clean)
         u = int(self.unknown_faces or 0)
@@ -154,7 +154,14 @@ class FacePresenceProvider:
         self._unknown_faces: int = 0
 
     def set_recent_sec(self, sec: float) -> None:
-        """Dynamically change the lookback window used for `/who`."""
+        """
+        Dynamically change the lookback window used for `/who`.
+
+        Parameters
+        ----------
+        sec : float
+            The number of seconds to use as the lookback window.
+        """
         self.recent_sec = max(0.0, float(sec))
 
     def register_message_callback(self, fn: Callable[[str], None]) -> None:
@@ -196,7 +203,14 @@ class FacePresenceProvider:
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
-        """Request the background thread to stop."""
+        """
+        Request the background thread to stop.
+
+        Parameters
+        ----------
+        wait : bool
+            If True, waits for the thread to finish. Defaults to False.
+        """
         self._stop.set()
         if wait and self._thread:
             self._thread.join(timeout=3.0)

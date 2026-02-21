@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from llm.output_model import Action
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 from simulators.base import Simulator, SimulatorConfig
 from simulators.orchestrator import SimulatorOrchestrator
 
@@ -69,13 +69,14 @@ async def test_start_simulators(orchestrator):
             == orchestrator._simulator_workers
         )
 
-        assert len(orchestrator._submitted_simulators) == len(
+        assert len(orchestrator._simulator_instances) == len(
             orchestrator._config.simulators
         )
         assert isinstance(future, asyncio.Future)
 
         expected_simulator_names = {bg.name for bg in orchestrator._config.simulators}
-        assert orchestrator._submitted_simulators == expected_simulator_names
+        actual_simulator_names = {sim.name for sim in orchestrator._simulator_instances}
+        assert actual_simulator_names == expected_simulator_names
     finally:
         orchestrator.stop()
 

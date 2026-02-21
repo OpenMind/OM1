@@ -5,7 +5,7 @@ import typing as T
 from concurrent.futures import ThreadPoolExecutor
 
 from llm.output_model import Action
-from runtime.single_mode.config import RuntimeConfig
+from runtime.config import RuntimeConfig
 from simulators.base import Simulator
 
 
@@ -20,10 +20,18 @@ class SimulatorOrchestrator:
     _config: RuntimeConfig
     _simulator_workers: int
     _simulator_executor: ThreadPoolExecutor
-    _submitted_simulators: T.Set[str]
+    _simulator_instances: T.List[Simulator]
     _stop_event: threading.Event
 
     def __init__(self, config: RuntimeConfig):
+        """
+        Initialize the Simulator Orchestrator.
+
+        Parameters
+        ----------
+        config : RuntimeConfig
+            Runtime configuration containing simulator settings.
+        """
         self._config = config
         self.promise_queue = []
         self._simulator_workers = (
@@ -32,7 +40,7 @@ class SimulatorOrchestrator:
         self._simulator_executor = ThreadPoolExecutor(
             max_workers=self._simulator_workers,
         )
-        self._submitted_simulators = set()
+        self._simulator_instances = []
         self._stop_event = threading.Event()
 
     def start(self):
@@ -40,7 +48,7 @@ class SimulatorOrchestrator:
         Start simulators in separate threads.
         """
         for simulator in self._config.simulators:
-            if simulator.name in self._submitted_simulators:
+            if any(sim.name == simulator.name for sim in self._simulator_instances):
                 logging.warning(
                     f"Simulator {simulator.name} already submitted, skipping."
                 )
@@ -49,7 +57,7 @@ class SimulatorOrchestrator:
             simulator.set_stop_event(self._stop_event)
 
             self._simulator_executor.submit(self._run_simulator_loop, simulator)
-            self._submitted_simulators.add(simulator.name)
+            self._simulator_instances.append(simulator)
 
         return asyncio.Future()
 
@@ -65,8 +73,8 @@ class SimulatorOrchestrator:
         while not self._stop_event.is_set():
             try:
                 simulator.tick()
-            except Exception as e:
-                logging.error(f"Error in simulator {simulator.name}: {e}")
+            except Exception:
+                logging.exception(f"Error in simulator {simulator.name}")
                 self._stop_event.wait(timeout=0.1)
 
     async def flush_promises(self) -> tuple[list[T.Any], list[asyncio.Task[T.Any]]]:
@@ -126,9 +134,22 @@ class SimulatorOrchestrator:
     def stop(self):
         """
         Stop the simulator executor and wait for all tasks to complete.
+
+        Sets the stop event to signal all simulator loops to terminate,
+        calls stop() on each simulator instance for cleanup, then shuts
+        down the thread pool executor and waits for all running tasks to
+        finish gracefully.
         """
         self._stop_event.set()
+
+        for simulator in self._simulator_instances:
+            try:
+                simulator.stop()
+            except Exception:
+                logging.exception(f"Error stopping simulator {simulator.name}")
+
         self._simulator_executor.shutdown(wait=True)
+        self._simulator_instances.clear()
 
     def __del__(self):
         """

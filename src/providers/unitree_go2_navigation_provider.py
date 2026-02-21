@@ -272,13 +272,13 @@ class UnitreeGo2NavigationProvider:
         """
         self.running = False
 
-        if self.session:
-            self.session.close()
-            logging.info("Zenoh session closed")
-
         if self.ai_status_pub:
             self.ai_status_pub.undeclare()
             logging.info("AI status publisher closed")
+
+        if self.session:
+            self.session.close()
+            logging.info("Zenoh session closed")
 
         logging.warning("Navigation Provider is not running")
 
