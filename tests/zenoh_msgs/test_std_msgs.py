@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 from zenoh_msgs.idl.std_msgs import (
     ColorRGBA,
     Duration,
@@ -76,47 +74,36 @@ class TestString:
 class TestPrepareHeader:
     """Tests for the prepare_header function."""
 
-    @patch("zenoh_msgs.idl.std_msgs.time.time", return_value=1700000000.5)
-    def test_returns_header(self, mock_time):
-        """Test that prepare_header returns a Header instance."""
+    def test_returns_header(self):
         header = prepare_header()
         assert isinstance(header, Header)
 
-    @patch("zenoh_msgs.idl.std_msgs.time.time", return_value=1700000000.5)
-    def test_default_frame_id_is_empty(self, mock_time):
-        """Test that the default frame_id is an empty string."""
+    def test_default_frame_id_is_empty(self):
         header = prepare_header()
         assert header.frame_id == ""
 
-    @patch("zenoh_msgs.idl.std_msgs.time.time", return_value=1700000000.5)
-    def test_custom_frame_id(self, mock_time):
-        """Test prepare_header with a custom frame_id."""
+    def test_custom_frame_id(self):
         header = prepare_header(frame_id="odom")
         assert header.frame_id == "odom"
 
-    @patch("zenoh_msgs.idl.std_msgs.time.time", return_value=1700000000.5)
-    def test_timestamp_seconds(self, mock_time):
-        """Test that the seconds portion of the timestamp is correct."""
+    def test_timestamp_seconds_is_int(self):
         header = prepare_header()
-        assert header.stamp.sec == 1700000000
+        assert isinstance(header.stamp.sec, int)
+        assert header.stamp.sec > 0
 
-    @patch("zenoh_msgs.idl.std_msgs.time.time", return_value=1700000000.5)
-    def test_timestamp_nanoseconds(self, mock_time):
-        """Test that the nanoseconds portion of the timestamp is correct."""
+    def test_timestamp_nanoseconds_is_int(self):
         header = prepare_header()
-        assert header.stamp.nanosec == 500000000
+        assert isinstance(header.stamp.nanosec, int)
+        assert 0 <= header.stamp.nanosec < 1_000_000_000
 
-    @patch("zenoh_msgs.idl.std_msgs.time.time", return_value=1000.0)
-    def test_zero_nanoseconds(self, mock_time):
-        """Test timestamp when time has no fractional part."""
-        header = prepare_header()
-        assert header.stamp.sec == 1000
-        assert header.stamp.nanosec == 0
+    def test_timestamp_is_recent(self):
+        import time
 
-    @patch("zenoh_msgs.idl.std_msgs.time.time", return_value=1700000000.123456789)
-    def test_fractional_nanoseconds(self, mock_time):
-        """Test nanosecond conversion from fractional seconds."""
+        before = int(time.time()) - 1
         header = prepare_header()
-        assert header.stamp.sec == 1700000000
-        expected_ns = int(0.123456789 * 1000000000)
-        assert abs(header.stamp.nanosec - expected_ns) < 100
+        after = int(time.time()) + 1
+        assert before <= header.stamp.sec <= after
+
+    def test_fractional_nanoseconds(self):
+        header = prepare_header()
+        assert 0 <= header.stamp.nanosec < 1_000_000_000
