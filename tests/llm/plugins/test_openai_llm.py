@@ -13,7 +13,21 @@ class DummyOutputModel(BaseModel):
 
 @pytest.fixture
 def config():
-    return OpenAIConfig(base_url="test_url/", api_key="test_key", model="test_model")
+    return OpenAIConfig(
+        base_url="https://test_url/", api_key="test_key", model="test_model"
+    )
+
+
+def make_response(tool_calls=None, content="{}"):
+    """Helper to build a mock completion response."""
+    mock_message = MagicMock()
+    mock_message.content = content
+    mock_message.tool_calls = tool_calls
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    response = MagicMock()
+    response.choices = [mock_choice]
+    return response
 
 
 @pytest.fixture
@@ -21,26 +35,12 @@ def mock_completion_response_with_tool_calls():
     mock_tool_call = MagicMock()
     mock_tool_call.function.name = "test_function"
     mock_tool_call.function.arguments = '{"arg1": "value1"}'
-    mock_message = MagicMock()
-    mock_message.content = '{"test_field": "success"}'
-    mock_message.tool_calls = [mock_tool_call]
-    mock_choice = MagicMock()
-    mock_choice.message = mock_message
-    response = MagicMock()
-    response.choices = [mock_choice]
-    return response
+    return make_response(tool_calls=[mock_tool_call])
 
 
 @pytest.fixture
 def mock_completion_response_without_tool_calls():
-    mock_message = MagicMock()
-    mock_message.content = '{"test_field": "success"}'
-    mock_message.tool_calls = None
-    mock_choice = MagicMock()
-    mock_choice.message = mock_message
-    response = MagicMock()
-    response.choices = [mock_choice]
-    return response
+    return make_response(tool_calls=None)
 
 
 @pytest.fixture(autouse=True)
@@ -55,7 +55,11 @@ def mock_avatar_components():
 
     with (
         patch("llm.plugins.openai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch(
+            "llm.plugins.openai_llm.LLMHistoryManager.update_history", mock_decorator
+        ),
         patch("llm.plugins.openai_llm.AvatarLLMState") as mock_avatar_state,
+        patch("llm.plugins.openai_llm.LLMHistoryManager") as mock_history_manager_cls,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
         patch(
             "providers.avatar_llm_state_provider.AvatarProvider"
@@ -63,32 +67,59 @@ def mock_avatar_components():
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
+
         mock_provider_instance = MagicMock()
         mock_provider_instance.running = False
         mock_provider_instance.session = None
         mock_provider_instance.stop = MagicMock()
         mock_avatar_provider.return_value = mock_provider_instance
         mock_avatar_llm_state_provider.return_value = mock_provider_instance
+
+        mock_history_instance = MagicMock()
+        mock_history_instance.frame_index = 0
+        mock_history_instance.history = []
+        mock_history_instance.get_messages.return_value = []
+        mock_history_manager_cls.return_value = mock_history_instance
+
         yield
 
 
 @pytest.fixture
 def llm(config):
-    return OpenAILLM(config, available_actions=None)
+    instance = OpenAILLM(config, available_actions=None)
+    instance.io_provider = MagicMock()
+    instance._skip_state_management = True
+    return instance
 
 
 @pytest.mark.asyncio
 async def test_init_with_config(llm, config):
-    assert llm._client.base_url == config.base_url
+    assert str(llm._client.base_url) == config.base_url
     assert llm._client.api_key == config.api_key
     assert llm._config.model == config.model
 
 
 @pytest.mark.asyncio
 async def test_init_empty_key():
-    config = OpenAIConfig(base_url="test_url", api_key="")
+    config = OpenAIConfig(base_url="https://test_url/", api_key="", model="gpt-4o")
     with pytest.raises(ValueError, match="config file missing api_key"):
         OpenAILLM(config, available_actions=None)
+
+
+@pytest.mark.asyncio
+async def test_init_model_none_falls_back_to_default():
+    """Ketika model None, harus fallback ke gpt-4.1-mini."""
+    config = OpenAIConfig(base_url="https://test_url/", api_key="test_key", model=None)
+    llm = OpenAILLM(config, available_actions=None)
+    assert llm._config.model == "gpt-4.1-mini"
+
+
+@pytest.mark.asyncio
+async def test_init_base_url_none_falls_back_to_default():
+    """Ketika base_url None, client harus pakai URL default openmind.org."""
+    config = OpenAIConfig(base_url=None, api_key="test_key", model="gpt-4o")
+    llm = OpenAILLM(config, available_actions=None)
+    assert "openmind.org" in str(llm._client.base_url)
 
 
 @pytest.mark.asyncio
@@ -108,9 +139,13 @@ async def test_ask_success_with_tool_calls(
             mock_create.assert_called_once()
             call_kwargs = mock_create.call_args.kwargs
             assert call_kwargs["model"] == llm._config.model
+            assert call_kwargs["tool_choice"] == "auto"
             assert "messages" in call_kwargs
             assert "tools" in call_kwargs
-            assert call_kwargs["tool_choice"] == "auto"
+            assert call_kwargs["messages"][-1] == {
+                "role": "user",
+                "content": "test prompt",
+            }
             mock_convert.assert_called_once()
             assert isinstance(result, CortexOutputModel)
             assert result.actions == [expected_action]
@@ -131,9 +166,9 @@ async def test_ask_success_without_tool_calls(
             mock_create.assert_called_once()
             call_kwargs = mock_create.call_args.kwargs
             assert call_kwargs["model"] == llm._config.model
+            assert call_kwargs["tool_choice"] == "auto"
             assert "messages" in call_kwargs
             assert "tools" in call_kwargs
-            assert call_kwargs["tool_choice"] == "auto"
             mock_convert.assert_not_called()
             assert result is None
 
@@ -160,3 +195,101 @@ async def test_ask_empty_choices(llm):
         result = await llm.ask("test prompt")
         mock_create.assert_called_once()
         assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_without_messages_sends_only_prompt(llm):
+    """Ketika tidak ada messages, hanya prompt user yang dikirim."""
+    response = make_response(tool_calls=None)
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = response
+        await llm.ask("only prompt")
+        sent_messages = mock_create.call_args.kwargs["messages"]
+        assert len(sent_messages) == 1
+        assert sent_messages[0] == {"role": "user", "content": "only prompt"}
+
+
+@pytest.mark.asyncio
+async def test_ask_with_messages_prepends_history(llm):
+    """Ketika ada messages, history harus di-prepend sebelum prompt user."""
+    history = [
+        {"role": "user", "content": "hello"},
+        {"role": "assistant", "content": "hi there"},
+    ]
+    response = make_response(tool_calls=None)
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = response
+        await llm.ask("follow up", messages=history)
+        sent_messages = mock_create.call_args.kwargs["messages"]
+        assert len(sent_messages) == 3
+        assert sent_messages[0] == {"role": "user", "content": "hello"}
+        assert sent_messages[1] == {"role": "assistant", "content": "hi there"}
+        assert sent_messages[2] == {"role": "user", "content": "follow up"}
+
+
+@pytest.mark.asyncio
+async def test_ask_multiple_tool_calls(llm):
+    """Ketika ada multiple tool calls, semua harus diproses."""
+
+    def make_tool_call(name, args):
+        tc = MagicMock()
+        tc.function.name = name
+        tc.function.arguments = args
+        return tc
+
+    tool_calls = [
+        make_tool_call("action_one", '{"key": "val1"}'),
+        make_tool_call("action_two", '{"key": "val2"}'),
+        make_tool_call("action_three", '{"key": "val3"}'),
+    ]
+    response = make_response(tool_calls=tool_calls)
+
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = response
+        with patch(
+            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+        ) as mock_convert:
+            mock_convert.return_value = [
+                Action(type="action_one", value="val1"),
+                Action(type="action_two", value="val2"),
+                Action(type="action_three", value="val3"),
+            ]
+            result = await llm.ask("test")
+            call_args = mock_convert.call_args[0][0]
+            assert len(call_args) == 3
+            assert call_args[0]["function"]["name"] == "action_one"
+            assert call_args[1]["function"]["name"] == "action_two"
+            assert call_args[2]["function"]["name"] == "action_three"
+            assert isinstance(result, CortexOutputModel)
+            assert len(result.actions) == 3
+
+
+@pytest.mark.asyncio
+async def test_ask_tool_call_data_format(llm):
+    """Verifikasi format function_call_data yang dikirim ke convert_function_calls_to_actions."""
+    tc = MagicMock()
+    tc.function.name = "my_action"
+    tc.function.arguments = '{"param": 42}'
+    response = make_response(tool_calls=[tc])
+
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = response
+        with patch(
+            "llm.plugins.openai_llm.convert_function_calls_to_actions"
+        ) as mock_convert:
+            mock_convert.return_value = []
+            await llm.ask("test")
+            call_args = mock_convert.call_args[0][0]
+            assert len(call_args) == 1
+            item = call_args[0]
+            assert "function" in item
+            assert item["function"]["name"] == "my_action"
+            assert item["function"]["arguments"] == '{"param": 42}'
