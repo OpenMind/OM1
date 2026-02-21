@@ -21,6 +21,7 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
         """
         super().__init__(config)
 
+        self.client: G1ArmActionClient | None = None
         try:
             self.client = G1ArmActionClient()
             self.client.SetTimeout(10.0)
@@ -42,6 +43,10 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
 
         if output_interface.action == "idle":
             logging.info("No action to perform, returning.")
+            return
+
+        if self.client is None:
+            logging.warning("G1 Arm Action Client not initialized, skipping action.")
             return
 
         action_id = None
