@@ -2,6 +2,7 @@ import logging
 import time
 import typing as T
 from collections.abc import Sequence
+from typing import Optional
 
 from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
@@ -52,7 +53,7 @@ class Fuser:
 
     async def fuse(
         self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
-    ) -> str:
+    ) -> Optional[str]:
         """
         Combine all inputs into a single formatted prompt string.
 
@@ -68,8 +69,9 @@ class Fuser:
 
         Returns
         -------
-        str
-            Fused prompt string combining all inputs and context.
+        Optional[str]
+            Fused prompt string combining all inputs and context,
+            or None if no meaningful inputs are available.
         """
         # Record the timestamp of the input
         self.io_provider.fuser_start_time = time.time()
@@ -81,6 +83,10 @@ class Fuser:
         system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + "\n"
 
         inputs_fused = " ".join([s for s in input_strings if s is not None])
+
+        if not inputs_fused.strip():
+            logging.debug("No meaningful inputs available, skipping LLM call")
+            return None
 
         # Query the knowledge base if configured and if there are inputs to query with
         kb_context = ""
