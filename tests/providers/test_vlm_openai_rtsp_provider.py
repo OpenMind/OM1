@@ -243,6 +243,6 @@ def test_queue_frame_unexpected_exception(mock_dependencies):
         base_url="http://localhost:8000", api_key="test-key"
     )
 
-    provider._queue_frame(None)
+    provider._queue_frame('{"invalid_key": "no_frame_field"}')
 
     assert len(provider.frame_queue) == 0
