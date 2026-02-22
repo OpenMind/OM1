@@ -181,3 +181,57 @@ def test_openai_client_initialization(mock_dependencies):
     call_kwargs = mock_dependencies["openai"].call_args[1]
     assert call_kwargs["api_key"] == "test-key-123"
     assert call_kwargs["base_url"] == "http://localhost:8000"
+
+
+@pytest.mark.asyncio
+async def test_send_batch_api_status_error():
+    """Test _send_batch_to_openai handles HTTP status errors (e.g. 502 Bad Gateway)"""
+    import openai
+
+    mock_create = MagicMock(
+        side_effect=openai.APIStatusError(
+            message="Bad Gateway",
+            response=MagicMock(status_code=502, headers={}),
+            body=None,
+        )
+    )
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = mock_create
+
+    with (
+        patch(
+            "providers.vlm_openai_rtsp_provider.AsyncOpenAI", return_value=mock_client
+        ),
+        patch("providers.vlm_openai_rtsp_provider.VideoRTSPStream"),
+    ):
+        provider = VLMOpenAIRTSPProvider(
+            base_url="http://localhost:8000", api_key="test-key"
+        )
+
+        # Call _send_batch_to_openai directly — no dependency on self.running
+        await provider._send_batch_to_openai(["frame1", "frame2", "frame3"])
+        mock_create.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_send_batch_api_connection_error():
+    """Test _send_batch_to_openai handles network connection errors"""
+    import openai
+
+    mock_create = MagicMock(side_effect=openai.APIConnectionError(request=MagicMock()))
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = mock_create
+
+    with (
+        patch(
+            "providers.vlm_openai_rtsp_provider.AsyncOpenAI", return_value=mock_client
+        ),
+        patch("providers.vlm_openai_rtsp_provider.VideoRTSPStream"),
+    ):
+        provider = VLMOpenAIRTSPProvider(
+            base_url="http://localhost:8000", api_key="test-key"
+        )
+
+        # Call _send_batch_to_openai directly — no dependency on self.running
+        await provider._send_batch_to_openai(["frame1", "frame2", "frame3"])
+        mock_create.assert_called_once()

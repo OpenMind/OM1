@@ -1,14 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 
 from llm.output_model import Action, CortexOutputModel
 from llm.plugins.qwen_llm import QwenLLM, QwenLLMConfig, _parse_qwen_tool_calls
-
-
-class DummyOutputModel(BaseModel):
-    test_field: str
 
 
 class TestParseQwenToolCalls:
@@ -365,3 +360,40 @@ class TestQwenLLMAsk:
             call_args = mock_create.call_args
             assert "tools" in call_args.kwargs
             assert call_args.kwargs.get("tool_choice") == "required"
+
+    @pytest.mark.asyncio
+    async def test_ask_api_status_error(self, llm):
+        """Test error handling for HTTP status errors (e.g. 502 Bad Gateway)"""
+        import openai
+
+        mock_response = MagicMock()
+        mock_response.status_code = 502
+        mock_response.headers = {}
+        error = openai.APIStatusError(
+            message="Bad Gateway",
+            response=mock_response,
+            body=None,
+        )
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr(
+                llm._client.chat.completions,
+                "create",
+                AsyncMock(side_effect=error),
+            )
+            result = await llm.ask("test prompt")
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_ask_api_connection_error(self, llm):
+        """Test error handling for network connection errors"""
+        import openai
+
+        error = openai.APIConnectionError(request=MagicMock())
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr(
+                llm._client.chat.completions,
+                "create",
+                AsyncMock(side_effect=error),
+            )
+            result = await llm.ask("test prompt")
+            assert result is None

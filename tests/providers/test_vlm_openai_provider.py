@@ -105,3 +105,44 @@ def test_stop(base_url, api_key, fps, mock_dependencies):
 
     assert not provider.running
     mock_video_stream_instance.stop.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_process_frame_api_status_error(
+    base_url, api_key, fps, mock_dependencies
+):
+    """Test _process_frame handles HTTP status errors (e.g. 502 Bad Gateway)"""
+    import openai
+
+    _, _, mock_client_instance, _ = mock_dependencies
+    provider = VLMOpenAIProvider(base_url, api_key, fps=fps)
+    provider.start()
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 502
+    mock_resp.headers = {}
+    mock_client_instance.chat.completions.create.side_effect = openai.APIStatusError(
+        message="Bad Gateway", response=mock_resp, body=None
+    )
+
+    await provider._process_frame("fake_frame")
+    mock_client_instance.chat.completions.create.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_process_frame_api_connection_error(
+    base_url, api_key, fps, mock_dependencies
+):
+    """Test _process_frame handles network connection errors"""
+    import openai
+
+    _, _, mock_client_instance, _ = mock_dependencies
+    provider = VLMOpenAIProvider(base_url, api_key, fps=fps)
+    provider.start()
+
+    mock_client_instance.chat.completions.create.side_effect = (
+        openai.APIConnectionError(request=MagicMock())
+    )
+
+    await provider._process_frame("fake_frame")
+    mock_client_instance.chat.completions.create.assert_called_once()

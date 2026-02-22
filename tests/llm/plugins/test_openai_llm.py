@@ -1,14 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
 
 from llm.output_model import Action, CortexOutputModel
 from llm.plugins.openai_llm import OpenAIConfig, OpenAILLM
-
-
-class DummyOutputModel(BaseModel):
-    test_field: str
 
 
 @pytest.fixture
@@ -159,4 +154,39 @@ async def test_ask_empty_choices(llm):
         mock_create.return_value = mock_response_empty_choices
         result = await llm.ask("test prompt")
         mock_create.assert_called_once()
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_api_status_error(llm):
+    """Test error handling for HTTP status errors (e.g. 502 Bad Gateway)"""
+    import openai
+
+    mock_response = MagicMock()
+    mock_response.status_code = 502
+    mock_response.headers = {}
+    error = openai.APIStatusError(
+        message="Bad Gateway",
+        response=mock_response,
+        body=None,
+    )
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.side_effect = error
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_ask_api_connection_error(llm):
+    """Test error handling for network connection errors"""
+    import openai
+
+    error = openai.APIConnectionError(request=MagicMock())
+    with patch.object(
+        llm._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.side_effect = error
+        result = await llm.ask("test prompt")
         assert result is None
