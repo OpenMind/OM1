@@ -144,6 +144,12 @@ class DeepSeekLLM(LLM[R]):
                 return T.cast(R, result)
 
             return None
+        except openai.APIStatusError as e:
+            logging.error(f"DeepSeek API error: HTTP {e.status_code} - {e.message}")
+            return None
+        except openai.APIConnectionError as e:
+            logging.error(f"DeepSeek connection error: {e.message}")
+            return None
         except Exception as e:
-            logging.error(f"DeepSeek API error: {e}")
+            logging.error(f"DeepSeek unexpected error: {type(e).__name__}: {e}")
             return None

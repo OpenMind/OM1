@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Callable, Optional
 
+import openai
 from om1_utils import ws
 from om1_vlm import VideoStream
 from openai import AsyncOpenAI
@@ -91,8 +92,12 @@ class VLMGeminiProvider:
             logging.debug(f"Gemini LLM VLM Response: {response}")
             if self.message_callback:
                 self.message_callback(response)
+        except openai.APIStatusError as e:
+            logging.error(f"VLMGemini API error: HTTP {e.status_code} - {e.message}")
+        except openai.APIConnectionError as e:
+            logging.error(f"VLMGemini connection error: {e.message}")
         except Exception as e:
-            logging.error(f"Error processing frame: {e}")
+            logging.error(f"VLMGemini unexpected error: {type(e).__name__}: {e}")
 
     def register_message_callback(self, message_callback: Optional[Callable]):
         """

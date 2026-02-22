@@ -154,6 +154,12 @@ class OpenRouter(LLM[R]):
 
             return None
 
+        except openai.APIStatusError as e:
+            logging.error(f"OpenRouter API error: HTTP {e.status_code} - {e.message}")
+            return None
+        except openai.APIConnectionError as e:
+            logging.error(f"OpenRouter connection error: {e.message}")
+            return None
         except Exception as e:
-            logging.error(f"OpenRouter API error: {e}")
+            logging.error(f"OpenRouter unexpected error: {type(e).__name__}: {e}")
             return None
