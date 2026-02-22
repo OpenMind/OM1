@@ -169,8 +169,8 @@ async def test_ask_api_status_error(llm):
     )
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
+            llm._client.chat.completions,
+            "create",
             AsyncMock(side_effect=error),
         )
         result = await llm.ask("test prompt")
@@ -185,8 +185,8 @@ async def test_ask_api_connection_error(llm):
     error = openai.APIConnectionError(request=MagicMock())
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
+            llm._client.chat.completions,
+            "create",
             AsyncMock(side_effect=error),
         )
         result = await llm.ask("test prompt")

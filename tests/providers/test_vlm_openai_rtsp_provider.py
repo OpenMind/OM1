@@ -235,3 +235,14 @@ async def test_send_batch_api_connection_error():
         # Call _send_batch_to_openai directly — no dependency on self.running
         await provider._send_batch_to_openai(["frame1", "frame2", "frame3"])
         mock_create.assert_called_once()
+
+
+def test_queue_frame_unexpected_exception(mock_dependencies):
+    """Test _queue_frame handles unexpected exceptions gracefully."""
+    provider = VLMOpenAIRTSPProvider(
+        base_url="http://localhost:8000", api_key="test-key"
+    )
+
+    provider._queue_frame(None)
+
+    assert len(provider.frame_queue) == 0
