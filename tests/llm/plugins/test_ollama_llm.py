@@ -179,3 +179,69 @@ async def test_close(llm):
     with patch.object(llm._client, "aclose", AsyncMock()) as mock_close:
         await llm.close()
         mock_close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_convert_tools_with_schemas(config):
+    """Test tool conversion with actual function schemas"""
+    schemas = [
+        {
+            "function": {
+                "name": "test_func",
+                "description": "A test function",
+                "parameters": {"type": "object", "properties": {}},
+            }
+        }
+    ]
+    llm = OllamaLLM(config, available_actions=None)
+    llm.function_schemas = schemas
+    tools = llm._convert_tools_to_ollama_format()
+    assert len(tools) == 1
+    assert tools[0]["function"]["name"] == "test_func"
+
+
+@pytest.mark.asyncio
+async def test_ask_json_parse_error(llm):
+    """Test handling of JSON parsing errors"""
+    mock_http_response = MagicMock()
+    mock_http_response.status_code = 200
+    mock_http_response.json.side_effect = ValueError("Invalid JSON")
+
+    with patch.object(llm._client, "post", AsyncMock(return_value=mock_http_response)):
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_base_url_trailing_slash():
+    """Test base_url with trailing slash is handled correctly"""
+    config = OllamaLLMConfig(base_url="http://localhost:11434/")
+    llm = OllamaLLM(config, available_actions=None)
+    assert llm._base_url == "http://localhost:11434"
+    assert llm._chat_url == "http://localhost:11434/api/chat"
+
+
+@pytest.mark.asyncio
+async def test_tool_calls_with_string_arguments(llm):
+    """Test tool calls where arguments is a JSON string"""
+    mock_response = {
+        "message": {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "function": {
+                        "name": "test_function",
+                        "arguments": '{"arg1": "value1"}',  # 字串格式
+                    }
+                }
+            ],
+        }
+    }
+    mock_http_response = MagicMock()
+    mock_http_response.status_code = 200
+    mock_http_response.json.return_value = mock_response
+
+    with patch.object(llm._client, "post", AsyncMock(return_value=mock_http_response)):
+        result = await llm.ask("test prompt")
+        assert isinstance(result, CortexOutputModel)
