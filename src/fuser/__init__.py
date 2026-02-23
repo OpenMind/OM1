@@ -1,10 +1,8 @@
 import logging
 import time
 import typing as T
-from collections.abc import Sequence
 
 from actions import describe_action
-from fuser.knowledge_base.retriever import KnowledgeBase
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
 from runtime.config import RuntimeConfig
@@ -13,7 +11,6 @@ from runtime.config import RuntimeConfig
 class Fuser:
     """
     Combines multiple agent inputs into a single formatted prompt.
-
     Responsible for integrating system prompts, input streams, action descriptions,
     and command prompts into a coherent format for LLM processing.
 
@@ -37,39 +34,26 @@ class Fuser:
         self.config = config
         self.io_provider = IOProvider()
 
-        self.knowledge_base = None
-        if config.knowledge_base:
-            try:
-                self.knowledge_base = KnowledgeBase(**config.knowledge_base)
-                logging.info(
-                    f"KnowledgeBase enabled with config: {config.knowledge_base}"
-                )
-            except Exception:
-                logging.exception(
-                    "Failed to initialize KnowledgeBase with provided config"
-                )
-                self.knowledge_base = None
-
-    async def fuse(
-        self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
-    ) -> str:
+    def fuse(
+        self, inputs: list[Sensor], finished_promises: list[T.Any]
+    ) -> T.Optional[str]:
         """
         Combine all inputs into a single formatted prompt string.
-
         Integrates system prompts, input buffers, action descriptions, and
         command prompts into a structured format for LLM processing.
 
         Parameters
         ----------
-        inputs : Sequence[Sensor]
-            Sequence of agent input objects containing latest input buffers.
+        inputs : list[Sensor]
+            List of agent input objects containing latest input buffers.
         finished_promises : list[Any]
             List of completed promises from previous actions.
 
         Returns
         -------
-        str
-            Fused prompt string combining all inputs and context.
+        Optional[str]
+            Fused prompt string combining all inputs and context,
+            or None if no sensor input is available this tick.
         """
         # Record the timestamp of the input
         self.io_provider.fuser_start_time = time.time()
@@ -77,42 +61,15 @@ class Fuser:
         input_strings = [input.formatted_latest_buffer() for input in inputs]
         logging.debug(f"InputMessageArray: {input_strings}")
 
-        # Combine all inputs, memories, and configurations into a single prompt
-        system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + "\n"
-
         inputs_fused = " ".join([s for s in input_strings if s is not None])
 
-        # Query the knowledge base if configured and if there are inputs to query with
-        kb_context = ""
-        if self.knowledge_base and inputs_fused:
-            try:
-                query_text = None
-                voice_input = self.io_provider.get_input("Voice")
-                if (
-                    voice_input
-                    and voice_input.input
-                    and self.io_provider.tick_counter == voice_input.tick
-                ):
-                    query_text = voice_input.input.strip()
+        # Guard: no sensor input this tick, skip LLM call
+        if not inputs_fused.strip():
+            logging.debug("No sensor input this tick, skipping LLM call")
+            return None
 
-                if query_text:
-                    logging.debug(
-                        f"Querying knowledge base with: {query_text[:100]}..."
-                    )
-                    results = await self.knowledge_base.query(query_text, top_k=3)
-                    if results:
-                        kb_context = self.knowledge_base.format_context(
-                            results, max_chars=1500
-                        )
-                        logging.info(
-                            f"Knowledge base retrieved {len(results)} documents"
-                        )
-            except Exception as e:
-                logging.error(f"Error querying knowledge base: {e}")
-
-        # Add knowledge base context to inputs if available
-        if kb_context:
-            inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
+        # Combine all inputs, memories, and configurations into a single prompt
+        system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + "\n"
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
@@ -125,7 +82,6 @@ class Fuser:
 
         # descriptions of possible actions
         actions_fused = ""
-
         for action in self.config.agent_actions:
             desc = describe_action(
                 action.name, action.llm_label, action.exclude_from_prompt
@@ -141,7 +97,6 @@ class Fuser:
         # (3) a (typically) fixed list of available actions
         # (4) a (typically) fixed system prompt requesting commands to be generated
         fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
-
         logging.debug(f"FINAL PROMPT: {fused_prompt}")
 
         # Record the global prompt, actions and inputs
