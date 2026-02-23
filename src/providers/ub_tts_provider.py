@@ -38,7 +38,7 @@ class UbTtsProvider:
         """Placeholder start method for compatibility."""
         logging.info("Ubtech TTS Provider started.")
 
-    def adding_pending_message(
+    def add_pending_message(
         self, message: str, interrupt: bool = True, timestamp: int = 0
     ):
         """

@@ -98,7 +98,7 @@ class UbTtsConnector(ActionConnector[UbTtsConfig, SpeakInput]):
         # Call the provider's speak method using data from SpeakInput.
         # The text comes from the 'action' field.
         # 'interrupt' and 'timestamp' use default values since they are not in SpeakInput.
-        self.tts.adding_pending_message(
+        self.tts.add_pending_message(
             message=output_interface.action,
             interrupt=True,
             timestamp=int(time.time()),  # Use current time as a sensible default
