@@ -44,6 +44,7 @@
       config: {
         odom_topic: "odometer_state",
         rpc_service_name: "booster_rpc_service",
+        allow_move_without_odom: true,
       },
     },
     {

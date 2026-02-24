@@ -1,7 +1,6 @@
 import json
 
 import rclpy
-import zenoh
 
 # Import ROS 2 service type
 from booster_interface.srv import RpcService
@@ -9,7 +8,12 @@ from rclpy.node import Node
 
 # Import your custom message wrappers
 # Ensure these are in your PYTHONPATH
-from zenoh_msgs import BoosterApiRespMsg, RpcServiceRequest, RpcServiceResponse
+from zenoh_msgs import (
+    BoosterApiRespMsg,
+    RpcServiceRequest,
+    RpcServiceResponse,
+    open_zenoh_session,
+)
 
 
 class BoosterZenohBridge(Node):
@@ -29,7 +33,7 @@ class BoosterZenohBridge(Node):
 
         # 2. Initialize Zenoh Session
         print("Opening Zenoh session...")
-        self.zenoh_session = zenoh.open(zenoh.Config())
+        self.zenoh_session = open_zenoh_session()
         self.zenoh_key = "booster_rpc_service"
 
         # 3. Register Zenoh Query Responder

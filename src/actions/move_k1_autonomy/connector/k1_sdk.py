@@ -2,6 +2,7 @@ import asyncio
 import logging
 import math
 import random
+import time
 from queue import Queue
 from typing import List, Optional
 
@@ -41,6 +42,11 @@ class MoveBoosterZenohConfig(ActionConfig):
     cmd_vel_topic: Optional[str] = Field(
         default=None,
         description="DEPRECATED. Previously used for remote_controller_state topic; now interpreted as rpc_service_name.",
+    )
+
+    allow_move_without_odom: bool = Field(
+        default=False,
+        description="TESTING ONLY. If true, bypass odom/body-attitude gating and send movement RPC commands even when odom is missing.",
     )
 
 
@@ -92,9 +98,26 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         logging.info(f"Booster Autonomy Odom Provider: {self.odom}")
         logging.info(f"Booster Autonomy RPC service key: {self.rpc_service_name}")
 
+    def _has_fresh_odom(self, max_age_s: float = 2.0) -> bool:
+        # K1 odometry can legitimately be exactly (0.0, 0.0) while stationary,
+        # so we must not use odom_x==0.0 as a readiness signal.
+        ts = float(self.odom.position.get("odom_subscriber_ts", 0.0))
+        if ts <= 0.0:
+            return False
+        return (time.time() - ts) <= max_age_s
+
+    def _run_move_robot(self, vx: float, vy: float, vyaw: float) -> None:
+        # Called from both sync code (tick thread) and async code (connect).
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self._move_robot(vx, vy, vyaw))
+        else:
+            loop.create_task(self._move_robot(vx, vy, vyaw))
+
     def _stop_robot(self) -> None:
         try:
-            asyncio.run(self._move_robot(0.0, 0.0, 0.0))
+            self._run_move_robot(0.0, 0.0, 0.0)
         except Exception as e:
             logging.debug(f"Stop robot failed: {e}")
 
@@ -117,9 +140,10 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             logging.info("No open Zenoh session, returning")
             return
 
-        if self.odom.position["body_attitude"] != RobotState.STANDING:
-            logging.info("Cannot move - robot is not standing")
-            return
+        if not self.config.allow_move_without_odom:
+            if self.odom.position["body_attitude"] != RobotState.STANDING:
+                logging.info("Cannot move - robot is not standing")
+                return
 
         try:
             import json
@@ -180,10 +204,28 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             logging.info("Movement in progress: disregarding new AI command")
             return
 
-        if self.odom.position["odom_x"] == 0.0:
-            # this value is never precisely zero EXCEPT while
-            # booting and waiting for data to arrive
-            logging.info("Waiting for location data")
+        if not self._has_fresh_odom():
+            if self.config.allow_move_without_odom:
+                logging.warning(
+                    "ODOM missing/stale but allow_move_without_odom=true; sending direct test command"
+                )
+
+                action = output_interface.action
+                if action == "move forwards":
+                    self._run_move_robot(0.2, 0.0, 0.0)
+                elif action == "move back":
+                    self._run_move_robot(-0.2, 0.0, 0.0)
+                elif action == "turn left":
+                    self._run_move_robot(0.0, 0.0, 0.3)
+                elif action == "turn right":
+                    self._run_move_robot(0.0, 0.0, -0.3)
+                elif action == "stand still":
+                    self._stop_robot()
+                else:
+                    logging.info(f"AI movement command unknown: {action}")
+                return
+
+            logging.info("Waiting for fresh odom data")
             return
 
         # Process movement commands with lidar safety checks
@@ -221,10 +263,8 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             self.sleep(0.5)
             return
 
-        if self.odom.position["odom_x"] == 0.0:
-            # this value is never precisely zero except while
-            # booting and waiting for data to arrive
-            logging.info("Waiting for odom data, x == 0.0")
+        if not self._has_fresh_odom():
+            logging.info("Waiting for fresh odom data")
             self.sleep(0.5)
             return
 
@@ -280,9 +320,9 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                     # rotate only because we are so close
                     # no need to check barriers because we are just performing small rotations
                     if gap > 0:
-                        asyncio.run(self._move_robot(0, 0, 0.2))
+                        self._run_move_robot(0, 0, 0.2)
                     elif gap < 0:
-                        asyncio.run(self._move_robot(0, 0, -0.2))
+                        self._run_move_robot(0, 0, -0.2)
                 elif abs(gap) <= self.angle_tolerance:
                     logging.info("Phase 1 - Turn completed, starting movement")
                     current_target.turn_complete = True
@@ -329,12 +369,12 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                     self.movement_attempts += 1
                     if distance_traveled < abs(goal_dx):
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
-                        asyncio.run(self._move_robot(fb * speed, 0.0, 0.0))
+                        self._run_move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
                         logging.debug(
                             f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
                         )
-                        asyncio.run(self._move_robot(-1 * fb * 0.15, 0.0, 0.0))
+                        self._run_move_robot(-1 * fb * 0.15, 0.0, 0.0)
                 else:
                     logging.info(
                         "Phase 2 - Movement completed normally, processing next AI command"
@@ -496,11 +536,11 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                 logging.warning("Cannot turn left due to barrier")
                 return False
             sharpness = min(self.path_provider.turn_left)
-            asyncio.run(self._move_robot(sharpness * 0.15, 0, self.turn_speed))
+            self._run_move_robot(sharpness * 0.15, 0, self.turn_speed)
         else:  # Turn right
             if not self.path_provider.turn_right:
                 logging.warning("Cannot turn right due to barrier")
                 return False
             sharpness = 8 - max(self.path_provider.turn_right)
-            asyncio.run(self._move_robot(sharpness * 0.15, 0, -self.turn_speed))
+            self._run_move_robot(sharpness * 0.15, 0, -self.turn_speed)
         return True
