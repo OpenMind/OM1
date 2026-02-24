@@ -70,7 +70,7 @@ class BoosterMoveZenohClient:
 
         # Serialize to CDR format for Zenoh bridge
         serialized_request = request.serialize()
-        print(f"Serialized request (hex): {serialized_request.hex()}")
+        # print(f"Serialized request (hex): {serialized_request.hex()}")
         return serialized_request
 
     async def _call_service(

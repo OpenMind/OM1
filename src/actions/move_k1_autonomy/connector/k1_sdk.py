@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import math
 import random
@@ -10,7 +11,7 @@ from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_k1_autonomy.interface import MoveInput
 from providers.k1_odom_provider import K1OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
-from zenoh_msgs import RemoteControllerState, open_zenoh_session
+from zenoh_msgs import open_zenoh_session
 
 
 class MoveBoosterZenohConfig(ActionConfig):
@@ -79,9 +80,9 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         logging.info(f"Booster Autonomy Odom Provider: {self.odom}")
         logging.info(f"Booster Autonomy cmd_vel topic: {self.cmd_vel_topic}")
 
-    def _move_robot(self, vx: float, vy: float, vyaw: float) -> None:
+    async def _move_robot(self, vx: float, vy: float, vyaw: float) -> None:
         """
-        Generate movement commands via Zenoh remote_controller_state topic.
+        Send movement command via Zenoh RPC service booster_rpc_service.
 
         Parameters
         ----------
@@ -102,25 +103,45 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             logging.info("Cannot move - robot is not standing")
             return
 
-        logging.debug(f"Pub RemoteControllerState: vx={vx}, vy={vy}, vyaw={vyaw}")
+        try:
+            import json
 
-        # For Booster robot:
-        # - ly controls forward/backward (negative is forward)
-        # - lx controls left/right strafe
-        # - rx controls rotation
-        # All values must be clamped to [-1, 1]
-        lx_val = max(-1.0, min(1.0, float(vy)))
-        ly_val = max(-1.0, min(1.0, float(-vx)))
-        rx_val = max(-1.0, min(1.0, float(vyaw)))
+            from zenoh_msgs import (
+                BoosterApiReqMsg,
+                RpcServiceRequest,
+                RpcServiceResponse,
+            )
 
-        msg = RemoteControllerState(
-            event=1536,
-            lx=lx_val,  # lateral movement
-            ly=ly_val,  # forward/backward (negated)
-            rx=rx_val,  # rotation
-            ry=0.0,
-        )
-        self.session.put(self.cmd_vel_topic, msg.serialize())
+            API_MOVE = 2001
+            # Create the inner request message
+            inner_request = BoosterApiReqMsg(
+                api_id=API_MOVE, body=json.dumps({"vx": vx, "vy": vy, "vyaw": vyaw})
+            )
+            # Wrap it in RpcServiceRequest
+            request = RpcServiceRequest(msg=inner_request)
+            # Serialize for Zenoh bridge
+            serialized_request = request.serialize()
+            service_name = "booster_rpc_service"
+            replies = self.session.get(
+                service_name,
+                payload=serialized_request,
+                timeout=5.0,
+            )
+            for reply in replies:
+                if reply.ok:
+                    try:
+                        service_response = RpcServiceResponse.deserialize(
+                            reply.ok.payload.to_bytes()
+                        )
+                        logging.info(
+                            f"RPC response status: {service_response.msg.status}, body: {service_response.msg.body}"
+                        )
+                    except Exception as e:
+                        logging.error(f"Error deserializing response: {e}")
+                else:
+                    logging.error(f"Service error: {reply.err}")
+        except Exception as e:
+            logging.error(f"Service call failed: {e}")
 
     async def connect(self, output_interface: MoveInput) -> None:
         """
@@ -240,9 +261,9 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                     # rotate only because we are so close
                     # no need to check barriers because we are just performing small rotations
                     if gap > 0:
-                        self._move_robot(0, 0, 0.2)
+                        asyncio.run(self._move_robot(0, 0, 0.2))
                     elif gap < 0:
-                        self._move_robot(0, 0, -0.2)
+                        asyncio.run(self._move_robot(0, 0, -0.2))
                 elif abs(gap) <= self.angle_tolerance:
                     logging.info("Phase 1 - Turn completed, starting movement")
                     current_target.turn_complete = True
@@ -289,12 +310,12 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                     self.movement_attempts += 1
                     if distance_traveled < abs(goal_dx):
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
-                        self._move_robot(fb * speed, 0.0, 0.0)
+                        asyncio.run(self._move_robot(fb * speed, 0.0, 0.0))
                     elif distance_traveled > abs(goal_dx):
                         logging.debug(
                             f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
                         )
-                        self._move_robot(-1 * fb * 0.15, 0.0, 0.0)
+                        asyncio.run(self._move_robot(-1 * fb * 0.15, 0.0, 0.0))
                 else:
                     logging.info(
                         "Phase 2 - Movement completed normally, processing next AI command"
@@ -456,11 +477,11 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                 logging.warning("Cannot turn left due to barrier")
                 return False
             sharpness = min(self.path_provider.turn_left)
-            self._move_robot(sharpness * 0.15, 0, self.turn_speed)
+            asyncio.run(self._move_robot(sharpness * 0.15, 0, self.turn_speed))
         else:  # Turn right
             if not self.path_provider.turn_right:
                 logging.warning("Cannot turn right due to barrier")
                 return False
             sharpness = 8 - max(self.path_provider.turn_right)
-            self._move_robot(sharpness * 0.15, 0, -self.turn_speed)
+            asyncio.run(self._move_robot(sharpness * 0.15, 0, -self.turn_speed))
         return True
