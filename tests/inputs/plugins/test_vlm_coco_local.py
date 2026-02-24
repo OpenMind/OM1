@@ -104,3 +104,20 @@ async def test_poll_returns_none_on_failed_frame_read(
 
     result = await sensor._poll()
     assert result is None
+
+
+def test_check_webcam_not_found_logs_warning():
+    """Test that check_webcam logs a warning when camera is not found."""
+    with patch("inputs.plugins.vlm_coco_local.cv2.VideoCapture") as mock_cap:
+        mock_instance = Mock()
+        mock_instance.isOpened.return_value = False
+        mock_cap.return_value = mock_instance
+        import logging
+
+        with patch.object(logging, "warning") as mock_warning:
+            from inputs.plugins.vlm_coco_local import check_webcam
+
+            result = check_webcam(0)
+            assert result is False
+            mock_warning.assert_called_once()
+            assert "macOS" in mock_warning.call_args[0][0]

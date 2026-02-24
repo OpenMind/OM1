@@ -69,3 +69,20 @@ def test_formatted_latest_buffer():
         assert "// START" in result
         assert "// END" in result
         assert len(sensor.messages) == 0
+
+
+def test_check_webcam_not_found_logs_warning():
+    """Test that check_webcam logs a warning when camera is not found."""
+    with patch("inputs.plugins.webcam_to_face_emotion.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = False
+        mock_cap.return_value = mock_instance
+        import logging
+
+        with patch.object(logging, "warning") as mock_warning:
+            from inputs.plugins.webcam_to_face_emotion import check_webcam
+
+            result = check_webcam()
+            assert result is False
+            mock_warning.assert_called_once()
+            assert "macOS" in mock_warning.call_args[0][0]

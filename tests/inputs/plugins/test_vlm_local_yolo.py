@@ -196,3 +196,20 @@ def test_cam_third_initialized_without_camera():
 
         assert hasattr(sensor, "cam_third")
         assert sensor.cam_third == 0
+
+
+def test_check_webcam_not_found_logs_error():
+    """Test that check_webcam logs an error when camera is not found."""
+    with patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = False
+        mock_cap.return_value = mock_instance
+        import logging
+
+        with patch.object(logging, "error") as mock_error:
+            from inputs.plugins.vlm_local_yolo import check_webcam
+
+            result = check_webcam(0)
+            assert result == (0, 0)
+            mock_error.assert_called_once()
+            assert "macOS" in mock_error.call_args[0][0]
