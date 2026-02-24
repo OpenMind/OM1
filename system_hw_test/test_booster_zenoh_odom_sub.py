@@ -4,19 +4,10 @@ Simple Zenoh subscriber to verify /odometer_state data transfer
 """
 import zenoh
 
-# Connect to zenoh on localhost:7447
-config = zenoh.Config()
-config.update_json5(
-    """
-{
-    "connect": {
-        "endpoints": ["tcp/127.0.0.1:7447"]
-    }
-}
-"""
-)
-session = zenoh.open(config)
-print("✓ Connected to Zenoh bridge on tcp/127.0.0.1:7447")
+# Connect to zenoh (defaults to localhost)
+print("Connecting to Zenoh...")
+session = zenoh.open()
+print("✓ Connected to Zenoh bridge")
 
 # Track received messages
 received = {"count": 0}
