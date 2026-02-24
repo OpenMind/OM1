@@ -43,7 +43,7 @@
       connector: "k1_sdk",
       config: {
         odom_topic: "odometer_state",
-        cmd_vel_topic: "remote_controller_state",
+        rpc_service_name: "booster_rpc_service",
       },
     },
     {

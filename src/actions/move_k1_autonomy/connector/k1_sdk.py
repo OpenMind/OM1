@@ -22,17 +22,25 @@ class MoveBoosterZenohConfig(ActionConfig):
     ----------
     odom_topic : str
         Zenoh topic for odometry data.
-    cmd_vel_topic : str
-        Zenoh topic for velocity commands.
+    rpc_service_name : str
+        Zenoh key for the ROS2 RPC service (request/reply via session.get).
+        Defaults to "booster_rpc_service".
     """
 
     odom_topic: str = Field(
         default="odometer_state",
         description="Zenoh topic for odometry data.",
     )
-    cmd_vel_topic: str = Field(
-        default="remote_controller_state",
-        description="Zenoh topic for velocity commands.",
+    rpc_service_name: str = Field(
+        default="booster_rpc_service",
+        description="Zenoh key for the Booster ROS2 RPC service (e.g. booster_rpc_service).",
+    )
+
+    # Backward-compat: older configs used cmd_vel_topic for topic-based control.
+    # If provided, we treat it as the RPC service name.
+    cmd_vel_topic: Optional[str] = Field(
+        default=None,
+        description="DEPRECATED. Previously used for remote_controller_state topic; now interpreted as rpc_service_name.",
     )
 
 
@@ -66,7 +74,11 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         self.session = None
 
         odom_topic = self.config.odom_topic
-        self.cmd_vel_topic = self.config.cmd_vel_topic
+        self.rpc_service_name = (
+            self.config.rpc_service_name
+            or self.config.cmd_vel_topic
+            or "booster_rpc_service"
+        )
 
         try:
             self.session = open_zenoh_session()
@@ -78,7 +90,13 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         self.odom = K1OdomProvider(topic=odom_topic)
 
         logging.info(f"Booster Autonomy Odom Provider: {self.odom}")
-        logging.info(f"Booster Autonomy cmd_vel topic: {self.cmd_vel_topic}")
+        logging.info(f"Booster Autonomy RPC service key: {self.rpc_service_name}")
+
+    def _stop_robot(self) -> None:
+        try:
+            asyncio.run(self._move_robot(0.0, 0.0, 0.0))
+        except Exception as e:
+            logging.debug(f"Stop robot failed: {e}")
 
     async def _move_robot(self, vx: float, vy: float, vyaw: float) -> None:
         """
@@ -121,7 +139,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             request = RpcServiceRequest(msg=inner_request)
             # Serialize for Zenoh bridge
             serialized_request = request.serialize()
-            service_name = "booster_rpc_service"
+            service_name = self.rpc_service_name
             replies = self.session.get(
                 service_name,
                 payload=serialized_request,
@@ -174,7 +192,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             "turn right": self._process_turn_right,
             "move forwards": self._process_move_forward,
             "move back": self._process_move_back,
-            "stand still": lambda: logging.info("AI movement command: stand still"),
+            "stand still": self._stop_robot,
         }
 
         handler = movement_map.get(output_interface.action)
@@ -187,6 +205,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         """
         Cleanly abort current movement and reset state.
         """
+        self._stop_robot()
         self.movement_attempts = 0
         if not self.pending_movements.empty():
             self.pending_movements.get()
