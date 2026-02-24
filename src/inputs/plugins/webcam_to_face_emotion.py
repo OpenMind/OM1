@@ -24,7 +24,10 @@ def check_webcam():
     """
     cap = cv2.VideoCapture(0)  # 0 is the default camera index
     if not cap.isOpened():
-        logging.info("No webcam found")
+        logging.warning(
+            "No webcam found. "
+            "On macOS, grant camera permission via System Settings → Privacy & Security → Camera."
+        )
         return False
     logging.info("Found cam(0)")
     return True

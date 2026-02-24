@@ -97,7 +97,10 @@ def check_webcam(index_to_check):
     """
     cap = cv2.VideoCapture(index_to_check)
     if not cap.isOpened():
-        logging.error(f"YOLO did not find cam: {index_to_check}")
+        logging.error(
+            f"YOLO did not find cam: {index_to_check}. "
+            "On macOS, grant camera permission via System Settings → Privacy & Security → Camera."
+        )
         cap.release()
         return 0, 0
 

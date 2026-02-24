@@ -134,6 +134,11 @@ Run the following command to start the Spot Agent:
 uv run src/run.py spot
 ```
 
+> **macOS Users:** On macOS Sequoia or later, you must grant camera permission
+> to your terminal app before running any agent that uses camera input.
+> Go to **System Settings → Privacy & Security → Camera**.
+> See [Apple Mac for Robotics](../robotics/mac.md) for details.
+
 > **Note:** Agent configuration names are only required when switching between different agents. Once an agent has been run, it becomes the default for subsequent executions.
 
 Spot is just an example agent configuration.

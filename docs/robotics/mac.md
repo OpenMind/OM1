@@ -8,6 +8,18 @@ icon: computer
 
 For the Mac Mini, add a 12V input directly to the power rail. You can figure this out yourself, or, find instructions on YouTube.
 
+## macOS Camera Permission (Apple Silicon / macOS Sequoia+)
+
+On macOS Sequoia and later, camera access must be explicitly granted to your terminal application before running any OM1 agent that uses camera input (e.g., `VLM_COCO_Local`, `vlm_openai`, `vlm_gemini`).
+
+**Symptom:** OM1 runs without errors, but the agent receives no camera input.
+
+**Solution:**
+1. Open **System Settings** → **Privacy & Security** → **Camera**
+2. Enable camera access for your terminal app (e.g., Terminal, iTerm2)
+3. Fully quit and restart your terminal
+4. Re-run your OM1 agent
+
 ## Apple Remote Desktop (ARD)
 
 Apple Remote Desktop is a good solution for developing, except that the audio is automatically routed to your development computer when you connect, which then prevents you from remotely debugging on-robot audio hardware issues.
