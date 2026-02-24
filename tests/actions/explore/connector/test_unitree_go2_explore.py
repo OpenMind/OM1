@@ -1,17 +1,13 @@
-import sys
 import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
-sys.modules["om1_speech"] = MagicMock()
-sys.modules["zenoh"] = MagicMock()
-
-from actions.explore.connector.unitree_go2_explore import (  # noqa: E402
+from actions.explore.connector.unitree_go2_explore import (
     UnitreeGo2ExploreConfig,
     UnitreeGo2ExploreConnector,
 )
-from actions.explore.interface import ExploreInput  # noqa: E402
+from actions.explore.interface import ExploreInput
 
 
 class TestUnitreeGo2ExploreConfig:
