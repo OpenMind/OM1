@@ -33,10 +33,10 @@ def listener(sample):
 
 
 # Subscribe to odometer_state
-print("\nSubscribing to **/odometer_state...")
-sub = session.declare_subscriber("**/odometer_state", listener)
+print("\nSubscribing to **/om/paths...")
+sub = session.declare_subscriber("**/om/paths", listener)
 
-print("\n✓ Listening for /odometer_state messages...")
+print("\n✓ Listening for /om/paths messages...")
 print("(Press Ctrl+C to stop)\n")
 
 try:
