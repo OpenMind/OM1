@@ -5,6 +5,7 @@ import rclpy
 # Import ROS 2 service type
 from booster_interface.srv import RpcService
 from rclpy.node import Node
+from rosidl_runtime_py.utilities import get_message
 
 # Import your custom message wrappers
 # Ensure these are in your PYTHONPATH
@@ -14,6 +15,8 @@ from zenoh_msgs import (
     RpcServiceResponse,
     open_zenoh_session,
 )
+from zenoh_msgs import sensor_msgs as zenoh_sensor_msgs
+from zenoh_msgs import std_msgs as zenoh_std_msgs
 
 
 class BoosterZenohBridge(Node):
@@ -36,6 +39,11 @@ class BoosterZenohBridge(Node):
         self.zenoh_session = open_zenoh_session()
         self.zenoh_key = "booster_rpc_service"
 
+        # 2b. Bridge ROS2 /om/paths -> Zenoh om/paths (for SimplePathsProvider)
+        self.ros2_paths_topic = "/om/paths"
+        self.zenoh_paths_key = "om/paths"
+        self._paths_sub = None
+
         # 3. Register Zenoh Query Responder
         # This listens for the session.get() calls from your test script
         print(f"Registering Zenoh responder on: {self.zenoh_key}")
@@ -43,7 +51,72 @@ class BoosterZenohBridge(Node):
             self.zenoh_key, self.zenoh_query_handler
         )
 
+        # Try to subscribe immediately; if /om/paths isn't available yet, retry.
+        self._try_subscribe_paths()
+        self.create_timer(1.0, self._try_subscribe_paths)
+
         print("Bridge is ready. Waiting for Zenoh requests...")
+
+    def _try_subscribe_paths(self):
+        if self._paths_sub is not None:
+            return
+
+        topics = dict(self.get_topic_names_and_types())
+        types = topics.get(self.ros2_paths_topic)
+        type_str = types[0] if types else None
+        if not type_str:
+            return
+
+        try:
+            msg_type = get_message(type_str)
+        except Exception as e:
+            print(
+                f"Cannot resolve ROS2 message type for {self.ros2_paths_topic}: {type_str} ({e})"
+            )
+            return
+
+        print(
+            f"Subscribing to ROS2 {self.ros2_paths_topic} [{type_str}] -> Zenoh {self.zenoh_paths_key}"
+        )
+        self._paths_sub = self.create_subscription(
+            msg_type,
+            self.ros2_paths_topic,
+            self._ros2_paths_callback,
+            10,
+        )
+
+    def _ros2_paths_callback(self, msg):
+        try:
+            header = getattr(msg, "header", None)
+            frame_id = getattr(header, "frame_id", "") if header else ""
+
+            stamp = getattr(header, "stamp", None) if header else None
+            sec = int(getattr(stamp, "sec", 0)) if stamp else 0
+            nanosec = int(getattr(stamp, "nanosec", 0)) if stamp else 0
+
+            z_header = zenoh_std_msgs.Header(
+                stamp=zenoh_std_msgs.Time(sec=sec, nanosec=nanosec),
+                frame_id=frame_id,
+            )
+
+            paths = list(getattr(msg, "paths", []) or [])
+            blocked_by_obstacle_idx = list(
+                getattr(msg, "blocked_by_obstacle_idx", []) or []
+            )
+            blocked_by_hazard_idx = list(
+                getattr(msg, "blocked_by_hazard_idx", []) or []
+            )
+
+            z_paths = zenoh_sensor_msgs.Paths(
+                header=z_header,
+                paths=paths,
+                blocked_by_obstacle_idx=blocked_by_obstacle_idx,
+                blocked_by_hazard_idx=blocked_by_hazard_idx,
+            )
+
+            self.zenoh_session.put(self.zenoh_paths_key, z_paths.serialize())
+        except Exception as e:
+            print(f"Error bridging {self.ros2_paths_topic}: {e}")
 
     def zenoh_query_handler(self, query):
         """Callback when Zenoh client calls session.get()"""
