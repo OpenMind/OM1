@@ -212,13 +212,13 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
                 action = output_interface.action
                 if action == "move forwards":
-                    self._run_move_robot(0.2, 0.0, 0.0)
+                    self._run_move_robot(0.1, 0.0, 0.0)
                 elif action == "move back":
-                    self._run_move_robot(-0.2, 0.0, 0.0)
+                    self._run_move_robot(-0.1, 0.0, 0.0)
                 elif action == "turn left":
-                    self._run_move_robot(0.0, 0.0, 0.3)
+                    self._run_move_robot(0.0, 0.0, 0.15)
                 elif action == "turn right":
-                    self._run_move_robot(0.0, 0.0, -0.3)
+                    self._run_move_robot(0.0, 0.0, -0.15)
                 elif action == "stand still":
                     self._stop_robot()
                 else:
