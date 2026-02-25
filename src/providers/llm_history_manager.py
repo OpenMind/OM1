@@ -360,6 +360,21 @@ class LLMHistoryManager:
                         ChatMessage(role="assistant", content=action_message)
                     )
 
+                    # Store to semantic memory
+                    from providers.semantic_memory_provider import (
+                        SemanticMemoryProvider,
+                    )
+
+                    sem_memory = SemanticMemoryProvider()
+                    if sem_memory.enabled:
+                        mode = getattr(self._config, "mode", None) or "default"
+                        sem_memory.store(
+                            formatted_inputs,
+                            action_message,
+                            mode,
+                            current_tick,
+                        )
+
                     if (
                         self.history_manager.config.history_length > 0
                         and len(self.history_manager.history)

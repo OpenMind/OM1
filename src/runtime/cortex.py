@@ -139,6 +139,21 @@ class ModeCortexRuntime:
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
 
+        # Configure semantic memory provider
+        from providers.semantic_memory_provider import SemanticMemoryProvider
+
+        memory = SemanticMemoryProvider()
+        llm_config = getattr(self.current_config.cortex_llm, "_config", None)
+        if llm_config is not None:
+            memory.configure(
+                enabled=getattr(llm_config, "semantic_memory_enabled", False) or False,
+                top_k=getattr(llm_config, "semantic_memory_top_k", 3) or 3,
+                similarity_threshold=getattr(
+                    llm_config, "semantic_memory_threshold", 0.3
+                )
+                or 0.3,
+            )
+
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
     async def _handle_mode_transitions(self):

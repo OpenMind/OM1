@@ -65,6 +65,19 @@ class Fuser:
 
         inputs_fused = " ".join([s for s in input_strings if s is not None])
 
+        # Retrieve relevant memories from semantic memory
+        memories_section = ""
+        from providers.semantic_memory_provider import SemanticMemoryProvider
+
+        sem_memory = SemanticMemoryProvider()
+        if sem_memory.enabled and inputs_fused.strip():
+            mode = self.config.mode or "default"
+            memories = sem_memory.retrieve(query=inputs_fused, mode=mode)
+            if memories:
+                memories_section = "\nRELEVANT MEMORIES:\n" + "".join(
+                    f"{i}. {mem}\n" for i, mem in enumerate(memories, 1)
+                )
+
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
         # since they are flowing from the outside world
@@ -91,7 +104,7 @@ class Fuser:
         # (2) all the inputs (vision, sound, etc.)
         # (3) a (typically) fixed list of available actions
         # (4) a (typically) fixed system prompt requesting commands to be generated
-        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
+        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}{memories_section}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
 
         logging.debug(f"FINAL PROMPT: {fused_prompt}")
 
