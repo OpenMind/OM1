@@ -31,7 +31,7 @@
     },
   ],
   cortex_llm: {
-    type: "OpenAILLM",
+    type: "GeminiLLM",
     config: {
       agent_name: "Spot",
       history_length: 3,
