@@ -19,9 +19,6 @@
     config: {
       agent_name: "Spot",
       history_length: 10,
-      semantic_memory_enabled: true,
-      semantic_memory_top_k: 3,
-      semantic_memory_threshold: 0.3,
     },
   },
   agent_actions: [

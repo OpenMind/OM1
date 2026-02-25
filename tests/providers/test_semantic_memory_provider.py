@@ -5,12 +5,14 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+chromadb = pytest.importorskip("chromadb")
+
+from providers.semantic_memory_provider import MAX_TEXT_LENGTH, SemanticMemoryProvider
+
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Reset the SemanticMemoryProvider singleton before each test."""
-    from providers.semantic_memory_provider import SemanticMemoryProvider
-
     SemanticMemoryProvider.reset()  # type: ignore
     yield
     SemanticMemoryProvider.reset()  # type: ignore
@@ -34,16 +36,12 @@ def mock_model():
 
 class TestSemanticMemoryProviderInit:
     def test_default_state_is_disabled(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         assert provider.enabled is False
         assert provider.top_k == 3
         assert provider.similarity_threshold == 0.3
 
     def test_configure_without_enable_stays_disabled(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.configure(enabled=False, top_k=5, similarity_threshold=0.5)
         assert provider.enabled is False
@@ -51,8 +49,6 @@ class TestSemanticMemoryProviderInit:
         assert provider.similarity_threshold == 0.5
 
     def test_singleton_returns_same_instance(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         p1 = SemanticMemoryProvider()
         p2 = SemanticMemoryProvider()
         assert p1 is p2
@@ -60,8 +56,6 @@ class TestSemanticMemoryProviderInit:
 
 class TestSemanticMemoryProviderConfigure:
     def test_configure_enabled_calls_initialize(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         with patch.object(provider, "_ensure_initialized") as mock_init:
             provider.configure(enabled=True, top_k=5, similarity_threshold=0.4)
@@ -71,8 +65,6 @@ class TestSemanticMemoryProviderConfigure:
             mock_init.assert_called_once()
 
     def test_configure_disabled_skips_initialize(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.configure(enabled=False)
         assert provider._model is None
@@ -81,31 +73,23 @@ class TestSemanticMemoryProviderConfigure:
 
 class TestStoreAndRetrieve:
     def test_store_when_disabled_is_noop(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = False
         provider.store("input", "response", "default", 1)
 
     def test_retrieve_when_disabled_returns_empty(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = False
         result = provider.retrieve("query", "default")
         assert result == []
 
     def test_store_when_model_is_none_is_noop(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = None
         provider.store("input", "response", "default", 1)
 
     def test_retrieve_when_model_is_none_returns_empty(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = None
@@ -113,10 +97,6 @@ class TestStoreAndRetrieve:
         assert result == []
 
     def test_store_and_retrieve_with_mock_model(self, mock_model, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -138,10 +118,6 @@ class TestStoreAndRetrieve:
         assert "I waved back" in results[0]
 
     def test_retrieve_filters_by_threshold(self, mock_model, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -162,13 +138,6 @@ class TestStoreAndRetrieve:
         assert results == []
 
     def test_store_truncates_long_text(self, mock_model, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import (
-            MAX_TEXT_LENGTH,
-            SemanticMemoryProvider,
-        )
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -188,10 +157,6 @@ class TestStoreAndRetrieve:
         assert len(doc) <= 2 * MAX_TEXT_LENGTH + 30
 
     def test_retrieve_empty_collection(self, mock_model, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -206,10 +171,6 @@ class TestStoreAndRetrieve:
 
 class TestClearMode:
     def test_clear_mode_removes_collection(self, mock_model, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -227,8 +188,6 @@ class TestClearMode:
         assert "om1_clearable" not in provider._collections
 
     def test_clear_mode_when_no_client_is_noop(self):
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider._chroma_client = None
         provider.clear_mode("some_mode")
@@ -238,10 +197,6 @@ class TestModeIsolation:
     def test_different_modes_have_separate_collections(
         self, mock_model, temp_persist_dir
     ):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -271,10 +226,6 @@ class TestModeIsolation:
 
 class TestMultipleStores:
     def test_multiple_stores_accumulate(self, mock_model, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -291,10 +242,6 @@ class TestMultipleStores:
         assert collection.count() == 5
 
     def test_top_k_limits_results(self, mock_model, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = mock_model
@@ -314,10 +261,6 @@ class TestMultipleStores:
 
 class TestErrorHandling:
     def test_store_handles_encoding_error(self, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = MagicMock()
@@ -327,10 +270,6 @@ class TestErrorHandling:
         provider.store("input", "response", "test_mode", 1)
 
     def test_retrieve_handles_query_error(self, temp_persist_dir):
-        import chromadb
-
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         provider = SemanticMemoryProvider()
         provider.enabled = True
         provider._model = MagicMock()
