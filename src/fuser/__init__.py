@@ -1,6 +1,7 @@
 import logging
 import time
 import typing as T
+from collections.abc import Sequence
 
 from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
@@ -43,11 +44,15 @@ class Fuser:
                 logging.info(
                     f"KnowledgeBase enabled with config: {config.knowledge_base}"
                 )
-            except Exception as e:
-                logging.error(f"Failed to initialize KnowledgeBase: {e}")
+            except Exception:
+                logging.exception(
+                    "Failed to initialize KnowledgeBase with provided config"
+                )
                 self.knowledge_base = None
 
-    async def fuse(self, inputs: list[Sensor], finished_promises: list[T.Any]) -> str:
+    async def fuse(
+        self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
+    ) -> str:
         """
         Combine all inputs into a single formatted prompt string.
 
@@ -56,8 +61,8 @@ class Fuser:
 
         Parameters
         ----------
-        inputs : list[Sensor]
-            List of agent input objects containing latest input buffers.
+        inputs : Sequence[Sensor]
+            Sequence of agent input objects containing latest input buffers.
         finished_promises : list[Any]
             List of completed promises from previous actions.
 
@@ -86,7 +91,7 @@ class Fuser:
                 if (
                     voice_input
                     and voice_input.input
-                    and self.io_provider.tick_counter != voice_input.tick
+                    and self.io_provider.tick_counter == voice_input.tick
                 ):
                     query_text = voice_input.input.strip()
 
