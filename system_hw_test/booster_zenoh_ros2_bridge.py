@@ -1,4 +1,5 @@
 import json
+import math
 
 import rclpy
 
@@ -11,6 +12,7 @@ from rosidl_runtime_py.utilities import get_message
 # Ensure these are in your PYTHONPATH
 from zenoh_msgs import (
     BoosterApiRespMsg,
+    Odometer,
     RpcServiceRequest,
     RpcServiceResponse,
     open_zenoh_session,
@@ -44,6 +46,11 @@ class BoosterZenohBridge(Node):
         self.zenoh_paths_key = "om/paths"
         self._paths_sub = None
 
+        # 2c. Bridge ROS2 /odometer_state -> Zenoh odometer_state (for K1OdomProvider)
+        self.ros2_odom_topic = "/odometer_state"
+        self.zenoh_odom_key = "odometer_state"
+        self._odom_sub = None
+
         # 3. Register Zenoh Query Responder
         # This listens for the session.get() calls from your test script
         print(f"Registering Zenoh responder on: {self.zenoh_key}")
@@ -55,7 +62,79 @@ class BoosterZenohBridge(Node):
         self._try_subscribe_paths()
         self.create_timer(1.0, self._try_subscribe_paths)
 
+        # Try to subscribe immediately; if /odometer_state isn't available yet, retry.
+        self._try_subscribe_odom()
+        self.create_timer(1.0, self._try_subscribe_odom)
+
         print("Bridge is ready. Waiting for Zenoh requests...")
+
+    def _try_subscribe_odom(self):
+        if self._odom_sub is not None:
+            return
+
+        topics = dict(self.get_topic_names_and_types())
+        types = topics.get(self.ros2_odom_topic)
+        type_str = types[0] if types else None
+        if not type_str:
+            return
+
+        try:
+            msg_type = get_message(type_str)
+        except Exception as e:
+            print(
+                f"Cannot resolve ROS2 message type for {self.ros2_odom_topic}: {type_str} ({e})"
+            )
+            return
+
+        print(
+            f"Subscribing to ROS2 {self.ros2_odom_topic} [{type_str}] -> Zenoh {self.zenoh_odom_key}"
+        )
+        self._odom_sub = self.create_subscription(
+            msg_type,
+            self.ros2_odom_topic,
+            self._ros2_odom_callback,
+            10,
+        )
+
+    def _yaw_from_quat(self, x: float, y: float, z: float, w: float) -> float:
+        # Standard yaw extraction (Z axis rotation) from quaternion.
+        siny_cosp = 2.0 * (w * z + x * y)
+        cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+        return math.atan2(siny_cosp, cosy_cosp)
+
+    def _ros2_odom_callback(self, msg):
+        try:
+            # Case 1: message already looks like (x, y, theta)
+            if hasattr(msg, "x") and hasattr(msg, "y") and hasattr(msg, "theta"):
+                x = float(getattr(msg, "x"))
+                y = float(getattr(msg, "y"))
+                theta = float(getattr(msg, "theta"))
+            else:
+                # Case 2: nav_msgs/Odometry-like: pose.pose.position + pose.pose.orientation
+                pose = getattr(msg, "pose", None)
+                pose_inner = getattr(pose, "pose", pose) if pose is not None else None
+                position = getattr(pose_inner, "position", None) if pose_inner else None
+                orientation = (
+                    getattr(pose_inner, "orientation", None) if pose_inner else None
+                )
+
+                if position is None or orientation is None:
+                    raise ValueError(
+                        "Unsupported odom message layout (need x/y/theta or pose.position+orientation)"
+                    )
+
+                x = float(getattr(position, "x", 0.0))
+                y = float(getattr(position, "y", 0.0))
+                qx = float(getattr(orientation, "x", 0.0))
+                qy = float(getattr(orientation, "y", 0.0))
+                qz = float(getattr(orientation, "z", 0.0))
+                qw = float(getattr(orientation, "w", 1.0))
+                theta = float(self._yaw_from_quat(qx, qy, qz, qw))
+
+            z_odom = Odometer(x=x, y=y, theta=theta)
+            self.zenoh_session.put(self.zenoh_odom_key, z_odom.serialize())
+        except Exception as e:
+            print(f"Error bridging {self.ros2_odom_topic}: {e}")
 
     def _try_subscribe_paths(self):
         if self._paths_sub is not None:
