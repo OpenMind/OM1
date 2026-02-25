@@ -48,8 +48,30 @@ class FAISSRetriever(BaseRetriever):
         )
 
         with open(self.metadata_path, "rb") as f:
-            metadata_list = pickle.load(f)
-        self.documents = [Document(**meta) for meta in metadata_list]
+            metadata = pickle.load(f)
+
+        if isinstance(metadata, list):
+            self.documents = [Document(**meta) for meta in metadata]
+        elif isinstance(metadata, dict):
+            if "questions" in metadata and "answers" in metadata:
+                questions = metadata["questions"]
+                answers = metadata["answers"]
+                self.documents = [
+                    Document(
+                        text=q, metadata={"answer": a, "type": "qa_pair", "index": i}
+                    )
+                    for i, (q, a) in enumerate(zip(questions, answers))
+                ]
+            else:
+                raise ValueError(
+                    f"Unsupported metadata format. Expected list or dict with "
+                    f"'questions'/'answers' keys, got dict with keys: {list(metadata.keys())}"
+                )
+        else:
+            raise ValueError(
+                f"Unsupported metadata format. Expected list or dict, got {type(metadata)}"
+            )
+
         logging.info(f"Loaded {len(self.documents)} documents")
 
         if len(self.documents) != self.index.ntotal:
