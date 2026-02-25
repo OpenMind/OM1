@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -204,7 +205,6 @@ def test_check_webcam_not_found_logs_error():
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = False
         mock_cap.return_value = mock_instance
-        import logging
 
         with patch.object(logging, "error") as mock_error:
             from inputs.plugins.vlm_local_yolo import check_webcam
@@ -213,3 +213,16 @@ def test_check_webcam_not_found_logs_error():
             assert result == (0, 0)
             mock_error.assert_called_once()
             assert "macOS" in mock_error.call_args[0][0]
+
+
+def test_check_webcam_found_logs_info():
+    """Test that check_webcam returns (width, height) when camera is found."""
+    with patch("inputs.plugins.vlm_local_yolo.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_instance.get.side_effect = lambda x: {3: 640.0, 4: 480.0}.get(x, 0)
+        mock_cap.return_value = mock_instance
+        from inputs.plugins.vlm_local_yolo import check_webcam
+
+        result = check_webcam(0)
+        assert result == (640, 480)

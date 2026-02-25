@@ -51,8 +51,7 @@ def check_webcam(index_to_check):
     cap = cv2.VideoCapture(index_to_check)  # 0 is the default camera index
     if not cap.isOpened():
         logging.warning(
-            f"COCO did not find cam: {index_to_check}. "
-            "On macOS, grant camera permission via System Settings → Privacy & Security → Camera."
+            f"COCO did not find cam: {index_to_check}. On macOS, grant camera permission via System Settings → Privacy & Security → Camera."
         )
         return False
     logging.info(f"COCO found cam: {index_to_check}")

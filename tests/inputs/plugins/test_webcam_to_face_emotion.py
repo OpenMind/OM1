@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -77,7 +78,6 @@ def test_check_webcam_not_found_logs_warning():
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = False
         mock_cap.return_value = mock_instance
-        import logging
 
         with patch.object(logging, "warning") as mock_warning:
             from inputs.plugins.webcam_to_face_emotion import check_webcam
@@ -86,3 +86,15 @@ def test_check_webcam_not_found_logs_warning():
             assert result is False
             mock_warning.assert_called_once()
             assert "macOS" in mock_warning.call_args[0][0]
+
+
+def test_check_webcam_found_logs_info():
+    """Test that check_webcam returns True when camera is found."""
+    with patch("inputs.plugins.webcam_to_face_emotion.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        from inputs.plugins.webcam_to_face_emotion import check_webcam
+
+        result = check_webcam()
+        assert result is True

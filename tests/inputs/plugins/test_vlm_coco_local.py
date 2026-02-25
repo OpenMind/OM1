@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -112,7 +113,6 @@ def test_check_webcam_not_found_logs_warning():
         mock_instance = Mock()
         mock_instance.isOpened.return_value = False
         mock_cap.return_value = mock_instance
-        import logging
 
         with patch.object(logging, "warning") as mock_warning:
             from inputs.plugins.vlm_coco_local import check_webcam
@@ -121,3 +121,15 @@ def test_check_webcam_not_found_logs_warning():
             assert result is False
             mock_warning.assert_called_once()
             assert "macOS" in mock_warning.call_args[0][0]
+
+
+def test_check_webcam_found_logs_info():
+    """Test that check_webcam returns True when camera is found."""
+    with patch("inputs.plugins.vlm_coco_local.cv2.VideoCapture") as mock_cap:
+        mock_instance = Mock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        from inputs.plugins.vlm_coco_local import check_webcam
+
+        result = check_webcam(0)
+        assert result is True
