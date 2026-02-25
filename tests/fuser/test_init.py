@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 from fuser import Fuser
 from inputs.base import Sensor, SensorConfig
 from providers.io_provider import IOProvider
+from providers.semantic_memory_provider import SemanticMemoryProvider
 from runtime.config import RuntimeConfig
 
 
@@ -94,3 +95,54 @@ def test_fuser_with_inputs_and_actions(mock_describe):
             io_provider.fuser_available_actions
             == "AVAILABLE ACTIONS:\naction description\n\naction description\n\n\n\nWhat will you do? Actions:"
         )
+
+
+@patch("fuser.describe_action")
+def test_fuser_injects_memories_when_enabled(mock_describe):
+    """Test that relevant memories are injected into the fused prompt."""
+    mock_describe.return_value = "action description"
+    config = create_mock_config(agent_actions=[MockAction("action1")])
+    config.mode = "test_mode"
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
+    io_provider = IOProvider()
+
+    # Setup semantic memory to return memories
+    SemanticMemoryProvider.reset()  # type: ignore
+    memory = SemanticMemoryProvider()
+    memory.enabled = True
+    memory.retrieve = MagicMock(  # type: ignore
+        return_value=["Input: user said hello | Response: waved back"]
+    )
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+    memory.retrieve.assert_called_once_with(query="test input", mode="test_mode")
+    assert "RELEVANT MEMORIES:" in result
+    assert "user said hello" in result
+    assert "waved back" in result
+
+    # Cleanup
+    SemanticMemoryProvider.reset()  # type: ignore
+
+
+@patch("fuser.describe_action")
+def test_fuser_skips_memories_when_disabled(mock_describe):
+    """Test that no memory retrieval happens when semantic memory is disabled."""
+    mock_describe.return_value = "action description"
+    config = create_mock_config(agent_actions=[MockAction("action1")])
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
+    io_provider = IOProvider()
+
+    SemanticMemoryProvider.reset()  # type: ignore
+    memory = SemanticMemoryProvider()
+    memory.enabled = False
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = fuser.fuse(inputs, [])
+
+    assert "RELEVANT MEMORIES:" not in result
+
+    SemanticMemoryProvider.reset()  # type: ignore
