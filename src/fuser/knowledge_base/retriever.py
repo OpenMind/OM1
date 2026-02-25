@@ -159,7 +159,11 @@ class KnowledgeBase:
             score = doc.score if doc.score is not None else 0.0
 
             header = f"[{i}] Source: {source} (chunk {chunk_id}) | Score: {score:.3f}"
-            content = doc.text
+            # content = doc.text
+            if doc.metadata.get("type") == "qa_pair":
+                content = doc.metadata.get("answer", doc.text)
+            else:
+                content = doc.text
 
             part = f"{header}\n{content}\n"
             if total_chars + len(part) > max_chars and context_parts:
