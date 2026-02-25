@@ -2,10 +2,9 @@ import shutil
 import tempfile
 from unittest.mock import MagicMock, patch
 
+import chromadb
 import numpy as np
 import pytest
-
-chromadb = pytest.importorskip("chromadb")
 
 from providers.semantic_memory_provider import MAX_TEXT_LENGTH, SemanticMemoryProvider
 
