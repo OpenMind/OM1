@@ -131,6 +131,8 @@ class RuntimeConfig:
         Optional action execution mode (e.g., "concurrent", "sequential", "dependencies"). Defaults to "concurrent".
     action_dependencies : Optional[Dict[str, List[str]]]
         Optional mapping of action dependencies.
+    knowledge_base : Optional[Dict[str, Any]]
+        Optional knowledge base configuration for document retrieval.
     """
 
     version: str
@@ -153,6 +155,7 @@ class RuntimeConfig:
     unitree_ethernet: Optional[str] = None
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    knowledge_base: Optional[Dict[str, Any]] = None
 
 
 def add_meta(

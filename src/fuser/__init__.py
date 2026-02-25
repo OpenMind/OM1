@@ -3,6 +3,7 @@ import time
 import typing as T
 
 from actions import describe_action
+from fuser.knowledge_base.retriever import KnowledgeBase
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
 from runtime.config import RuntimeConfig
@@ -35,7 +36,18 @@ class Fuser:
         self.config = config
         self.io_provider = IOProvider()
 
-    def fuse(self, inputs: list[Sensor], finished_promises: list[T.Any]) -> str:
+        self.knowledge_base = None
+        if config.knowledge_base:
+            try:
+                self.knowledge_base = KnowledgeBase(**config.knowledge_base)
+                logging.info(
+                    f"KnowledgeBase enabled with config: {config.knowledge_base}"
+                )
+            except Exception as e:
+                logging.error(f"Failed to initialize KnowledgeBase: {e}")
+                self.knowledge_base = None
+
+    async def fuse(self, inputs: list[Sensor], finished_promises: list[T.Any]) -> str:
         """
         Combine all inputs into a single formatted prompt string.
 
@@ -64,6 +76,38 @@ class Fuser:
         system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + "\n"
 
         inputs_fused = " ".join([s for s in input_strings if s is not None])
+
+        # Query the knowledge base if configured and if there are inputs to query with
+        kb_context = ""
+        if self.knowledge_base and inputs_fused:
+            try:
+                query_text = None
+                voice_input = self.io_provider.get_input("Voice")
+                if (
+                    voice_input
+                    and voice_input.input
+                    and self.io_provider.tick_counter != voice_input.tick
+                ):
+                    query_text = voice_input.input.strip()
+
+                if query_text:
+                    logging.debug(
+                        f"Querying knowledge base with: {query_text[:100]}..."
+                    )
+                    results = await self.knowledge_base.query(query_text, top_k=3)
+                    if results:
+                        kb_context = self.knowledge_base.format_context(
+                            results, max_chars=1500
+                        )
+                        logging.info(
+                            f"Knowledge base retrieved {len(results)} documents"
+                        )
+            except Exception as e:
+                logging.error(f"Error querying knowledge base: {e}")
+
+        # Add knowledge base context to inputs if available
+        if kb_context:
+            inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,

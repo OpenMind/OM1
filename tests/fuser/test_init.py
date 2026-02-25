@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Any, List, Optional
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from fuser import Fuser
 from inputs.base import Sensor, SensorConfig
 from providers.io_provider import IOProvider
@@ -26,6 +28,7 @@ class MockAction:
 
 def create_mock_config(
     agent_actions: Optional[List[MockAction]] = None,
+    knowledge_base: Optional[dict] = None,
 ) -> RuntimeConfig:
     """Create a mock RuntimeConfig for testing."""
     if agent_actions is None:
@@ -36,6 +39,7 @@ def create_mock_config(
     mock_config.system_governance = "system governance"
     mock_config.system_prompt_examples = "system prompt examples"
     mock_config.agent_actions = agent_actions
+    mock_config.knowledge_base = knowledge_base
 
     return mock_config
 
@@ -48,23 +52,26 @@ def test_fuser_initialization():
         fuser = Fuser(config)
         assert fuser.config == config
         assert fuser.io_provider == io_provider
+        assert fuser.knowledge_base is None  # No knowledge base config provided
 
 
 @patch("time.time")
-def test_fuser_timestamps(mock_time):
+@pytest.mark.asyncio
+async def test_fuser_timestamps(mock_time):
     mock_time.return_value = 1000
     config = create_mock_config()
     io_provider = IOProvider()
 
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        fuser.fuse([], [])
+        await fuser.fuse([], [])
         assert io_provider.fuser_start_time == 1000
         assert io_provider.fuser_end_time == 1000
 
 
 @patch("fuser.describe_action")
-def test_fuser_with_inputs_and_actions(mock_describe):
+@pytest.mark.asyncio
+async def test_fuser_with_inputs_and_actions(mock_describe):
     mock_describe.return_value = "action description"
     config = create_mock_config(
         agent_actions=[MockAction("action1"), MockAction("action2")]
@@ -74,7 +81,7 @@ def test_fuser_with_inputs_and_actions(mock_describe):
 
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        result = fuser.fuse(inputs, [])
+        result = await fuser.fuse(inputs, [])
 
         system_prompt = (
             "\nBASIC CONTEXT:\n"
