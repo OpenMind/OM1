@@ -181,6 +181,7 @@ class TestStoreAndRetrieve:
         provider.store(long_text, long_text, "test_mode", 1)
 
         collection = provider._get_collection("test_mode")
+        assert collection is not None
         assert collection.count() == 1
         doc = collection.get()["documents"][0]
         # Each side truncated to MAX_TEXT_LENGTH, total < 2 * MAX_TEXT_LENGTH + overhead
@@ -218,7 +219,9 @@ class TestClearMode:
         mock_model.encode.return_value = vec
 
         provider.store("data", "action", "clearable", 1)
-        assert provider._get_collection("clearable").count() == 1
+        clearable_col = provider._get_collection("clearable")
+        assert clearable_col is not None
+        assert clearable_col.count() == 1
 
         provider.clear_mode("clearable")
         assert "om1_clearable" not in provider._collections
@@ -250,8 +253,12 @@ class TestModeIsolation:
         provider.store("mode_a data", "mode_a action", "mode_a", 1)
         provider.store("mode_b data", "mode_b action", "mode_b", 2)
 
-        assert provider._get_collection("mode_a").count() == 1
-        assert provider._get_collection("mode_b").count() == 1
+        col_a = provider._get_collection("mode_a")
+        col_b = provider._get_collection("mode_b")
+        assert col_a is not None
+        assert col_b is not None
+        assert col_a.count() == 1
+        assert col_b.count() == 1
 
         results_a = provider.retrieve("data", "mode_a")
         results_b = provider.retrieve("data", "mode_b")
@@ -280,6 +287,7 @@ class TestMultipleStores:
             provider.store(f"input_{i}", f"action_{i}", "test_mode", i)
 
         collection = provider._get_collection("test_mode")
+        assert collection is not None
         assert collection.count() == 5
 
     def test_top_k_limits_results(self, mock_model, temp_persist_dir):
