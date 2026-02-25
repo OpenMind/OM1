@@ -1,5 +1,3 @@
-"""Tests for base_retriever module."""
-
 from pathlib import Path
 
 import numpy as np

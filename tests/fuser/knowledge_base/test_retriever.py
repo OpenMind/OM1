@@ -1,5 +1,3 @@
-"""Tests for retriever module (KnowledgeBase class)."""
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
@@ -43,7 +41,7 @@ class TestKnowledgeBase:
             mock_retriever.return_value = mock_retriever_instance
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
             assert kb.kb_dir == mock_kb_structure / "demo"
@@ -66,7 +64,7 @@ class TestKnowledgeBase:
             mock_retriever.return_value = mock_retriever_instance
 
             kb = KnowledgeBase(
-                knowledge_base="demo",
+                knowledge_base_name="demo",
                 knowledge_base_root=mock_kb_structure,
                 embedding_host="192.168.1.1",
                 embedding_port=9000,
@@ -81,7 +79,9 @@ class TestKnowledgeBase:
         kb_root.mkdir()
 
         with pytest.raises(FileNotFoundError) as exc_info:
-            KnowledgeBase(knowledge_base="nonexistent", knowledge_base_root=kb_root)
+            KnowledgeBase(
+                knowledge_base_name="nonexistent", knowledge_base_root=kb_root
+            )
 
         assert "Knowledge base not found" in str(exc_info.value)
         assert "nonexistent" in str(exc_info.value)
@@ -90,7 +90,7 @@ class TestKnowledgeBase:
         """Test that ValueError is raised for invalid retriever type."""
         with pytest.raises(ValueError) as exc_info:
             KnowledgeBase(
-                knowledge_base="demo",
+                knowledge_base_name="demo",
                 knowledge_base_root=mock_kb_structure,
                 retriever_type="invalid",
             )
@@ -109,7 +109,6 @@ class TestKnowledgeBase:
             ) as mock_retriever,
             patch("src.fuser.knowledge_base.retriever.Path") as mock_path,
         ):
-            # Mock the path resolution
             mock_parent = MagicMock()
             mock_parent.parent.parent.parent.parent = MagicMock()
             mock_kb_root = MagicMock()
@@ -129,7 +128,7 @@ class TestKnowledgeBase:
             mock_retriever_instance.dimension = 384
             mock_retriever.return_value = mock_retriever_instance
 
-            KnowledgeBase(knowledge_base="demo")
+            KnowledgeBase(knowledge_base_name="demo")
             mock_embedding.assert_called_once()
 
     @pytest.mark.asyncio
@@ -163,7 +162,7 @@ class TestKnowledgeBase:
             mock_retriever_cls.return_value = mock_retriever
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
             # Execute query
@@ -212,7 +211,7 @@ class TestKnowledgeBase:
             mock_retriever_cls.return_value = mock_retriever
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
             # Execute batch query
@@ -237,7 +236,7 @@ class TestKnowledgeBase:
             mock_ret.return_value = mock_retriever
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
             context = kb.format_context([])
@@ -256,7 +255,7 @@ class TestKnowledgeBase:
             mock_ret.return_value = mock_retriever
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
             docs = [
@@ -293,10 +292,9 @@ class TestKnowledgeBase:
             mock_ret.return_value = mock_retriever
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
-            # Create documents with known sizes
             docs = [
                 Document(
                     text="X" * 100,
@@ -322,7 +320,7 @@ class TestKnowledgeBase:
             mock_ret.return_value = mock_retriever
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
             docs = [Document(text="Content with no metadata", metadata={}, score=0.95)]
@@ -359,11 +357,10 @@ class TestKnowledgeBase:
             mock_retriever_cls.return_value = mock_retriever
 
             kb = KnowledgeBase(
-                knowledge_base="demo", knowledge_base_root=mock_kb_structure
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
             )
 
             await kb.query("test", top_k=10)
 
-            # Verify top_k was passed to search
             call_args = mock_retriever.search.call_args
             assert call_args[1]["top_k"] == 10

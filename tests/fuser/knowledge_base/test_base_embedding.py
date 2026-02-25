@@ -1,5 +1,3 @@
-"""Tests for base_embedding module."""
-
 import numpy as np
 import pytest
 

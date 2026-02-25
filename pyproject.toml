@@ -73,6 +73,7 @@ markers = [
 ]
 filterwarnings = [
     "ignore:builtin type.*has no __module__ attribute:DeprecationWarning",
+    "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
 ]
 
 [tool.coverage.run]

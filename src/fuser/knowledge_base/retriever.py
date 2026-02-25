@@ -18,7 +18,7 @@ class KnowledgeBase:
 
     def __init__(
         self,
-        knowledge_base: str = "demo",
+        knowledge_base_name: str = "demo",
         knowledge_base_root: Optional[str | Path] = None,
         embedding_host: str = "localhost",
         embedding_port: int = 8100,
@@ -29,7 +29,7 @@ class KnowledgeBase:
 
         Parameters
         ----------
-        knowledge_base : str
+        knowledge_base_name : str
             Name of the knowledge base to use.
         knowledge_base_root : str or Path, optional
             Root directory containing knowledge bases.
@@ -47,7 +47,7 @@ class KnowledgeBase:
         else:
             knowledge_base_root = Path(knowledge_base_root)
 
-        self.kb_dir = knowledge_base_root / knowledge_base
+        self.kb_dir = knowledge_base_root / knowledge_base_name
         if not self.kb_dir.exists():
             raise FileNotFoundError(
                 f"Knowledge base not found: {self.kb_dir}. "
@@ -59,8 +59,8 @@ class KnowledgeBase:
                 host=embedding_host, port=embedding_port
             )
 
-            index_path = self.kb_dir / f"{knowledge_base}.faiss"
-            metadata_path = self.kb_dir / f"{knowledge_base}.pkl"
+            index_path = self.kb_dir / f"{knowledge_base_name}.faiss"
+            metadata_path = self.kb_dir / f"{knowledge_base_name}.pkl"
             self.retriever = FAISSRetriever(
                 index_path=index_path, metadata_path=metadata_path
             )
@@ -71,7 +71,7 @@ class KnowledgeBase:
             )
 
         logging.info(
-            f"KnowledgeBase initialized: kb='{knowledge_base}', "
+            f"KnowledgeBase initialized: kb='{knowledge_base_name}', "
             f"retriever={type(self.retriever).__name__}, "
             f"embedding={type(self.embedding_client).__name__}, "
             f"{self.retriever.num_documents} docs, "
