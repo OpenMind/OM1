@@ -10,6 +10,7 @@ from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
+from providers.semantic_memory_provider import SemanticMemoryProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.config import (
     LifecycleHookType,
@@ -140,8 +141,6 @@ class ModeCortexRuntime:
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
 
         # Configure semantic memory provider
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         memory = SemanticMemoryProvider()
         llm_config = getattr(self.current_config.cortex_llm, "_config", None)
         if llm_config is not None:

@@ -5,6 +5,7 @@ import typing as T
 from actions import describe_action
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
+from providers.semantic_memory_provider import SemanticMemoryProvider
 from runtime.config import RuntimeConfig
 
 
@@ -67,8 +68,6 @@ class Fuser:
 
         # Retrieve relevant memories from semantic memory
         memories_section = ""
-        from providers.semantic_memory_provider import SemanticMemoryProvider
-
         sem_memory = SemanticMemoryProvider()
         if sem_memory.enabled and inputs_fused.strip():
             mode = self.config.mode or "default"

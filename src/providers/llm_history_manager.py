@@ -9,6 +9,7 @@ import openai
 from llm import LLMConfig
 
 from .io_provider import IOProvider
+from .semantic_memory_provider import SemanticMemoryProvider
 
 R = TypeVar("R")
 
@@ -361,10 +362,6 @@ class LLMHistoryManager:
                     )
 
                     # Store to semantic memory
-                    from providers.semantic_memory_provider import (
-                        SemanticMemoryProvider,
-                    )
-
                     sem_memory = SemanticMemoryProvider()
                     if sem_memory.enabled:
                         mode = getattr(self._config, "mode", None) or "default"
