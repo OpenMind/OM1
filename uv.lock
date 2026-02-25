@@ -3124,7 +3124,6 @@ dependencies = [
     { name = "aiohttp" },
     { name = "bleak" },
     { name = "cdp-sdk" },
-    { name = "chromadb" },
     { name = "cv-bridge" },
     { name = "deepface" },
     { name = "dimo-python-sdk" },
@@ -3137,7 +3136,6 @@ dependencies = [
     { name = "nest-asyncio" },
     { name = "numpy" },
     { name = "om1-modules" },
-    { name = "onnxruntime" },
     { name = "openai" },
     { name = "opencv-python" },
     { name = "pillow" },
@@ -3148,7 +3146,6 @@ dependencies = [
     { name = "pynput" },
     { name = "pyserial" },
     { name = "python-dotenv" },
-    { name = "sentence-transformers" },
     { name = "sounddevice" },
     { name = "soundfile" },
     { name = "tf-keras" },
@@ -3167,6 +3164,11 @@ dds = [
 ]
 macos = [
     { name = "osascript" },
+]
+memory = [
+    { name = "chromadb" },
+    { name = "onnxruntime" },
+    { name = "sentence-transformers" },
 ]
 
 [package.dev-dependencies]
@@ -3187,7 +3189,7 @@ requires-dist = [
     { name = "aiohttp", specifier = "==3.13.3" },
     { name = "bleak", specifier = "==0.22.3" },
     { name = "cdp-sdk", specifier = "==0.21.0" },
-    { name = "chromadb", specifier = ">=0.5.0" },
+    { name = "chromadb", marker = "extra == 'memory'", specifier = ">=0.5.0" },
     { name = "cv-bridge", specifier = "==1.13.0.post0" },
     { name = "cyclonedds", marker = "extra == 'dds'", specifier = "==0.10.2" },
     { name = "deepface", specifier = "==0.0.93" },
@@ -3201,7 +3203,7 @@ requires-dist = [
     { name = "nest-asyncio", specifier = "==1.6.0" },
     { name = "numpy", specifier = "==2.0.2" },
     { name = "om1-modules", git = "https://github.com/OpenMind/om1-modules.git?rev=8502244d94e9592816f3cad9f3df61a903315b35" },
-    { name = "onnxruntime", specifier = "<1.20" },
+    { name = "onnxruntime", marker = "extra == 'memory'", specifier = "<1.20" },
     { name = "openai", specifier = "==1.60.1" },
     { name = "opencv-python", specifier = "==4.11.0.86" },
     { name = "osascript", marker = "extra == 'macos'" },
@@ -3213,7 +3215,7 @@ requires-dist = [
     { name = "pynput", specifier = "==1.8.1" },
     { name = "pyserial", specifier = "==3.5" },
     { name = "python-dotenv", specifier = "==1.0.1" },
-    { name = "sentence-transformers", specifier = ">=3.0.0" },
+    { name = "sentence-transformers", marker = "extra == 'memory'", specifier = ">=3.0.0" },
     { name = "sounddevice", specifier = "==0.5.2" },
     { name = "soundfile", specifier = "==0.13.1" },
     { name = "tf-keras", specifier = "==2.18.0" },
@@ -3225,7 +3227,7 @@ requires-dist = [
     { name = "web3", specifier = "==7.6.0" },
     { name = "websockets", specifier = "==13.1" },
 ]
-provides-extras = ["dds", "macos"]
+provides-extras = ["dds", "macos", "memory"]
 
 [package.metadata.requires-dev]
 dev = [

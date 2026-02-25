@@ -159,7 +159,7 @@ class TestStoreAndRetrieve:
         mock_model.encode.return_value = vec2
 
         results = provider.retrieve("unrelated query", "test_mode")
-        assert isinstance(results, list)
+        assert results == []
 
     def test_store_truncates_long_text(self, mock_model, temp_persist_dir):
         import chromadb
