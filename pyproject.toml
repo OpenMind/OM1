@@ -65,10 +65,14 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 addopts = "-m \"not integration\""
 norecursedirs = ["src/unitree", "system_hw_test", "src/ubtech"]
 markers = [
     "integration: marks tests as integration tests",
+]
+filterwarnings = [
+    "ignore:builtin type.*has no __module__ attribute:DeprecationWarning",
 ]
 
 [tool.coverage.run]
