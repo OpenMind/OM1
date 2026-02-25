@@ -68,7 +68,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         super().__init__(config)
 
         # Movement parameters
-        self.move_speed = 0.25
+        self.move_speed = 0.1
         self.turn_speed = 0.35
         self.angle_tolerance = 5.0  # degrees
         self.distance_tolerance = 0.05  # meters
@@ -470,7 +470,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
                 turn_complete=True,
-                speed=0.25,
+                speed=0.1,
             )
         )
 
