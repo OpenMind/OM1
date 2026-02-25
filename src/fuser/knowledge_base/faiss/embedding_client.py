@@ -50,6 +50,36 @@ class EmbeddingClient(BaseEmbeddingClient):
             await self._session.close()
             self._session = None
 
+    async def _make_request(self, endpoint: str, payload: dict) -> dict:
+        """
+        Make an HTTP POST request to the embedding server.
+
+        Parameters
+        ----------
+        endpoint : str
+            API endpoint (e.g., "embed", "embed_batch").
+        payload : dict
+            JSON payload to send.
+
+        Returns
+        -------
+        dict
+            JSON response from server.
+        """
+        if self._session:
+            async with self._session.post(
+                f"{self.base_url}/{endpoint}", json=payload
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json()
+        else:
+            async with aiohttp.ClientSession(timeout=self.timeout) as session:
+                async with session.post(
+                    f"{self.base_url}/{endpoint}", json=payload
+                ) as resp:
+                    resp.raise_for_status()
+                    return await resp.json()
+
     async def embed(self, query: str) -> np.ndarray:
         """
         Embed a single query string.
@@ -70,18 +100,7 @@ class EmbeddingClient(BaseEmbeddingClient):
             If the request fails.
         """
         payload = {"query": query}
-
-        if not self._session:
-            async with aiohttp.ClientSession(timeout=self.timeout) as session:
-                async with session.post(f"{self.base_url}/embed", json=payload) as resp:
-                    resp.raise_for_status()
-                    data = await resp.json()
-        else:
-            async with self._session.post(
-                f"{self.base_url}/embed", json=payload
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
+        data = await self._make_request("embed", payload)
 
         emb_bytes = base64.b64decode(data["embedding_b64"])
         embedding = np.frombuffer(emb_bytes, dtype="float32")
@@ -109,20 +128,7 @@ class EmbeddingClient(BaseEmbeddingClient):
             If the request fails.
         """
         payload = {"queries": queries}
-
-        if not self._session:
-            async with aiohttp.ClientSession(timeout=self.timeout) as session:
-                async with session.post(
-                    f"{self.base_url}/embed_batch", json=payload
-                ) as resp:
-                    resp.raise_for_status()
-                    data = await resp.json()
-        else:
-            async with self._session.post(
-                f"{self.base_url}/embed_batch", json=payload
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
+        data = await self._make_request("embed_batch", payload)
 
         embeddings = []
         for emb_b64 in data["embeddings_b64"]:
