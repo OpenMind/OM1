@@ -22,9 +22,9 @@
   },
 
   knowledge_base: {
-      knowledge_base_name: "demo",   
-      embedding_host: "localhost",
-      embedding_port: 8100,
+    knowledge_base_name: "demo",
+    embedding_host: "localhost",
+    embedding_port: 8100,
   },
 
   modes: {
