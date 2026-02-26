@@ -4,7 +4,6 @@ import typing as T
 from collections.abc import Sequence
 
 from actions import describe_action
-from fuser.knowledge_base.retriever import KnowledgeBase
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
 from providers.semantic_memory_provider import SemanticMemoryProvider
@@ -41,6 +40,8 @@ class Fuser:
         self.knowledge_base = None
         if config.knowledge_base:
             try:
+                from fuser.knowledge_base.retriever import KnowledgeBase
+
                 self.knowledge_base = KnowledgeBase(**config.knowledge_base)
                 logging.info(
                     f"KnowledgeBase enabled with config: {config.knowledge_base}"

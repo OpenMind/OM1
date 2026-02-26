@@ -180,7 +180,7 @@ async def test_fuser_initialization_with_knowledge_base():
     mock_kb = MagicMock()
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb) as mock_kb_class,
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb) as mock_kb_class,
     ):
         fuser = Fuser(config)
         assert fuser.knowledge_base == mock_kb
@@ -196,7 +196,7 @@ async def test_fuser_initialization_with_invalid_knowledge_base():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", side_effect=Exception("Invalid config")),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", side_effect=Exception("Invalid config")),
     ):
         fuser = Fuser(config)
         assert fuser.knowledge_base is None
@@ -228,7 +228,7 @@ async def test_fuser_with_knowledge_base_no_voice_input():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])
@@ -270,7 +270,7 @@ async def test_fuser_with_knowledge_base_and_voice_input():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
@@ -304,7 +304,7 @@ async def test_fuser_with_knowledge_base_empty_results():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
@@ -334,7 +334,7 @@ async def test_fuser_with_knowledge_base_query_error():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
@@ -363,7 +363,7 @@ async def test_fuser_with_knowledge_base_voice_input_different_tick():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])
@@ -386,7 +386,7 @@ async def test_fuser_with_knowledge_base_no_voice_input_object():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])
@@ -413,7 +413,7 @@ async def test_fuser_with_knowledge_base_empty_voice_input():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])
