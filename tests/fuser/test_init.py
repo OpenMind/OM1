@@ -1,19 +1,29 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional
-from unittest.mock import MagicMock, patch
+from typing import Any, List, Optional, Sequence
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
 
 from fuser import Fuser
+from fuser.knowledge_base.base_retriever import Document
 from inputs.base import Sensor, SensorConfig
 from providers.io_provider import IOProvider
 from runtime.config import RuntimeConfig
 
 
-@dataclass
+@pytest.fixture(autouse=True)
+def reset_io_provider():
+    """Reset the IOProvider singleton before each test to prevent state pollution."""
+    IOProvider.reset()  # type: ignore
+    yield
+    IOProvider.reset()  # type: ignore
+
+
 class MockSensor(Sensor[SensorConfig, Any]):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(SensorConfig())
 
-    def formatted_latest_buffer(self):
+    def formatted_latest_buffer(self) -> str:
         return "test input"
 
 
@@ -26,6 +36,7 @@ class MockAction:
 
 def create_mock_config(
     agent_actions: Optional[List[MockAction]] = None,
+    knowledge_base: Optional[dict] = None,
 ) -> RuntimeConfig:
     """Create a mock RuntimeConfig for testing."""
     if agent_actions is None:
@@ -36,6 +47,7 @@ def create_mock_config(
     mock_config.system_governance = "system governance"
     mock_config.system_prompt_examples = "system prompt examples"
     mock_config.agent_actions = agent_actions
+    mock_config.knowledge_base = knowledge_base
 
     return mock_config
 
@@ -48,33 +60,36 @@ def test_fuser_initialization():
         fuser = Fuser(config)
         assert fuser.config == config
         assert fuser.io_provider == io_provider
+        assert fuser.knowledge_base is None
 
 
 @patch("time.time")
-def test_fuser_timestamps(mock_time):
+@pytest.mark.asyncio
+async def test_fuser_timestamps(mock_time):
     mock_time.return_value = 1000
     config = create_mock_config()
     io_provider = IOProvider()
 
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        fuser.fuse([MockSensor()], [])
+        await fuser.fuse([MockSensor()], [])
         assert io_provider.fuser_start_time == 1000
         assert io_provider.fuser_end_time == 1000
 
 
 @patch("fuser.describe_action")
-def test_fuser_with_inputs_and_actions(mock_describe):
+@pytest.mark.asyncio
+async def test_fuser_with_inputs_and_actions(mock_describe):
     mock_describe.return_value = "action description"
     config = create_mock_config(
         agent_actions=[MockAction("action1"), MockAction("action2")]
     )
-    inputs: list[Sensor[Any, Any]] = [MockSensor()]
+    inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
     io_provider = IOProvider()
 
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        result = fuser.fuse(inputs, [])
+        result = await fuser.fuse(inputs, [])
 
         system_prompt = (
             "\nBASIC CONTEXT:\n"
@@ -96,42 +111,303 @@ def test_fuser_with_inputs_and_actions(mock_describe):
         )
 
 
-def test_fuser_returns_none_when_all_sensors_return_none():
+@pytest.mark.asyncio
+async def test_fuser_initialization_with_knowledge_base():
+    """Test that Fuser properly initializes with knowledge_base config."""
+    kb_config = {
+        "knowledge_base": "test_kb",
+        "knowledge_base_root": "/tmp/kb",
+        "embedding_host": "localhost",
+        "embedding_port": 8100,
+    }
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    mock_kb = MagicMock()
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb) as mock_kb_class,
+    ):
+        fuser = Fuser(config)
+        assert fuser.knowledge_base == mock_kb
+        mock_kb_class.assert_called_once_with(**kb_config)
+
+
+@pytest.mark.asyncio
+async def test_fuser_initialization_with_invalid_knowledge_base():
+    """Test that Fuser handles invalid knowledge_base config gracefully."""
+    kb_config = {"invalid_param": "value"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", side_effect=Exception("Invalid config")),
+    ):
+        fuser = Fuser(config)
+        assert fuser.knowledge_base is None
+
+
+@pytest.mark.asyncio
+async def test_fuser_without_knowledge_base():
+    """Test that Fuser works without knowledge_base config."""
+    config = create_mock_config(knowledge_base=None)
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = await fuser.fuse([], [])
+
+        assert fuser.knowledge_base is None
+        assert result is None or "KNOWLEDGE BASE:" not in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_with_knowledge_base_no_voice_input():
+    """Test that knowledge base is not queried when there's no voice input."""
+    kb_config = {"knowledge_base": "test_kb"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    mock_kb = MagicMock()
+    mock_kb.query = AsyncMock()
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb),
+    ):
+        fuser = Fuser(config)
+        result = await fuser.fuse([], [])
+
+        mock_kb.query.assert_not_called()
+        assert result is None or "KNOWLEDGE BASE:" not in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_with_knowledge_base_and_voice_input():
+    """Test that knowledge base is queried when voice input is available."""
+    kb_config = {"knowledge_base": "test_kb"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    voice_input = Mock()
+    voice_input.input = "What is the capital of France?"
+    voice_input.tick = 1
+    io_provider.increment_tick()
+    io_provider.get_input = Mock(return_value=voice_input)
+
+    mock_doc1 = Document(
+        text="Paris is the capital of France.",
+        metadata={"source": "geography.txt", "chunk_id": 0},
+        score=0.95,
+    )
+    mock_doc2 = Document(
+        text="France is a country in Europe.",
+        metadata={"source": "geography.txt", "chunk_id": 1},
+        score=0.85,
+    )
+    mock_kb = MagicMock()
+    mock_kb.query = AsyncMock(return_value=[mock_doc1, mock_doc2])
+    mock_kb.format_context = Mock(
+        return_value="[1] Source: geography.txt (chunk 0) | Score: 0.950\nParis is the capital of France.\n"
+    )
+
+    inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb),
+    ):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+
+        mock_kb.query.assert_called_once_with("What is the capital of France?", top_k=3)
+        mock_kb.format_context.assert_called_once_with(
+            [mock_doc1, mock_doc2], max_chars=1500
+        )
+        assert result is not None
+        assert "KNOWLEDGE BASE:" in result
+        assert "Paris is the capital of France." in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_with_knowledge_base_empty_results():
+    """Test that fuser handles empty knowledge base results gracefully."""
+    kb_config = {"knowledge_base": "test_kb"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    voice_input = Mock()
+    voice_input.input = "Some query"
+    voice_input.tick = 1
+    io_provider.increment_tick()
+    io_provider.get_input = Mock(return_value=voice_input)
+
+    mock_kb = MagicMock()
+    mock_kb.query = AsyncMock(return_value=[])
+    mock_kb.format_context = Mock(return_value="")
+
+    inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb),
+    ):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+
+        mock_kb.query.assert_called_once()
+        assert result is None or "KNOWLEDGE BASE:" not in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_with_knowledge_base_query_error():
+    """Test that fuser handles knowledge base query errors gracefully."""
+    kb_config = {"knowledge_base": "test_kb"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    # Setup voice input
+    voice_input = Mock()
+    voice_input.input = "Some query"
+    voice_input.tick = 1
+    io_provider.increment_tick()
+    io_provider.get_input = Mock(return_value=voice_input)
+
+    mock_kb = MagicMock()
+    mock_kb.query = AsyncMock(side_effect=Exception("Query failed"))
+
+    inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb),
+    ):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+
+        mock_kb.query.assert_called_once()
+        assert result is None or "KNOWLEDGE BASE:" not in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_with_knowledge_base_voice_input_different_tick():
+    """Test that knowledge base is not queried when voice input is from a different tick."""
+    kb_config = {"knowledge_base": "test_kb"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    voice_input = Mock()
+    voice_input.input = "Some query"
+    voice_input.tick = 5
+
+    for _ in range(10):
+        io_provider.increment_tick()
+    io_provider.get_input = Mock(return_value=voice_input)
+
+    mock_kb = MagicMock()
+    mock_kb.query = AsyncMock()
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb),
+    ):
+        fuser = Fuser(config)
+        result = await fuser.fuse([], [])
+
+        mock_kb.query.assert_not_called()
+        assert result is None or "KNOWLEDGE BASE:" not in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_with_knowledge_base_no_voice_input_object():
+    """Test that knowledge base is not queried when voice input object is None."""
+    kb_config = {"knowledge_base": "test_kb"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    io_provider.get_input = Mock(return_value=None)
+
+    mock_kb = MagicMock()
+    mock_kb.query = AsyncMock()
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb),
+    ):
+        fuser = Fuser(config)
+        result = await fuser.fuse([], [])
+
+        mock_kb.query.assert_not_called()
+        assert result is None or "KNOWLEDGE BASE:" not in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_with_knowledge_base_empty_voice_input():
+    """Test that knowledge base is not queried when voice input is empty/whitespace."""
+    kb_config = {"knowledge_base": "test_kb"}
+    config = create_mock_config(knowledge_base=kb_config)
+    io_provider = IOProvider()
+
+    voice_input = Mock()
+    voice_input.input = "   "
+    voice_input.tick = 1
+    io_provider.increment_tick()
+    io_provider.get_input = Mock(return_value=voice_input)
+
+    mock_kb = MagicMock()
+    mock_kb.query = AsyncMock()
+
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.KnowledgeBase", return_value=mock_kb),
+    ):
+        fuser = Fuser(config)
+        result = await fuser.fuse([], [])
+
+        mock_kb.query.assert_not_called()
+        assert result is None or "KNOWLEDGE BASE:" not in result
+
+
+@pytest.mark.asyncio
+async def test_fuser_returns_none_when_all_sensors_return_none():
+    """Test that fuser returns None when all sensors return None."""
     config = create_mock_config()
     io_provider = IOProvider()
-    sensor = MagicMock(spec=Sensor)
+    sensor = MagicMock()
     sensor.formatted_latest_buffer.return_value = None
-
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        result = fuser.fuse([sensor, sensor], [])
+        result = await fuser.fuse([sensor, sensor], [])
         assert result is None
 
 
-def test_fuser_returns_none_when_all_sensors_return_empty_string():
+@pytest.mark.asyncio
+async def test_fuser_returns_none_when_all_sensors_return_empty_string():
+    """Test that fuser returns None when all sensors return empty string."""
     config = create_mock_config()
     io_provider = IOProvider()
-    sensor_empty = MagicMock(spec=Sensor)
+    sensor_empty = MagicMock()
     sensor_empty.formatted_latest_buffer.return_value = ""
-    sensor_whitespace = MagicMock(spec=Sensor)
+    sensor_whitespace = MagicMock()
     sensor_whitespace.formatted_latest_buffer.return_value = "   "
-
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        result = fuser.fuse([sensor_empty, sensor_whitespace], [])
+        result = await fuser.fuse([sensor_empty, sensor_whitespace], [])
         assert result is None
 
 
-def test_fuser_returns_prompt_when_at_least_one_sensor_has_data():
+@pytest.mark.asyncio
+async def test_fuser_returns_prompt_when_at_least_one_sensor_has_data():
+    """Test that fuser returns a prompt when at least one sensor has data."""
     config = create_mock_config()
     io_provider = IOProvider()
-    sensor_none = MagicMock(spec=Sensor)
+    sensor_none = MagicMock()
     sensor_none.formatted_latest_buffer.return_value = None
-    sensor_data = MagicMock(spec=Sensor)
+    sensor_data = MagicMock()
     sensor_data.formatted_latest_buffer.return_value = "detected: person 0.92"
-
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        result = fuser.fuse([sensor_none, sensor_data], [])
+        result = await fuser.fuse([sensor_none, sensor_data], [])
         assert result is not None
         assert "detected: person 0.92" in result
