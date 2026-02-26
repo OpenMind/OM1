@@ -43,6 +43,7 @@ dependencies = [
     "sentence-transformers>=3.0.0",
     "chromadb>=0.5.0",
     "onnxruntime<1.20",
+    "faiss-cpu>=1.7.4",
 ]
 
 [project.optional-dependencies]
@@ -67,10 +68,15 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 addopts = "-m \"not integration\""
 norecursedirs = ["src/unitree", "system_hw_test", "src/ubtech"]
 markers = [
     "integration: marks tests as integration tests",
+]
+filterwarnings = [
+    "ignore:builtin type.*has no __module__ attribute:DeprecationWarning",
+    "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
 ]
 
 [tool.coverage.run]
