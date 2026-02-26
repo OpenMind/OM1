@@ -7,8 +7,6 @@ import numpy as np
 
 from ..base_embedding import BaseEmbeddingClient
 
-logger = logging.getLogger(__name__)
-
 
 class EmbeddingClient(BaseEmbeddingClient):
     """
@@ -105,7 +103,9 @@ class EmbeddingClient(BaseEmbeddingClient):
         emb_bytes = base64.b64decode(data["embedding_b64"])
         embedding = np.frombuffer(emb_bytes, dtype="float32")
 
-        logger.debug(f"Embedded query (len={len(query)}) in {data['latency_ms']:.1f}ms")
+        logging.debug(
+            f"Embedded query (len={len(query)}) in {data['latency_ms']:.1f}ms"
+        )
         return embedding
 
     async def embed_batch(self, queries: list[str]) -> np.ndarray:
@@ -137,5 +137,5 @@ class EmbeddingClient(BaseEmbeddingClient):
             embeddings.append(embedding)
 
         embeddings_array = np.array(embeddings)
-        logger.debug(f"Embedded {len(queries)} queries in {data['latency_ms']:.1f}ms")
+        logging.debug(f"Embedded {len(queries)} queries in {data['latency_ms']:.1f}ms")
         return embeddings_array
