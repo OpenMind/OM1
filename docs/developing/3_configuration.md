@@ -10,13 +10,13 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 ```python
 {
-  version: "v1.0.2",
+  version: "v1.0.3",
   default_mode: "welcome",
   allow_manual_switching: true,
   mode_memory_enabled: true,
 
   // Global settings
-  api_key: "openmind_free",
+  api_key: "${OM_API_KEY:-openmind_free}",
   system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
   cortex_llm: {
     type: "OpenAILLM",
@@ -153,17 +153,21 @@ The runtime/version.py module handles:
 
 ### Available versions
 
-  - `v1.0.0`
+  - `v1.0.3` (latest)
 
-    Initial stable configuration version.
+    Adds support for global custom environment variables in the configuration file, allowing users to use `yaml` syntax to define environment variables throughout their configuration. This enables more flexible and dynamic configurations, such as securely referencing API keys or adjusting settings based on the deployment environment.
+
+  - `v1.0.2`
+
+    Adds support for multiple TTS.
 
   - `v1.0.1`
 
     Adds support for context-aware mode for full autonomy.
 
-  - `v1.0.2` (latest)
+  - `v1.0.0`
 
-    Adds support for multiple TTS.
+    Initial stable configuration version.
 
 > **Note:** Always use the latest supported version in your configuration files unless you have a specific reason to pin an older version.
 
