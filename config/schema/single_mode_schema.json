@@ -27,6 +27,14 @@
         "system_prompt_base": {"type": "string"},
         "system_governance": {"type": "string"},
         "system_prompt_examples": {"type": "string"},
+        "knowledge_base": {
+            "type": "object",
+            "description": "Optional knowledge base configuration for document retrieval.",
+            "properties": {
+                "knowledge_base_name": {"type": "string", "description": "Name of the knowledge base directory."},
+                "knowledge_base_root": {"type": "string", "description": "Root directory path for knowledge bases."}
+            }
+        },
         "agent_inputs": {
             "type": "array",
             "items": {
