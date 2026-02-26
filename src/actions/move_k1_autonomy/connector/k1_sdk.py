@@ -76,6 +76,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         self.movement_attempts = 0
         self.movement_attempt_limit = 15
         self.gap_previous = 0
+        self._consecutive_retreat_cmds = 0  # calculate whether 5 time retreat (move back), to prevent the odom inaccuracy causing continuous retreating
 
         self.session = None
 
@@ -249,6 +250,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         """
         self._stop_robot()
         self.movement_attempts = 0
+        self._consecutive_retreat_cmds = 0
         if not self.pending_movements.empty():
             self.pending_movements.get()
 
@@ -298,6 +300,8 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
             # Phase 1: Turn to face the target direction
             if not current_target.turn_complete:
+                # Turning resets consecutive retreat accounting.
+                self._consecutive_retreat_cmds = 0
                 gap = self._calculate_angle_gap(
                     -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
                 )
@@ -335,6 +339,21 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                     self.clean_abort()
                     return
 
+                # If we've been retreating for several ticks and odom/progress is unreliable,
+                # stop retreating and decide what to do next based only on obstacle safety.
+                if goal_dx < 0 and self._consecutive_retreat_cmds >= 5:
+                    logging.warning(
+                        "Retreat attempted 5+ times; aborting retreat and checking if front is clear to move forward"
+                    )
+                    self.clean_abort()
+                    if self._enqueue_forward_if_front_clear(dx=0.1):
+                        self.movement_attempts = 0
+                        self.gap_previous = 0
+                    return
+                if goal_dx >= 0:
+                    # Any non-retreat target resets consecutive retreat accounting.
+                    self._consecutive_retreat_cmds = 0
+
                 s_x = current_target.start_x
                 s_y = current_target.start_y
                 speed = current_target.speed
@@ -370,11 +389,17 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                     if distance_traveled < abs(goal_dx):
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
                         self._run_move_robot(fb * speed, 0.0, 0.0)
+                        if fb < 0:
+                            self._consecutive_retreat_cmds += 1
+                        else:
+                            self._consecutive_retreat_cmds = 0
                     elif distance_traveled > abs(goal_dx):
                         logging.debug(
                             f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
                         )
                         self._run_move_robot(-1 * fb * 0.15, 0.0, 0.0)
+                        # Overshoot correction is opposite direction; reset retreat accounting.
+                        self._consecutive_retreat_cmds = 0
                 else:
                     logging.info(
                         "Phase 2 - Movement completed normally, processing next AI command"
@@ -465,7 +490,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
         self.pending_movements.put(
             MoveCommand(
-                dx=-0.3,
+                dx=-0.15,
                 yaw=0.0,
                 start_x=round(self.odom.position["odom_x"], 2),
                 start_y=round(self.odom.position["odom_y"], 2),
@@ -473,6 +498,27 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                 speed=0.1,
             )
         )
+
+    def _enqueue_forward_if_front_clear(self, dx: float = 0.1) -> bool:
+        # "Front clear" == straight path (index 4) is available.
+        if 4 not in (self.path_provider.advance or []):
+            logging.warning("Front not clear (path 4 not safe); staying stopped")
+            return False
+
+        target_yaw = self._normalize_angle(
+            -1 * self.odom.position["odom_yaw_m180_p180"]
+        )
+        self.pending_movements.put(
+            MoveCommand(
+                dx=dx,
+                yaw=target_yaw,
+                start_x=round(self.odom.position["odom_x"], 2),
+                start_y=round(self.odom.position["odom_y"], 2),
+                turn_complete=True,
+                speed=self.move_speed,
+            )
+        )
+        return True
 
     def _normalize_angle(self, angle: float) -> float:
         """
