@@ -197,6 +197,24 @@ class TestModeConfig:
         assert runtime_config.URID == "test_urid"
         assert runtime_config.unitree_ethernet == "eth0"
 
+    def test_to_runtime_config_with_knowledge_base(
+        self, sample_mode_config, sample_system_config, mock_llm
+    ):
+        """Test conversion to RuntimeConfig with knowledge_base configuration."""
+        sample_mode_config.cortex_llm = mock_llm
+        sample_system_config.modes = {"test_mode": sample_mode_config}
+        sample_system_config.knowledge_base = {
+            "knowledge_base": "demo",
+            "knowledge_base_root": "/tmp/kb",
+        }
+
+        runtime_config = sample_mode_config.to_runtime_config(sample_system_config)
+
+        assert isinstance(runtime_config, RuntimeConfig)
+        assert runtime_config.knowledge_base is not None
+        assert runtime_config.knowledge_base["knowledge_base"] == "demo"
+        assert runtime_config.knowledge_base["knowledge_base_root"] == "/tmp/kb"
+
     def test_to_runtime_config_no_llm(self, sample_mode_config, sample_system_config):
         """Test conversion to RuntimeConfig fails when no LLM is configured."""
         sample_system_config.modes = {"test_mode": sample_mode_config}
@@ -248,6 +266,7 @@ class TestModeSystemConfig:
         assert config.api_key is None
         assert config.robot_ip is None
         assert config.URID is None
+        assert config.knowledge_base is None
         assert config.unitree_ethernet is None
         assert config.system_governance == ""
         assert config.system_prompt_examples == ""
