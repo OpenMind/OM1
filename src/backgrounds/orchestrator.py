@@ -98,8 +98,8 @@ class BackgroundOrchestrator:
         for background in self._background_instances:
             try:
                 background.stop()
-            except Exception as e:
-                logging.error(f"Error stopping background {background.name}: {e}")
+            except Exception:
+                logging.exception(f"Error stopping background {background.name}")
 
         self._background_executor.shutdown(wait=True)
         self._background_instances.clear()
