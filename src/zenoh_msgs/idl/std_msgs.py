@@ -59,6 +59,9 @@ def prepare_header(frame_id: str = "") -> Header:
         The frame ID to be set in the header.
     """
     ts = time.time()
+
+    # math.modf returns (fractional, integer) — assign correctly to avoid swapped sec/nsec
+
     remainder, seconds = math.modf(ts)
     timestamp = Time(sec=int(seconds), nanosec=int(remainder * 1000000000))
     header = Header(stamp=timestamp, frame_id=frame_id)
