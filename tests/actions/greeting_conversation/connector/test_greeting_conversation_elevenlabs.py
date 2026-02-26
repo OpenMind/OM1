@@ -23,18 +23,23 @@ def mock_providers():
             "actions.greeting_conversation.connector.greeting_conversation_elevenlabs.ElevenLabsTTSProvider"
         ) as mock_tts_cls,
         patch(
-            "actions.greeting_conversation.connector.greeting_conversation_elevenlabs.GreetingConversationStateMachineProvider"
+            "actions.greeting_conversation.connector.base_greeting_conversation.GreetingConversationStateMachineProvider"
         ) as mock_state_cls,
         patch(
-            "actions.greeting_conversation.connector.greeting_conversation_elevenlabs.ContextProvider"
+            "actions.greeting_conversation.connector.base_greeting_conversation.ContextProvider"
         ) as mock_ctx_cls,
+        patch(
+            "actions.greeting_conversation.connector.base_greeting_conversation.open_zenoh_session"
+        ) as mock_zenoh,
     ):
         mock_tts = Mock()
         mock_state = Mock()
         mock_ctx = Mock()
+        mock_session = Mock()
         mock_tts_cls.return_value = mock_tts
         mock_state_cls.return_value = mock_state
         mock_ctx_cls.return_value = mock_ctx
+        mock_zenoh.return_value = mock_session
         yield {
             "tts_cls": mock_tts_cls,
             "tts": mock_tts,
@@ -42,6 +47,8 @@ def mock_providers():
             "state": mock_state,
             "ctx_cls": mock_ctx_cls,
             "ctx": mock_ctx,
+            "zenoh": mock_zenoh,
+            "session": mock_session,
         }
 
 
@@ -180,7 +187,7 @@ class TestGreetingConversationElevenLabsConnector:
         connector.tts_triggered_time = float("inf")
         connector.tts_duration = 10.0
         with patch(
-            "actions.greeting_conversation.connector.greeting_conversation_elevenlabs.logging"
+            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
             connector.tick()
         mock_providers["state"].update_state_without_llm.assert_not_called()
@@ -195,7 +202,7 @@ class TestGreetingConversationElevenLabsConnector:
             "silence_duration": 2.0,
         }
         with patch(
-            "actions.greeting_conversation.connector.greeting_conversation_elevenlabs.logging"
+            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
             connector.tick()
         mock_providers["state"].update_state_without_llm.assert_called_once()
@@ -210,7 +217,7 @@ class TestGreetingConversationElevenLabsConnector:
             "silence_duration": 5.0,
         }
         with patch(
-            "actions.greeting_conversation.connector.greeting_conversation_elevenlabs.logging"
+            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
             connector.tick()
         mock_providers["ctx"].update_context.assert_called_once_with(
