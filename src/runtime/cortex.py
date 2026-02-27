@@ -8,6 +8,7 @@ from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
+from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -90,6 +91,7 @@ class ModeCortexRuntime:
         self.simulator_orchestrator: Optional[SimulatorOrchestrator] = None
         self.background_orchestrator: Optional[BackgroundOrchestrator] = None
         self.input_orchestrator: Optional[InputOrchestrator] = None
+        self.mcp_orchestrator: Optional[MCPOrchestrator] = None
 
         # Tasks for orchestrators
         self.input_listener_task: Optional[asyncio.Task] = None
@@ -138,6 +140,9 @@ class ModeCortexRuntime:
         self.action_orchestrator = ActionOrchestrator(self.current_config)
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
+        self.mcp_orchestrator = MCPOrchestrator(
+            self.current_config.mcp_servers, self.current_config.cortex_llm
+        )
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
@@ -235,6 +240,10 @@ class ModeCortexRuntime:
         if self.action_orchestrator:
             logging.debug("Stopping action orchestrator")
             self.action_orchestrator.stop()
+
+        if self.mcp_orchestrator:
+            logging.debug("Closing MCP connections")
+            await self.mcp_orchestrator.close()
 
         tasks_to_cancel = {}
 
@@ -558,6 +567,13 @@ class ModeCortexRuntime:
         output = await self.current_config.cortex_llm.ask(prompt)
         if output is None:
             logging.debug("No output from LLM")
+            return
+
+        output = await self.mcp_orchestrator.process(
+            output, prompt, self.current_config.cortex_llm
+        )
+        if output is None:
+            logging.debug("No output from LLM after MCP processing")
             return
 
         if self._is_reloading:
