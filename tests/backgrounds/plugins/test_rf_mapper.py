@@ -333,8 +333,9 @@ class TestRFmapper:
         # Enable running so the while loop enters, then stop after one iteration
         background.running = True
 
-        def stop_after_one_iteration(duration):
+        def stop_after_one_iteration(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one_iteration  # type: ignore[assignment]
 
@@ -390,8 +391,9 @@ class TestRFmapper:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one_iteration(duration):
+        def stop_after_one_iteration(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one_iteration  # type: ignore[assignment]
 
@@ -439,8 +441,9 @@ class TestRFmapper:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one_iteration(duration):
+        def stop_after_one_iteration(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one_iteration  # type: ignore[assignment]
 
@@ -490,8 +493,9 @@ class TestRFmapper:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one_iteration(duration):
+        def stop_after_one_iteration(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one_iteration  # type: ignore[assignment]
 
@@ -720,8 +724,9 @@ class TestRFmapperCoverage:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one(duration):
+        def stop_after_one(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one
         background.run()
@@ -771,8 +776,9 @@ class TestRFmapperCoverage:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one(duration):
+        def stop_after_one(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one
         with caplog.at_level("WARNING"):
@@ -820,8 +826,9 @@ class TestRFmapperCoverage:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one(duration):
+        def stop_after_one(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one
         background.run()
@@ -881,8 +888,9 @@ class TestRFmapperCoverage:
         background.scan_last_sent = 0
         background.running = True
 
-        def stop_after_one(duration):
+        def stop_after_one(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one
         background.run()
@@ -926,7 +934,7 @@ class TestRFmapperCoverage:
         background = RFmapper(config)
         background.running = True
 
-        def raise_keyboard_interrupt(duration):
+        def raise_keyboard_interrupt(duration: float) -> bool:
             raise KeyboardInterrupt
 
         background.sleep = raise_keyboard_interrupt
@@ -971,8 +979,9 @@ class TestRFmapperCoverage:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one(duration):
+        def stop_after_one(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one
         with caplog.at_level("ERROR"):
@@ -1015,8 +1024,9 @@ class TestRFmapperCoverage:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one(duration):
+        def stop_after_one(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one
         with caplog.at_level("ERROR"):
@@ -1061,8 +1071,9 @@ class TestRFmapperCoverage:
         background = RFmapper(config)
         background.running = True
 
-        def stop_after_one(duration):
+        def stop_after_one(duration: float) -> bool:
             background.running = False
+            return False
 
         background.sleep = stop_after_one
         with caplog.at_level("ERROR"):
