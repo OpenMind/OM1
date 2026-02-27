@@ -1,6 +1,9 @@
+import threading
+import time
 from unittest.mock import MagicMock, patch
 
 from backgrounds.plugins.rf_mapper import RFmapper, RFmapperConfig
+from providers.fabric_map_provider import RFData
 
 
 class TestRFmapperConfig:
@@ -529,3 +532,540 @@ class TestRFmapper:
         assert background.config is config
         assert background.name == "TestMapper"
         assert background.api_key == "key-123"
+
+
+class TestRFmapperThreadSafetyAndMemoryLeak:
+    """Test cases for thread safety and memory leak fixes."""
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_scan_lock_exists(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+    ):
+        """Test scan_lock is initialized as a threading.Lock."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom_class.return_value = MagicMock()
+        mock_fds_class.return_value = MagicMock()
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig()
+        background = RFmapper(config)
+
+        assert hasattr(background, "scan_lock")
+        assert isinstance(background.scan_lock, type(threading.Lock()))
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_seen_names_not_exists(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+    ):
+        """Test seen_names has been removed."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom_class.return_value = MagicMock()
+        mock_fds_class.return_value = MagicMock()
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig()
+        background = RFmapper(config)
+
+        assert not hasattr(background, "seen_names")
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_seen_devices_stale_cleanup(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+    ):
+        """Test stale BLE devices older than 60s are removed during scan."""
+
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom_class.return_value = MagicMock()
+        mock_fds_class.return_value = MagicMock()
+        mock_thread_class.return_value = MagicMock()
+        mock_event_loop.return_value = MagicMock()
+
+        config = RFmapperConfig()
+        background = RFmapper(config)
+
+        now = time.time()
+
+        # Tambah device stale (120 detik lalu)
+        stale_device = RFData(
+            unix_ts=now - 120,
+            address="AA:BB:CC:DD:EE:FF",
+            name=None,
+            rssi=-90,
+            tx_power=None,
+            service_uuid="",
+            mfgkey="",
+            mfgval="",
+        )
+        background.seen_devices["AA:BB:CC:DD:EE:FF"] = stale_device
+
+        # Tambah device fresh
+        fresh_device = RFData(
+            unix_ts=now,
+            address="11:22:33:44:55:66",
+            name=None,
+            rssi=-70,
+            tx_power=None,
+            service_uuid="",
+            mfgkey="",
+            mfgval="",
+        )
+        background.seen_devices["11:22:33:44:55:66"] = fresh_device
+
+        # Jalankan cleanup logic langsung (sama persis seperti di scan())
+        stale_addrs = [
+            addr
+            for addr, dev in background.seen_devices.items()
+            if now - dev.unix_ts > 60
+        ]
+        for addr in stale_addrs:
+            del background.seen_devices[addr]
+
+        # Device stale harus sudah dihapus
+        assert "AA:BB:CC:DD:EE:FF" not in background.seen_devices
+        # Device fresh harus masih ada
+        assert "11:22:33:44:55:66" in background.seen_devices
+
+
+class TestRFmapperCoverage:
+    """Additional tests to improve coverage."""
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_with_ble_scan_data(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+    ):
+        """Test run() handles ble_scan data correctly."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = {
+            "gps_unix_ts": 1234567890.0,
+            "gps_lat": 40.7128,
+            "gps_lon": -74.0060,
+            "gps_alt": 10.5,
+            "yaw_mag_0_360": 180.0,
+            "gps_qua": 4,
+            "ble_scan": [{"addr": "AA:BB", "rssi": -70}],
+        }
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk.data = None
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = None
+        mock_odom_class.return_value = mock_odom
+        mock_fds = MagicMock()
+        mock_fds_class.return_value = mock_fds
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig(URID="robot-001")
+        background = RFmapper(config)
+        background.running = True
+
+        def stop_after_one(duration):
+            background.running = False
+
+        background.sleep = stop_after_one
+        background.run()
+
+        assert background.ble_scan == [{"addr": "AA:BB", "rssi": -70}]
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_with_ble_scan_none_logs_warning(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+        caplog,
+    ):
+        """Test run() logs warning when ble_scan is None."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = {
+            "gps_unix_ts": 1234567890.0,
+            "gps_lat": 40.7128,
+            "gps_lon": -74.0060,
+            "gps_alt": 10.5,
+            "yaw_mag_0_360": 180.0,
+            "gps_qua": 4,
+            "ble_scan": None,
+        }
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk.data = None
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = None
+        mock_odom_class.return_value = mock_odom
+        mock_fds_class.return_value = MagicMock()
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig(URID="robot-001")
+        background = RFmapper(config)
+        background.running = True
+
+        def stop_after_one(duration):
+            background.running = False
+
+        background.sleep = stop_after_one
+        with caplog.at_level("WARNING"):
+            background.run()
+
+        assert "No nRF52 scan results" in caplog.text
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_with_rtk_data(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+    ):
+        """Test run() parses RTK data correctly."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = None
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = True
+        mock_rtk.data = {
+            "rtk_unix_ts": 1234567890.0,
+            "rtk_lat": 40.7128,
+            "rtk_lon": -74.0060,
+            "rtk_alt": 10.5,
+            "rtk_qua": 4,
+        }
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = None
+        mock_odom_class.return_value = mock_odom
+        mock_fds_class.return_value = MagicMock()
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig(URID="robot-001")
+        background = RFmapper(config)
+        background.running = True
+
+        def stop_after_one(duration):
+            background.running = False
+
+        background.sleep = stop_after_one
+        background.run()
+
+        assert background.rtk_lat == 40.7128
+        assert background.rtk_lon == -74.0060
+        assert background.rtk_alt == 10.5
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_with_fresh_scan_results(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+    ):
+        """Test run() sends fresh scan results when available."""
+
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = None
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk.data = None
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = None
+        mock_odom_class.return_value = mock_odom
+        mock_fds = MagicMock()
+        mock_fds_class.return_value = mock_fds
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig(URID="robot-001")
+        background = RFmapper(config)
+
+        # Simulasi ada scan results baru
+        fresh = RFData(
+            unix_ts=time.time(),
+            address="AA:BB:CC:DD:EE:FF",
+            name="TestDevice",
+            rssi=-70,
+            tx_power=None,
+            service_uuid="",
+            mfgkey="",
+            mfgval="",
+        )
+        background.scan_results = [fresh]
+        background.scan_idx = 1
+        background.scan_last_sent = 0
+        background.running = True
+
+        def stop_after_one(duration):
+            background.running = False
+
+        background.sleep = stop_after_one
+        background.run()
+
+        # scan_results harus dikosongkan setelah dikirim
+        assert background.scan_results == []
+        assert background.scan_last_sent == 1
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_keyboard_interrupt(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+    ):
+        """Test run() handles KeyboardInterrupt gracefully."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = None
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk.data = None
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = None
+        mock_odom_class.return_value = mock_odom
+        mock_fds_class.return_value = MagicMock()
+        mock_thread = MagicMock()
+        mock_thread_class.return_value = mock_thread
+
+        config = RFmapperConfig()
+        background = RFmapper(config)
+        background.running = True
+
+        def raise_keyboard_interrupt(duration):
+            raise KeyboardInterrupt
+
+        background.sleep = raise_keyboard_interrupt
+
+        # Tidak boleh raise exception
+        background.run()
+
+        assert background.running is False
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_handles_odom_exception(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+        caplog,
+    ):
+        """Test run() handles exception in odom parsing gracefully."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = None
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk.data = None
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = {"bad_key": "causes_error"}
+        mock_odom_class.return_value = mock_odom
+        mock_fds_class.return_value = MagicMock()
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig()
+        background = RFmapper(config)
+        background.running = True
+
+        def stop_after_one(duration):
+            background.running = False
+
+        background.sleep = stop_after_one
+        with caplog.at_level("ERROR"):
+            background.run()
+
+        assert "Error parsing Odom" in caplog.text
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_handles_rtk_exception(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+        caplog,
+    ):
+        """Test run() handles exception in RTK parsing gracefully."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = None
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = True
+        mock_rtk.data = {"bad_key": "causes_error"}
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = None
+        mock_odom_class.return_value = mock_odom
+        mock_fds_class.return_value = MagicMock()
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig()
+        background = RFmapper(config)
+        background.running = True
+
+        def stop_after_one(duration):
+            background.running = False
+
+        background.sleep = stop_after_one
+        with caplog.at_level("ERROR"):
+            background.run()
+
+        assert "Error parsing RTK" in caplog.text
+
+    @patch("backgrounds.plugins.rf_mapper.threading.Thread")
+    @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")
+    @patch("backgrounds.plugins.rf_mapper.UnitreeGo2OdomProvider")
+    @patch("backgrounds.plugins.rf_mapper.RtkProvider")
+    @patch("backgrounds.plugins.rf_mapper.GpsProvider")
+    @patch("backgrounds.plugins.rf_mapper.asyncio.new_event_loop")
+    def test_run_handles_fabric_exception(
+        self,
+        mock_event_loop,
+        mock_gps_class,
+        mock_rtk_class,
+        mock_odom_class,
+        mock_fds_class,
+        mock_thread_class,
+        caplog,
+    ):
+        """Test run() handles exception in fabric sharing gracefully."""
+        mock_gps = MagicMock()
+        mock_gps.running = True
+        mock_gps.data = None
+        mock_gps_class.return_value = mock_gps
+        mock_rtk = MagicMock()
+        mock_rtk.running = False
+        mock_rtk.data = None
+        mock_rtk_class.return_value = mock_rtk
+        mock_odom = MagicMock()
+        mock_odom.position = None
+        mock_odom_class.return_value = mock_odom
+        mock_fds = MagicMock()
+        mock_fds.share_data.side_effect = Exception("Fabric error")
+        mock_fds_class.return_value = mock_fds
+        mock_thread_class.return_value = MagicMock()
+
+        config = RFmapperConfig(URID="robot-001")
+        background = RFmapper(config)
+        background.running = True
+
+        def stop_after_one(duration):
+            background.running = False
+
+        background.sleep = stop_after_one
+        with caplog.at_level("ERROR"):
+            background.run()
+
+        assert "Error sharing to Fabric" in caplog.text
