@@ -125,6 +125,13 @@ class ActionOrchestrator:
 
         self.promise_queue = []
 
+        for task in done:
+            if task.exception() is not None:
+                logging.exception(
+                    "A promised action task failed",
+                    exc_info=task.exception(),
+                )
+
         return list(done), list(pending)
 
     async def promise(self, actions: list[Action]) -> None:
@@ -376,9 +383,19 @@ class ActionOrchestrator:
                     f"Parameter '{key}' not found in input type hints for action '{agent_action.llm_label}'"
                 )
 
-        input_interface = input_type(**converted_params)
+        try:
+            input_interface = input_type(**converted_params)
+        except Exception:
+            logging.exception(
+                f"Failed to create input interface for action '{agent_action.llm_label}'"
+            )
+            return None
 
-        await agent_action.connector.connect(input_interface)
+        try:
+            await agent_action.connector.connect(input_interface)
+        except Exception:
+            logging.exception(f"Connector failed for action '{agent_action.llm_label}'")
+            return None
 
         return input_interface
 

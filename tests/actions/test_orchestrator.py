@@ -913,3 +913,124 @@ class TestLLMResultParser:
         await orchestrator.flush_promises()
 
         assert len(MockConnector.execution_order) == 1
+
+
+class TestActionOrchestratorExceptionHandling:
+    """Test exception handling in _promise_action and flush_promises."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Reset mock connector state before each test."""
+        MockConnector.reset()
+
+    @pytest.mark.asyncio
+    async def test_connector_crash_does_not_propagate(
+        self, mock_runtime_config, create_agent_action
+    ):
+        """Test that a crashing connector does not crash the orchestrator."""
+        action = create_agent_action("move", "move")
+        action.connector.connect = lambda _: (_ for _ in ()).throw(
+            RuntimeError("hardware disconnect")
+        )
+        mock_runtime_config.agent_actions = [action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [Action(type="move", value="forward")]
+        await orchestrator.promise(actions)
+        done, pending = await orchestrator.flush_promises()
+
+        assert len(done) == 1
+        assert len(pending) == 0
+
+    @pytest.mark.asyncio
+    async def test_invalid_enum_value_does_not_crash(self, mock_runtime_config):
+        """Test that an invalid enum value from LLM does not crash the orchestrator."""
+        from enum import Enum
+
+        class MovementAction(Enum):
+            FORWARD = "forward"
+            BACKWARD = "backward"
+
+        @dataclass
+        class EnumInput:
+            action: MovementAction
+
+        @dataclass
+        class EnumInterface(Interface[EnumInput, MockOutput]):
+            input: EnumInput
+            output: MockOutput
+
+        connector = MockConnector(ActionConfig(), "move")
+        agent_action = AgentAction(
+            name="move",
+            llm_label="move",
+            interface=EnumInterface,
+            connector=connector,
+            exclude_from_prompt=False,
+        )
+        mock_runtime_config.agent_actions = [agent_action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        # "fly" is not a valid MovementAction — simulates bad LLM output
+        actions = [Action(type="move", value="fly")]
+        await orchestrator.promise(actions)
+        done, pending = await orchestrator.flush_promises()
+
+        assert len(done) == 1
+        assert len(pending) == 0
+
+    @pytest.mark.asyncio
+    async def test_other_actions_continue_after_one_crash(
+        self, mock_runtime_config, create_agent_action
+    ):
+        """Test that other actions still execute even if one connector crashes."""
+        good_action = create_agent_action("speak", "speak")
+        bad_action = create_agent_action("move", "move")
+        bad_action.connector.connect = lambda _: (_ for _ in ()).throw(
+            RuntimeError("motor failure")
+        )
+
+        mock_runtime_config.agent_actions = [good_action, bad_action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        actions = [
+            Action(type="speak", value="hello"),
+            Action(type="move", value="forward"),
+        ]
+        await orchestrator.promise(actions)
+        await orchestrator.flush_promises()
+
+        assert "speak" in MockConnector.execution_order
+
+    @pytest.mark.asyncio
+    async def test_missing_required_param_does_not_crash(self, mock_runtime_config):
+        """Test that missing required parameter in input_type() does not crash orchestrator."""
+
+        @dataclass
+        class StrictInput:
+            required_param: str
+            another_required: int
+
+        @dataclass
+        class StrictInterface(Interface[StrictInput, MockOutput]):
+            input: StrictInput
+            output: MockOutput
+
+        connector = MockConnector(ActionConfig(), "move")
+        agent_action = AgentAction(
+            name="move",
+            llm_label="move",
+            interface=StrictInterface,
+            connector=connector,
+            exclude_from_prompt=False,
+        )
+        mock_runtime_config.agent_actions = [agent_action]
+        orchestrator = ActionOrchestrator(mock_runtime_config)
+
+        # value tidak mengandung required_param maupun another_required
+        actions = [Action(type="move", value="forward")]
+        await orchestrator.promise(actions)
+        done, pending = await orchestrator.flush_promises()
+
+        assert len(done) == 1
+        assert len(pending) == 0
