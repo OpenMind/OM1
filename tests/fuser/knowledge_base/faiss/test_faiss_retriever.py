@@ -260,12 +260,11 @@ class TestFAISSRetriever:
             mock_load.assert_called_once()
 
     def test_score_calculation(self, mock_faiss_index):
-        """Test that score is calculated correctly from distance."""
+        """Test that score is calculated consistently with batch_search."""
         index_path, metadata_path, dim, _ = mock_faiss_index
         retriever = FAISSRetriever(index_path, metadata_path)
 
         with patch.object(retriever.index, "search") as mock_search:
-            # For IndexFlatIP, dist is already cosine similarity
             mock_search.return_value = (
                 np.array([[0.95, 0.85, 0.70]], dtype="float32"),
                 np.array([[0, 1, 2]], dtype="int64"),
@@ -274,9 +273,10 @@ class TestFAISSRetriever:
             query_embedding = np.random.randn(dim).astype("float32")
             results = retriever.search(query_embedding, top_k=3)
 
-            assert results[0].score == pytest.approx(0.95, rel=1e-5)
-            assert results[1].score == pytest.approx(0.85, rel=1e-5)
-            assert results[2].score == pytest.approx(0.70, rel=1e-5)
+            # Score uses 1/(1+dist) normalization, consistent with batch_search
+            assert results[0].score == pytest.approx(1.0 / (1.0 + 0.95), rel=1e-5)
+            assert results[1].score == pytest.approx(1.0 / (1.0 + 0.85), rel=1e-5)
+            assert results[2].score == pytest.approx(1.0 / (1.0 + 0.70), rel=1e-5)
 
     def test_batch_search_returns_independent_results(self, mock_faiss_index):
         """Test that batch search returns independent result sets."""
