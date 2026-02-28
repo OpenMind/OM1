@@ -118,7 +118,7 @@ class TwitterInput(FuserInput[TwitterSensorConfig, Optional[str]]):
         if raw_input:
             self.message_buffer.put_nowait(raw_input)
 
-        if self.message_buffer:
+        if not self.message_buffer.empty():
             try:
                 message = self.message_buffer.get_nowait()
                 if message:
