@@ -364,3 +364,36 @@ class TestKnowledgeBase:
 
             call_args = mock_retriever.search.call_args
             assert call_args[1]["top_k"] == 10
+
+    def test_format_context_qa_pair_type(self, mock_kb_structure):
+        """Test format_context with qa_pair type uses answer instead of text."""
+        with (
+            patch("src.fuser.knowledge_base.retriever.EmbeddingClient"),
+            patch("src.fuser.knowledge_base.retriever.FAISSRetriever") as mock_ret,
+        ):
+            mock_retriever = MagicMock()
+            mock_retriever.num_documents = 10
+            mock_retriever.dimension = 384
+            mock_ret.return_value = mock_retriever
+
+            kb = KnowledgeBase(
+                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
+            )
+
+            docs = [
+                Document(
+                    text="What is the question?",
+                    metadata={
+                        "source": "qa.txt",
+                        "chunk_id": 0,
+                        "type": "qa_pair",
+                        "answer": "This is the answer.",
+                    },
+                    score=0.95,
+                )
+            ]
+
+            context = kb.format_context(docs)
+
+            assert "This is the answer." in context
+            assert "What is the question?" not in context
