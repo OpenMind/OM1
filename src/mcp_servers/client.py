@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.types import TextContent
 from pydantic import BaseModel, TypeAdapter
 
 logger = logging.getLogger(__name__)
@@ -135,6 +136,7 @@ class MCPClientManager:
         read, write = await transport.connect(self._exit_stack, config)
 
         session = ClientSession(read, write)
+        assert self._exit_stack is not None
         await self._exit_stack.enter_async_context(session)
         await session.initialize()
 
@@ -195,7 +197,7 @@ class MCPClientManager:
 
         texts = []
         for content in result.content:
-            if hasattr(content, "text"):
+            if isinstance(content, TextContent):
                 texts.append(content.text)
 
         return "\n".join(texts) if texts else str(result.content)

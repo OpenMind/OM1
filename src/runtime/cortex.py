@@ -140,9 +140,10 @@ class ModeCortexRuntime:
         self.action_orchestrator = ActionOrchestrator(self.current_config)
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
-        self.mcp_orchestrator = MCPOrchestrator(
-            self.current_config.mcp_servers, self.current_config.cortex_llm
-        )
+        if self.current_config.mcp_servers:
+            self.mcp_orchestrator = MCPOrchestrator(
+                self.current_config.mcp_servers, self.current_config.cortex_llm
+            )
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
@@ -569,9 +570,13 @@ class ModeCortexRuntime:
             logging.debug("No output from LLM")
             return
 
-        output = await self.mcp_orchestrator.process(
-            output, prompt, self.current_config.cortex_llm
-        )
+        if self.mcp_orchestrator:
+            output = await self.mcp_orchestrator.process(
+                output,
+                prompt,
+                self.current_config.cortex_llm,
+                dispatch_om1=self.action_orchestrator.promise,
+            )
         if output is None:
             logging.debug("No output from LLM after MCP processing")
             return

@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 from llm.output_model import CortexOutputModel
 from mcp_servers.client import MCPClientManager
@@ -19,20 +19,17 @@ class ToolResult:
     content: str
 
 
+@dataclass
+class RoundRecord:
+    """Record of a single orchestration round."""
+
+    round_num: int
+    tools_called: List[str]
+    results: List[ToolResult]
+
+
 class MCPOrchestrator:
-    """Orchestrate MCP tool execution between LLM and action dispatch.
-
-    Intercepts MCP tool calls, executes them, and re-calls the LLM with results.
-
-    Parameters
-    ----------
-    mcp_client : MCPClientManager
-        Connected MCP client with tool schemas.
-    llm : Any
-        The LLM instance (used to inject tool schemas).
-    max_concurrency : int
-        Maximum number of MCP tools to execute concurrently.
-    """
+    """Orchestrate multi-round MCP tool execution."""
 
     def __init__(
         self,
@@ -44,63 +41,110 @@ class MCPOrchestrator:
         self._max_concurrency = max_concurrency
 
         mcp_schemas = mcp_client.get_tool_schemas()
-        llm.function_schemas.extend(mcp_schemas)
-        logger.info(f"MCPOrchestrator initialized with {len(mcp_schemas)} tools")
+        base_schemas = [
+            schema
+            for schema in llm.function_schemas
+            if not schema.get("function", {}).get("name", "").startswith("mcp_")
+        ]
+        llm.function_schemas = base_schemas + mcp_schemas
 
-    async def process(self, output: Any, prompt: str, llm: Any) -> Any:
-        """Process LLM output, execute MCP tools if needed.
+        logger.info(
+            f"MCP Orchestrator initialized with {len(mcp_schemas)} MCP tools, "
+            f"{len(base_schemas)} base tools"
+        )
 
-        Parameters
-        ----------
-        output : CortexOutputModel
-            The LLM's output containing actions.
-        prompt : str
-            The original prompt (used for re-calling LLM).
-        llm : Any
-            The LLM instance for follow-up inference.
-
-        Returns
-        -------
-        CortexOutputModel
-            Final output with merged actions.
-        """
+    async def process(
+        self,
+        output: Any,
+        prompt: str,
+        llm: Any,
+        dispatch_om1=None,
+        max_rounds: int = 5,
+    ) -> Any:
+        """Execute MCP tools in multi-round loop."""
         if output is None or not hasattr(output, "actions"):
             return output
 
-        mcp_actions = self._get_mcp_actions(output.actions)
+        history: List[RoundRecord] = []
+        succeeded_calls: Set[str] = set()
 
-        if not mcp_actions:
-            return output
+        for round_idx in range(max_rounds):
+            # Extract MCP actions from output
+            mcp_actions = self._extract_mcp_actions(output.actions)
+            if not mcp_actions:
+                break
 
-        # Preserve OM1 actions to avoid actions loss
-        om1_actions = [
-            a for a in output.actions if not self._mcp_client.is_mcp_tool(a.type)
+            # Filter out duplicate actions in all rounds
+            new_actions = self._filter_new_actions(mcp_actions, succeeded_calls)
+            if not new_actions:
+                break
+
+            # Extract OM1 actions from output
+            om1_actions = [
+                action
+                for action in output.actions
+                if not self._mcp_client.is_mcp_tool(action.type)
+            ]
+
+            # Start OM1 actions
+            if om1_actions and dispatch_om1:
+                await dispatch_om1(om1_actions)
+
+            logger.info(
+                f"MCP round {round_idx + 1}/{max_rounds}: "
+                f"executing {len(new_actions)} tool(s)"
+            )
+
+            results = await self._execute_tools(new_actions)
+
+            for action, result in zip(new_actions, results):
+                if result.success:
+                    succeeded_calls.add(self._build_call_signature(action))
+
+            history.append(
+                RoundRecord(
+                    round_num=round_idx + 1,
+                    tools_called=[action.type for action in new_actions],
+                    results=results,
+                )
+            )
+
+            output = await self._recall_llm(llm, prompt, history)
+
+            if output is None or not hasattr(output, "actions"):
+                return None
+
+        # If there are still mcp actions in the output after max_rounds, remove them
+        if output and hasattr(output, "actions"):
+            final_actions = [
+                action
+                for action in output.actions
+                if not action.type.startswith("mcp_")
+            ]
+            return CortexOutputModel(actions=final_actions)
+        return output
+
+    def _extract_mcp_actions(self, actions: list) -> list:
+        return [
+            action for action in actions if self._mcp_client.is_mcp_tool(action.type)
         ]
 
-        logger.info(
-            f"MCP: executing {len(mcp_actions)} tool(s), preserving {len(om1_actions)} OM1 action(s)"
-        )
+    def _filter_new_actions(self, actions: list, succeeded: Set[str]) -> list:
+        return [
+            action
+            for action in actions
+            if self._build_call_signature(action) not in succeeded
+        ]
 
-        results = await self._execute_tools(mcp_actions)
-        second_output = await self._recall_llm(llm, prompt, results)
-
-        if second_output is None or not hasattr(second_output, "actions"):
-            return CortexOutputModel(actions=om1_actions) if om1_actions else output
-
-        merged = om1_actions + second_output.actions
-        return CortexOutputModel(actions=merged)
-
-    def _get_mcp_actions(self, actions: list) -> list:
-        """Extract MCP tool calls from action list."""
-        return [a for a in actions if self._mcp_client.is_mcp_tool(a.type)]
+    def _build_call_signature(self, action: Any) -> str:
+        """Deterministic signature for dedup: tool_key + sorted args."""
+        args = self._parse_arguments(action)
+        return f"{action.type}|{json.dumps(args, sort_keys=True, default=str)}"
 
     def _parse_arguments(self, action: Any) -> Dict[str, Any]:
-        """Extract tool arguments from an action's value."""
         value = action.value
-
         if isinstance(value, dict):
             return value
-
         if isinstance(value, str):
             try:
                 parsed = json.loads(value)
@@ -109,59 +153,83 @@ class MCPOrchestrator:
             except (json.JSONDecodeError, TypeError):
                 pass
             return {"action": value}
-
         return {"action": str(value)}
 
-    async def _execute_single_tool(self, action: Any) -> ToolResult:
-        """Execute a single MCP tool call with error handling."""
+    async def _execute_single_tool(
+        self, action: Any, timeout: float = 10.0
+    ) -> ToolResult:
         try:
             args = self._parse_arguments(action)
-            content = await self._mcp_client.call_tool(action.type, args)
+            content = await asyncio.wait_for(
+                self._mcp_client.call_tool(action.type, args), timeout=timeout
+            )
             logger.info(f"MCP tool {action.type} returned: {content}")
+
+            try:
+                parsed = json.loads(content)
+                if isinstance(parsed, dict) and "error" in parsed:
+                    return ToolResult(
+                        tool_key=action.type, success=False, content=content
+                    )
+            except (json.JSONDecodeError, TypeError):
+                pass
+
             return ToolResult(tool_key=action.type, success=True, content=content)
-        except Exception as e:
-            logger.error(f"Error calling {action.type}: {e}")
+        except Exception as exc:
+            logger.error(f"Error calling {action.type}: {exc}")
             return ToolResult(
                 tool_key=action.type,
                 success=False,
-                content=f"Error: {e}",
+                content=f"Error: {exc}",
             )
 
     async def _execute_tools(self, actions: list) -> List[ToolResult]:
-        """Execute multiple MCP tools concurrently."""
         semaphore = asyncio.Semaphore(self._max_concurrency)
 
         async def _guarded(action: Any) -> ToolResult:
             async with semaphore:
                 return await self._execute_single_tool(action)
 
-        return await asyncio.gather(*(_guarded(a) for a in actions))
+        return await asyncio.gather(*(_guarded(action) for action in actions))
 
     def _build_result_prompt(
-        self, original_prompt: str, results: List[ToolResult]
+        self,
+        original_prompt: str,
+        history: List[RoundRecord],
     ) -> str:
-        """Build a follow-up prompt that includes tool results."""
+        """Build follow-up prompt."""
+        # Tool results: concise, structured
         lines = []
-        for r in results:
-            status = "OK" if r.success else "FAILED"
-            lines.append(f"[{r.tool_key}] ({status}): {r.content}")
-
+        for record in history:
+            for result in record.results:
+                status = "OK" if result.success else "FAILED"
+                lines.append(f"[{result.tool_key}] {status}: {result.content}")
         result_block = "\n".join(lines)
+
         return (
             f"{original_prompt}\n\n"
-            f"TOOL RESULTS:\n{result_block}\n\n"
-            f"Based on the tool results above, respond using the speak action "
-            f"to tell the user the information. Summarize concisely."
+            f"[Tool Results]\n{result_block}\n\n"
+            f"[Next Step]\n"
+            f"Do NOT re-call any tool marked OK above. "
+            f"If all needed info is available, respond with speak. "
+            f"Otherwise call only the necessary tools in one batch.\n"
         )
 
     async def _recall_llm(
-        self, llm: Any, prompt: str, results: List[ToolResult]
+        self,
+        llm: Any,
+        prompt: str,
+        history: List[RoundRecord],
     ) -> Any:
-        """Re-call the LLM with tool results to generate the final response."""
-        new_prompt = self._build_result_prompt(prompt, results)
-        logger.info("MCP execution complete, recall LLM")
-        return await llm.ask(new_prompt)
+        """Recall LLM with tool results. Skips history to avoid pollution."""
+        recall_prompt = self._build_result_prompt(prompt, history)
+        logger.info("MCP recall LLM with cumulative context")
+        llm._skip_state_management = True
+        try:
+            return await llm.ask(recall_prompt)
+        finally:
+            llm._skip_state_management = False
 
     async def close(self) -> None:
-        """Close underlying MCP server connections."""
+        """Close all MCP client connections."""
         await self._mcp_client.close_all()
