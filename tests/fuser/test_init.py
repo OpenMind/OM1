@@ -48,6 +48,7 @@ def create_mock_config(
     mock_config.system_prompt_examples = "system prompt examples"
     mock_config.agent_actions = agent_actions
     mock_config.knowledge_base = knowledge_base
+    mock_config.mcp_servers = None
 
     return mock_config
 
