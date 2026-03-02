@@ -1,0 +1,51 @@
+{
+  version: "v1.0.0",
+  hertz: 10,
+  name: "imu_robot",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  system_prompt_base: "You are a robot with an IMU sensor. Monitor your orientation and movement. If you detect a fall or impact, immediately execute the appropriate recovery action. Stay safe and protect yourself and those around you.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  agent_inputs: [
+    {
+      type: "IMUInput",
+      config: {
+        port: "/dev/ttyUSB0",
+        baudrate: 115200,
+        timeout: 1.0,
+        fall_threshold: 45.0,
+        impact_threshold: 20.0,
+        poll_interval: 0.1,
+      },
+    },
+  ],
+  agent_backgrounds: [
+    {
+      type: "IMUFallDetector",
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "IMURobot",
+      history_length: 5,
+    },
+  },
+  agent_actions: [
+    {
+      name: "fall_recovery",
+      llm_label: "fall_recovery",
+      connector: "serial",
+      config: {
+        port: "/dev/ttyUSB0",
+        baudrate: 115200,
+        timeout: 2.0,
+      },
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "elevenlabs_tts",
+      config: {},
+    },
+  ],
+}
