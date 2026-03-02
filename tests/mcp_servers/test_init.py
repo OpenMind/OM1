@@ -27,7 +27,7 @@ class TestLoadMcp:
         ):
             mock_loop.return_value.is_running.return_value = False
 
-            with patch("asyncio.run", new_callable=MagicMock) as mock_run:
+            with patch("asyncio.run", new_callable=MagicMock):
                 result = load_mcp(configs)
 
         assert result == mock_client
