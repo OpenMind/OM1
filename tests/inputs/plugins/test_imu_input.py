@@ -10,9 +10,9 @@ from providers.imu_provider import IMUProvider
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    IMUProvider.reset()
+    IMUProvider.reset()  # type: ignore[attr-defined]
     yield
-    IMUProvider.reset()
+    IMUProvider.reset()  # type: ignore[attr-defined]
 
 
 @pytest.fixture

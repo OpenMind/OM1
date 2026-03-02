@@ -5,9 +5,9 @@ from providers.imu_provider import IMUProvider
 
 @pytest.fixture(autouse=True)
 def reset_singleton():
-    IMUProvider.reset()
+    IMUProvider.reset()  # type: ignore[attr-defined]
     yield
-    IMUProvider.reset()
+    IMUProvider.reset()  # type: ignore[attr-defined]
 
 
 def test_initial_state():
@@ -115,3 +115,7 @@ def test_gyro_data_stored():
     assert state["gyro_x"] == 1.1
     assert state["gyro_y"] == 2.2
     assert state["gyro_z"] == 3.3
+
+
+def test_reset_class_method_callable():
+    IMUProvider.reset()  # type: ignore[attr-defined]

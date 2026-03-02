@@ -140,8 +140,3 @@ class IMUProvider:
     def stop(self) -> None:
         """Stop the IMUProvider and clean up resources."""
         logging.info("IMUProvider stopped")
-
-    @classmethod
-    def reset(cls) -> None:
-        """Reset the singleton instance (used in tests)."""
-        ...
