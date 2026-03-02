@@ -4,6 +4,7 @@
   name: "imu_robot",
   api_key: "${OM_API_KEY:-openmind_free}",
   system_prompt_base: "You are a robot with an IMU sensor. Monitor your orientation and movement. If you detect a fall or impact, immediately execute the appropriate recovery action. Stay safe and protect yourself and those around you.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If the robot falls, you might:\n    fall_recovery: {{'action': 'stand_up'}}\n    Speak: {{'sentence': 'I fell down, trying to stand up!'}}\n\n2. If an impact is detected, you might:\n    fall_recovery: {{'action': 'emergency_stop'}}\n    Speak: {{'sentence': 'Impact detected, stopping for safety.'}}\n\n3. If the robot is operating normally, you might:\n    Speak: {{'sentence': 'All systems normal, monitoring orientation.'}}",
   system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
   agent_inputs: [
     {

@@ -173,7 +173,7 @@ class IMUInput(FuserInput[IMUConfig, Optional[dict]]):
             logging.error(f"IMUInput: error processing data - {e}")
             return None
 
-    async def raw_to_text(self, raw_input: Optional[dict]) -> None:
+    async def raw_to_text(self, raw_input: Optional[dict]):
         """
         Update message buffer with processed IMU data.
 
