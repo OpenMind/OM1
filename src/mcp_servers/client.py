@@ -100,10 +100,10 @@ class MCPClientManager:
 
     async def _connect_server(self, config: StdioServerConfig) -> None:
         """Connect to a single MCP server."""
+        assert self._exit_stack is not None
         read, write = await StdioTransport.connect(self._exit_stack, config)
 
         session = ClientSession(read, write)
-        assert self._exit_stack is not None
         await self._exit_stack.enter_async_context(session)
         await session.initialize()
 
