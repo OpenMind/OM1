@@ -329,10 +329,10 @@ class ModeConfig:
     simulators: List[Simulator] = field(default_factory=list)
     agent_actions: List[AgentAction] = field(default_factory=list)
     backgrounds: List[Background] = field(default_factory=list)
-    mcp_servers: Optional[Any] = None
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    mcp_servers: Optional[Any] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
