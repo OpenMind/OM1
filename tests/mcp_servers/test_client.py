@@ -4,7 +4,6 @@ import pytest
 from mcp.types import TextContent
 
 from mcp_servers.client import (
-    HttpServerConfig,
     MCPClientManager,
     MCPTool,
     StdioServerConfig,
@@ -49,30 +48,22 @@ class TestConfigParsing:
 
     def test_stdio_config(self):
         config = StdioServerConfig(name="test", command="python", args=["-m", "server"])
-        assert config.transport == "stdio"
         assert config.name == "test"
-
-    def test_http_config(self):
-        config = HttpServerConfig(
-            name="test", transport="http", url="http://localhost:8080"
-        )
-        assert config.transport == "http"
-        assert config.url == "http://localhost:8080"
 
     def test_client_manager_parses_configs(self):
         configs = [
-            {"name": "s1", "transport": "stdio", "command": "python", "args": []},
-            {"name": "s2", "transport": "http", "url": "http://localhost:8080"},
+            {"name": "s1", "command": "python", "args": []},
+            {"name": "s2", "command": "node", "args": ["-y", "server"]},
         ]
         manager = MCPClientManager(configs)
 
         assert len(manager._configs) == 2
         assert isinstance(manager._configs[0], StdioServerConfig)
-        assert isinstance(manager._configs[1], HttpServerConfig)
+        assert isinstance(manager._configs[1], StdioServerConfig)
 
-    def test_invalid_transport_raises(self):
+    def test_missing_command_raises(self):
         with pytest.raises(Exception):
-            MCPClientManager([{"name": "bad", "transport": "grpc", "url": "x"}])
+            MCPClientManager([{"name": "bad"}])
 
 
 class TestMCPClientManager:
@@ -211,18 +202,17 @@ class TestConnectAll:
         mock_session.list_tools = AsyncMock(return_value=Mock(tools=[mock_tool]))
 
         configs = [
-            {"name": "weather", "transport": "stdio", "command": "python", "args": []},
+            {"name": "weather", "command": "python", "args": []},
         ]
         manager = MCPClientManager(configs)
 
         with (
-            patch("mcp_servers.client._TRANSPORTS") as mock_transports,
+            patch(
+                "mcp_servers.client.StdioTransport.connect",
+                return_value=("read", "write"),
+            ),
             patch("mcp_servers.client.ClientSession", return_value=mock_session),
         ):
-            mock_transport = AsyncMock()
-            mock_transport.connect = AsyncMock(return_value=("read", "write"))
-            mock_transports.get = Mock(return_value=mock_transport)
-
             await manager.connect_all()
 
         assert "mcp_weather_get_weather" in manager._tools
@@ -233,25 +223,15 @@ class TestConnectAll:
     @pytest.mark.asyncio
     async def test_connect_handles_server_failure(self):
         configs = [
-            {"name": "bad_server", "transport": "stdio", "command": "fail", "args": []},
+            {"name": "bad_server", "command": "fail", "args": []},
         ]
         manager = MCPClientManager(configs)
 
-        with patch("mcp_servers.client._TRANSPORTS") as mock_transports:
-            mock_transport = AsyncMock()
-            mock_transport.connect = AsyncMock(side_effect=ConnectionError("refused"))
-            mock_transports.get = Mock(return_value=mock_transport)
-
+        with patch(
+            "mcp_servers.client.StdioTransport.connect",
+            side_effect=ConnectionError("refused"),
+        ):
             await manager.connect_all()
 
         assert len(manager._tools) == 0
         assert len(manager._sessions) == 0
-
-    @pytest.mark.asyncio
-    async def test_unsupported_transport_raises(self):
-        manager = MCPClientManager([])
-        config = Mock()
-        config.transport = "grpc"
-
-        with pytest.raises(ValueError, match="Unsupported MCP transport"):
-            await manager._connect_server(config)

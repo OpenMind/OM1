@@ -1,35 +1,21 @@
 import logging
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.client.streamable_http import streamable_http_client
 from mcp.types import TextContent
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel
 
 
 class StdioServerConfig(BaseModel):
     """Configuration for an MCP server using stdio transport."""
 
     name: str
-    transport: Literal["stdio"] = "stdio"
     command: str
     args: List[str] = []
     env: Optional[Dict[str, str]] = None
-
-
-class HttpServerConfig(BaseModel):
-    """Configuration for an MCP server using HTTP transport."""
-
-    name: str
-    transport: Literal["http"]
-    url: str
-
-
-ServerConfig = Union[StdioServerConfig, HttpServerConfig]
-_config_adapter = TypeAdapter(ServerConfig)
 
 
 @dataclass
@@ -69,7 +55,7 @@ class MCPTool:
 
 
 class StdioTransport:
-    """Create a stdio transport connection."""
+    """Handles stdio transport connections to MCP servers."""
 
     @staticmethod
     async def connect(
@@ -86,25 +72,6 @@ class StdioTransport:
         return read, write
 
 
-class HttpTransport:
-    """Create an HTTP transport connection."""
-
-    @staticmethod
-    async def connect(
-        exit_stack: AsyncExitStack, config: HttpServerConfig
-    ) -> Tuple[Any, Any]:
-        """Open an HTTP connection to an MCP server."""
-        client_cm = streamable_http_client(config.url)
-        read, write, _ = await exit_stack.enter_async_context(client_cm)
-        return read, write
-
-
-_TRANSPORTS = {
-    "stdio": StdioTransport,
-    "http": HttpTransport,
-}
-
-
 class MCPClientManager:
     """Manage connections to multiple MCP servers and execute tool calls.
 
@@ -115,7 +82,7 @@ class MCPClientManager:
     """
 
     def __init__(self, server_configs: List[Dict]) -> None:
-        self._configs = [_config_adapter.validate_python(c) for c in server_configs]
+        self._configs = [StdioServerConfig(**c) for c in server_configs]
         self._sessions: Dict[str, ClientSession] = {}
         self._tools: Dict[str, MCPTool] = {}
         self._exit_stack: Optional[AsyncExitStack] = None
@@ -131,13 +98,9 @@ class MCPClientManager:
             except Exception as e:
                 logging.error(f"Failed to connect to MCP server '{config.name}': {e}")
 
-    async def _connect_server(self, config: ServerConfig) -> None:
+    async def _connect_server(self, config: StdioServerConfig) -> None:
         """Connect to a single MCP server."""
-        transport = _TRANSPORTS.get(config.transport)
-        if not transport:
-            raise ValueError(f"Unsupported MCP transport: {config.transport}")
-
-        read, write = await transport.connect(self._exit_stack, config)
+        read, write = await StdioTransport.connect(self._exit_stack, config)
 
         session = ClientSession(read, write)
         assert self._exit_stack is not None
