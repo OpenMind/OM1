@@ -6,8 +6,6 @@ import pytest
 from llm.output_model import Action, CortexOutputModel
 from mcp_servers.orchestrator import MCPOrchestrator, RoundRecord, ToolResult
 
-# -- Mocks ------------------------------------------------------------------
-
 
 class MockMCPClient:
     """Mock MCP client that tracks tool calls."""
@@ -61,9 +59,6 @@ class MockLLM:
         return None
 
 
-# -- Fixtures ---------------------------------------------------------------
-
-
 @pytest.fixture
 def mock_client():
     return MockMCPClient()
@@ -77,9 +72,6 @@ def make_output():
         return CortexOutputModel(actions=[Action(type=t, value=v) for t, v in actions])
 
     return _make
-
-
-# -- Tests ------------------------------------------------------------------
 
 
 class TestInit:

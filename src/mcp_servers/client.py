@@ -9,8 +9,6 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.types import TextContent
 from pydantic import BaseModel, TypeAdapter
 
-logger = logging.getLogger(__name__)
-
 
 class StdioServerConfig(BaseModel):
     """Configuration for an MCP server using stdio transport."""
@@ -108,9 +106,15 @@ _TRANSPORTS = {
 
 
 class MCPClientManager:
-    """Manage connections to MCP servers and execute tool calls."""
+    """Manage connections to multiple MCP servers and execute tool calls.
 
-    def __init__(self, server_configs: List[Dict]):
+    Parameters
+    ----------
+    server_configs : list of dict
+        Raw configuration dicts.
+    """
+
+    def __init__(self, server_configs: List[Dict]) -> None:
         self._configs = [_config_adapter.validate_python(c) for c in server_configs]
         self._sessions: Dict[str, ClientSession] = {}
         self._tools: Dict[str, MCPTool] = {}
@@ -125,7 +129,7 @@ class MCPClientManager:
             try:
                 await self._connect_server(config)
             except Exception as e:
-                logger.error(f"Failed to connect to MCP server '{config.name}': {e}")
+                logging.error(f"Failed to connect to MCP server '{config.name}': {e}")
 
     async def _connect_server(self, config: ServerConfig) -> None:
         """Connect to a single MCP server."""
@@ -154,7 +158,7 @@ class MCPClientManager:
             )
             self._tools[mcp_tool.key] = mcp_tool
 
-        logger.info(
+        logging.info(
             f"MCP server '{config.name}': {len(tools_result.tools)} tools "
             f"({[t.name for t in tools_result.tools]})"
         )
@@ -208,7 +212,7 @@ class MCPClientManager:
             try:
                 await self._exit_stack.aclose()
             except Exception as e:
-                logger.error(f"Error closing MCP connections: {e}")
+                logging.error(f"Error closing MCP connections: {e}")
             self._exit_stack = None
         self._sessions.clear()
         self._tools.clear()

@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Set
 from llm.output_model import CortexOutputModel
 from mcp_servers.client import MCPClientManager
 
-logger = logging.getLogger(__name__)
-
 
 @dataclass
 class ToolResult:
@@ -29,14 +27,28 @@ class RoundRecord:
 
 
 class MCPOrchestrator:
-    """Orchestrate multi-round MCP tool execution."""
+    """Orchestrate multi-round MCP tool execution.
+
+    Manages the lifecycle of MCP tool calls within a single LLM tick,
+    executing tools in batches and recalling the LLM with results until
+    no more MCP actions are requested or the round limit is reached.
+
+    Parameters
+    ----------
+    mcp_client : MCPClientManager
+        The client manager for MCP server connections.
+    llm : Any
+        The LLM instance whose function_schemas will be extended.
+    max_concurrency : int
+        Maximum number of concurrent tool executions per round.
+    """
 
     def __init__(
         self,
         mcp_client: MCPClientManager,
         llm: Any,
         max_concurrency: int = 5,
-    ):
+    ) -> None:
         self._mcp_client = mcp_client
         self._max_concurrency = max_concurrency
 
@@ -48,7 +60,7 @@ class MCPOrchestrator:
         ]
         llm.function_schemas = base_schemas + mcp_schemas
 
-        logger.info(
+        logging.info(
             f"MCP Orchestrator initialized with {len(mcp_schemas)} MCP tools, "
             f"{len(base_schemas)} base tools"
         )
@@ -61,7 +73,34 @@ class MCPOrchestrator:
         dispatch_om1=None,
         max_rounds: int = 5,
     ) -> Any:
-        """Execute MCP tools in multi-round loop."""
+        """Execute MCP tools in a multi-round loop.
+
+        Extracts MCP actions from the LLM output, executes them
+        concurrently, and recalls the LLM with results. Repeats until
+        no MCP actions remain or ``max_rounds`` is reached.
+
+        Parameters
+        ----------
+        output : Any
+            The initial LLM output containing actions.
+        prompt : str
+            The original user prompt for LLM recall.
+        llm : Any
+            The LLM instance to recall with tool results.
+        dispatch_om1 : callable, optional
+            Dispatch non-MCP (OM1) actions immediately.
+            Because MCP rounds are sometimes serially dependent,
+            OM1 actions from earlier rounds cannot be carried
+            over to the final output. This callback ensures
+            they are dispatched.
+        max_rounds : int
+            Maximum number of tool-execution rounds.
+
+        Returns
+        -------
+        Any
+            Final LLM output with MCP actions removed.
+        """
         if output is None or not hasattr(output, "actions"):
             return output
 
@@ -90,7 +129,7 @@ class MCPOrchestrator:
             if om1_actions and dispatch_om1:
                 await dispatch_om1(om1_actions)
 
-            logger.info(
+            logging.info(
                 f"MCP round {round_idx + 1}/{max_rounds}: "
                 f"executing {len(new_actions)} tool(s)"
             )
@@ -125,11 +164,13 @@ class MCPOrchestrator:
         return output
 
     def _extract_mcp_actions(self, actions: list) -> list:
+        """Return only the actions that target an MCP tool."""
         return [
             action for action in actions if self._mcp_client.is_mcp_tool(action.type)
         ]
 
     def _filter_new_actions(self, actions: list, succeeded: Set[str]) -> list:
+        """Filter out actions whose call signature already succeeded."""
         return [
             action
             for action in actions
@@ -142,6 +183,7 @@ class MCPOrchestrator:
         return f"{action.type}|{json.dumps(args, sort_keys=True, default=str)}"
 
     def _parse_arguments(self, action: Any) -> Dict[str, Any]:
+        """Parse the action value into a dict suitable for MCP tool args."""
         value = action.value
         if isinstance(value, dict):
             return value
@@ -158,12 +200,13 @@ class MCPOrchestrator:
     async def _execute_single_tool(
         self, action: Any, timeout: float = 10.0
     ) -> ToolResult:
+        """Execute one MCP tool call with a timeout."""
         try:
             args = self._parse_arguments(action)
             content = await asyncio.wait_for(
                 self._mcp_client.call_tool(action.type, args), timeout=timeout
             )
-            logger.info(f"MCP tool {action.type} returned: {content}")
+            logging.info(f"MCP tool {action.type} returned: {content}")
 
             try:
                 parsed = json.loads(content)
@@ -176,7 +219,7 @@ class MCPOrchestrator:
 
             return ToolResult(tool_key=action.type, success=True, content=content)
         except Exception as exc:
-            logger.error(f"Error calling {action.type}: {exc}")
+            logging.error(f"Error calling {action.type}: {exc}")
             return ToolResult(
                 tool_key=action.type,
                 success=False,
@@ -184,6 +227,7 @@ class MCPOrchestrator:
             )
 
     async def _execute_tools(self, actions: list) -> List[ToolResult]:
+        """Execute multiple MCP tools concurrently with a semaphore."""
         semaphore = asyncio.Semaphore(self._max_concurrency)
 
         async def _guarded(action: Any) -> ToolResult:
@@ -197,7 +241,7 @@ class MCPOrchestrator:
         original_prompt: str,
         history: List[RoundRecord],
     ) -> str:
-        """Build follow-up prompt."""
+        """Build the follow-up prompt containing tool results."""
         # Tool results: concise, structured
         lines = []
         for record in history:
@@ -223,7 +267,7 @@ class MCPOrchestrator:
     ) -> Any:
         """Recall LLM with tool results. Skips history to avoid pollution."""
         recall_prompt = self._build_result_prompt(prompt, history)
-        logger.info("MCP recall LLM with cumulative context")
+        logging.info("MCP recall LLM with cumulative context")
         llm._skip_state_management = True
         try:
             return await llm.ask(recall_prompt)
