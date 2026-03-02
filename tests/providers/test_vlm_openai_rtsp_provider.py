@@ -246,3 +246,25 @@ def test_queue_frame_unexpected_exception(mock_dependencies):
     provider._queue_frame('{"invalid_key": "no_frame_field"}')
 
     assert len(provider.frame_queue) == 0
+
+
+@pytest.mark.asyncio
+async def test_send_batch_unexpected_error():
+    """Test _send_batch_to_openai handles unexpected exceptions gracefully."""
+    from unittest.mock import MagicMock, patch
+
+    mock_create = MagicMock(side_effect=RuntimeError("unexpected failure"))
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = mock_create
+
+    with (
+        patch(
+            "providers.vlm_openai_rtsp_provider.AsyncOpenAI", return_value=mock_client
+        ),
+        patch("providers.vlm_openai_rtsp_provider.VideoRTSPStream"),
+    ):
+        provider = VLMOpenAIRTSPProvider(
+            base_url="http://localhost:8000", api_key="test-key"
+        )
+        await provider._send_batch_to_openai(["frame1"])
+        mock_create.assert_called_once()
