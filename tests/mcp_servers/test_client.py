@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from mcp.types import TextContent
 
 from mcp_servers.client import (
     HttpServerConfig,
@@ -133,7 +134,6 @@ class TestMCPClientManager:
 
     @pytest.mark.asyncio
     async def test_call_tool_returns_text(self):
-        from mcp.types import TextContent
 
         manager = self._make_manager_with_tools()
 

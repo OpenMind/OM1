@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from mcp_servers import load_mcp
+from mcp_servers.client import MCPClientManager
 
 
 class TestLoadMcp:
@@ -37,10 +38,8 @@ class TestLoadMcp:
             {"name": "bad", "transport": "stdio", "command": "fail", "args": []},
         ]
 
-        from mcp_servers.client import MCPClientManager as RealManager
-
         mock_client = MagicMock()
-        fallback_client = RealManager([])
+        fallback_client = MCPClientManager([])
 
         with (
             patch(
