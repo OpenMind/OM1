@@ -12,6 +12,9 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     """
     Find which module file contains the specified class name.
 
+    Scans both direct .py files and subpackage __init__.py files
+    inside the plugins directory.
+
     Parameters
     ----------
     class_name : str
@@ -27,25 +30,36 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
     if not os.path.exists(plugins_dir):
         return None
 
-    plugin_files = [f for f in os.listdir(plugins_dir) if f.endswith(".py")]
+    pattern = rf"^class\s+{re.escape(class_name)}\s*\([^)]*FuserInput[^)]*\)\s*:"
 
-    for plugin_file in plugin_files:
+    # Scan direct .py files in plugins/
+    for plugin_file in os.listdir(plugins_dir):
+        if not plugin_file.endswith(".py"):
+            continue
         file_path = os.path.join(plugins_dir, plugin_file)
-
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-
-            pattern = (
-                rf"^class\s+{re.escape(class_name)}\s*\([^)]*FuserInput[^)]*\)\s*:"
-            )
-
             if re.search(pattern, content, re.MULTILINE):
                 return plugin_file[:-3]
-
         except Exception as e:
             logging.warning(f"Could not read {plugin_file}: {e}")
+
+    # Scan subpackage __init__.py files in plugins/*/
+    for entry in os.listdir(plugins_dir):
+        entry_path = os.path.join(plugins_dir, entry)
+        if not os.path.isdir(entry_path) or entry.startswith("_"):
             continue
+        init_path = os.path.join(entry_path, "__init__.py")
+        if not os.path.exists(init_path):
+            continue
+        try:
+            with open(init_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if re.search(pattern, content, re.MULTILINE):
+                return entry
+        except Exception as e:
+            logging.warning(f"Could not read {init_path}: {e}")
 
     return None
 
@@ -99,7 +113,7 @@ def load_input(input_config: T.Dict[str, T.Any]) -> Sensor:
                 **(config_dict if isinstance(config_dict, dict) else {})
             )
 
-        logging.debug(f"Loaded input {class_name} from {module_name}.py")
+        logging.debug(f"Loaded input {class_name} from {module_name}")
         return input_class(config=config)
 
     except ImportError as e:
