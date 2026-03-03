@@ -50,11 +50,10 @@
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "RivaASRInput",
+          type: "RivaASRRTSPInput",
           config: {
             base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,
-            microphone_name: "default_mic_aec",
           },
         },
       ],
