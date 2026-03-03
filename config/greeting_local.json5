@@ -54,6 +54,7 @@
           config: {
             base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,
+            microphone_name: "default_mic_aec",
           },
         },
       ],
