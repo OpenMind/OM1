@@ -17,15 +17,6 @@ class ToolResult:
     content: str
 
 
-@dataclass
-class RoundRecord:
-    """Record of a single orchestration round."""
-
-    round_num: int
-    tools_called: List[str]
-    results: List[ToolResult]
-
-
 class MCPOrchestrator:
     """Orchestrate multi-round MCP tool execution.
 
@@ -104,7 +95,6 @@ class MCPOrchestrator:
         if output is None or not hasattr(output, "actions"):
             return output
 
-        history: List[RoundRecord] = []
         succeeded_calls: Set[str] = set()
 
         for round_idx in range(max_rounds):
@@ -140,15 +130,7 @@ class MCPOrchestrator:
                 if result.success:
                     succeeded_calls.add(self._build_call_signature(action))
 
-            history.append(
-                RoundRecord(
-                    round_num=round_idx + 1,
-                    tools_called=[action.type for action in new_actions],
-                    results=results,
-                )
-            )
-
-            output = await self._recall_llm(llm, prompt, history)
+            output = await self._recall_llm(llm, prompt, results)
 
             if output is None or not hasattr(output, "actions"):
                 return None
@@ -239,23 +221,21 @@ class MCPOrchestrator:
     def _build_result_prompt(
         self,
         original_prompt: str,
-        history: List[RoundRecord],
+        latest_results: List[ToolResult],
     ) -> str:
-        """Build the follow-up prompt containing tool results."""
-        # Tool results: concise, structured
+        """Build the follow-up prompt with the latest tool results."""
         lines = []
-        for record in history:
-            for result in record.results:
-                status = "OK" if result.success else "FAILED"
-                lines.append(f"[{result.tool_key}] {status}: {result.content}")
+        for result in latest_results:
+            status = "OK" if result.success else "FAILED"
+            lines.append(f"[{result.tool_key}] {status}: {result.content}")
         result_block = "\n".join(lines)
 
         return (
             f"{original_prompt}\n\n"
             f"[Tool Results]\n{result_block}\n\n"
             f"[Next Step]\n"
-            f"Do NOT re-call any tool marked OK above. "
-            f"If all needed info is available, respond with speak. "
+            f"Do NOT re-call tools you have already called successfully. "
+            f"If all needed info is available, respond with your final actions. "
             f"Otherwise call only the necessary tools in one batch.\n"
         )
 
@@ -263,16 +243,12 @@ class MCPOrchestrator:
         self,
         llm: Any,
         prompt: str,
-        history: List[RoundRecord],
+        latest_results: List[ToolResult],
     ) -> Any:
-        """Recall LLM with tool results. Skips history to avoid pollution."""
-        recall_prompt = self._build_result_prompt(prompt, history)
-        logging.info("MCP recall LLM with cumulative context")
-        llm._skip_state_management = True
-        try:
-            return await llm.ask(recall_prompt)
-        finally:
-            llm._skip_state_management = False
+        """Recall LLM with the latest tool results."""
+        recall_prompt = self._build_result_prompt(prompt, latest_results)
+        logging.info("MCP recall LLM with latest results")
+        return await llm.ask(recall_prompt)
 
     async def close(self) -> None:
         """Close all MCP client connections."""

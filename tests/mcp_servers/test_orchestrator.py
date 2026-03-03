@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import pytest
 
 from llm.output_model import Action, CortexOutputModel
-from mcp_servers.orchestrator import MCPOrchestrator, RoundRecord, ToolResult
+from mcp_servers.orchestrator import MCPOrchestrator, ToolResult
 
 
 class MockMCPClient:
@@ -293,11 +293,12 @@ class TestDispatchOM1:
         assert dispatched[0].type == "emotion"
 
 
-class TestSkipStateManagement:
-    """Test that recall_llm sets _skip_state_management flag."""
+class TestHistoryManagement:
+    """Test that recall_llm allows normal history management."""
 
     @pytest.mark.asyncio
-    async def test_flag_set_during_recall(self, mock_client, make_output):
+    async def test_flag_not_set_during_recall(self, mock_client, make_output):
+        """MCP recall should NOT skip state management."""
         initial = make_output([("mcp_weather_get", '{"city":"SF"}')])
         final = make_output([("speak", "done")])
 
@@ -313,40 +314,7 @@ class TestSkipStateManagement:
 
         await orch.process(initial, "test", llm)
 
-        # The recall ask should have had _skip_state_management = True
-        assert flags_during_ask[-1] is True
-
-    @pytest.mark.asyncio
-    async def test_flag_restored_after_recall(self, mock_client, make_output):
-        initial = make_output([("mcp_weather_get", '{"city":"SF"}')])
-        final = make_output([("speak", "done")])
-
-        llm = MockLLM([final])
-        orch = MCPOrchestrator(mock_client, llm)
-
-        await orch.process(initial, "test", llm)
-
-        # Flag should be restored to False after process completes
-        assert llm._skip_state_management is False
-
-    @pytest.mark.asyncio
-    async def test_flag_restored_on_error(self, mock_client, make_output):
-        initial = make_output([("mcp_weather_get", '{"city":"SF"}')])
-
-        class FailingLLM(MockLLM):
-            async def ask(self, prompt):
-                if self._skip_state_management:
-                    raise RuntimeError("LLM crashed")
-                return await super().ask(prompt)
-
-        llm = FailingLLM([])
-        orch = MCPOrchestrator(mock_client, llm)
-
-        with pytest.raises(RuntimeError, match="LLM crashed"):
-            await orch.process(initial, "test", llm)
-
-        # Flag must be restored even after exception
-        assert llm._skip_state_management is False
+        assert flags_during_ask[-1] is False
 
 
 class TestBuildResultPrompt:
@@ -356,59 +324,35 @@ class TestBuildResultPrompt:
         llm = MockLLM([])
         orch = MCPOrchestrator(mock_client, llm)
 
-        history = [
-            RoundRecord(
-                round_num=1,
-                tools_called=["mcp_weather_get"],
-                results=[ToolResult("mcp_weather_get", True, '{"temp":73}')],
-            )
-        ]
-
-        prompt = orch._build_result_prompt("original", history)
+        results = [ToolResult("mcp_weather_get", True, '{"temp":73}')]
+        prompt = orch._build_result_prompt("original", results)
 
         assert "original" in prompt
         assert "mcp_weather_get" in prompt
         assert '{"temp":73}' in prompt
         assert "OK" in prompt
-        assert "3" in prompt
 
     def test_marks_failed_tools(self, mock_client):
         llm = MockLLM([])
         orch = MCPOrchestrator(mock_client, llm)
 
-        history = [
-            RoundRecord(
-                round_num=1,
-                tools_called=["mcp_slack_post"],
-                results=[ToolResult("mcp_slack_post", False, "Error: timeout")],
-            )
-        ]
-
-        prompt = orch._build_result_prompt("original", history)
+        results = [ToolResult("mcp_slack_post", False, "Error: timeout")]
+        prompt = orch._build_result_prompt("original", results)
 
         assert "FAILED" in prompt
         assert "Error: timeout" in prompt
 
-    def test_succeeded_summary(self, mock_client):
+    def test_mixed_results(self, mock_client):
         llm = MockLLM([])
         orch = MCPOrchestrator(mock_client, llm)
 
-        history = [
-            RoundRecord(
-                round_num=1,
-                tools_called=["mcp_weather_get", "mcp_maps_geocode"],
-                results=[
-                    ToolResult("mcp_weather_get", True, "ok"),
-                    ToolResult("mcp_maps_geocode", False, "error"),
-                ],
-            )
+        results = [
+            ToolResult("mcp_weather_get", True, "ok"),
+            ToolResult("mcp_maps_geocode", False, "error"),
         ]
+        prompt = orch._build_result_prompt("original", results)
 
-        prompt = orch._build_result_prompt("original", history)
-
-        # OK tool should appear in results
         assert "[mcp_weather_get] OK" in prompt
-        # FAILED tool should appear in results
         assert "[mcp_maps_geocode] FAILED" in prompt
 
 
