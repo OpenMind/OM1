@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
@@ -73,11 +74,11 @@ class StdioTransport:
 
 
 class MCPClientManager:
-    """Manage connections to multiple MCP servers and execute tool calls.
+    """Manage connections to multiple MCP servers.
 
     Parameters
     ----------
-    server_configs : list of dict
+    server_configs : list[dict]
         Raw configuration dicts.
     """
 
@@ -87,7 +88,48 @@ class MCPClientManager:
         self._tools: Dict[str, MCPTool] = {}
         self._exit_stack: Optional[AsyncExitStack] = None
 
-    async def connect_all(self) -> None:
+        self._connect_event = asyncio.Event()
+        self._close_event = asyncio.Event()
+        self._ready = asyncio.Event()
+        self._closed = asyncio.Event()
+        self.task: Optional[asyncio.Task] = None
+
+    async def start(self) -> None:
+        """Connect to all configured MCP servers."""
+        if self.task is None or self.task.done():
+            self.task = asyncio.create_task(self._run_event_loop())
+        self._connect_event.set()
+        await self._ready.wait()
+
+    async def stop(self) -> None:
+        """Disconnect all MCP servers."""
+        if not self._ready.is_set():
+            return
+        self._close_event.set()
+        await self._closed.wait()
+
+    async def _run_event_loop(self) -> None:
+        """Internal loop that owns all MCP connections in a single task."""
+        try:
+            while True:
+                await self._connect_event.wait()
+                self._connect_event.clear()
+                self._closed.clear()
+
+                await self._connect_all()
+                self._ready.set()
+
+                await self._close_event.wait()
+                self._close_event.clear()
+                self._ready.clear()
+
+                await self._close_all()
+                self._closed.set()
+        except asyncio.CancelledError:
+            await self._close_all()
+            raise
+
+    async def _connect_all(self) -> None:
         """Connect to all configured MCP servers and discover tools."""
         self._exit_stack = AsyncExitStack()
         await self._exit_stack.__aenter__()
@@ -98,6 +140,19 @@ class MCPClientManager:
             except Exception as e:
                 logging.error(f"Failed to connect to MCP server '{config.name}': {e}")
 
+        logging.info(f"MCP client connected with {len(self._tools)} tools")
+
+    async def _close_all(self) -> None:
+        """Close all MCP server connections."""
+        if self._exit_stack:
+            try:
+                await self._exit_stack.aclose()
+            except Exception as e:
+                logging.error(f"Error closing MCP connections: {e}")
+            self._exit_stack = None
+        self._sessions.clear()
+        self._tools.clear()
+
     async def _connect_server(self, config: StdioServerConfig) -> None:
         """Connect to a single MCP server."""
         assert self._exit_stack is not None
@@ -107,7 +162,6 @@ class MCPClientManager:
         await self._exit_stack.enter_async_context(session)
         await session.initialize()
 
-        # Discover tools
         tools_result = await session.list_tools()
         self._sessions[config.name] = session
 
@@ -168,14 +222,3 @@ class MCPClientManager:
                 texts.append(content.text)
 
         return "\n".join(texts) if texts else str(result.content)
-
-    async def close_all(self) -> None:
-        """Close all MCP server connections."""
-        if self._exit_stack:
-            try:
-                await self._exit_stack.aclose()
-            except Exception as e:
-                logging.error(f"Error closing MCP connections: {e}")
-            self._exit_stack = None
-        self._sessions.clear()
-        self._tools.clear()

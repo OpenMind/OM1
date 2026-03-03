@@ -141,6 +141,7 @@ class ModeCortexRuntime:
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
         if self.current_config.mcp_servers:
+            await self.current_config.mcp_servers.start()
             self.mcp_orchestrator = MCPOrchestrator(
                 self.current_config.mcp_servers, self.current_config.cortex_llm
             )
@@ -244,7 +245,8 @@ class ModeCortexRuntime:
 
         if self.mcp_orchestrator:
             logging.debug("Closing MCP connections")
-            await self.mcp_orchestrator.close()
+            await self.mcp_orchestrator.stop()
+            self.mcp_orchestrator = None
 
         tasks_to_cancel = {}
 

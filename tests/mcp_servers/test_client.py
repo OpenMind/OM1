@@ -155,7 +155,7 @@ class TestMCPClientManager:
         manager._sessions = {"weather": Mock()}
         manager._exit_stack = AsyncMock()
 
-        await manager.close_all()
+        await manager._close_all()
 
         assert manager._exit_stack is None
         assert len(manager._sessions) == 0
@@ -169,7 +169,7 @@ class TestMCPClientManager:
         mock_stack.aclose = AsyncMock(side_effect=Exception("close error"))
         manager._exit_stack = mock_stack
 
-        await manager.close_all()
+        await manager._close_all()
 
         assert manager._exit_stack is None
         assert len(manager._sessions) == 0
@@ -179,7 +179,7 @@ class TestMCPClientManager:
         manager = MCPClientManager([])
         manager._exit_stack = None
 
-        await manager.close_all()
+        await manager._close_all()
 
         assert manager._exit_stack is None
 
@@ -213,7 +213,7 @@ class TestConnectAll:
             ),
             patch("mcp_servers.client.ClientSession", return_value=mock_session),
         ):
-            await manager.connect_all()
+            await manager._connect_all()
 
         assert "mcp_weather_get_weather" in manager._tools
         assert (
@@ -231,7 +231,7 @@ class TestConnectAll:
             "mcp_servers.client.StdioTransport.connect",
             side_effect=ConnectionError("refused"),
         ):
-            await manager.connect_all()
+            await manager._connect_all()
 
         assert len(manager._tools) == 0
         assert len(manager._sessions) == 0

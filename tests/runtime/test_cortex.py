@@ -159,6 +159,12 @@ class TestModeCortexRuntime:
             mock_background_class.return_value = mock_background_orch
             mock_mcp_class.return_value = mock_mcp_orch
 
+            mock_mcp_servers = Mock()
+            mock_mcp_servers.start = AsyncMock()
+            mock_mode_config.to_runtime_config.return_value = Mock(
+                mcp_servers=mock_mcp_servers,
+                cortex_llm=Mock(),
+            )
             runtime.mode_config.modes = {"test_mode": mock_mode_config}
 
             await runtime._initialize_mode("test_mode")
@@ -169,6 +175,7 @@ class TestModeCortexRuntime:
             mock_mode_config.to_runtime_config.assert_called_once_with(
                 runtime.mode_config
             )
+            mock_mcp_servers.start.assert_awaited_once()
 
             assert runtime.fuser == mock_fuser
             assert runtime.action_orchestrator == mock_action_orch
@@ -439,6 +446,160 @@ class TestModeCortexRuntime:
             mock_task1.cancel.assert_called_once()
             mock_task2.cancel.assert_called_once()
             mock_gather.assert_called_once()
+
+
+class TestMCPModeTransition:
+    """Test MCP lifecycle during cortex mode transitions."""
+
+    @pytest.mark.asyncio
+    async def test_initialize_mode_calls_mcp_start(
+        self, cortex_runtime, mock_mode_config
+    ):
+        """_initialize_mode should call mcp_servers.start() when MCP is configured."""
+        runtime, mocks = cortex_runtime
+
+        mock_mcp_servers = Mock()
+        mock_mcp_servers.start = AsyncMock()
+        mock_mode_config.to_runtime_config.return_value = Mock(
+            mcp_servers=mock_mcp_servers,
+            cortex_llm=Mock(),
+        )
+        runtime.mode_config.modes = {"test_mode": mock_mode_config}
+
+        with (
+            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.ActionOrchestrator"),
+            patch("runtime.cortex.SimulatorOrchestrator"),
+            patch("runtime.cortex.BackgroundOrchestrator"),
+            patch("runtime.cortex.MCPOrchestrator"),
+        ):
+            await runtime._initialize_mode("test_mode")
+
+        mock_mcp_servers.start.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_stop_orchestrators_calls_mcp_stop(self, cortex_runtime):
+        """_stop_current_orchestrators should call mcp_orchestrator.stop()."""
+        runtime, mocks = cortex_runtime
+
+        mock_mcp_orch = Mock()
+        mock_mcp_orch.stop = AsyncMock()
+        runtime.current_config = Mock()
+        runtime.mcp_orchestrator = mock_mcp_orch
+
+        with patch("asyncio.wait", new_callable=AsyncMock) as mock_wait:
+            mock_wait.return_value = (set(), set())
+            await runtime._stop_current_orchestrators()
+
+        mock_mcp_orch.stop.assert_awaited_once()
+        assert runtime.mcp_orchestrator is None
+
+    @pytest.mark.asyncio
+    async def test_transition_mcp_to_no_mcp(self, cortex_runtime, mock_mode_config):
+        """Mode transition from MCP mode to non-MCP mode."""
+        runtime, mocks = cortex_runtime
+
+        mock_mcp_orch = Mock()
+        mock_mcp_orch.stop = AsyncMock()
+        runtime.current_config = Mock()
+        runtime.mcp_orchestrator = mock_mcp_orch
+
+        with patch("asyncio.wait", new_callable=AsyncMock) as mock_wait:
+            mock_wait.return_value = (set(), set())
+            await runtime._stop_current_orchestrators()
+
+        mock_mcp_orch.stop.assert_awaited_once()
+        assert runtime.mcp_orchestrator is None
+
+        mock_mode_config.to_runtime_config.return_value = Mock(
+            mcp_servers=None,
+            cortex_llm=Mock(),
+        )
+        runtime.mode_config.modes = {"no_mcp_mode": mock_mode_config}
+
+        with (
+            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.ActionOrchestrator"),
+            patch("runtime.cortex.SimulatorOrchestrator"),
+            patch("runtime.cortex.BackgroundOrchestrator"),
+            patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
+        ):
+            await runtime._initialize_mode("no_mcp_mode")
+
+        mock_mcp_class.assert_not_called()
+        assert runtime.mcp_orchestrator is None
+
+    @pytest.mark.asyncio
+    async def test_transition_no_mcp_to_mcp(self, cortex_runtime, mock_mode_config):
+        """Mode transition from non-MCP mode to MCP mode."""
+        runtime, mocks = cortex_runtime
+
+        runtime.current_config = Mock(mcp_servers=None)
+        runtime.mcp_orchestrator = None
+
+        with patch("asyncio.wait", new_callable=AsyncMock) as mock_wait:
+            mock_wait.return_value = (set(), set())
+            await runtime._stop_current_orchestrators()
+
+        mock_mcp_servers = Mock()
+        mock_mcp_servers.start = AsyncMock()
+        mock_mode_config.to_runtime_config.return_value = Mock(
+            mcp_servers=mock_mcp_servers,
+            cortex_llm=Mock(),
+        )
+        runtime.mode_config.modes = {"mcp_mode": mock_mode_config}
+
+        with (
+            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.ActionOrchestrator"),
+            patch("runtime.cortex.SimulatorOrchestrator"),
+            patch("runtime.cortex.BackgroundOrchestrator"),
+            patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
+        ):
+            await runtime._initialize_mode("mcp_mode")
+
+        mock_mcp_servers.start.assert_awaited_once()
+        mock_mcp_class.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_transition_mcp_to_mcp(self, cortex_runtime, mock_mode_config):
+        """Full e2e mode transition from MCP mode to a different MCP mode."""
+        runtime, mocks = cortex_runtime
+
+        old_mcp_orch = Mock()
+        old_mcp_orch.stop = AsyncMock()
+        runtime.current_config = Mock()
+        runtime.mcp_orchestrator = old_mcp_orch
+
+        with patch("asyncio.wait", new_callable=AsyncMock) as mock_wait:
+            mock_wait.return_value = (set(), set())
+            await runtime._stop_current_orchestrators()
+
+        old_mcp_orch.stop.assert_awaited_once()
+        assert runtime.mcp_orchestrator is None
+
+        new_mcp_servers = Mock()
+        new_mcp_servers.start = AsyncMock()
+        mock_mode_config.to_runtime_config.return_value = Mock(
+            mcp_servers=new_mcp_servers,
+            cortex_llm=Mock(),
+        )
+        runtime.mode_config.modes = {"new_mcp_mode": mock_mode_config}
+
+        with (
+            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.ActionOrchestrator"),
+            patch("runtime.cortex.SimulatorOrchestrator"),
+            patch("runtime.cortex.BackgroundOrchestrator"),
+            patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
+        ):
+            mock_new_orch = Mock()
+            mock_mcp_class.return_value = mock_new_orch
+            await runtime._initialize_mode("new_mcp_mode")
+
+        new_mcp_servers.start.assert_awaited_once()
+        mock_mcp_class.assert_called_once()
+        assert runtime.mcp_orchestrator == mock_new_orch
 
 
 class TestModeCortexRuntimeHotReload:

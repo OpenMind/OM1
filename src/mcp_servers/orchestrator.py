@@ -250,6 +250,6 @@ class MCPOrchestrator:
         logging.info("MCP recall LLM with latest results")
         return await llm.ask(recall_prompt)
 
-    async def close(self) -> None:
-        """Close all MCP client connections."""
-        await self._mcp_client.close_all()
+    async def stop(self) -> None:
+        """Stop all MCP server connections."""
+        await self._mcp_client.stop()
