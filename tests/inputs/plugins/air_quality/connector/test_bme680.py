@@ -152,6 +152,7 @@ class TestBME680ConnectorRead:
 
         result = connector._read_sensor()
         assert result is not None
+        assert result.aqi is not None
         assert result.aqi <= 500
 
     def test_read_sensor_aqi_zero_floor(self):
@@ -170,6 +171,7 @@ class TestBME680ConnectorRead:
 
         result = connector._read_sensor()
         assert result is not None
+        assert result.aqi is not None
         assert result.aqi >= 0
 
 

@@ -87,7 +87,7 @@ class TestAirQualityConnectorAbstract:
 
     def test_cannot_instantiate_directly(self):
         with pytest.raises(TypeError):
-            AirQualityConnector({})
+            AirQualityConnector({})  # type: ignore[abstract]
 
     def test_concrete_must_implement_all_methods(self):
         class IncompleteConnector(AirQualityConnector):
@@ -97,7 +97,7 @@ class TestAirQualityConnectorAbstract:
             # missing read() and disconnect()
 
         with pytest.raises(TypeError):
-            IncompleteConnector({})
+            IncompleteConnector({})  # type: ignore[abstract]
 
     def test_concrete_full_implementation(self):
         class ConcreteConnector(AirQualityConnector):
