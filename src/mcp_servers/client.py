@@ -108,6 +108,14 @@ class MCPClientManager:
         self._close_event.set()
         await self._closed.wait()
 
+        if self.task is not None and not self.task.done():
+            self.task.cancel()
+            try:
+                await self.task
+            except asyncio.CancelledError:
+                pass
+        self.task = None
+
     async def _run_event_loop(self) -> None:
         """Internal loop that owns all MCP connections in a single task."""
         try:

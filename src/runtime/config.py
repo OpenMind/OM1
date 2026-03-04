@@ -752,7 +752,9 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         raise ValueError(f"No LLM configuration found for mode {mode_config.name}")
 
     # Load MCP servers
-    mode_config.mcp_servers = load_mcp(mode_config._raw_mcp_servers)
+    mode_config.mcp_servers = (
+        load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
+    )
 
 
 def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
