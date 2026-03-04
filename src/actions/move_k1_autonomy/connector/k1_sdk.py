@@ -69,7 +69,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
         # Movement parameters
         self.move_speed = 0.1
-        self.turn_speed = 0.35
+        self.turn_speed = 0.5  # 0.35
         self.angle_tolerance = 5.0  # degrees
         self.distance_tolerance = 0.05  # meters
         self.pending_movements: Queue[Optional[MoveCommand]] = Queue()
