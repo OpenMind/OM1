@@ -21,8 +21,9 @@ class GeminiModel(str, Enum):
     GEMINI_2_5_FLASH = "gemini-2.5-flash"
     GEMINI_2_5_FLASH_LITE = "gemini-2.5-flash-lite"
     GEMINI_2_5_PRO = "gemini-2.5-pro"
-    GEMINI_3_PRO = "gemini-3-pro"
-    GEMINI_3_FLASH = "gemini-3-flash"
+    GEMINI_3_PRO_PREVIEW = "gemini-3-pro-preview"
+    GEMINI_3_FLASH_PREVIEW = "gemini-3-flash-preview"
+    GEMINI_3_1_PRO_PREVIEW = "gemini-3.1-pro-preview"
 
 
 class GeminiConfig(LLMConfig):
@@ -78,7 +79,7 @@ class GeminiLLM(LLM[R]):
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
-        self, prompt: str, messages: T.List[T.Dict[str, str]] = []
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
     ) -> T.Optional[R]:
         """
         Execute LLM query and parse response.
@@ -87,7 +88,7 @@ class GeminiLLM(LLM[R]):
         ----------
         prompt : str
             The input prompt to send to the model.
-        messages : List[Dict[str, str]]
+        messages : List[Dict[str, str]], optional
             List of message dictionaries to send to the model.
 
         Returns
@@ -96,6 +97,8 @@ class GeminiLLM(LLM[R]):
             Parsed response matching the output_model structure, or None if
             parsing fails.
         """
+        if messages is None:
+            messages = []
         try:
             logging.debug(f"Gemini LLM input: {prompt}")
             logging.debug(f"Gemini LLM messages: {messages}")

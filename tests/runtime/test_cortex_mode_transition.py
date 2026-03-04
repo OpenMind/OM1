@@ -204,7 +204,7 @@ def cortex_runtime_with_mode_transition(
 
         runtime.current_config = mock_runtime_config
         runtime.fuser = Mock()
-        runtime.fuser.fuse = Mock(return_value="test prompt")
+        runtime.fuser.fuse = AsyncMock(return_value="test prompt")
         runtime.action_orchestrator = Mock()
         runtime.action_orchestrator.flush_promises = AsyncMock(return_value=([], None))
         runtime.action_orchestrator.promise = AsyncMock()
@@ -245,7 +245,7 @@ def cortex_runtime(mock_system_config, mock_io_provider, mock_mode_manager):
 
         runtime.current_config = mock_runtime_config
         runtime.fuser = Mock()
-        runtime.fuser.fuse = Mock(return_value="test prompt")
+        runtime.fuser.fuse = AsyncMock(return_value="test prompt")
         runtime.action_orchestrator = Mock()
         runtime.action_orchestrator.flush_promises = AsyncMock(return_value=([], None))
         runtime.action_orchestrator.promise = AsyncMock()

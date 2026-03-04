@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 from collections import deque
 from queue import Empty, Queue
@@ -100,6 +101,7 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
         try:
             self.message_buffer.put_nowait(text_line)
         except Exception:
+            logging.debug("FacePresence queue full; dropping oldest message to enqueue")
             try:
                 _ = self.message_buffer.get_nowait()
             except Empty:
@@ -107,6 +109,9 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
             try:
                 self.message_buffer.put_nowait(text_line)
             except Exception:
+                logging.warning(
+                    "FacePresence queue still full; dropping latest message"
+                )
                 pass
 
     async def _poll(self) -> Optional[str]:

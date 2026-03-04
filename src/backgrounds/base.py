@@ -86,3 +86,13 @@ class Background(T.Generic[ConfigType]):
         This method should be overridden by subclasses to implement specific behavior.
         """
         self.sleep(60)
+
+    def stop(self) -> None:
+        """
+        Stop the background task and clean up resources.
+
+        This method should be overridden by subclasses that need to perform
+        cleanup operations (e.g., closing connections, releasing resources).
+        The base implementation does nothing.
+        """
+        pass

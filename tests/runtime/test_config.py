@@ -80,7 +80,7 @@ def sample_mode_config():
 def sample_system_config():
     """Sample system configuration for testing."""
     return ModeSystemConfig(
-        version="v1.0.2",
+        version="v1.0.3",
         name="test_system",
         default_mode="default",
         config_name="test_config",
@@ -197,6 +197,24 @@ class TestModeConfig:
         assert runtime_config.URID == "test_urid"
         assert runtime_config.unitree_ethernet == "eth0"
 
+    def test_to_runtime_config_with_knowledge_base(
+        self, sample_mode_config, sample_system_config, mock_llm
+    ):
+        """Test conversion to RuntimeConfig with knowledge_base configuration."""
+        sample_mode_config.cortex_llm = mock_llm
+        sample_system_config.modes = {"test_mode": sample_mode_config}
+        sample_system_config.knowledge_base = {
+            "knowledge_base": "demo",
+            "knowledge_base_root": "/tmp/kb",
+        }
+
+        runtime_config = sample_mode_config.to_runtime_config(sample_system_config)
+
+        assert isinstance(runtime_config, RuntimeConfig)
+        assert runtime_config.knowledge_base is not None
+        assert runtime_config.knowledge_base["knowledge_base"] == "demo"
+        assert runtime_config.knowledge_base["knowledge_base_root"] == "/tmp/kb"
+
     def test_to_runtime_config_no_llm(self, sample_mode_config, sample_system_config):
         """Test conversion to RuntimeConfig fails when no LLM is configured."""
         sample_system_config.modes = {"test_mode": sample_mode_config}
@@ -221,7 +239,7 @@ class TestModeSystemConfig:
     def test_system_config_creation(self, sample_system_config):
         """Test basic system config creation."""
         config = sample_system_config
-        assert config.version == "v1.0.2"
+        assert config.version == "v1.0.3"
         assert config.name == "test_system"
         assert config.default_mode == "default"
         assert config.config_name == "test_config"
@@ -237,17 +255,18 @@ class TestModeSystemConfig:
     def test_system_config_defaults(self):
         """Test system config with default values."""
         config = ModeSystemConfig(
-            version="v1.0.2",
+            version="v1.0.3",
             name="minimal_system",
             default_mode="default",
         )
-        assert config.version == "v1.0.2"
+        assert config.version == "v1.0.3"
         assert config.config_name == ""
         assert config.allow_manual_switching is True
         assert config.mode_memory_enabled is True
         assert config.api_key is None
         assert config.robot_ip is None
         assert config.URID is None
+        assert config.knowledge_base is None
         assert config.unitree_ethernet is None
         assert config.system_governance == ""
         assert config.system_prompt_examples == ""
@@ -348,16 +367,19 @@ class TestLoadModeConfig:
         with pytest.raises(FileNotFoundError):
             load_mode_config("non_existent_config")
 
+    @patch("runtime.config.validate_config_schema")
     @patch.dict(
         os.environ,
         {"ROBOT_IP": "env_robot_ip", "OM_API_KEY": "env_api_key", "URID": "env_urid"},
     )
-    def test_load_mode_config_env_fallback(self):
-        """Test that environment variables are used as fallback."""
+    def test_load_mode_config_env_loading(self, mock_validate):
+        """Test that ${ENV_VAR} patterns in config are resolved by load_env_vars."""
         config_data = {
-            "version": "v1.0.2",
+            "version": "v1.0.3",
             "default_mode": "default",
-            "api_key": "openmind_free",
+            "api_key": "${OM_API_KEY:-openmind_free}",
+            "robot_ip": "${ROBOT_IP:-}",
+            "URID": "${URID:-default}",
             "system_governance": "Env governance",
             "modes": {
                 "default": {
@@ -395,7 +417,7 @@ class TestLoadModeConfig:
     def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
-            "version": "v1.0.2",
+            "version": "v1.0.3",
             "unitree_ethernet": "eth0",
             "default_mode": "default",
             "api_key": "openmind_free",
@@ -474,7 +496,7 @@ class TestModeConfigToDict:
         result = mode_config_to_dict(sample_system_config)
 
         assert "version" in result
-        assert result["version"] == "v1.0.2"
+        assert result["version"] == "v1.0.3"
 
     def test_mode_config_to_dict_all_fields(self, sample_system_config):
         """Test that mode_config_to_dict includes all expected fields."""

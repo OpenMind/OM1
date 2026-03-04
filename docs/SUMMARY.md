@@ -41,7 +41,8 @@
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
-* [Architecture Overview](full_autonomy_guidelines/architecture_overview.md)
+* [Overview](full_autonomy_guidelines/architecture_overview.md)
+* [Setup Instructions](full_autonomy_guidelines/setup_system.md)
     * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
     * [System Config](full_autonomy_guidelines/system_config.md)
     * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
@@ -66,20 +67,25 @@
 
 ## Release Notes <a href="#release-notes" id="release-notes"></a>
 
-* [Beta](release-notes/beta/om.md)
-  * [OM](release-notes/beta/om.md)
-  * [OM1 Avatar](release-notes/beta/om1-avatar.md)
-  * [OM1 ROS2 SDK](release-notes/beta/om1-ros2-sdk.md)
-  * [Video Processor](release-notes/beta/video-processor.md)
 * [Major Updates](release-notes/major-updates/beta_release.md)
   * [Beta Release](release-notes/major-updates/beta_release.md)
   * [Production Ready Release](release-notes/major-updates/production_ready_release.md)
-* [v1.0.0](release-notes/v1.0.0/om.md)
-  * [OM](release-notes/v1.0.0/om.md)
-  * [OM1 Avatar](release-notes/v1.0.0/om1-avatar.md)
-  * [OM1 ROS2 SDK](release-notes/v1.0.0/om1-ros2-sdk.md)
-  * [OM1 System Setup](release-notes/v1.0.0/om1-system-setup.md)
-  * [Video Processor](release-notes/v1.0.0/video-processor.md)
+* [OM1](release-notes/om/beta.md)
+    * [beta](release-notes/om/beta.md)
+    * [v1.0.0](release-notes/om/v1.0.0.md)
+* [OM1 Avatar](release-notes/om1-avatar/beta.md)
+    * [beta](release-notes/om1-avatar/beta.md)
+    * [v1.0.0](release-notes/om1-avatar/v1.0.0.md)
+    * [v1.0.1](release-notes/om1-avatar/v1.0.1.md)
+* [OM1 ROS2 SDK](release-notes/om1-ros2-sdk/beta.md)
+    * [beta](release-notes/om1-ros2-sdk/beta.md)
+    * [v1.0.0](release-notes/om1-ros2-sdk/v1.0.0.md)
+* [Video Processor](release-notes/om1-video-processor/beta.md)
+    * [beta](release-notes/om1-video-processor/beta.md)
+    * [v1.0.0](release-notes/om1-video-processor/v1.0.0.md)
+* [OM1 System Setup](release-notes/om1-system-setup/beta.md)
+    * [beta](release-notes/om1-system-setup/beta.md)
+    * [v1.0.0](release-notes/om1-system-setup/v1.0.0.md)
 
 ## Robotics <a href="#robotics" id="robotics"></a>
 

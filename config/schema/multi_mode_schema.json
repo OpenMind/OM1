@@ -17,6 +17,14 @@
         "api_key": {"type": "string", "description": "API key for the OM1 system."},
         "unitree_ethernet": {"type": "string", "description": "Network interface name for the Unitree connection."},
         "system_governance": {"type": "string", "description": "Governance model determining system behavior rules."},
+        "knowledge_base": {
+            "type": "object",
+            "description": "Optional knowledge base configuration for document retrieval.",
+            "properties": {
+                "knowledge_base_name": {"type": "string", "description": "Name of the knowledge base directory."},
+                "knowledge_base_root": {"type": "string", "description": "Root directory path for knowledge bases."}
+            }
+        },
         "cortex_llm": {
             "$ref": "#/definitions/cortex_llm"
         },

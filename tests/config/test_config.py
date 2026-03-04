@@ -80,8 +80,11 @@ def assert_action_classes_exist(action_config):
         assert (
             connector is not None
         ), f"No connector found for action {action_config['name']}"
-    except (ImportError, ModuleNotFoundError):
-        assert False, f"Connector module not found for action {action_config['name']}"
+    except (ImportError, ModuleNotFoundError) as e:
+        assert False, (
+            f"Connector import failed for action {action_config['name']}: "
+            f"{type(e).__name__}: {e}"
+        )
 
 
 def find_subclass_in_module(module, parent_class: Type) -> Optional[Type]:

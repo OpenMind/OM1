@@ -231,13 +231,13 @@ class UnitreeG1NavigationProvider:
         """
         self.running = False
 
-        if self.session:
-            self.session.close()
-            self.session = None
-
         if self.ai_status_pub:
             self.ai_status_pub.undeclare()
             self.ai_status_pub = None
+
+        if self.session:
+            self.session.close()
+            self.session = None
 
         logging.info("G1 Navigation Provider stopped")
 

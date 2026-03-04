@@ -534,7 +534,7 @@ class ConfigSchemaGenerator:
                 "name": name,
                 "type": self._annotation_to_type(item.annotation),
                 "label": name.replace("_", " ").title(),
-                "required": has_default,
+                "required": not has_default,
                 "description": description,
             }
 

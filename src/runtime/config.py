@@ -17,6 +17,7 @@ from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
 from runtime.converter import convert_to_multi_mode
+from runtime.env import load_env_vars
 from runtime.hook import (
     LifecycleHook,
     LifecycleHookType,
@@ -130,6 +131,8 @@ class RuntimeConfig:
         Optional action execution mode (e.g., "concurrent", "sequential", "dependencies"). Defaults to "concurrent".
     action_dependencies : Optional[Dict[str, List[str]]]
         Optional mapping of action dependencies.
+    knowledge_base : Optional[Dict[str, Any]]
+        Optional knowledge base configuration for document retrieval.
     """
 
     version: str
@@ -152,6 +155,7 @@ class RuntimeConfig:
     unitree_ethernet: Optional[str] = None
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    knowledge_base: Optional[Dict[str, Any]] = None
 
 
 def add_meta(
@@ -369,6 +373,7 @@ class ModeConfig:
             unitree_ethernet=global_config.unitree_ethernet,
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
+            knowledge_base=global_config.knowledge_base,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -450,6 +455,8 @@ class ModeSystemConfig:
         Global system governance prompt.
     system_prompt_examples : str
         Global system prompt examples.
+    knowledge_base : Optional[Dict[str, Any]]
+        Optional knowledge base configuration for document retrieval.
     global_cortex_llm : Optional[Dict]
         Global default LLM configuration if mode doesn't override.
     global_lifecycle_hooks : List[LifecycleHook], optional
@@ -475,6 +482,9 @@ class ModeSystemConfig:
     unitree_ethernet: Optional[str] = None
     system_governance: str = ""
     system_prompt_examples: str = ""
+
+    # Knowledge base configuration
+    knowledge_base: Optional[Dict[str, Any]] = None
 
     # Default LLM settings if mode doesn't override
     global_cortex_llm: Optional[Dict] = None
@@ -550,36 +560,18 @@ def load_mode_config(
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
+
+    raw_config = load_env_vars(raw_config)
+
     validate_config_schema(raw_config)
     raw_config = convert_to_multi_mode(raw_config)
 
-    g_robot_ip = raw_config.get("robot_ip", None)
-    if g_robot_ip is None or g_robot_ip == "" or g_robot_ip == "192.168.0.241":
-        logging.warning("No robot ip found in mode config. Checking .env file.")
-        backup_key = os.environ.get("ROBOT_IP")
-        if backup_key:
-            g_robot_ip = backup_key
-            logging.info("Found ROBOT_IP in .env file.")
+    g_robot_ip = raw_config.get("robot_ip")
+    g_api_key = raw_config.get("api_key")
+    g_URID = raw_config.get("URID")
+    g_ut_eth = raw_config.get("unitree_ethernet")
 
-    g_api_key = raw_config.get("api_key", None)
-    if g_api_key is None or g_api_key == "" or g_api_key == "openmind_free":
-        logging.warning("No API key found in mode config. Checking .env file.")
-        backup_key = os.environ.get("OM_API_KEY")
-        if backup_key:
-            g_api_key = backup_key
-            logging.info("Found OM_API_KEY in .env file.")
-
-    g_URID = raw_config.get("URID", "default")
-    if g_URID == "default":
-        backup_URID = os.environ.get("URID")
-        if backup_URID:
-            g_URID = backup_URID
-
-    g_ut_eth = raw_config.get("unitree_ethernet", None)
-    if g_ut_eth is None or g_ut_eth == "":
-        logging.info("No robot hardware ethernet port provided.")
-    else:
-        load_unitree(g_ut_eth)
+    load_unitree(g_ut_eth)
 
     mode_system_config = ModeSystemConfig(
         version=config_version,
@@ -594,6 +586,7 @@ def load_mode_config(
         unitree_ethernet=g_ut_eth,
         system_governance=raw_config.get("system_governance", ""),
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
+        knowledge_base=raw_config.get("knowledge_base"),
         global_cortex_llm=raw_config.get("cortex_llm"),
         global_lifecycle_hooks=parse_lifecycle_hooks(
             raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
@@ -814,6 +807,7 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
             "unitree_ethernet": config.unitree_ethernet,
             "system_governance": config.system_governance,
             "system_prompt_examples": config.system_prompt_examples,
+            "knowledge_base": config.knowledge_base,
             "cortex_llm": config.global_cortex_llm,
             "global_lifecycle_hooks": config._raw_global_lifecycle_hooks,
             "modes": modes_dict,

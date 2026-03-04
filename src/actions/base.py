@@ -129,12 +129,12 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
     @abstractmethod
     async def connect(self, output_interface: OT) -> None:
         """
-        Connect the input protocol to the action.
+        Connect the output interface to the action.
 
         Parameters
         ----------
         output_interface : OT
-            The input protocol containing the action details.
+            The output interface containing the action details.
         """
         pass
 
@@ -143,6 +143,16 @@ class ActionConnector(ABC, T.Generic[CT, OT]):
         Tick method for periodic updates.
         """
         self.sleep(60)
+
+    def stop(self) -> None:
+        """
+        Stop the connector and clean up resources.
+
+        This method should be overridden by subclasses that need to perform
+        cleanup operations (e.g., closing connections, releasing resources).
+        The base implementation does nothing.
+        """
+        pass
 
 
 @dataclass

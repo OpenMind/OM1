@@ -32,7 +32,7 @@ def describe_action(
     interface = None
     action = importlib.import_module(f"actions.{action_name}.interface")
 
-    for _, obj in action.__dict__.items():
+    for obj in action.__dict__.values():
         if isinstance(obj, type) and issubclass(obj, Interface) and obj != Interface:
             interface = obj
 
@@ -87,7 +87,7 @@ def load_action(
     interface = None
     action = importlib.import_module(f"actions.{action_config['name']}.interface")
 
-    for _, obj in action.__dict__.items():
+    for obj in action.__dict__.values():
         if isinstance(obj, type) and issubclass(obj, Interface) and obj != Interface:
             interface = obj
 
@@ -100,7 +100,7 @@ def load_action(
 
     connector_class = None
     config_class = None
-    for _, obj in connector.__dict__.items():
+    for obj in connector.__dict__.values():
         if isinstance(obj, type) and issubclass(obj, ActionConnector):
             connector_class = obj
         if (
