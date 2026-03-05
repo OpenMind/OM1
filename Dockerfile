@@ -66,7 +66,7 @@ ENV PATH="/app/OM1/.venv/bin:$PATH"
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
     echo 'cp -r /app/OM1/config_defaults/* /app/OM1/config/ 2>/dev/null || true' >> /entrypoint.sh && \
-    echo 'if [ "${SKIP_WIFI}" = "true" ]; then' >> /entrypoint.sh && \
+    echo 'if [ "${SKIP_INTERNET_CHECK}" = "true" ]; then' >> /entrypoint.sh && \
     echo '  echo "Skipping internet connectivity check."' >> /entrypoint.sh && \
     echo 'else' >> /entrypoint.sh && \
     echo '  until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
