@@ -15,6 +15,7 @@ icon: backpack
 ![ ](../assets/brainpack.png)
 ![ ](../assets/brainpack_2.png)
 
+## Su
 ## Next steps
 We'll shortly be releasing the **BOM** so that you can build your own BrainPack and details on **DIY** guideline for it.
 Stay tuned!
