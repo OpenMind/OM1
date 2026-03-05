@@ -23,8 +23,7 @@
 
   knowledge_base: {
     knowledge_base_name: "demo",
-    embedding_host: "localhost",
-    embedding_port: 8100,
+    base_url: "${KB_BASE_URL:-http://localhost:8100}",
   },
 
   modes: {
