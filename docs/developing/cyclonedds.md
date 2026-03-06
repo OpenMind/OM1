@@ -19,11 +19,9 @@ cmake -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=$HOME/Documents/GitHub/cycloned
 cmake --build . --target install
 ```
 
-### CycloneDDS config for Unitree Go2
+### CycloneDDS config
 
-### CycloneDDS config for Unitree G1
-
-### CycloneDDS config for Unitree Simulation (Gazebo or Isaac Sim)
+#### for Unitree Simulation (Gazebo or Isaac Sim)
 
 Use this CycloneDDS configuration for running simulation. It uses `lo` as the network interface. We recommend that you export this in your .bashrc or equivalent configuration file cyclonedds.xml. To add it to cyclonedds.xml:
 
@@ -64,8 +62,9 @@ export CYCLONEDDS_URI=/path/to/cyclonedds/cyclonedds.xml
 
 Apply the changes
 
+```bash
 source ~/.bashrc
-
+```
 
 To add the config to your bashrc, run:
 

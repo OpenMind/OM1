@@ -24,4 +24,4 @@ echo "deb [signed-by=/etc/apt/keyrings/zenoh-public-key.gpg] https://download.ec
 sudo apt update
 ```
 
-install the standalone executable with: `sudo apt install zenoh-bridge-ros2dds`.
+Now you can install the standalone executable with: `sudo apt install zenoh-bridge-ros2dds`.

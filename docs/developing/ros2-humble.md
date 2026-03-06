@@ -6,24 +6,7 @@ icon: gear
 
 ## Install ROS2-humble
 
-#### Set locale
-
-Make sure you have a locale which supports UTF-8.
-
-If you are in a minimal environment (such as a docker container), the locale may be something minimal like POSIX. We test with the following settings. However, it should be fine if you’re using a different UTF-8 supported locale.
-
-```bash
-locale  # check for UTF-8
-
-sudo apt update && sudo apt install locales
-sudo locale-gen en_US en_US.UTF-8
-sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-export LANG=en_US.UTF-8
-
-locale  # verify settings
-```
-
-#### Setup Sources
+### Setup Sources
 
 You will need to add the ROS 2 apt repository to your system.
 
@@ -38,6 +21,13 @@ The ros-apt-source packages provide keys and apt source configuration for the va
 
 Installing the `ros2-apt-source` package will configure ROS 2 repositories for your system. Updates to repository configuration will occur automatically when new versions of this package are released to the ROS repositories.
 
+```bash
+sudo apt update && sudo apt install curl -y
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
+```
+
 Now, run
 
 ```bash
@@ -46,5 +36,8 @@ sudo apt upgrade
 sudo apt install ros-humble-desktop
 ```
 
-> **Note:**
 This will install ROS and all the relevant packages.
+
+> **Note:** When installing ros2-humble for Gazebo, run `sudo apt install ros-humble-desktop-full` instead of sudo apt install `ros-humble-desktop`. It will install ROS, RViz, and Gazebo.
+
+Refer [ros2-humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html), to get a better understanding.
