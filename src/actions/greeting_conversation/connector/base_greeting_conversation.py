@@ -1,5 +1,5 @@
-import json
 import asyncio
+import json
 import logging
 import time
 from abc import abstractmethod
@@ -126,7 +126,9 @@ class BaseGreetingConversationConnector(
             self.pending_finished_update = True
             # Hacky way to delay context update until after TTS is likely finished
             # A better way is to listen for an event from the TTS provider when it finishes speaking
-            asyncio.create_task(self._delayed_context_update((word_count / 150.0) * 60.0))
+            asyncio.create_task(
+                self._delayed_context_update((word_count / 150.0) * 60.0)
+            )
 
     async def _delayed_context_update(self, wait_duration: float) -> None:
         """
@@ -140,11 +142,15 @@ class BaseGreetingConversationConnector(
             The duration in seconds to wait before updating the context.
         """
         try:
-            logging.info(f"Waiting {wait_duration:.1f}s for TTS to complete before updating context...")
+            logging.info(
+                f"Waiting {wait_duration:.1f}s for TTS to complete before updating context..."
+            )
             await asyncio.sleep(wait_duration)
 
             if not self.conversation_finished_sent:
-                logging.info("TTS completed. Updating context: greeting_conversation_finished = True")
+                logging.info(
+                    "TTS completed. Updating context: greeting_conversation_finished = True"
+                )
                 self.context_provider.update_context(
                     {"greeting_conversation_finished": True}
                 )
