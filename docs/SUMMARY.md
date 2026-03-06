@@ -3,10 +3,9 @@
 ## Get Started <a href="#developing" id="developing"></a>
 
 * [OM1](README.md)
-* [Get Started](developing/0_introduction.md)
-    * [Introduction](developing/0_introduction.md)
-    * [Quick Start](developing/1_get-started.md)
-    * [Architecture](developing/2_architecture.md)
+* [Introduction](developing/0_introduction.md)
+* [Quick Start](developing/1_get-started.md)
+* [Architecture](developing/2_architecture.md)
 * [Understanding Core Concepts](concepts.md)
     * [Project Structure](developing/7_project_structure.md)
     * [Configuration](developing/3_configuration.md)
@@ -15,6 +14,10 @@
     * [Actions](developing/6_actions.md)
     * [Backgrounds](developing/8_backgrounds.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
+* [Middleware](developing/middleware.md)
+    * [CycloneDDS](developing/cyclonedds.md)
+    * [ROS2-humble](developing/ros2-humble.md)
+    * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
 
 ## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
 
