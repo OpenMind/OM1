@@ -59,3 +59,36 @@ export CYCLONEDDS_URI=/path/to/cyclonedds/cyclonedds.xml
 Apply the changes
 
 source ~/.bashrc
+
+
+To add the config to your bashrc, run:
+
+```bash
+vim ~/.bashrc
+```
+
+And add the following, replacing `/path/to/cyclonedds` with the actual path to your CycloneDDS installation:
+
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI='
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+        </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>'
+```
+
+Now run
+
+```bash
+source ~/.bashrc
+```
+This will apply the latest changes in the current shell session.
