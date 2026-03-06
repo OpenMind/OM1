@@ -193,10 +193,10 @@ class BaseGreetingConversationConnector(
             and not self.conversation_finished_sent
         ):
             logging.info("Greeting conversation has finished (detected in tick).")
+            self.conversation_finished_sent = True
             self.context_provider.update_context(
                 {"greeting_conversation_finished": True}
             )
-            self.conversation_finished_sent = True
 
         logging.info(
             f"State: {current_state}, "
