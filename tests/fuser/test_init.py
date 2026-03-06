@@ -117,8 +117,7 @@ async def test_fuser_initialization_with_knowledge_base():
     kb_config = {
         "knowledge_base": "test_kb",
         "knowledge_base_root": "/tmp/kb",
-        "embedding_host": "localhost",
-        "embedding_port": 8100,
+        "base_url": "http://localhost:8100",
     }
     config = create_mock_config(knowledge_base=kb_config)
     io_provider = IOProvider()
