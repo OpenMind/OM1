@@ -1,4 +1,5 @@
 import json
+import asyncio
 import logging
 import time
 from abc import abstractmethod
@@ -118,11 +119,40 @@ class BaseGreetingConversationConnector(
             self.greeting_status == ConversationState.FINISHED.value
             and not self.conversation_finished_sent
         ):
-            logging.info("Greeting conversation has finished.")
-            self.context_provider.update_context(
-                {"greeting_conversation_finished": True}
+            logging.info(
+                f"Greeting conversation state is FINISHED. "
+                f"Scheduling context update after TTS completes ({self.tts_duration:.1f}s)."
             )
-            self.conversation_finished_sent = True
+            self.pending_finished_update = True
+            # Hacky way to delay context update until after TTS is likely finished
+            # A better way is to listen for an event from the TTS provider when it finishes speaking
+            asyncio.create_task(self._delayed_context_update((word_count / 150.0) * 60.0))
+
+    async def _delayed_context_update(self, wait_duration: float) -> None:
+        """
+        Wait for TTS to finish, then update the context to indicate conversation is finished.
+
+        This method is scheduled as an async task when the FINISHED state is reached.
+
+        Parameters
+        ----------
+        wait_duration : float
+            The duration in seconds to wait before updating the context.
+        """
+        try:
+            logging.info(f"Waiting {wait_duration:.1f}s for TTS to complete before updating context...")
+            await asyncio.sleep(wait_duration)
+
+            if not self.conversation_finished_sent:
+                logging.info("TTS completed. Updating context: greeting_conversation_finished = True")
+                self.context_provider.update_context(
+                    {"greeting_conversation_finished": True}
+                )
+                self.conversation_finished_sent = True
+            else:
+                logging.info("Context already updated, skipping duplicate update.")
+        except Exception as e:
+            logging.error(f"Error in delayed context update: {e}")
 
     def tick(self) -> None:
         """
