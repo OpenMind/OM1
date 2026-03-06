@@ -182,6 +182,77 @@ class TestBaseGreetingConversationConnector:
         assert connector.tts_request_id is not None
 
     @pytest.mark.asyncio
+    async def test_connect_does_not_set_tts_playing_without_audio_pub(
+        self, connector, greeting_input, mock_providers
+    ):
+        """Test tts_playing stays False when audio_pub is None."""
+        connector.audio_pub = None
+        mock_providers["state"].process_conversation.return_value = {
+            "current_state": ConversationState.CONVERSING.value
+        }
+        await connector.connect(greeting_input)
+        assert connector.tts_playing is False
+
+    def test_on_audio_status_resets_tts_playing_on_match(
+        self, connector, mock_providers
+    ):
+        """Test _on_audio_status resets tts_playing when UUID and READY status match."""
+        connector.tts_request_id = "test-uuid-123"
+        connector.tts_playing = True
+
+        mock_data = Mock()
+        mock_status = Mock()
+        mock_status.header.frame_id = "test-uuid-123"
+        mock_status.status_speaker = 1  # READY
+
+        with patch(
+            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
+        ) as mock_audio_cls:
+            mock_audio_cls.deserialize.return_value = mock_status
+            mock_audio_cls.STATUS_SPEAKER.READY.value = 1
+            connector._on_audio_status(mock_data)
+
+        assert connector.tts_playing is False
+
+    def test_on_audio_status_ignores_non_matching_uuid(self, connector, mock_providers):
+        """Test _on_audio_status does not reset tts_playing for a different UUID."""
+        connector.tts_request_id = "test-uuid-123"
+        connector.tts_playing = True
+
+        mock_data = Mock()
+        mock_status = Mock()
+        mock_status.header.frame_id = "different-uuid-456"
+        mock_status.status_speaker = 1  # READY
+
+        with patch(
+            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
+        ) as mock_audio_cls:
+            mock_audio_cls.deserialize.return_value = mock_status
+            mock_audio_cls.STATUS_SPEAKER.READY.value = 1
+            connector._on_audio_status(mock_data)
+
+        assert connector.tts_playing is True
+
+    def test_on_audio_status_ignores_non_ready_status(self, connector, mock_providers):
+        """Test _on_audio_status does not reset tts_playing when speaker is ACTIVE."""
+        connector.tts_request_id = "test-uuid-123"
+        connector.tts_playing = True
+
+        mock_data = Mock()
+        mock_status = Mock()
+        mock_status.header.frame_id = "test-uuid-123"
+        mock_status.status_speaker = 2  # ACTIVE
+
+        with patch(
+            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
+        ) as mock_audio_cls:
+            mock_audio_cls.deserialize.return_value = mock_status
+            mock_audio_cls.STATUS_SPEAKER.READY.value = 1
+            connector._on_audio_status(mock_data)
+
+        assert connector.tts_playing is True
+
+    @pytest.mark.asyncio
     async def test_connect_processes_conversation(
         self, connector, greeting_input, mock_providers
     ):
@@ -235,8 +306,6 @@ class TestBaseGreetingConversationConnector:
             "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
-        if connector.delayed_update_task:
-            await connector.delayed_update_task
         mock_providers["ctx"].update_context.assert_called_once_with(
             {"greeting_conversation_finished": True}
         )
@@ -257,11 +326,7 @@ class TestBaseGreetingConversationConnector:
             "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
-        if connector.delayed_update_task:
-            await connector.delayed_update_task
         await connector.connect(finished_input)
-        if connector.delayed_update_task:
-            await connector.delayed_update_task
         mock_providers["ctx"].update_context.assert_called_once()
 
     @pytest.mark.asyncio
