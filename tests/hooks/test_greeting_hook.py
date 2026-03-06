@@ -324,8 +324,7 @@ class TestGeetingEndHook:
             mock_elevenlabs_provider.add_pending_message.assert_called_once()
 
             message = mock_elevenlabs_provider.add_pending_message.call_args[0][0]
-            assert "enjoyed our conversation" in message.lower()
-            assert "need to help others" in message.lower()
+            assert "i hope you enjoy the rest of nvidia gtc" in message.lower()
 
     @pytest.mark.asyncio
     async def test_hook_turn_count_exceeded(
@@ -348,7 +347,7 @@ class TestGeetingEndHook:
             await geeting_end_hook(context)
 
             message = mock_kokoro_provider.add_pending_message.call_args[0][0]
-            assert "enjoyed our conversation" in message.lower()
+            assert "i hope you enjoy the rest of nvidia gtc" in message.lower()
 
     @pytest.mark.asyncio
     async def test_hook_zero_turn_count(

@@ -52,6 +52,8 @@ class BaseGreetingConversationConnector(
         self.tts_triggered_time = time.time()
         self.tts_duration = 0.0
         self.conversation_finished_sent = False
+        self.pending_finished_update = False
+        self.delayed_update_task = None
 
         self.person_greeting_topic = "om/person_greeting"
         try:
@@ -127,7 +129,7 @@ class BaseGreetingConversationConnector(
             self.conversation_finished_sent = True
             # Hacky way to delay context update until after TTS is likely finished
             # A better way is to listen for an event from the TTS provider when it finishes speaking
-            asyncio.create_task(
+            self.delayed_update_task = asyncio.create_task(
                 self._delayed_context_update((word_count / 150.0) * 60.0)
             )
 
@@ -155,7 +157,7 @@ class BaseGreetingConversationConnector(
                 self.context_provider.update_context(
                     {"greeting_conversation_finished": True}
                 )
-                self.conversation_finished_sent = True
+                self.pending_finished_update = False
             else:
                 logging.info("Context already updated, skipping duplicate update.")
         except Exception as e:
