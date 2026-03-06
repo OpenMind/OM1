@@ -66,11 +66,16 @@ ENV PATH="/app/OM1/.venv/bin:$PATH"
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
     echo 'cp -r /app/OM1/config_defaults/* /app/OM1/config/ 2>/dev/null || true' >> /entrypoint.sh && \
-    echo 'until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
-    echo '  echo "Waiting for internet connection..."' >> /entrypoint.sh && \
-    echo '  sleep 2' >> /entrypoint.sh && \
-    echo 'done' >> /entrypoint.sh && \
-    echo 'echo "Internet connected. Checking audio system..."' >> /entrypoint.sh && \
+    echo 'if [ "${OM1_SKIP_INTERNET_CHECK}" = "true" ]; then' >> /entrypoint.sh && \
+    echo '  echo "Skipping internet connectivity check."' >> /entrypoint.sh && \
+    echo 'else' >> /entrypoint.sh && \
+    echo '  until ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; do' >> /entrypoint.sh && \
+    echo '    echo "Waiting for internet connection..."' >> /entrypoint.sh && \
+    echo '    sleep 2' >> /entrypoint.sh && \
+    echo '  done' >> /entrypoint.sh && \
+    echo '  echo "Internet connected."' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    echo 'echo "Checking audio system..."' >> /entrypoint.sh && \
     echo 'if ! pactl info >/dev/null 2>&1; then' >> /entrypoint.sh && \
     echo '  echo "ERROR: PulseAudio connection failed. Exiting container for restart..."' >> /entrypoint.sh && \
     echo '  exit 1' >> /entrypoint.sh && \
