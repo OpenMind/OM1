@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -49,6 +50,10 @@ class RivaASRRTSPSensorConfig(SensorConfig):
     )
 
 
+# Import shared ASR filters from riva_asr
+from inputs.plugins.riva_asr import _normalize_asr_text, _seems_directed_at_robot
+
+
 class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
     """
     Automatic Speech Recognition (ASR) input handler.
@@ -77,6 +82,10 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
 
         # Message buffer for incoming ASR messages
         self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
+
+        # Cooldown after a message is accepted: ignore ASR during robot response
+        self._cooldown_until: float = 0.0
+        self._cooldown_seconds: float = 2.0
 
         # Initialize ASR provider
         api_key = self.config.api_key
@@ -128,9 +137,16 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
         try:
             json_message: Dict = json.loads(raw_message)
             if "asr_reply" in json_message:
-                asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                asr_reply = _normalize_asr_text(json_message["asr_reply"])
+                if len(asr_reply.split()) > 2:
+                    if time.time() < self._cooldown_until:
+                        logging.info("ASR suppressed during cooldown: %s", asr_reply)
+                        return
+                    if not _seems_directed_at_robot(asr_reply):
+                        logging.info("ASR filtered as overheard chatter: %s", asr_reply)
+                        return
                     self.message_buffer.put_nowait(asr_reply)
+                    self._cooldown_until = time.time() + self._cooldown_seconds
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
             pass

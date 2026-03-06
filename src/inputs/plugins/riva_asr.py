@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -56,6 +57,55 @@ class RivaASRSensorConfig(SensorConfig):
     )
 
 
+# Keywords that suggest speech is directed at the robot (greeter context)
+# All lowercase — matching is case-insensitive
+# Avoid generic words (is, are, do, will, etc.) that appear in any conversation
+_DIRECTED_KEYWORDS = {
+    # Addressing the robot directly
+    "you", "your", "yours", "yourself",
+    "bits", "robot", "dog", "puppy", "buddy",
+    "openmind", "om1",
+    # Greetings and social
+    "hello", "hi", "hey", "howdy", "greetings",
+    "goodbye", "bye",
+    "thanks", "thank", "please",
+    # Questions — only question words, not auxiliaries
+    "what", "how", "why", "who", "where", "when", "which",
+    # Requests directed at the robot
+    "tell", "show", "explain", "describe", "help",
+    # Conference / demo context
+    "gtc", "nvidia", "unitree", "conference", "demo", "booth", "exhibit",
+    # Product questions
+    "name", "company", "product", "price", "cost", "buy", "available",
+    "software", "ai", "autonomous", "platform",
+}
+
+
+# Common ASR misrecognitions → correct text (case-insensitive)
+_ASR_CORRECTIONS = [
+    (re.compile(r"\b(?:om one|ol one|on one|om 1|ol 1|oh and one|o one|oh one)\b", re.IGNORECASE), "OM1"),
+    (re.compile(r"\b(?:open mind|pokemon)\b", re.IGNORECASE), "OpenMind"),
+    (re.compile(r"\bunit tree\b", re.IGNORECASE), "Unitree"),
+]
+
+
+def _normalize_asr_text(text: str) -> str:
+    """Fix common ASR misrecognitions."""
+    for pattern, replacement in _ASR_CORRECTIONS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def _seems_directed_at_robot(text: str) -> bool:
+    """Check if the transcript seems directed at the robot rather than overheard chatter."""
+    words = set(text.lower().split())
+    if words & _DIRECTED_KEYWORDS:
+        return True
+    if text.rstrip().endswith("?"):
+        return True
+    return False
+
+
 class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
     """
     Automatic Speech Recognition (ASR) input handler.
@@ -84,6 +134,10 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
 
         # Message buffer for incoming ASR messages
         self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
+
+        # Cooldown after a message is accepted: ignore ASR during robot response
+        self._cooldown_until: float = 0.0
+        self._cooldown_seconds: float = 2.0
 
         # Initialize ASR provider
         api_key = self.config.api_key
@@ -140,9 +194,16 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
         try:
             json_message: Dict = json.loads(raw_message)
             if "asr_reply" in json_message:
-                asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                asr_reply = _normalize_asr_text(json_message["asr_reply"])
+                if len(asr_reply.split()) > 2:
+                    if time.time() < self._cooldown_until:
+                        logging.info("ASR suppressed during cooldown: %s", asr_reply)
+                        return
+                    if not _seems_directed_at_robot(asr_reply):
+                        logging.info("ASR filtered as overheard chatter: %s", asr_reply)
+                        return
                     self.message_buffer.put_nowait(asr_reply)
+                    self._cooldown_until = time.time() + self._cooldown_seconds
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
             pass
