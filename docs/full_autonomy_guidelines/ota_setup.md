@@ -53,7 +53,7 @@ source ~/.bashrc
 ```bash
 vim ~/.bashrc
 
-export ROBOT_TYPE="go2"  # or "go1", "tron"
+export ROBOT_TYPE="go2"  # or "g1", "tron", "booster"
 ```
 
 ### Setup OTA Update Services
