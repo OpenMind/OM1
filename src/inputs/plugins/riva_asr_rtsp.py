@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import re
 import time
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -10,6 +9,7 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
+from inputs.plugins.riva_asr import _normalize_asr_text, _seems_directed_at_robot
 from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -48,10 +48,6 @@ class RivaASRRTSPSensorConfig(SensorConfig):
         default=False,
         description="Enable TTS interrupt (does not mute mic during TTS playback)",
     )
-
-
-# Import shared ASR filters from riva_asr
-from inputs.plugins.riva_asr import _normalize_asr_text, _seems_directed_at_robot
 
 
 class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):

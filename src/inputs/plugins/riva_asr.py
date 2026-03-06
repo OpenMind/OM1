@@ -62,28 +62,74 @@ class RivaASRSensorConfig(SensorConfig):
 # Avoid generic words (is, are, do, will, etc.) that appear in any conversation
 _DIRECTED_KEYWORDS = {
     # Addressing the robot directly
-    "you", "your", "yours", "yourself",
-    "bits", "robot", "dog", "puppy", "buddy",
-    "openmind", "om1",
+    "you",
+    "your",
+    "yours",
+    "yourself",
+    "bits",
+    "robot",
+    "dog",
+    "puppy",
+    "buddy",
+    "openmind",
+    "om1",
     # Greetings and social
-    "hello", "hi", "hey", "howdy", "greetings",
-    "goodbye", "bye",
-    "thanks", "thank", "please",
+    "hello",
+    "hi",
+    "hey",
+    "howdy",
+    "greetings",
+    "goodbye",
+    "bye",
+    "thanks",
+    "thank",
+    "please",
     # Questions — only question words, not auxiliaries
-    "what", "how", "why", "who", "where", "when", "which",
+    "what",
+    "how",
+    "why",
+    "who",
+    "where",
+    "when",
+    "which",
     # Requests directed at the robot
-    "tell", "show", "explain", "describe", "help",
+    "tell",
+    "show",
+    "explain",
+    "describe",
+    "help",
     # Conference / demo context
-    "gtc", "nvidia", "unitree", "conference", "demo", "booth", "exhibit",
+    "gtc",
+    "nvidia",
+    "unitree",
+    "conference",
+    "demo",
+    "booth",
+    "exhibit",
     # Product questions
-    "name", "company", "product", "price", "cost", "buy", "available",
-    "software", "ai", "autonomous", "platform",
+    "name",
+    "company",
+    "product",
+    "price",
+    "cost",
+    "buy",
+    "available",
+    "software",
+    "ai",
+    "autonomous",
+    "platform",
 }
 
 
 # Common ASR misrecognitions → correct text (case-insensitive)
 _ASR_CORRECTIONS = [
-    (re.compile(r"\b(?:om one|ol one|on one|om 1|ol 1|oh and one|o one|oh one)\b", re.IGNORECASE), "OM1"),
+    (
+        re.compile(
+            r"\b(?:om one|ol one|on one|om 1|ol 1|oh and one|o one|oh one)\b",
+            re.IGNORECASE,
+        ),
+        "OM1",
+    ),
     (re.compile(r"\b(?:open mind|pokemon)\b", re.IGNORECASE), "OpenMind"),
     (re.compile(r"\bunit tree\b", re.IGNORECASE), "Unitree"),
 ]
