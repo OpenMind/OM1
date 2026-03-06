@@ -251,7 +251,6 @@ class TestBaseGreetingConversationConnector:
             "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
-        # Wait for the delayed update task to complete
         if connector.delayed_update_task:
             await connector.delayed_update_task
         mock_providers["ctx"].update_context.assert_called_once_with(
@@ -274,14 +273,11 @@ class TestBaseGreetingConversationConnector:
             "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
-        # Wait for the first delayed update task to complete
         if connector.delayed_update_task:
             await connector.delayed_update_task
         await connector.connect(finished_input)
-        # Wait for the second call's task (if any)
         if connector.delayed_update_task:
             await connector.delayed_update_task
-        # Should only be called once
         mock_providers["ctx"].update_context.assert_called_once()
 
     @pytest.mark.asyncio
