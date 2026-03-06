@@ -23,8 +23,7 @@
 
   knowledge_base: {
     knowledge_base_name: "demo",
-    embedding_host: "localhost",
-    embedding_port: 8100,
+    base_url: "${KB_BASE_URL:-http://localhost:8100}",
   },
 
   modes: {
@@ -50,7 +49,7 @@
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "RivaASRInput",
+          type: "RivaASRRTSPInput",
           config: {
             base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,
