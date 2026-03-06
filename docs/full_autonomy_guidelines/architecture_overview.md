@@ -77,7 +77,7 @@ Media handling subsystem:
 
 #### Architecture Diagram
 
-![Architecture Diagram](../assets/om1_video_processor_architecture.png)
+![ ](../assets/om1_video_processor_architecture.png)
 
 #### Openmind privacy system
 
@@ -86,7 +86,7 @@ It runs entirely on the **robot's edge device** and automatically blurs the face
 **How it works**
 
 - Find faces (SCRFD) – Each frame is scanned with the face detector. The model is robust to different angles and lighting. It is optimized with TensorRT, so inference is fast.
-- After it locates the face with bounding box, we expand the region around the face bounding box, create a smooth mask, and apply strong Gaussian blur  so identity wouldn't leak or recovered.
+- After it locates the face with bounding box, we expand the region around the face bounding box, create a smooth mask, and apply strong Gaussian blur so identity wouldn't leak or be recovered.
 
 We prioritize safety and want to protect everyone's identity – when in doubt (low confidence, motion blur, occlusion), we focus on the side of privacy and blur anyway.
 
