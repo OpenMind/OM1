@@ -19,31 +19,7 @@ Checkout the video walkthrough [here](https://assets.openmind.org/education-vide
 
 ## Simulation Instructions
 
-To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first.
-
-Install cyclonedds from this [link](https://cyclonedds.io/docs/cyclonedds/latest/installation/installation.html) or follow the instructions below.
-
-```bash
-sudo apt-get install git cmake gcc
-```
-
-```bash
-git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x
-cd cyclonedds && mkdir build install && cd build
-cmake -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=$HOME/Documents/GitHub/cyclonedds/install ..
-cmake --build . --target install
-```
-
-To install ROS2 Humble, go to this [link](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html). Follow the steps under Setup Sources.
-Now, run
-
-```bash
-sudo apt update
-sudo apt upgrade
-sudo apt install ros-humble-desktop-full
-```
-
-This will install ROS, RViz, Gazebo and all the relevant packages.
+To get started with **Gazebo** and **Unitree SDK**, please install cyclonedds and **ROS2 Humble** first. You can find the installation steps [here](../developing/middleware.md).
 
 To install compilers and other tools to build ROS packages, run
 
@@ -218,7 +194,7 @@ zenoh-bridge-ros2dds -c ./zenoh/zenoh_bridge_config.json5
 
 Step 8: Start OM1
 
-Refer to the [Installation Guide](../developing/1_get-started) for detailed instructions.
+Refer to the [Installation Guide](../developing/1_get-started.md) for detailed instructions.
 
 Then add the optional Python CycloneDDS module to OM1, run
 

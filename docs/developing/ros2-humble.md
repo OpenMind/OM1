@@ -1,3 +1,9 @@
+---
+title: ROS2-humble
+description: "Installation"
+icon: gear
+---
+
 ## Install ROS2-humble
 
 #### Set locale
@@ -40,4 +46,5 @@ sudo apt upgrade
 sudo apt install ros-humble-desktop
 ```
 
+> **Note:**
 This will install ROS and all the relevant packages.

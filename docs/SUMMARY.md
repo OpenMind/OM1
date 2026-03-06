@@ -17,6 +17,7 @@
 * [Middleware](developing/middleware.md)
     * [CycloneDDS](developing/cyclonedds.md)
     * [ROS2-humble](developing/ros2-humble.md)
+    * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
 
 ## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
 

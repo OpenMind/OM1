@@ -40,6 +40,13 @@ The robotics middleware that provides:
 - Low-level robot control
 - Auto charging
 
+The `om1-ros2-sdk` consists of the following:
+
+- om1_sensor: Handles all low-level sensor drivers (Intel RealSense D435, RPLidar). It collects and publishes sensor data to ROS2 topics for localization and mapping.
+- orchestrator: Manages SLAM, navigation, and map storage. Provides REST API endpoints for control and integration. It consumes the data published by `om1_sensor` for SLAM and navigation.
+- watchdog: Monitors sensor and topic health, automatically restarting om1_sensor if issues are detected.
+- zenoh_bridge: Acts as a bridge between OM1 and OM1_sensor to publish and subscribe to/from ROS2 topics.
+
 ### 3. OM1 Avatar (`om1-avatar`)
 Frontend interface components:
 - React-based user interface
@@ -54,6 +61,34 @@ Media handling subsystem:
 - Face detection and recognition
 - Video and audio streaming to RTSP server
 - Face detection and anonymisation
+- Performance monitoring
+- Optimised for NVIDIA Jetson platforms with CUDA support
+
+#### What is RTSP?
+- RTSP (Real Time Streaming Protocol) is a network control protocol designed to manage multimedia streaming sessions.
+- It functions as a "remote control" for media servers, establishing and controlling one or more time-synchronized streams of continuous media such as audio and video.
+
+#### Key characteristics:
+
+- Control Protocol: RTSP manages streaming sessions but does not typically transport the media data itself
+- Session Management: Establishes, maintains, and terminates streaming sessions
+- Time Synchronization: Coordinates multiple media streams (audio/video) to play in sync
+- Network Remote Control: Provides VCR-like commands (play, pause, stop, seek) for media playback over a network
+
+#### Architecture Diagram
+
+![Architecture Diagram](../assets/om1_video_processor_architecture.png)
+
+#### Openmind privacy system
+
+It runs entirely on the **robot's edge device** and automatically blurs the faces to prevent any personal information from leaking. Frames never leave the device; only the blurred output is saved or streamed. It works offline and keeps latency low for real-time use.
+
+**How it works**
+
+- Find faces (SCRFD) – Each frame is scanned with the face detector. The model is robust to different angles and lighting. It is optimized with TensorRT, so inference is fast.
+- After it locates the face with bounding box, we expand the region around the face bounding box, create a smooth mask, and apply strong Gaussian blur  so identity wouldn't leak or recovered.
+
+We prioritize safety and want to protect everyone's identity – when in doubt (low confidence, motion blur, occlusion), we focus on the side of privacy and blur anyway.
 
 We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 

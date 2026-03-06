@@ -18,3 +18,44 @@ cmake --build . --target install
 ### CycloneDDS config for Unitree G1
 
 ### CycloneDDS config for Unitree Simulation (Gazebo or Isaac Sim)
+
+Use this CycloneDDS configuration for running simulation. It uses `lo` as the network interface. We recommend that you export this in your .bashrc or equivalent configuration file cyclonedds.xml. To add it to cyclonedds.xml:
+
+```bash
+cd cyclonedds
+vi cyclonedds.xml
+```
+
+Add the following, then save and exit.
+
+```bash
+<CycloneDDS>
+    <Domain>
+        <General>
+            <Interfaces>
+                <NetworkInterface address="127.0.0.1" priority="default" multicast="default" />
+            </Interfaces>
+        </General>
+        <Discovery>
+            <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+        </Discovery>
+    </Domain>
+</CycloneDDS>
+```
+
+Open your bashrc file
+
+```bash
+vi ~/.bashrc
+```
+
+Add the following, replacing /path/to/cyclonedds with the actual path to your CycloneDDS installation:
+
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=/path/to/cyclonedds/cyclonedds.xml
+```
+
+Apply the changes
+
+source ~/.bashrc
