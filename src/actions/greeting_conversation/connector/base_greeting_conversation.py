@@ -124,6 +124,7 @@ class BaseGreetingConversationConnector(
                 f"Scheduling context update after TTS completes ({self.tts_duration:.1f}s)."
             )
             self.pending_finished_update = True
+            self.conversation_finished_sent = True
             # Hacky way to delay context update until after TTS is likely finished
             # A better way is to listen for an event from the TTS provider when it finishes speaking
             asyncio.create_task(
@@ -147,7 +148,7 @@ class BaseGreetingConversationConnector(
             )
             await asyncio.sleep(wait_duration)
 
-            if not self.conversation_finished_sent:
+            if self.pending_finished_update:
                 logging.info(
                     "TTS completed. Updating context: greeting_conversation_finished = True"
                 )
