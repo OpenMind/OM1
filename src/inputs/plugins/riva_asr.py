@@ -135,10 +135,6 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
         # Message buffer for incoming ASR messages
         self.message_buffer: asyncio.Queue[str] = asyncio.Queue()
 
-        # Cooldown after a message is accepted: ignore ASR during robot response
-        self._cooldown_until: float = 0.0
-        self._cooldown_seconds: float = 2.0
-
         # Initialize ASR provider
         api_key = self.config.api_key
         rate = self.config.rate
@@ -196,14 +192,10 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
             if "asr_reply" in json_message:
                 asr_reply = _normalize_asr_text(json_message["asr_reply"])
                 if len(asr_reply.split()) > 2:
-                    if time.time() < self._cooldown_until:
-                        logging.info("ASR suppressed during cooldown: %s", asr_reply)
-                        return
                     if not _seems_directed_at_robot(asr_reply):
                         logging.info("ASR filtered as overheard chatter: %s", asr_reply)
                         return
                     self.message_buffer.put_nowait(asr_reply)
-                    self._cooldown_until = time.time() + self._cooldown_seconds
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
             pass
