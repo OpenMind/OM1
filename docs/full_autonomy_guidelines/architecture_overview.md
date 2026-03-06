@@ -92,6 +92,37 @@ We prioritize safety and want to protect everyone's identity – when in doubt (
 
 We currently provide full autonomy for Unitree G1 and Go2 through the BrainPack.
 
+### 5. System Setup
+
+#### ota_agent
+
+Key functions:
+- Pull new images
+- Start and stop containers
+- Restart services
+- Upgrade existing images
+
+This is the main service responsible for OTA (Over-The-Air) application lifecycle management.
+
+#### ota_updater
+
+Ota_updater is used to update the OTA_agent.
+
+Key functions:
+- Updates the OTA agent to the latest version
+- Ensures compatibility with new features and fixes
+- This service guarantees that the OTA system can evolve without manual intervention.
+
+#### om1_monitor
+This service is used for setting up the Wi-Fi, local network, and local status page.
+
+Key functions:
+- Wi-Fi configuration
+- Local network setup
+- Local status and monitoring page
+
+This service exposes a web interface for initial device configuration.
+
 ## System Architecture
 1. **Sensor Data Collection** - The OM1-ros2-sdk gathers data from sensors such as LiDAR and cameras, publishing ROS2 topics for localization and mapping.
 
