@@ -9,7 +9,6 @@ Welcome to the Core Concepts section. This guide introduces the fundamental prin
 
 This section covers the essential building blocks you need to understand before diving into development:
 
-- **System Architecture** - How OM1's components work together
 - **Configuration Management** - How to configure and customize OM1
 - **Input Processing** - Understanding data flow and input handling
 - **Language Models (LLMs)** - Integration and usage of AI language models
