@@ -20,8 +20,7 @@ class KnowledgeBase:
         self,
         knowledge_base_name: str = "demo",
         knowledge_base_root: Optional[str | Path] = None,
-        embedding_host: str = "localhost",
-        embedding_port: int = 8100,
+        base_url: str = "http://localhost:8100",
         retriever_type: str = "faiss",
     ):
         """
@@ -33,10 +32,8 @@ class KnowledgeBase:
             Name of the knowledge base to use.
         knowledge_base_root : str or Path, optional
             Root directory containing knowledge bases.
-        embedding_host : str
-            Host for the embedding server (used if embedding_client not provided).
-        embedding_port : int
-            Port for the embedding server (used if embedding_client not provided).
+        base_url : str, optional
+            Base URL for the embedding service. Default is "http://localhost:8100".
         retriever_type : str
             Type of retriever to use if retriever not provided. Default is "faiss".
             Also determines the embedding client type if embedding_client not provided.
@@ -55,9 +52,7 @@ class KnowledgeBase:
             )
 
         if retriever_type == "faiss":
-            self.embedding_client = EmbeddingClient(
-                host=embedding_host, port=embedding_port
-            )
+            self.embedding_client = EmbeddingClient(base_url=base_url)
 
             index_path = self.kb_dir / f"{knowledge_base_name}.faiss"
             metadata_path = self.kb_dir / f"{knowledge_base_name}.pkl"

@@ -167,6 +167,8 @@ class TestGreetingConversationElevenLabsConnector:
             "current_state": ConversationState.FINISHED.value
         }
         await connector.connect(finished_input)
+        if connector.delayed_update_task:
+            await connector.delayed_update_task
         mock_providers["ctx"].update_context.assert_called_once_with(
             {"greeting_conversation_finished": True}
         )
