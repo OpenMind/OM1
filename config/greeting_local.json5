@@ -24,6 +24,7 @@
   knowledge_base: {
     knowledge_base_name: "demo",
     base_url: "${KB_BASE_URL:-http://localhost:8100}",
+    min_score: 0.85,
   },
 
   modes: {
@@ -49,7 +50,7 @@
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "RivaASRInput",
+          type: "RivaASRRTSPInput",
           config: {
             base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,

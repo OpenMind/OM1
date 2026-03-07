@@ -201,8 +201,26 @@ class BaseGreetingConversationConnector(
     def stop(self):
         """
         Stop the connector and clean up resources.
+
+        Clears the TTS pending message queue to prevent stale messages from
+        the current greeting session from continuing to play after the mode
+        transition. Without this, the TTS singleton keeps playing old messages,
+        causing the robot to keep talking, which makes ASR pick up echo,
+        which feeds garbage into the next session's summary.
         """
         logging.info("Stopping Greeting Conversation action...")
 
+        # Clear pending TTS messages FIRST to stop the robot from talking
+        # The TTS provider is a singleton — we don't stop it, just drain its queue
+        if self.tts and hasattr(self.tts, "clear_pending_messages"):
+            self.tts.clear_pending_messages()
+            logging.info("Cleared TTS pending messages during greeting stop")
+
+        # Close Zenoh session
         if self.session:
-            self.session.close()
+            try:
+                self.session.close()
+                logging.info("Greeting Zenoh session closed")
+            except Exception as e:
+                logging.warning(f"Error closing greeting Zenoh session: {e}")
+            self.session = None
