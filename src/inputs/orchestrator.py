@@ -71,16 +71,9 @@ class InputOrchestrator:
     def stop(self):
         """
         Stop all input sources and clean up resources.
-
-        Calls stop() on each input that supports it, ensuring proper
-        cleanup of callbacks, connections, and other resources during
-        mode transitions.
         """
         for input_source in self.inputs:
-            input_name = type(input_source).__name__
             try:
-                if hasattr(input_source, "stop"):
-                    input_source.stop()
-                    logging.info(f"Stopped input: {input_name}")
-            except Exception as e:
-                logging.error(f"Error stopping input {input_name}: {e}")
+                input_source.stop()
+            except Exception:
+                logging.exception(f"Error stopping input {type(input_source).__name__}")

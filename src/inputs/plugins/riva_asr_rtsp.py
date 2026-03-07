@@ -68,11 +68,6 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
         """
         super().__init__(config)
 
-        # Guard flag: when True, this instance ignores incoming ASR messages.
-        # Set to True in stop() to prevent stale callbacks from feeding data
-        # after mode transitions.
-        self._stopped = False
-
         # Buffer for storing the final output
         self.messages: List[str] = []
 
@@ -121,6 +116,9 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
             self.session = None
             self.asr_publisher = None
 
+        # Guard flag: when True, this instance ignores incoming ASR messages.
+        self._stopped = False
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages.
@@ -130,9 +128,6 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
         raw_message : str
             Raw message received from ASR service
         """
-        # Guard: ignore messages after this instance has been stopped.
-        # This prevents stale callbacks (still registered on the ASR singleton)
-        # from feeding data into a dead instance's buffer after mode transitions.
         if self._stopped:
             return
 
@@ -245,41 +240,32 @@ INPUT: {self.descriptor_for_LLM}
     def stop(self):
         """
         Stop the ASR input handler and clean up resources.
-
-        Sets the stopped guard flag to prevent the callback (which may still
-        be registered on the ASR singleton) from feeding data into this
-        instance's buffer. Also cleans up Zenoh resources.
         """
         logging.info("Stopping RivaASRRTSPInput, disabling callback")
 
-        # Set guard flag FIRST — the callback can fire from another thread
-        # at any time, so this must happen before any other cleanup.
         self._stopped = True
 
-        # Drain any remaining messages in the buffer to prevent stale data
-        # from being processed if references to this instance linger.
         while not self.message_buffer.empty():
             try:
                 self.message_buffer.get_nowait()
             except asyncio.QueueEmpty:
                 break
 
-        # Clear accumulated messages
         self.messages = []
 
-        # Unregister callback from the ASR singleton if the provider supports it.
-        # This is the proper cleanup — the guard flag above is a safety net.
         if self.asr:
-            if hasattr(self.asr, "unregister_message_callback"):
-                try:
-                    self.asr.unregister_message_callback(self._handle_asr_message)
-                    logging.info("Unregistered ASR callback")
-                except Exception as e:
-                    logging.warning(f"Failed to unregister ASR callback: {e}")
-            # NOTE: Do NOT call self.asr.stop() here — the ASR provider is a
-            # singleton that will be reused by the next RivaASRRTSPInput instance.
+            try:
+                self.asr.unregister_message_callback(self._handle_asr_message)
+                logging.info("Unregistered ASR callback")
+            except Exception as e:
+                logging.warning(f"Failed to unregister ASR callback: {e}")
 
-        # Close Zenoh publisher and session
+            try:
+                self.asr.stop()
+                logging.info("ASR provider stopped")
+            except Exception as e:
+                logging.warning(f"Failed to stop ASR provider: {e}")
+
         if self.asr_publisher:
             try:
                 self.asr_publisher.undeclare()

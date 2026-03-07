@@ -41,9 +41,8 @@ class Fuser:
         self.kb_min_score = 0.0
         if config.knowledge_base:
             try:
-                # Extract min_score before passing to KnowledgeBase
                 kb_config = dict(config.knowledge_base)
-                self.kb_min_score = float(kb_config.pop("min_score", 0.0))
+                self.kb_min_score = kb_config.get("min_score", 0.0)
                 if self.kb_min_score > 0:
                     logging.info(
                         f"KnowledgeBase min_score threshold: {self.kb_min_score}"
@@ -92,15 +91,6 @@ class Fuser:
 
         inputs_fused = " ".join([s for s in input_strings if s is not None])
 
-        # If no sensor produced any data this tick, skip the LLM call entirely.
-        # Without this check, fuser always returns a prompt (system_prompt + actions),
-        # which causes the LLM to generate unsolicited responses every tick,
-        # leading to: nonstop TTS → ASR echo → summary drift → total breakdown.
-        if not inputs_fused.strip():
-            logging.debug("No input data this tick, skipping LLM call")
-            self.io_provider.fuser_end_time = time.time()
-            return None
-
         # Query the knowledge base if configured and if there are inputs to query with
         kb_context = ""
         if self.knowledge_base and inputs_fused:
@@ -115,9 +105,6 @@ class Fuser:
                     query_text = voice_input.input.strip()
 
                 if query_text:
-                    logging.info(
-                        f"KB query: '{query_text}'"
-                    )
                     results = await self.knowledge_base.query(
                         query_text, top_k=3, min_score=self.kb_min_score
                     )
