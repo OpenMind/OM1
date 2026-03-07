@@ -59,6 +59,7 @@ class BaseGreetingConversationConnector(
         self.tts_playing = False
 
         self.conversation_finished_sent = False
+        self.pending_finished_update = False
 
         self.person_greeting_topic = "om/person_greeting"
         self.audio_topic = "robot/status/audio"
@@ -96,6 +97,15 @@ class BaseGreetingConversationConnector(
         ):
             self.tts_playing = False
             logging.info(f"TTS playback completed for UUID: {self.tts_request_id}")
+
+            if self.pending_finished_update:
+                logging.info(
+                    "TTS completed. Updating context: greeting_conversation_finished = True"
+                )
+                self.context_provider.update_context(
+                    {"greeting_conversation_finished": True}
+                )
+                self.pending_finished_update = False
 
     @abstractmethod
     def create_tts_provider(self) -> Any:
@@ -150,7 +160,6 @@ class BaseGreetingConversationConnector(
         else:
             self.tts_request_id = None
             self.tts_playing = False
-            self.tts.add_pending_message(pending_message)
 
         state_update = self.greeting_state_provider.process_conversation(llm_output)
         current_state = state_update.get("current_state", self.greeting_status)
@@ -163,11 +172,18 @@ class BaseGreetingConversationConnector(
             self.greeting_status == ConversationState.FINISHED.value
             and not self.conversation_finished_sent
         ):
-            logging.info("Greeting conversation has finished.")
             self.conversation_finished_sent = True
-            self.context_provider.update_context(
-                {"greeting_conversation_finished": True}
-            )
+            if self.tts_playing:
+                logging.info(
+                    "Greeting conversation has finished. "
+                    "Waiting for TTS to complete before updating context."
+                )
+                self.pending_finished_update = True
+            else:
+                logging.info("Greeting conversation has finished.")
+                self.context_provider.update_context(
+                    {"greeting_conversation_finished": True}
+                )
 
     def tick(self) -> None:
         """

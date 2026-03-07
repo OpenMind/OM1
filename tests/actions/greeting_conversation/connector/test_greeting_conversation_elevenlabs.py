@@ -165,8 +165,10 @@ class TestGreetingConversationElevenLabsConnector:
         )
 
     @pytest.mark.asyncio
-    async def test_connect_finished_updates_context(self, connector, mock_providers):
-        """Test connect updates context when conversation finishes."""
+    async def test_connect_finished_defers_context_update(
+        self, connector, mock_providers
+    ):
+        """Test connect sets pending flag instead of updating context directly."""
         finished_input = GreetingConversationInput(
             response="Goodbye!",
             conversation_state=InterfaceConversationState.FINISHED,
@@ -178,9 +180,8 @@ class TestGreetingConversationElevenLabsConnector:
         }
         mock_providers["tts"].create_pending_message.return_value = {"text": "Goodbye!"}
         await connector.connect(finished_input)
-        mock_providers["ctx"].update_context.assert_called_once_with(
-            {"greeting_conversation_finished": True}
-        )
+        mock_providers["ctx"].update_context.assert_not_called()
+        assert connector.pending_finished_update is True
 
     @pytest.mark.asyncio
     async def test_connect_not_finished_no_context_update(

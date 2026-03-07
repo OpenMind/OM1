@@ -199,6 +199,7 @@ class TestBaseGreetingConversationConnector:
         """Test _on_audio_status resets tts_playing when UUID and READY status match."""
         connector.tts_request_id = "test-uuid-123"
         connector.tts_playing = True
+        connector.pending_finished_update = False
 
         mock_data = Mock()
         mock_status = Mock()
@@ -213,6 +214,33 @@ class TestBaseGreetingConversationConnector:
             connector._on_audio_status(mock_data)
 
         assert connector.tts_playing is False
+        mock_providers["ctx"].update_context.assert_not_called()
+
+    def test_on_audio_status_triggers_deferred_context_update(
+        self, connector, mock_providers
+    ):
+        """Test _on_audio_status calls update_context when pending_finished_update is True."""
+        connector.tts_request_id = "test-uuid-123"
+        connector.tts_playing = True
+        connector.pending_finished_update = True
+
+        mock_data = Mock()
+        mock_status = Mock()
+        mock_status.header.frame_id = "test-uuid-123"
+        mock_status.status_speaker = 1  # READY
+
+        with patch(
+            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
+        ) as mock_audio_cls:
+            mock_audio_cls.deserialize.return_value = mock_status
+            mock_audio_cls.STATUS_SPEAKER.READY.value = 1
+            connector._on_audio_status(mock_data)
+
+        assert connector.tts_playing is False
+        assert connector.pending_finished_update is False
+        mock_providers["ctx"].update_context.assert_called_once_with(
+            {"greeting_conversation_finished": True}
+        )
 
     def test_on_audio_status_ignores_non_matching_uuid(self, connector, mock_providers):
         """Test _on_audio_status does not reset tts_playing for a different UUID."""
@@ -294,8 +322,30 @@ class TestBaseGreetingConversationConnector:
             mock_report.assert_called_once_with(ConversationState.CONVERSING.value)
 
     @pytest.mark.asyncio
-    async def test_connect_finished_updates_context(self, connector, mock_providers):
-        """Test connect updates context when conversation finishes."""
+    async def test_connect_finished_defers_context_update(
+        self, connector, mock_providers
+    ):
+        """Test connect sets pending flag when TTS is playing."""
+        finished_input = GreetingConversationInput(
+            response="Goodbye!",
+            conversation_state=InterfaceConversationState.FINISHED,
+            confidence=0.95,
+            speech_clarity=0.9,
+        )
+        mock_providers["state"].process_conversation.return_value = {
+            "current_state": ConversationState.FINISHED.value
+        }
+        await connector.connect(finished_input)
+        mock_providers["ctx"].update_context.assert_not_called()
+        assert connector.pending_finished_update is True
+        assert connector.conversation_finished_sent is True
+
+    @pytest.mark.asyncio
+    async def test_connect_finished_updates_context_when_not_playing(
+        self, connector, mock_providers
+    ):
+        """Test connect updates context immediately when TTS is not playing."""
+        connector.audio_pub = None  # No Zenoh → tts_playing stays False
         finished_input = GreetingConversationInput(
             response="Goodbye!",
             conversation_state=InterfaceConversationState.FINISHED,
@@ -312,10 +362,10 @@ class TestBaseGreetingConversationConnector:
         assert connector.conversation_finished_sent is True
 
     @pytest.mark.asyncio
-    async def test_connect_finished_only_updates_context_once(
+    async def test_connect_finished_only_sets_flag_once(
         self, connector, mock_providers
     ):
-        """Test connect only updates context once even if called multiple times."""
+        """Test connect only sets pending flag once even if called multiple times."""
         finished_input = GreetingConversationInput(
             response="Goodbye!",
             conversation_state=InterfaceConversationState.FINISHED,
@@ -327,7 +377,7 @@ class TestBaseGreetingConversationConnector:
         }
         await connector.connect(finished_input)
         await connector.connect(finished_input)
-        mock_providers["ctx"].update_context.assert_called_once()
+        mock_providers["ctx"].update_context.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_connect_not_finished_no_context_update(
