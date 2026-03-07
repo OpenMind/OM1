@@ -100,12 +100,29 @@ class Fuser:
                         f"Querying knowledge base with: {query_text[:100]}..."
                     )
                     results = await self.knowledge_base.query(query_text, top_k=3)
-                    if results:
-                        kb_context = self.knowledge_base.format_context(
-                            results, max_chars=1500
+                    high = [
+                        r for r in results if r.score is not None and r.score >= 0.92
+                    ]
+                    low = [
+                        r
+                        for r in results
+                        if r.score is not None and 0.75 <= r.score < 0.92
+                    ]
+                    kb_parts = []
+                    if high:
+                        kb_parts.append(
+                            self.knowledge_base.format_context(high, max_chars=1500)
                         )
+                    if low:
+                        kb_parts.append(
+                            "[Potentially relevant, low confidence]\n"
+                            + self.knowledge_base.format_context(low, max_chars=1000)
+                        )
+                    if kb_parts:
+                        kb_context = "\n".join(kb_parts)
                         logging.info(
-                            f"Knowledge base retrieved {len(results)} documents"
+                            f"Knowledge base: {len(high)} high,"
+                            f" {len(low)} low confidence"
                         )
             except Exception as e:
                 logging.error(f"Error querying knowledge base: {e}")
@@ -114,11 +131,10 @@ class Fuser:
         if kb_context:
             inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
 
-        # if we provide laws from blockchain, these override the locally stored rules
-        # the rules are not provided in the system prompt, but as a separate INPUT,
-        # since they are flowing from the outside world
-        if "Universal Laws" not in inputs_fused:
-            system_prompt += "\nLAWS:\n" + self.config.system_governance
+        # Only include verbose sections if they have content
+        if self.config.system_governance:
+            if "Universal Laws" not in inputs_fused:
+                system_prompt += "\nLAWS:\n" + self.config.system_governance
 
         if self.config.system_prompt_examples:
             system_prompt += "\n\nEXAMPLES:\n" + self.config.system_prompt_examples
@@ -133,14 +149,18 @@ class Fuser:
             if desc:
                 actions_fused += desc + "\n\n"
 
-        question_prompt = "What will you do? Actions:"
-
-        # this is the final prompt:
-        # (1) a (typically) fixed overall system prompt with the agents, name, rules, and examples
-        # (2) all the inputs (vision, sound, etc.)
-        # (3) a (typically) fixed list of available actions
-        # (4) a (typically) fixed system prompt requesting commands to be generated
-        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
+        # Build final prompt — skip verbose headers if sections are empty
+        if actions_fused:
+            question_prompt = "What will you do? Actions:"
+            fused_prompt = (
+                f"{system_prompt}\n\n"
+                f"AVAILABLE INPUTS:\n{inputs_fused}\n"
+                f"AVAILABLE ACTIONS:\n\n{actions_fused}\n\n"
+                f"{question_prompt}"
+            )
+        else:
+            question_prompt = ""
+            fused_prompt = f"{system_prompt}\n\n{inputs_fused}"
 
         logging.debug(f"FINAL PROMPT: {fused_prompt}")
 
