@@ -158,6 +158,7 @@ async def test_fuser_without_knowledge_base():
         result = await fuser.fuse([], [])
 
         assert fuser.knowledge_base is None
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -179,6 +180,7 @@ async def test_fuser_with_knowledge_base_no_voice_input():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -226,6 +228,7 @@ async def test_fuser_with_knowledge_base_and_voice_input():
         mock_kb.format_context.assert_called_once_with(
             [mock_doc1, mock_doc2], max_chars=1500
         )
+        assert result is not None
         assert "KNOWLEDGE BASE:" in result
         assert "Paris is the capital of France." in result
 
@@ -257,6 +260,7 @@ async def test_fuser_with_knowledge_base_empty_results():
         result = await fuser.fuse(inputs, [])
 
         mock_kb.query.assert_called_once()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -287,6 +291,7 @@ async def test_fuser_with_knowledge_base_query_error():
         result = await fuser.fuse(inputs, [])
 
         mock_kb.query.assert_called_once()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -316,6 +321,7 @@ async def test_fuser_with_knowledge_base_voice_input_different_tick():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -339,6 +345,7 @@ async def test_fuser_with_knowledge_base_no_voice_input_object():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -366,4 +373,5 @@ async def test_fuser_with_knowledge_base_empty_voice_input():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
