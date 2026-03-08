@@ -260,12 +260,6 @@ INPUT: {self.descriptor_for_LLM}
             except Exception as e:
                 logging.warning(f"Failed to unregister ASR callback: {e}")
 
-            try:
-                self.asr.stop()
-                logging.info("ASR provider stopped")
-            except Exception as e:
-                logging.warning(f"Failed to stop ASR provider: {e}")
-
         if self.asr_publisher:
             try:
                 self.asr_publisher.undeclare()

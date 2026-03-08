@@ -243,10 +243,6 @@ class BaseGreetingConversationConnector(
         """
         logging.info("Stopping Greeting Conversation action...")
 
-        if self.tts and hasattr(self.tts, "clear_pending_messages"):
-            self.tts.clear_pending_messages()
-            logging.info("Cleared TTS pending messages during greeting stop")
-
         if self.session:
             try:
                 self.session.close()
