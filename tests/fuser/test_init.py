@@ -27,6 +27,22 @@ class MockSensor(Sensor[SensorConfig, Any]):
         return "test input"
 
 
+class NoneInputSensor(Sensor[SensorConfig, Any]):
+    def __init__(self) -> None:
+        super().__init__(SensorConfig())
+
+    def formatted_latest_buffer(self):
+        return None
+
+
+class EmptyInputSensor(Sensor[SensorConfig, Any]):
+    def __init__(self) -> None:
+        super().__init__(SensorConfig())
+
+    def formatted_latest_buffer(self):
+        return ""
+
+
 @dataclass
 class MockAction:
     name: str
@@ -69,10 +85,11 @@ async def test_fuser_timestamps(mock_time):
     mock_time.return_value = 1000
     config = create_mock_config()
     io_provider = IOProvider()
+    inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
 
     with patch("fuser.IOProvider", return_value=io_provider):
         fuser = Fuser(config)
-        await fuser.fuse([], [])
+        await fuser.fuse(inputs, [])
         assert io_provider.fuser_start_time == 1000
         assert io_provider.fuser_end_time == 1000
 
@@ -109,6 +126,43 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
             io_provider.fuser_available_actions
             == "AVAILABLE ACTIONS:\naction description\n\naction description\n\n\n\nWhat will you do? Actions:"
         )
+
+
+@pytest.mark.asyncio
+async def test_fuse_returns_none_when_all_inputs_none():
+    config = create_mock_config()
+    inputs: Sequence[Sensor[Any, Any]] = [NoneInputSensor(), NoneInputSensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_fuse_returns_none_when_all_inputs_empty():
+    config = create_mock_config()
+    inputs: Sequence[Sensor[Any, Any]] = [EmptyInputSensor(), EmptyInputSensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_fuse_returns_prompt_with_valid_inputs():
+    config = create_mock_config()
+    inputs: Sequence[Sensor[Any, Any]] = [NoneInputSensor(), MockSensor()]
+    io_provider = IOProvider()
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+        assert result is not None
+        assert "test input" in result
 
 
 @pytest.mark.asyncio
@@ -158,7 +212,7 @@ async def test_fuser_without_knowledge_base():
         result = await fuser.fuse([], [])
 
         assert fuser.knowledge_base is None
-        assert "KNOWLEDGE BASE:" not in result
+        assert result is None
 
 
 @pytest.mark.asyncio
@@ -179,7 +233,7 @@ async def test_fuser_with_knowledge_base_no_voice_input():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
-        assert "KNOWLEDGE BASE:" not in result
+        assert result is None
 
 
 @pytest.mark.asyncio
@@ -314,7 +368,7 @@ async def test_fuser_with_knowledge_base_voice_input_different_tick():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
-        assert "KNOWLEDGE BASE:" not in result
+        assert result is None
 
 
 @pytest.mark.asyncio
@@ -337,7 +391,7 @@ async def test_fuser_with_knowledge_base_no_voice_input_object():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
-        assert "KNOWLEDGE BASE:" not in result
+        assert result is None
 
 
 @pytest.mark.asyncio
@@ -364,4 +418,4 @@ async def test_fuser_with_knowledge_base_empty_voice_input():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
-        assert "KNOWLEDGE BASE:" not in result
+        assert result is None
