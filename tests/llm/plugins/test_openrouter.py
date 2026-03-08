@@ -61,10 +61,8 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
-        patch("llm.plugins.deepseek_llm.AvatarLLMState") as mock_avatar_state,
+        patch("llm.openai_compatible.AvatarLLMState.trigger_thinking", mock_decorator),
+        patch("llm.openai_compatible.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
         patch(
             "providers.avatar_llm_state_provider.AvatarProvider"
@@ -106,8 +104,8 @@ async def test_init_empty_key():
 async def test_ask_success(llm, mock_response):
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
+            llm._client.chat.completions,
+            "create",
             AsyncMock(return_value=mock_response),
         )
 
@@ -137,21 +135,21 @@ async def test_ask_invalid_json(llm):
 
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
+            llm._client.chat.completions,
+            "create",
             AsyncMock(return_value=invalid_response),
         )
 
         result = await llm.ask("test prompt")
-        assert result is None
+        assert result == CortexOutputModel(actions=[])
 
 
 @pytest.mark.asyncio
 async def test_ask_api_error(llm):
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
-            llm._client.beta.chat.completions,
-            "parse",
+            llm._client.chat.completions,
+            "create",
             AsyncMock(side_effect=Exception("API error")),
         )
 

@@ -3,8 +3,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
+from llm import LLMConfig
+from llm.openai_compatible import OpenAICompatibleLLM
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.deepseek_llm import DeepSeekConfig, DeepSeekLLM
 
 
 class DummyOutputModel(BaseModel):
@@ -13,24 +14,15 @@ class DummyOutputModel(BaseModel):
 
 @pytest.fixture
 def config():
-    return DeepSeekConfig(base_url="test_url/", api_key="test_key", model="test_model")
-
-
-@pytest.fixture
-def mock_response():
-    """Fixture providing a valid mock API response"""
-    response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(content='{"test_field": "success"}', tool_calls=None)
-        )
-    ]
-    return response
+    return LLMConfig(
+        base_url="https://test.example.com/",
+        api_key="test_key",
+        model="test_model",
+    )
 
 
 @pytest.fixture
 def mock_response_with_tool_calls():
-    """Fixture providing a mock API response with tool calls"""
     tool_call = MagicMock()
     tool_call.function.name = "test_function"
     tool_call.function.arguments = '{"arg1": "value1"}'
@@ -46,10 +38,19 @@ def mock_response_with_tool_calls():
     return response
 
 
+@pytest.fixture
+def mock_response_without_tool_calls():
+    response = MagicMock()
+    response.choices = [
+        MagicMock(
+            message=MagicMock(content='{"test_field": "success"}', tool_calls=None)
+        )
+    ]
+    return response
+
+
 @pytest.fixture(autouse=True)
 def mock_avatar_components():
-    """Mock all avatar and IO components to prevent Zenoh session creation"""
-
     def mock_decorator(func=None):
         def decorator(f):
             return f
@@ -81,42 +82,12 @@ def mock_avatar_components():
 
 @pytest.fixture
 def llm(config):
-    return DeepSeekLLM(config, available_actions=None)
-
-
-@pytest.mark.asyncio
-async def test_init_with_config(llm, config):
-    """Test initialization with provided configuration"""
-    assert llm._client.base_url == config.base_url
-    assert llm._client.api_key == config.api_key
-    assert llm._config.model == config.model
-
-
-@pytest.mark.asyncio
-async def test_init_empty_key():
-    """Test fallback API key when no credentials provided"""
-    config = DeepSeekConfig(base_url="test_url")
-    with pytest.raises(ValueError, match="config file missing api_key"):
-        DeepSeekLLM(config, available_actions=None)
-
-
-@pytest.mark.asyncio
-async def test_ask_success(llm, mock_response):
-    """Test successful API request and response parsing"""
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(
-            llm._client.chat.completions,
-            "create",
-            AsyncMock(return_value=mock_response),
-        )
-
-        result = await llm.ask("test prompt")
-        assert result is None
+    return OpenAICompatibleLLM(config, available_actions=None)
 
 
 @pytest.mark.asyncio
 async def test_ask_with_tool_calls(llm, mock_response_with_tool_calls):
-    """Test successful API request with tool calls"""
+    """Test that tool calls are parsed into CortexOutputModel."""
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
             llm._client.chat.completions,
@@ -130,25 +101,22 @@ async def test_ask_with_tool_calls(llm, mock_response_with_tool_calls):
 
 
 @pytest.mark.asyncio
-async def test_ask_invalid_json(llm):
-    """Test handling of invalid JSON response"""
-    invalid_response = MagicMock()
-    invalid_response.choices = [MagicMock(message=MagicMock(content="invalid"))]
-
+async def test_ask_without_tool_calls(llm, mock_response_without_tool_calls):
+    """Test that no tool calls returns None."""
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
             llm._client.chat.completions,
             "create",
-            AsyncMock(return_value=invalid_response),
+            AsyncMock(return_value=mock_response_without_tool_calls),
         )
 
         result = await llm.ask("test prompt")
-        assert result == CortexOutputModel(actions=[])
+        assert result is None
 
 
 @pytest.mark.asyncio
 async def test_ask_api_error(llm):
-    """Test error handling for API exceptions"""
+    """Test that API errors return None."""
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
             llm._client.chat.completions,
@@ -161,16 +129,35 @@ async def test_ask_api_error(llm):
 
 
 @pytest.mark.asyncio
-async def test_io_provider_timing(llm, mock_response):
-    """Test timing metrics collection"""
+async def test_ask_empty_choices(llm):
+    """Test that empty choices returns None."""
+    empty_response = MagicMock()
+    empty_response.choices = []
+
     with pytest.MonkeyPatch.context() as m:
         m.setattr(
             llm._client.chat.completions,
             "create",
-            AsyncMock(return_value=mock_response),
+            AsyncMock(return_value=empty_response),
         )
 
-        await llm.ask("test prompt")
-        assert llm.io_provider.llm_start_time is not None
-        assert llm.io_provider.llm_end_time is not None
-        assert llm.io_provider.llm_end_time >= llm.io_provider.llm_start_time
+        result = await llm.ask("test prompt")
+        assert result is None
+
+
+def test_missing_api_key():
+    """Test that missing API key raises ValueError."""
+    config = LLMConfig(base_url="https://test.example.com/")
+    with pytest.raises(ValueError, match="config file missing api_key"):
+        OpenAICompatibleLLM(config, available_actions=None)
+
+
+@pytest.mark.asyncio
+async def test_call_api_method(llm, mock_response_with_tool_calls):
+    """Test that _call_api is called during ask()."""
+    with patch.object(llm, "_call_api", new_callable=AsyncMock) as mock_call_api:
+        mock_call_api.return_value = mock_response_with_tool_calls
+
+        result = await llm.ask("test prompt")
+        mock_call_api.assert_called_once()
+        assert isinstance(result, CortexOutputModel)
