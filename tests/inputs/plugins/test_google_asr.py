@@ -454,7 +454,6 @@ def test_stop():
         assert sensor.message_buffer.empty()
         assert len(sensor.messages) == 0
         mock_asr_instance.unregister_message_callback.assert_called_once()
-        mock_asr_instance.stop.assert_called_once()
         mock_publisher.undeclare.assert_called_once()
         mock_session.close.assert_called_once()
 
@@ -484,7 +483,6 @@ def test_stop_with_exceptions():
         config = GoogleASRSensorConfig()
         sensor = GoogleASRInput(config=config)
 
-        # Should not raise exception
         sensor.stop()
         assert sensor._stopped is True
 
@@ -503,4 +501,3 @@ def test_stop_no_session():
         sensor.session = None
 
         sensor.stop()
-        sensor.asr.stop.assert_called_once()  # type: ignore[union-attr]

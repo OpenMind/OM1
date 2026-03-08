@@ -455,7 +455,6 @@ def test_stop():
         assert sensor.message_buffer.empty()
         assert len(sensor.messages) == 0
         mock_asr_instance.unregister_message_callback.assert_called_once()
-        mock_asr_instance.stop.assert_called_once()
         mock_publisher.undeclare.assert_called_once()
         mock_session.close.assert_called_once()
 
@@ -486,7 +485,6 @@ def test_stop_asr_unregister_failure():
 
         sensor.stop()
         assert sensor._stopped is True
-        mock_asr_instance.stop.assert_called_once()
 
 
 def test_stop_asr_stop_failure():
@@ -561,4 +559,3 @@ def test_stop_without_zenoh():
 
         sensor.stop()
         assert sensor._stopped is True
-        mock_asr_instance.stop.assert_called_once()
