@@ -51,6 +51,15 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+    semantic_memory_enabled: T.Optional[bool] = Field(
+        default=False, description="Enable semantic memory for long-term recall"
+    )
+    semantic_memory_top_k: T.Optional[int] = Field(
+        default=3, description="Number of top memories to retrieve per query"
+    )
+    semantic_memory_threshold: T.Optional[float] = Field(
+        default=0.3, description="Minimum cosine similarity for memory retrieval"
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:

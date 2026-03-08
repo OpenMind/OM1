@@ -9,6 +9,7 @@ import openai
 from llm import LLMConfig
 
 from .io_provider import IOProvider
+from .semantic_memory_provider import SemanticMemoryProvider
 
 R = TypeVar("R")
 
@@ -359,6 +360,17 @@ class LLMHistoryManager:
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)
                     )
+
+                    # Store to semantic memory
+                    sem_memory = SemanticMemoryProvider()
+                    if sem_memory.enabled:
+                        mode = getattr(self._config, "mode", None) or "default"
+                        sem_memory.store(
+                            formatted_inputs,
+                            action_message,
+                            mode,
+                            current_tick,
+                        )
 
                     if (
                         self.history_manager.config.history_length > 0

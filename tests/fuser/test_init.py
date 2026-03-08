@@ -8,6 +8,7 @@ from fuser import Fuser
 from fuser.knowledge_base.base_retriever import Document
 from inputs.base import Sensor, SensorConfig
 from providers.io_provider import IOProvider
+from providers.semantic_memory_provider import SemanticMemoryProvider
 from runtime.config import RuntimeConfig
 
 
@@ -111,6 +112,59 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
         )
 
 
+@patch("fuser.describe_action")
+@pytest.mark.asyncio
+async def test_fuser_injects_memories_when_enabled(mock_describe):
+    """Test that relevant memories are injected into the fused prompt."""
+    mock_describe.return_value = "action description"
+    config = create_mock_config(agent_actions=[MockAction("action1")])
+    config.mode = "test_mode"
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
+    io_provider = IOProvider()
+
+    # Setup semantic memory to return memories
+    SemanticMemoryProvider.reset()  # type: ignore
+    memory = SemanticMemoryProvider()
+    memory.enabled = True
+    memory.retrieve = MagicMock(  # type: ignore
+        return_value=["Input: user said hello | Response: waved back"]
+    )
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+
+    memory.retrieve.assert_called_once_with(query="test input", mode="test_mode")
+    assert "RELEVANT MEMORIES:" in result
+    assert "user said hello" in result
+    assert "waved back" in result
+
+    # Cleanup
+    SemanticMemoryProvider.reset()  # type: ignore
+
+
+@patch("fuser.describe_action")
+@pytest.mark.asyncio
+async def test_fuser_skips_memories_when_disabled(mock_describe):
+    """Test that no memory retrieval happens when semantic memory is disabled."""
+    mock_describe.return_value = "action description"
+    config = create_mock_config(agent_actions=[MockAction("action1")])
+    inputs: list[Sensor[Any, Any]] = [MockSensor()]
+    io_provider = IOProvider()
+
+    SemanticMemoryProvider.reset()  # type: ignore
+    memory = SemanticMemoryProvider()
+    memory.enabled = False
+
+    with patch("fuser.IOProvider", return_value=io_provider):
+        fuser = Fuser(config)
+        result = await fuser.fuse(inputs, [])
+
+    assert "RELEVANT MEMORIES:" not in result
+
+    SemanticMemoryProvider.reset()  # type: ignore
+
+
 @pytest.mark.asyncio
 async def test_fuser_initialization_with_knowledge_base():
     """Test that Fuser properly initializes with knowledge_base config."""
@@ -125,7 +179,9 @@ async def test_fuser_initialization_with_knowledge_base():
     mock_kb = MagicMock()
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb) as mock_kb_class,
+        patch(
+            "fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb
+        ) as mock_kb_class,
     ):
         fuser = Fuser(config)
         assert fuser.knowledge_base == mock_kb
@@ -141,7 +197,10 @@ async def test_fuser_initialization_with_invalid_knowledge_base():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", side_effect=Exception("Invalid config")),
+        patch(
+            "fuser.knowledge_base.retriever.KnowledgeBase",
+            side_effect=Exception("Invalid config"),
+        ),
     ):
         fuser = Fuser(config)
         assert fuser.knowledge_base is None
@@ -173,7 +232,7 @@ async def test_fuser_with_knowledge_base_no_voice_input():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])
@@ -215,7 +274,7 @@ async def test_fuser_with_knowledge_base_and_voice_input():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
@@ -249,7 +308,7 @@ async def test_fuser_with_knowledge_base_empty_results():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
@@ -279,7 +338,7 @@ async def test_fuser_with_knowledge_base_query_error():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
@@ -308,7 +367,7 @@ async def test_fuser_with_knowledge_base_voice_input_different_tick():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])
@@ -331,7 +390,7 @@ async def test_fuser_with_knowledge_base_no_voice_input_object():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])
@@ -358,7 +417,7 @@ async def test_fuser_with_knowledge_base_empty_voice_input():
 
     with (
         patch("fuser.IOProvider", return_value=io_provider),
-        patch("fuser.KnowledgeBase", return_value=mock_kb),
+        patch("fuser.knowledge_base.retriever.KnowledgeBase", return_value=mock_kb),
     ):
         fuser = Fuser(config)
         result = await fuser.fuse([], [])

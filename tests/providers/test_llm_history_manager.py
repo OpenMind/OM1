@@ -6,6 +6,7 @@ import openai
 import pytest
 
 from providers.llm_history_manager import ChatMessage, LLMHistoryManager
+from providers.semantic_memory_provider import SemanticMemoryProvider
 
 
 @dataclass
@@ -582,6 +583,88 @@ async def test_multiple_summarization_failures_prevent_unbounded_growth():
 
     # Final check: history should be at or below history_length
     assert len(history_manager.history) <= config.history_length
+
+
+@pytest.mark.asyncio
+async def test_update_history_stores_to_semantic_memory():
+    """Test that semantic memory store is called after a successful LLM response."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+    config.mode = "conversation"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    SemanticMemoryProvider.reset()  # type: ignore
+    memory = SemanticMemoryProvider()
+    memory.enabled = True
+    memory.store = MagicMock()  # type: ignore
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Hello there")]
+            return response
+
+    provider = MockLLMProvider()
+    provider.io_provider.add_input("audio", "User said hi", 1234.0)
+    await provider.process("test prompt")
+
+    memory.store.assert_called_once()
+    call_args = memory.store.call_args
+    assert "User said hi" in call_args[0][0]  # formatted_inputs
+    assert "conversation" == call_args[0][2]  # mode
+
+    SemanticMemoryProvider.reset()  # type: ignore
+
+
+@pytest.mark.asyncio
+async def test_update_history_skips_store_when_memory_disabled():
+    """Test that semantic memory store is NOT called when memory is disabled."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    SemanticMemoryProvider.reset()  # type: ignore
+    memory = SemanticMemoryProvider()
+    memory.enabled = False
+    memory.store = MagicMock()  # type: ignore
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Hello")]
+            return response
+
+    provider = MockLLMProvider()
+    provider.io_provider.add_input("audio", "Test input", 1234.0)
+    await provider.process("test prompt")
+
+    memory.store.assert_not_called()
+
+    SemanticMemoryProvider.reset()  # type: ignore
 
 
 def test_get_messages_empty(history_manager):
