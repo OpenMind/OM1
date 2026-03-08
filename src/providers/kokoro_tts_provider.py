@@ -198,16 +198,8 @@ class KokoroTTSProvider:
     def clear_pending_messages(self):
         """
         Clear all pending TTS messages from the queue.
-
-        This must be called during mode transitions to prevent stale messages
-        from the previous greeting session from continuing to play. Without
-        this, the TTS singleton keeps playing old messages after the greeting
-        connector has been stopped, causing:
-        1. The robot to keep talking after conversation ends
-        2. ASR to pick up the robot's own voice (echo)
-        3. Summary drift from garbage ASR input
         """
-        if hasattr(self._audio_stream, "_pending_requests"):
+        if self.get_pending_message_count() > 0:
             count = 0
             while not self._audio_stream._pending_requests.empty():
                 try:
@@ -251,6 +243,6 @@ class KokoroTTSProvider:
         if not self.running:
             logging.warning("Kokoro TTS provider is not running")
             return
- 
+
         self.running = False
         self._audio_stream.stop()

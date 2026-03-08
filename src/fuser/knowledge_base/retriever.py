@@ -101,7 +101,6 @@ class KnowledgeBase:
             query_embedding = await self.embedding_client.embed(query_text)
             results = self.retriever.search(query_embedding, top_k=top_k)
 
-        # Filter by similarity threshold
         if min_score > 0:
             before_count = len(results)
             results = [
@@ -145,7 +144,6 @@ class KnowledgeBase:
             query_embeddings = await self.embedding_client.embed_batch(query_texts)
             all_results = self.retriever.batch_search(query_embeddings, top_k=top_k)
 
-        # Filter by similarity threshold
         if min_score > 0:
             all_results = [
                 [
