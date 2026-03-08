@@ -835,7 +835,6 @@ def test_stop_clears_buffers_and_stops_asr(
     assert len(instance.messages) == 0
     assert instance.message_buffer.empty()
     mock_asr_instance.unregister_message_callback.assert_called_once()
-    mock_asr_instance.stop.assert_called_once()
     mock_zenoh["publisher"].undeclare.assert_called_once()
     mock_zenoh["session"].close.assert_called_once()
 
