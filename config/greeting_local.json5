@@ -24,7 +24,7 @@
   knowledge_base: {
     knowledge_base_name: "demo",
     base_url: "${KB_BASE_URL:-http://localhost:8100}",
-    min_score: 0.85,
+    min_score: 0.6,
   },
 
   modes: {
