@@ -236,6 +236,10 @@ class ModeCortexRuntime:
             logging.debug("Stopping action orchestrator")
             self.action_orchestrator.stop()
 
+        if self.input_orchestrator:
+            logging.debug("Stopping input orchestrator")
+            self.input_orchestrator.stop()
+
         tasks_to_cancel = {}
 
         if self.cortex_loop_task and not self.cortex_loop_task.done():

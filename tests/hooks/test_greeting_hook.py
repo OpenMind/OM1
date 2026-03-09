@@ -137,7 +137,7 @@ class TestGeetingEndHook:
             mock_elevenlabs_provider.start.assert_called_once()
             mock_elevenlabs_provider.add_pending_message.assert_called_once()
             message = mock_elevenlabs_provider.add_pending_message.call_args[0][0]
-            assert "nice talking to you" in message.lower()
+            assert "nice talking with you" in message.lower()
 
     @pytest.mark.asyncio
     async def test_hook_with_elevenlabs_custom_params(
@@ -371,7 +371,7 @@ class TestGeetingEndHook:
 
             mock_riva_provider.start.assert_called_once()
             message = mock_riva_provider.add_pending_message.call_args[0][0]
-            assert "no worries" in message.lower()
+            assert "it was great meeting you" in message.lower()
 
     @pytest.mark.asyncio
     async def test_hook_unsupported_provider(self, mock_greeting_state_provider):

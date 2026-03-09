@@ -140,11 +140,11 @@ async def geeting_end_hook(context: Dict[str, Any]):
             )
         elif greeting_state_provider.turn_count > 0:
             provider.add_pending_message(
-                "It was nice talking to you! If you have any more questions, feel free to come back and chat with me again!"
+                "It was nice talking with you! If you have any more questions, come chat with me again!"
             )
         else:
             provider.add_pending_message(
-                "No worries! If you have any questions or want to chat later, just come back and say hi!"
+                "It was great meeting you! If you want to chat later, just come back and say hi!"
             )
 
         return True
