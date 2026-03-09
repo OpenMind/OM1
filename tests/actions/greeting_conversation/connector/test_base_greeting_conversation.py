@@ -713,6 +713,7 @@ class TestBaseGreetingConversationConnector:
             True
         ], "self.session should be None when close() is called"
 
+
 class TestNormalizeTTSText:
     """Test the normalize_tts_text function."""
 
