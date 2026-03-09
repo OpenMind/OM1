@@ -2,6 +2,7 @@ import logging
 import time
 import typing as T
 from collections.abc import Sequence
+from datetime import datetime
 
 from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
@@ -87,7 +88,12 @@ class Fuser:
         logging.debug(f"InputMessageArray: {input_strings}")
 
         # Combine all inputs, memories, and configurations into a single prompt
-        system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + "\n"
+        today = datetime.now().strftime("%B %-d, %Y")
+        system_prompt = (
+            "\nBASIC CONTEXT:\n"
+            + self.config.system_prompt_base
+            + f"\nToday is {today}.\n"
+        )
 
         inputs_fused = " ".join([s for s in input_strings if s is not None])
 

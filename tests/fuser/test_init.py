@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, List, Optional, Sequence
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -91,10 +92,12 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
+        today = datetime.now().strftime("%B %-d, %Y")
         system_prompt = (
             "\nBASIC CONTEXT:\n"
             + config.system_prompt_base
-            + "\n\nLAWS:\n"
+            + f"\nToday is {today}.\n"
+            + "\nLAWS:\n"
             + config.system_governance
             + "\n\nEXAMPLES:\n"
             + config.system_prompt_examples
