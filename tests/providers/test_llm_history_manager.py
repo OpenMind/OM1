@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import openai
 import pytest
 
-from providers.llm_history_manager import ChatMessage, LLMHistoryManager
+from providers.llm_history_manager import ACTION_MAP, ChatMessage, LLMHistoryManager
 
 
 @dataclass
@@ -57,7 +57,9 @@ async def test_summarize_messages_success(history_manager):
     # Test successful summarization
     result = await history_manager.summarize_messages(messages)
     assert result.role == "assistant"
-    assert "Previously, This is a test summary" == result.content
+    assert result.content == (
+        "[Conversation summary - do not repeat] Previously, This is a test summary"
+    )
 
 
 @pytest.mark.asyncio
@@ -204,9 +206,8 @@ async def test_update_history_only_current_tick_inputs():
     # First message should be the inputs message
     inputs_msg = history_manager.history[0]
     assert inputs_msg.role == "user"
-    assert "audio_new" in inputs_msg.content
+    assert inputs_msg.content.startswith("User: ")
     assert "User said goodbye" in inputs_msg.content
-    assert "lidar" in inputs_msg.content
     assert "Detected obstacle" in inputs_msg.content
 
     assert "User said hello" not in inputs_msg.content
@@ -256,7 +257,7 @@ async def test_update_history_no_inputs_for_current_tick():
     # First message should be the inputs message with just the preamble
     inputs_msg = history_manager.history[0]
     assert inputs_msg.role == "user"
-    assert "TestBot sensed the following:" in inputs_msg.content
+    assert inputs_msg.content == "User: (no input)"
     # Old inputs should not be included
     assert "Old audio" not in inputs_msg.content
 
@@ -294,7 +295,6 @@ async def test_update_history_multiple_ticks():
 
     # Verify only tick 0 data in first cycle
     first_inputs = history_manager.history[0]
-    assert "input_tick0" in first_inputs.content
     assert "Data at tick 0" in first_inputs.content
 
     # Tick 1: Increment and add new inputs
@@ -304,7 +304,6 @@ async def test_update_history_multiple_ticks():
 
     # Find the second input message (should be at index 2)
     second_inputs = history_manager.history[2]
-    assert "input_tick1" in second_inputs.content
     assert "Data at tick 1" in second_inputs.content
     # Should NOT include tick 0 data
     assert "Data at tick 0" not in second_inputs.content
@@ -316,7 +315,6 @@ async def test_update_history_multiple_ticks():
 
     # Find the third input message (should be at index 4)
     third_inputs = history_manager.history[4]
-    assert "input_tick2" in third_inputs.content
     assert "Data at tick 2" in third_inputs.content
     # Should NOT include previous tick data
     assert "Data at tick 0" not in third_inputs.content
@@ -611,3 +609,131 @@ def test_get_messages_multiple_roles(history_manager):
     assert result[0] == {"role": "system", "content": "You are a robot"}
     assert result[1] == {"role": "user", "content": "Hello"}
     assert result[2] == {"role": "assistant", "content": "Hi there"}
+
+
+def test_action_map_includes_greeting_conversation():
+    """Test that ACTION_MAP includes greeting_conversation."""
+    assert "greeting_conversation" in ACTION_MAP
+    assert "emotion" in ACTION_MAP
+    assert "speak" in ACTION_MAP
+    assert "move" in ACTION_MAP
+
+
+def test_action_map_uses_simple_format():
+    """Test that ACTION_MAP uses plain '{}' format without preambles."""
+    for key, fmt in ACTION_MAP.items():
+        assert fmt == "{}", f"Expected '{{}}' for {key}, got '{fmt}'"
+
+
+@pytest.mark.asyncio
+async def test_update_history_extracts_json_response():
+    """Test that action values with JSON-wrapped response field are extracted."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            response = MagicMock()
+            response.actions = [
+                MockAction(
+                    type="greeting_conversation",
+                    value='{"response": "Hello there!"}',
+                ),
+            ]
+            return response
+
+    provider = MockLLMProvider()
+
+    provider.io_provider.add_input("audio", "Hi", 1234.0)
+    await provider.process("test prompt")
+
+    assert len(history_manager.history) == 2
+
+    action_msg = history_manager.history[1]
+    assert action_msg.role == "assistant"
+    # Should extract "Hello there!" from JSON, not show raw JSON
+    assert "Hello there!" in action_msg.content
+    assert "TestBot:" in action_msg.content
+
+
+@pytest.mark.asyncio
+async def test_update_history_agent_name_format():
+    """Test that action messages use '{agent_name}: {text}' format."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "Bits"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Welcome to GTC!")]
+            return response
+
+    provider = MockLLMProvider()
+
+    provider.io_provider.add_input("audio", "Hello", 1234.0)
+    await provider.process("test prompt")
+
+    action_msg = history_manager.history[1]
+    assert action_msg.content == "Bits: Welcome to GTC!"
+
+
+@pytest.mark.asyncio
+async def test_update_history_skip_when_history_length_zero():
+    """Test that history is skipped entirely when history_length is 0."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 0
+    config.agent_name = "TestBot"
+
+    client = AsyncMock()
+    history_manager = LLMHistoryManager(config, client)
+
+    class MockLLMProvider:
+        def __init__(self):
+            self._config = config
+            self._skip_state_management = False
+            self.history_manager = history_manager
+            self.io_provider = history_manager.io_provider
+            self.agent_name = config.agent_name
+
+        @LLMHistoryManager.update_history()
+        async def process(self, prompt: str, messages: list) -> MagicMock:
+            # messages should be empty list when history_length is 0
+            assert messages == []
+            response = MagicMock()
+            response.actions = [MockAction(type="speak", value="Hello")]
+            return response
+
+    provider = MockLLMProvider()
+
+    provider.io_provider.add_input("audio", "Test input", 1234.0)
+    await provider.process("test prompt")
+
+    # History should remain empty
+    assert len(history_manager.history) == 0
