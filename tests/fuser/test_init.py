@@ -225,9 +225,11 @@ async def test_fuser_with_knowledge_base_and_voice_input():
         mock_kb.query.assert_called_once_with(
             "What is the capital of France?", top_k=3, min_score=0.0
         )
-        mock_kb.format_context.assert_called_once_with(
-            [mock_doc1, mock_doc2], max_chars=1500
-        )
+        # Two-tier KB filtering: high confidence (>=0.92) and low (0.75-0.92)
+        # are formatted separately, so format_context is called twice
+        assert mock_kb.format_context.call_count == 2
+        mock_kb.format_context.assert_any_call([mock_doc1], max_chars=1500)
+        mock_kb.format_context.assert_any_call([mock_doc2], max_chars=1000)
         assert result is not None
         assert "KNOWLEDGE BASE:" in result
         assert "Paris is the capital of France." in result

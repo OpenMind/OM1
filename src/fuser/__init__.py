@@ -108,12 +108,30 @@ class Fuser:
                     results = await self.knowledge_base.query(
                         query_text, top_k=3, min_score=self.kb_min_score
                     )
-                    if results:
-                        kb_context = self.knowledge_base.format_context(
-                            results, max_chars=1500
+                    high = [
+                        r for r in results if r.score is not None and r.score >= 0.92
+                    ]
+                    low = [
+                        r
+                        for r in results
+                        if r.score is not None and 0.75 <= r.score < 0.92
+                    ]
+                    kb_parts = []
+                    if high:
+                        kb_parts.append(
+                            self.knowledge_base.format_context(high, max_chars=1500)
                         )
+                    if low:
+                        kb_parts.append(
+                            "[Potentially relevant, low confidence]\n"
+                            + self.knowledge_base.format_context(low, max_chars=1000)
+                        )
+                    if kb_parts:
+                        kb_context = "\n".join(kb_parts)
                         logging.info(
-                            f"Knowledge base: {len(results)} docs passed to LLM"
+                            f"Knowledge base: {len(high)} high,"
+                            f" {len(low)} low confidence;"
+                            f" {len(results)} docs passed to LLM"
                         )
                     else:
                         logging.info(
