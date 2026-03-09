@@ -263,10 +263,10 @@ class BaseGreetingConversationConnector(
         logging.info("Stopping Greeting Conversation action...")
 
         if self.session:
+            session = self.session
+            self.session = None
             try:
-                self.session.close()
+                session.close()
                 logging.info("Greeting Zenoh session closed")
             except Exception as e:
                 logging.warning(f"Error closing greeting Zenoh session: {e}")
-
-            self.session = None
