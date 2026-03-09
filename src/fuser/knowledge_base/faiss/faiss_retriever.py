@@ -111,7 +111,6 @@ class FAISSRetriever(BaseRetriever):
         if self.index is None:
             raise ValueError("FAISS index not loaded")
 
-        # Search more candidates to find enough unique answers
         search_k = min(top_k * 5, len(self.documents))
         distances, indices = self.index.search(query_vec, search_k)
 
@@ -121,7 +120,6 @@ class FAISSRetriever(BaseRetriever):
             if idx < 0 or idx >= len(self.documents):
                 continue
             doc = self.documents[idx]
-            # Deduplicate by answer text
             answer_text = doc.metadata.get("answer", doc.text)
             if answer_text in seen_answers:
                 continue
