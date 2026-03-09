@@ -82,18 +82,19 @@ class FAISSRetriever(BaseRetriever):
     def search(self, query_embedding: np.ndarray, top_k: int = 5) -> list[Document]:
         """
         Search for the most similar documents to the query embedding.
+        Results are deduplicated by answer text so each result has a unique answer.
 
         Parameters
         ----------
         query_embedding : np.ndarray
             Query embedding vector (shape: [dimension]).
         top_k : int, optional
-            Number of top results to return. Default is 5.
+            Number of top unique results to return. Default is 5.
 
         Returns
         -------
         list of Document
-            Top-k most similar documents with similarity scores.
+            Top-k most similar documents with unique answers and similarity scores.
 
         Raises
         ------
@@ -110,19 +111,30 @@ class FAISSRetriever(BaseRetriever):
         if self.index is None:
             raise ValueError("FAISS index not loaded")
 
-        distances, indices = self.index.search(query_vec, top_k)
+        search_k = min(top_k * 5, len(self.documents))
+        distances, indices = self.index.search(query_vec, search_k)
 
         results = []
+        seen_answers = set()
         for dist, idx in zip(distances[0], indices[0]):
             if idx < 0 or idx >= len(self.documents):
                 continue
             doc = self.documents[idx]
+            answer_text = doc.metadata.get("answer", doc.text)
+            if answer_text in seen_answers:
+                continue
+            seen_answers.add(answer_text)
             score = float(dist)
             results.append(
                 Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
             )
+            if len(results) >= top_k:
+                break
 
-        logging.debug(f"Retrieved {len(results)} documents (top_k={top_k})")
+        logging.debug(
+            f"Retrieved {len(results)} unique documents "
+            f"(searched {search_k}, top_k={top_k})"
+        )
         return results
 
     def batch_search(
@@ -130,18 +142,19 @@ class FAISSRetriever(BaseRetriever):
     ) -> list[list[Document]]:
         """
         Batch search for multiple query embeddings.
+        Results are deduplicated by answer text per query.
 
         Parameters
         ----------
         query_embeddings : np.ndarray
             Query embedding matrix (shape: [num_queries, dimension]).
         top_k : int, optional
-            Number of top results per query. Default is 5.
+            Number of top unique results per query. Default is 5.
 
         Returns
         -------
         list of list of Document
-            List of top-k results for each query.
+            List of top-k unique results for each query.
 
         Raises
         ------
@@ -156,20 +169,28 @@ class FAISSRetriever(BaseRetriever):
         if self.index is None:
             raise ValueError("FAISS index not loaded")
 
+        search_k = min(top_k * 5, len(self.documents))
         query_vecs = query_embeddings.astype("float32")
-        distances, indices = self.index.search(query_vecs, top_k)
+        distances, indices = self.index.search(query_vecs, search_k)
 
         all_results = []
         for query_distances, query_indices in zip(distances, indices):
             results = []
+            seen_answers = set()
             for dist, idx in zip(query_distances, query_indices):
                 if idx < 0 or idx >= len(self.documents):
                     continue
                 doc = self.documents[idx]
+                answer_text = doc.metadata.get("answer", doc.text)
+                if answer_text in seen_answers:
+                    continue
+                seen_answers.add(answer_text)
                 score = float(1.0 / (1.0 + dist))
                 results.append(
                     Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
                 )
+                if len(results) >= top_k:
+                    break
             all_results.append(results)
 
         logging.debug(f"Batch retrieved {len(all_results)} result sets (top_k={top_k})")
