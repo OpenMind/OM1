@@ -1,3 +1,4 @@
+import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -410,6 +411,7 @@ class TestBaseGreetingConversationConnector:
     def test_tick_skips_during_tts_activity(self, connector, mock_providers):
         """Test tick skips state update when TTS is still active."""
         connector.tts_playing = True
+        connector.tts_playing_since = time.time()
         with (
             patch(
                 "actions.greeting_conversation.connector.base_greeting_conversation.logging"
@@ -662,3 +664,50 @@ class TestBaseGreetingConversationConnector:
     def test_conversation_finished_sent_defaults_to_false(self, connector):
         """Test that conversation_finished_sent defaults to False on init."""
         assert connector.conversation_finished_sent is False
+
+    def test_tick_tts_timeout_prevents_freeze(self, connector, mock_providers):
+        """Test tick resets tts_playing after timeout to prevent system freeze
+        when Zenoh READY message is lost."""
+        connector.tts_playing = True
+        connector.tts_playing_start_time = (
+            time.time() - 31
+        )  # 31s ago, exceeds 30s timeout
+
+        mock_providers["state"].update_state_without_llm.return_value = {
+            "current_state": ConversationState.CONVERSING.value,
+            "confidence": {"overall": 0.5},
+            "silence_duration": 31.0,
+        }
+
+        with (
+            patch(
+                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
+            ) as mock_logging,
+            patch.object(connector, "sleep"),
+            patch.object(connector, "publish_countdown_status"),
+        ):
+            connector.tick()
+            mock_logging.warning.assert_called()
+
+        assert connector.tts_playing is False
+        mock_providers["state"].update_state_without_llm.assert_called_once()
+
+    def test_stop_sets_session_none_before_close(self, connector, mock_providers):
+        """Test stop() sets self.session = None before calling close() to
+        prevent race condition with publish_countdown_status."""
+        session_ref = connector.session
+        session_none_during_close = []
+
+        def track_session_on_close():
+            session_none_during_close.append(connector.session is None)
+
+        session_ref.close = track_session_on_close
+
+        with patch(
+            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
+        ):
+            connector.stop()
+
+        assert session_none_during_close == [
+            True
+        ], "self.session should be None when close() is called"

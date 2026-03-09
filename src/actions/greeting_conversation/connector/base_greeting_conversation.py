@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from abc import abstractmethod
 from typing import Any, Generic, TypeVar
 from uuid import uuid4
@@ -57,6 +58,8 @@ class BaseGreetingConversationConnector(
 
         self.tts_request_id: str | None = None
         self.tts_playing = False
+        self.tts_playing_start_time: float = 0.0
+        self.tts_timeout: float = 30.0
 
         self.conversation_finished_sent = False
         self.pending_finished_update = False
@@ -156,6 +159,7 @@ class BaseGreetingConversationConnector(
         if self.audio_pub:
             self.tts_request_id = request_id
             self.tts_playing = True
+            self.tts_playing_start_time = time.time()
             self.audio_pub.put(state.serialize())
         else:
             self.tts_request_id = None
@@ -196,8 +200,15 @@ class BaseGreetingConversationConnector(
         self.sleep(10)
 
         if self.tts_playing:
-            logging.info("Skipping tick update due to active TTS playback.")
-            return
+            tts_playing_time = time.time() - self.tts_playing_start_time
+            if tts_playing_time > self.tts_timeout:
+                logging.warning(
+                    f"TTS playback timed out after {tts_playing_time:.1f}s. "
+                )
+                self.tts_playing = False
+            else:
+                logging.info("Skipping tick update due to active TTS playback.")
+                return
 
         state_update = self.greeting_state_provider.update_state_without_llm()
         current_state = state_update.get("current_state", self.greeting_status)

@@ -1,3 +1,4 @@
+import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -200,6 +201,7 @@ class TestGreetingConversationElevenLabsConnector:
     def test_tick_skips_during_tts_activity(self, connector, mock_providers):
         """Test tick skips state update when TTS is still active."""
         connector.tts_playing = True
+        connector.tts_playing_since = time.time()
         with patch(
             "actions.greeting_conversation.connector.base_greeting_conversation.logging"
         ):
