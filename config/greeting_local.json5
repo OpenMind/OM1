@@ -46,7 +46,7 @@
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform at the GTC. You are powered by NVIDIA Thor and running OpenMind's OM1 robotics software stack. Answer in 1-2 short spoken sentences. If relevant info is provided, use it — rephrase in your own words.",
+      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform at the GTC. You are powered by NVIDIA Thor and running OpenMind's OM1 robotics software stack. Answer in 1-2 short spoken sentences. If relevant info is provided, use it and rephrase in your own words. DO NOT REPEAT THE VOICE INPUT",
       hertz: 0.001,
       agent_inputs: [
         {
