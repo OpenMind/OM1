@@ -319,6 +319,87 @@ def test_handle_asr_message_ignores_json_without_asr_reply(
     assert final_size == initial_size
 
 
+def test_handle_asr_message_filters_overheard_chatter(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that _handle_asr_message filters messages not directed at robot."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = RivaASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.riva_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        instance = RivaASRRTSPInput(config=config)
+
+    # Message with >2 words but not directed at robot should be filtered
+    raw_message = '{"asr_reply": "yeah totally agree man"}'
+    initial_size = instance.message_buffer.qsize()
+    instance._handle_asr_message(raw_message)
+    assert instance.message_buffer.qsize() == initial_size
+
+
+def test_handle_asr_message_normalizes_text(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    """Test that _handle_asr_message applies ASR text normalization."""
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = RivaASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.riva_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        instance = RivaASRRTSPInput(config=config)
+
+    raw_message = '{"asr_reply": "tell me about om one please"}'
+    instance._handle_asr_message(raw_message)
+    assert instance.message_buffer.qsize() == 1
+    assert "OM1" in instance.message_buffer.get_nowait()
+
+
 def test_handle_asr_message_ignores_json_with_asr_reply_shorter_than_two_words(
     mock_io_provider,
     mock_asr_provider,

@@ -9,6 +9,7 @@ from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
+from inputs.plugins.riva_asr import _normalize_asr_text, _seems_directed_at_robot
 from providers.asr_rtsp_provider import ASRRTSPProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -134,8 +135,11 @@ class RivaASRRTSPInput(FuserInput[RivaASRRTSPSensorConfig, Optional[str]]):
         try:
             json_message: Dict = json.loads(raw_message)
             if "asr_reply" in json_message:
-                asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                asr_reply = _normalize_asr_text(json_message["asr_reply"])
+                if len(asr_reply.split()) > 2:
+                    if not _seems_directed_at_robot(asr_reply):
+                        logging.info("ASR filtered as overheard chatter: %s", asr_reply)
+                        return
                     self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
