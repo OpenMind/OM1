@@ -72,8 +72,6 @@ def normalize_tts_text(text: str) -> str:
     for pattern, replacement in _TTS_CORRECTIONS:
         text = pattern.sub(replacement, text)
 
-    text = re.sub(r"[^\x00-\x7F]+", " ", text)
-
     return text
 
 

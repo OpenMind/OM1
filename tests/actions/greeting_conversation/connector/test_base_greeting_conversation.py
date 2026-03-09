@@ -661,12 +661,12 @@ class TestNormalizeTTSText:
         assert normalize_tts_text("Start at 2:15") == "Start at 2 15"
         assert normalize_tts_text("Ends at 6:05") == "Ends at 6 05"
 
-    def test_remove_non_ascii_characters(self):
-        """Test that non-ASCII characters are replaced with spaces."""
-        assert normalize_tts_text("Hello café") == "Hello calf "
-        assert normalize_tts_text("Test 你好 text") == "Test   text"
-        assert normalize_tts_text("Price: €100") == "Price:  100"
-        assert normalize_tts_text("Naïve résumé") == "Na ve r sum "
+    def test_preserve_non_ascii_characters(self):
+        """Test that non-ASCII characters are preserved."""
+        assert normalize_tts_text("Hello café") == "Hello café"
+        assert normalize_tts_text("Test 你好 text") == "Test 你好 text"
+        assert normalize_tts_text("Price: €100") == "Price: €100"
+        assert normalize_tts_text("Naïve résumé") == "Naïve résumé"
 
     def test_mixed_transformations(self):
         """Test text with multiple transformation types."""
@@ -716,7 +716,7 @@ class TestNormalizeTTSText:
     def test_all_transformations_combined(self):
         """Test text requiring all types of transformations."""
         text = "Visit N Main St in Jan at 2:30 with café latte"
-        expected = "Visit North Main Street in January at 2 30 with calf  latte"
+        expected = "Visit North Main Street in January at 2 30 with café latte"
         assert normalize_tts_text(text) == expected
 
     def test_case_preservation_where_applicable(self):
