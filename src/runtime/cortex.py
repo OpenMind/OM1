@@ -498,12 +498,16 @@ class ModeCortexRuntime:
         """
         current_mode = self.mode_manager.current_mode_name
         cortex_generation = self._cortex_loop_generation
-        logging.info(f"Starting cortex loop for mode: {current_mode} (generation {cortex_generation})")
+        logging.info(
+            f"Starting cortex loop for mode: {current_mode} (generation {cortex_generation})"
+        )
 
         try:
             while True:
                 if cortex_generation != self._cortex_loop_generation:
-                    logging.info(f"Cortex loop generation {cortex_generation} invalidated, stopping gracefully")
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated, stopping gracefully"
+                    )
                     return
 
                 skip_status = self.sleep_ticker_provider.skip_sleep
@@ -547,7 +551,9 @@ class ModeCortexRuntime:
             return
 
         if cortex_generation != self._cortex_loop_generation:
-            logging.debug(f"Cortex loop generation {cortex_generation} does not match current generation {self._cortex_loop_generation}, skipping tick")
+            logging.debug(
+                f"Cortex loop generation {cortex_generation} does not match current generation {self._cortex_loop_generation}, skipping tick"
+            )
             return
 
         tick_num = self.io_provider.increment_tick()
@@ -589,7 +595,9 @@ class ModeCortexRuntime:
             raise
 
         if cortex_generation != self._cortex_loop_generation:
-            logging.info(f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response")
+            logging.info(
+                f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
+            )
             return
 
         if output is None:
