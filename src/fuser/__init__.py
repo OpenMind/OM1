@@ -39,10 +39,14 @@ class Fuser:
 
         self.knowledge_base = None
         self.kb_min_score = 0.0
+        self.kb_high_score = 0.92
+        self.kb_low_score = 0.75
         if config.knowledge_base:
             try:
                 kb_config = dict(config.knowledge_base)
                 self.kb_min_score = kb_config.get("min_score", 0.0)
+                self.kb_high_score = kb_config.get("high_score", 0.92)
+                self.kb_low_score = kb_config.get("low_score", 0.75)
                 if self.kb_min_score > 0:
                     logging.info(
                         f"KnowledgeBase min_score threshold: {self.kb_min_score}"
@@ -109,12 +113,15 @@ class Fuser:
                         query_text, top_k=3, min_score=self.kb_min_score
                     )
                     high = [
-                        r for r in results if r.score is not None and r.score >= 0.92
+                        r
+                        for r in results
+                        if r.score is not None and r.score >= self.kb_high_score
                     ]
                     low = [
                         r
                         for r in results
-                        if r.score is not None and 0.75 <= r.score < 0.92
+                        if r.score is not None
+                        and self.kb_low_score <= r.score < self.kb_high_score
                     ]
                     kb_parts = []
                     if high:
