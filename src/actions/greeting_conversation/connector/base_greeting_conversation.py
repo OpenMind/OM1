@@ -206,10 +206,9 @@ class BaseGreetingConversationConnector(
             "speech_clarity": output_interface.speech_clarity,
         }
 
-        pending_message = self.tts.create_pending_message(output_interface.response)
-        request_id = str(uuid4())
         tts_text = normalize_tts_text(output_interface.response)
-        self.tts.add_pending_message(tts_text)
+        pending_message = self.tts.create_pending_message(tts_text)
+        request_id = str(uuid4())
 
         state = AudioStatus(
             header=prepare_header(request_id),
