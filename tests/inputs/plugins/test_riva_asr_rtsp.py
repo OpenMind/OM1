@@ -777,8 +777,186 @@ def test_stop_method_stops_asr_and_closes_zenoh(
     ):
         instance = RivaASRRTSPInput(config=config)
 
+    instance.message_buffer.put_nowait("message 1")
+    instance.messages.append("message 2")
+
     assert instance.session is mock_zenoh["session"]
     instance.stop()
 
-    mock_asr_instance.stop.assert_called_once()
+    assert instance._stopped is True
+    assert instance.message_buffer.empty()
+    assert len(instance.messages) == 0
+    mock_asr_instance.unregister_message_callback.assert_called_once()
+    mock_zenoh["publisher"].undeclare.assert_called_once()
     mock_zenoh["session"].close.assert_called_once()
+
+
+def test_stop_method_handles_exceptions(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, mock_asr_instance = mock_asr_provider
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
+        mock_sleep_ticker_provider
+    )
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
+        mock_teleops_conversation_provider
+    )
+
+    mock_asr_instance.unregister_message_callback.side_effect = Exception(
+        "Unregister failed"
+    )
+    mock_asr_instance.stop.side_effect = Exception("Stop failed")
+    mock_zenoh["publisher"].undeclare.side_effect = Exception("Undeclare failed")
+    mock_zenoh["session"].close.side_effect = Exception("Close failed")
+
+    config = RivaASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.riva_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.riva_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.SleepTickerProvider",
+            new=mock_sleep_ticker_constructor,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.TeleopsConversationProvider",
+            new=mock_teleops_conv_constructor,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        instance = RivaASRRTSPInput(config=config)
+
+    # Should not raise exception
+    instance.stop()
+    assert instance._stopped is True
+
+
+def test_initialization_with_zenoh_failure(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+):
+    mock_asr_constructor, mock_asr_instance = mock_asr_provider
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
+        mock_sleep_ticker_provider
+    )
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
+        mock_teleops_conversation_provider
+    )
+
+    config = RivaASRRTSPSensorConfig()
+
+    with (
+        patch("inputs.plugins.riva_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.riva_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.SleepTickerProvider",
+            new=mock_sleep_ticker_constructor,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.TeleopsConversationProvider",
+            new=mock_teleops_conv_constructor,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.open_zenoh_session",
+            side_effect=Exception("Zenoh failed"),
+        ),
+    ):
+        instance = RivaASRRTSPInput(config=config)
+
+    assert instance.session is None
+    assert instance.asr_publisher is None
+
+
+def test_handle_asr_message_when_stopped(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = RivaASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.riva_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        instance = RivaASRRTSPInput(config=config)
+
+    instance._stopped = True
+    raw_message = '{"asr_reply": "Hello world"}'
+    initial_size = instance.message_buffer.qsize()
+
+    instance._handle_asr_message(raw_message)
+
+    assert instance.message_buffer.qsize() == initial_size
+
+
+def test_formatted_latest_buffer_with_zenoh_publish_failure(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    _, mock_asr_instance = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = RivaASRRTSPSensorConfig()
+    with (
+        patch("inputs.plugins.riva_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.ASRRTSPProvider",
+            return_value=mock_asr_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.riva_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        instance = RivaASRRTSPInput(config=config)
+
+    msg_content = "Test message"
+    instance.messages = [msg_content]
+    mock_zenoh["publisher"].put.side_effect = Exception("Zenoh publish failed")
+
+    with patch("time.time", return_value=1234.0):
+        result = instance.formatted_latest_buffer()
+
+    assert result is not None
+    assert msg_content in result
+    assert len(instance.messages) == 0
