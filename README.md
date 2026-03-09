@@ -1,4 +1,4 @@
-![OM_Banner_X2 (1)](https://github.com/user-attachments/assets/853153b7-351a-433d-9e1a-d257b781f93c)
+![om1_banner_w](https://github.com/user-attachments/assets/86590615-018d-4443-b345-8d224227e83f)
 
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
