@@ -22,6 +22,7 @@ class KnowledgeBase:
         knowledge_base_root: Optional[str | Path] = None,
         base_url: str = "http://localhost:8100",
         retriever_type: str = "faiss",
+        **kwargs,
     ):
         """
         Initialize the knowledge base retrieval system.
@@ -37,6 +38,9 @@ class KnowledgeBase:
         retriever_type : str
             Type of retriever to use if retriever not provided. Default is "faiss".
             Also determines the embedding client type if embedding_client not provided.
+        **kwargs
+            Additional keyword arguments (e.g. min_score) are ignored here
+            but accepted so config dicts can be unpacked without errors.
         """
         if knowledge_base_root is None:
             project_root = Path(__file__).parent.parent.parent.parent
@@ -73,7 +77,9 @@ class KnowledgeBase:
             f"dim={self.retriever.dimension}"
         )
 
-    async def query(self, query_text: str, top_k: int = 5) -> list[Document]:
+    async def query(
+        self, query_text: str, top_k: int = 5, min_score: float = 0.0
+    ) -> list[Document]:
         """
         Query the knowledge base with text input.
 
@@ -83,6 +89,8 @@ class KnowledgeBase:
             Query text (e.g., transcribed voice input).
         top_k : int, optional
             Number of top results to return. Default is 5.
+        min_score : float, optional
+            Minimum cosine similarity score to include. Default is 0.0 (no filter).
 
         Returns
         -------
@@ -93,13 +101,27 @@ class KnowledgeBase:
             query_embedding = await self.embedding_client.embed(query_text)
             results = self.retriever.search(query_embedding, top_k=top_k)
 
-        logging.info(
-            f"Query: '{query_text[:50]}...' | Retrieved {len(results)} results"
-        )
+        if min_score > 0:
+            before_count = len(results)
+            results = [
+                doc
+                for doc in results
+                if doc.score is not None and doc.score >= min_score
+            ]
+            logging.info(
+                f"Query: '{query_text[:50]}...' | "
+                f"top_k={top_k}, min_score={min_score:.2f} | "
+                f"{before_count} retrieved → {len(results)} after threshold"
+            )
+        else:
+            logging.info(
+                f"Query: '{query_text[:50]}...' | Retrieved {len(results)} results"
+            )
+
         return results
 
     async def query_batch(
-        self, query_texts: list[str], top_k: int = 5
+        self, query_texts: list[str], top_k: int = 5, min_score: float = 0.0
     ) -> list[list[Document]]:
         """
         Query the knowledge base with multiple text inputs.
@@ -110,6 +132,8 @@ class KnowledgeBase:
             List of query texts.
         top_k : int, optional
             Number of top results per query. Default is 5.
+        min_score : float, optional
+            Minimum cosine similarity score to include. Default is 0.0 (no filter).
 
         Returns
         -------
@@ -119,6 +143,16 @@ class KnowledgeBase:
         async with self.embedding_client:
             query_embeddings = await self.embedding_client.embed_batch(query_texts)
             all_results = self.retriever.batch_search(query_embeddings, top_k=top_k)
+
+        if min_score > 0:
+            all_results = [
+                [
+                    doc
+                    for doc in results
+                    if doc.score is not None and doc.score >= min_score
+                ]
+                for results in all_results
+            ]
 
         logging.info(
             f"Batch query: {len(query_texts)} queries | "
