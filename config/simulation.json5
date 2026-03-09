@@ -42,6 +42,9 @@
         {
           type: "SimplePaths",
         },
+        {
+          type: "EpisodicMemoryInput",
+        },
       ],
       cortex_llm: {
         type: "OpenAILLM",
@@ -75,6 +78,9 @@
       backgrounds: [
         {
           type: "UnitreeGo2State",
+        },
+        {
+          type: "EpisodicMemoryWriter",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -142,6 +148,31 @@
           },
           priority: 0,
         },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "start_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "stop_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          timeout_seconds: 10,
+          priority: 0,
+        },
       ],
     },
 
@@ -196,6 +227,9 @@
         {
           type: "SimplePaths",
         },
+        {
+          type: "EpisodicMemoryInput",
+        },
       ],
       cortex_llm: {
         type: "OpenAILLM",
@@ -234,6 +268,9 @@
       backgrounds: [
         {
           type: "UnitreeGo2State",
+        },
+        {
+          type: "EpisodicMemoryWriter",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -297,6 +334,31 @@
           },
           priority: 0,
         },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "start_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "stop_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          timeout_seconds: 10,
+          priority: 0,
+        },
       ],
     },
 
@@ -330,6 +392,9 @@
         {
           type: "SimplePaths",
         },
+        {
+          type: "EpisodicMemoryInput",
+        },
       ],
       agent_actions: [
         {
@@ -350,6 +415,9 @@
       backgrounds: [
         {
           type: "UnitreeGo2State",
+        },
+        {
+          type: "EpisodicMemoryWriter",
         },
         {
           type: "UnitreeGo2LidarLocalization",
@@ -375,6 +443,31 @@
           handler_config: {
             message: "I'm ready to chat! What would you like to talk about?",
           },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "start_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "stop_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          timeout_seconds: 10,
+          priority: 0,
         },
       ],
     },
@@ -421,6 +514,9 @@
         {
           type: "SimplePaths",
         },
+        {
+          type: "EpisodicMemoryInput",
+        },
       ],
       action_execution_mode: "concurrent",
       agent_actions: [
@@ -458,6 +554,9 @@
           type: "UnitreeGo2State",
         },
         {
+          type: "EpisodicMemoryWriter",
+        },
+        {
           type: "UnitreeGo2LidarLocalization",
         },
         {
@@ -488,6 +587,31 @@
           handler_config: {
             message: "Security patrol complete. All areas checked.",
           },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "start_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          priority: 0,
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "episodic_hook",
+            function: "stop_episodic_hook",
+            context: {
+              announce: false,
+            },
+          },
+          timeout_seconds: 10,
+          priority: 0,
         },
       ],
     },

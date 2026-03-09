@@ -19,6 +19,7 @@ from runtime.config import (
 )
 from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+from providers.episodic_memory_provider import EpisodicMemoryProvider
 
 
 class ModeCortexRuntime:
@@ -607,6 +608,21 @@ class ModeCortexRuntime:
         if self._is_reloading or cortex_generation != self._cortex_loop_generation:
             logging.debug("Skipping action execution due to mode transition")
             return
+
+        try:
+            voice_input_obj = self.io_provider.get_input("Voice")
+            voice_text = voice_input_obj.input.strip() if voice_input_obj and voice_input_obj.input else None
+            battery_obj = self.io_provider.get_input("Battery")
+            battery_text = battery_obj.input if battery_obj and battery_obj.input else None
+            if voice_text:
+                await EpisodicMemoryProvider().write_episode(
+                    mode=self.current_config.mode or "default",
+                    voice_input=voice_text,
+                    actions=[{"type": a.type, "value": a.value} for a in output.actions],
+                    battery=battery_text,
+                )
+        except Exception as e:
+            logging.warning("EpisodicMemory write_episode failed: " + str(e))
 
         if self.simulator_orchestrator:
             await self.simulator_orchestrator.promise(output.actions)
