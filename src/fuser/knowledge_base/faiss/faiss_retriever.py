@@ -166,7 +166,7 @@ class FAISSRetriever(BaseRetriever):
                 if idx < 0 or idx >= len(self.documents):
                     continue
                 doc = self.documents[idx]
-                score = float(1.0 / (1.0 + dist))
+                score = float(dist)
                 results.append(
                     Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
                 )
