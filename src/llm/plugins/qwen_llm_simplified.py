@@ -9,6 +9,7 @@ for when the model returns plain text instead of tool calls.
 import json
 import logging
 import re
+import re
 import time
 import typing as T
 
@@ -239,6 +240,11 @@ class QwenLLMSimplified(LLM[R]):
                 if is_summary:
                     logging.info(f"Skipping summary-style response: {text[:200]}")
                     return None
+                # Strip XML-style tags the model may wrap around the response
+                text = re.sub(r"</?[a-zA-Z_]+>", "", text).strip()
+                if not text:
+                    return None
+
                 fn_name = self.function_schemas[0]["function"]["name"]
                 logging.info(
                     f"No tool calls found, wrapping text as {fn_name}: " f"{text[:200]}"
