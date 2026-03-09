@@ -13,6 +13,7 @@ from providers.greeting_conversation_state_provider import (
     ConversationState,
     GreetingConversationStateMachineProvider,
 )
+from providers.tts_text_utils import normalize_tts_text
 from zenoh_msgs import PersonGreetingStatus, String, open_zenoh_session, prepare_header
 
 ConfigT = TypeVar("ConfigT", bound=ActionConfig)
@@ -101,7 +102,8 @@ class BaseGreetingConversationConnector(
             "speech_clarity": output_interface.speech_clarity,
         }
 
-        self.tts.add_pending_message(output_interface.response)
+        tts_text = normalize_tts_text(output_interface.response)
+        self.tts.add_pending_message(tts_text)
 
         # Estimate TTS duration based on text length (~100 words per minute speech rate)
         word_count = len(output_interface.response.split())
