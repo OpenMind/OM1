@@ -9,6 +9,7 @@ from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from providers.config_provider import ConfigProvider
+from providers.episodic_memory_provider import EpisodicMemoryProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.config import (
@@ -19,7 +20,6 @@ from runtime.config import (
 )
 from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
-from providers.episodic_memory_provider import EpisodicMemoryProvider
 
 
 class ModeCortexRuntime:
@@ -611,14 +611,22 @@ class ModeCortexRuntime:
 
         try:
             voice_input_obj = self.io_provider.get_input("Voice")
-            voice_text = voice_input_obj.input.strip() if voice_input_obj and voice_input_obj.input else None
+            voice_text = (
+                voice_input_obj.input.strip()
+                if voice_input_obj and voice_input_obj.input
+                else None
+            )
             battery_obj = self.io_provider.get_input("Battery")
-            battery_text = battery_obj.input if battery_obj and battery_obj.input else None
+            battery_text = (
+                battery_obj.input if battery_obj and battery_obj.input else None
+            )
             if voice_text:
                 await EpisodicMemoryProvider().write_episode(
                     mode=self.current_config.mode or "default",
                     voice_input=voice_text,
-                    actions=[{"type": a.type, "value": a.value} for a in output.actions],
+                    actions=[
+                        {"type": a.type, "value": a.value} for a in output.actions
+                    ],
                     battery=battery_text,
                 )
         except Exception as e:

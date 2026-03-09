@@ -81,9 +81,7 @@ class EpisodicMemoryInput(FuserInput[EpisodicMemoryInputConfig, Optional[str]]):
             f"// END\n"
         )
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest.message, time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest.message, time.time())
 
         self.messages = []
         return result
@@ -121,8 +119,6 @@ class EpisodicMemoryInput(FuserInput[EpisodicMemoryInputConfig, Optional[str]]):
                 or "no actions"
             )
 
-            lines.append(
-                f"[{age}, {mode}] Said: '{voice}'\n  Robot did: {acts}"
-            )
+            lines.append(f"[{age}, {mode}] Said: '{voice}'\n  Robot did: {acts}")
 
         return "\n".join(lines)

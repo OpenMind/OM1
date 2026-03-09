@@ -10,7 +10,7 @@ from hooks.episodic_hook import start_episodic_hook, stop_episodic_hook
 @pytest.fixture
 def mock_provider():
     """Mock EpisodicMemoryProvider."""
-    with patch('hooks.episodic_hook.EpisodicMemoryProvider') as mock_cls:
+    with patch("hooks.episodic_hook.EpisodicMemoryProvider") as mock_cls:
         provider = Mock()
         mock_cls.return_value = provider
         yield provider
@@ -19,7 +19,7 @@ def mock_provider():
 @pytest.fixture
 def mock_tts():
     """Mock ElevenLabsTTSProvider."""
-    with patch('hooks.episodic_hook.ElevenLabsTTSProvider') as mock_cls:
+    with patch("hooks.episodic_hook.ElevenLabsTTSProvider") as mock_cls:
         tts = Mock()
         mock_cls.return_value = tts
         yield tts

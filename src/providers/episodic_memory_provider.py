@@ -153,9 +153,7 @@ class EpisodicMemoryProvider:
             f"EpisodicMemoryProvider: wrote episode for mode '{mode}': '{voice_input[:60]}'"
         )
 
-    async def recall(
-        self, query: str, top_k: int = 3
-    ) -> List[Dict[str, Any]]:
+    async def recall(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """Retrieve the most semantically relevant past episodes for a query (async)."""
         if not query or not query.strip():
             return []

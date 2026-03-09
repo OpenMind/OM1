@@ -14,6 +14,7 @@ from providers.episodic_memory_provider import EpisodicMemoryProvider
 @pytest.fixture
 def reset_singleton():
     from typing import Any
+
     provider_factory: Any = EpisodicMemoryProvider
     provider_factory.reset()
     provider = provider_factory()
@@ -130,7 +131,9 @@ class TestCosineSimilarity:
 
     def test_opposite_vectors(self, reset_singleton):
         """Cosine similarity of opposite vectors should be -1.0."""
-        assert reset_singleton._cosine_similarity([1, 0], [-1, 0]) == pytest.approx(-1.0)
+        assert reset_singleton._cosine_similarity([1, 0], [-1, 0]) == pytest.approx(
+            -1.0
+        )
 
 
 class TestLoadMode:
@@ -240,7 +243,9 @@ class TestWriteEpisode:
     @pytest.mark.asyncio
     async def test_write_episode_success(self, reset_singleton):
         fake_embedding = [0.5] * 10
-        with patch.object(reset_singleton, "_embed", AsyncMock(return_value=fake_embedding)):
+        with patch.object(
+            reset_singleton, "_embed", AsyncMock(return_value=fake_embedding)
+        ):
             await reset_singleton.write_episode(
                 mode="slam",
                 voice_input="go to kitchen",
@@ -263,7 +268,9 @@ class TestWriteEpisode:
     @pytest.mark.asyncio
     async def test_write_episode_no_embedding_skipped(self, reset_singleton):
         with patch.object(reset_singleton, "_embed", AsyncMock(return_value=None)):
-            await reset_singleton.write_episode(mode="slam", voice_input="hello", actions=[])
+            await reset_singleton.write_episode(
+                mode="slam", voice_input="hello", actions=[]
+            )
         assert reset_singleton._episodes == []
 
     @pytest.mark.asyncio
@@ -284,7 +291,9 @@ class TestRecall:
 
     @pytest.mark.asyncio
     async def test_recall_no_episodes(self, reset_singleton):
-        with patch.object(reset_singleton, "_embed", AsyncMock(return_value=[0.1, 0.2])):
+        with patch.object(
+            reset_singleton, "_embed", AsyncMock(return_value=[0.1, 0.2])
+        ):
             result = await reset_singleton.recall("anything")
         assert result == []
 
@@ -297,11 +306,31 @@ class TestRecall:
             "ep3": [0.9, 0.1],
         }
         reset_singleton._episodes = [
-            {"episode_id": "1", "mode": "m", "voice_input": "a", "actions": [], "embedding": embeddings["ep1"]},
-            {"episode_id": "2", "mode": "m", "voice_input": "b", "actions": [], "embedding": embeddings["ep2"]},
-            {"episode_id": "3", "mode": "m", "voice_input": "c", "actions": [], "embedding": embeddings["ep3"]},
+            {
+                "episode_id": "1",
+                "mode": "m",
+                "voice_input": "a",
+                "actions": [],
+                "embedding": embeddings["ep1"],
+            },
+            {
+                "episode_id": "2",
+                "mode": "m",
+                "voice_input": "b",
+                "actions": [],
+                "embedding": embeddings["ep2"],
+            },
+            {
+                "episode_id": "3",
+                "mode": "m",
+                "voice_input": "c",
+                "actions": [],
+                "embedding": embeddings["ep3"],
+            },
         ]
-        with patch.object(reset_singleton, "_embed", AsyncMock(return_value=embeddings["query"])):
+        with patch.object(
+            reset_singleton, "_embed", AsyncMock(return_value=embeddings["query"])
+        ):
             result = await reset_singleton.recall("query", top_k=2)
         assert len(result) == 2
         for ep in result:
@@ -312,14 +341,22 @@ class TestRecall:
         reset_singleton._episodes = [
             {"episode_id": "no-emb", "mode": "m", "voice_input": "x", "actions": []},
         ]
-        with patch.object(reset_singleton, "_embed", AsyncMock(return_value=[1.0, 0.0])):
+        with patch.object(
+            reset_singleton, "_embed", AsyncMock(return_value=[1.0, 0.0])
+        ):
             result = await reset_singleton.recall("query")
         assert result == []
 
     @pytest.mark.asyncio
     async def test_recall_no_query_embedding(self, reset_singleton):
         reset_singleton._episodes = [
-            {"episode_id": "1", "mode": "m", "voice_input": "x", "actions": [], "embedding": [1.0]},
+            {
+                "episode_id": "1",
+                "mode": "m",
+                "voice_input": "x",
+                "actions": [],
+                "embedding": [1.0],
+            },
         ]
         with patch.object(reset_singleton, "_embed", AsyncMock(return_value=None)):
             result = await reset_singleton.recall("query")

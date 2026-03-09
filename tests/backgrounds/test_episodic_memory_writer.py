@@ -13,7 +13,9 @@ from backgrounds.plugins.episodic_memory_writer import (
 @pytest.fixture
 def writer():
     """Create EpisodicMemoryWriter instance with mocked provider."""
-    with patch('backgrounds.plugins.episodic_memory_writer.EpisodicMemoryProvider') as mock_cls:
+    with patch(
+        "backgrounds.plugins.episodic_memory_writer.EpisodicMemoryProvider"
+    ) as mock_cls:
         mock_provider = Mock()
         mock_cls.return_value = mock_provider
         config = EpisodicMemoryWriterConfig()

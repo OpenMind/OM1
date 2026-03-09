@@ -36,7 +36,10 @@ async def start_episodic_hook(context: Dict[str, Any]):
             tts.add_pending_message("I remember our past interactions.")
         except Exception as e:
             logging.warning(f"episodic_hook: TTS announce failed: {e}")
-    return {"status": "success", "message": f"Episodic memory loaded for mode '{ctx.mode}'"}
+    return {
+        "status": "success",
+        "message": f"Episodic memory loaded for mode '{ctx.mode}'",
+    }
 
 
 async def stop_episodic_hook(context: Dict[str, Any]):
@@ -55,4 +58,7 @@ async def stop_episodic_hook(context: Dict[str, Any]):
             tts.add_pending_message("I've saved our memories.")
         except Exception as e:
             logging.warning(f"episodic_hook: TTS announce failed: {e}")
-    return {"status": "success", "message": f"Episodic memory flushed for mode '{ctx.mode}'"}
+    return {
+        "status": "success",
+        "message": f"Episodic memory flushed for mode '{ctx.mode}'",
+    }
