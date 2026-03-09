@@ -181,6 +181,10 @@ class FAISSRetriever(BaseRetriever):
                 if idx < 0 or idx >= len(self.documents):
                     continue
                 doc = self.documents[idx]
+                answer_text = doc.metadata.get("answer", doc.text)
+                if answer_text in seen_answers:
+                    continue
+                seen_answers.add(answer_text)
                 score = float(dist)
                 results.append(
                     Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
