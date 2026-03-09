@@ -275,7 +275,7 @@ async def test_tick_with_mode_transition_input_triggers_transition(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_called_once_with("I need advanced mode")
 
@@ -296,7 +296,7 @@ async def test_tick_with_emergency_input_triggers_emergency_mode(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_called_once_with("Emergency help needed!")
     assert runtime._pending_mode_transition == "emergency"
@@ -316,7 +316,7 @@ async def test_tick_with_no_mode_transition_input_continues_normally(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_called_once_with(None)
 
@@ -339,7 +339,7 @@ async def test_tick_with_unrecognized_input_continues_normally(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_called_once_with("just some random text")
 
@@ -363,7 +363,7 @@ async def test_mode_transition_input_is_cleared_after_use(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     assert mocks["io_provider"].get_mode_transition_input() is None
 
@@ -385,7 +385,7 @@ async def test_multiple_mode_transition_inputs_are_combined(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_called_once_with("I need advanced mode")
     assert runtime._pending_mode_transition == "advanced"
@@ -400,7 +400,7 @@ async def test_tick_skips_processing_during_reload(cortex_runtime_with_mode_tran
 
     runtime._is_reloading = True
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_not_called()
     runtime.action_orchestrator.promise.assert_not_called()
@@ -417,7 +417,7 @@ async def test_tick_handles_llm_returning_none(cortex_runtime_with_mode_transiti
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_called_once_with(None)
 
@@ -437,7 +437,7 @@ async def test_tick_handles_fuser_returning_none(cortex_runtime_with_mode_transi
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     mocks["mode_manager"].process_tick.assert_not_called()
     assert runtime._pending_mode_transition is None
@@ -606,7 +606,7 @@ async def test_emergency_mode_has_highest_priority(cortex_runtime_with_mode_tran
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     assert runtime._pending_mode_transition == "emergency"
 
@@ -626,7 +626,7 @@ async def test_mode_transition_during_reload_is_ignored(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     assert runtime._pending_mode_transition is None
     runtime._mode_transition_event.set.assert_not_called()
@@ -653,7 +653,7 @@ async def test_mode_transition_with_simulator_orchestrator(
     runtime._mode_transition_event = Mock()
     runtime._mode_transition_event.set = Mock()
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     assert runtime._pending_mode_transition == "advanced"
 
@@ -672,7 +672,7 @@ async def test_mode_transition_input_triggers_advanced_mode(cortex_runtime):
 
     components["io_provider"].add_mode_transition_input("switch to advanced mode")
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     components["mode_manager"].process_tick.assert_called_once_with(
         "switch to advanced mode"
@@ -689,7 +689,7 @@ async def test_mode_transition_input_triggers_emergency_mode(cortex_runtime):
 
     components["io_provider"].add_mode_transition_input("emergency help needed!")
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     components["mode_manager"].process_tick.assert_called_once_with(
         "emergency help needed!"
@@ -706,7 +706,7 @@ async def test_no_mode_transition_input_continues_normal_processing(cortex_runti
 
     assert components["io_provider"].get_mode_transition_input() is None
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     components["mode_manager"].process_tick.assert_called_once_with(None)
 
@@ -725,7 +725,7 @@ async def test_mode_transition_input_is_cleared_after_use_basic(cortex_runtime):
     components["io_provider"].add_mode_transition_input("default mode")
     assert components["io_provider"].get_mode_transition_input() == "default mode"
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     assert components["io_provider"].get_mode_transition_input() is None
 
@@ -737,7 +737,7 @@ async def test_unrecognized_input_does_not_trigger_transition(cortex_runtime):
 
     components["io_provider"].add_mode_transition_input("some random text")
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     components["mode_manager"].process_tick.assert_called_once_with("some random text")
     assert runtime._pending_mode_transition is None
@@ -754,7 +754,7 @@ async def test_mode_transition_during_reload_is_skipped_basic(cortex_runtime):
     components["io_provider"].add_mode_transition_input("emergency")
     runtime._is_reloading = True
 
-    await runtime._tick()
+    await runtime._tick(runtime._cortex_loop_generation)
 
     components["mode_manager"].process_tick.assert_not_called()
     runtime.action_orchestrator.promise.assert_not_called()
