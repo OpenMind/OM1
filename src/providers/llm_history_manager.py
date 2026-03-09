@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
@@ -25,10 +24,9 @@ class ChatMessage:
 
 
 ACTION_MAP = {
-    "emotion": "{}",
-    "speak": "{}",
-    "move": "{}",
-    "greeting_conversation": "{}",
+    "emotion": "**** felt: {}.",
+    "speak": "**** said: {}",
+    "move": "**** performed this motion: {}.",
 }
 
 
@@ -41,8 +39,8 @@ class LLMHistoryManager:
         self,
         config: LLMConfig,
         client: Union[openai.AsyncClient, openai.OpenAI],
-        system_prompt: str = "You are a concise assistant that tracks conversation history for a robot named ****. Summarize ONLY what was said: what the user asked and what **** replied. Do NOT elaborate, add analysis, or invent details. Use plain short sentences, not tables or markdown.",
-        summary_command: str = "\nWrite a brief summary of the conversation so far. List only what the user said and what **** replied. Keep it under 100 words. Do not repeat ****'s previous responses verbatim — just note the topic.",
+        system_prompt: str = "You are a helpful assistant that summarizes a succession of events and interactions accurately and concisely. You are watching a robot named **** interact with people and the world. Your goal is to help **** remember what the robot felt, saw, and heard, and how the robot responded to those inputs.",
+        summary_command: str = "\nConsidering the new information, write an updated summary of the situation for ****. Emphasize information that **** needs to know to respond to people and situations in the best possible and most compelling way.",
     ):
         """
         Initialize the LLMHistoryManager.
@@ -185,10 +183,7 @@ class LLMHistoryManager:
                 return ChatMessage(
                     role="system", content="Error: Received empty summary from API"
                 )
-            return ChatMessage(
-                role="assistant",
-                content=f"[Conversation summary - do not repeat] Previously, {summary}",
-            )
+            return ChatMessage(role="assistant", content=f"Previously, {summary}")
 
         except asyncio.TimeoutError:
             logging.error(f"API request timed out after {timeout} seconds")
@@ -323,15 +318,15 @@ class LLMHistoryManager:
                 logging.debug(f"LLM Tasking cycle debug tracker: {cycle}")
 
                 current_tick = self.io_provider.tick_counter
-                parts = []
+                formatted_inputs = f"{self.agent_name} sensed the following: "
                 for input_type, input_info in self.io_provider.inputs.items():
                     if input_info.tick == current_tick:
                         logging.debug(f"LLM: {input_type} (tick #{input_info.tick})")
-                        if input_info.input:
-                            parts.append(input_info.input.strip())
-                formatted_inputs = (
-                    "User: " + " ".join(parts) if parts else "User: (no input)"
-                )
+                        logging.debug(f"LLM: {input_info}")
+                        formatted_inputs += f"{input_type}. {input_info.input} | "
+
+                formatted_inputs = formatted_inputs.replace("..", ".")
+                formatted_inputs = formatted_inputs.replace("  ", " ")
 
                 inputs = ChatMessage(role="user", content=formatted_inputs)
 
@@ -346,28 +341,20 @@ class LLMHistoryManager:
 
                 if response is not None:
 
-                    def _extract_text(value: str) -> str:
-                        """Extract plain text from action value, stripping JSON wrapper."""
-                        try:
-                            parsed = json.loads(value)
-                            if isinstance(parsed, dict) and "response" in parsed:
-                                return parsed["response"]
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-                        return value
-
-                    actions_text = " | ".join(
-                        ACTION_MAP[action.type.lower()].format(
-                            _extract_text(action.value) if action.value else ""
-                        )
-                        for action in response.actions  # type: ignore
-                        if action.type.lower() in ACTION_MAP
-                    )
                     action_message = (
-                        f"{self.agent_name}: {actions_text}"
-                        if actions_text
-                        else f"{self.agent_name}: (no response)"
+                        "Given that information, **** took these actions: "
+                        + (
+                            " | ".join(
+                                ACTION_MAP[action.type.lower()].format(
+                                    action.value if action.value else ""
+                                )
+                                for action in response.actions  # type: ignore
+                                if action.type.lower() in ACTION_MAP
+                            )
+                        )
                     )
+
+                    action_message = action_message.replace("****", self.agent_name)
 
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)

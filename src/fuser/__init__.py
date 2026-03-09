@@ -108,7 +108,6 @@ class Fuser:
                     results = await self.knowledge_base.query(
                         query_text, top_k=3, min_score=self.kb_min_score
                     )
-                    results = await self.knowledge_base.query(query_text, top_k=3)
                     high = [
                         r for r in results if r.score is not None and r.score >= 0.92
                     ]

@@ -9,7 +9,6 @@ for when the model returns plain text instead of tool calls.
 import json
 import logging
 import re
-import re
 import time
 import typing as T
 
@@ -19,7 +18,7 @@ from pydantic import BaseModel, Field
 from llm import LLM, LLMConfig
 from llm.output_model import Action, CortexOutputModel
 from providers.avatar_llm_state_provider import AvatarLLMState
-from providers.llm_history_manager import LLMHistoryManager
+from providers.llm_history_manager_simplified import LLMHistoryManagerSimplified
 
 R = T.TypeVar("R", bound=BaseModel)
 
@@ -114,12 +113,12 @@ class QwenLLMSimplified(LLM[R]):
         )
 
         self._extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
-        self.history_manager = LLMHistoryManager(self._config, self._client)
+        self.history_manager = LLMHistoryManagerSimplified(self._config, self._client)
 
         self._skip_state_management = False
 
     @AvatarLLMState.trigger_thinking()
-    @LLMHistoryManager.update_history()
+    @LLMHistoryManagerSimplified.update_history()
     async def ask(
         self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
     ) -> R | None:
