@@ -46,6 +46,6 @@ def normalize_tts_text(text: str) -> str:
         text = pattern.sub(replacement, text)
 
     # Strip non-English characters (keep ASCII letters, digits, punctuation, whitespace)
-    text = re.sub(r"[^\x00-\x7F]+", "", text)
+    text = re.sub(r"[^\x00-\x7F]+", " ", text)
 
     return text
