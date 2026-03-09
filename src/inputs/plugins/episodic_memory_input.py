@@ -57,7 +57,7 @@ class EpisodicMemoryInput(FuserInput[EpisodicMemoryInputConfig, Optional[str]]):
 
         return Message(timestamp=time.time(), message=formatted)
 
-    async def raw_to_text(self, raw_input: Optional[str]) -> None:
+    async def raw_to_text(self, raw_input: Optional[str]):
         """Convert raw poll result to a Message and append to buffer."""
         if raw_input is None:
             return
