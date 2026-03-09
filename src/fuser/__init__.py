@@ -149,7 +149,7 @@ class Fuser:
 
         # Add knowledge base context to inputs if available
         if kb_context:
-            inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
+            inputs_fused += f"\n\nYOUR KNOWLEDGE BASE:\n{kb_context}"
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
