@@ -32,7 +32,7 @@
     * [Tesla Dimo](robotics/tesla_dimo.md)
     * [TurtleBot4](robotics/turtlebot4_zenoh.md)
     * [UBTech Yanshee](robotics/ubtech_yanshee.md)
-* [Examples](examples/conversation.md)
+* [Examples](examples/examples.md)
     * [Conversation](examples/conversation.md)
     * [Smart Toy](examples/smart_toy.md)
 
