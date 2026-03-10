@@ -185,7 +185,7 @@ class FAISSRetriever(BaseRetriever):
                 if answer_text in seen_answers:
                     continue
                 seen_answers.add(answer_text)
-                score = float(1.0 / (1.0 + dist))
+                score = float(dist)
                 results.append(
                     Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
                 )
