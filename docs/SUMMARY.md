@@ -24,7 +24,7 @@
 * [Introduction](developer_cookbook/introduction.md)
     * [Configuration](developer_cookbook/config.md)
     * [Input](developer_cookbook/input.md)
-    * [New Mode](developer_cookbook/new_mode.md)
+    * [Action](developer_cookbook/new_mode.md)
 * [OM1 Integrations with different machines](robotics/unitree_g1_humanoid.md)
     * [Unitree G1 Humanoid](robotics/unitree_g1_humanoid.md)
     * [Unitree Go2 Quadruped](robotics/unitree_go2_quadruped.md)
@@ -32,7 +32,7 @@
     * [Tesla Dimo](robotics/tesla_dimo.md)
     * [TurtleBot4](robotics/turtlebot4_zenoh.md)
     * [UBTech Yanshee](robotics/ubtech_yanshee.md)
-* [Examples](examples/conversation.md)
+* [Examples](examples/examples.md)
     * [Conversation](examples/conversation.md)
     * [Smart Toy](examples/smart_toy.md)
 
