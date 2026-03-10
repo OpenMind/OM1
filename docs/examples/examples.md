@@ -10,12 +10,12 @@ This section contains practical examples demonstrating how to use the OM1 projec
 
 ### Getting Started
 
-Before running any examples, ensure you have the project dependencies installed. Refer the documentation [here](../1_get-started.md).
+Before running any examples, ensure you have the project dependencies installed. Refer the documentation [here](../developing/1_get-started.md).
 
 ### Running Examples
 
 Examples can be executed using:
 
 ```bash
-uv run <example_command>
+uv run src/run.py <example_command>
 ```
