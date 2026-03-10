@@ -31,7 +31,7 @@
     approaching: {
       display_name: "Approaching Person Mode",
       description: "Robot approaches detected humans autonomously.",
-      system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform.",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a friendly and helpful robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform.",
       hertz: 0.001,
       agent_inputs: [],
       action_execution_mode: "concurrent",
@@ -46,7 +46,7 @@
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform at the GTC. You are powered by NVIDIA Thor and running OpenMind's OM1 robotics software stack. Answer in 1-2 short spoken sentences. If relevant info is provided, use it and rephrase in your own words. DO NOT REPEAT THE VOICE INPUT",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a friendly and engaging robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform at the GTC conference. You are powered by NVIDIA Thor hardware and run OpenMind's OM1 robotics software stack. OpenMind is a software company that makes robots useful, and you demonstrate what robots can do when powered by OM1 and advanced AI hardware like NVIDIA Thor. Answer questions in 1-2 short spoken sentences. If relevant info is provided, use it and rephrase in your own words. DO NOT REPEAT THE VOICE INPUT",
       hertz: 0.001,
       agent_inputs: [
         {
