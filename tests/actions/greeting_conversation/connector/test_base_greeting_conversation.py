@@ -5,6 +5,7 @@ import pytest
 from actions.base import ActionConfig
 from actions.greeting_conversation.connector.base_greeting_conversation import (
     BaseGreetingConversationConnector,
+    normalize_tts_text,
 )
 from actions.greeting_conversation.interface import (
     ConversationState as InterfaceConversationState,
@@ -579,3 +580,147 @@ class TestBaseGreetingConversationConnector:
     def test_conversation_finished_sent_defaults_to_false(self, connector):
         """Test that conversation_finished_sent defaults to False on init."""
         assert connector.conversation_finished_sent is False
+
+
+class TestNormalizeTTSText:
+    """Test the normalize_tts_text function."""
+
+    def test_expand_month_abbreviations(self):
+        """Test that month abbreviations are expanded correctly."""
+        assert normalize_tts_text("Meet me in Jan") == "Meet me in January"
+        assert normalize_tts_text("Due in Feb") == "Due in February"
+        assert normalize_tts_text("Start in Mar") == "Start in March"
+        assert normalize_tts_text("Born in Apr") == "Born in April"
+        assert normalize_tts_text("Leave in Jun") == "Leave in June"
+        assert normalize_tts_text("Hot in Jul") == "Hot in July"
+        assert normalize_tts_text("Summer Aug") == "Summer August"
+        assert normalize_tts_text("Fall in Sep") == "Fall in September"
+        assert normalize_tts_text("Fall in Sept") == "Fall in September"
+        assert normalize_tts_text("Leaves in Oct") == "Leaves in October"
+        assert normalize_tts_text("Cold in Nov") == "Cold in November"
+        assert normalize_tts_text("Winter Dec") == "Winter December"
+
+    def test_month_abbreviations_case_sensitive(self):
+        """Test that month abbreviations are case-sensitive."""
+        assert normalize_tts_text("meet me in jan") == "meet me in jan"
+        assert normalize_tts_text("Meet me in Jan") == "Meet me in January"
+        assert normalize_tts_text("DUE IN FEB") == "DUE IN FEB"
+
+    def test_month_abbreviations_word_boundaries(self):
+        """Test that month abbreviations only match at word boundaries."""
+        assert "January" in normalize_tts_text("Jan 1st")
+        assert "January" not in normalize_tts_text("Janitor")
+
+    def test_expand_address_abbreviations(self):
+        """Test that address abbreviations are expanded correctly."""
+        assert normalize_tts_text("123 Main St") == "123 Main Street"
+        assert normalize_tts_text("456 Park Ave") == "456 Park Avenue"
+        assert normalize_tts_text("789 Sunset Blvd") == "789 Sunset Boulevard"
+        assert normalize_tts_text("101 Oak Dr") == "101 Oak Drive"
+        assert normalize_tts_text("202 Elm Rd") == "202 Elm Road"
+        assert normalize_tts_text("303 Maple Ln") == "303 Maple Lane"
+        assert normalize_tts_text("404 Court Ct") == "404 Court Court"
+        assert normalize_tts_text("505 Central Pl") == "505 Central Place"
+        assert normalize_tts_text("606 Garden Pkwy") == "606 Garden Parkway"
+        assert normalize_tts_text("707 Pacific Hwy") == "707 Pacific Highway"
+
+    def test_address_abbreviations_with_period(self):
+        """Test that address abbreviations with periods are expanded."""
+        assert normalize_tts_text("123 Main St.") == "123 Main Street"
+        assert normalize_tts_text("456 Park Ave.") == "456 Park Avenue"
+
+    def test_expand_directional_abbreviations(self):
+        """Test that directional abbreviations are expanded correctly."""
+        assert normalize_tts_text("N Main Street") == "North Main Street"
+        assert normalize_tts_text("S Park Avenue") == "South Park Avenue"
+        # Note: Blvd is also expanded to Boulevard
+        assert normalize_tts_text("E Sunset Blvd") == "East Sunset Boulevard"
+        assert normalize_tts_text("W Oak Drive") == "West Oak Drive"
+
+    def test_directional_abbreviations_with_period(self):
+        """Test that directional abbreviations with periods are expanded."""
+        assert normalize_tts_text("N. Main Street") == "North Main Street"
+        assert normalize_tts_text("S. Park Avenue") == "South Park Avenue"
+
+    def test_directional_abbreviations_require_following_capital(self):
+        """Test that directional abbreviations only match before capitalized words."""
+        assert "North" in normalize_tts_text("N Main")
+        assert "North" not in normalize_tts_text("heading N")
+
+    def test_reformat_time_on_hour(self):
+        """Test that times on the hour are reformatted (remove :00)."""
+        assert normalize_tts_text("Meet at 11:00 a.m.") == "Meet at 11 a.m."
+        assert normalize_tts_text("Starts at 3:00 p.m.") == "Starts at 3 p.m."
+        assert normalize_tts_text("Opens at 9:00") == "Opens at 9"
+        assert normalize_tts_text("Closes at 10:00") == "Closes at 10"
+
+    def test_reformat_time_with_minutes(self):
+        """Test that times with minutes are reformatted (space instead of colon)."""
+        assert normalize_tts_text("Meet at 11:30 a.m.") == "Meet at 11 30 a.m."
+        assert normalize_tts_text("Party at 8:45 p.m.") == "Party at 8 45 p.m."
+        assert normalize_tts_text("Start at 2:15") == "Start at 2 15"
+        assert normalize_tts_text("Ends at 6:05") == "Ends at 6 05"
+
+    def test_preserve_non_ascii_characters(self):
+        """Test that non-ASCII characters are preserved."""
+        assert normalize_tts_text("Hello café") == "Hello café"
+        assert normalize_tts_text("Test 你好 text") == "Test 你好 text"
+        assert normalize_tts_text("Price: €100") == "Price: €100"
+        assert normalize_tts_text("Naïve résumé") == "Naïve résumé"
+
+    def test_mixed_transformations(self):
+        """Test text with multiple transformation types."""
+        text = "Meet at 123 Main St on Jan 15 at 3:30 p.m."
+        expected = "Meet at 123 Main Street on January 15 at 3 30 p.m."
+        assert normalize_tts_text(text) == expected
+
+    def test_address_with_directions_and_time(self):
+        """Test complex address with directions and time."""
+        text = "Go to N Main St at 11:00"
+        expected = "Go to North Main Street at 11"
+        assert normalize_tts_text(text) == expected
+
+    def test_multiple_abbreviations_same_type(self):
+        """Test text with multiple abbreviations of the same type."""
+        assert (
+            normalize_tts_text("From Jan to Feb to Mar")
+            == "From January to February to March"
+        )
+        assert normalize_tts_text("Main St and Oak Ave") == "Main Street and Oak Avenue"
+
+    def test_empty_string(self):
+        """Test that empty string is handled correctly."""
+        assert normalize_tts_text("") == ""
+
+    def test_text_without_abbreviations(self):
+        """Test that text without abbreviations is unchanged."""
+        text = "Hello world, this is a simple sentence."
+        assert normalize_tts_text(text) == text
+
+    def test_preserve_valid_ascii_punctuation(self):
+        """Test that valid ASCII punctuation is preserved."""
+        text = "Hello! How are you? I'm fine, thanks."
+        assert normalize_tts_text(text) == text
+
+    def test_time_patterns_in_context(self):
+        """Test time patterns in realistic contexts."""
+        assert (
+            normalize_tts_text("The meeting is from 9:00 to 5:30 daily.")
+            == "The meeting is from 9 to 5 30 daily."
+        )
+        assert (
+            normalize_tts_text("Call between 10:15 and 12:00")
+            == "Call between 10 15 and 12"
+        )
+
+    def test_all_transformations_combined(self):
+        """Test text requiring all types of transformations."""
+        text = "Visit N Main St in Jan at 2:30 with café latte"
+        expected = "Visit North Main Street in January at 2 30 with café latte"
+        assert normalize_tts_text(text) == expected
+
+    def test_case_preservation_where_applicable(self):
+        """Test that regex patterns are case-sensitive."""
+        assert normalize_tts_text("jan") == "jan"  # No match (lowercase)
+        assert normalize_tts_text("Jan") == "January"  # Match (proper case)
+        assert normalize_tts_text("JAN") == "JAN"  # No match (uppercase)
