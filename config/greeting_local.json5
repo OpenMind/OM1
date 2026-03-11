@@ -76,7 +76,7 @@
           handler_type: "message",
           handler_config: {
             tts_provider: "kokoro",
-            message: "Hello! I'm Bits, how can I help you today?",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
             base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
           },
@@ -86,7 +86,7 @@
           handler_type: "message",
           handler_config: {
             tts_provider: "kokoro",
-            message: "Hello! I'm Bits, how can I help you today?",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
             base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
           },
