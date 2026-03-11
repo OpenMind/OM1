@@ -61,22 +61,29 @@ Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repos
 git clone https://github.com/OpenMind/OM1-ros2-sdk.git
 ```
 
-Step 2: Install all the necessary dependencies:
+Step 2: Initialize rosdep by setting up the source list:
 
 ```bash
 cd OM1-ros2-sdk
-uv venv --python 3.10
 sudo rosdep init
 rosdep update
 rosdep install --from-paths . --ignore-src -r -y
-source .venv/bin/activate
-uv pip install .
 ```
+
+It automatically installs all system dependencies needed by the ROS packages in your current directory.
 
 Step 3: Build all the packages:
 
 ```bash
 colcon build
+```
+
+Once the build is successful, create a virtual environment and install the dependencies
+
+```bash
+uv venv --python 3.10
+source .venv/bin/activate
+uv pip install .
 ```
 
 Now you should be able to launch the **Gazebo Simulator**.
