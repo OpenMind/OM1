@@ -16,13 +16,13 @@ Run from the **repo root**:
 # YOLO benchmark
 python benchmarks/benchmark_yolo_gpu.py
 
-# YOLO dengan opsi lengkap
+# YOLO with full options
 python benchmarks/benchmark_yolo_gpu.py --model yolov8n.pt --runs 100 --warmup 5 --device cuda
 
 # COCO benchmark
 python benchmarks/benchmark_coco_gpu.py
 
-# COCO dengan opsi lengkap
+# COCO with full options
 python benchmarks/benchmark_coco_gpu.py --runs 100 --warmup 5 --device cuda
 ```
 
@@ -30,24 +30,29 @@ python benchmarks/benchmark_coco_gpu.py --runs 100 --warmup 5 --device cuda
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--runs` | `100` | Jumlah timed inference runs |
-| `--warmup` | `5` | Warmup runs (tidak dihitung) |
+| `--runs` | `100` | Number of timed inference runs |
+| `--warmup` | `5` | Warmup runs excluded from stats |
 | `--device` | `auto` | `auto` / `cuda` / `mps` / `cpu` |
-| `--model` | `yolov8n.pt` | Nama atau path model YOLO |
-| `--output-dir` | `benchmarks/results` | Folder output |
+| `--model` | `yolov8n.pt` | Model name or path (YOLO only) |
+| `--output-dir` | `benchmarks/results` | Output directory |
 
 `auto` device priority: `cuda` → `mps` → `cpu`
 
 ## Output
 
-Setiap run menghasilkan dua file di `benchmarks/results/`:
+Each run writes two files to `benchmarks/results/`:
 
 - `yolo_benchmark_<timestamp>.json`
 - `yolo_benchmark_<timestamp>.md`
 
 ## Running Tests
 ```bash
-pytest benchmarks/tests/test_benchmarks_gpu.py -v
+pytest tests/benchmarks/test_benchmarks_gpu.py -v
 ```
 
-Test berjalan tanpa GPU, kamera, atau model file.
+Tests run without GPU, camera, or model files.
+
+## Notes
+
+- Benchmarks are not run in CI — execute manually on target hardware.
+- PyTorch >= 2.6 (cu128 build) required for RTX 5000 series (sm_120).
