@@ -4,7 +4,7 @@
 "icon": gear
 ---
 
-## Gazebo & Simulation Issues
+## Gazebo Specific Issues
 
 ### colcon build fails
 
@@ -30,8 +30,6 @@
 **Solution:**
 - Manually reposition the robot in Gazebo using translate or rotate mode
 - Alternatively, use RViZ to send a 2D Nav Goal pose to the robot
-
-## Orchestrator Issues
 
 ### Orchestrator throws errors
 
