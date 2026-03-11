@@ -60,7 +60,7 @@ icon: gear
    which python
    ```
 
-2. Confirm you installed the dependencies using `uv pip install`. If you still face issues, try deleting and creating a new virtual environment. Make sure to export `PYTHONPATH` to correct location.
+2. Confirm you installed the dependencies using `uv pip install`, during the setup. If you still face issues, try deleting and creating a new virtual environment. Make sure to export `PYTHONPATH` to correct location.
 
 ## Audio Issues
 
