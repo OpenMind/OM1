@@ -1,7 +1,7 @@
 ---
-"title": Troubleshooting
-"description":
-"icon": gear
+title: Troubleshooting
+description:
+icon: gear
 ---
 
 ## Gazebo Specific Issues
@@ -15,7 +15,7 @@
 2. Deactivate any active environments (including conda)
 3. Open a fresh terminal and retry the build
 
-### Gazebo and RViZ fail to launch
+### Gazebo and RViz fail to launch
 
 **Problem:** Simulation environment doesn't start properly.
 
@@ -29,7 +29,7 @@
 
 **Solution:**
 - Manually reposition the robot in Gazebo using translate or rotate mode
-- Alternatively, use RViZ to send a 2D Nav Goal pose to the robot
+- Alternatively, use RViz to send a 2D Nav Goal pose to the robot
 
 ### Orchestrator throws errors
 

@@ -67,7 +67,9 @@ Step 1: Clone the [OM1-ros2-sdk](https://github.com/OpenMind/OM1-ros2-sdk) repos
 git clone https://github.com/OpenMind/OM1-ros2-sdk.git
 ```
 
-Step 2: Initialize rosdep by setting up the source list:
+Step 2:  Initialize rosdep by setting up the source list (this is only needed once per machine)
+
+> **Note:**  Run 'sudo rosdep init' only if rosdep has not been initialized on this machine before. If it has, skip this line and start from 'rosdep update'.
 
 ```bash
 cd OM1-ros2-sdk
