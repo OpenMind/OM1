@@ -8,8 +8,8 @@
   mode_memory_enabled: true,
 
   // Global settings
-  api_key: "openmind_free",
-  unitree_ethernet: "",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
   system_governance: "",
   cortex_llm: {
     type: "OpenAILLM",
@@ -18,6 +18,12 @@
       history_length: 10,
       model: "gpt-4.1-mini",
     },
+  },
+
+  knowledge_base: {
+    knowledge_base_name: "demo",
+    base_url: "${KB_BASE_URL:-http://localhost:8100}",
+    min_score: 0.6,
   },
 
   modes: {
@@ -63,14 +69,20 @@
           hook_type: "on_startup",
           handler_type: "message",
           handler_config: {
+            tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
+            model_id: "kokoro",
+            base_url: "http://localhost:8880/v1",
           },
         },
         {
           hook_type: "on_entry",
           handler_type: "message",
           handler_config: {
+            tts_provider: "kokoro",
             message: "Hello! I'm Bits, how can I help you today?",
+            model_id: "kokoro",
+            base_url: "http://localhost:8880/v1",
           },
         },
         {
@@ -80,8 +92,8 @@
             module_name: "greeting_hook",
             function: "geeting_end_hook",
             tts_provider: "kokoro",
-            model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "http://omr2.local:8880/v1",
+            model_id: "kokoro",
+            base_url: "http://localhost:8880/v1",
           },
         },
       ],
