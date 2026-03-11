@@ -1,0 +1,126 @@
+{
+  // Configuration version
+  version: "v1.0.3",
+
+  // Mode system configuration for Unitree Go2
+  default_mode: "greeting",
+  allow_manual_switching: true,
+  mode_memory_enabled: true,
+
+  // Global settings
+  api_key: "${OM_API_KEY:-openmind_free}",
+  unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
+  system_governance: "",
+  cortex_llm: {
+    type: "QwenLLMSimplified",
+    config: {
+      agent_name: "Bits",
+      history_length: 2,
+      base_url: "${QWEN_BASE_URL:-http://omr2.local:8860}/v1",
+      model: "nvidia/nemotron-3-nano",
+    },
+  },
+
+  knowledge_base: {
+    knowledge_base_name: "demo",
+    base_url: "${KB_BASE_URL:-http://localhost:8100}",
+  },
+
+  modes: {
+    approaching: {
+      display_name: "Approaching Person Mode",
+      description: "Robot approaches detected humans autonomously.",
+      system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform.",
+      hertz: 0.001,
+      agent_inputs: [],
+      action_execution_mode: "concurrent",
+      agent_actions: [],
+      backgrounds: [
+        {
+          type: "ApproachingPerson",
+        },
+      ],
+      lifecycle_hooks: [],
+    },
+    greeting: {
+      display_name: "Greeting Conversation Mode",
+      description: "Robot engages in greeting conversations with users upon approach.",
+      system_prompt_base: "You are Bits, a friendly robot dog at NVIDIA GTC made by OpenMind. Today is March 9, 2026. Answer in 1-2 short spoken sentences. If relevant info is provided, use it — rephrase in your own words.",
+      hertz: 0.001,
+      agent_inputs: [
+        {
+          type: "RivaASRRTSPInput",
+          config: {
+            base_url: "ws://localhost:6790",
+            enable_tts_interrupt: false,
+          },
+        },
+      ],
+      action_execution_mode: "concurrent",
+      agent_actions: [
+        {
+          name: "greeting_conversation_simplified",
+          llm_label: "greeting_conversation",
+          connector: "greeting_conversation_kokoro_simplified",
+          config: {
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
+          },
+        },
+      ],
+      backgrounds: [],
+      lifecycle_hooks: [
+        {
+          hook_type: "on_startup",
+          handler_type: "message",
+          handler_config: {
+            tts_provider: "kokoro",
+            message: "Hello! I'm Bits, how can I help you today?",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
+          },
+        },
+        {
+          hook_type: "on_entry",
+          handler_type: "message",
+          handler_config: {
+            tts_provider: "kokoro",
+            message: "Hey there! What can I help you with?",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
+          },
+        },
+        {
+          hook_type: "on_exit",
+          handler_type: "function",
+          handler_config: {
+            module_name: "greeting_hook",
+            function: "geeting_end_hook",
+            tts_provider: "kokoro",
+            model_id: "mlx-community/Kokoro-82M-bf16",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
+          },
+        },
+      ],
+    },
+  },
+
+  transition_rules: [
+    {
+      from_mode: "approaching",
+      to_mode: "greeting",
+      transition_type: "context_aware",
+      context_conditions: { approaching_detected: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+    {
+      from_mode: "greeting",
+      to_mode: "approaching",
+      transition_type: "context_aware",
+      context_conditions: { greeting_conversation_finished: true },
+      priority: 0,
+      cooldown_seconds: 5.0,
+    },
+  ],
+}
