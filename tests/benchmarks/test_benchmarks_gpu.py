@@ -529,6 +529,9 @@ class TestCocoMissingBranches:
             patch("torch.cuda.is_available", return_value=True),
             patch("torch.cuda.synchronize"),
             patch(
+                "benchmarks.benchmark_coco_gpu.get_device_name", return_value="Mock GPU"
+            ),
+            patch(
                 "benchmarks.benchmark_coco_gpu.preprocess_image",
                 return_value=mock_tensor,
             ),
