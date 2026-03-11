@@ -3,10 +3,9 @@
 ## Get Started <a href="#developing" id="developing"></a>
 
 * [OM1](README.md)
-* [Get Started](developing/0_introduction.md)
-    * [Introduction](developing/0_introduction.md)
-    * [Quick Start](developing/1_get-started.md)
-    * [Architecture](developing/2_architecture.md)
+* [Introduction](developing/0_introduction.md)
+* [Quick Start](developing/1_get-started.md)
+* [Architecture](developing/2_architecture.md)
 * [Understanding Core Concepts](concepts.md)
     * [Project Structure](developing/7_project_structure.md)
     * [Configuration](developing/3_configuration.md)
@@ -15,6 +14,10 @@
     * [Actions](developing/6_actions.md)
     * [Backgrounds](developing/8_backgrounds.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
+* [Middleware](developing/middleware.md)
+    * [CycloneDDS](developing/cyclonedds.md)
+    * [ROS2-humble](developing/ros2-humble.md)
+    * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
 
 ## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
 
@@ -29,7 +32,7 @@
     * [Tesla Dimo](robotics/tesla_dimo.md)
     * [TurtleBot4](robotics/turtlebot4_zenoh.md)
     * [UBTech Yanshee](robotics/ubtech_yanshee.md)
-* [Examples](examples/conversation.md)
+* [Examples](examples/examples.md)
     * [Conversation](examples/conversation.md)
     * [Smart Toy](examples/smart_toy.md)
 
@@ -37,6 +40,7 @@
 
 * [Gazebo](simulators/gazebo.md)
 * [Isaac Sim](simulators/isaac-sim.md)
+* [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 

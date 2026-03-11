@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, List, Optional, Sequence
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -91,10 +92,12 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
+        today = datetime.now().strftime("%B %-d, %Y")
         system_prompt = (
             "\nBASIC CONTEXT:\n"
             + config.system_prompt_base
-            + "\n\nLAWS:\n"
+            + f"\nToday is {today}.\n"
+            + "\nLAWS:\n"
             + config.system_governance
             + "\n\nEXAMPLES:\n"
             + config.system_prompt_examples
@@ -117,8 +120,7 @@ async def test_fuser_initialization_with_knowledge_base():
     kb_config = {
         "knowledge_base": "test_kb",
         "knowledge_base_root": "/tmp/kb",
-        "embedding_host": "localhost",
-        "embedding_port": 8100,
+        "base_url": "http://localhost:8100",
     }
     config = create_mock_config(knowledge_base=kb_config)
     io_provider = IOProvider()
@@ -159,6 +161,7 @@ async def test_fuser_without_knowledge_base():
         result = await fuser.fuse([], [])
 
         assert fuser.knowledge_base is None
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -180,6 +183,7 @@ async def test_fuser_with_knowledge_base_no_voice_input():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -221,10 +225,13 @@ async def test_fuser_with_knowledge_base_and_voice_input():
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
-        mock_kb.query.assert_called_once_with("What is the capital of France?", top_k=3)
+        mock_kb.query.assert_called_once_with(
+            "What is the capital of France?", top_k=3, min_score=0.0
+        )
         mock_kb.format_context.assert_called_once_with(
             [mock_doc1, mock_doc2], max_chars=1500
         )
+        assert result is not None
         assert "KNOWLEDGE BASE:" in result
         assert "Paris is the capital of France." in result
 
@@ -256,6 +263,7 @@ async def test_fuser_with_knowledge_base_empty_results():
         result = await fuser.fuse(inputs, [])
 
         mock_kb.query.assert_called_once()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -286,6 +294,7 @@ async def test_fuser_with_knowledge_base_query_error():
         result = await fuser.fuse(inputs, [])
 
         mock_kb.query.assert_called_once()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -315,6 +324,7 @@ async def test_fuser_with_knowledge_base_voice_input_different_tick():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -338,6 +348,7 @@ async def test_fuser_with_knowledge_base_no_voice_input_object():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
 
 
@@ -365,4 +376,5 @@ async def test_fuser_with_knowledge_base_empty_voice_input():
         result = await fuser.fuse([], [])
 
         mock_kb.query.assert_not_called()
+        assert result is not None
         assert "KNOWLEDGE BASE:" not in result
