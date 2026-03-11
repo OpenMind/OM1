@@ -40,6 +40,7 @@
 
 * [Gazebo](simulators/gazebo.md)
 * [Isaac Sim](simulators/isaac-sim.md)
+* [Isaac Sim](simulators/troubleshooting.md)
 
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
