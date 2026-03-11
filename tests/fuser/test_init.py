@@ -108,10 +108,6 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
         assert mock_describe.call_count == 2
         assert io_provider.fuser_system_prompt == system_prompt
         assert io_provider.fuser_inputs == "test input"
-        assert (
-            io_provider.fuser_available_actions
-            == "AVAILABLE ACTIONS:\naction description\n\naction description\n\n\n\nWhat will you do? Actions:"
-        )
 
 
 @pytest.mark.asyncio

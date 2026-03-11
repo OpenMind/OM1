@@ -4,7 +4,6 @@ import typing as T
 from collections.abc import Sequence
 from datetime import datetime
 
-from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
@@ -92,7 +91,7 @@ class Fuser:
         system_prompt = (
             "\nBASIC CONTEXT:\n"
             + self.config.system_prompt_base
-            + f"\nToday is {today}.\n"
+            + f"\n\nToday is {today}.\n"
         )
 
         inputs_fused = " ".join([s for s in input_strings if s is not None])
@@ -135,39 +134,24 @@ class Fuser:
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
         # since they are flowing from the outside world
-        if "Universal Laws" not in inputs_fused:
+        if self.config.system_governance and "Universal Laws" not in inputs_fused:
             system_prompt += "\nLAWS:\n" + self.config.system_governance
 
         if self.config.system_prompt_examples:
             system_prompt += "\n\nEXAMPLES:\n" + self.config.system_prompt_examples
-
-        # descriptions of possible actions
-        actions_fused = ""
-
-        for action in self.config.agent_actions:
-            desc = describe_action(
-                action.name, action.llm_label, action.exclude_from_prompt
-            )
-            if desc:
-                actions_fused += desc + "\n\n"
-
-        question_prompt = "What will you do? Actions:"
 
         # this is the final prompt:
         # (1) a (typically) fixed overall system prompt with the agents, name, rules, and examples
         # (2) all the inputs (vision, sound, etc.)
         # (3) a (typically) fixed list of available actions
         # (4) a (typically) fixed system prompt requesting commands to be generated
-        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
+        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}"
 
         logging.debug(f"FINAL PROMPT: {fused_prompt}")
 
         # Record the global prompt, actions and inputs
         self.io_provider.set_fuser_system_prompt(f"{system_prompt}")
         self.io_provider.set_fuser_inputs(inputs_fused)
-        self.io_provider.set_fuser_available_actions(
-            f"AVAILABLE ACTIONS:\n{actions_fused}\n\n{question_prompt}"
-        )
 
         # Record the timestamp of the output
         self.io_provider.fuser_end_time = time.time()

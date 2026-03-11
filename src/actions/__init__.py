@@ -1,70 +1,7 @@
 import importlib
 import typing as T
-from enum import Enum
-from typing import Optional
 
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
-
-
-def describe_action(
-    action_name: str, llm_label: str, exclude_from_prompt: bool
-) -> Optional[str]:
-    """
-    Generate a description of the action for use in prompts.
-
-    Parameters
-    ----------
-    action_name : str
-        The name of the action.
-    llm_label : str
-        The label used by the LLM for this action.
-    exclude_from_prompt : bool
-        Whether to exclude this action from the prompt. If True, returns None.
-
-    Returns
-    -------
-    Optional[str]
-        A formatted description of the action, or None if excluded.
-    """
-    if exclude_from_prompt:
-        return None
-
-    interface = None
-    action = importlib.import_module(f"actions.{action_name}.interface")
-
-    for obj in action.__dict__.values():
-        if isinstance(obj, type) and issubclass(obj, Interface) and obj != Interface:
-            interface = obj
-
-    if interface is None:
-        raise ValueError(f"No interface found for action {action_name}")
-
-    # Get docstring from interface class
-    doc = interface.__doc__ or ""
-    doc = doc.replace("\n", "")
-
-    # Build type hint descriptions
-    hints = {}
-    input_interface = T.get_type_hints(interface)["input"]
-    for field_name, field_type in T.get_type_hints(input_interface).items():
-        if hasattr(field_type, "__origin__") and isinstance(
-            field_type.__origin__, type
-        ):
-            # Handle generic types
-            hints[field_name] = str(field_type)
-        elif isinstance(field_type, type) and issubclass(field_type, Enum):
-            # Handle enums by listing allowed values
-            values = [f"'{v.value}'" for v in field_type]
-            hints[field_name] = "value={" + f"{', '.join(values)}" + "}"
-        else:
-            hints[field_name] = f"value={str(field_type)}"
-
-    # Format the full docstring
-    type_hints = "\n".join(f"{desc}" for name, desc in hints.items())
-    final_description = f"{llm_label.upper()}: {doc}\ntype={llm_label}\n{type_hints}"
-    final_description = final_description.replace("    ", "")
-
-    return final_description
 
 
 def load_action(
