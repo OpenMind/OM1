@@ -127,6 +127,9 @@ OM1 _should_ run on other platforms (such as Windows) and microcontrollers such 
 ## Introduction to BrainPack
 
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
+
+The BrainPack is designed to be mounted directly onto a robot to bring together mapping, object recognition, remote control, and self charging, giving humanoids and quadrupeds what they need to navigate, remember, and act with purpose.
+
 ## Full Autonomy Guidance
 
 We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
