@@ -118,7 +118,7 @@ class ConversationHistoryInput(FuserInput[ConversationHistoryConfig, Optional[st
             return None
 
         lines = [f"User: {msg.message}" for msg in self.messages]
-        result = f'{self.descriptor_for_LLM}: "{" ".join(lines)}"'
+        result = f'{self.descriptor_for_LLM}: "{"; ".join(lines)}"'
 
         return result
 
