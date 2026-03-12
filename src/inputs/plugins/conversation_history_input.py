@@ -1,17 +1,5 @@
 """
 Conversation history input plugin.
-
-Follows the same pattern as FacePresenceInput:
-- Subscribes to ConversationHistoryProvider callbacks
-- Enqueues received voice input lines
-- Polls the queue in _poll()
-- Converts to Messages in raw_to_text()
-- Formats for LLM in formatted_latest_buffer()
-
-Place this file at: src/inputs/plugins/conversation_history_input.py
-
-Add to greeting_local.json5 agent_inputs:
-    { type: "ConversationHistoryInput", config: { max_rounds: 3 } }
 """
 
 import asyncio
@@ -152,9 +140,7 @@ class ConversationHistoryInput(FuserInput[ConversationHistoryConfig, Optional[st
     def formatted_latest_buffer(self) -> Optional[str]:
         """
         Return all recorded voice inputs as a conversation history block.
-
-        Unlike FacePresence which only returns the latest, this returns
-        all messages to give the LLM full conversation context.
+        This returns all messages to give the LLM full conversation context.
 
         Returns
         -------
