@@ -64,6 +64,8 @@ vi ~/.bashrc # for Linux
 vi ~/.zshrc # for macOS
 ```
 
+Add the following to the file
+
 ```bash
 export OM_API_KEY="<your_api_key>"
 ```
