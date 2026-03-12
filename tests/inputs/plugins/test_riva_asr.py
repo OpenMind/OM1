@@ -356,11 +356,8 @@ def test_formatted_latest_buffer():
 
         result = sensor.formatted_latest_buffer()
         assert isinstance(result, str)
-        assert "INPUT:" in result
         assert "Voice" in result
         assert "hello world how are you" in result
-        assert "// START" in result
-        assert "// END" in result
         assert len(sensor.messages) == 0
 
         mock_io_instance.add_input.assert_called_once()

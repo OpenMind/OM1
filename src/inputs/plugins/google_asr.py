@@ -255,10 +255,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             return None
 
         result = f"""
-INPUT: {self.descriptor_for_LLM}
-// START
-{self.messages[-1]}
-// END
+{self.descriptor_for_LLM}: "{self.messages[-1]}"
 """
         # Add to IO provider and conversation provider
         self.io_provider.add_input(
