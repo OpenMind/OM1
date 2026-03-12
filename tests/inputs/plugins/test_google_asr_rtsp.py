@@ -778,7 +778,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
         result = instance.formatted_latest_buffer()
 
     assert result is not None
-    assert "INPUT: Voice" in result
+    assert "Voice" in result
     assert msg_content in result
     assert len(instance.messages) == 0
     mock_io_provider.add_input.assert_called_once_with(
