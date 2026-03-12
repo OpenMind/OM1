@@ -53,9 +53,10 @@ uv venv
 ### Obtain an OpenMind API Key
 
 Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/).
-1. Go to the dashboard.
-2. Create a new API key.
-3. Edit `config/spot.json5` and replace the `openmind_free` placeholder with your API key. Or, `cp .env.example .env` and add your key to the `.env`.
+1. Create your account on OpenMind Portal if you haven't yet.
+2. Go to the dashboard and create a new API key.
+3. Copy the generated API key.
+4. Edit `config/spot.json5` and replace the `openmind_free` placeholder with your API key. Or, configure it in the `.env` file using this command - `cp .env.example .env` and add your key to the `.env`.
 
 Alternatively, you can set your API key in the `.bashrc` file
 
