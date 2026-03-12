@@ -69,7 +69,8 @@ class VLM_COCO_Local(FuserInput[VLM_COCO_LocalConfig, Optional[np.ndarray]]):
         """
         super().__init__(config)
 
-        self.device = "cpu"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        logging.info(f"COCO Object Detector using device: {self.device}")
         self.detection_threshold = 0.2
 
         self.camera_index = self.config.camera_index
