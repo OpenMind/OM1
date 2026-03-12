@@ -12,11 +12,10 @@
   unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
   system_governance: "",
   cortex_llm: {
-    type: "OpenAILLM",
+    type: "GeminiLLM",
     config: {
-      agent_name: "Bits",
+      agent_name: "${ROBOT_NAME:-Bits}",
       history_length: 10,
-      model: "gpt-4.1-mini",
     },
   },
 
