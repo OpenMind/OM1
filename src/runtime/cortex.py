@@ -202,6 +202,12 @@ class ModeCortexRuntime:
             # Set reloading flag
             self._is_reloading = True
 
+            from providers.conversation_history_provider import (
+                ConversationHistoryProvider,
+            )
+
+            ConversationHistoryProvider().clear()
+
             # Stop current orchestrators
             await self._stop_current_orchestrators()
 
@@ -604,8 +610,22 @@ class ModeCortexRuntime:
             logging.debug("No output from LLM")
             return
 
-        if self._is_reloading or cortex_generation != self._cortex_loop_generation:
-            logging.debug("Skipping action execution due to mode transition")
+        # Record conversation for history
+        from providers.conversation_history_provider import ConversationHistoryProvider
+
+        conv = ConversationHistoryProvider()
+        voice_input = self.io_provider.get_input("Voice")
+        if (
+            voice_input
+            and voice_input.input
+            and self.io_provider.tick_counter == voice_input.tick
+        ):
+            conv.add_user_input(voice_input.input)
+        for action in output.actions:
+            conv.add_robot_response(action.value)
+
+        if self._is_reloading:
+            logging.debug("Skipping tick during config reload")
             return
 
         if self.simulator_orchestrator:

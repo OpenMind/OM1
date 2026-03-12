@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
@@ -319,22 +318,15 @@ class LLMHistoryManager:
                 logging.debug(f"LLM Tasking cycle debug tracker: {cycle}")
 
                 current_tick = self.io_provider.tick_counter
-
-                # Only extract voice (ASR) input for clean conversation history
-                voice_input = ""
+                formatted_inputs = f"{self.agent_name} sensed the following: "
                 for input_type, input_info in self.io_provider.inputs.items():
                     if input_info.tick == current_tick:
                         logging.debug(f"LLM: {input_type} (tick #{input_info.tick})")
                         logging.debug(f"LLM: {input_info}")
-                        if "voice" in input_type.lower() or "asr" in input_type.lower():
-                            voice_input = input_info.input.strip()
+                        formatted_inputs += f"{input_type}. {input_info.input} | "
 
-                if voice_input:
-                    formatted_inputs = f"User: {voice_input}"
-                else:
-                    formatted_inputs = (
-                        f"User: {self.agent_name} received no voice input this cycle."
-                    )
+                formatted_inputs = formatted_inputs.replace("..", ".")
+                formatted_inputs = formatted_inputs.replace("  ", " ")
 
                 inputs = ChatMessage(role="user", content=formatted_inputs)
 
@@ -349,41 +341,32 @@ class LLMHistoryManager:
 
                 if response is not None:
 
-                    speak_parts = []
-                    for action in response.actions:
-                        atype = action.type.lower()
-                        if atype == "speak" and action.value:
-                            speak_parts.append(action.value)
-                        elif action.value:
-                            try:
-                                parsed = json.loads(action.value)
-                                if isinstance(parsed, dict) and "response" in parsed:
-                                    speak_parts.append(parsed["response"])
-                            except (ValueError, TypeError):
-                                pass
+                    action_message = (
+                        "Given that information, **** took these actions: "
+                        + (
+                            " | ".join(
+                                ACTION_MAP[action.type.lower()].format(
+                                    action.value if action.value else ""
+                                )
+                                for action in response.actions  # type: ignore
+                                if action.type.lower() in ACTION_MAP
+                            )
+                        )
+                    )
 
-                    if speak_parts:
-                        action_message = f"{self.agent_name}: {' '.join(speak_parts)}"
-                    else:
-                        action_message = f"{self.agent_name}: [no verbal response]"
+                    action_message = action_message.replace("****", self.agent_name)
 
                     self.history_manager.history.append(
                         ChatMessage(role="assistant", content=action_message)
                     )
 
-                    # Truncate history to keep only the most recent messages (no summarization)
                     if (
                         self.history_manager.config.history_length > 0
                         and len(self.history_manager.history)
                         > self.history_manager.config.history_length
                     ):
-                        excess = (
-                            len(self.history_manager.history)
-                            - self.history_manager.config.history_length
-                        )
-                        del self.history_manager.history[:excess]
-                        logging.info(
-                            f"Truncated {excess} oldest messages, keeping {self.history_manager.config.history_length}"
+                        await self.history_manager.start_summary_task(
+                            self.history_manager.history
                         )
                 else:
                     if (
