@@ -1,13 +1,5 @@
 """
 Conversation history input plugin.
-
-Polls IOProvider directly for new voice inputs via _poll().
-No separate provider needed.
-
-Place this file at: src/inputs/plugins/conversation_history_input.py
-
-Add to greeting_local.json5 agent_inputs:
-    { type: "ConversationHistoryInput", config: { max_rounds: 3 } }
 """
 
 import asyncio
