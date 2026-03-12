@@ -14,7 +14,7 @@
   cortex_llm: {
     type: "QwenLLM",
     config: {
-      agent_name: "Bits",
+      agent_name: "${ROBOT_NAME:-Bits}",
       history_length: 1,
       base_url: "${QWEN_BASE_URL:-http://omr2.local:8860}/v1",
       model: "nvidia/nemotron-3-nano",
