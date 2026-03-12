@@ -146,7 +146,7 @@ OM1 integrates with popular robotics simulators to enable rapid prototyping and 
 
 Full support for Gazebo with ROS2 integration. Ideal for testing autonomous SLAM map generation and navigation stacks, sensor simulation, and multi-robot scenarios.
 
-Requires NVIDIA GPU and CUDA support. See [Isaac Sim Setup](docs/simulators/gazebo.md) to get started.
+Requires NVIDIA GPU and CUDA support. See [Gazebo](docs/simulators/gazebo.md) to get started.
 
 ### Isaac Sim
 
