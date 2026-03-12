@@ -119,7 +119,7 @@ class ConversationHistoryInput(FuserInput[ConversationHistoryConfig, Optional[st
 
         self.io_provider.add_input(
             self.__class__.__name__,
-            "\n".join(lines),
+            " ".join(lines),
             self.messages[-1].timestamp,
         )
 
