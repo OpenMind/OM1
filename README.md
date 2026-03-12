@@ -30,7 +30,7 @@ You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-start
 
 ### Install Dependencies
 
-For MacOS
+For macOS
 ```bash
 brew install portaudio ffmpeg
 ```
@@ -60,7 +60,8 @@ Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/).
 Alternatively, you can set your API key in the `.bashrc` file
 
 ```bash
-vi ~/.bashrc
+vi ~/.bashrc # for Linux
+vi ~/.zshrc # for macOS
 ```
 
 ```bash
@@ -68,7 +69,8 @@ export OM_API_KEY="<your_api_key>"
 ```
 
 ```bash
-source ~/.bashrc
+source ~/.bashrc # for linux
+source ~/.zshrc # for macOS
 ```
 
 ### OMCU
