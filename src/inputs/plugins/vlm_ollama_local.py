@@ -221,7 +221,7 @@ class VLM_Ollama_Local(FuserInput[VLM_Ollama_LocalConfig, Optional[np.ndarray]])
             logging.error(f"VLM Ollama Local: unexpected error: {e}")
             return None
 
-    async def raw_to_text(self, raw_input: Optional[np.ndarray]) -> None:
+    async def raw_to_text(self, raw_input: Optional[np.ndarray]):
         """
         Convert a camera frame to text and append to the message buffer.
 
