@@ -28,15 +28,6 @@ To get started with OM1, let's run the Spot agent. Spot uses your webcam to capt
 
 You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
 
-### Clone the Repo
-
-```bash
-git clone https://github.com/OpenMind/OM1.git
-cd OM1
-git submodule update --init
-uv venv
-```
-
 ### Install Dependencies
 
 For MacOS
@@ -48,6 +39,15 @@ For Linux
 ```bash
 sudo apt-get update
 sudo apt-get install portaudio19-dev python3-dev ffmpeg
+```
+
+### Clone the Repo
+
+```bash
+git clone https://github.com/OpenMind/OM1.git
+cd OM1
+git submodule update --init
+uv venv
 ```
 
 ### Obtain an OpenMind API Key
@@ -73,7 +73,9 @@ source ~/.bashrc
 
 ### OMCU
 
-OMCU is the computational unit for billing on OpenMind's platform. The free plan provides 50 OMCU renewed monthly. Upgrade your plan [here](https://portal.openmind.org/) for additional credits.
+OMCU is the computational unit for billing on OpenMind's platform. The free plan provides 50 OMCU renewed monthly.
+
+Upgrade your plan [here](https://portal.openmind.org/) for additional credits.
 
 ### Launching OM1
 
@@ -125,9 +127,6 @@ OM1 _should_ run on other platforms (such as Windows) and microcontrollers such 
 ## Introduction to BrainPack
 
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
-We'll shortly be releasing the **BOM** and details on **DIY** for the BrainPack.
-Stay tuned!
-
 ## Full Autonomy Guidance
 
 We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the BrainPack. Full autonomy has five services that work together in a loop without manual intervention:
@@ -146,7 +145,7 @@ OM1 integrates with popular robotics simulators to enable rapid prototyping and 
 
 Full support for Gazebo with ROS2 integration. Ideal for testing autonomous SLAM map generation and navigation stacks, sensor simulation, and multi-robot scenarios.
 
-Requires NVIDIA GPU and CUDA support. See [Gazebo](docs/simulators/gazebo.md) to get started.
+See [Gazebo](docs/simulators/gazebo.md) to get started.
 
 ### Isaac Sim
 
