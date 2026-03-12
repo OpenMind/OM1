@@ -1,8 +1,5 @@
-"""
-Conversation history input plugin.
-"""
-
 import asyncio
+import logging
 import time
 from collections import deque
 from typing import Deque, Optional
@@ -44,6 +41,9 @@ class ConversationHistoryInput(FuserInput[ConversationHistoryConfig, Optional[st
         self._last_recorded_tick: int = -1
         self.descriptor_for_LLM = "Conversation History"
 
+        # Guard flag: when True, this instance ignores incoming voice inputs
+        self._stopped = False
+
     async def _poll(self) -> Optional[str]:
         """
         Check IOProvider for new voice input this tick.
@@ -54,6 +54,9 @@ class ConversationHistoryInput(FuserInput[ConversationHistoryConfig, Optional[st
             The voice input text if new, None otherwise.
         """
         await asyncio.sleep(0.5)
+
+        if self._stopped:
+            return
 
         current_tick = self.io_provider.tick_counter
         if current_tick <= self._last_recorded_tick:
@@ -108,8 +111,8 @@ class ConversationHistoryInput(FuserInput[ConversationHistoryConfig, Optional[st
 
         Returns
         -------
-        str or None
-            Formatted conversation history for LLM, or None if empty.
+        Optional[str]
+            A formatted string of the conversation history for LLM input, or None if no history exists.
         """
         if len(self.messages) == 0:
             return None
@@ -117,10 +120,14 @@ class ConversationHistoryInput(FuserInput[ConversationHistoryConfig, Optional[st
         lines = [f"User: {msg.message}" for msg in self.messages]
         result = f'{self.descriptor_for_LLM}: "{" ".join(lines)}"'
 
-        self.io_provider.add_input(
-            self.__class__.__name__,
-            " ".join(lines),
-            self.messages[-1].timestamp,
-        )
-
         return result
+
+    def stop(self):
+        """
+        Clear message history and reset state when stopping the input.
+        """
+        logging.info("Stopping ConversationHistoryInput")
+
+        self._stopped = True
+
+        self.messages.clear()
