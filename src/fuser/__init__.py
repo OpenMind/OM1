@@ -6,7 +6,6 @@ from datetime import datetime
 
 from fuser.knowledge_base.retriever import KnowledgeBase
 from inputs.base import Sensor
-from providers.conversation_history_provider import ConversationHistoryProvider
 from providers.io_provider import IOProvider
 from runtime.config import RuntimeConfig
 
@@ -37,7 +36,6 @@ class Fuser:
         """
         self.config = config
         self.io_provider = IOProvider()
-        self.conversation_history = ConversationHistoryProvider()
 
         self.knowledge_base = None
         self.kb_min_score = 0.0
@@ -132,11 +130,6 @@ class Fuser:
         # Add knowledge base context to inputs if available
         if kb_context:
             inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
-
-        # Add conversation history to inputs if available
-        conv_history = self.conversation_history.format()
-        if conv_history:
-            inputs_fused += f"\n\n{conv_history}"
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,

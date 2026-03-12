@@ -1,144 +1,164 @@
 """
-Simple conversation history provider.
+Conversation history provider.
 
-Records user voice input and robot spoken responses,
-keeps the last N rounds, and formats them for the Fuser
-to inject into the LLM prompt.
+Polls IOProvider for new voice inputs in a background thread and
+emits them via registered callbacks. Follows the same pattern as
+FacePresenceProvider.
 
+Place this file at: src/providers/conversation_history_provider.py
 """
 
-import json
 import logging
-from dataclasses import dataclass
-from typing import List, Optional
+import threading
+import time
+from typing import Callable, List, Optional
 
+from .io_provider import IOProvider
 from .singleton import singleton
-
-
-@dataclass
-class ConversationRound:
-    """A single round of user input and robot response."""
-
-    user_input: str
-    robot_response: str
 
 
 @singleton
 class ConversationHistoryProvider:
     """
-    Singleton that tracks conversation rounds between user and robot.
+    Singleton provider that polls IOProvider for voice inputs at a fixed cadence
+    and emits text lines via registered callbacks.
 
     Parameters
     ----------
     max_rounds : int
-        Maximum number of conversation rounds to keep (default: 3).
-    agent_name : str
-        The robot's name for formatting (default: "Bits").
+        Maximum number of voice inputs to keep (default: 3).
+    poll_interval : float
+        Polling interval in seconds (default: 0.2).
     """
 
-    def __init__(self, max_rounds: int = 3, agent_name: str = "Bits"):
+    def __init__(
+        self,
+        *,
+        max_rounds: int = 3,
+        poll_interval: float = 0.2,
+    ) -> None:
         self.max_rounds = max_rounds
-        self.agent_name = agent_name
-        self.rounds: List[ConversationRound] = []
+        self.poll_interval = poll_interval
+        self.io_provider = IOProvider()
+
+        self._last_recorded_tick: int = -1
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self._callbacks: List[Callable[[str], None]] = []
+        self._cb_lock = threading.Lock()
+
         logging.info(
-            f"ConversationHistoryProvider initialized: max_rounds={max_rounds}, agent={agent_name}"
+            f"ConversationHistoryProvider initialized: max_rounds={max_rounds}"
         )
 
-    def add_user_input(self, user_input: str) -> None:
+    def register_message_callback(self, fn: Callable[[str], None]) -> None:
         """
-        Record what the user said. Creates a new round with an empty robot response.
+        Subscribe a consumer to receive each emitted voice input line.
 
         Parameters
         ----------
-        user_input : str
-            The voice input from the user.
+        fn : Callable[[str], None]
+            Function invoked from the polling thread with one voice input string.
         """
-        text = user_input.strip()
-        if not text:
-            return
-        self.rounds.append(ConversationRound(user_input=text, robot_response=""))
-        logging.debug(f"ConversationHistory: recorded user input: {text[:80]}")
+        with self._cb_lock:
+            if fn not in self._callbacks:
+                self._callbacks.append(fn)
+                logging.info("Registered message callback")
 
-    def add_robot_response(self, action_value: str) -> None:
+    def unregister_message_callback(self, fn: Callable[[str], None]) -> None:
         """
-        Record what the robot said. Updates the most recent round.
-        Handles both plain text and JSON format like: {"response": "Hello!", "confidence": 0.9, ...}.
-
+        Remove a previously registered consumer.
 
         Parameters
         ----------
-        action_value : str
-            The raw action value from the LLM output.
+        fn : Callable[[str], None]
+            The same callable passed to register_message_callback().
         """
-        response = self._extract_response(action_value)
-        if not response:
+        with self._cb_lock:
+            try:
+                self._callbacks.remove(fn)
+            except ValueError:
+                pass
+
+    def start(self) -> None:
+        """Start the background polling thread."""
+        if self._thread and self._thread.is_alive():
             return
-
-        if self.rounds and not self.rounds[-1].robot_response:
-            self.rounds[-1].robot_response = response
-        else:
-            # Edge case: response without a preceding user input
-            self.rounds.append(
-                ConversationRound(user_input="", robot_response=response)
-            )
-
-        # Truncate to max_rounds
-        if len(self.rounds) > self.max_rounds:
-            self.rounds = self.rounds[-self.max_rounds :]
-
-        logging.debug(
-            f"ConversationHistory: {len(self.rounds)}/{self.max_rounds} rounds"
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._loop, name="conv-history-poll", daemon=True
         )
+        self._thread.start()
 
-    def format(self) -> str:
+    def stop(self, *, wait: bool = False) -> None:
         """
-        Format conversation history as a string for LLM prompt injection.
-
-        Returns
-        -------
-        str
-            Formatted conversation history, or empty string if no history.
-        """
-        if not self.rounds:
-            return ""
-
-        lines = []
-        for r in self.rounds:
-            if r.user_input:
-                lines.append(f"User: {r.user_input}")
-            if r.robot_response:
-                lines.append(f"{self.agent_name}: {r.robot_response}")
-
-        if not lines:
-            return ""
-
-        return "CONVERSATION HISTORY:\n" + "\n".join(lines)
-
-    def clear(self) -> None:
-        """Clear all conversation history (e.g., on mode transition)."""
-        self.rounds.clear()
-        logging.debug("ConversationHistory: cleared")
-
-    def _extract_response(self, action_value: str) -> Optional[str]:
-        """
-        Extract spoken text from action value.
+        Request the background thread to stop.
 
         Parameters
         ----------
-        action_value : str
-            Raw action value, either plain text or JSON with "response" field.
+        wait : bool
+            If True, waits for the thread to finish. Defaults to False.
+        """
+        self._stop.set()
+        if wait and self._thread:
+            self._thread.join(timeout=3.0)
+
+    def _loop(self) -> None:
+        """
+        Internal polling loop.
+
+        Checks IOProvider for new voice inputs and emits them via callbacks.
+        """
+        while not self._stop.is_set():
+            try:
+                text = self._fetch_voice_input()
+                if text:
+                    self._emit(text)
+            except Exception as e:
+                logging.warning(f"ConversationHistory poll error: {e}")
+            time.sleep(self.poll_interval)
+
+    def _emit(self, text: str) -> None:
+        """
+        Deliver one voice input line to all subscribers.
+
+        Parameters
+        ----------
+        text : str
+            The user's voice input text.
+        """
+        with self._cb_lock:
+            callbacks = list(self._callbacks)
+        for cb in callbacks:
+            try:
+                cb(text)
+            except Exception as e:
+                logging.warning(f"ConversationHistory callback failed: {e}")
+
+    def _fetch_voice_input(self) -> Optional[str]:
+        """
+        Check IOProvider for a new voice input this tick.
 
         Returns
         -------
         Optional[str]
-            The extracted spoken text, or None.
+            The voice input text if new, None otherwise.
         """
-        if not action_value:
+        current_tick = self.io_provider.tick_counter
+        if current_tick <= self._last_recorded_tick:
             return None
-        try:
-            parsed = json.loads(action_value)
-            if isinstance(parsed, dict) and "response" in parsed:
-                return parsed["response"].strip()
-        except (ValueError, TypeError):
-            pass
-        return action_value.strip() or None
+
+        voice_input = self.io_provider.get_input("Voice")
+        if voice_input and voice_input.input and voice_input.tick == current_tick:
+            text = voice_input.input.strip()
+            if text:
+                self._last_recorded_tick = current_tick
+                logging.debug(f"ConversationHistory: captured voice '{text[:50]}'")
+                return text
+
+        return None
+
+    def clear(self) -> None:
+        """Reset tick tracking (e.g., on mode transition)."""
+        self._last_recorded_tick = -1
+        logging.debug("ConversationHistory: cleared")
