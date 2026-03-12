@@ -610,6 +610,10 @@ class ModeCortexRuntime:
             logging.debug("No output from LLM")
             return
 
+        if self._is_reloading or cortex_generation != self._cortex_loop_generation:
+            logging.debug("Skipping action execution due to mode transition")
+            return
+
         # Record conversation for history
         from providers.conversation_history_provider import ConversationHistoryProvider
 
