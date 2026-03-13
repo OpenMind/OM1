@@ -129,6 +129,98 @@ class QwenLLM(LLM[R]):
 
         self._skip_state_management = False
 
+    def _get_request_overrides(self) -> dict[str, T.Any]:
+        """Return additional request params from config (temperature, max_tokens, etc.)."""
+        overrides: dict[str, T.Any] = {}
+
+        # LLMConfig supports both explicit `extra_params` and Pydantic "extra" fields.
+        try:
+            if isinstance(getattr(self._config, "extra_params", None), dict):
+                overrides.update(self._config.extra_params)
+        except Exception:
+            pass
+
+        try:
+            pydantic_extra = getattr(self._config, "__pydantic_extra__", None)
+            if isinstance(pydantic_extra, dict):
+                overrides.update(pydantic_extra)
+        except Exception:
+            pass
+
+        # Only forward a small, known-safe subset of OpenAI request parameters.
+        # Runtime config injects meta keys like `mode`, `URID`, etc. which MUST NOT
+        # be forwarded to the OpenAI client.
+        allowlist = {
+            "temperature",
+            "top_p",
+            "max_tokens",
+            "presence_penalty",
+            "frequency_penalty",
+            "stop",
+            "seed",
+            "n",
+            "stream",
+            "response_format",
+            "parallel_tool_calls",
+            # We set tool_choice internally when tools are present; allow opt-in only
+            # when no tools are configured.
+            "tool_choice",
+            "extra_body",
+        }
+
+        sanitized: dict[str, T.Any] = {
+            key: value
+            for key, value in overrides.items()
+            if key in allowlist and value is not None
+        }
+
+        # Merge nested extra_body dicts instead of overwriting.
+        if isinstance(sanitized.get("extra_body"), dict):
+            sanitized_extra_body = sanitized.pop("extra_body")
+            merged = dict(self._extra_body)
+            merged.update(sanitized_extra_body)
+            sanitized["extra_body"] = merged
+
+        # Don't allow config to relax tool enforcement when tools are configured.
+        if self.function_schemas and "tool_choice" in sanitized:
+            sanitized.pop("tool_choice", None)
+
+        return sanitized
+
+    def _fallback_actions_from_text(self, text: str) -> list:
+        """Best-effort fallback when backend fails to emit tool_calls.
+
+        Only applies when exactly one tool is available (e.g. greeting mode with `speak`).
+        """
+        if not self.function_schemas or len(self.function_schemas) != 1:
+            return []
+        tool_name = (
+            self.function_schemas[0].get("function", {}).get("name")
+            if isinstance(self.function_schemas[0], dict)
+            else None
+        )
+        if not tool_name:
+            return []
+
+        cleaned = (text or "").strip()
+        if not cleaned:
+            return []
+
+        # Some backends may include tool-call tags in content; strip them.
+        cleaned = _QWEN_TOOL_CALL_RE.sub("", cleaned).strip()
+        if not cleaned:
+            return []
+
+        function_call_data = [
+            {
+                "function": {
+                    "name": tool_name,
+                    "arguments": json.dumps({"action": cleaned}, ensure_ascii=False),
+                }
+            }
+        ]
+        return convert_function_calls_to_actions(function_call_data)
+
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
     async def ask(
@@ -171,6 +263,8 @@ class QwenLLM(LLM[R]):
                 "timeout": self._config.timeout,
                 "extra_body": self._extra_body,
             }
+
+            request_params.update(self._get_request_overrides())
 
             if self.function_schemas:
                 request_params["tools"] = self.function_schemas
@@ -215,8 +309,31 @@ class QwenLLM(LLM[R]):
                     for tc in tool_calls
                 ]
                 actions = convert_function_calls_to_actions(function_call_data)
-                result = CortexOutputModel(actions=actions)
-                return T.cast(R, result)
+                if actions:
+                    result = CortexOutputModel(actions=actions)
+                    return T.cast(R, result)
+
+                # If tool calls exist but arguments were malformed, fall back to text.
+                if isinstance(message.content, str):
+                    fallback_actions = self._fallback_actions_from_text(message.content)
+                    if fallback_actions:
+                        logging.warning(
+                            "Qwen backend returned tool_calls but no valid actions; falling back to single-tool text execution"
+                        )
+                        result = CortexOutputModel(actions=fallback_actions)
+                        return T.cast(R, result)
+
+                return None
+
+            # No tool calls: some OpenAI-compatible servers ignore tool_choice='required'.
+            if isinstance(message.content, str):
+                fallback_actions = self._fallback_actions_from_text(message.content)
+                if fallback_actions:
+                    logging.warning(
+                        "Qwen backend returned no tool_calls; falling back to single-tool text execution"
+                    )
+                    result = CortexOutputModel(actions=fallback_actions)
+                    return T.cast(R, result)
 
             return None
         except Exception as e:

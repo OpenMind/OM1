@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
   om1:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     image: openmindagi/om1:latest
     container_name: om1
     restart: unless-stopped
@@ -22,6 +21,10 @@ services:
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - PULSE_COOKIE=/root/.config/pulse/cookie
       - ALSA_CARD=0
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
     volumes:
       - ./config:/app/OM1/config
       - ./cyclonedds:/cyclonedds
