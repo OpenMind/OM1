@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Callable, Optional, Union
 
 from om1_speech import AudioOutputLiveStream
@@ -166,13 +167,47 @@ class KokoroTTSProvider:
         dict
             A dictionary containing the TTS request parameters.
         """
-        logging.info(f"audio_stream: {text}")
+        sanitized_text = self._sanitize_text(text)
+        logging.info(f"audio_stream: {sanitized_text}")
         return {
-            "text": text,
+            "text": sanitized_text,
             "voice_id": self._voice_id,
             "model_id": self._model_id,
             "output_format": self._output_format,
         }
+
+    def _sanitize_text(self, text: str) -> str:
+        """
+        Remove emoji characters, emoji shortcodes like :smile:, and common ASCII emoticons
+        to avoid the TTS engine speaking icon descriptions.
+        """
+        if not text:
+            return text
+
+        # Remove emoji shortcodes like :smile:
+        text = re.sub(r":[a-z0-9_+-]+:", "", text, flags=re.IGNORECASE)
+
+        # Remove common ASCII emoticons like :) :-D ;)
+        text = re.sub(r"[:;=8][\-^]?[)DPp\(\]\\]", "", text)
+
+        # Remove unicode emoji ranges
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "]+",
+            flags=re.UNICODE,
+        )
+        text = emoji_pattern.sub("", text)
+
+        # Collapse multiple spaces and trim
+        text = re.sub(r"\s+", " ", text).strip()
+
+        return text
 
     def add_pending_message(self, message: Union[str, dict]):
         """
