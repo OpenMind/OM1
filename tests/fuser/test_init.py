@@ -109,6 +109,7 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
         assert io_provider.fuser_system_prompt == system_prompt
         assert io_provider.fuser_inputs == "test input"
 
+
 @pytest.mark.asyncio
 async def test_fuser_initialization_with_knowledge_base():
     """Test that Fuser properly initializes with knowledge_base config."""

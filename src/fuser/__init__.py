@@ -141,7 +141,6 @@ class Fuser:
         if self.config.system_prompt_examples:
             system_prompt += "\n\nEXAMPLES:\n" + self.config.system_prompt_examples
 
-
         actions_fused = ""
 
         for action in self.config.agent_actions:

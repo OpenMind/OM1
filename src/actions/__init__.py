@@ -5,6 +5,7 @@ from typing import Optional
 
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 
+
 def describe_action(
     action_name: str, llm_label: str, exclude_from_prompt: bool
 ) -> Optional[str]:
