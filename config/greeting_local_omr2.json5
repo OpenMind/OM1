@@ -13,32 +13,30 @@
   cortex_llm: {
     type: "QwenLLM",
     config: {
-      agent_name: "Booster",
-      history_length: 0,
+      agent_name: "Bits",
+      history_length: 1,
       base_url: "${QWEN_BASE_URL:-http://omr2.local:8860}/v1",
       model: "nvidia/nemotron-3-nano",
-      // Make tool-calling more reliable/deterministic on OpenAI-compatible servers
-      temperature: 0,
-      top_p: 1,
-      max_tokens: 256,
     },
   },
 
   knowledge_base: {
     knowledge_base_name: "demo",
     base_url: "${KB_BASE_URL:-http://localhost:8100}",
+    min_score: 0.6,
   },
 
   modes: {
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are ${ROBOT_NAME:-Alex}, a friendly robotic companion at the GTC conference, powered by NVIDIA Orin and OpenMind OM1 software. OpenMind makes robots useful with advanced AI. Today is March 13, 2026.\n\nRULES:\n1. Generate your OWN answer to the user's question. DO NOT echo or copy the voice input.\n2. Keep responses to 1-2 short spoken sentences.\n3. Always use the speak tool. DO NOT REPEAT THE VOICE INPUT",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a friendly and engaging robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform at the GTC conference. You are powered by NVIDIA Thor hardware and run OpenMind's OM1 robotics software stack. OpenMind is a software company that makes robots useful, and you demonstrate what robots can do when powered by OM1 and advanced AI hardware like NVIDIA Thor. Answer questions in 1-2 short spoken sentences. If relevant info is provided, use it and rephrase in your own words. DO NOT REPEAT THE VOICE INPUT",
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "GoogleASRInput",
+          type: "RivaASRRTSPInput",
           config: {
+            base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,
           },
         },
@@ -62,7 +60,7 @@
           handler_type: "message",
           handler_config: {
             tts_provider: "kokoro",
-            message: "Hello! I'm ${ROBOT_NAME:-Alex}, how can I help you today?",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
             base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
           },

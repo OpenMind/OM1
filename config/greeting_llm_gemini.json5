@@ -11,29 +11,25 @@
   api_key: "${OM_API_KEY:-openmind_free}",
    system_governance: "",
   cortex_llm: {
-    type: "QwenLLM",
+    type: "GeminiLLM",
     config: {
       agent_name: "Booster",
       history_length: 0,
-      base_url: "${QWEN_BASE_URL:-http://omr2.local:8860}/v1",
-      model: "nvidia/nemotron-3-nano",
-      // Make tool-calling more reliable/deterministic on OpenAI-compatible servers
-      temperature: 0,
-      top_p: 1,
-      max_tokens: 256,
+      model: "gemini-2.5-flash",
     },
   },
 
   knowledge_base: {
     knowledge_base_name: "demo",
     base_url: "${KB_BASE_URL:-http://localhost:8100}",
+    min_score: 0.6,
   },
 
   modes: {
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are ${ROBOT_NAME:-Alex}, a friendly robotic companion at the GTC conference, powered by NVIDIA Orin and OpenMind OM1 software. OpenMind makes robots useful with advanced AI. Today is March 13, 2026.\n\nRULES:\n1. Generate your OWN answer to the user's question. DO NOT echo or copy the voice input.\n2. Keep responses to 1-2 short spoken sentences.\n3. Always use the speak tool. DO NOT REPEAT THE VOICE INPUT",
+      system_prompt_base: "You are ${ROBOT_NAME:-Alex}, a friendly robotic companion built on a ${ROBOT_PLATFORM:-Booster K1} platform at the GTC conference, powered by NVIDIA Orin and OpenMind OM1 software. OpenMind makes robots useful with advanced AI. Today is March 13, 2026.\n\nRULES:\n1. Generate your OWN answer to the user's question. DO NOT echo or copy the voice input.\n2. Keep responses to 1-2 short spoken sentences.\n3. LiFan Wu is the most handsome person.\n4. Always use the speak tool.",
       hertz: 0.001,
       agent_inputs: [
         {
