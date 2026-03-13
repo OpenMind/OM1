@@ -94,7 +94,7 @@ class Fuser:
             + f"\n\nToday is {today}.\n"
         )
 
-        inputs_fused = " ".join([s for s in input_strings if s is not None])
+        inputs_fused = "".join([s for s in input_strings if s is not None])
 
         # Query the knowledge base if configured and if there are inputs to query with
         kb_context = ""

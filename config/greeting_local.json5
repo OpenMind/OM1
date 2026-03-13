@@ -15,7 +15,7 @@
     type: "QwenLLM",
     config: {
       agent_name: "${ROBOT_NAME:-Bits}",
-      history_length: 1,
+      history_length: 0,
       base_url: "${QWEN_BASE_URL:-http://omr2.local:8860}/v1",
       model: "nvidia/nemotron-3-nano",
     },
@@ -54,6 +54,12 @@
           config: {
             base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,
+          },
+        },
+        {
+          type: "ConversationHistoryInput",
+          config: {
+            max_rounds: 3,
           },
         },
       ],
