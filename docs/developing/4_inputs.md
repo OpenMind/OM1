@@ -25,5 +25,6 @@ Here are a few examples for you to reuse and build on:
 - [VLM_COCO_Local](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/vlm_coco_local.py)
 - [VLM_Vila](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/vlm_vila.py)
 - [Arduino GPS](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/gps.py)
+- [PIR Motion Sensor (HC-SR501)](https://github.com/openmind/OM1/blob/main/src/inputs/plugins/pir_motion.py)
 
 Learn how to build a new input plugin [here](../developer_cookbook/input.md)
