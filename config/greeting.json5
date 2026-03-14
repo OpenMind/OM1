@@ -89,7 +89,7 @@
           handler_type: "function",
           handler_config: {
             module_name: "greeting_hook",
-            function: "geeting_end_hook",
+            function: "greeting_end_hook",
             tts_provider: "kokoro",
             model_id: "kokoro",
             base_url: "http://localhost:8880/v1",
