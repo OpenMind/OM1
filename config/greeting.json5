@@ -61,7 +61,7 @@
           llm_label: "greeting_conversation",
           connector: "greeting_conversation_elevenlabs",
           config: {
-            voice_id: "PoHUWWWMHFrA8z7Q88pu",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
       ],
@@ -73,7 +73,7 @@
           handler_config: {
             tts_provider: "elevenlabs",
             message: "Hello! I'm Bits, how can I help you today?",
-            voice_id: "PoHUWWWMHFrA8z7Q88pu",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
         {
@@ -82,7 +82,7 @@
           handler_config: {
             tts_provider: "elevenlabs",
             message: "Hello! I'm Bits, how can I help you today?",
-            voice_id: "PoHUWWWMHFrA8z7Q88pu",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
         {
@@ -92,7 +92,7 @@
             module_name: "greeting_hook",
             function: "geeting_end_hook",
             tts_provider: "elevenlabs",
-            voice_id: "PoHUWWWMHFrA8z7Q88pu",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
       ],

@@ -35,7 +35,7 @@ class GeminiConfig(LLMConfig):
         description="Base URL for the Gemini API endpoint",
     )
     model: T.Optional[T.Union[GeminiModel, str]] = Field(
-        default=GeminiModel.GEMINI_3_FLASH_PREVIEW,
+        default=GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW,
         description="Gemini model to use",
     )
 
