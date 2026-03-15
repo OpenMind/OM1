@@ -72,7 +72,7 @@
           handler_type: "message",
           handler_config: {
             tts_provider: "elevenlabs",
-            message: "Hello! I'm Bits, how can I help you today?",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
@@ -81,7 +81,7 @@
           handler_type: "message",
           handler_config: {
             tts_provider: "elevenlabs",
-            message: "Hello! I'm Bits, how can I help you today?",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
