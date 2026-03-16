@@ -847,11 +847,15 @@ class TestEpisodicMemoryInTick:
         runtime._mode_transition_event = Mock()
         runtime._mode_transition_event.set = Mock()
 
-        with patch("runtime.cortex.EpisodicMemoryProvider") as mock_cls:
-            mock_provider = Mock()
-            mock_provider.write_episode = AsyncMock()
-            mock_cls.return_value = mock_provider
-            await runtime._tick()
+        from providers.episodic_memory_provider import EpisodicMemoryProvider
+
+        mock_provider = Mock()
+        mock_provider.write_episode = AsyncMock()
+        EpisodicMemoryProvider._singleton_class._singleton_instance = mock_provider
+        try:
+            await runtime._tick(0)
+        finally:
+            EpisodicMemoryProvider.reset()
 
         mock_provider.write_episode.assert_called_once()
 
@@ -891,4 +895,4 @@ class TestEpisodicMemoryInTick:
             mock_provider = Mock()
             mock_provider.write_episode = AsyncMock(side_effect=Exception("API error"))
             mock_cls.return_value = mock_provider
-            await runtime._tick()
+            await runtime._tick(1)
