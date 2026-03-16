@@ -847,15 +847,18 @@ class TestEpisodicMemoryInTick:
         runtime._mode_transition_event = Mock()
         runtime._mode_transition_event.set = Mock()
 
+        from typing import Any
+
         from providers.episodic_memory_provider import EpisodicMemoryProvider
 
         mock_provider = Mock()
         mock_provider.write_episode = AsyncMock()
-        EpisodicMemoryProvider._singleton_class._singleton_instance = mock_provider
+        ep_any: Any = EpisodicMemoryProvider
+        ep_any._singleton_class._singleton_instance = mock_provider
         try:
             await runtime._tick(0)
         finally:
-            EpisodicMemoryProvider.reset()
+            ep_any.reset()
 
         mock_provider.write_episode.assert_called_once()
 
