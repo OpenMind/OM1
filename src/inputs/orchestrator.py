@@ -67,3 +67,13 @@ class InputOrchestrator:
         except Exception as e:
             logging.error(f"Input {input_name} listener failed: {e}", exc_info=True)
             raise
+
+    def stop(self):
+        """
+        Stop all input sources and clean up resources.
+        """
+        for input_source in self.inputs:
+            try:
+                input_source.stop()
+            except Exception:
+                logging.exception(f"Error stopping input {type(input_source).__name__}")
