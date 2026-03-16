@@ -4,6 +4,7 @@ import typing as T
 from collections.abc import Sequence
 from datetime import datetime
 
+from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
@@ -94,7 +95,7 @@ class Fuser:
             + f"\n\nToday is {today}.\n"
         )
 
-        inputs_fused = " ".join([s for s in input_strings if s is not None])
+        inputs_fused = "".join([s for s in input_strings if s is not None])
 
         # Query the knowledge base if configured and if there are inputs to query with
         kb_context = ""
@@ -140,12 +141,23 @@ class Fuser:
         if self.config.system_prompt_examples:
             system_prompt += "\n\nEXAMPLES:\n" + self.config.system_prompt_examples
 
+        actions_fused = ""
+
+        for action in self.config.agent_actions:
+            desc = describe_action(
+                action.name, action.llm_label, action.exclude_from_prompt
+            )
+            if desc:
+                actions_fused += desc + "\n\n"
+
+        question_prompt = "What will you do? Actions:"
+
         # this is the final prompt:
         # (1) a (typically) fixed overall system prompt with the agents, name, rules, and examples
         # (2) all the inputs (vision, sound, etc.)
         # (3) a (typically) fixed list of available actions
         # (4) a (typically) fixed system prompt requesting commands to be generated
-        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}"
+        fused_prompt = f"{system_prompt}\n\nAVAILABLE INPUTS:\n{inputs_fused}\nAVAILABLE ACTIONS:\n\n{actions_fused}\n\n{question_prompt}"
 
         logging.debug(f"FINAL PROMPT: {fused_prompt}")
 
