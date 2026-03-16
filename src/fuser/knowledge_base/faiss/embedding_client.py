@@ -17,23 +17,19 @@ class EmbeddingClient(BaseEmbeddingClient):
     exposes a compatible API.
     """
 
-    def __init__(
-        self, host: str = "localhost", port: int = 8100, timeout: float = 30.0
-    ):
+    def __init__(self, base_url: str = "http://localhost:8100", timeout: float = 30.0):
         """
         Initialize the embedding client.
 
         Parameters
         ----------
-        host : str
-            Embedding server host (default: "localhost").
-        port : int
-            Embedding server port (default: 8100).
+        base_url : str
+            Base URL of the embedding server (default: "http://localhost:8100").
         timeout : float
             Request timeout in seconds (default: 30.0).
         """
         super().__init__()
-        self.base_url = f"http://{host}:{port}"
+        self.base_url = base_url
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self._session: Optional[aiohttp.ClientSession] = None
 
