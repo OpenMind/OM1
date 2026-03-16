@@ -9,7 +9,7 @@ icon: brain
 
 OM1 allows AI agents to be configured and deployed in both the digital and physical worlds. You can create *one* AI persona and run it in the cloud but also on physical robot hardware such as Quadrupeds, TurtleBot 4, and Humanoids.
 
-With OM1, you can interact with OpenAI's `gpt-4o` (or Gemini, Claude, DeepSeek, or Ollama for local inference) and shake hands with it, mediated by physical robot hardware controlled by one or more LLMs. Agents/robots built on OM1 can ingest data from multiple sources (the web, X/Twitter, cameras, and LIDAR) and can then tweet, explore your house, and help your kids with their math homework.
+With OM1, you can interact with OpenAI's `gpt-5.2` (or Gemini, Claude, DeepSeek, or Ollama for local inference) and shake hands with it, mediated by physical robot hardware controlled by one or more LLMs. Agents/robots built on OM1 can ingest data from multiple sources (the web, X/Twitter, cameras, and LIDAR) and can then tweet, explore your house, and help your kids with their math homework.
 
 Since it's open source, *you* have control and can optimize the system for your home or workplace.
 

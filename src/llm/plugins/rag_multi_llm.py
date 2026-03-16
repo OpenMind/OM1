@@ -125,7 +125,6 @@
 #             request = {
 #                 "system_prompt": self.io_provider.fuser_system_prompt,
 #                 "inputs": self.io_provider.fuser_inputs,
-#                 "available_actions": self.io_provider.fuser_available_actions,
 #                 "model": self._config.model,
 #                 "response_format": self._output_model.model_json_schema(),
 #                 "structured_outputs": True,

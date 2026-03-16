@@ -75,6 +75,26 @@ class ASRProvider:
         if message_callback is not None:
             self.ws_client.register_message_callback(message_callback)
 
+    def unregister_message_callback(self, message_callback: Callable):
+        """
+        Unregister a previously registered callback for ASR results.
+
+        Since ws.Client stores a single callback (not a list), this clears it
+        only if the current callback matches the one being unregistered.
+
+        Parameters
+        ----------
+        message_callback : Callable
+            The callback function to unregister.
+        """
+        if self.ws_client.message_callback == message_callback:
+            self.ws_client.message_callback = None
+            logging.info("Unregistered message callback")
+        else:
+            logging.debug(
+                "Callback already replaced by newer instance, skipping unregister"
+            )
+
     def start(self):
         """
         Start the ASR provider.
