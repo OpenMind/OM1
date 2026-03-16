@@ -45,7 +45,7 @@ class TestKnowledgeBase:
             )
 
             assert kb.kb_dir == mock_kb_structure / "demo"
-            mock_embedding.assert_called_once_with(host="localhost", port=8100)
+            mock_embedding.assert_called_once_with(base_url="http://localhost:8100")
             mock_retriever.assert_called_once()
 
     def test_initialization_custom_params(self, mock_kb_structure):
@@ -66,12 +66,11 @@ class TestKnowledgeBase:
             kb = KnowledgeBase(
                 knowledge_base_name="demo",
                 knowledge_base_root=mock_kb_structure,
-                embedding_host="192.168.1.1",
-                embedding_port=9000,
+                base_url="http://192.168.1.1:9000",
             )
 
             assert kb.kb_dir == mock_kb_structure / "demo"
-            mock_embedding.assert_called_once_with(host="192.168.1.1", port=9000)
+            mock_embedding.assert_called_once_with(base_url="http://192.168.1.1:9000")
 
     def test_initialization_kb_not_found(self, tmp_path):
         """Test that FileNotFoundError is raised when knowledge base doesn't exist."""

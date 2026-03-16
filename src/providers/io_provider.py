@@ -46,7 +46,6 @@ class IOProvider:
 
         self._fuser_system_prompt: Optional[str] = None
         self._fuser_inputs: Optional[str] = None
-        self._fuser_available_actions: Optional[str] = None
         self._fuser_start_time: Optional[float] = None
         self._fuser_end_time: Optional[float] = None
 
@@ -226,39 +225,6 @@ class IOProvider:
         """
         with self._lock:
             self._fuser_inputs = value
-
-    @property
-    def fuser_available_actions(self) -> Optional[str]:
-        """
-        Get the fuser available actions.
-        """
-        with self._lock:
-            return self._fuser_available_actions
-
-    @fuser_available_actions.setter
-    def fuser_available_actions(self, value: Optional[str]) -> None:
-        """
-        Set the fuser available actions.
-
-        Parameters
-        ----------
-        value : Optional[str]
-            The fuser available actions value to set.
-        """
-        with self._lock:
-            self._fuser_available_actions = value
-
-    def set_fuser_available_actions(self, value: Optional[str]) -> None:
-        """
-        Alternative method to set fuser available actions.
-
-        Parameters
-        ----------
-        value : Optional[str]
-            The fuser available actions value to set.
-        """
-        with self._lock:
-            self._fuser_available_actions = value
 
     @property
     def fuser_start_time(self) -> Optional[float]:
