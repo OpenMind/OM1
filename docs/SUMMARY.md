@@ -32,7 +32,7 @@
     * [Tesla Dimo](robotics/tesla_dimo.md)
     * [TurtleBot4](robotics/turtlebot4_zenoh.md)
     * [UBTech Yanshee](robotics/ubtech_yanshee.md)
-* [Examples](examples/conversation.md)
+* [Examples](examples/examples.md)
     * [Conversation](examples/conversation.md)
     * [Smart Toy](examples/smart_toy.md)
 
@@ -40,6 +40,7 @@
 
 * [Gazebo](simulators/gazebo.md)
 * [Isaac Sim](simulators/isaac-sim.md)
+* [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
