@@ -142,7 +142,6 @@ The system employs four primary agents that work together:
     request = {
         "system_prompt": self.io_provider.fuser_system_prompt,
         "inputs": self.io_provider.fuser_inputs,
-        "available_actions": self.io_provider.fuser_available_actions,
         "model": self._config.model,
         "response_format": self._output_model.model_json_schema(),
         "structured_outputs": True,
@@ -204,7 +203,7 @@ DEEPSEEK_SUPPORTED_MODELS = ["deepseek-chat"]
 ```
 
 ```python
-GEMINI_SUPPORTED_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3-pro", "gemini-3-flash"]
+GEMINI_SUPPORTED_MODELS = ["gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
 ```
 
 ```python

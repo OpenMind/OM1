@@ -10,10 +10,10 @@ If you don't have the BrainPack, you can skip this section.
 
 ### Screen Animation Service
 
-To enable the screen animation service, install unclutter first to hide the mouse cursor:
+To enable the screen animation service, install unclutter and `wmctrl`:
 
 ```bash
-sudo apt install unclutter
+sudo apt install unclutter wmctrl
 ```
 
 Then, add the script to `/usr/local/bin/start-kiosk.sh` and make it executable:
@@ -32,8 +32,8 @@ while ! nc -z $HOST $PORT; do
   sleep 0.1
 done
 
-# Launch with autoplay permissions
-exec chromium \
+# Launch Chromium in background
+chromium \
   --kiosk http://$HOST:$PORT \
   --start-fullscreen \
   --disable-infobars \
@@ -43,7 +43,24 @@ exec chromium \
   --no-first-run \
   --disable-session-crashed-bubble \
   --disable-translate \
-  --window-position=0,0
+  --window-position=0,0 &
+
+CHROMIUM_PID=$!
+
+# Wait for Chromium window to appear
+sleep 3
+
+# Force fullscreen using wmctrl (more reliable than --kiosk flag)
+for i in {1..10}; do
+  if wmctrl -r "Chromium" -b add,fullscreen 2>/dev/null; then
+    echo "Fullscreen applied successfully"
+    break
+  fi
+  sleep 1
+done
+
+# Keep script running to maintain the service
+wait $CHROMIUM_PID
 ```
 
 Make it executable:
