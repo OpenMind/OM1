@@ -136,15 +136,15 @@ async def geeting_end_hook(context: Dict[str, Any]):
         if greeting_state_provider.turn_count >= greeting_state_provider.max_turn_count:
             logging.info("Greeting conversation ended due to maximum turn count.")
             provider.add_pending_message(
-                "I have enjoyed our conversation, but I need to help others. Thank you for chatting with me!"
+                "Thank you for chatting with me today. I hope you enjoy the rest of NVIDIA GTC!"
             )
         elif greeting_state_provider.turn_count > 0:
             provider.add_pending_message(
-                "It was nice talking to you! If you have any more questions, feel free to come back and chat with me again!"
+                "It was nice talking with you! If you have any more questions, come chat with me again!"
             )
         else:
             provider.add_pending_message(
-                "No worries! If you have any questions or want to chat later, just come back and say hi!"
+                "It was great meeting you! If you want to chat later, just come back and say hi!"
             )
 
         return True
