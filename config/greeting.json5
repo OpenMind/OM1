@@ -60,6 +60,9 @@
           name: "greeting_conversation",
           llm_label: "greeting_conversation",
           connector: "greeting_conversation_elevenlabs",
+          config: {
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+          },
         },
       ],
       backgrounds: [],
@@ -68,20 +71,18 @@
           hook_type: "on_startup",
           handler_type: "message",
           handler_config: {
-            tts_provider: "kokoro",
-            message: "Hello! I'm Bits, how can I help you today?",
-            model_id: "kokoro",
-            base_url: "http://localhost:8880/v1",
+            tts_provider: "elevenlabs",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
         {
           hook_type: "on_entry",
           handler_type: "message",
           handler_config: {
-            tts_provider: "kokoro",
-            message: "Hello! I'm Bits, how can I help you today?",
-            model_id: "kokoro",
-            base_url: "http://localhost:8880/v1",
+            tts_provider: "elevenlabs",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
         {
@@ -90,9 +91,8 @@
           handler_config: {
             module_name: "greeting_hook",
             function: "geeting_end_hook",
-            tts_provider: "kokoro",
-            model_id: "kokoro",
-            base_url: "http://localhost:8880/v1",
+            tts_provider: "elevenlabs",
+            voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
           },
         },
       ],
