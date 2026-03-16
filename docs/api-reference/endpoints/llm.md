@@ -53,8 +53,10 @@ deepseek-chat
 ### Google Gemini Models
 
 ```
-gemini-3-pro
-gemini-3-flash
+gemini-3.1-pro-preview
+gemini-3.1-flash-lite-preview
+gemini-3-pro-preview
+gemini-3-flash-preview
 gemini-2.5-flash
 gemini-2.5-flash-lite
 gemini-2.5-pro
@@ -487,7 +489,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 
 | Model Tier | Examples | Use Case |
 |------------|----------|----------|
-| High Performance | gpt-5, claude-opus-4.1, gemini-3-pro | Complex reasoning, production applications |
+| High Performance | gpt-5, claude-opus-4.1, gemini-3.1-pro-preview | Complex reasoning, production applications |
 | Balanced | gpt-4o, claude-sonnet-4.5, grok-4 | General-purpose, most tasks |
 | Fast/Economical | gpt-4o-mini, gemini-2.5-flash-lite, deepseek-chat | High-volume, simple tasks |
 
