@@ -128,6 +128,9 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
             self.session = None
             self.asr_publisher = None
 
+        # Guard flag: when True, this instance ignores incoming ASR messages.
+        self._stopped = False
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages.
@@ -137,11 +140,14 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
         raw_message : str
             Raw message received from ASR service
         """
+        if self._stopped:
+            return
+
         try:
             json_message: Dict = json.loads(raw_message)
             if "asr_reply" in json_message:
                 asr_reply = json_message["asr_reply"]
-                if len(asr_reply.split()) > 1:
+                if len(asr_reply.split()) > 2:
                     self.message_buffer.put_nowait(asr_reply)
                     logging.info("Detected ASR message: %s", asr_reply)
         except json.JSONDecodeError:
@@ -216,10 +222,7 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
             return None
 
         result = f"""
-INPUT: {self.descriptor_for_LLM}
-// START
-{self.messages[-1]}
-// END
+{self.descriptor_for_LLM}: "{self.messages[-1]}"
 """
         # Add to IO provider and conversation provider
         self.io_provider.add_input(
@@ -248,8 +251,31 @@ INPUT: {self.descriptor_for_LLM}
         """
         Stop the ASR input.
         """
+        logging.info("Stopping RivaASRInput, disabling callback")
+
+        self._stopped = True
+
+        while not self.message_buffer.empty():
+            try:
+                self.message_buffer.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+        self.messages = []
+
         if self.asr:
-            self.asr.stop()
+            try:
+                self.asr.unregister_message_callback(self._handle_asr_message)
+                logging.info("Unregistered ASR callback")
+            except Exception as e:
+                logging.warning(f"Failed to unregister ASR callback: {e}")
+
+        if self.asr_publisher:
+            try:
+                self.asr_publisher.undeclare()
+                logging.info("Zenoh ASR publisher undeclared")
+            except Exception as e:
+                logging.warning(f"Failed to undeclare Zenoh ASR publisher: {e}")
 
         if self.session:
             self.session.close()
