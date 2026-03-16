@@ -78,8 +78,10 @@ async def test_fuser_timestamps(mock_time):
         assert io_provider.fuser_end_time == 1000
 
 
+@patch("fuser.describe_action")
 @pytest.mark.asyncio
-async def test_fuser_with_inputs_and_actions():
+async def test_fuser_with_inputs_and_actions(mock_describe):
+    mock_describe.return_value = "action description"
     config = create_mock_config(
         agent_actions=[MockAction("action1"), MockAction("action2")]
     )
@@ -101,8 +103,9 @@ async def test_fuser_with_inputs_and_actions():
             + config.system_prompt_examples
         )
 
-        expected = f"{system_prompt}\n\nAVAILABLE INPUTS:\ntest input"
+        expected = f"{system_prompt}\n\nAVAILABLE INPUTS:\ntest input\nAVAILABLE ACTIONS:\n\naction description\n\naction description\n\n\n\nWhat will you do? Actions:"
         assert result == expected
+        assert mock_describe.call_count == 2
         assert io_provider.fuser_system_prompt == system_prompt
         assert io_provider.fuser_inputs == "test input"
 
