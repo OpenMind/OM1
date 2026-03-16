@@ -679,7 +679,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
             input_obj.set_cortex_runtime(cortex)  # type: ignore
 
     # Run a single tick of the cortex loop
-    await cortex._tick()
+    await cortex._tick(cortex._cortex_loop_generation)
 
     # Clean up inputs after test completion
     await cleanup_mock_inputs(cortex.current_config.agent_inputs)
@@ -1733,7 +1733,7 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
     transition_handler_task = _setup_mode_transition_mocks(cortex)
 
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
-    await cortex._tick()
+    await cortex._tick(cortex._cortex_loop_generation)
 
     # If a transition was scheduled, wait for the handler to process it
     if cortex._mode_transition_event.is_set():
@@ -1837,7 +1837,7 @@ async def run_time_based_transition_test(config: Dict[str, Any]) -> Dict[str, An
 
     # Initialize inputs and run tick - process_tick() will detect timeout
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
-    await cortex._tick()
+    await cortex._tick(cortex._cortex_loop_generation)
 
     if cortex._mode_transition_event.is_set():
         await asyncio.sleep(0.5)
@@ -1892,7 +1892,7 @@ async def test_cooldown_prevents_transition():
 
     # First transition: calm -> alert (should succeed)
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
-    await cortex._tick()
+    await cortex._tick(cortex._cortex_loop_generation)
 
     if cortex._mode_transition_event.is_set():
         await asyncio.sleep(0.5)
@@ -1921,7 +1921,7 @@ async def test_cooldown_prevents_transition():
     cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
 
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
-    await cortex._tick()
+    await cortex._tick(cortex._cortex_loop_generation)
 
     if cortex._mode_transition_event.is_set():
         await asyncio.sleep(0.5)

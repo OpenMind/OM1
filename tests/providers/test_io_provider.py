@@ -13,7 +13,6 @@ def io_provider():
     provider._inputs.clear()
     provider._fuser_system_prompt = None
     provider._fuser_inputs = None
-    provider._fuser_available_actions = None
     provider._fuser_start_time = None
     provider._fuser_end_time = None
     provider._llm_prompt = None
@@ -148,18 +147,6 @@ def test_set_fuser_inputs_method(io_provider):
     inputs = "fuser inputs"
     io_provider.set_fuser_inputs(inputs)
     assert io_provider.fuser_inputs == inputs
-
-
-def test_fuser_available_actions_property(io_provider):
-    actions = "available actions"
-    io_provider.fuser_available_actions = actions
-    assert io_provider.fuser_available_actions == actions
-
-
-def test_set_fuser_available_actions_method(io_provider):
-    actions = "available actions"
-    io_provider.set_fuser_available_actions(actions)
-    assert io_provider.fuser_available_actions == actions
 
 
 def test_set_fuser_start_time_method(io_provider):
