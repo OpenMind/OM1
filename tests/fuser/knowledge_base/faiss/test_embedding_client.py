@@ -63,7 +63,7 @@ class MockEmbeddingServer(AioHTTPTestCase):
         """Test embedding a single query."""
         host = self.server.host
         port = self.server.port
-        client = EmbeddingClient(host=host, port=port)  # type: ignore
+        client = EmbeddingClient(base_url=f"http://{host}:{port}")  # type: ignore
 
         async with client:
             embedding = await client.embed("test query")
@@ -76,7 +76,7 @@ class MockEmbeddingServer(AioHTTPTestCase):
         """Test embedding multiple queries in batch."""
         host = self.server.host
         port = self.server.port
-        client = EmbeddingClient(host=host, port=port)  # type: ignore
+        client = EmbeddingClient(base_url=f"http://{host}:{port}")  # type: ignore
 
         queries = ["query 1", "query 2", "query 3"]
 
@@ -91,7 +91,7 @@ class MockEmbeddingServer(AioHTTPTestCase):
         """Test embedding without using context manager."""
         host = self.server.host
         port = self.server.port
-        client = EmbeddingClient(host=host, port=port)  # type: ignore
+        client = EmbeddingClient(base_url=f"http://{host}:{port}")  # type: ignore
 
         embedding = await client.embed("test query")
 
@@ -102,7 +102,7 @@ class MockEmbeddingServer(AioHTTPTestCase):
         """Test embedding empty batch."""
         host = self.server.host
         port = self.server.port
-        client = EmbeddingClient(host=host, port=port)  # type: ignore
+        client = EmbeddingClient(base_url=f"http://{host}:{port}")  # type: ignore
 
         async with client:
             embeddings = await client.embed_batch([])
@@ -125,7 +125,7 @@ class TestEmbeddingClientUnit:
 
     def test_initialization_custom_params(self):
         """Test EmbeddingClient initialization with custom parameters."""
-        client = EmbeddingClient(host="192.168.1.1", port=9000, timeout=60.0)
+        client = EmbeddingClient(base_url="http://192.168.1.1:9000", timeout=60.0)
 
         assert client.base_url == "http://192.168.1.1:9000"
         assert client.timeout.total == 60.0
@@ -144,7 +144,9 @@ class TestEmbeddingClientUnit:
     @pytest.mark.asyncio
     async def test_embed_with_server_error(self):
         """Test that embed raises exception on server error."""
-        client = EmbeddingClient(host="localhost", port=9999)  # Non-existent server
+        client = EmbeddingClient(
+            base_url="http://localhost:9999"
+        )  # Non-existent server
 
         with pytest.raises(aiohttp.ClientError):
             await client.embed("test query")
@@ -152,7 +154,9 @@ class TestEmbeddingClientUnit:
     @pytest.mark.asyncio
     async def test_embed_batch_with_server_error(self):
         """Test that embed_batch raises exception on server error."""
-        client = EmbeddingClient(host="localhost", port=9999)  # Non-existent server
+        client = EmbeddingClient(
+            base_url="http://localhost:9999"
+        )  # Non-existent server
 
         with pytest.raises(aiohttp.ClientError):
             await client.embed_batch(["query 1", "query 2"])

@@ -126,3 +126,13 @@ class Sensor(T.Generic[ConfigType, R]):
         """
         async for event in self._listen_loop():  # type: ignore
             yield event
+
+    def stop(self):
+        """
+        Stop the input listener and clean up resources.
+
+        This method should be implemented by subclasses to handle any necessary
+        cleanup when the input is no longer needed, such as closing connections
+        or stopping background tasks.
+        """
+        pass
