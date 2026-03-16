@@ -1,9 +1,12 @@
 import json
 import logging
+import re
 import time
 from abc import abstractmethod
 from typing import Any, Generic, TypeVar
 from uuid import uuid4
+
+import zenoh
 
 from actions.base import ActionConfig, ActionConnector
 from actions.greeting_conversation.interface import GreetingConversationInput
@@ -12,7 +15,72 @@ from providers.greeting_conversation_state_provider import (
     ConversationState,
     GreetingConversationStateMachineProvider,
 )
-from zenoh_msgs import PersonGreetingStatus, String, open_zenoh_session, prepare_header
+from zenoh_msgs import (
+    AudioStatus,
+    PersonGreetingStatus,
+    String,
+    open_zenoh_session,
+    prepare_header,
+)
+
+_TTS_CORRECTIONS = [
+    # Month abbreviations
+    (re.compile(r"\bJan\b"), "January"),
+    (re.compile(r"\bFeb\b"), "February"),
+    (re.compile(r"\bMar\b"), "March"),
+    (re.compile(r"\bApr\b"), "April"),
+    (re.compile(r"\bJun\b"), "June"),
+    (re.compile(r"\bJul\b"), "July"),
+    (re.compile(r"\bAug\b"), "August"),
+    (re.compile(r"\bSep(?:t)?\b"), "September"),
+    (re.compile(r"\bOct\b"), "October"),
+    (re.compile(r"\bNov\b"), "November"),
+    (re.compile(r"\bDec\b"), "December"),
+    # Address abbreviations
+    (re.compile(r"\bSt\b\.?"), "Street"),
+    (re.compile(r"\bAve\b\.?"), "Avenue"),
+    (re.compile(r"\bBlvd\b\.?"), "Boulevard"),
+    (re.compile(r"\bDr\b\.?"), "Drive"),
+    (re.compile(r"\bRd\b\.?"), "Road"),
+    (re.compile(r"\bLn\b\.?"), "Lane"),
+    (re.compile(r"\bCt\b\.?"), "Court"),
+    (re.compile(r"\bPl\b\.?"), "Place"),
+    (re.compile(r"\bPkwy\b\.?"), "Parkway"),
+    (re.compile(r"\bHwy\b\.?"), "Highway"),
+    # Directional abbreviations
+    (re.compile(r"\bN\b\.?(?=\s+[A-Z])"), "North"),
+    (re.compile(r"\bS\b\.?(?=\s+[A-Z])"), "South"),
+    (re.compile(r"\bE\b\.?(?=\s+[A-Z])"), "East"),
+    (re.compile(r"\bW\b\.?(?=\s+[A-Z])"), "West"),
+]
+
+# Time patterns: "11:00 a.m." -> "11 a.m.", "3:30 p.m." -> "3 30 p.m."
+_TIME_ON_HOUR = re.compile(r"\b(\d{1,2}):00\b")
+_TIME_WITH_MINUTES = re.compile(r"\b(\d{1,2}):(\d{2})\b")
+
+
+def normalize_tts_text(text: str) -> str:
+    """
+    Expand abbreviations and reformat times for cleaner TTS output.
+
+    Parameters
+    ----------
+    text : str
+        The original text to be spoken by TTS.
+
+    Returns
+    -------
+    str
+        The normalized text with expanded abbreviations and reformatted times.
+    """
+    text = _TIME_ON_HOUR.sub(r"\1", text)
+    text = _TIME_WITH_MINUTES.sub(r"\1 \2", text)
+
+    for pattern, replacement in _TTS_CORRECTIONS:
+        text = pattern.sub(replacement, text)
+
+    return text
+
 
 ConfigT = TypeVar("ConfigT", bound=ActionConfig)
 
@@ -48,19 +116,59 @@ class BaseGreetingConversationConnector(
         self.tts = self.create_tts_provider()
         self.tts.start()
 
-        self.tts_triggered_time = time.time()
-        self.tts_duration = 0.0
+        self.tts_request_id: str | None = None
+        self.tts_playing = False
+        self.tts_playing_start_time: float = 0.0
+        self.tts_timeout: float = 30.0
+
         self.conversation_finished_sent = False
+        self.pending_finished_update = False
 
         self.person_greeting_topic = "om/person_greeting"
+        self.audio_topic = "robot/status/audio"
+
         try:
             self.session = open_zenoh_session()
-            logging.info("Zenoh session opened for PersonGreetingStatus publishing")
+            self.audio_pub = self.session.declare_publisher(self.audio_topic)
+            self.session.declare_subscriber(self.audio_topic, self._on_audio_status)
+            logging.info(
+                "Zenoh session opened for AudioStatus and PersonGreetingStatus"
+            )
         except Exception as e:
             logging.error(f"Error opening Zenoh session: {e}")
+            self.audio_pub = None
             self.session = None
 
         self.greeting_status = ConversationState.CONVERSING.value
+
+    def _on_audio_status(self, data: zenoh.Sample) -> None:
+        """
+        Callback for Zenoh audio status messages.
+
+        Matches the frame_id (UUID) to determine when TTS
+        message finishes playing.
+
+        Parameters
+        ----------
+        data : zenoh.Sample
+            The Zenoh sample containing audio status data.
+        """
+        audio_status = AudioStatus.deserialize(data.payload.to_bytes())
+        if (
+            audio_status.header.frame_id == self.tts_request_id
+            and audio_status.status_speaker == AudioStatus.STATUS_SPEAKER.READY.value
+        ):
+            self.tts_playing = False
+            logging.info(f"TTS playback completed for UUID: {self.tts_request_id}")
+
+            if self.pending_finished_update:
+                logging.info(
+                    "TTS completed. Updating context: greeting_conversation_finished = True"
+                )
+                self.context_provider.update_context(
+                    {"greeting_conversation_finished": True}
+                )
+                self.pending_finished_update = False
 
     @abstractmethod
     def create_tts_provider(self) -> Any:
@@ -98,14 +206,25 @@ class BaseGreetingConversationConnector(
             "speech_clarity": output_interface.speech_clarity,
         }
 
-        self.tts.add_pending_message(output_interface.response)
+        tts_text = normalize_tts_text(output_interface.response)
+        pending_message = self.tts.create_pending_message(tts_text)
+        request_id = str(uuid4())
 
-        # Estimate TTS duration based on text length (~100 words per minute speech rate)
-        word_count = len(output_interface.response.split())
-        self.tts_duration = (
-            word_count / 100.0
-        ) * 60.0 + 5  # Convert to seconds and add buffer time
-        self.tts_triggered_time = time.time()
+        state = AudioStatus(
+            header=prepare_header(request_id),
+            status_mic=AudioStatus.STATUS_MIC.UNKNOWN.value,
+            status_speaker=AudioStatus.STATUS_SPEAKER.ACTIVE.value,
+            sentence_to_speak=String(json.dumps(pending_message)),
+        )
+
+        if self.audio_pub:
+            self.tts_request_id = request_id
+            self.tts_playing = True
+            self.tts_playing_start_time = time.time()
+            self.audio_pub.put(state.serialize())
+        else:
+            self.tts_request_id = None
+            self.tts_playing = False
 
         state_update = self.greeting_state_provider.process_conversation(llm_output)
         current_state = state_update.get("current_state", self.greeting_status)
@@ -118,11 +237,18 @@ class BaseGreetingConversationConnector(
             self.greeting_status == ConversationState.FINISHED.value
             and not self.conversation_finished_sent
         ):
-            logging.info("Greeting conversation has finished.")
-            self.context_provider.update_context(
-                {"greeting_conversation_finished": True}
-            )
             self.conversation_finished_sent = True
+            if self.tts_playing:
+                logging.info(
+                    "Greeting conversation has finished. "
+                    "Waiting for TTS to complete before updating context."
+                )
+                self.pending_finished_update = True
+            else:
+                logging.info("Greeting conversation has finished.")
+                self.context_provider.update_context(
+                    {"greeting_conversation_finished": True}
+                )
 
     def tick(self) -> None:
         """
@@ -134,12 +260,16 @@ class BaseGreetingConversationConnector(
 
         self.sleep(10)
 
-        if time.time() - self.tts_triggered_time < self.tts_duration:
-            logging.info(
-                f"Skipping tick update due to recent TTS activity "
-                f"(remaining: {self.tts_duration - (time.time() - self.tts_triggered_time):.1f}s)."
-            )
-            return
+        if self.tts_playing:
+            tts_playing_time = time.time() - self.tts_playing_start_time
+            if tts_playing_time > self.tts_timeout:
+                logging.warning(
+                    f"TTS playback timed out after {tts_playing_time:.1f}s. "
+                )
+                self.tts_playing = False
+            else:
+                logging.info("Skipping tick update due to active TTS playback.")
+                return
 
         state_update = self.greeting_state_provider.update_state_without_llm()
         current_state = state_update.get("current_state", self.greeting_status)
@@ -151,10 +281,10 @@ class BaseGreetingConversationConnector(
             and not self.conversation_finished_sent
         ):
             logging.info("Greeting conversation has finished (detected in tick).")
+            self.conversation_finished_sent = True
             self.context_provider.update_context(
                 {"greeting_conversation_finished": True}
             )
-            self.conversation_finished_sent = True
 
         logging.info(
             f"State: {current_state}, "
@@ -205,4 +335,10 @@ class BaseGreetingConversationConnector(
         logging.info("Stopping Greeting Conversation action...")
 
         if self.session:
-            self.session.close()
+            session = self.session
+            self.session = None
+            try:
+                session.close()
+                logging.info("Greeting Zenoh session closed")
+            except Exception as e:
+                logging.warning(f"Error closing greeting Zenoh session: {e}")
