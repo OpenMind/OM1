@@ -24,6 +24,7 @@ class GeminiModel(str, Enum):
     GEMINI_3_PRO_PREVIEW = "gemini-3-pro-preview"
     GEMINI_3_FLASH_PREVIEW = "gemini-3-flash-preview"
     GEMINI_3_1_PRO_PREVIEW = "gemini-3.1-pro-preview"
+    GEMINI_3_1_FLASH_LITE_PREVIEW = "gemini-3.1-flash-lite-preview"
 
 
 class GeminiConfig(LLMConfig):
@@ -34,7 +35,7 @@ class GeminiConfig(LLMConfig):
         description="Base URL for the Gemini API endpoint",
     )
     model: T.Optional[T.Union[GeminiModel, str]] = Field(
-        default=GeminiModel.GEMINI_2_5_FLASH,
+        default=GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW,
         description="Gemini model to use",
     )
 
@@ -100,8 +101,8 @@ class GeminiLLM(LLM[R]):
         if messages is None:
             messages = []
         try:
-            logging.debug(f"Gemini LLM input: {prompt}")
-            logging.debug(f"Gemini LLM messages: {messages}")
+            logging.info(f"Gemini LLM input: {prompt}")
+            logging.info(f"Gemini LLM messages: {messages}")
 
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
