@@ -144,6 +144,9 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
             self.session = None
             self.asr_publisher = None
 
+        # Guard flag: when True, this instance ignores incoming ASR messages.
+        self._stopped = False
+
     def _handle_asr_message(self, raw_message: str):
         """
         Process incoming ASR messages from the ASR provider.
@@ -172,6 +175,9 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         Optional[str]
             Message from the buffer if available, None otherwise
         """
+        if self._stopped:
+            return
+
         try:
             message = self.message_buffer.get_nowait()
             return message
@@ -231,10 +237,7 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
             return None
 
         result = f"""
-INPUT: {self.descriptor_for_LLM}
-// START
-{self.messages[-1]}
-// END
+{self.descriptor_for_LLM}: "{self.messages[-1]}"
 """
         # Add to IO provider and conversation provider
         self.io_provider.add_input(
@@ -263,8 +266,31 @@ INPUT: {self.descriptor_for_LLM}
         """
         Stop the ASR input handler and clean up resources.
         """
+        logging.info("Stopping RivaASRInput, disabling callback")
+
+        self._stopped = True
+
+        while not self.message_buffer.empty():
+            try:
+                self.message_buffer.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+        self.messages = []
+
         if self.asr:
-            self.asr.stop()
+            try:
+                self.asr.unregister_message_callback(self._handle_asr_message)
+                logging.info("Unregistered ASR callback")
+            except Exception as e:
+                logging.warning(f"Failed to unregister ASR callback: {e}")
+
+        if self.asr_publisher:
+            try:
+                self.asr_publisher.undeclare()
+                logging.info("Zenoh ASR publisher undeclared")
+            except Exception as e:
+                logging.warning(f"Failed to undeclare Zenoh ASR publisher: {e}")
 
         if self.session:
             self.session.close()
