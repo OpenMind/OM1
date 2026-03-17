@@ -1,0 +1,51 @@
+{
+  version: "v1.0.3",
+  hertz: 0.5,
+  name: "smoke_patrol",
+  api_key: "${OM_API_KEY:-openmind_free}",
+  system_prompt_base: "You are an autonomous safety patrol robot. Your name is SafeBot. You monitor the environment using a smoke and gas detector to detect fire hazards and dangerous gas leaks. When smoke or gas is detected at warning level, alert and inspect immediately. When critical levels are detected, trigger evacuation. Patrol continuously and report air quality status.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.\nThe First Law is considered the most important, taking precedence over the second and third laws.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If smoke detector detects warning level:\n    Speak: {{'sentence': 'Warning: elevated smoke detected. Inspecting area immediately.'}}\n\n2. If smoke detector detects critical level:\n    Speak: {{'sentence': 'ALERT: Critical smoke level detected. Initiating evacuation protocol.'}}\n\n3. If air quality is normal:\n    Move: 'forward'\n    Speak: {{'sentence': 'Air quality normal. Continuing patrol.'}}",
+  agent_inputs: [
+    {
+      // Smoke and gas detector for fire and hazard detection
+      // connector options: "mock", "serial", "i2c_ens160", "i2c_sgp30"
+      type: "SmokeGasDetector",
+      config: {
+        connector: "mock",
+        cooldown: 5.0,
+        smoke_warning_threshold: 300,
+        smoke_danger_threshold: 600,
+        gas_warning_threshold: 300,
+        gas_danger_threshold: 600,
+        mock_scenario: "normal",
+      },
+    },
+    {
+      type: "GoogleASRInput",
+      config: {
+        enable_tts_interrupt: false,
+      },
+    },
+  ],
+  simulators: [
+    {
+      type: "WebSim",
+    },
+  ],
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "SafeBot",
+      history_length: 10,
+    },
+  },
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      implementation: "passthrough",
+      connector: "elevenlabs_tts",
+    },
+  ],
+}
