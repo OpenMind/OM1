@@ -46,6 +46,10 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
         Base URL for the ASR service.
     language : str
         Language for speech recognition.
+    alternative_languages : Optional[List[str]]
+        List of alternative languages for multilingual speech recognition.
+    enable_tts_interrupt : bool
+        Enable TTS interrupt (does not mute mic during TTS playback).
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
@@ -59,6 +63,10 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
     )
     language: str = Field(
         default="english", description="Language for speech recognition"
+    )
+    alternative_languages: Optional[List[str]] = Field(
+        default=None,
+        description="List of alternative languages for multilingual speech recognition",
     )
     enable_tts_interrupt: bool = Field(
         default=False,
@@ -112,6 +120,21 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
         logging.info(f"Using language code {language_code} for Google ASR")
 
+        alternative_languages = self.config.alternative_languages or []
+        alternative_language_codes = []
+        for alt_lang in alternative_languages:
+            alt_lang = alt_lang.strip().lower()
+            if alt_lang in LANGUAGE_CODE_MAP:
+                alt_code = LANGUAGE_CODE_MAP[alt_lang]
+                alternative_language_codes.append(alt_code)
+                logging.info(
+                    f"Adding alternative language code {alt_code} for language {alt_lang}"
+                )
+            else:
+                logging.warning(
+                    f"Alternative language {alt_lang} not supported. Skipping."
+                )
+
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
         self.asr: ASRRTSPProvider = ASRRTSPProvider(
@@ -119,6 +142,7 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
             rate=rate,
             ws_url=base_url,
             language_code=language_code,
+            alternative_language_codes=alternative_language_codes,
             enable_tts_interrupt=enable_tts_interrupt,
         )
         self.asr.start()

@@ -67,6 +67,10 @@ class GoogleASRSensorConfig(SensorConfig):
     language: str = Field(
         default="english", description="Language for speech recognition"
     )
+    alternative_languages: Optional[List[str]] = Field(
+        default=None,
+        description="List of alternative languages for multilingual speech recognition",
+    )
     remote_input: bool = Field(default=False, description="Whether to use remote input")
     enable_tts_interrupt: bool = Field(
         default=False,
@@ -125,6 +129,21 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         language_code = LANGUAGE_CODE_MAP.get(language, "en-US")
         logging.info(f"Using language code {language_code} for Google ASR")
 
+        alternative_languages = self.config.alternative_languages or []
+        alternative_language_codes = []
+        for alt_lang in alternative_languages:
+            alt_lang = alt_lang.strip().lower()
+            if alt_lang in LANGUAGE_CODE_MAP:
+                alt_code = LANGUAGE_CODE_MAP[alt_lang]
+                alternative_language_codes.append(alt_code)
+                logging.info(
+                    f"Adding alternative language code {alt_code} for language {alt_lang}"
+                )
+            else:
+                logging.warning(
+                    f"Alternative language {alt_lang} not supported. Skipping."
+                )
+
         remote_input = self.config.remote_input
         enable_tts_interrupt = self.config.enable_tts_interrupt
 
@@ -135,6 +154,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
             device_id=microphone_device_id,
             microphone_name=microphone_name,
             language_code=language_code,
+            alternative_language_codes=alternative_language_codes,
             remote_input=remote_input,
             enable_tts_interrupt=enable_tts_interrupt,
         )
