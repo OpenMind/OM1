@@ -1,21 +1,4 @@
-
 ## Docker image
-
-### Setup the API key
-
-For Bash: vim ~/.bashrc or ~/.bash_profile.
-
-For Zsh: vim ~/.zshrc.
-
-Add
-```bash
-export OM_API_KEY="your_api_key"
-```
-
-Update the docker-compose file. Replace "unitree_go2_autonomy_advance" with the agent you want to run.
-```bash
-command: ["unitree_go2_autonomy_advance"]
-```
 
 The OM1 service is provided as a Docker image for easy setup:
 ```bash

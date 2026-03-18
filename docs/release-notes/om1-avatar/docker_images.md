@@ -1,4 +1,3 @@
-
 ## Docker image
 
 The OM1-avatar service is provided as a Docker image for easy setup:

@@ -1,4 +1,3 @@
-
 ## Docker image
 
 The OM1-ros2-sdk is provided as a Docker image for easy setup.

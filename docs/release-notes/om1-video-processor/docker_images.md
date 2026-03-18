@@ -1,4 +1,3 @@
-
 ## Docker image
 
 The video-processor is provided as a Docker image for easy setup.

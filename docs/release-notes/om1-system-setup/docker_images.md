@@ -1,4 +1,3 @@
-
 ## Docker image
 
 The OM1-system-setup is provided as a Docker image for easy setup.
