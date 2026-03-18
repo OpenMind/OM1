@@ -65,6 +65,7 @@ def test_initialization_with_custom_config():
             device_id=1,
             microphone_name="test_mic",
             language_code="cmn-Hans-CN",
+            alternative_language_codes=[],
             remote_input=True,
             enable_tts_interrupt=True,
         )
