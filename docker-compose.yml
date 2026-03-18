@@ -15,16 +15,20 @@ services:
       - CMAKE_PREFIX_PATH=/app/cyclonedds/install
       - OM_API_KEY=${OM_API_KEY}
       - OM1_COMMAND=${OM1_COMMAND:-greeting_local_omr1}
+      # Docker containers typically cannot resolve mDNS names like `*.local`.
+      # Use the resolved IP for the machine hosting Kokoro/Qwen (override in .env if it changes).
+      # - KOKORO_BASE_URL=${KOKORO_BASE_URL:-http://192.168.0.178:8880}
+      # - QWEN_BASE_URL=${QWEN_BASE_URL:-http://192.168.0.178:8860}
       - VIRTUAL_ENV=/app/OM1/.venv
       - PATH=/app/OM1/.venv/bin:$PATH
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - PULSE_COOKIE=/root/.config/pulse/cookie
       - ALSA_CARD=0
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-      - 1.1.1.1
+      # dns:
+      #   - 8.8.8.8
+      #   - 8.8.4.4
+      #   - 1.1.1.1
     volumes:
       - ./config:/app/OM1/config
       - ./cyclonedds:/cyclonedds
@@ -32,9 +36,9 @@ services:
       - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw
       - ~/.config/pulse/cookie:/root/.config/pulse/cookie:ro
       - ${HOME}/shared_data/locations:/app/OM1/locations:rw
+      - /var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket
     devices:
       - /dev/snd:/dev/snd
-      
     logging:
       driver: "json-file"
       options:
@@ -47,4 +51,5 @@ services:
       - apparmor:unconfined
     group_add:
       - audio
-    command: ["${OM1_COMMAND:-greeting_local_omr1}"]
+    command: ["${OM1_COMMAND:-greeting_llm_gemini}"]
+    #command: ["${OM1_COMMAND:-greeting_local_omr1}"]
