@@ -2,11 +2,11 @@
 ## Docker image
 
 The video-processor is provided as a Docker image for easy setup.
-   ```bash
-   git clone https://github.com/OpenMind/OM1-video-processor.git
-   cd OM1-video-processor
-   docker-compose up -d
-   ```
+```bash
+git clone https://github.com/OpenMind/OM1-video-processor.git
+cd OM1-video-processor
+docker-compose up -d
+```
 
 The docker images are also available at Docker Hub.
 

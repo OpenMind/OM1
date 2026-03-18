@@ -4,7 +4,7 @@ description: "v1.0.1-beta.3"
 icon: rectangle-beta
 ---
 
-Beta release for the Docker image openmindagi/om1_ros2_sdk, which provides the full ROS2 system for running the Unitree Go2, G1 and Limx Tron SDK.
+Beta release for the Docker image openmindagi/om1_ros2_sdk, which provides the full ROS2 system for running the Unitree Go2, G1 and LimX Tron SDK.
 
 ## [v1.0.1-beta.3](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.1-beta.3)
 
