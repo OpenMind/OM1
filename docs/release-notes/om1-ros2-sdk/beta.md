@@ -10,7 +10,7 @@ Beta release for the Docker image openmindagi/om1_ros2_sdk, which provides the f
 
 - Added support for Isaac Sim with Unitree Go2 and Unitree G1
 - Upgraded RPLidar support to S2L. Please update the configuration if you are still using RPLidar A1
-- Improve the performance of OM Path
+- Improved the performance of OM Path
 - Added support for the LimX Tron robot
 
 ## [v1.0.1-beta.2](https://github.com/OpenMind/OM1-ros2-sdk/releases/tag/v1.0.1-beta.2)

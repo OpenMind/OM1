@@ -15,7 +15,7 @@ docker-compose up zenoh-bridge -d --no-build
 
 The docker images are also available at Docker Hub.
 
-- [v1.0.1](https://hub.docker.com/layers/openmindagi/om1+ros2_sdk/v1.0.1)
+- [v1.0.1](https://hub.docker.com/layers/openmindagi/om1_ros2_sdk/v1.0.1)
 - [v1.0.1-beta.3](https://hub.docker.com/layers/openmindagi/om1_ros2_sdk/v1.0.1-beta.3)
 - [v1.0.1-beta.2](https://hub.docker.com/layers/openmindagi/om1_ros2_sdk/v1.0.1-beta.2)
 - [v1.0.1-beta.1](https://hub.docker.com/layers/openmindagi/om1_ros2_sdk/v1.0.1-beta.1)

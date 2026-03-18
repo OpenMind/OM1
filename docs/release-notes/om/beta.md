@@ -7,9 +7,9 @@ icon: rectangle-beta
 ## [v1.0.1-beta.3](https://github.com/OpenMind/OM1/releases/tag/v1.0.1-beta.3)
 
 - The single mode has been migrated to multi-mode. The same Cortex runtime now supports both single and multiple modes.
-- Fix a bug where the previous LLM could persist when switching between modes.
-- Fix a bug in the callback handling for Riva and Google ASR.
-- Improve the TTS duration calculation for the greeting mode.
+- Fixed a bug where the previous LLM could persist when switching between modes.
+- Fixed a bug in the callback handling for Riva and Google ASR.
+- Improved the TTS duration calculation for the greeting mode.
 
 ## [v1.0.1-beta.2](https://github.com/OpenMind/OM1/releases/tag/v1.0.1-beta.2)
 
