@@ -24,6 +24,7 @@ class GeminiModel(str, Enum):
     GEMINI_3_PRO_PREVIEW = "gemini-3-pro-preview"
     GEMINI_3_FLASH_PREVIEW = "gemini-3-flash-preview"
     GEMINI_3_1_PRO_PREVIEW = "gemini-3.1-pro-preview"
+    GEMINI_3_1_FLASH_LITE_PREVIEW = "gemini-3.1-flash-lite-preview"
 
 
 class GeminiConfig(LLMConfig):
@@ -34,7 +35,7 @@ class GeminiConfig(LLMConfig):
         description="Base URL for the Gemini API endpoint",
     )
     model: T.Optional[T.Union[GeminiModel, str]] = Field(
-        default=GeminiModel.GEMINI_3_FLASH_PREVIEW,
+        default=GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW,
         description="Gemini model to use",
     )
 

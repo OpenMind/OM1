@@ -6,7 +6,7 @@
 <a href="https://x.com/openmind_agi">X</a>
 </p>
 
-**OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, websites, Quadrupeds, and educational robots such as TurtleBot 4. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
+**OpenMind's OM1 is a modular AI runtime that empowers developers to create and deploy multimodal AI agents across digital environments and physical robots**, including Humanoids, Phone Apps, Quadrupeds, educational robots such as TurtleBot 4, and simulators like Gazebo and Isaac Sim. OM1 agents can process diverse inputs like web data, social media, camera feeds, and LIDAR, while enabling physical actions including motion, autonomous navigation, and natural conversations. The goal of OM1 is to make it easy to create highly capable human-focused robots, that are easy to upgrade and (re)configure to accommodate different physical form factors.
 
 ## Capabilities of OM1
 
@@ -28,18 +28,9 @@ To get started with OM1, let's run the Spot agent. Spot uses your webcam to capt
 
 You will need the [`uv` package manager](https://docs.astral.sh/uv/getting-started/installation/).
 
-### Clone the Repo
-
-```bash
-git clone https://github.com/OpenMind/OM1.git
-cd OM1
-git submodule update --init
-uv venv
-```
-
 ### Install Dependencies
 
-For MacOS
+For macOS
 ```bash
 brew install portaudio ffmpeg
 ```
@@ -50,9 +41,46 @@ sudo apt-get update
 sudo apt-get install portaudio19-dev python3-dev ffmpeg
 ```
 
+### Clone the Repo
+
+```bash
+git clone https://github.com/OpenMind/OM1.git
+cd OM1
+git submodule update --init
+uv venv
+```
+
 ### Obtain an OpenMind API Key
 
-Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp .env.example .env` and add your key to the `.env`.
+Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/).
+1. Create your account on OpenMind Portal if you haven't yet.
+2. Go to the dashboard and create a new API key.
+3. Copy the generated API key.
+4. Edit `config/spot.json5` and replace the `openmind_free` placeholder with your API key. Or, configure it in the `.env` file using this command - `cp .env.example .env` and add your key to the `.env`.
+
+Alternatively, you can set your API key in the `.bashrc` file
+
+```bash
+vi ~/.bashrc # for Linux
+vi ~/.zshrc # for macOS
+```
+
+Add the following to the file
+
+```bash
+export OM_API_KEY="<your_api_key>"
+```
+
+```bash
+source ~/.bashrc # for linux
+source ~/.zshrc # for macOS
+```
+
+### OMCU
+
+OMCU is the computational unit for billing on OpenMind's platform. The free plan provides 50 OMCU renewed monthly.
+
+Upgrade your plan [here](https://portal.openmind.org/) for additional credits.
 
 ### Launching OM1
 
@@ -68,7 +96,7 @@ If you want to interact with the agent and see how it works, make sure ASR and T
 
 ## What's Next?
 
-* Try out some [examples](https://docs.openmind.org/examples)
+* Try out some [examples](https://docs.openmind.org/developer-cookbook/examples)
 * Add new `inputs` and `actions`.
 * Design custom agents and robots by creating your own `json5` config files with custom combinations of inputs and actions.
 * Change the system prompts in the configuration files (located in `/config/`) to create new behaviors.
@@ -104,8 +132,8 @@ OM1 _should_ run on other platforms (such as Windows) and microcontrollers such 
 ## Introduction to BrainPack
 
 From research to real-world autonomy, a platform that learns, moves, and builds with you.
-We'll shortly be releasing the **BOM** and details on **DIY** for the BrainPack.
-Stay tuned!
+
+The BrainPack is designed to be mounted directly onto a robot to bring together mapping, object recognition, remote control, and self charging, giving humanoids and quadrupeds what they need to navigate, remember, and act with purpose.
 
 ## Full Autonomy Guidance
 
@@ -116,6 +144,22 @@ We're excited to introduce **full autonomy** for Unitree Go2 and G1 with the Bra
 - **om1-avatar** – A modern React-based frontend application that provides the user interface and avatar display system for OM1 robotics software.
 - **om1-video-processor** - The OM1 Video Processor is a Docker-based solution that enables real-time video streaming, face recognition, and audio capture for OM1 robots.
 - **om1-system-setup** - To setup wifi, and, monitor and manage docker containers.
+
+## Simulator Support
+
+OM1 integrates with popular robotics simulators to enable rapid prototyping and testing without physical hardware. We currently support Gazebo with Unitree Go2 and Isaac Sim with Unitree Go2 and G1.
+
+### Gazebo
+
+Full support for Gazebo with ROS2 integration. Ideal for testing autonomous SLAM map generation and navigation stacks, sensor simulation, and multi-robot scenarios.
+
+See [Gazebo](docs/simulators/gazebo.md) to get started.
+
+### Isaac Sim
+
+NVIDIA Isaac Sim support for physics-accurate simulation with GPU acceleration.
+
+Requires NVIDIA GPU and CUDA support. See [Isaac Sim Setup](docs/simulators/isaac-sim.md) to get started.
 
 ## Detailed Documentation
 
