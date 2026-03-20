@@ -33,6 +33,14 @@ except ImportError:
         def __init__(self):
             pass
 
+    class dds_:
+        """
+        Placeholder for dds_ module when Unitree SDK is not installed.
+        """
+
+        BmsState_ = BmsState_
+        LowState_ = LowState_
+
 
 # Data structure documentation:
 #
