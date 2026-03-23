@@ -2,6 +2,7 @@ import logging
 import time
 import typing as T
 from collections.abc import Sequence
+from datetime import datetime
 
 from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
@@ -38,9 +39,17 @@ class Fuser:
         self.io_provider = IOProvider()
 
         self.knowledge_base = None
+        self.kb_min_score = 0.0
         if config.knowledge_base:
             try:
-                self.knowledge_base = KnowledgeBase(**config.knowledge_base)
+                kb_config = dict(config.knowledge_base)
+                self.kb_min_score = kb_config.get("min_score", 0.0)
+                if self.kb_min_score > 0:
+                    logging.info(
+                        f"KnowledgeBase min_score threshold: {self.kb_min_score}"
+                    )
+
+                self.knowledge_base = KnowledgeBase(**kb_config)
                 logging.info(
                     f"KnowledgeBase enabled with config: {config.knowledge_base}"
                 )
@@ -52,7 +61,7 @@ class Fuser:
 
     async def fuse(
         self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
-    ) -> str:
+    ) -> T.Optional[str]:
         """
         Combine all inputs into a single formatted prompt string.
 
@@ -68,8 +77,9 @@ class Fuser:
 
         Returns
         -------
-        str
-            Fused prompt string combining all inputs and context.
+        str or None
+            Fused prompt string combining all inputs and context,
+            or None if no inputs are available this tick.
         """
         # Record the timestamp of the input
         self.io_provider.fuser_start_time = time.time()
@@ -78,9 +88,14 @@ class Fuser:
         logging.debug(f"InputMessageArray: {input_strings}")
 
         # Combine all inputs, memories, and configurations into a single prompt
-        system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + "\n"
+        today = datetime.now().strftime("%B %-d, %Y")
+        system_prompt = (
+            "\nBASIC CONTEXT:\n"
+            + self.config.system_prompt_base
+            + f"\n\nToday is {today}.\n"
+        )
 
-        inputs_fused = " ".join([s for s in input_strings if s is not None])
+        inputs_fused = "".join([s for s in input_strings if s is not None])
 
         # Query the knowledge base if configured and if there are inputs to query with
         kb_context = ""
@@ -96,16 +111,19 @@ class Fuser:
                     query_text = voice_input.input.strip()
 
                 if query_text:
-                    logging.debug(
-                        f"Querying knowledge base with: {query_text[:100]}..."
+                    results = await self.knowledge_base.query(
+                        query_text, top_k=3, min_score=self.kb_min_score
                     )
-                    results = await self.knowledge_base.query(query_text, top_k=3)
                     if results:
                         kb_context = self.knowledge_base.format_context(
                             results, max_chars=1500
                         )
                         logging.info(
-                            f"Knowledge base retrieved {len(results)} documents"
+                            f"Knowledge base: {len(results)} docs passed to LLM"
+                        )
+                    else:
+                        logging.info(
+                            "Knowledge base: 0 docs passed threshold, skipping context"
                         )
             except Exception as e:
                 logging.error(f"Error querying knowledge base: {e}")
@@ -117,13 +135,12 @@ class Fuser:
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
         # since they are flowing from the outside world
-        if "Universal Laws" not in inputs_fused:
+        if self.config.system_governance and "Universal Laws" not in inputs_fused:
             system_prompt += "\nLAWS:\n" + self.config.system_governance
 
         if self.config.system_prompt_examples:
             system_prompt += "\n\nEXAMPLES:\n" + self.config.system_prompt_examples
 
-        # descriptions of possible actions
         actions_fused = ""
 
         for action in self.config.agent_actions:
@@ -153,9 +170,6 @@ class Fuser:
         # Record the global prompt, actions and inputs
         self.io_provider.set_fuser_system_prompt(f"{system_prompt}")
         self.io_provider.set_fuser_inputs(inputs_fused)
-        self.io_provider.set_fuser_available_actions(
-            f"AVAILABLE ACTIONS:\n{actions_fused}\n\n{question_prompt}"
-        )
 
         # Record the timestamp of the output
         self.io_provider.fuser_end_time = time.time()

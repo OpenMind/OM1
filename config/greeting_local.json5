@@ -14,8 +14,8 @@
   cortex_llm: {
     type: "QwenLLM",
     config: {
-      agent_name: "Bits",
-      history_length: 1,
+      agent_name: "${ROBOT_NAME:-Bits}",
+      history_length: 0,
       base_url: "${QWEN_BASE_URL:-http://omr2.local:8860}/v1",
       model: "nvidia/nemotron-3-nano",
     },
@@ -23,15 +23,15 @@
 
   knowledge_base: {
     knowledge_base_name: "demo",
-    embedding_host: "localhost",
-    embedding_port: 8100,
+    base_url: "${KB_BASE_URL:-http://localhost:8100}",
+    min_score: 0.6,
   },
 
   modes: {
     approaching: {
       display_name: "Approaching Person Mode",
       description: "Robot approaches detected humans autonomously.",
-      system_prompt_base: "You are Bits, a friendly and helpful robotic companion built on a Unitree Go2 platform.",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a friendly and helpful robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform.",
       hertz: 0.001,
       agent_inputs: [],
       action_execution_mode: "concurrent",
@@ -46,14 +46,20 @@
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are Bits, a friendly and engaging robotic companion built on a Unitree Go2 platform at the GTC conference. Your primary function is to help attendees with questions and friendly conversation. Remember: OpenMind is a software company that makes robots useful and you are running OpenMind's OM1 software. IMPORTANT: When a KNOWLEDGE BASE section is provided, treat it as your own knowledge and answer confidently. Never say 'I don't have that information' when knowledge base results are present. Speak naturally as if you already know the answer.",
+      system_prompt_base: "You are ${ROBOT_NAME:-Bits}, a friendly and engaging robotic companion built on a ${ROBOT_PLATFORM:-Unitree Go2} platform at the GTC conference. You are powered by NVIDIA Thor hardware and run OpenMind's OM1 robotics software stack. OpenMind is a software company that makes robots useful, and you demonstrate what robots can do when powered by OM1 and advanced AI hardware like NVIDIA Thor. Answer questions in 1-2 short spoken sentences. If relevant info is provided, use it and rephrase in your own words. DO NOT REPEAT THE VOICE INPUT",
       hertz: 0.001,
       agent_inputs: [
         {
-          type: "RivaASRInput",
+          type: "RivaASRRTSPInput",
           config: {
             base_url: "ws://localhost:6790",
             enable_tts_interrupt: false,
+          },
+        },
+        {
+          type: "ConversationHistoryInput",
+          config: {
+            max_rounds: 3,
           },
         },
       ],
@@ -76,7 +82,7 @@
           handler_type: "message",
           handler_config: {
             tts_provider: "kokoro",
-            message: "Hello! I'm Bits, how can I help you today?",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
             base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
           },
@@ -86,7 +92,7 @@
           handler_type: "message",
           handler_config: {
             tts_provider: "kokoro",
-            message: "Hello! I'm Bits, how can I help you today?",
+            message: "Hello! I'm ${ROBOT_NAME:-Bits}, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
             base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
           },

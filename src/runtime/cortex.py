@@ -110,6 +110,9 @@ class ModeCortexRuntime:
         # Flag to track if a reload is in progress
         self._is_reloading = False
 
+        # Unique ID for cortex loop generations to manage cancellations during transitions
+        self._cortex_loop_generation = 0
+
         # Event for handling mode transitions
         self._mode_transition_event = asyncio.Event()
         self._pending_mode_transition: Optional[str] = None
@@ -230,6 +233,8 @@ class ModeCortexRuntime:
         """
         logging.debug("Stopping current orchestrators...")
 
+        self._cortex_loop_generation += 1
+
         self.sleep_ticker_provider.skip_sleep = True
 
         if self.background_orchestrator:
@@ -247,6 +252,10 @@ class ModeCortexRuntime:
             logging.debug("Closing MCP connections")
             await self.mcp_orchestrator.stop()
             self.mcp_orchestrator = None
+            
+        if self.input_orchestrator:
+            logging.debug("Stopping input orchestrator")
+            self.input_orchestrator.stop()
 
         tasks_to_cancel = {}
 
@@ -280,7 +289,7 @@ class ModeCortexRuntime:
             try:
                 done, pending = await asyncio.wait(
                     tasks_to_cancel.values(),
-                    timeout=1.0,
+                    timeout=15.0,
                     return_when=asyncio.ALL_COMPLETED,
                 )
                 if pending:
@@ -500,10 +509,19 @@ class ModeCortexRuntime:
         Execute the main cortex processing loop with mode awareness.
         """
         current_mode = self.mode_manager.current_mode_name
-        logging.info(f"Starting cortex loop for mode: {current_mode}")
+        cortex_generation = self._cortex_loop_generation
+        logging.info(
+            f"Starting cortex loop for mode: {current_mode} (generation {cortex_generation})"
+        )
 
         try:
             while True:
+                if cortex_generation != self._cortex_loop_generation:
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated, stopping gracefully"
+                    )
+                    return
+
                 skip_status = self.sleep_ticker_provider.skip_sleep
                 sleep_duration = (
                     1 / self.current_config.hertz if self.current_config else 1
@@ -514,7 +532,7 @@ class ModeCortexRuntime:
                 # Helper to yield control to event loop
                 await asyncio.sleep(0)
 
-                await self._tick()
+                await self._tick(cortex_generation)
                 self.sleep_ticker_provider.skip_sleep = False
         except asyncio.CancelledError:
             logging.info(
@@ -527,9 +545,14 @@ class ModeCortexRuntime:
             )
             raise
 
-    async def _tick(self) -> None:
+    async def _tick(self, cortex_generation: int) -> None:
         """
         Execute a single tick of the mode-aware cortex processing cycle.
+
+        Parameters
+        ----------
+        cortex_generation : int
+            The generation number of the cortex loop calling this tick
         """
         if not self.current_config or not self.fuser or not self.action_orchestrator:
             logging.warning("Cortex not properly initialized, skipping tick")
@@ -537,6 +560,12 @@ class ModeCortexRuntime:
 
         if self._is_reloading:
             logging.debug("Skipping tick during config reload")
+            return
+
+        if cortex_generation != self._cortex_loop_generation:
+            logging.debug(
+                f"Cortex loop generation {cortex_generation} does not match current generation {self._cortex_loop_generation}, skipping tick"
+            )
             return
 
         tick_num = self.io_provider.increment_tick()
@@ -567,7 +596,22 @@ class ModeCortexRuntime:
             )
             return
 
-        output = await self.current_config.cortex_llm.ask(prompt)
+        if self._is_reloading or self._pending_mode_transition:
+            logging.debug("Skipping LLM call during mode transition")
+            return
+
+        try:
+            output = await self.current_config.cortex_llm.ask(prompt)
+        except asyncio.CancelledError:
+            logging.info("LLM call cancelled during mode transition")
+            raise
+
+        if cortex_generation != self._cortex_loop_generation:
+            logging.info(
+                f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
+            )
+            return
+
         if output is None:
             logging.debug("No output from LLM")
             return
@@ -579,12 +623,13 @@ class ModeCortexRuntime:
                 self.current_config.cortex_llm,
                 dispatch_om1=self.action_orchestrator.promise,
             )
+            
         if output is None:
             logging.debug("No output from LLM after MCP processing")
             return
 
-        if self._is_reloading:
-            logging.debug("Skipping tick during config reload")
+        if self._is_reloading or cortex_generation != self._cortex_loop_generation:
+            logging.debug("Skipping action execution due to mode transition")
             return
 
         if self.simulator_orchestrator:

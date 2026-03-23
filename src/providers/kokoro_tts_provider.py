@@ -195,6 +195,25 @@ class KokoroTTSProvider:
         logging.info(f"Adding pending TTS message: {message}")
         self._audio_stream.add_request(message)
 
+    def clear_pending_messages(self):
+        """
+        Clear all pending TTS messages from the queue.
+        """
+        if self.get_pending_message_count() > 0:
+            count = 0
+            while not self._audio_stream._pending_requests.empty():
+                try:
+                    self._audio_stream._pending_requests.get_nowait()
+                    count += 1
+                except Exception:
+                    break
+            if count > 0:
+                logging.info(f"Cleared {count} pending TTS messages")
+        else:
+            logging.debug(
+                "AudioOutputLiveStream has no _pending_requests queue to clear"
+            )
+
     def get_pending_message_count(self) -> int:
         """
         Get the count of pending messages in the TTS provider.
