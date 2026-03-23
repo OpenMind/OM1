@@ -242,8 +242,9 @@ class TestModeCortexRuntime:
         runtime._pending_mode_transition = None
         runtime._mode_transition_event = Mock()
         runtime._mode_transition_event.set = Mock()
+        runtime._cortex_loop_generation = 0
 
-        await runtime._tick()
+        await runtime._tick(0)
 
         runtime.mcp_orchestrator.process.assert_called_once_with(
             mock_output,
@@ -285,8 +286,9 @@ class TestModeCortexRuntime:
         runtime._pending_mode_transition = None
         runtime._mode_transition_event = Mock()
         runtime._mode_transition_event.set = Mock()
+        runtime._cortex_loop_generation = 0
 
-        await runtime._tick()
+        await runtime._tick(0)
 
         # Should still reach action_orchestrator.promise
         runtime.action_orchestrator.promise.assert_called_once()

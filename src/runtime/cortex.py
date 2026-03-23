@@ -252,7 +252,7 @@ class ModeCortexRuntime:
             logging.debug("Closing MCP connections")
             await self.mcp_orchestrator.stop()
             self.mcp_orchestrator = None
-            
+
         if self.input_orchestrator:
             logging.debug("Stopping input orchestrator")
             self.input_orchestrator.stop()
@@ -623,7 +623,7 @@ class ModeCortexRuntime:
                 self.current_config.cortex_llm,
                 dispatch_om1=self.action_orchestrator.promise,
             )
-            
+
         if output is None:
             logging.debug("No output from LLM after MCP processing")
             return
