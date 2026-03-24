@@ -115,9 +115,14 @@ class MCPOrchestrator:
                 if not self._mcp_client.is_mcp_tool(action.type)
             ]
 
-            # Start OM1 actions
+            # Dispatch OM1 actions and remove from output
             if om1_actions and dispatch_om1:
                 await dispatch_om1(om1_actions)
+                output.actions = [
+                    action
+                    for action in output.actions
+                    if self._mcp_client.is_mcp_tool(action.type)
+                ]
 
             logging.info(
                 f"MCP round {round_idx + 1}/{max_rounds}: "
