@@ -47,12 +47,7 @@ class MCPTool:
             f"{param_name}: {param_info.get('type', 'any')}"
             for param_name, param_info in params.items()
         )
-        return (
-            f"MCP TOOL: {self.key}({param_str})\n"
-            f"Description: {self.description}\n"
-            f"Use this tool when you need to get external information. "
-            f"Call it first, then use the result to respond.\n"
-        )
+        return f"- {self.key}({param_str}): {self.description}"
 
 
 class StdioTransport:
@@ -196,7 +191,15 @@ class MCPClientManager:
         """Get text descriptions of MCP tools for the LLM prompt."""
         if not self._tools:
             return ""
-        return "\n".join(tool.generate_description() for tool in self._tools.values())
+        header = (
+            "[MCP Tools]\n"
+            "Use these tools to get external information. "
+            "Call the tool first, then use the result to respond.\n"
+        )
+        tool_lines = "\n".join(
+            tool.generate_description() for tool in self._tools.values()
+        )
+        return f"{header}{tool_lines}"
 
     def is_mcp_tool(self, tool_name: str) -> bool:
         """Check if a tool name belongs to an MCP server."""
