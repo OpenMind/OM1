@@ -189,7 +189,7 @@ class EmergencyAlertElevenLabsTTSConnector(
         # Store robot message to conversation history only if there was ASR input
         if (
             self.io_provider.llm_prompt is not None
-            and "INPUT: Voice" in self.io_provider.llm_prompt
+            and "Voice:" in self.io_provider.llm_prompt
         ):
             self.conversation_provider.store_robot_message(output_interface.action)
 
