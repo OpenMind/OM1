@@ -174,13 +174,10 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
         return
 
     try:
-        from providers.unitree_go2_rplidar_provider import UnitreeGo2RPLidarProvider
+        from providers.rplidar_driver import RPDriver
     except ImportError:
-        logging.error("DataCollector: Lidar provider not found")
+        logging.error("DataCollector: RPDriver not found")
         return
-
-    lidar = UnitreeGo2RPLidarProvider(serial_port=serial_port)
-    lidar.start()
 
     os.makedirs("recordings", exist_ok=True)
     def _open_lidar():
@@ -189,12 +186,37 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
 
     lidar_file = _open_lidar()
     file_start_time = time.time()
-    last_scan = None
     last_data_log_time = time.time()
     has_warned_empty = False
 
+    lidar = None
+    for baud in [256000, 115200, 1000000]:
+        try:
+            logging.info(f"DataCollector: Attempting LiDAR connection on {serial_port} @ {baud}")
+            lidar = RPDriver(serial_port, baudrate=baud)
+            lidar.get_info()
+            break
+        except Exception:
+            if lidar:
+                try:
+                    lidar.disconnect()
+                except:
+                    pass
+            lidar = None
+
+    if not lidar:
+        logging.error(f"DataCollector: LiDAR failed to connect to {serial_port} at all tested baud rates.")
+        lidar_file.close()
+        return
+
     try:
-        while not stop_event.is_set():
+        lidar.reset()
+        time.sleep(0.5)
+
+        for scan in lidar.iter_scans_local(scan_type="express", max_buf_meas=0, min_len=5, max_distance_mm=10000):
+            if stop_event.is_set():
+                break
+
             if time.time() - file_start_time >= rollover_seconds:
                 lidar_file.flush()
                 os.fsync(lidar_file.fileno())
@@ -202,37 +224,48 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
                 lidar_file = _open_lidar()
                 file_start_time = time.time()
                 
-            if hasattr(lidar, "raw_scan") and getattr(lidar, "raw_scan", None) is not None:
-                scan = lidar.raw_scan
-                if scan is not last_scan and len(scan) > 0:
-                    last_scan = scan
-                    has_warned_empty = False
-                    try:
-                        pts = np.zeros((len(scan), 3), dtype=np.float32)
-                        pts[:, 0] = scan[:, 0]
-                        pts[:, 1] = scan[:, 1]
-                        compressed = DracoPy.encode(pts)
-                        lidar_file.write(struct.pack("<I", len(compressed)))
-                        lidar_file.write(compressed)
-                        lidar_file.flush()
-                        os.fsync(lidar_file.fileno())  # Force write to physical disk to prevent data loss on sudden power failure
-                    except Exception as e:
-                        logging.error(f"DataCollector Lidar encoding error: {e}")
-                
-            elif time.time() - last_data_log_time > 10.0:
+            has_warned_empty = False
+            last_data_log_time = time.time()
+
+            if len(scan) > 0:
+                try:
+                    scan_array = np.array(scan)
+                    # RPDriver returns (angle in degrees, distance in mm)
+                    angles_deg = scan_array[:, 0]
+                    distances_m = scan_array[:, 1] / 1000.0
+                    
+                    # Convert to cartesian coordinates
+                    angles_rad = angles_deg * (math.pi / 180.0)
+                    pts = np.zeros((len(scan), 3), dtype=np.float32)
+                    pts[:, 0] = distances_m * np.cos(angles_rad)
+                    pts[:, 1] = distances_m * np.sin(angles_rad)
+                    
+                    compressed = DracoPy.encode(pts)
+                    lidar_file.write(struct.pack("<I", len(compressed)))
+                    lidar_file.write(compressed)
+                    lidar_file.flush()
+                    os.fsync(lidar_file.fileno())  # Force write to physical disk
+                except Exception as e:
+                    logging.error(f"DataCollector Lidar encoding error: {e}")
+
+            # Also check heartbeat inside loop defensively
+            if time.time() - last_data_log_time > 10.0:
                 if not has_warned_empty:
-                    logging.warning(f"DataCollector: No LiDAR data received on '{serial_port}' for over 10s. Is the port mapped into Docker?")
+                    logging.warning(f"DataCollector: No LiDAR data received on '{serial_port}' for over 10s.")
                     has_warned_empty = True
                 last_data_log_time = time.time()
 
-            time.sleep(0.05)
+    except Exception as e:
+        logging.error(f"DataCollector LiDAR loop exception: {e}")
     finally:
         lidar_file.flush()
         lidar_file.close()
-        try:
-            lidar.stop()
-        except Exception:
-            pass
+        if lidar:
+            try:
+                lidar.stop()
+                lidar.disconnect()
+            except Exception:
+                pass
         logging.info("DataCollector: LiDAR recording stopped and saved gracefully.")
 
 
