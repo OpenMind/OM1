@@ -3,6 +3,7 @@ import logging
 import multiprocessing as mp
 import os
 import shutil
+
 from typing import Optional, Tuple
 
 import dotenv
@@ -73,6 +74,7 @@ def start(
     ),
     log_level: str = typer.Option("INFO", help="The logging level to use."),
     log_to_file: bool = typer.Option(False, help="Whether to log output to a file."),
+    collect_data: bool = typer.Option(False, envvar="OM1_COLLECT_DATA", help="Enable background data collection (Video, Audio, Lidar)."),
 ) -> None:
     """
     Start the OM1 agent with a specific configuration.
@@ -90,6 +92,8 @@ def start(
         The logging level to use (default is "INFO").
     log_to_file : bool, optional
         Whether to log output to a file (default is False).
+    collect_data : bool, optional
+        Enable background data collection in an isolated process (default is False).
     """
     config_name, config_path = setup_config_file(config_name)
     setup_logging(config_name, log_level, log_to_file)
@@ -110,6 +114,44 @@ def start(
             logging.info(
                 f"Hot-reload enabled (check interval: {check_interval} seconds)"
             )
+
+        if collect_data:
+            import atexit
+            import json5
+            from data_collector import run_data_collector_process
+
+            dc_config: dict = {}
+            if config_path and os.path.exists(config_path):
+                try:
+                    with open(config_path, "r") as f:
+                        raw = json5.load(f)
+                        dc_config = raw.get("data_collector", {})
+                except Exception as e:
+                    logging.warning(f"Could not parse data_collector config from json5: {e}")
+
+            v_rtsp = dc_config.get("video_rtsp", "rtsp://localhost:8554/top_camera")
+            a_rtsp = dc_config.get("audio_rtsp", "rtsp://localhost:8554/audio")
+            lidar_p = dc_config.get("lidar_port", "/dev/cu.usbserial-0001")
+            odom_c = dc_config.get("odom_channel") or mode_config.unitree_ethernet
+            rollover_c = dc_config.get("rollover_seconds", 120)
+
+            logging.info("Starting isolated data collector process...")
+            logging.info(f"Collector Config -> Video: {v_rtsp}, Audio: {a_rtsp}, LiDAR: {lidar_p}, Odom: {odom_c}, Rollover: {rollover_c}s")
+            
+            collector_p = mp.Process(
+                target=run_data_collector_process,
+                args=(v_rtsp, a_rtsp, lidar_p, odom_c, rollover_c),
+                daemon=False,  # False so it's not abruptly killed by OS
+            )
+            collector_p.start()
+
+            def cleanup_collector():
+                if collector_p.is_alive():
+                    logging.info("Sending graceful termination signal to data collector...")
+                    collector_p.terminate()  # Sends SIGTERM
+                    collector_p.join(timeout=6.0)
+
+            atexit.register(cleanup_collector)
 
         asyncio.run(runtime.run())
 

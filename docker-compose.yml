@@ -16,6 +16,7 @@ services:
       - CMAKE_PREFIX_PATH=/app/cyclonedds/install
       - OM_API_KEY=${OM_API_KEY}
       - OM1_COMMAND=${OM1_COMMAND:-unitree_go2_modes}
+      - OM1_COLLECT_DATA=${OM1_COLLECT_DATA:-false}
       - OM1_SKIP_INTERNET_CHECK=${OM1_SKIP_INTERNET_CHECK:-false}
       - VIRTUAL_ENV=/app/OM1/.venv
       - PATH=/app/OM1/.venv/bin:$PATH
@@ -30,6 +31,7 @@ services:
       - ${XDG_RUNTIME_DIR}/pulse:${XDG_RUNTIME_DIR}/pulse:rw
       - ~/.config/pulse/cookie:/root/.config/pulse/cookie:ro
       - ${HOME}/shared_data/locations:/app/OM1/locations:rw
+      - ./recordings:/app/OM1/recordings:rw
     devices:
       - /dev/snd:/dev/snd
       - /dev/video0:/dev/video0
