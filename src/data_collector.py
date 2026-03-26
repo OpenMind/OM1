@@ -190,6 +190,8 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
     lidar_file = _open_lidar()
     file_start_time = time.time()
     last_scan = None
+    last_data_log_time = time.time()
+    has_warned_empty = False
 
     try:
         while not stop_event.is_set():
@@ -204,6 +206,7 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
                 scan = lidar.raw_scan
                 if scan is not last_scan and len(scan) > 0:
                     last_scan = scan
+                    has_warned_empty = False
                     try:
                         pts = np.zeros((len(scan), 3), dtype=np.float32)
                         pts[:, 0] = scan[:, 0]
@@ -215,6 +218,13 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
                         os.fsync(lidar_file.fileno())  # Force write to physical disk to prevent data loss on sudden power failure
                     except Exception as e:
                         logging.error(f"DataCollector Lidar encoding error: {e}")
+                
+            elif time.time() - last_data_log_time > 10.0:
+                if not has_warned_empty:
+                    logging.warning(f"DataCollector: No LiDAR data received on '{serial_port}' for over 10s. Is the port mapped into Docker?")
+                    has_warned_empty = True
+                last_data_log_time = time.time()
+
             time.sleep(0.05)
     finally:
         lidar_file.flush()

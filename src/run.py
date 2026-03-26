@@ -130,7 +130,7 @@ def start(
 
             v_rtsp = dc_config.get("video_rtsp", "rtsp://localhost:8554/top_camera")
             a_rtsp = dc_config.get("audio_rtsp", "rtsp://localhost:8554/audio")
-            lidar_p = dc_config.get("lidar_port", "/dev/cu.usbserial-0001")
+            lidar_p = dc_config.get("lidar_port", "/dev/ttyUSB0")
             odom_c = dc_config.get("odom_channel") or mode_config.unitree_ethernet
             rollover_c = dc_config.get("rollover_seconds", 120)
 
