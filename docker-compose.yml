@@ -35,6 +35,7 @@ services:
     devices:
       - /dev/snd:/dev/snd
       - /dev/video0:/dev/video0
+      - /dev/ttyUSB0:/dev/ttyUSB0
     logging:
       driver: "json-file"
       options:
