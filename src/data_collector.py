@@ -32,23 +32,44 @@ def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
     if stop_event.is_set() or cap is None or not cap.isOpened():
         return
 
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    # Read one frame to get EXACT dimensions natively (RTSP .get() sometimes returns 0)
+    ret, frame = cap.read()
+    if not ret or frame is None:
+        logging.error("DataCollector: Cap opened but failed to read first frame.")
+        cap.release()
+        return
+
+    height, width = frame.shape[:2]
     fps = 30.0
+    logging.info(f"DataCollector: Video RTSP stream opened. Dim: {width}x{height}")
 
     os.makedirs("recordings", exist_ok=True)
     
     file_start_time = time.time()
     def _open_video_writer():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return cv2.VideoWriter(
-            f"recordings/data_collector_video_{timestamp}.mp4",
-            cv2.VideoWriter_fourcc(*"avc1"),
-            fps,
-            (width, height),
-        )
+        filepath = f"recordings/data_collector_video_{timestamp}.mp4"
+        
+        # Try H264 first (avc1)
+        w = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*"avc1"), fps, (width, height))
+        if not w.isOpened():
+            logging.warning("DataCollector: avc1 codec rejected by cv2 Linux backend. Falling back to mp4v...")
+            w = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+            
+        if not w.isOpened():
+            logging.error(f"DataCollector: FATAL ERROR. Could not open VideoWriter for {filepath}")
+        else:
+            logging.info(f"DataCollector: VideoWriter successfully initialized for {filepath}")
+        return w
 
     writer = _open_video_writer()
+
+    if writer is None or not writer.isOpened():
+        cap.release()
+        return
+
+    # Write the first grabbed frame
+    writer.write(frame)
 
     try:
         while not stop_event.is_set():
@@ -56,6 +77,8 @@ def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
             if time.time() - file_start_time >= rollover_seconds:
                 writer.release()
                 writer = _open_video_writer()
+                if not writer.isOpened():
+                    break
                 file_start_time = time.time()
                 
             ret, frame = cap.read()
