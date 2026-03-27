@@ -72,19 +72,19 @@ class Fuser:
                 )  # None = default OM1/memory/
 
                 # Reuse KnowledgeBase's embedding client if available,
-                # otherwise use OpenAI Embeddings API
+                # otherwise use local embedding sidecar
                 embedding_client = None
                 if self.knowledge_base:
                     embedding_client = self.knowledge_base.embedding_client
                 else:
-                    from fuser.memory.embedding_client import (
-                        OpenAIEmbeddingClient,
+                    from fuser.knowledge_base.faiss.embedding_client import (
+                        EmbeddingClient,
                     )
 
-                    model = memory_config.get(
-                        "embedding_model", "text-embedding-3-small"
+                    base_url = memory_config.get(
+                        "embedding_base_url", "http://localhost:8100"
                     )
-                    embedding_client = OpenAIEmbeddingClient(model=model)
+                    embedding_client = EmbeddingClient(base_url=base_url)
 
                 self.memory_reader = MemoryReader(
                     embedding_client=embedding_client,
