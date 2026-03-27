@@ -575,6 +575,11 @@ def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str
         t_zenoh = threading.Thread(target=_record_lidar_zenoh, args=("**/scan", stop_event, rollover_seconds), daemon=True)
         t_zenoh.start()
         threads.append(t_zenoh)
+    
+    if odom_channel:
+        t = threading.Thread(target=_record_odom, args=(odom_channel, stop_event, rollover_seconds), daemon=True)
+        t.start()
+        threads.append(t)
 
     try:
         # Loop until stop_event is set via signals
