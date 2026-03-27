@@ -330,7 +330,7 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
         logging.info("DataCollector: Odom (Yaw) recording stopped and saved gracefully.")
 
 
-def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str, odom_channel: str = "eth0", rollover_seconds: int = 120):
+def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_topic: str, odom_channel: str = "eth0", rollover_seconds: int = 120):
     """
     Main entry point for the data collector process.
     Spawned via multiprocessing.Process in run.py.
@@ -357,8 +357,8 @@ def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str
         t.start()
         threads.append(t)
 
-    if lidar_port:
-        t_zenoh = threading.Thread(target=_record_lidar_zenoh, args=("**/scan", stop_event, rollover_seconds), daemon=True)
+    if lidar_topic:
+        t_zenoh = threading.Thread(target=_record_lidar_zenoh, args=(lidar_topic, stop_event, rollover_seconds), daemon=True)
         t_zenoh.start()
         threads.append(t_zenoh)
     

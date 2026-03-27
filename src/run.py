@@ -130,16 +130,16 @@ def start(
 
             v_rtsp = dc_config.get("video_rtsp", "rtsp://localhost:8554/top_camera")
             a_rtsp = dc_config.get("audio_rtsp", "rtsp://localhost:8554/audio")
-            lidar_p = dc_config.get("lidar_port", "/dev/ttyUSB0")
+            lidar_t = dc_config.get("lidar_topic", "**/scan")
             odom_c = dc_config.get("odom_channel") or mode_config.unitree_ethernet
             rollover_c = dc_config.get("rollover_seconds", 120)
 
             logging.info("Starting isolated data collector process...")
-            logging.info(f"Collector Config -> Video: {v_rtsp}, Audio: {a_rtsp}, LiDAR: {lidar_p}, Odom: {odom_c}, Rollover: {rollover_c}s")
+            logging.info(f"Collector Config -> Video: {v_rtsp}, Audio: {a_rtsp}, LiDAR: {lidar_t}, Odom: {odom_c}, Rollover: {rollover_c}s")
             
             collector_p = mp.Process(
                 target=run_data_collector_process,
-                args=(v_rtsp, a_rtsp, lidar_p, odom_c, rollover_c),
+                args=(v_rtsp, a_rtsp, lidar_t, odom_c, rollover_c),
                 daemon=False,  # False so it's not abruptly killed by OS
             )
             collector_p.start()
