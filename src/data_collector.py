@@ -274,6 +274,12 @@ def _record_lidar_serial(serial_port: str, stop_event: threading.Event, rollover
 def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_seconds: int):
     logging.info(f"DataCollector: Starting 2D LiDAR (Zenoh) recording on topic: {topic}")
     try:
+        import DracoPy
+    except ImportError:
+        logging.error("DataCollector: DracoPy is not installed. Zenoh Lidar recording disabled.")
+        return
+
+    try:
         import zenoh
         from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
     except ImportError:
@@ -283,7 +289,7 @@ def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_second
     os.makedirs("recordings", exist_ok=True)
     def _open_lidar():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return open(f"recordings/data_collector_2d_zenoh_lidar_{timestamp}.jsonl", "w")
+        return open(f"recordings/data_collector_2d_zenoh_lidar_{timestamp}.drcs", "wb")
 
     lidar_file = _open_lidar()
     file_start_time = time.time()
@@ -333,20 +339,31 @@ def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_second
                 last_data_log_time = time.time()
                 
                 try:
-                    import json
-                    import math
-                    angles = np.arange(msg_to_process.angle_min, msg_to_process.angle_max, msg_to_process.angle_increment)
-                    ranges = msg_to_process.ranges
-                    pts_list = []
-                    for i in range(min(len(angles), len(ranges))):
-                        r = float(ranges[i])
-                        if 0.05 < r < 12.0:  # Valid distance bounds
-                            deg = round(float(angles[i] * 180.0 / math.pi), 2)
-                            pts_list.append([deg, round(r, 3)])
-                            
-                    if pts_list:
-                        json_line = json.dumps({"ts": time.time(), "frame": pts_list})
-                        lidar_file.write(json_line + "\n")
+                    angles = np.arange(
+                        msg_to_process.angle_min,
+                        msg_to_process.angle_max,
+                        msg_to_process.angle_increment,
+                        dtype=np.float32,
+                    )
+                    ranges = np.array(msg_to_process.ranges, dtype=np.float32)
+                    n = min(len(angles), len(ranges))
+                    angles = angles[:n]
+                    ranges = ranges[:n]
+
+                    # Filter invalid / out-of-range readings
+                    valid = np.isfinite(ranges) & (ranges > 0.05) & (ranges < 12.0)
+                    angles = angles[valid]
+                    ranges = ranges[valid]
+
+                    if len(ranges) > 0:
+                        # Convert polar → Cartesian XYZ (Z=0 for 2-D scan)
+                        pts = np.zeros((len(ranges), 3), dtype=np.float32)
+                        pts[:, 0] = ranges * np.cos(angles)
+                        pts[:, 1] = ranges * np.sin(angles)
+
+                        compressed = DracoPy.encode(pts)
+                        lidar_file.write(struct.pack("<I", len(compressed)))
+                        lidar_file.write(compressed)
                         lidar_file.flush()
                         os.fsync(lidar_file.fileno())
                 except Exception as e:
@@ -371,14 +388,15 @@ def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_second
                 pass
         logging.info("DataCollector: Zenoh 2D LiDAR recording stopped gracefully.")
 
+
 def _record_lidar_ros2(topic: str, stop_event: threading.Event, rollover_seconds: int):
     logging.info(f"DataCollector: Starting 2D LiDAR (ROS 2) recording on topic: {topic}")
     try:
         import rclpy
         from rclpy.node import Node
         from sensor_msgs.msg import LaserScan
-    except ImportError:
-        logging.error("DataCollector: rclpy or sensor_msgs not found. ROS 2 Lidar recording disabled.")
+    except Exception as e:
+        logging.error(f"DataCollector: rclpy or sensor_msgs not found ({type(e).__name__}: {e}). ROS 2 Lidar recording disabled.")
         return
 
     os.makedirs("recordings", exist_ok=True)
@@ -470,9 +488,6 @@ def _record_lidar_ros2(topic: str, stop_event: threading.Event, rollover_seconds
         logging.info("DataCollector: ROS 2 2D LiDAR recording stopped gracefully.")
 
 
-# Dispatcher removed: all three backends are now spawned simultaneously in the main process loop.
-
-
 def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: int):
     logging.info(f"DataCollector: Starting Odom (Yaw) recording on {channel}")
     try:
@@ -500,15 +515,16 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
                 odom_file = _open_odom()
                 file_start_time = time.time()
                 
-            if hasattr(odom, "odom_yaw_m180_p180"):
+            if hasattr(odom, "position"):
                 import json
-                data = {
-                    "ts": time.time(),
-                    "yaw_m180_p180": odom.odom_yaw_m180_p180,
-                    "yaw_0_360": odom.odom_yaw_0_360,
-                    "x": getattr(odom, "x", 0.0),
-                    "y": getattr(odom, "y", 0.0)
-                }
+                data = odom.position
+                # Handle Enum serialization
+                if data.get("body_attitude"):
+                    data["body_attitude"] = data["body_attitude"].value
+                
+                # Append collector timestamp
+                data["ts"] = time.time()
+                
                 odom_file.write(json.dumps(data) + "\n")
                 odom_file.flush()
                 os.fsync(odom_file.fileno())  # Force write to physical disk to prevent data loss on sudden power failure
@@ -517,112 +533,6 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
         odom_file.flush()
         odom_file.close()
         logging.info("DataCollector: Odom (Yaw) recording stopped and saved gracefully.")
-
-
-def _record_lidar_3d(channel: str, stop_event: threading.Event, rollover_seconds: int):
-    logging.info(f"DataCollector: Starting 3D LiDAR (Go2 Native) recording on rt/utlidar/cloud_deskewed via {channel}")
-    try:
-        import DracoPy
-        from unitree.unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
-        from unitree.unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
-    except ImportError:
-        logging.error("DataCollector: 3D Lidar dependencies not found. Skipping.")
-        return
-
-    try:
-        ChannelFactoryInitialize(0, channel)
-    except Exception:
-        pass
-
-    os.makedirs("recordings", exist_ok=True)
-    def _open_lidar():
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return open(f"recordings/data_collector_3d_lidar_{timestamp}.drcs", "wb")
-        
-    lidar_file = _open_lidar()
-    file_start_time = time.time()
-    last_data_log_time = time.time()
-    has_warned_empty = False
-    
-    class Lidar3DHandler:
-        def __init__(self):
-            self.lock = threading.Lock()
-            self.msg = None
-            
-        def handler(self, msg: PointCloud2_):
-            with self.lock:
-                self.msg = msg
-
-    handler = Lidar3DHandler()
-    sub1 = ChannelSubscriber("rt/utlidar/cloud_deskewed", PointCloud2_)
-    sub1.Init(handler.handler, 10)
-    
-    sub2 = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
-    sub2.Init(handler.handler, 10)
-    
-    sub3 = ChannelSubscriber("rt/utlidar/voxel_map", PointCloud2_)
-    sub3.Init(handler.handler, 10)
-    
-    try:
-        while not stop_event.is_set():
-            if time.time() - file_start_time >= rollover_seconds:
-                lidar_file.flush()
-                os.fsync(lidar_file.fileno())
-                lidar_file.close()
-                lidar_file = _open_lidar()
-                file_start_time = time.time()
-                
-            msg_to_process = None
-            with handler.lock:
-                if handler.msg is not None:
-                    msg_to_process = handler.msg
-                    handler.msg = None
-                    
-            if msg_to_process:
-                has_warned_empty = False
-                last_data_log_time = time.time()
-                width = msg_to_process.width
-                point_step = msg_to_process.point_step
-                data = msg_to_process.data
-                
-                try:
-                    sliced = bytes(data)
-                    height = msg_to_process.height
-                    
-                    # Convert byte array to float32 array natively and fast
-                    arr = np.frombuffer(sliced, dtype=np.float32)
-                    arr = arr.reshape((width * height, int(point_step / 4)))
-                    
-                    pts = arr[:, :3].astype(np.float32)
-                    
-                    compressed = DracoPy.encode(pts)
-                    lidar_file.write(struct.pack("<I", len(compressed)))
-                    lidar_file.write(compressed)
-                    lidar_file.flush()
-                    os.fsync(lidar_file.fileno())
-                except Exception as e:
-                    logging.error(f"DataCollector 3D Lidar Parse Error: {type(e).__name__}: {e}")
-            
-            if time.time() - last_data_log_time > 10.0:
-                if not has_warned_empty:
-                    logging.warning(f"DataCollector: No 3D Lidar data received on '{channel}' for over 10s.")
-                    has_warned_empty = True
-                last_data_log_time = time.time()
-                
-            # Reduce polling so we roughly capture 3D points at a manageable ~10Hz max
-            time.sleep(0.1)
-    except Exception as e:
-        logging.error(f"DataCollector 3D LiDAR exception: {e}")
-    finally:
-        lidar_file.flush()
-        lidar_file.close()
-        try:
-            sub1.Close()
-            sub2.Close()
-            sub3.Close()
-        except:
-            pass
-        logging.info("DataCollector: 3D LiDAR recording stopped gracefully.")
 
 
 def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str, odom_channel: str = "eth0", rollover_seconds: int = 120):
@@ -665,16 +575,6 @@ def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str
         t_zenoh = threading.Thread(target=_record_lidar_zenoh, args=("**/scan", stop_event, rollover_seconds), daemon=True)
         t_zenoh.start()
         threads.append(t_zenoh)
-
-    # Always grab the built-in 3D lidar via CycloneDDS
-    if odom_channel:
-        t3d = threading.Thread(target=_record_lidar_3d, args=(odom_channel, stop_event, rollover_seconds), daemon=True)
-        t3d.start()
-        threads.append(t3d)
-
-        t = threading.Thread(target=_record_odom, args=(odom_channel, stop_event, rollover_seconds), daemon=True)
-        t.start()
-        threads.append(t)
 
     try:
         # Loop until stop_event is set via signals
