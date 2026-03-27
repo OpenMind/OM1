@@ -283,15 +283,17 @@ def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_second
         logging.info("DataCollector: Zenoh 2D LiDAR recording stopped gracefully.")
 
 
-def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: int):
-    logging.info(f"DataCollector: Starting Odom (Yaw) recording on {channel}")
-    try:
-        from providers.unitree_go2_odom_provider import UnitreeGo2OdomProvider
-    except ImportError:
-        logging.error("DataCollector: Odom provider not found")
-        return
+def _record_odom(topic: str, stop_event: threading.Event, rollover_seconds: int):
+    import json
+    import math
 
-    odom = UnitreeGo2OdomProvider(channel=channel)
+    logging.info(f"DataCollector: Starting Odom (Zenoh) recording on topic: {topic}")
+    try:
+        import zenoh
+        from zenoh_msgs import Odometry, open_zenoh_session, nav_msgs
+    except ImportError:
+        logging.error("DataCollector: zenoh or zenoh_msgs not found. Odom recording disabled.")
+        return
 
     os.makedirs("recordings", exist_ok=True)
     def _open_odom():
@@ -300,6 +302,31 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
 
     odom_file = _open_odom()
     file_start_time = time.time()
+    last_data_log_time = time.time()
+    has_warned_empty = False
+
+    class OdomHandler:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.msg = None
+
+        def listen_odom(self, data: zenoh.Sample):
+            try:
+                msg = nav_msgs.Odometry.deserialize(data.payload.to_bytes())
+                with self.lock:
+                    self.msg = msg
+            except Exception as e:
+                logging.debug(f"Zenoh Odometry deserialize error: {e}")
+
+    handler = OdomHandler()
+    try:
+        zen = open_zenoh_session()
+        logging.info(f"DataCollector: Zenoh session opened. Declaring odom subscriber on {topic}")
+        sub = zen.declare_subscriber(topic, handler.listen_odom)
+    except Exception as e:
+        logging.error(f"DataCollector: Error opening Zenoh odom subscriber: {e}")
+        odom_file.close()
+        return
 
     try:
         while not stop_event.is_set():
@@ -309,28 +336,73 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
                 odom_file.close()
                 odom_file = _open_odom()
                 file_start_time = time.time()
-                
-            if hasattr(odom, "position"):
-                import json
-                data = odom.position
-                # Handle Enum serialization
-                if data.get("body_attitude"):
-                    data["body_attitude"] = data["body_attitude"].value
-                
-                # Append collector timestamp
-                data["ts"] = time.time()
-                
-                odom_file.write(json.dumps(data) + "\n")
-                odom_file.flush()
-                os.fsync(odom_file.fileno())  # Force write to physical disk to prevent data loss on sudden power failure
-            time.sleep(0.05)  # 20Hz polling for yaw
+
+            msg_to_process = None
+            with handler.lock:
+                if handler.msg is not None:
+                    msg_to_process = handler.msg
+                    handler.msg = None
+
+            if msg_to_process:
+                has_warned_empty = False
+                last_data_log_time = time.time()
+
+                try:
+                    p = msg_to_process.pose.pose.position
+                    q = msg_to_process.pose.pose.orientation
+                    lv = msg_to_process.twist.twist.linear
+                    av = msg_to_process.twist.twist.angular
+                    hdr = msg_to_process.header
+
+                    # Quaternion → yaw (rotation around Z axis)
+                    siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+                    cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+                    yaw_rad = math.atan2(siny_cosp, cosy_cosp)
+
+                    record = {
+                        "ts": time.time(),
+                        "ros_ts": hdr.stamp.sec + hdr.stamp.nanosec * 1e-9,
+                        "pos_x": p.x,
+                        "pos_y": p.y,
+                        "pos_z": p.z,
+                        "quat_x": q.x,
+                        "quat_y": q.y,
+                        "quat_z": q.z,
+                        "quat_w": q.w,
+                        "yaw_rad": yaw_rad,
+                        "yaw_deg": math.degrees(yaw_rad),
+                        "lin_vx": lv.x,
+                        "lin_vy": lv.y,
+                        "lin_vz": lv.z,
+                        "ang_vz": av.z,
+                    }
+                    odom_file.write(json.dumps(record) + "\n")
+                    odom_file.flush()
+                    os.fsync(odom_file.fileno())
+                except Exception as e:
+                    logging.error(f"DataCollector Odom encoding error: {e}")
+
+            if time.time() - last_data_log_time > 10.0:
+                if not has_warned_empty:
+                    logging.warning(f"DataCollector: No Zenoh Odometry received on '{topic}' for over 10s.")
+                    has_warned_empty = True
+                last_data_log_time = time.time()
+
+            time.sleep(0.02)  # ~50 Hz polling
+    except Exception as e:
+        logging.error(f"DataCollector Zenoh Odom loop exception: {e}")
     finally:
         odom_file.flush()
         odom_file.close()
-        logging.info("DataCollector: Odom (Yaw) recording stopped and saved gracefully.")
+        if 'sub' in locals():
+            try:
+                sub.undeclare()
+            except Exception:
+                pass
+        logging.info("DataCollector: Odom recording stopped gracefully.")
 
 
-def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_topic: str, odom_channel: str = "eth0", rollover_seconds: int = 120):
+def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_topic: str, odom_topic: str = "/odom", rollover_seconds: int = 120):
     """
     Main entry point for the data collector process.
     Spawned via multiprocessing.Process in run.py.
@@ -362,8 +434,8 @@ def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_topic: st
         t_zenoh.start()
         threads.append(t_zenoh)
     
-    if odom_channel:
-        t = threading.Thread(target=_record_odom, args=(odom_channel, stop_event, rollover_seconds), daemon=True)
+    if odom_topic:
+        t = threading.Thread(target=_record_odom, args=(odom_topic, stop_event, rollover_seconds), daemon=True)
         t.start()
         threads.append(t)
 
