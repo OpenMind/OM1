@@ -1,5 +1,3 @@
-# src/inputs/plugins/person_following_status.py
-
 import asyncio
 import logging
 import time
@@ -87,6 +85,9 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
         self._last_enroll_attempt: float = 0.0
         self._has_ever_tracked: bool = False
 
+        self._session: Optional[aiohttp.ClientSession] = None
+        self._last_tracking_report: float = 0.0
+
         logging.info(
             f"PersonFollowingStatus initialized, polling {self.status_url} "
             f"every {self.poll_interval}s, re-enroll every {self.enroll_retry_interval}s when not tracking"
@@ -107,40 +108,39 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
         await asyncio.sleep(self.poll_interval)
 
         try:
-            async with aiohttp.ClientSession() as session:
-                # First, get current status
-                async with session.get(
-                    self.status_url,
-                    timeout=aiohttp.ClientTimeout(total=2),
-                ) as response:
-                    if response.status != 200:
-                        return None
+            if self._session is None or self._session.closed:
+                self._session = aiohttp.ClientSession()
 
-                    data = await response.json()
-                    is_tracked = data.get("is_tracked", False)
-                    status = data.get("status", "UNKNOWN")
-                    target_track_id = data.get("target_track_id")
+            async with self._session.get(
+                self.status_url,
+                timeout=aiohttp.ClientTimeout(total=2),
+            ) as response:
+                if response.status != 200:
+                    return None
 
-                    # If tracking, remember we've successfully tracked
-                    if is_tracked:
-                        self._has_ever_tracked = True
+                data = await response.json()
+                is_tracked = data.get("is_tracked", False)
+                status = data.get("status", "UNKNOWN")
+                target_track_id = data.get("target_track_id")
 
-                    # Only retry enrollment if INACTIVE (no one enrolled yet)
-                    # Do NOT re-enroll if SEARCHING (person enrolled but temporarily out of frame)
-                    if status == "INACTIVE" and target_track_id is None:
-                        current_time = time.time()
-                        time_since_last_enroll = (
-                            current_time - self._last_enroll_attempt
+                # If tracking, remember we've successfully tracked
+                if is_tracked:
+                    self._has_ever_tracked = True
+
+                # Only retry enrollment if INACTIVE (no one enrolled yet)
+                # Do NOT re-enroll if SEARCHING (person enrolled but temporarily out of frame)
+                if status == "INACTIVE" and target_track_id is None:
+                    current_time = time.time()
+                    time_since_last_enroll = current_time - self._last_enroll_attempt
+
+                    if time_since_last_enroll >= self.enroll_retry_interval:
+                        self._last_enroll_attempt = current_time
+                        logging.info(
+                            "PersonFollowingStatus: Status INACTIVE, attempting enrollment"
                         )
+                        await self._try_enroll(self._session)
 
-                        if time_since_last_enroll >= self.enroll_retry_interval:
-                            self._last_enroll_attempt = current_time
-                            logging.info(
-                                "PersonFollowingStatus: Status INACTIVE, attempting enrollment"
-                            )
-                            await self._try_enroll(session)
-
-                    return self._format_status(data)
+                return self._format_status(data)
 
         except aiohttp.ClientError as e:
             logging.debug(f"PersonFollowingStatus: Poll failed: {e}")
@@ -215,6 +215,7 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
             # Person was acquired - always report this
             self._lost_tracking_time = None
             self._lost_tracking_announced = False
+            self._last_tracking_report = current_time
             return f"TRACKING STARTED: Person detected and now following. Distance: {z:.1f}m ahead, {x:.1f}m to the side."
 
         if tracking_just_lost:
@@ -242,7 +243,10 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
             return None
 
         # Currently tracking - provide occasional updates
-        # Only report significant distance changes or periodically
+        if (current_time - self._last_tracking_report) < 10.0:
+            return None
+
+        self._last_tracking_report = current_time
         return f"TRACKING: Following person at {z:.1f}m ahead, {x:.1f}m to the side. Status: {status}"
 
     async def _raw_to_text(self, raw_input: Optional[str]) -> Optional[Message]:

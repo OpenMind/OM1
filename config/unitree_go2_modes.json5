@@ -689,15 +689,6 @@ VOICE RULE:\n\
       lifecycle_hooks: [
         {
           hook_type: "on_startup",
-          handler_type: "function",
-          handler_config: {
-            module_name: "person_follow_hook",
-            function: "start_person_follow_hook",
-          },
-          priority: 1,
-        },
-        {
-          hook_type: "on_startup",
           handler_type: "message",
           handler_config: {
             message: "Person following mode activated. Stand in front of me so I can see you!",
