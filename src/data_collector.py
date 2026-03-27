@@ -165,7 +165,7 @@ def _record_audio(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
         logging.info("DataCollector: Audio recording stopped and saved gracefully.")
 
 
-def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_seconds: int):
+def _record_lidar_serial(serial_port: str, stop_event: threading.Event, rollover_seconds: int):
     logging.info(f"DataCollector: Starting LiDAR recording on {serial_port}")
     try:
         import DracoPy
@@ -182,7 +182,7 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
     os.makedirs("recordings", exist_ok=True)
     def _open_lidar():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return open(f"recordings/data_collector_lidar_{timestamp}.drcs", "wb")
+        return open(f"recordings/data_collector_lidar_serial_{timestamp}.drcs", "wb")
 
     lidar_file = _open_lidar()
     file_start_time = time.time()
@@ -190,23 +190,24 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
     has_warned_empty = False
 
     lidar = None
-    for baud in [256000, 115200, 1000000]:
-        try:
-            logging.info(f"DataCollector: Attempting LiDAR connection on {serial_port} @ {baud}")
-            lidar = RPDriver(serial_port, baudrate=baud)
-            lidar.get_info()
-            break
-        except Exception as e:
-            logging.warning(f"DataCollector: Failed at {baud} - {type(e).__name__}: {str(e)}")
-            if lidar:
-                try:
-                    lidar.disconnect()
-                except:
-                    pass
-            lidar = None
+    try:
+        lidar = RPDriver(serial_port)
+        info = lidar.get_info()
+        logging.info(f"RPLidar Info: {info}")
+
+        health = lidar.get_health()
+        logging.info(f"RPLidar Health: {health[0]}")
+    except Exception as e:
+        logging.warning(f"DataCollector: Failed at RPDriver __init__ - {type(e).__name__}: {str(e)}")
+        if lidar:
+            try:
+                lidar.disconnect()
+            except:
+                pass
+        lidar = None
 
     if not lidar:
-        logging.error(f"DataCollector: LiDAR failed to connect to {serial_port} at all tested baud rates.")
+        logging.error(f"DataCollector: LiDAR failed to connect to {serial_port} purely.")
         lidar_file.close()
         return
 
@@ -268,6 +269,208 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
             except Exception:
                 pass
         logging.info("DataCollector: LiDAR recording stopped and saved gracefully.")
+
+
+def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_seconds: int):
+    logging.info(f"DataCollector: Starting 2D LiDAR (Zenoh) recording on topic: {topic}")
+    try:
+        import zenoh
+        from zenoh_msgs import LaserScan, open_zenoh_session, sensor_msgs
+    except ImportError:
+        logging.error("DataCollector: zenoh or zenoh_msgs not found. Zenoh Lidar recording disabled.")
+        return
+
+    os.makedirs("recordings", exist_ok=True)
+    def _open_lidar():
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return open(f"recordings/data_collector_2d_zenoh_lidar_{timestamp}.jsonl", "w")
+
+    lidar_file = _open_lidar()
+    file_start_time = time.time()
+    last_data_log_time = time.time()
+    has_warned_empty = False
+
+    class ZenohHandler:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.msg = None
+            
+        def listen_scan(self, data: zenoh.Sample):
+            try:
+                msg = sensor_msgs.LaserScan.deserialize(data.payload.to_bytes())
+                with self.lock:
+                    self.msg = msg
+            except Exception as e:
+                logging.debug(f"Zenoh LaserScan deserialize error: {e}")
+
+    handler = ZenohHandler()
+    try:
+        zen = open_zenoh_session()
+        logging.info(f"DataCollector: Zenoh session opened. Declaring subscriber on {topic}")
+        sub = zen.declare_subscriber(topic, handler.listen_scan)
+    except Exception as e:
+        logging.error(f"DataCollector: Error opening Zenoh subscriber: {e}")
+        lidar_file.close()
+        return
+
+    try:
+        while not stop_event.is_set():
+            if time.time() - file_start_time >= rollover_seconds:
+                lidar_file.flush()
+                os.fsync(lidar_file.fileno())
+                lidar_file.close()
+                lidar_file = _open_lidar()
+                file_start_time = time.time()
+                
+            msg_to_process = None
+            with handler.lock:
+                if handler.msg is not None:
+                    msg_to_process = handler.msg
+                    handler.msg = None
+                    
+            if msg_to_process:
+                has_warned_empty = False
+                last_data_log_time = time.time()
+                
+                try:
+                    import json
+                    import math
+                    angles = np.arange(msg_to_process.angle_min, msg_to_process.angle_max, msg_to_process.angle_increment)
+                    ranges = msg_to_process.ranges
+                    pts_list = []
+                    for i in range(min(len(angles), len(ranges))):
+                        r = float(ranges[i])
+                        if 0.05 < r < 12.0:  # Valid distance bounds
+                            deg = round(float(angles[i] * 180.0 / math.pi), 2)
+                            pts_list.append([deg, round(r, 3)])
+                            
+                    if pts_list:
+                        json_line = json.dumps({"ts": time.time(), "frame": pts_list})
+                        lidar_file.write(json_line + "\n")
+                        lidar_file.flush()
+                        os.fsync(lidar_file.fileno())
+                except Exception as e:
+                    logging.error(f"DataCollector Zenoh 2D Lidar encoding error: {e}")
+            
+            if time.time() - last_data_log_time > 10.0:
+                if not has_warned_empty:
+                    logging.warning(f"DataCollector: No Zenoh LaserScan received on '{topic}' for over 10s.")
+                    has_warned_empty = True
+                last_data_log_time = time.time()
+                
+            time.sleep(0.05)
+    except Exception as e:
+        logging.error(f"DataCollector Zenoh 2D LiDAR loop exception: {e}")
+    finally:
+        lidar_file.flush()
+        lidar_file.close()
+        if 'sub' in locals():
+            try:
+                sub.undeclare()
+            except Exception:
+                pass
+        logging.info("DataCollector: Zenoh 2D LiDAR recording stopped gracefully.")
+
+def _record_lidar_ros2(topic: str, stop_event: threading.Event, rollover_seconds: int):
+    logging.info(f"DataCollector: Starting 2D LiDAR (ROS 2) recording on topic: {topic}")
+    try:
+        import rclpy
+        from rclpy.node import Node
+        from sensor_msgs.msg import LaserScan
+    except ImportError:
+        logging.error("DataCollector: rclpy or sensor_msgs not found. ROS 2 Lidar recording disabled.")
+        return
+
+    os.makedirs("recordings", exist_ok=True)
+    def _open_lidar():
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return open(f"recordings/data_collector_2d_ros2_lidar_{timestamp}.jsonl", "w")
+
+    lidar_file = _open_lidar()
+    file_start_time = time.time()
+    last_data_log_time = time.time()
+    has_warned_empty = False
+
+    class Ros2LidarCollector(Node):
+        def __init__(self):
+            super().__init__('om1_lidar_collector_node')
+            self.subscription = self.create_subscription(LaserScan, topic, self.listener_callback, 10)
+            self.lock = threading.Lock()
+            self.msg = None
+
+        def listener_callback(self, msg):
+            with self.lock:
+                self.msg = msg
+
+    try:
+        rclpy.init(args=None)
+        node = Ros2LidarCollector()
+    except Exception as e:
+        logging.error(f"DataCollector: Error initializing rclpy: {e}")
+        lidar_file.close()
+        return
+
+    try:
+        while not stop_event.is_set():
+            rclpy.spin_once(node, timeout_sec=0.05)
+            
+            if time.time() - file_start_time >= rollover_seconds:
+                lidar_file.flush()
+                os.fsync(lidar_file.fileno())
+                lidar_file.close()
+                lidar_file = _open_lidar()
+                file_start_time = time.time()
+                
+            msg_to_process = None
+            with node.lock:
+                if node.msg is not None:
+                    msg_to_process = node.msg
+                    node.msg = None
+                    
+            if msg_to_process:
+                has_warned_empty = False
+                last_data_log_time = time.time()
+                
+                try:
+                    import json
+                    import math
+                    angles = np.arange(msg_to_process.angle_min, msg_to_process.angle_max, msg_to_process.angle_increment)
+                    ranges = msg_to_process.ranges
+                    pts_list = []
+                    for i in range(min(len(angles), len(ranges))):
+                        r = float(ranges[i])
+                        if math.isfinite(r) and 0.05 < r < 12.0:
+                            deg = round(float(angles[i] * 180.0 / math.pi), 2)
+                            pts_list.append([deg, round(r, 3)])
+                            
+                    if pts_list:
+                        json_line = json.dumps({"ts": time.time(), "frame": pts_list})
+                        lidar_file.write(json_line + "\n")
+                        lidar_file.flush()
+                        os.fsync(lidar_file.fileno())
+                except Exception as e:
+                    logging.error(f"DataCollector ROS 2 2D Lidar encoding error: {e}")
+            
+            if time.time() - last_data_log_time > 10.0:
+                if not has_warned_empty:
+                    logging.warning(f"DataCollector: No ROS 2 LaserScan received on '{topic}' for over 10s.")
+                    has_warned_empty = True
+                last_data_log_time = time.time()
+                
+    except Exception as e:
+        logging.error(f"DataCollector ROS 2 2D LiDAR loop exception: {e}")
+    finally:
+        lidar_file.flush()
+        lidar_file.close()
+        try:
+            node.destroy_node()
+            rclpy.shutdown()
+        except:
+            pass
+        logging.info("DataCollector: ROS 2 2D LiDAR recording stopped gracefully.")
+
+
+# Dispatcher removed: all three backends are now spawned simultaneously in the main process loop.
 
 
 def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: int):
@@ -450,9 +653,18 @@ def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str
         threads.append(t)
 
     if lidar_port:
-        t = threading.Thread(target=_record_lidar, args=(lidar_port, stop_event, rollover_seconds), daemon=True)
-        t.start()
-        threads.append(t)
+        # Aggressively spawn all three 2D Lidar backends simultaneously over different protocols
+        t_serial = threading.Thread(target=_record_lidar_serial, args=(lidar_port, stop_event, rollover_seconds), daemon=True)
+        t_serial.start()
+        threads.append(t_serial)
+
+        t_ros2 = threading.Thread(target=_record_lidar_ros2, args=("/scan", stop_event, rollover_seconds), daemon=True)
+        t_ros2.start()
+        threads.append(t_ros2)
+
+        t_zenoh = threading.Thread(target=_record_lidar_zenoh, args=("**/scan", stop_event, rollover_seconds), daemon=True)
+        t_zenoh.start()
+        threads.append(t_zenoh)
 
     # Always grab the built-in 3D lidar via CycloneDDS
     if odom_channel:
