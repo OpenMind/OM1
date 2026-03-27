@@ -5,8 +5,10 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from runtime.config import ModeConfig, ModeSystemConfig
-from runtime.cortex import ModeCortexRuntime
+from runtime.config import ModeConfig, ModeSystemConfig, RuntimeConfig
+from runtime.cortex import (
+    ModeCortexRuntime,
+)
 
 
 @pytest.fixture
@@ -624,7 +626,11 @@ class TestModeCortexRuntimeHotReload:
 
     @pytest.mark.asyncio
     async def test_reload_config_failure(self, mock_system_config):
-        """Test config reload failure handling."""
+        """Test config reload failure handling.
+
+        When load_mode_config fails, the runtime should keep running with
+        the previous configuration and NOT stop orchestrators.
+        """
         with (
             patch("runtime.cortex.ModeManager") as mock_manager_class,
             patch("runtime.cortex.IOProvider"),
@@ -650,7 +656,8 @@ class TestModeCortexRuntimeHotReload:
 
             await runtime._reload_config()
 
-            runtime._stop_current_orchestrators.assert_called_once()
+            # Config load failed early, orchestrators should NOT be stopped
+            runtime._stop_current_orchestrators.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_run_with_hot_reload_enabled(self, mock_system_config):
@@ -805,3 +812,332 @@ class TestHotReloadMultiToSingle:
 
             assert len(new_single_config.modes) == 1
             assert "single_mode" in new_single_config.modes
+
+
+class TestSelectiveHotReload:
+    """Test cases for selective (partial) hot-reload functionality."""
+
+    @pytest.fixture
+    def old_mode_config(self):
+        """Create an old mode config for comparison."""
+        return ModeConfig(
+            version="v1.0.3",
+            name="test_mode",
+            display_name="Test Mode",
+            description="A test mode",
+            system_prompt_base="You are a test agent",
+            hertz=1.0,
+            _raw_inputs=[{"type": "TestInput"}],
+            _raw_llm={"type": "TestLLM"},
+            _raw_actions=[{"name": "test_action"}],
+            _raw_backgrounds=[],
+        )
+
+    @pytest.fixture
+    def old_system_config(self, old_mode_config):
+        """Create an old system config wrapping the mode config."""
+        config = Mock(spec=ModeSystemConfig)
+        config.modes = {"test_mode": old_mode_config}
+        config.default_mode = "test_mode"
+        config.system_governance = "Be safe"
+        config.system_prompt_examples = "Example 1"
+        return config
+
+    @pytest.fixture
+    def new_mode_config_partial(self):
+        """Create a new mode config with only hot-reloadable fields changed."""
+        return ModeConfig(
+            version="v1.0.3",
+            name="test_mode",
+            display_name="Test Mode",
+            description="A test mode",
+            system_prompt_base="You are an updated test agent",
+            hertz=2.0,
+            _raw_inputs=[{"type": "TestInput"}],
+            _raw_llm={"type": "TestLLM"},
+            _raw_actions=[{"name": "test_action"}],
+            _raw_backgrounds=[],
+        )
+
+    @pytest.fixture
+    def new_system_config_partial(self, new_mode_config_partial):
+        """Create a new system config with hot-reloadable fields changed."""
+        config = Mock(spec=ModeSystemConfig)
+        config.modes = {"test_mode": new_mode_config_partial}
+        config.default_mode = "test_mode"
+        config.system_governance = "Be safe and helpful"
+        config.system_prompt_examples = "Example 1"
+        return config
+
+    @pytest.fixture
+    def new_mode_config_structural(self):
+        """Create a new mode config with structural fields changed."""
+        return ModeConfig(
+            version="v1.0.3",
+            name="test_mode",
+            display_name="Test Mode",
+            description="A test mode",
+            system_prompt_base="You are a test agent",
+            hertz=1.0,
+            _raw_inputs=[{"type": "NewInput"}],
+            _raw_llm={"type": "TestLLM"},
+            _raw_actions=[{"name": "test_action"}],
+            _raw_backgrounds=[],
+        )
+
+    @pytest.fixture
+    def new_system_config_structural(self, new_mode_config_structural):
+        """Create a new system config with structural fields changed."""
+        config = Mock(spec=ModeSystemConfig)
+        config.modes = {"test_mode": new_mode_config_structural}
+        config.default_mode = "test_mode"
+        config.system_governance = "Be safe"
+        config.system_prompt_examples = "Example 1"
+        return config
+
+    def _create_runtime(self, mock_system_config):
+        """Helper to create a runtime instance for testing."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager.state = Mock()
+            mock_manager.state.transition_history = []
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            return runtime
+
+    def test_get_changed_fields_no_changes(
+        self, mock_system_config, old_mode_config, old_system_config
+    ):
+        """Test that no changes are detected when configs are identical."""
+        runtime = self._create_runtime(mock_system_config)
+        changed = runtime._get_changed_fields(
+            old_mode_config,
+            old_mode_config,
+            old_system_config,
+            old_system_config,
+        )
+        assert changed == set()
+
+    def test_get_changed_fields_hot_reload_only(
+        self,
+        mock_system_config,
+        old_mode_config,
+        new_mode_config_partial,
+        old_system_config,
+        new_system_config_partial,
+    ):
+        """Test detection of hot-reloadable field changes."""
+        runtime = self._create_runtime(mock_system_config)
+        changed = runtime._get_changed_fields(
+            old_mode_config,
+            new_mode_config_partial,
+            old_system_config,
+            new_system_config_partial,
+        )
+        assert changed == {"system_prompt_base", "system_governance", "hertz"}
+
+    def test_get_changed_fields_structural(
+        self,
+        mock_system_config,
+        old_mode_config,
+        new_mode_config_structural,
+        old_system_config,
+        new_system_config_structural,
+    ):
+        """Test detection of structural field changes."""
+        runtime = self._create_runtime(mock_system_config)
+        changed = runtime._get_changed_fields(
+            old_mode_config,
+            new_mode_config_structural,
+            old_system_config,
+            new_system_config_structural,
+        )
+        assert "agent_inputs" in changed
+
+    def test_partial_reload_updates_runtime_config(
+        self,
+        mock_system_config,
+        old_mode_config,
+        new_mode_config_partial,
+        new_system_config_partial,
+    ):
+        """Test that partial reload updates config objects in-place."""
+        runtime = self._create_runtime(mock_system_config)
+
+        # Set up current state
+        runtime.mode_config = Mock(spec=ModeSystemConfig)
+        runtime.mode_config.modes = {"test_mode": old_mode_config}
+        runtime.mode_config.system_governance = "Be safe"
+        runtime.mode_config.system_prompt_examples = "Example 1"
+        runtime.current_config = Mock(spec=RuntimeConfig)
+        runtime.current_config.system_prompt_base = "You are a test agent"
+        runtime.current_config.system_governance = "Be safe"
+        runtime.current_config.hertz = 1.0
+
+        changed = {"system_prompt_base", "system_governance", "hertz"}
+        runtime._apply_partial_reload(
+            new_system_config_partial, new_mode_config_partial, changed
+        )
+
+        assert (
+            runtime.current_config.system_prompt_base == "You are an updated test agent"
+        )
+        assert runtime.current_config.system_governance == "Be safe and helpful"
+        assert runtime.current_config.hertz == 2.0
+
+    @pytest.mark.asyncio
+    async def test_reload_config_partial_reload(
+        self,
+        mock_system_config,
+        old_mode_config,
+        new_mode_config_partial,
+        old_system_config,
+        new_system_config_partial,
+    ):
+        """Test that partial reload skips orchestrator restart."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager.state = Mock()
+            mock_manager.state.transition_history = []
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            mock_load_config.return_value = new_system_config_partial
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.mode_config = old_system_config
+            runtime.current_config = Mock(spec=RuntimeConfig)
+            runtime.current_config.system_prompt_base = "You are a test agent"
+            runtime.current_config.system_governance = "Be safe"
+            runtime.current_config.hertz = 1.0
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            # Partial reload should NOT stop/restart orchestrators
+            runtime._stop_current_orchestrators.assert_not_called()
+            runtime._initialize_mode.assert_not_called()
+            runtime._start_orchestrators.assert_not_called()
+
+            # Config should be updated in-place
+            assert (
+                runtime.current_config.system_prompt_base
+                == "You are an updated test agent"
+            )
+
+    @pytest.mark.asyncio
+    async def test_reload_config_full_reload_on_structural_change(
+        self,
+        mock_system_config,
+        old_mode_config,
+        new_mode_config_structural,
+        old_system_config,
+        new_system_config_structural,
+    ):
+        """Test that structural changes trigger a full reload."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager.state = Mock()
+            mock_manager.state.transition_history = []
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            mock_load_config.return_value = new_system_config_structural
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.mode_config = old_system_config
+            runtime.current_config = Mock(spec=RuntimeConfig)
+
+            runtime._stop_current_orchestrators = AsyncMock()
+            runtime._initialize_mode = AsyncMock()
+            runtime._start_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            # Structural change should trigger full reload
+            runtime._stop_current_orchestrators.assert_called_once()
+            runtime._initialize_mode.assert_called_once_with("test_mode")
+            runtime._start_orchestrators.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_reload_config_no_changes_skipped(
+        self,
+        mock_system_config,
+        old_mode_config,
+        old_system_config,
+    ):
+        """Test that reload is skipped when no changes are detected."""
+        with (
+            patch("runtime.cortex.ModeManager") as mock_manager_class,
+            patch("runtime.cortex.IOProvider"),
+            patch("runtime.cortex.SleepTickerProvider"),
+            patch("runtime.cortex.load_mode_config") as mock_load_config,
+        ):
+            mock_manager = Mock()
+            mock_manager.add_transition_callback = Mock()
+            mock_manager.current_mode_name = "test_mode"
+            mock_manager._get_runtime_config_path = Mock(
+                return_value="/fake/path/test_config.json5"
+            )
+            mock_manager_class.return_value = mock_manager
+
+            # Return a system config with same mode and same system fields
+            new_system_config = Mock(spec=ModeSystemConfig)
+            new_system_config.modes = {"test_mode": old_mode_config}
+            new_system_config.system_governance = "Be safe"
+            new_system_config.system_prompt_examples = "Example 1"
+            mock_load_config.return_value = new_system_config
+
+            runtime = ModeCortexRuntime(
+                mock_system_config, "test_config", hot_reload=True
+            )
+            runtime.mode_manager = mock_manager
+            runtime.mode_config = old_system_config
+            runtime.current_config = Mock(spec=RuntimeConfig)
+
+            runtime._stop_current_orchestrators = AsyncMock()
+
+            await runtime._reload_config()
+
+            # No changes should skip reload entirely
+            runtime._stop_current_orchestrators.assert_not_called()
