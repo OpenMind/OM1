@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import Callable, Optional
 
 import zenoh
@@ -20,17 +21,8 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         topic: str = "om/localization_pose",
         quality_tolerance: float = 0.9,
     ):
-        """
-        Initialize the Lidar Localization Provider with a specific topic.
-
-        Parameters
-        ----------
-        topic : str, optional
-            The topic on which to subscribe for lidar localization messages (default is "om/localization_pose").
-        quality_tolerance : float, optional
-            The tolerance for localization quality percent (default is 0.9).
-        """
         super().__init__(topic)
+        self._lock = threading.Lock()
         logging.info("Lidar Localization Provider initialized with topic: %s", topic)
 
         self.localization_pose: Optional[Pose] = None
@@ -38,43 +30,35 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
         self.quality_tolerance = quality_tolerance
 
     def lidar_localization_message_callback(self, data: zenoh.Sample):
-        """
-        Process an incoming lidar localization message.
+        """Process an incoming lidar localization message.
 
         Parameters
         ----------
         data : zenoh.Sample
-            The Zenoh sample received, which should have a 'payload' attribute.
+            The Zenoh sample received from the localization topic.
         """
-        if data.payload:
-            message: nav_msgs.LidarLocalization = (
-                nav_msgs.LidarLocalization.deserialize(data.payload.to_bytes())
-            )
-            logging.debug("Received Lidar Localization message: %s", message)
+        if not data.payload:
+            logging.warning("Received empty lidar localization message")
+            return
 
-            quality_percent = message.quality_percent
+        message: nav_msgs.LidarLocalization = nav_msgs.LidarLocalization.deserialize(
+            data.payload.to_bytes()
+        )
+        logging.debug("Received Lidar Localization message: %s", message)
+
+        quality_percent = message.quality_percent
+        with self._lock:
             self.localization_status = quality_percent >= self.quality_tolerance
             self.localization_pose = message.pose
 
-            logging.debug(
-                "Localization Status: %s, Pose: %s",
-                self.localization_status,
-                self.localization_pose,
-            )
-
-        else:
-            logging.warning("Received empty lidar localization message")
+        logging.debug(
+            "Localization Status: %s, Pose: %s",
+            self.localization_status,
+            self.localization_pose,
+        )
 
     def start(self, message_callback: Optional[Callable] = None):
-        """
-        Start the Lidar Localization Provider by registering the message callback.
-
-        Parameters
-        ----------
-        message_callback : Optional[Callable]
-            Optional callback function for message processing. Not used directly
-            but kept for interface compatibility.
-        """
+        """Start the Lidar Localization Provider by registering the message callback."""
         if not self.running:
             self.register_message_callback(self.lidar_localization_message_callback)
             self.running = True
@@ -86,24 +70,12 @@ class UnitreeGo2LidarLocalizationProvider(ZenohListenerProvider):
 
     @property
     def is_localized(self) -> bool:
-        """
-        Check if the robot is localized based on the Lidar Localization data.
-
-        Returns
-        -------
-        bool
-            True if the robot is localized, False otherwise.
-        """
-        return self.localization_status
+        """Check if the robot is localized based on the Lidar Localization data."""
+        with self._lock:
+            return self.localization_status
 
     @property
     def pose(self) -> Optional[Pose]:
-        """
-        Get the current localization pose.
-
-        Returns
-        -------
-        Optional[Pose]
-            The current pose if available, None otherwise.
-        """
-        return self.localization_pose
+        """Get the current localization pose, or None if unavailable."""
+        with self._lock:
+            return self.localization_pose

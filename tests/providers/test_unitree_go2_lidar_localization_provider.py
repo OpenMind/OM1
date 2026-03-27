@@ -59,12 +59,14 @@ def test_singleton_pattern(mock_zenoh):
 
 
 def test_is_localized_property(mock_zenoh):
-    """Test is_localized property."""
+    """Test is_localized property reflects localization_status via lock."""
     provider = UnitreeGo2LidarLocalizationProvider()
 
     assert provider.is_localized is False
 
-    provider.localization_status = True
+    with provider._lock:
+        provider.localization_status = True
+
     assert provider.is_localized is True
 
 
@@ -82,3 +84,66 @@ def test_start(mock_zenoh):
     provider.start()
 
     assert provider.running is True
+
+
+def test_lidar_callback_localized(mock_zenoh):
+    """Test callback when quality meets tolerance."""
+    provider = UnitreeGo2LidarLocalizationProvider()
+
+    mock_pose = MagicMock()
+    mock_message = MagicMock()
+    mock_message.quality_percent = 0.95
+    mock_message.pose = mock_pose
+
+    with patch(
+        "providers.unitree_go2_lidar_localization_provider.nav_msgs.LidarLocalization.deserialize",
+        return_value=mock_message,
+    ):
+        mock_payload = MagicMock()
+        mock_payload.to_bytes.return_value = b"data"
+        mock_data = MagicMock()
+        mock_data.payload = mock_payload
+        provider.lidar_localization_message_callback(mock_data)
+
+    assert provider.is_localized is True
+    assert provider.pose == mock_pose
+
+
+def test_lidar_callback_not_localized(mock_zenoh):
+    """Test callback when quality below tolerance."""
+    provider = UnitreeGo2LidarLocalizationProvider()
+
+    mock_message = MagicMock()
+    mock_message.quality_percent = 0.5
+    mock_message.pose = None
+
+    with patch(
+        "providers.unitree_go2_lidar_localization_provider.nav_msgs.LidarLocalization.deserialize",
+        return_value=mock_message,
+    ):
+        mock_payload = MagicMock()
+        mock_payload.to_bytes.return_value = b"data"
+        mock_data = MagicMock()
+        mock_data.payload = mock_payload
+        provider.lidar_localization_message_callback(mock_data)
+
+    assert provider.is_localized is False
+
+
+def test_lidar_callback_empty_payload(mock_zenoh):
+    """Test callback with empty payload."""
+    provider = UnitreeGo2LidarLocalizationProvider()
+
+    mock_data = MagicMock()
+    mock_data.payload = None
+    provider.lidar_localization_message_callback(mock_data)
+
+    assert provider.is_localized is False
+    assert provider.pose is None
+
+
+def test_start_already_running(mock_zenoh):
+    """Test start when provider is already running."""
+    provider = UnitreeGo2LidarLocalizationProvider()
+    provider.start()
+    provider.start()
