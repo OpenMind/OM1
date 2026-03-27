@@ -67,6 +67,18 @@ async def test_poll_mock_mode(peer_mock_mode):
 
 
 @pytest.mark.asyncio
+async def test_poll_mock_mode_returns_none_when_mock_coords_missing(peer_mock_mode, caplog):
+    """Test _poll returns None when mock_mode is enabled but coords are missing."""
+    peer_mock_mode.config.mock_lat = None
+    peer_mock_mode.config.mock_lon = None
+
+    result = await peer_mock_mode._poll()
+
+    assert result is None
+    assert "mock_lat and mock_lon must be set" in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_poll_uses_aiohttp_not_requests(peer_real_mode):
     """Test that _poll uses aiohttp for non-blocking HTTP."""
     mock_response = MagicMock()
