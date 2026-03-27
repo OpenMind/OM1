@@ -149,6 +149,24 @@ class ModeCortexRuntime:
                 self.current_config.mcp_servers, self.current_config.cortex_llm
             )
 
+        # Wire MemoryWriter to Fuser for per-tick writes in cortex loop
+        if self.fuser.memory_reader:
+            from fuser.memory.indexer import MemoryIndex
+            from fuser.memory.writer import MemoryWriter
+
+            reader = self.fuser.memory_reader
+            # Create shared index for both reader and writer
+            memory_index = MemoryIndex(reader.embedding_client)
+            reader.index = memory_index
+            reader._index_initialized = False  # Will lazy-load on first search
+
+            memory_config = self.current_config.memory or {}
+            memory_root = memory_config.get("memory_root")
+            self.fuser.memory_writer = MemoryWriter(
+                memory_root=memory_root, index=memory_index
+            )
+            logging.info("Memory writer wired to Fuser")
+
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
     async def _handle_mode_transitions(self):
@@ -636,6 +654,21 @@ class ModeCortexRuntime:
             await self.simulator_orchestrator.promise(output.actions)
 
         await self.action_orchestrator.promise(output.actions)
+
+        # Write interaction to daily memory log
+        if self.fuser and self.fuser.memory_writer:
+            voice_input = self.io_provider.get_input("Voice")
+            if voice_input and voice_input.input and voice_input.tick == tick_num:
+                action_summary = " | ".join(
+                    f"{a.type}: {a.value}" for a in output.actions if a.value
+                )
+                asyncio.create_task(
+                    self.fuser.memory_writer.append_interaction(
+                        user_msg=voice_input.input.strip(),
+                        robot_msg=action_summary,
+                        mode=self.io_provider.get_dynamic_variable("current_mode"),
+                    )
+                )
 
     def get_mode_info(self) -> dict:
         """
