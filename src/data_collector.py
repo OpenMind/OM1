@@ -196,7 +196,8 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
             lidar = RPDriver(serial_port, baudrate=baud)
             lidar.get_info()
             break
-        except Exception:
+        except Exception as e:
+            logging.warning(f"DataCollector: Failed at {baud} - {type(e).__name__}: {str(e)}")
             if lidar:
                 try:
                     lidar.disconnect()
@@ -235,7 +236,7 @@ def _record_lidar(serial_port: str, stop_event: threading.Event, rollover_second
                     distances_m = scan_array[:, 1] / 1000.0
                     
                     # Convert to cartesian coordinates
-                    angles_rad = angles_deg * (math.pi / 180.0)
+                    angles_rad = angles_deg * (np.pi / 180.0)
                     pts = np.zeros((len(scan), 3), dtype=np.float32)
                     pts[:, 0] = distances_m * np.cos(angles_rad)
                     pts[:, 1] = distances_m * np.sin(angles_rad)
@@ -315,6 +316,96 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
         logging.info("DataCollector: Odom (Yaw) recording stopped and saved gracefully.")
 
 
+def _record_lidar_3d(stop_event: threading.Event, rollover_seconds: int):
+    logging.info("DataCollector: Starting 3D LiDAR (Go2 Native) recording on rt/utlidar/cloud_deskewed")
+    try:
+        import DracoPy
+        from unitree.unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
+        from unitree.unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
+    except ImportError:
+        logging.error("DataCollector: 3D Lidar dependencies not found. Skipping.")
+        return
+
+    try:
+        ChannelFactoryInitialize(0)
+    except Exception:
+        pass
+
+    os.makedirs("recordings", exist_ok=True)
+    def _open_lidar():
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return open(f"recordings/data_collector_3d_lidar_{timestamp}.drcs", "wb")
+        
+    lidar_file = _open_lidar()
+    file_start_time = time.time()
+    last_data_log_time = time.time()
+    
+    class Lidar3DHandler:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.msg = None
+            
+        def handler(self, msg: PointCloud2_):
+            with self.lock:
+                self.msg = msg
+
+    handler = Lidar3DHandler()
+    sub = ChannelSubscriber("rt/utlidar/cloud_deskewed", PointCloud2_)
+    sub.Init(handler.handler, 10)
+    
+    try:
+        while not stop_event.is_set():
+            if time.time() - file_start_time >= rollover_seconds:
+                lidar_file.flush()
+                os.fsync(lidar_file.fileno())
+                lidar_file.close()
+                lidar_file = _open_lidar()
+                file_start_time = time.time()
+                
+            msg_to_process = None
+            with handler.lock:
+                if handler.msg is not None:
+                    msg_to_process = handler.msg
+                    handler.msg = None
+                    
+            if msg_to_process:
+                last_data_log_time = time.time()
+                width = msg_to_process.width
+                point_step = msg_to_process.point_step
+                data = msg_to_process.data
+                
+                try:
+                    sliced = bytes(data)
+                    unpack_size = int(width * point_step / 4)
+                    format_string = str(unpack_size) + "f"
+                    float_array2 = np.array(struct.unpack(format_string, sliced))
+                    arr = float_array2.reshape((width, int(point_step/4)))
+                    
+                    pts = arr[:, :3].astype(np.float32)
+                    
+                    compressed = DracoPy.encode(pts)
+                    lidar_file.write(struct.pack("<I", len(compressed)))
+                    lidar_file.write(compressed)
+                    lidar_file.flush()
+                    os.fsync(lidar_file.fileno())
+                except Exception as e:
+                    # Ignore corrupted packets that occasionally come from CycloneDDS
+                    pass
+            
+            # Reduce polling so we roughly capture 3D points at a manageable ~10Hz max
+            time.sleep(0.1)
+    except Exception as e:
+        logging.error(f"DataCollector 3D LiDAR exception: {e}")
+    finally:
+        lidar_file.flush()
+        lidar_file.close()
+        try:
+            sub.Close()
+        except:
+            pass
+        logging.info("DataCollector: 3D LiDAR recording stopped gracefully.")
+
+
 def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str, odom_channel: str = "eth0", rollover_seconds: int = 120):
     """
     Main entry point for the data collector process.
@@ -346,6 +437,11 @@ def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str
         t = threading.Thread(target=_record_lidar, args=(lidar_port, stop_event, rollover_seconds), daemon=True)
         t.start()
         threads.append(t)
+
+    # Always grab the built-in 3D lidar via CycloneDDS
+    t3d = threading.Thread(target=_record_lidar_3d, args=(stop_event, rollover_seconds), daemon=True)
+    t3d.start()
+    threads.append(t3d)
 
     if odom_channel:
         t = threading.Thread(target=_record_odom, args=(odom_channel, stop_event, rollover_seconds), daemon=True)
