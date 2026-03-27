@@ -131,7 +131,7 @@ def start(
             v_rtsp = dc_config.get("video_rtsp", "rtsp://localhost:8554/top_camera")
             a_rtsp = dc_config.get("audio_rtsp", "rtsp://localhost:8554/audio")
             lidar_t = dc_config.get("lidar_topic", "**/scan")
-            odom_t = dc_config.get("odom_topic", "/odom")
+            odom_t = dc_config.get("odom_topic", "**/odom")
             rollover_c = dc_config.get("rollover_seconds", 120)
 
             logging.info("Starting isolated data collector process...")

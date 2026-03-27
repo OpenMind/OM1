@@ -402,7 +402,7 @@ def _record_odom(topic: str, stop_event: threading.Event, rollover_seconds: int)
         logging.info("DataCollector: Odom recording stopped gracefully.")
 
 
-def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_topic: str, odom_topic: str = "/odom", rollover_seconds: int = 120):
+def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_topic: str, odom_topic: str = "**/odom", rollover_seconds: int = 120):
     """
     Main entry point for the data collector process.
     Spawned via multiprocessing.Process in run.py.
