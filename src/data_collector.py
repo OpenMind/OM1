@@ -351,8 +351,14 @@ def _record_lidar_3d(channel: str, stop_event: threading.Event, rollover_seconds
                 self.msg = msg
 
     handler = Lidar3DHandler()
-    sub = ChannelSubscriber("rt/utlidar/cloud_deskewed", PointCloud2_)
-    sub.Init(handler.handler, 10)
+    sub1 = ChannelSubscriber("rt/utlidar/cloud_deskewed", PointCloud2_)
+    sub1.Init(handler.handler, 10)
+    
+    sub2 = ChannelSubscriber("rt/utlidar/cloud", PointCloud2_)
+    sub2.Init(handler.handler, 10)
+    
+    sub3 = ChannelSubscriber("rt/utlidar/voxel_map", PointCloud2_)
+    sub3.Init(handler.handler, 10)
     
     try:
         while not stop_event.is_set():
@@ -408,7 +414,9 @@ def _record_lidar_3d(channel: str, stop_event: threading.Event, rollover_seconds
         lidar_file.flush()
         lidar_file.close()
         try:
-            sub.Close()
+            sub1.Close()
+            sub2.Close()
+            sub3.Close()
         except:
             pass
         logging.info("DataCollector: 3D LiDAR recording stopped gracefully.")
