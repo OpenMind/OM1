@@ -316,8 +316,8 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
         logging.info("DataCollector: Odom (Yaw) recording stopped and saved gracefully.")
 
 
-def _record_lidar_3d(stop_event: threading.Event, rollover_seconds: int):
-    logging.info("DataCollector: Starting 3D LiDAR (Go2 Native) recording on rt/utlidar/cloud_deskewed")
+def _record_lidar_3d(channel: str, stop_event: threading.Event, rollover_seconds: int):
+    logging.info(f"DataCollector: Starting 3D LiDAR (Go2 Native) recording on rt/utlidar/cloud_deskewed via {channel}")
     try:
         import DracoPy
         from unitree.unitree_sdk2py.idl.sensor_msgs.msg.dds_ import PointCloud2_
@@ -327,7 +327,7 @@ def _record_lidar_3d(stop_event: threading.Event, rollover_seconds: int):
         return
 
     try:
-        ChannelFactoryInitialize(0)
+        ChannelFactoryInitialize(0, channel)
     except Exception:
         pass
 
@@ -339,6 +339,7 @@ def _record_lidar_3d(stop_event: threading.Event, rollover_seconds: int):
     lidar_file = _open_lidar()
     file_start_time = time.time()
     last_data_log_time = time.time()
+    has_warned_empty = False
     
     class Lidar3DHandler:
         def __init__(self):
@@ -369,6 +370,7 @@ def _record_lidar_3d(stop_event: threading.Event, rollover_seconds: int):
                     handler.msg = None
                     
             if msg_to_process:
+                has_warned_empty = False
                 last_data_log_time = time.time()
                 width = msg_to_process.width
                 point_step = msg_to_process.point_step
@@ -392,6 +394,12 @@ def _record_lidar_3d(stop_event: threading.Event, rollover_seconds: int):
                     # Ignore corrupted packets that occasionally come from CycloneDDS
                     pass
             
+            if time.time() - last_data_log_time > 10.0:
+                if not has_warned_empty:
+                    logging.warning(f"DataCollector: No 3D Lidar data received on '{channel}' for over 10s.")
+                    has_warned_empty = True
+                last_data_log_time = time.time()
+                
             # Reduce polling so we roughly capture 3D points at a manageable ~10Hz max
             time.sleep(0.1)
     except Exception as e:
@@ -439,11 +447,11 @@ def run_data_collector_process(video_rtsp: str, audio_rtsp: str, lidar_port: str
         threads.append(t)
 
     # Always grab the built-in 3D lidar via CycloneDDS
-    t3d = threading.Thread(target=_record_lidar_3d, args=(stop_event, rollover_seconds), daemon=True)
-    t3d.start()
-    threads.append(t3d)
-
     if odom_channel:
+        t3d = threading.Thread(target=_record_lidar_3d, args=(odom_channel, stop_event, rollover_seconds), daemon=True)
+        t3d.start()
+        threads.append(t3d)
+
         t = threading.Thread(target=_record_odom, args=(odom_channel, stop_event, rollover_seconds), daemon=True)
         t.start()
         threads.append(t)
