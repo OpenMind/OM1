@@ -384,10 +384,11 @@ def _record_lidar_3d(channel: str, stop_event: threading.Event, rollover_seconds
                 
                 try:
                     sliced = bytes(data)
-                    unpack_size = int(width * point_step / 4)
-                    format_string = str(unpack_size) + "f"
-                    float_array2 = np.array(struct.unpack(format_string, sliced))
-                    arr = float_array2.reshape((width, int(point_step/4)))
+                    height = msg_to_process.height
+                    
+                    # Convert byte array to float32 array natively and fast
+                    arr = np.frombuffer(sliced, dtype=np.float32)
+                    arr = arr.reshape((width * height, int(point_step / 4)))
                     
                     pts = arr[:, :3].astype(np.float32)
                     
@@ -397,8 +398,7 @@ def _record_lidar_3d(channel: str, stop_event: threading.Event, rollover_seconds
                     lidar_file.flush()
                     os.fsync(lidar_file.fileno())
                 except Exception as e:
-                    # Ignore corrupted packets that occasionally come from CycloneDDS
-                    pass
+                    logging.error(f"DataCollector 3D Lidar Parse Error: {type(e).__name__}: {e}")
             
             if time.time() - last_data_log_time > 10.0:
                 if not has_warned_empty:
