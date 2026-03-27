@@ -156,6 +156,7 @@ class RuntimeConfig:
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
+    memory: Optional[Dict[str, Any]] = None
 
 
 def add_meta(
@@ -374,6 +375,7 @@ class ModeConfig:
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
             knowledge_base=global_config.knowledge_base,
+            memory=global_config.memory,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -486,6 +488,9 @@ class ModeSystemConfig:
     # Knowledge base configuration
     knowledge_base: Optional[Dict[str, Any]] = None
 
+    # Long-term memory configuration
+    memory: Optional[Dict[str, Any]] = None
+
     # Default LLM settings if mode doesn't override
     global_cortex_llm: Optional[Dict] = None
 
@@ -587,6 +592,7 @@ def load_mode_config(
         system_governance=raw_config.get("system_governance", ""),
         system_prompt_examples=raw_config.get("system_prompt_examples", ""),
         knowledge_base=raw_config.get("knowledge_base"),
+        memory=raw_config.get("memory"),
         global_cortex_llm=raw_config.get("cortex_llm"),
         global_lifecycle_hooks=parse_lifecycle_hooks(
             raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
@@ -808,6 +814,7 @@ def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:
             "system_governance": config.system_governance,
             "system_prompt_examples": config.system_prompt_examples,
             "knowledge_base": config.knowledge_base,
+            "memory": config.memory,
             "cortex_llm": config.global_cortex_llm,
             "global_lifecycle_hooks": config._raw_global_lifecycle_hooks,
             "modes": modes_dict,

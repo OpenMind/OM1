@@ -6,6 +6,8 @@ from datetime import datetime
 
 from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
+from fuser.memory_base.reader import MemoryReader
+from fuser.memory_base.writer import MemoryWriter
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
 from runtime.config import RuntimeConfig
@@ -59,6 +61,20 @@ class Fuser:
                 )
                 self.knowledge_base = None
 
+        self.memory_reader = None
+        self.memory_writer = None
+        if config.memory and config.memory.get("enabled", False):
+            try:
+                self.memory_reader = MemoryReader()
+                self.memory_writer = MemoryWriter()
+                logging.info(
+                    f"Memory enabled with root: {self.memory_reader.memory_root}"
+                )
+            except Exception:
+                logging.exception("Failed to initialize Memory with provided config")
+                self.memory_reader = None
+                self.memory_writer = None
+
     async def fuse(
         self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
     ) -> T.Optional[str]:
@@ -97,19 +113,19 @@ class Fuser:
 
         inputs_fused = "".join([s for s in input_strings if s is not None])
 
+        query_text = None
+        voice_input = self.io_provider.get_input("Voice")
+        if (
+            voice_input
+            and voice_input.input
+            and self.io_provider.tick_counter == voice_input.tick
+        ):
+            query_text = voice_input.input.strip()
+
         # Query the knowledge base if configured and if there are inputs to query with
         kb_context = ""
         if self.knowledge_base and inputs_fused:
             try:
-                query_text = None
-                voice_input = self.io_provider.get_input("Voice")
-                if (
-                    voice_input
-                    and voice_input.input
-                    and self.io_provider.tick_counter == voice_input.tick
-                ):
-                    query_text = voice_input.input.strip()
-
                 if query_text:
                     results = await self.knowledge_base.query(
                         query_text, top_k=3, min_score=self.kb_min_score
@@ -131,6 +147,29 @@ class Fuser:
         # Add knowledge base context to inputs if available
         if kb_context:
             inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
+
+        # Query long-term memory if configured
+        memory_context = ""
+        if self.memory_reader:
+            try:
+                memory_md = self.memory_reader.read_memory_md()
+
+                search_results = []
+                if query_text:
+                    search_results = await self.memory_reader.search_daily(query_text)
+
+                memory_context = self.memory_reader.format_context(
+                    memory_md, search_results
+                )
+                if memory_context:
+                    logging.info(
+                        f"Memory: injecting {len(memory_context)} chars into prompt"
+                    )
+            except Exception as e:
+                logging.error(f"Error querying memory: {e}")
+
+        if memory_context:
+            inputs_fused += f"\n\nMEMORY:\n{memory_context}"
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
