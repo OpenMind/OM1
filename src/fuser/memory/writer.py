@@ -51,8 +51,8 @@ class MemoryWriter:
             )
 
     def _get_daily_path(self) -> Path:
-        """Get the path for today's daily log file."""
-        today = datetime.now().strftime("%Y-%m-%d")
+        """Get the path for today's daily log file (UTC date)."""
+        today = datetime.utcnow().strftime("%Y-%m-%d")
         return self.daily_dir / f"{today}.md"
 
     async def append_interaction(
@@ -79,7 +79,7 @@ class MemoryWriter:
             return
 
         daily_path = self._get_daily_path()
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        timestamp = datetime.utcnow().strftime("%H:%M:%S UTC")
         mode_label = f" ({mode})" if mode else ""
 
         entry = f"\n## {timestamp}{mode_label}\n"
@@ -124,7 +124,7 @@ class MemoryWriter:
             return
 
         daily_path = self._get_daily_path()
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        timestamp = datetime.utcnow().strftime("%H:%M:%S UTC")
         mode_label = f" ({mode})" if mode else ""
 
         entry = f"\n## Summary {timestamp}{mode_label}\n"
