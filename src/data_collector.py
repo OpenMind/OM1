@@ -7,7 +7,7 @@ import sys
 import threading
 import time
 import wave
-from datetime import datetime
+from datetime import datetime, timezone
 
 import cv2
 import numpy as np
@@ -47,7 +47,7 @@ def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
     
     file_start_time = time.time()
     def _open_video_writer():
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filepath = f"recordings/data_collector_video_{timestamp}.mp4"
         
         # Try H264 first (avc1)
@@ -111,7 +111,7 @@ def _record_audio(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
             self.wav_file = self._open_wav()
 
         def _open_wav(self):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             wf = wave.open(f"recordings/data_collector_audio_{timestamp}.wav", "wb")
             wf.setnchannels(1)
             wf.setsampwidth(2)
@@ -182,7 +182,7 @@ def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_second
 
     os.makedirs("recordings", exist_ok=True)
     def _open_lidar():
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         return open(f"recordings/data_collector_2d_zenoh_lidar_{timestamp}.drcs", "wb")
 
     lidar_file = _open_lidar()
@@ -295,7 +295,7 @@ def _record_odom(channel: str, stop_event: threading.Event, rollover_seconds: in
 
     os.makedirs("recordings", exist_ok=True)
     def _open_odom():
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         return open(f"recordings/data_collector_odom_{timestamp}.jsonl", "w")
 
     odom_file = _open_odom()
