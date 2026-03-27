@@ -82,6 +82,7 @@ class ConfigConverter:
             "system_governance": raw_config.get("system_governance", ""),
             "system_prompt_examples": raw_config.get("system_prompt_examples", ""),
             "knowledge_base": raw_config.get("knowledge_base"),
+            "memory": raw_config.get("memory"),
             "cortex_llm": raw_config.get("cortex_llm"),
         }
 
@@ -114,6 +115,7 @@ class ConfigConverter:
                 "action_execution_mode", "concurrent"
             ),
             "action_dependencies": raw_config.get("action_dependencies", {}),
+            "mcp_servers": raw_config.get("mcp_servers", []),
         }
 
     @staticmethod

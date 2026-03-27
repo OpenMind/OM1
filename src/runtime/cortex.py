@@ -8,6 +8,7 @@ from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
+from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
@@ -90,6 +91,7 @@ class ModeCortexRuntime:
         self.simulator_orchestrator: Optional[SimulatorOrchestrator] = None
         self.background_orchestrator: Optional[BackgroundOrchestrator] = None
         self.input_orchestrator: Optional[InputOrchestrator] = None
+        self.mcp_orchestrator: Optional[MCPOrchestrator] = None
 
         # Tasks for orchestrators
         self.input_listener_task: Optional[asyncio.Task] = None
@@ -141,6 +143,29 @@ class ModeCortexRuntime:
         self.action_orchestrator = ActionOrchestrator(self.current_config)
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
+        if self.current_config.mcp_servers:
+            await self.current_config.mcp_servers.start()
+            self.mcp_orchestrator = MCPOrchestrator(
+                self.current_config.mcp_servers, self.current_config.cortex_llm
+            )
+
+        # Wire MemoryWriter to Fuser for per-tick writes in cortex loop
+        if self.fuser.memory_reader:
+            from fuser.memory.indexer import MemoryIndex
+            from fuser.memory.writer import MemoryWriter
+
+            reader = self.fuser.memory_reader
+            # Create shared index for both reader and writer
+            memory_index = MemoryIndex(reader.embedding_client)
+            reader.index = memory_index
+            reader._index_initialized = False  # Will lazy-load on first search
+
+            memory_config = self.current_config.memory or {}
+            memory_root = memory_config.get("memory_root")
+            self.fuser.memory_writer = MemoryWriter(
+                memory_root=memory_root, index=memory_index
+            )
+            logging.info("Memory writer wired to Fuser")
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
@@ -240,6 +265,11 @@ class ModeCortexRuntime:
         if self.action_orchestrator:
             logging.debug("Stopping action orchestrator")
             self.action_orchestrator.stop()
+
+        if self.mcp_orchestrator:
+            logging.debug("Closing MCP connections")
+            await self.mcp_orchestrator.stop()
+            self.mcp_orchestrator = None
 
         if self.input_orchestrator:
             logging.debug("Stopping input orchestrator")
@@ -604,6 +634,18 @@ class ModeCortexRuntime:
             logging.debug("No output from LLM")
             return
 
+        if self.mcp_orchestrator:
+            output = await self.mcp_orchestrator.process(
+                output,
+                prompt,
+                self.current_config.cortex_llm,
+                dispatch_om1=self.action_orchestrator.promise,
+            )
+
+        if output is None:
+            logging.debug("No output from LLM after MCP processing")
+            return
+
         if self._is_reloading or cortex_generation != self._cortex_loop_generation:
             logging.debug("Skipping action execution due to mode transition")
             return
@@ -612,6 +654,21 @@ class ModeCortexRuntime:
             await self.simulator_orchestrator.promise(output.actions)
 
         await self.action_orchestrator.promise(output.actions)
+
+        # Write interaction to daily memory log
+        if self.fuser and self.fuser.memory_writer:
+            voice_input = self.io_provider.get_input("Voice")
+            if voice_input and voice_input.input and voice_input.tick == tick_num:
+                action_summary = " | ".join(
+                    f"{a.type}: {a.value}" for a in output.actions if a.value
+                )
+                asyncio.create_task(
+                    self.fuser.memory_writer.append_interaction(
+                        user_msg=voice_input.input.strip(),
+                        robot_msg=action_summary,
+                        mode=self.io_provider.get_dynamic_variable("current_mode"),
+                    )
+                )
 
     def get_mode_info(self) -> dict:
         """

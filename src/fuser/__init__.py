@@ -6,6 +6,7 @@ from datetime import datetime
 
 from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
+from fuser.memory.reader import MemoryReader
 from inputs.base import Sensor
 from providers.io_provider import IOProvider
 from runtime.config import RuntimeConfig
@@ -59,6 +60,46 @@ class Fuser:
                 )
                 self.knowledge_base = None
 
+        self.memory_reader = None
+        self.memory_writer = None  # Set externally by cortex.py
+        self.memory_min_score = 0.3
+        if config.memory:
+            try:
+                memory_config = dict(config.memory)
+                self.memory_min_score = memory_config.get("min_score", 0.3)
+                memory_root = memory_config.get(
+                    "memory_root"
+                )  # None = default OM1/memory/
+
+                # Reuse KnowledgeBase's embedding client if available,
+                # otherwise use local embedding sidecar
+                embedding_client = None
+                if self.knowledge_base:
+                    embedding_client = self.knowledge_base.embedding_client
+                else:
+                    from fuser.knowledge_base.faiss.embedding_client import (
+                        EmbeddingClient,
+                    )
+
+                    base_url = memory_config.get(
+                        "embedding_base_url", "http://localhost:8100"
+                    )
+                    embedding_client = EmbeddingClient(base_url=base_url)
+
+                self.memory_reader = MemoryReader(
+                    embedding_client=embedding_client,
+                    memory_root=memory_root,
+                    min_score=self.memory_min_score,
+                )
+                logging.info(
+                    f"Memory enabled with root: {self.memory_reader.memory_root}"
+                )
+            except Exception:
+                logging.exception(
+                    "Failed to initialize MemoryReader with provided config"
+                )
+                self.memory_reader = None
+
     async def fuse(
         self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
     ) -> T.Optional[str]:
@@ -97,19 +138,20 @@ class Fuser:
 
         inputs_fused = "".join([s for s in input_strings if s is not None])
 
+        # Extract voice query text for KB and memory search
+        query_text = None
+        voice_input = self.io_provider.get_input("Voice")
+        if (
+            voice_input
+            and voice_input.input
+            and self.io_provider.tick_counter == voice_input.tick
+        ):
+            query_text = voice_input.input.strip()
+
         # Query the knowledge base if configured and if there are inputs to query with
         kb_context = ""
         if self.knowledge_base and inputs_fused:
             try:
-                query_text = None
-                voice_input = self.io_provider.get_input("Voice")
-                if (
-                    voice_input
-                    and voice_input.input
-                    and self.io_provider.tick_counter == voice_input.tick
-                ):
-                    query_text = voice_input.input.strip()
-
                 if query_text:
                     results = await self.knowledge_base.query(
                         query_text, top_k=3, min_score=self.kb_min_score
@@ -132,6 +174,35 @@ class Fuser:
         if kb_context:
             inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
 
+        # Query long-term memory if configured
+        memory_context = ""
+        if self.memory_reader:
+            try:
+                # Always read persistent facts from MEMORY.md
+                memory_md = self.memory_reader.read_memory_md(max_chars=500)
+
+                # Search daily logs only when there is voice input
+                search_results = []
+                latest = ""
+                if query_text:
+                    search_results = await self.memory_reader.search_daily(
+                        query_text, top_k=1, min_score=self.memory_min_score
+                    )
+                latest = self.memory_reader.get_latest_daily(max_chars=300)
+
+                memory_context = self.memory_reader.format_context(
+                    memory_md, search_results, latest, max_chars=1000
+                )
+                if memory_context:
+                    logging.info(
+                        f"Memory: injecting {len(memory_context)} chars into prompt"
+                    )
+            except Exception as e:
+                logging.error(f"Error querying memory: {e}")
+
+        if memory_context:
+            inputs_fused += f"\n\nMEMORY:\n{memory_context}"
+
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
         # since they are flowing from the outside world
@@ -149,6 +220,12 @@ class Fuser:
             )
             if desc:
                 actions_fused += desc + "\n\n"
+
+        # descriptions of MCP tools
+        if self.config.mcp_servers:
+            mcp_descriptions = self.config.mcp_servers.get_tool_descriptions()
+            if mcp_descriptions:
+                actions_fused += mcp_descriptions + "\n\n"
 
         question_prompt = "What will you do? Actions:"
 
