@@ -199,7 +199,7 @@ class TestEmergencyAlertConnectorConnect:
             "text": "Emergency!"
         }
         mock_dependencies["tts"].get_pending_message_count.return_value = 0
-        mock_dependencies["io"].llm_prompt = "INPUT: Voice says help"
+        mock_dependencies["io"].llm_prompt = 'Voice: "help"'
 
         alert_input = EmergencyAlertInput(action="Emergency!")
         await connector.connect(alert_input)

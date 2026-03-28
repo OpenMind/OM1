@@ -236,7 +236,7 @@ class TestSpeakKokoroTTSConnector:
         common_mocks["zenoh_session"].declare_publisher.return_value = mock_audio_pub
 
         mock_io_instance = Mock()
-        mock_io_instance.llm_prompt = "INPUT: Voice: Hello"
+        mock_io_instance.llm_prompt = 'Voice: "Hello"'
         common_mocks["io_provider"].return_value = mock_io_instance
 
         mock_conversation_instance = Mock()
