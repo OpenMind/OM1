@@ -53,13 +53,13 @@ def test_stop_method():
 # Tests for async message processing
 
 
-def test_adding_pending_message_submits_to_executor():
-    """Test that adding_pending_message submits work to the executor."""
+def test_add_pending_message_submits_to_executor():
+    """Test that add_pending_message submits work to the executor."""
     provider = UbTtsProvider("http://localhost:8080/tts")
     executor_mock = MagicMock()
     provider.executor = executor_mock
 
-    provider.adding_pending_message("Hello world")
+    provider.add_pending_message("Hello world")
 
     executor_mock.submit.assert_called_once()
     args = executor_mock.submit.call_args[0]
@@ -71,13 +71,13 @@ def test_adding_pending_message_submits_to_executor():
     provider.stop()
 
 
-def test_adding_pending_message_with_custom_parameters():
-    """Test that adding_pending_message correctly passes custom parameters."""
+def test_add_pending_message_with_custom_parameters():
+    """Test that add_pending_message correctly passes custom parameters."""
     provider = UbTtsProvider("http://localhost:8080/tts")
     executor_mock = MagicMock()
     provider.executor = executor_mock
 
-    provider.adding_pending_message("Custom message", interrupt=False, timestamp=12345)
+    provider.add_pending_message("Custom message", interrupt=False, timestamp=12345)
 
     executor_mock.submit.assert_called_once()
     args = executor_mock.submit.call_args[0]
@@ -89,8 +89,8 @@ def test_adding_pending_message_with_custom_parameters():
     provider.stop()
 
 
-def test_adding_pending_message_integration():
-    """Test integration of adding_pending_message with actual worker."""
+def test_add_pending_message_integration():
+    """Test integration of add_pending_message with actual worker."""
     provider = UbTtsProvider("http://localhost:8080/tts")
 
     mock_response = MagicMock()
@@ -98,7 +98,7 @@ def test_adding_pending_message_integration():
     mock_response.raise_for_status = MagicMock()
 
     with patch("providers.ub_tts_provider.requests.put", return_value=mock_response):
-        provider.adding_pending_message("Hello world")
+        provider.add_pending_message("Hello world")
 
         time.sleep(0.1)
 

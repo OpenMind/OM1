@@ -101,7 +101,7 @@ class TestUbTtsConnector:
             mock_time.time.return_value = 1000
             await connector.connect(speak_input)
 
-        mock_tts_provider["instance"].adding_pending_message.assert_called_once_with(
+        mock_tts_provider["instance"].add_pending_message.assert_called_once_with(
             message="Hello!",
             interrupt=True,
             timestamp=1000,
@@ -115,7 +115,7 @@ class TestUbTtsConnector:
 
         await connector.connect(speak_input)
 
-        mock_tts_provider["instance"].adding_pending_message.assert_not_called()
+        mock_tts_provider["instance"].add_pending_message.assert_not_called()
 
     def test_zenoh_tts_status_request_read(self, connector, mock_zenoh_session):
         """Test status request with code 2 (read status) responds with current state."""
