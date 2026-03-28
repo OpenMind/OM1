@@ -805,3 +805,97 @@ class TestHotReloadMultiToSingle:
 
             assert len(new_single_config.modes) == 1
             assert "single_mode" in new_single_config.modes
+
+
+class TestEpisodicMemoryInTick:
+    """Test episodic memory write_episode integration in cortex _tick."""
+
+    @pytest.mark.asyncio
+    async def test_write_episode_called_when_voice_present(self, cortex_runtime):
+        """write_episode should be called when voice input is present in tick."""
+        runtime, mocks = cortex_runtime
+
+        voice_mock = Mock()
+        voice_mock.input = "go to kitchen"
+        battery_mock = Mock()
+        battery_mock.input = "80%"
+        mocks["io_provider"].get_input = Mock(
+            side_effect=lambda k: voice_mock if k == "Voice" else battery_mock
+        )
+        mocks["io_provider"].increment_tick = Mock(return_value=1)
+        mocks["io_provider"].mode_transition_input = Mock(
+            return_value=__import__("contextlib").nullcontext()
+        )
+        mocks["io_provider"].get_mode_transition_input = Mock(return_value=None)
+        mocks["mode_manager"].process_tick = AsyncMock(return_value=None)
+
+        mock_output = Mock()
+        mock_output.actions = []
+
+        mock_config = Mock()
+        mock_config.mode = "test_mode"
+        mock_config.agent_inputs = []
+        mock_config.cortex_llm = Mock()
+        mock_config.cortex_llm.ask = AsyncMock(return_value=mock_output)
+        runtime.current_config = mock_config
+        runtime.fuser = Mock()
+        runtime.fuser.fuse = AsyncMock(return_value="test prompt")
+        runtime.action_orchestrator = Mock()
+        runtime.action_orchestrator.flush_promises = AsyncMock(return_value=([], []))
+        runtime.action_orchestrator.promise = AsyncMock()
+        runtime._is_reloading = False
+        runtime._mode_transition_event = Mock()
+        runtime._mode_transition_event.set = Mock()
+
+        from typing import Any
+
+        from providers.episodic_memory_provider import EpisodicMemoryProvider
+
+        mock_provider = Mock()
+        mock_provider.write_episode = AsyncMock()
+        ep_any: Any = EpisodicMemoryProvider
+        ep_any._singleton_class._singleton_instance = mock_provider
+        try:
+            await runtime._tick(0)
+        finally:
+            ep_any.reset()
+
+        mock_provider.write_episode.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_write_episode_exception_is_caught(self, cortex_runtime):
+        """Exception in write_episode should be caught and logged as warning."""
+        runtime, mocks = cortex_runtime
+
+        voice_mock = Mock()
+        voice_mock.input = "hello"
+        mocks["io_provider"].get_input = Mock(return_value=voice_mock)
+        mocks["io_provider"].increment_tick = Mock(return_value=1)
+        mocks["io_provider"].mode_transition_input = Mock(
+            return_value=__import__("contextlib").nullcontext()
+        )
+        mocks["io_provider"].get_mode_transition_input = Mock(return_value=None)
+        mocks["mode_manager"].process_tick = AsyncMock(return_value=None)
+
+        mock_output = Mock()
+        mock_output.actions = []
+
+        mock_config = Mock()
+        mock_config.mode = "test_mode"
+        mock_config.agent_inputs = []
+        mock_config.cortex_llm = Mock()
+        mock_config.cortex_llm.ask = AsyncMock(return_value=mock_output)
+        runtime.current_config = mock_config
+        runtime.fuser = Mock()
+        runtime.fuser.fuse = AsyncMock(return_value="test prompt")
+        runtime.action_orchestrator = Mock()
+        runtime.action_orchestrator.flush_promises = AsyncMock(return_value=([], []))
+        runtime.action_orchestrator.promise = AsyncMock()
+        runtime._is_reloading = False
+        runtime._mode_transition_event = Mock()
+
+        with patch("runtime.cortex.EpisodicMemoryProvider") as mock_cls:
+            mock_provider = Mock()
+            mock_provider.write_episode = AsyncMock(side_effect=Exception("API error"))
+            mock_cls.return_value = mock_provider
+            await runtime._tick(1)
