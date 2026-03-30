@@ -9,11 +9,7 @@
 
   // Global settings
   api_key: "${OM_API_KEY:-openmind_free}",
-<<<<<<< HEAD
-   system_governance: "",
-=======
   system_governance: "",
->>>>>>> main
   cortex_llm: {
     type: "QwenLLM",
     config: {
