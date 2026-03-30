@@ -25,15 +25,6 @@ def k1_odom_processor(
     Process function for the K1 Odom Provider.
     This function runs in a separate process to periodically retrieve the odometry
     data from the robot via Zenoh and put it into a multiprocessing queue.
-
-    Parameters
-    ----------
-    topic : str
-        The Zenoh topic to subscribe to for odometry data.
-    data_queue : mp.Queue
-        Queue for sending the retrieved odometry data.
-    logging_config : LoggingConfig, optional
-        Optional logging configuration. If provided, it will override the default logging settings.
     """
     setup_logging("k1_odom_processor", logging_config=logging_config)
 

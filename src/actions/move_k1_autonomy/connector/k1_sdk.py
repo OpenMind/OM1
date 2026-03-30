@@ -18,14 +18,6 @@ from zenoh_msgs import open_zenoh_session
 class MoveBoosterZenohConfig(ActionConfig):
     """
     Configuration for Booster Zenoh connector.
-
-    Parameters
-    ----------
-    odom_topic : str
-        Zenoh topic for odometry data.
-    rpc_service_name : str
-        Zenoh key for the ROS2 RPC service (request/reply via session.get).
-        Defaults to "booster_rpc_service".
     """
 
     odom_topic: str = Field(
