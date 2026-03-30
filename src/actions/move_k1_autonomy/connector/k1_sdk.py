@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import math
 import random
@@ -12,7 +13,12 @@ from actions.base import ActionConfig, ActionConnector, MoveCommand
 from actions.move_k1_autonomy.interface import MoveInput
 from providers.k1_odom_provider import K1OdomProvider, RobotState
 from providers.simple_paths_provider import SimplePathsProvider
-from zenoh_msgs import open_zenoh_session
+from zenoh_msgs import (
+    BoosterApiReqMsg,
+    RpcServiceRequest,
+    RpcServiceResponse,
+    open_zenoh_session,
+)
 
 
 class MoveBoosterZenohConfig(ActionConfig):
@@ -139,14 +145,6 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                 return
 
         try:
-            import json
-
-            from zenoh_msgs import (
-                BoosterApiReqMsg,
-                RpcServiceRequest,
-                RpcServiceResponse,
-            )
-
             API_MOVE = 2001
             # Create the inner request message
             inner_request = BoosterApiReqMsg(
