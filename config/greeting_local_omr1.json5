@@ -15,7 +15,7 @@
     config: {
       agent_name: "Booster",
       history_length: 0,
-      base_url: "${QWEN_BASE_URL:-http://omr1.local:8860}/v1",
+      base_url: "${QWEN_BASE_URL:-http://omr2.local:8860}/v1",
       model: "nvidia/nemotron-3-nano",
       // Make tool-calling more reliable/deterministic on OpenAI-compatible servers
       temperature: 0,
@@ -51,7 +51,7 @@
           connector: "kokoro_tts",
           config: {
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "${KOKORO_BASE_URL:-http://omr1.local:8880}/v1",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
           },
         },
       ],
@@ -64,7 +64,7 @@
             tts_provider: "kokoro",
             message: "Hello! I'm ${ROBOT_NAME:-Alex}, how can I help you today?",
             model_id: "mlx-community/Kokoro-82M-bf16",
-            base_url: "${KOKORO_BASE_URL:-http://omr1.local:8880}/v1",
+            base_url: "${KOKORO_BASE_URL:-http://omr2.local:8880}/v1",
           },
         },
       ],
