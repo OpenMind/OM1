@@ -94,13 +94,13 @@ You can stream your video to our remote server using your **OM API Key**:
 ```bash
 ffmpeg -f avfoundation -video_size 1920x1080 -framerate 30 -i "0:0" \
   -vcodec libx264 -preset ultrafast -tune zerolatency -f flv \
-  "rtmp://api-video-ingest.openmind.org:1935/<OM_API_KEY_ID>?api_key=<OM_API_KEY>"
+  "rtmp://api-video-ingest.openmind.com:1935/<OM_API_KEY_ID>?api_key=<OM_API_KEY>"
 ```
 
-> **Note:** **OM_API_KEY_ID** refers to the first 16 digits of your API key, excluding the **om_prod_ prefix**. You can also find your corresponding **OM_API_KEY_ID** in our [portal](https://portal.openmind.org).
+> **Note:** **OM_API_KEY_ID** refers to the first 16 digits of your API key, excluding the **om_prod_ prefix**. You can also find your corresponding **OM_API_KEY_ID** in our [portal](https://portal.openmind.com).
 
 You can view your video stream at:
 
 ```bash
-https://api-video-webrtc.openmind.org/<OM_API_KEY_ID>?api_key=<OM_API_KEY>
+https://api-video-webrtc.openmind.com/<OM_API_KEY_ID>?api_key=<OM_API_KEY>
 ```
