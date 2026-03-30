@@ -267,7 +267,8 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
         # if we got to this point, we have good data and we are able to
         # safely proceed
-        target: List[MoveCommand] = list(self.pending_movements.queue)
+        with self.pending_movements.mutex:
+            target: List[MoveCommand] = list(self.pending_movements.queue)
 
         if len(target) > 0:
 
