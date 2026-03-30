@@ -762,11 +762,11 @@ def test_find_function_in_module_import_error():
 
     with patch("runtime.hook.os.path.exists", return_value=True):
         with patch("builtins.open", mock_open(read_data=file_content)):
-            with patch(
-                "runtime.hook.importlib.import_module",
-                side_effect=ImportError("Module not found"),
-            ):
-                with patch("runtime.hook.logging") as mock_logging:
+            with patch("runtime.hook.logging") as mock_logging:
+                with patch(
+                    "runtime.hook.importlib.import_module",
+                    side_effect=ImportError("Module not found"),
+                ):
                     result = handler._find_function_in_module(
                         "test_module", "test_func"
                     )

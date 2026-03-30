@@ -33,6 +33,28 @@ except ImportError:
         def __init__(self):
             pass
 
+    class dds_:
+        """
+        Placeholder for dds_ module when Unitree SDK is not installed.
+        """
+
+        BmsState_ = BmsState_
+        LowState_ = LowState_
+
+    class ChannelSubscriber:
+        """
+        Placeholder for ChannelSubscriber when Unitree SDK is not installed.
+        """
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def Init(self, *args, **kwargs):
+            """
+            Placeholder for Init method of ChannelSubscriber.
+            """
+            pass
+
 
 # Data structure documentation:
 #
@@ -120,11 +142,11 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         # Joint angles e.g.
         if unitree_ethernet and unitree_ethernet != "":
             # only set up if we are connected to a robot
-            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)  # type: ignore
+            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", dds_.LowState_)  # type: ignore
             self.lowstate_subscriber.Init(self.LowStateHandler, 10)
 
             # Battery specific data
-            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", BmsState_)  # type: ignore
+            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", dds_.BmsState_)  # type: ignore
             self.bmsstate_subscriber.Init(self.BMSStateHandler, 10)
 
         # battery state
