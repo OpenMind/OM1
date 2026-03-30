@@ -83,15 +83,49 @@ class UnitreeGo2GPSOdomReader(FuserInput[UnitreeGo2GPSOdomReaderConfig, Optional
 
     @staticmethod
     def _wrap_angle(a: float) -> float:
+        """
+        Normalize an angle to the range [-pi, pi].
+
+        Parameters
+        ----------
+        a : float
+            Input angle in radians.
+
+        Returns
+        -------
+        float
+            Normalized angle within [-pi, pi].
+        """
         return (a + math.pi) % (2 * math.pi) - math.pi
 
     def _xy_to_latlon(self, x: float, y: float):
+        """
+        Convert local cartesian coordinates to latitude and longitude.
+
+        Parameters
+        ----------
+        x : float
+            East offset in metres from origin.
+        y : float
+            North offset in metres from origin.
+
+        Returns
+        -------
+        map
+            Mapped degrees of latitude and longitude.
+        """
         φ0, λ0 = map(math.radians, (self.lat0, self.lon0))  # type: ignore
         φ = φ0 + y / R_EARTH
         λ = λ0 + x / (R_EARTH * math.cos(φ0))
         return map(math.degrees, (φ, λ))
 
     async def _update_pose(self):
+        """
+        Update robot pose from latest odometry data.
+
+        Reads x, y, and yaw from the odometry provider and applies
+        the yaw offset to compute the pose in the world frame.
+        """
         o = self.odom
         logging.debug(f"Odom data: {o}")
         self.pose_x = self.odom.x

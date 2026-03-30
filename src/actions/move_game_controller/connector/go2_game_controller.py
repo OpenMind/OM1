@@ -246,7 +246,19 @@ class Go2GameControllerConnector(ActionConnector[Go2GameControllerConfig, IDLEIn
             self.thread_lock.release()
 
     def _execute_sport_command_sync(self, command: str) -> None:
+        """
+        Execute a sport command synchronously using the sport client.
 
+        Parameters
+        ----------
+        command : str
+            The sport command string to execute.
+
+        Returns
+        -------
+        None
+            Returns early if sport client is unavailable or action is in progress.
+        """
         logging.debug(f"_execute_sport_command_sync({command})")
 
         if self.sport_client is None:

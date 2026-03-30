@@ -102,6 +102,23 @@ def _process_scan(raw):
 
 
 def _process_express_scan(data, new_angle, trame):
+    """
+    Process an express scan packet from RPLidar.
+
+    Parameters
+    ----------
+    data : object
+        Scan data containing start angle, angles and distances.
+    new_angle : float
+        The new angle value from the latest packet.
+    trame : int
+        Frame index within the express scan packet.
+
+    Returns
+    -------
+    tuple
+        Tuple of (new_scan, quality, angle, distance).
+    """
     new_scan = (new_angle < data.start_angle) & (trame == 1)
     angle = (
         data.start_angle
@@ -174,6 +191,14 @@ class RPDriver(object):
         self._serial.close()
 
     def _set_pwm(self, pwm):
+        """
+        Set the PWM value for the RPLidar motor.
+
+        Parameters
+        ----------
+        pwm : int
+            PWM value to set for motor speed control.
+        """
         payload = struct.pack("<H", pwm)
         self._send_payload_cmd(SET_PWM_BYTE, payload)
 
