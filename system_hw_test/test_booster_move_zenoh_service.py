@@ -97,7 +97,7 @@ class BoosterMoveZenohClient:
             replies = self.session.get(
                 self.service_name,
                 payload=request_payload,
-                timeout=5.0,
+                timeout=timeout,
             )
 
             for reply in replies:
