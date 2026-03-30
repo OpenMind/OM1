@@ -9,7 +9,6 @@
 
   // Global settings
   api_key: "${OM_API_KEY:-openmind_free}",
-  unitree_ethernet: "${UNITREE_ETHERNET:-enP2p1s0}",
   system_governance: "",
   cortex_llm: {
     type: "QwenLLM",
