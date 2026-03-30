@@ -1,5 +1,3 @@
-"""Booster Interface Messages."""
-
 from dataclasses import dataclass
 
 from pycdr2 import IdlStruct
