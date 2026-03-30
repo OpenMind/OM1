@@ -3,10 +3,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from actions.speak.connector.riva_tts import (
-    SpeakRivaTTSConfig,
-    SpeakRivaTTSConnector,
-)
+from actions.speak.connector.riva_tts import SpeakRivaTTSConfig, SpeakRivaTTSConnector
 from actions.speak.interface import SpeakInput
 
 
@@ -174,12 +171,12 @@ class TestSpeakRivaTTSConnector:
         common_mocks["zenoh_session"].declare_publisher.assert_called_once()
 
         common_mocks["asr_provider"].assert_called_once_with(
-            ws_url="wss://api-asr.openmind.org",
+            ws_url="wss://api-asr.openmind.com",
             device_id=None,
             microphone_name=None,
         )
         common_mocks["tts_provider"].assert_called_once_with(
-            url="https://api.openmind.org/api/core/riva/tts",
+            url="https://api.openmind.com/api/core/riva/tts",
             api_key=None,
         )
 
@@ -192,12 +189,12 @@ class TestSpeakRivaTTSConnector:
         SpeakRivaTTSConnector(custom_config)
 
         common_mocks["asr_provider"].assert_called_once_with(
-            ws_url="wss://api-asr.openmind.org",
+            ws_url="wss://api-asr.openmind.com",
             device_id=2,
             microphone_name="test_mic",
         )
         common_mocks["tts_provider"].assert_called_once_with(
-            url="https://api.openmind.org/api/core/riva/tts",
+            url="https://api.openmind.com/api/core/riva/tts",
             api_key="test_api_key",
         )
 

@@ -105,7 +105,7 @@ def test_initialization_creates_providers_and_buffers(
     mock_asr_constructor.assert_called_once_with(
         rtsp_url=rtsp_url,
         rate=rate,
-        ws_url=f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
+        ws_url=f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}",
         language_code="en-US",
         enable_tts_interrupt=enable_tts_interrupt,
     )

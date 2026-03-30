@@ -257,7 +257,7 @@ def test_teleops_status_provider_initialization(mock_teleops_dependencies):
     provider = TeleopsStatusProvider(api_key="test_api_key_1234567890123456789")
 
     assert provider.api_key == "test_api_key_1234567890123456789"
-    assert provider.base_url == "https://api.openmind.org/api/core/teleops/status"
+    assert provider.base_url == "https://api.openmind.com/api/core/teleops/status"
     assert provider.executor is not None
 
 
@@ -273,4 +273,4 @@ def test_teleops_status_provider_initialization_failure():
     provider = TeleopsStatusProvider()
 
     assert provider.api_key is None
-    assert provider.base_url == "https://api.openmind.org/api/core/teleops/status"
+    assert provider.base_url == "https://api.openmind.com/api/core/teleops/status"

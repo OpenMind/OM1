@@ -47,7 +47,7 @@ class TwitterInput(FuserInput[TwitterSensorConfig, Optional[str]]):
 
         self.buffer: List[str] = []
         self.message_buffer: Queue[str] = Queue()
-        self.api_url = "https://api.openmind.org/api/core/query"
+        self.api_url = "https://api.openmind.com/api/core/query"
         self.session: Optional[aiohttp.ClientSession] = None
         self.context: Optional[str] = None
 

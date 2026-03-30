@@ -47,7 +47,7 @@
 #         if not config.model:
 #             self._config.model = "gpt-4.1-nano"
 
-#         self.endpoint = "https://api.openmind.org/api/core/agent/medical"
+#         self.endpoint = "https://api.openmind.com/api/core/agent/medical"
 
 #     async def ask(
 #         self, prompt: str, messages: T.List[T.Dict[str, str]] = []

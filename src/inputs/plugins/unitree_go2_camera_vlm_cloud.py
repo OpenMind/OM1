@@ -29,7 +29,7 @@ class UnitreeGo2CameraVLMCloudConfig(SensorConfig):
 
     api_key: Optional[str] = Field(default=None, description="API Key")
     base_url: str = Field(
-        default="wss://api-vila.openmind.org",
+        default="wss://api-vila.openmind.com",
         description="Base URL for the VLM service",
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
@@ -71,7 +71,7 @@ class UnitreeGo2CameraVLMCloud(
         base_url = self.config.base_url
         stream_base_url = (
             self.config.stream_base_url
-            or f"wss://api.openmind.org/api/core/teleops/stream?api_key={api_key}"
+            or f"wss://api.openmind.com/api/core/teleops/stream?api_key={api_key}"
         )
 
         self.vlm: UnitreeCameraVLMProvider = UnitreeCameraVLMProvider(

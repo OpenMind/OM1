@@ -77,7 +77,7 @@ class CommandStatus:
 class RemoteMoveController:
     def __init__(self):
         self.ws_client = ws.Client(
-            url=f"wss://api.openmind.org/api/core/teleops/command?api_key={OM_API_KEY}"
+            url=f"wss://api.openmind.com/api/core/teleops/command?api_key={OM_API_KEY}"
         )
         self.ws_client.start()
 

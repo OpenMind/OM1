@@ -710,7 +710,7 @@ def _check_api_key(raw_config: dict, verbose: bool):
     if (not api_key or api_key == "openmind_free") and not env_api_key:
         print()
         print("Warning: No API key configured")
-        print("   Get a free key at: https://portal.openmind.org")
+        print("   Get a free key at: https://portal.openmind.com")
         print("   Or set OM_API_KEY in your .env file")
     elif verbose:
         if env_api_key:

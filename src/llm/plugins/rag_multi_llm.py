@@ -45,8 +45,8 @@
 #         if not config.model:
 #             self._config.model = "gpt-4.1-nano"
 
-#         self.endpoint = "https://api.openmind.org/api/core/agent"
-#         self.rag_endpoint = "https://api.openmind.org/api/core/rag/query"
+#         self.endpoint = "https://api.openmind.com/api/core/agent"
+#         self.rag_endpoint = "https://api.openmind.com/api/core/rag/query"
 
 #         self.use_rag = hasattr(self._config, "use_rag") and self._config.use_rag
 

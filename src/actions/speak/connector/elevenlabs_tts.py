@@ -139,7 +139,7 @@ class SpeakElevenLabsTTSConnector(
 
         # Initialize Eleven Labs TTS Provider
         self.tts = ElevenLabsTTSProvider(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
@@ -151,7 +151,7 @@ class SpeakElevenLabsTTSConnector(
 
         # Configure Eleven Labs TTS Provider to ensure settings are applied
         self.tts.configure(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,

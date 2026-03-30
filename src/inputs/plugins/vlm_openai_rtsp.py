@@ -35,7 +35,7 @@ class VLMOpenAIRTSPConfig(SensorConfig):
 
     api_key: Optional[str] = Field(default=None, description="API Key")
     base_url: str = Field(
-        default="https://api.openmind.org/api/core/openai",
+        default="https://api.openmind.com/api/core/openai",
         description="Base URL for the OpenAI service",
     )
     rtsp_url: str = Field(
