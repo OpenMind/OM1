@@ -48,19 +48,56 @@ def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
     file_start_time = time.time()
     def _open_video_writer():
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        filepath = f"recordings/data_collector_video_{timestamp}.mp4"
-        
-        # Try H264 first (avc1)
-        w = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*"avc1"), fps, (width, height))
-        if not w.isOpened():
-            logging.warning("DataCollector: avc1 codec rejected by cv2 Linux backend. Falling back to mp4v...")
-            w = cv2.VideoWriter(filepath, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
-            
-        if not w.isOpened():
-            logging.error(f"DataCollector: FATAL ERROR. Could not open VideoWriter for {filepath}")
-        else:
-            logging.info(f"DataCollector: VideoWriter successfully initialized for {filepath}")
-        return w
+        mp4_path = f"recordings/data_collector_video_{timestamp}.mp4"
+        avi_path  = f"recordings/data_collector_video_{timestamp}.avi"
+
+        # ── 1. GStreamer + Jetson NVENC (nvv4l2h264enc) ────────────────────────
+        # appsrc feeds raw BGR frames; nvvidconv converts colour space on the
+        # GPU; nvv4l2h264enc is the Jetson hardware H.264 encoder (no CPU load);
+        # mp4mux + filesink write the output file.
+        # cv2.VideoWriter with CAP_GSTREAMER accepts the pipeline as the filename
+        # and fourcc=0.
+        gst_pipeline = (
+            f"appsrc ! "
+            f"video/x-raw,format=BGR,width={width},height={height},"
+            f"framerate={int(fps)}/1 ! "
+            f"videoconvert ! "
+            f"video/x-raw,format=BGRx ! "
+            f"nvvidconv ! "
+            f"video/x-raw(memory:NVMM),format=NV12 ! "
+            f"nvv4l2h264enc bitrate=8000000 iframeinterval=30 ! "
+            f"h264parse ! "
+            f"mp4mux ! "
+            f"filesink location={mp4_path}"
+        )
+        w = cv2.VideoWriter(gst_pipeline, cv2.CAP_GSTREAMER, 0, fps, (width, height))
+        if w.isOpened():
+            logging.info(f"DataCollector: VideoWriter opened via GStreamer nvv4l2h264enc ({mp4_path})")
+            return w
+        w.release()
+        logging.warning("DataCollector: GStreamer nvv4l2h264enc unavailable, falling back to OpenCV codecs...")
+
+        # ── 2–4. OpenCV codec fallback chain ──────────────────────────────────
+        #   avc1 – H.264 via V4L2M2M (generic ARM hardware encoder)
+        #   mp4v – software MPEG-4  (most FFmpeg builds)
+        #   MJPG – Motion JPEG .avi (always available, no external deps)
+        codecs = [
+            (cv2.VideoWriter_fourcc(*"avc1"), mp4_path),
+            (cv2.VideoWriter_fourcc(*"mp4v"), mp4_path),
+            (cv2.VideoWriter_fourcc(*"MJPG"), avi_path),
+        ]
+        for fourcc, filepath in codecs:
+            w = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+            if w.isOpened():
+                logging.info(f"DataCollector: VideoWriter opened ({filepath})")
+                return w
+            w.release()
+            logging.warning(f"DataCollector: Codec {fourcc:#010x} rejected, trying next fallback...")
+
+        logging.error("DataCollector: All video codecs failed. Video recording disabled.")
+        return None
+
+
 
     writer = _open_video_writer()
 
@@ -76,8 +113,12 @@ def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
             # Rollover file every `rollover_seconds`
             if time.time() - file_start_time >= rollover_seconds:
                 writer.release()
+                # Give the kernel a moment to fully reclaim the V4L2M2M encoder
+                # device before attempting to re-open it. Without this, the
+                # immediate re-open races the driver teardown and fails.
+                time.sleep(0.5)
                 writer = _open_video_writer()
-                if not writer.isOpened():
+                if writer is None or not writer.isOpened():
                     break
                 file_start_time = time.time()
                 
