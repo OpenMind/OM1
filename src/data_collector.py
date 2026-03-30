@@ -13,6 +13,14 @@ import cv2
 import numpy as np
 
 
+def _recordings_dir() -> str:
+    """Return (and create) today's date-stamped recording sub-directory."""
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    path = os.path.join("recordings", date_str)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: int):
     logging.info(f"DataCollector: Starting video recording from {rtsp_url}")
     
@@ -43,13 +51,12 @@ def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
     fps = 30.0
     logging.info(f"DataCollector: Video RTSP stream opened. Dim: {width}x{height}")
 
-    os.makedirs("recordings", exist_ok=True)
-    
     file_start_time = time.time()
     def _open_video_writer():
+        rec_dir = _recordings_dir()
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        mp4_path = f"recordings/data_collector_video_{timestamp}.mp4"
-        avi_path  = f"recordings/data_collector_video_{timestamp}.avi"
+        mp4_path = os.path.join(rec_dir, f"data_collector_video_{timestamp}.mp4")
+        avi_path  = os.path.join(rec_dir, f"data_collector_video_{timestamp}.avi")
 
         # ── 1. GStreamer + Jetson NVENC (nvv4l2h264enc) ────────────────────────
         # appsrc feeds raw BGR frames; nvvidconv converts colour space on the
@@ -78,21 +85,30 @@ def _record_video(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
         logging.warning("DataCollector: GStreamer nvv4l2h264enc unavailable, falling back to OpenCV codecs...")
 
         # ── 2–4. OpenCV codec fallback chain ──────────────────────────────────
-        #   avc1 – H.264 via V4L2M2M (generic ARM hardware encoder)
-        #   mp4v – software MPEG-4  (most FFmpeg builds)
-        #   MJPG – Motion JPEG .avi (always available, no external deps)
+        #   mp4v – software MPEG-4  (most FFmpeg builds, always available)
+        #   avc1 – H.264 via V4L2M2M (ARM hardware encoder, may be absent)
+        #   MJPG – Motion JPEG .avi (last resort, no external deps)
+        #
+        # Suppress OpenCV/FFmpeg stderr spam while probing hardware codecs.
+        # cv2.setLogLevel is available in OpenCV 4.5+; fall back gracefully.
         codecs = [
-            (cv2.VideoWriter_fourcc(*"avc1"), mp4_path),
             (cv2.VideoWriter_fourcc(*"mp4v"), mp4_path),
+            (cv2.VideoWriter_fourcc(*"avc1"), mp4_path),
             (cv2.VideoWriter_fourcc(*"MJPG"), avi_path),
         ]
-        for fourcc, filepath in codecs:
-            w = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
-            if w.isOpened():
-                logging.info(f"DataCollector: VideoWriter opened ({filepath})")
-                return w
-            w.release()
-            logging.warning(f"DataCollector: Codec {fourcc:#010x} rejected, trying next fallback...")
+        prev_log_level = cv2.getLogLevel()
+        cv2.setLogLevel(3)  # LOG_LEVEL_ERROR – silences codec probe noise
+        try:
+            for fourcc, filepath in codecs:
+                w = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+                if w.isOpened():
+                    cv2.setLogLevel(prev_log_level)
+                    logging.info(f"DataCollector: VideoWriter opened ({filepath})")
+                    return w
+                w.release()
+                logging.warning(f"DataCollector: Codec {fourcc:#010x} rejected, trying next fallback...")
+        finally:
+            cv2.setLogLevel(prev_log_level)
 
         logging.error("DataCollector: All video codecs failed. Video recording disabled.")
         return None
@@ -143,8 +159,7 @@ def _record_audio(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
         return
 
     rate = 16000
-    os.makedirs("recordings", exist_ok=True)
-    
+
     class AudioState:
         def __init__(self):
             self.lock = threading.Lock()
@@ -152,8 +167,9 @@ def _record_audio(rtsp_url: str, stop_event: threading.Event, rollover_seconds: 
             self.wav_file = self._open_wav()
 
         def _open_wav(self):
+            rec_dir = _recordings_dir()
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-            wf = wave.open(f"recordings/data_collector_audio_{timestamp}.wav", "wb")
+            wf = wave.open(os.path.join(rec_dir, f"data_collector_audio_{timestamp}.wav"), "wb")
             wf.setnchannels(1)
             wf.setsampwidth(2)
             wf.setframerate(rate)
@@ -221,10 +237,10 @@ def _record_lidar_zenoh(topic: str, stop_event: threading.Event, rollover_second
         logging.error("DataCollector: zenoh or zenoh_msgs not found. Zenoh Lidar recording disabled.")
         return
 
-    os.makedirs("recordings", exist_ok=True)
     def _open_lidar():
+        rec_dir = _recordings_dir()
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        return open(f"recordings/data_collector_2d_zenoh_lidar_{timestamp}.drcs", "wb")
+        return open(os.path.join(rec_dir, f"data_collector_2d_zenoh_lidar_{timestamp}.drcs"), "wb")
 
     lidar_file = _open_lidar()
     file_start_time = time.time()
@@ -336,10 +352,10 @@ def _record_odom(topic: str, stop_event: threading.Event, rollover_seconds: int)
         logging.error("DataCollector: zenoh or zenoh_msgs not found. Odom recording disabled.")
         return
 
-    os.makedirs("recordings", exist_ok=True)
     def _open_odom():
+        rec_dir = _recordings_dir()
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        return open(f"recordings/data_collector_odom_{timestamp}.jsonl", "w")
+        return open(os.path.join(rec_dir, f"data_collector_odom_{timestamp}.jsonl"), "w")
 
     odom_file = _open_odom()
     file_start_time = time.time()
