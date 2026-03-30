@@ -102,7 +102,8 @@ def _process_scan(raw):
 
 
 def _process_express_scan(data, new_angle, trame):
-    """Process an express scan packet from RPLidar.
+    """
+    Process an express scan packet from RPLidar.
 
     Parameters
     ----------
@@ -190,7 +191,8 @@ class RPDriver(object):
         self._serial.close()
 
     def _set_pwm(self, pwm):
-        """Set the PWM value for the RPLidar motor.
+        """
+        Set the PWM value for the RPLidar motor.
 
         Parameters
         ----------
