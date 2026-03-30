@@ -414,7 +414,10 @@ class TestLoadModeConfig:
             os.unlink(temp_file)
 
     @patch("runtime.config.load_unitree")
-    def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
+    @patch("runtime.config.validate_config_schema")
+    def test_load_mode_config_with_unitree_ethernet(
+        self, mock_validate, mock_load_unitree
+    ):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
             "version": "v1.0.3",

@@ -64,6 +64,19 @@ class PresenceSnapshot:
         u = int(self.unknown_faces or 0)
 
         def join_names(ns: List[str]) -> str:
+            """
+            Join a list of names into a human-readable string.
+
+            Parameters
+            ----------
+            ns : List[str]
+                List of name strings to join.
+
+            Returns
+            -------
+            str
+                Human-readable string with proper conjunctions.
+            """
             if not ns:
                 return ""
             if len(ns) == 1:

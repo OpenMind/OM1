@@ -86,7 +86,10 @@ class UnitreeG1RememberLocationConnector(
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    self.base_url, json=payload, headers=headers, timeout=self.timeout
+                    self.base_url,
+                    json=payload,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=self.timeout),
                 ) as resp:
                     text = await resp.text()
                     if resp.status >= 200 and resp.status < 300:
