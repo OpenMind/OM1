@@ -121,7 +121,7 @@ class TestEmotionUnitreeConnectorConnect:
         emotion_input = EmotionInput(action=EmotionAction.HAPPY)
         with patch("actions.emotion.connector.unitree_sdk.logging") as mock_logging:
             await connector_with_client.connect(emotion_input)
-            mock_logging.info.assert_any_call("SendThisToUTClient: happy")
+            mock_logging.info.assert_any_call("SendThisToUTClient: EmotionAction.HAPPY")
 
 
 class TestEmotionUnitreeConnectorTick:

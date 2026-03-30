@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 from pycdr2 import IdlStruct
@@ -93,7 +93,9 @@ class ModeStatusRequest(IdlStruct, typename="ModeStatusRequest"):
     header: Header
     request_id: String
     code: int8
-    mode: String = String("")  # Target mode for SWITCH_MODE, ignored for STATUS
+    mode: String = field(
+        default_factory=lambda: String("")
+    )  # Target mode for SWITCH_MODE, ignored for STATUS
 
 
 @dataclass
@@ -194,7 +196,7 @@ class ConfigRequest(IdlStruct, typename="ConfigRequest"):
 
     header: Header
     request_id: String
-    config: String = String("")  # ignored for GET_CONFIG
+    config: String = field(default_factory=lambda: String(""))  # ignored for GET_CONFIG
 
 
 @dataclass
