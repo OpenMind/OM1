@@ -44,12 +44,14 @@ class GoogleASRSensorConfig(SensorConfig):
         Chunk size.
     base_url : Optional[str]
         Base URL for the ASR service.
-    microphone_device_id : Optional[str]
+    microphone_device_id : Optional[int]
         Microphone Device ID.
     microphone_name : Optional[str]
         Microphone Name.
     language : str
         Language for speech recognition.
+    alternative_languages : Optional[List[str]]
+        List of alternative languages for multilingual speech recognition. If None (default), no alternative languages will be used.
     remote_input : bool
         Whether to use remote input.
     """

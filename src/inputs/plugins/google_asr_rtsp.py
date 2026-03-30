@@ -47,7 +47,7 @@ class GoogleASRRTSPSensorConfig(SensorConfig):
     language : str
         Language for speech recognition.
     alternative_languages : Optional[List[str]]
-        List of alternative languages for multilingual speech recognition.
+        List of alternative languages for multilingual speech recognition. If None (default), no alternative languages will be used.
     enable_tts_interrupt : bool
         Enable TTS interrupt (does not mute mic during TTS playback).
     """
