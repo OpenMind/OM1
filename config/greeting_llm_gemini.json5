@@ -9,7 +9,7 @@
 
   // Global settings
   api_key: "${OM_API_KEY:-openmind_free}",
-   system_governance: "",
+  system_governance: "",
   cortex_llm: {
     type: "GeminiLLM",
     config: {
