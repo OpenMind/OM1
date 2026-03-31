@@ -1,6 +1,7 @@
 import asyncio
+import json
 from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import openai
 import pytest
@@ -20,6 +21,7 @@ def llm_config():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "Test Robot"
+    config.save_interactions = False
     return config
 
 
@@ -157,6 +159,7 @@ async def test_update_history_only_current_tick_inputs():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -220,6 +223,7 @@ async def test_update_history_no_inputs_for_current_tick():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -268,6 +272,7 @@ async def test_update_history_multiple_ticks():
     config.model = "gpt-4o"
     config.history_length = 10
     config.agent_name = "MultiTickBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -330,6 +335,7 @@ async def test_update_history_tick_boundary():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "BoundaryBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -447,6 +453,7 @@ async def test_llm_response_failure_removes_unpaired_user_message():
     config.model = "gpt-4o"
     config.history_length = 5
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -486,6 +493,7 @@ async def test_llm_response_failure_with_existing_history():
     config.model = "gpt-4o"
     config.history_length = 10
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -541,6 +549,7 @@ async def test_multiple_summarization_failures_prevent_unbounded_growth():
     config.model = "gpt-4o"
     config.history_length = 6
     config.agent_name = "TestBot"
+    config.save_interactions = False
 
     client = AsyncMock()
     history_manager = LLMHistoryManager(config, client)
@@ -611,3 +620,153 @@ def test_get_messages_multiple_roles(history_manager):
     assert result[0] == {"role": "system", "content": "You are a robot"}
     assert result[1] == {"role": "user", "content": "Hello"}
     assert result[2] == {"role": "assistant", "content": "Hi there"}
+
+
+@pytest.fixture
+def persistence_config():
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+    config.save_interactions = True
+    config.mode = "test_mode"
+    return config
+
+
+def _make_persistence_manager(config, client, tmp_path):
+    """Create an LLMHistoryManager with _get_history_file_path patched to tmp_path."""
+    history_file = tmp_path / ".test_mode.history.json"
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=history_file,
+    ):
+        manager = LLMHistoryManager(config, client)
+    manager._get_history_file_path = lambda: history_file  # type: ignore[assignment]
+    return manager, history_file
+
+
+def test_save_history_creates_file(persistence_config, openai_client, tmp_path):
+    """Test that _save_history creates a JSON file on disk."""
+    manager, history_file = _make_persistence_manager(
+        persistence_config, openai_client, tmp_path
+    )
+    manager.history = [
+        ChatMessage(role="user", content="Hello"),
+        ChatMessage(role="assistant", content="Hi there"),
+    ]
+    manager.frame_index = 3
+
+    manager._save_history()
+
+    assert history_file.exists()
+
+    with open(history_file, "r") as f:
+        data = json.load(f)
+
+    assert len(data["history"]) == 2
+    assert data["history"][0] == {"role": "user", "content": "Hello"}
+    assert data["history"][1] == {"role": "assistant", "content": "Hi there"}
+    assert data["frame_index"] == 3
+
+
+def test_load_history_restores_state(persistence_config, openai_client, tmp_path):
+    """Test that history is restored from disk on initialization."""
+    history_file = tmp_path / ".test_mode.history.json"
+    saved_data = {
+        "history": [
+            {"role": "user", "content": "Saved question"},
+            {"role": "assistant", "content": "Saved answer"},
+        ],
+        "frame_index": 7,
+    }
+    with open(history_file, "w") as f:
+        json.dump(saved_data, f)
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=history_file,
+    ):
+        manager = LLMHistoryManager(persistence_config, openai_client)
+
+    assert len(manager.history) == 2
+    assert manager.history[0].role == "user"
+    assert manager.history[0].content == "Saved question"
+    assert manager.history[1].role == "assistant"
+    assert manager.history[1].content == "Saved answer"
+    assert manager.frame_index == 7
+
+
+def test_load_history_missing_file(persistence_config, openai_client, tmp_path):
+    """Test that missing history file results in empty history without error."""
+    non_existent = tmp_path / ".nonexistent.history.json"
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=non_existent,
+    ):
+        manager = LLMHistoryManager(persistence_config, openai_client)
+
+    assert manager.history == []
+    assert manager.frame_index == 0
+
+
+def test_load_history_corrupted_file(persistence_config, openai_client, tmp_path):
+    """Test that corrupted JSON file is handled gracefully."""
+    history_file = tmp_path / ".test_mode.history.json"
+    history_file.write_text("NOT VALID JSON {{{")
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=history_file,
+    ):
+        manager = LLMHistoryManager(persistence_config, openai_client)
+
+    assert manager.history == []
+    assert manager.frame_index == 0
+
+
+def test_save_history_atomic_write(persistence_config, openai_client, tmp_path):
+    """Test that save uses atomic write (temp file + rename)."""
+    manager, history_file = _make_persistence_manager(
+        persistence_config, openai_client, tmp_path
+    )
+    manager.history = [ChatMessage(role="user", content="test")]
+    manager.frame_index = 1
+
+    manager._save_history()
+
+    # Verify file exists and is valid
+    assert history_file.exists()
+    with open(history_file, "r") as f:
+        data = json.load(f)
+    assert len(data["history"]) == 1
+
+    # No leftover .tmp files
+    tmp_files = list(history_file.parent.glob("*.tmp"))
+    assert len(tmp_files) == 0
+
+
+def test_save_interactions_false_no_file(openai_client, tmp_path):
+    """Test that no history file is created when save_interactions is False."""
+    config = MagicMock()
+    config.model = "gpt-4o"
+    config.history_length = 5
+    config.agent_name = "TestBot"
+    config.save_interactions = False
+    config.mode = "test_mode"
+
+    history_file = tmp_path / ".test_mode.history.json"
+
+    with patch.object(
+        LLMHistoryManager,
+        "_get_history_file_path",
+        return_value=history_file,
+    ):
+        manager = LLMHistoryManager(config, openai_client)
+
+    manager.history = [ChatMessage(role="user", content="Hello")]
+    assert not history_file.exists()

@@ -51,6 +51,10 @@ class LLMConfig(BaseModel):
     history_length: T.Optional[int] = Field(
         default=0, description="Number of past interactions to keep in context"
     )
+    save_interactions: T.Optional[bool] = Field(
+        default=False,
+        description="Whether to persist conversation history to disk",
+    )
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
