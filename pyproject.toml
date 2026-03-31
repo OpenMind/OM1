@@ -51,7 +51,7 @@ macos = ["osascript"]
 
 [dependency-groups]
 dev = [
-    "black==25.1.0",
+    "black==26.3.1",
     "isort==6.0.0",
     "pre-commit==4.1.0",
     "pyright==1.1.408",
@@ -102,6 +102,7 @@ skip_covered = false
 
 [tool.black]
 line-length = 88
+target-version = ["py312"]
 include = '\.pyi?$'
 exclude = "(.venv)|(/src/unitree)|(/src/ubtech)"
 
