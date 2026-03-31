@@ -1,3 +1,9 @@
+"""
+Zenoh session management utilities.
+
+Provides configuration and session initialization with automatic fallback
+from local connection to network discovery.
+"""
 import logging
 
 import zenoh
@@ -43,20 +49,27 @@ def open_zenoh_session() -> zenoh.Session:
     """
     local_config = create_zenoh_config(network_discovery=False)
     try:
-        session = zenoh.open(local_config)
+        local_session = zenoh.open(local_config)
         logging.info("Zenoh client opened without network discovery")
-        return session
-    except Exception:
-        logging.info("Falling back to network discovery...")
+        return local_session
+    except Exception as local_err:
+        logging.warning(
+            f"Local Zenoh connection failed (endpoint: tcp/127.0.0.1:7447): {local_err}. "
+            "Attempting network discovery fallback..."
+        )
 
     config = create_zenoh_config()
     try:
-        session = zenoh.open(config)
+        discovery_session = zenoh.open(config)
         logging.info("Zenoh client opened with network discovery")
-        return session
-    except Exception as e:
-        logging.error(f"Error opening Zenoh client: {e}")
-        raise Exception("Failed to open Zenoh session") from e
+        return discovery_session
+    except Exception as discovery_err:
+        logging.error(
+            f"Zenoh session initialization failed. "
+            f"Local connection failed, and network discovery also failed: {discovery_err}. "
+            f"Check Zenoh router status and network connectivity."
+        )
+        raise Exception("Failed to open Zenoh session") from discovery_err
 
 
 if __name__ == "__main__":
