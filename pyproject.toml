@@ -1,14 +1,14 @@
 [project]
 name = "om1"
-version = "0.1.0"
+version = "1.0.1"
 description = "OM1 - a modern agent and robotics runtime system"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "ultralytics==8.3.156",
     "soundfile==0.13.1",
     "sounddevice==0.5.2",
-    "pynmeagps==1.0.50",
+    "pynmeagps==1.1.2",
     "bleak==0.22.3",
     "matplotlib==3.10.1",
     "json5==0.10.0",
