@@ -102,6 +102,7 @@ skip_covered = false
 
 [tool.black]
 line-length = 88
+target-version = ["py312"]
 include = '\.pyi?$'
 exclude = "(.venv)|(/src/unitree)|(/src/ubtech)"
 
