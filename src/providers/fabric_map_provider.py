@@ -180,7 +180,7 @@ class FabricDataSubmitter:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.openmind.org/api/core/fabric/submit",
+        base_url: str = "https://api.openmind.com/api/core/fabric/submit",
         write_to_local_file: bool = False,
     ):
         """
@@ -192,7 +192,7 @@ class FabricDataSubmitter:
             API key for authentication. Default is None.
         base_url : str
             Base URL for the FABRIC API. Default is
-            "https://api.openmind.org/api/core/fabric/submit".
+            "https://api.openmind.com/api/core/fabric/submit".
         write_to_local_file : bool
             If True, enables local file logging of submitted data.
             Default is False.

@@ -15,7 +15,7 @@ icon: robot
 
 It's ideal to have at least 128 GB SSD storage for the setup to run smoothly.
 
-Checkout the video walkthrough [here](https://assets.openmind.org/education-video/Gazebo%20Setup%20Tutorial%20%28Part%201%29.mp4). More video tutorials coming soon.
+Checkout the video walkthrough [here](https://assets.openmind.com/education-video/Gazebo%20Setup%20Tutorial%20%28Part%201%29.mp4). More video tutorials coming soon.
 
 ## Simulation Instructions
 
@@ -138,7 +138,7 @@ uv pip install -r pyproject.toml --extra dds
 
 Setup your API key in `.bashrc` file and run your simulation agent:
 
-Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
+Get your API key from the [portal](https://portal.openmind.com), and add it to `bashrc`
 
 ```bash
 vi ~/.bashrc

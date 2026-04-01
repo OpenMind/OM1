@@ -131,7 +131,7 @@ def test_configure_no_restart_when_same_parameters(
     provider_module, mock_external_modules
 ):
     """Test no restart when all parameters remain the same."""
-    url = "https://api.openmind.org/api/core/elevenlabs/tts"
+    url = "https://api.openmind.com/api/core/elevenlabs/tts"
     api_key = "same_key"
     elevenlabs_key = "same_elevenlabs_key"
     voice_id = "same_voice"

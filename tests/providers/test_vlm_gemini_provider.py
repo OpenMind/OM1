@@ -7,7 +7,7 @@ from providers.vlm_gemini_provider import VLMGeminiProvider
 
 @pytest.fixture
 def base_url():
-    return "https://api.openmind.org/api/core/gemini"
+    return "https://api.openmind.com/api/core/gemini"
 
 
 @pytest.fixture

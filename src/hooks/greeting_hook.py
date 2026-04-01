@@ -100,7 +100,7 @@ async def geeting_end_hook(context: Dict[str, Any]):
     try:
         if tts_provider == "elevenlabs":
             provider = ElevenLabsTTSProvider(
-                url=ctx.base_url or "https://api.openmind.org/api/core/elevenlabs/tts",
+                url=ctx.base_url or "https://api.openmind.com/api/core/elevenlabs/tts",
                 api_key=ctx.api_key,
                 elevenlabs_api_key=ctx.elevenlabs_api_key,
                 voice_id=ctx.voice_id or "JBFqnCBsd6RMkjVDRZzb",

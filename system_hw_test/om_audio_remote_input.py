@@ -76,7 +76,7 @@ class RemoteAudioInput:
         device_name: str = None,
     ):
         self.ws_client: ws.Client = ws.Client(
-            url=f"wss://api.openmind.org/api/core/teleops/audio?api_key={OM_API_KEY}"
+            url=f"wss://api.openmind.com/api/core/teleops/audio?api_key={OM_API_KEY}"
         )
         self.ws_client.start()
 

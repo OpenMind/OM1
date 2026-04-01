@@ -2,7 +2,7 @@
 
 <p align="center">
 <a href="https://arxiv.org/abs/2412.18588">Technical Paper</a> |
-<a href="https://docs.openmind.org/">Documentation</a> |
+<a href="https://docs.openmind.com/">Documentation</a> |
 <a href="https://x.com/openmind_agi">X</a>
 </p>
 
@@ -52,7 +52,7 @@ uv venv
 
 ### Obtain an OpenMind API Key
 
-Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/).
+Obtain your API Key at [OpenMind Portal](https://portal.openmind.com/).
 1. Create your account on OpenMind Portal if you haven't yet.
 2. Go to the dashboard and create a new API key.
 3. Copy the generated API key.
@@ -80,7 +80,7 @@ source ~/.zshrc # for macOS
 
 OMCU is the computational unit for billing on OpenMind's platform. The free plan provides 50 OMCU renewed monthly.
 
-Upgrade your plan [here](https://portal.openmind.org/) for additional credits.
+Upgrade your plan [here](https://portal.openmind.com/) for additional credits.
 
 ### Launching OM1
 
@@ -89,14 +89,14 @@ Run
 uv run src/run.py spot
 ```
 
-After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
+After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.com/developing/1_get-started).
 
 > **Note:** This is just an example agent configuration.
 If you want to interact with the agent and see how it works, make sure ASR and TTS are configured in spot.json5.
 
 ## What's Next?
 
-* Try out some [examples](https://docs.openmind.org/developer-cookbook/examples)
+* Try out some [examples](https://docs.openmind.com/developer-cookbook/examples)
 * Add new `inputs` and `actions`.
 * Design custom agents and robots by creating your own `json5` config files with custom combinations of inputs and actions.
 * Change the system prompts in the configuration files (located in `/config/`) to create new behaviors.
@@ -163,7 +163,7 @@ Requires NVIDIA GPU and CUDA support. See [Isaac Sim Setup](docs/simulators/isaa
 
 ## Detailed Documentation
 
-More detailed documentation can be accessed at [docs.openmind.org](https://docs.openmind.org/).
+More detailed documentation can be accessed at [docs.openmind.com](https://docs.openmind.com/).
 
 ## Contributing
 

@@ -253,7 +253,7 @@ def test_message_handler_create_elevenlabs_provider():
     with patch("runtime.hook.ElevenLabsTTSProvider") as mock_provider:
         handler._create_tts_provider()
         mock_provider.assert_called_once_with(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=None,
             elevenlabs_api_key=None,
             voice_id="JBFqnCBsd6RMkjVDRZzb",

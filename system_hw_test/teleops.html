@@ -464,7 +464,7 @@
 
             function connectToVideoWebSocket(apiKey) {
                 try {
-                    const videoUrl = `wss://api.openmind.org/api/core/teleops/video?api_key=${apiKey}`;
+                    const videoUrl = `wss://api.openmind.com/api/core/teleops/video?api_key=${apiKey}`;
                     websocket = new WebSocket(videoUrl);
                     updateStatus('Connecting...', 'orange');
                     connectBtn.disabled = true;
@@ -513,7 +513,7 @@
 
             function connectToControlWebSocket(apiKey) {
                 try {
-                    const controlUrl = `wss://api.openmind.org/api/core/teleops/command?api_key=${apiKey}`;
+                    const controlUrl = `wss://api.openmind.com/api/core/teleops/command?api_key=${apiKey}`;
                     controlWebsocket = new WebSocket(controlUrl);
 
                     updateControlStatus('Connecting...', 'orange');

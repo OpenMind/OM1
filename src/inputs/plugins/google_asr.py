@@ -109,7 +109,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
         chunk = self.config.chunk
         base_url = (
             self.config.base_url
-            or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
+            or f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}"
         )
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name

@@ -90,12 +90,12 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
 
         # Initialize ASR and TTS providers
         self.asr = ASRProvider(
-            ws_url="wss://api-asr.openmind.org",
+            ws_url="wss://api-asr.openmind.com",
             device_id=microphone_device_id,
             microphone_name=microphone_name,
         )
         self.tts = RivaTTSProvider(
-            url="https://api.openmind.org/api/core/riva/tts",
+            url="https://api.openmind.com/api/core/riva/tts",
             api_key=api_key,
         )
 

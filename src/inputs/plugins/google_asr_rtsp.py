@@ -98,7 +98,7 @@ class GoogleASRRTSPInput(FuserInput[GoogleASRRTSPSensorConfig, Optional[str]]):
         rate = self.config.rate
         base_url = (
             self.config.base_url
-            or f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
+            or f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}"
         )
 
         language = self.config.language.strip().lower()

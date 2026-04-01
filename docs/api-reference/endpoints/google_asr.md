@@ -6,7 +6,7 @@ icon: webhook
 
 The Google ASR API provides real-time speech-to-text transcription using Google Cloud Speech-to-Text. This WebSocket-based endpoint enables low-latency streaming recognition for live audio processing.
 
-**Base URL:** `wss://api.openmind.org`
+**Base URL:** `wss://api.openmind.com`
 
 **Authentication:** Requires an OpenMind API key passed as a query parameter.
 
@@ -20,7 +20,7 @@ The Google ASR API provides real-time speech-to-text transcription using Google 
 
 Establish a persistent WebSocket connection for streaming audio data and receiving real-time transcription results.
 
-**Endpoint:** `wss://api.openmind.org/api/core/google/asr?api_key=YOUR_API_KEY`
+**Endpoint:** `wss://api.openmind.com/api/core/google/asr?api_key=YOUR_API_KEY`
 
 ### Connection Parameters
 
@@ -32,7 +32,7 @@ Establish a persistent WebSocket connection for streaming audio data and receivi
 
 ```bash
 # Using wscat (install with: npm install -g wscat)
-wscat -c "wss://api.openmind.org/api/core/google/asr?api_key=om1_live_your_api_key"
+wscat -c "wss://api.openmind.com/api/core/google/asr?api_key=om1_live_your_api_key"
 ```
 
 ### Connection Response
@@ -153,7 +153,7 @@ import json
 import pyaudio
 
 API_KEY = "om1_live_your_api_key"
-WS_URL = f"wss://api.openmind.org/api/core/google/asr?api_key={API_KEY}"
+WS_URL = f"wss://api.openmind.com/api/core/google/asr?api_key={API_KEY}"
 
 # Audio configuration
 RATE = 16000
@@ -227,7 +227,7 @@ const WebSocket = require('ws');
 const fs = require('fs');
 
 const API_KEY = 'om1_live_your_api_key';
-const WS_URL = `wss://api.openmind.org/api/core/google/asr?api_key=${API_KEY}`;
+const WS_URL = `wss://api.openmind.com/api/core/google/asr?api_key=${API_KEY}`;
 
 // Connect to WebSocket
 const ws = new WebSocket(WS_URL);
@@ -292,7 +292,7 @@ ws.on('close', () => {
 npm install -g wscat
 
 # Connect to the WebSocket
-wscat -c "wss://api.openmind.org/api/core/google/asr?api_key=om1_live_your_api_key"
+wscat -c "wss://api.openmind.com/api/core/google/asr?api_key=om1_live_your_api_key"
 
 # Send a message (paste into the terminal after connection)
 {"audio":"UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQAAAAA=","rate":16000,"language_code":"en-US"}
@@ -533,7 +533,7 @@ class GoogleASRClient:
     def __init__(self, api_key: str, language: str = "en-US"):
         self.api_key = api_key
         self.language = language
-        self.ws_url = f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}"
+        self.ws_url = f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}"
         self.client_id = None
 
         # Audio config

@@ -293,7 +293,7 @@ class MessageHookHandler(LifecycleHookHandler):
         if provider_type == "elevenlabs":
             return ElevenLabsTTSProvider(
                 url=self.config.base_url
-                or "https://api.openmind.org/api/core/elevenlabs/tts",
+                or "https://api.openmind.com/api/core/elevenlabs/tts",
                 api_key=self.config.api_key,
                 elevenlabs_api_key=self.config.elevenlabs_api_key,
                 voice_id=self.config.voice_id or "JBFqnCBsd6RMkjVDRZzb",

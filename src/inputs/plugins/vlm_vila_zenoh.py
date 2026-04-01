@@ -28,7 +28,7 @@ class VLMVilaZenohConfig(SensorConfig):
     """
 
     base_url: str = Field(
-        default="wss://api-vila.openmind.org",
+        default="wss://api-vila.openmind.com",
         description="Base URL for the VLM service",
     )
     topic: str = Field(

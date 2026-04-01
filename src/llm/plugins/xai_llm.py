@@ -28,7 +28,7 @@ class XAIConfig(LLMConfig):
     """XAI-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/xai",
+        default="https://api.openmind.com/api/core/xai",
         description="Base URL for the XAI API endpoint",
     )
     model: T.Optional[T.Union[XAIModel, str]] = Field(
@@ -67,7 +67,7 @@ class XAILLM(LLM[R]):
             self._config.model = "grok-4-latest"
 
         self._client = openai.AsyncOpenAI(
-            base_url=config.base_url or "https://api.openmind.org/api/core/xai",
+            base_url=config.base_url or "https://api.openmind.com/api/core/xai",
             api_key=config.api_key,
         )
 

@@ -42,7 +42,7 @@ class RivaASRSensorConfig(SensorConfig):
     rate: int = Field(default=48000, description="Sampling rate")
     chunk: int = Field(default=12144, description="Chunk size")
     base_url: str = Field(
-        default="wss://api-asr.openmind.org", description="Base URL for the ASR service"
+        default="wss://api-asr.openmind.com", description="Base URL for the ASR service"
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
     microphone_device_id: Optional[int] = Field(

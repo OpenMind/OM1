@@ -31,7 +31,7 @@ class NearAIConfig(LLMConfig):
     """NearAI-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/nearai",
+        default="https://api.openmind.com/api/core/nearai",
         description="Base URL for the NearAI API endpoint",
     )
     model: T.Optional[T.Union[NearAIModel, str]] = Field(
@@ -71,7 +71,7 @@ class NearAILLM(LLM[R]):
             self._config.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.org/api/core/nearai",
+            base_url=config.base_url or "https://api.openmind.com/api/core/nearai",
             api_key=config.api_key,
         )
 
