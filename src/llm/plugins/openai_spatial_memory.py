@@ -44,7 +44,7 @@
 #             self._config.model = "gpt-4o-mini"
 
 #         self._client = openai.AsyncClient(
-#             base_url=config.base_url or "https://api.openmind.org/api/core/openai",
+#             base_url=config.base_url or "https://api.openmind.com/api/core/openai",
 #             api_key=config.api_key,
 #         )
 

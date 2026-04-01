@@ -16,7 +16,7 @@ icon: user-robot
 
 - Yanshee mobile app
 - OM1
-- [OM1 API key](https://portal.openmind.org/)
+- [OM1 API key](https://portal.openmind.com/)
 
 ### Installation
 

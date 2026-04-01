@@ -33,7 +33,7 @@ class OpenRouterConfig(LLMConfig):
     """OpenRouter-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/openrouter",
+        default="https://api.openmind.com/api/core/openrouter",
         description="Base URL for the OpenRouter API endpoint",
     )
     model: T.Optional[T.Union[OpenRouterModel, str]] = Field(
@@ -74,7 +74,7 @@ class OpenRouter(LLM[R]):
             self._config.model = "meta-llama/llama-3.3-70b-instruct"
 
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.org/api/core/openrouter",
+            base_url=config.base_url or "https://api.openmind.com/api/core/openrouter",
             api_key=config.api_key,
         )
 

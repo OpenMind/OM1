@@ -31,7 +31,7 @@ class VLMGeminiConfig(SensorConfig):
 
     api_key: Optional[str] = Field(default=None, description="API Key")
     base_url: str = Field(
-        default="https://api.openmind.org/api/core/gemini",
+        default="https://api.openmind.com/api/core/gemini",
         description="Base URL for the Gemini service",
     )
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
@@ -77,7 +77,7 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
         base_url = self.config.base_url
         stream_base_url = (
             self.config.stream_base_url
-            or f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}"
+            or f"wss://api.openmind.com/api/core/teleops/stream/video?api_key={api_key}"
         )
         camera_index = self.config.camera_index
 

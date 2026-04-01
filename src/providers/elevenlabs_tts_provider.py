@@ -18,7 +18,7 @@ class ElevenLabsTTSProvider:
 
     def __init__(
         self,
-        url: str = "https://api.openmind.org/api/core/elevenlabs/tts",
+        url: str = "https://api.openmind.com/api/core/elevenlabs/tts",
         api_key: Optional[str] = None,
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
@@ -38,7 +38,7 @@ class ElevenLabsTTSProvider:
         ----------
         url : str, optional
             The URL endpoint for the TTS service.
-            Defaults to "https://api.openmind.org/api/core/elevenlabs/tts".
+            Defaults to "https://api.openmind.com/api/core/elevenlabs/tts".
         api_key : str, optional
             The primary API key for the TTS service. If provided, it's used in the
             request headers as "x-api-key". Defaults to None.
@@ -90,7 +90,7 @@ class ElevenLabsTTSProvider:
 
     def configure(
         self,
-        url: str = "https://api.openmind.org/api/core/elevenlabs/tts",
+        url: str = "https://api.openmind.com/api/core/elevenlabs/tts",
         api_key: Optional[str] = None,
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",

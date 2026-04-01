@@ -211,7 +211,7 @@ class TeleopsStatusProvider:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.openmind.org/api/core/teleops/status",
+        base_url: str = "https://api.openmind.com/api/core/teleops/status",
     ):
         """
         Initialize the TeleopsStatusProvider.
@@ -225,7 +225,7 @@ class TeleopsStatusProvider:
             API key for authentication. Default is None.
         base_url : str
             Base URL for the teleops status API. Default is
-            "https://api.openmind.org/api/core/teleops/status".
+            "https://api.openmind.com/api/core/teleops/status".
         """
         self.api_key = api_key
         self.base_url = base_url

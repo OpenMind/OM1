@@ -62,7 +62,7 @@ class MoveZenohRemoteConnector(ActionConnector[MoveZenohRemoteConfig, MoveInput]
             logging.error(f"Error opening Zenoh client: {e}")
 
         self.ws_client = ws.Client(
-            url=f"wss://api.openmind.org/api/core/teleops/action?api_key={api_key}"
+            url=f"wss://api.openmind.com/api/core/teleops/action?api_key={api_key}"
         )
         self.ws_client.start()
         self.ws_client.register_message_callback(self._on_message)

@@ -128,7 +128,7 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 * **hertz** Defines the base tick rate of the agent. This rate can be adjusted to allow the agent to respond quickly to changing environments, but comes at the expense of reducing the time available for LLMs to finish generating tokens. Note: time critical tasks such as collision avoidance should be handled through low level control loops operating in parallel to the LLM-based logic, using event-triggered callbacks through real-time middleware.
 * **name** A unique identifier for the agent.
-* **api_key** The API key for the agent. You can get your API key from the [OpenMind Portal](https://portal.openmind.org/).
+* **api_key** The API key for the agent. You can get your API key from the [OpenMind Portal](https://portal.openmind.com/).
 * **URID** The Universal Robot ID for the robot. Used to join a decentralized machine-to-machine coordination and communication system (FABRIC).
 * **system_prompt_base** Defines the agent's personality and behavior.
 * **system_governance** The agent's laws and constitution.

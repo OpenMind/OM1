@@ -11,7 +11,7 @@ We're excited to announce the first beta release of our complete software stack,
 - OM1-avatar
 - OM1-ros2-sdk
 
-For more technical details, please refer to the [Architecture Overview](https://docs.openmind.org/full_autonomy_guidelines/architecture_overview).
+For more technical details, please refer to the [Architecture Overview](https://docs.openmind.com/full_autonomy_guidelines/architecture_overview).
 
 ## Key Features
 

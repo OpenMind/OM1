@@ -52,7 +52,7 @@ def test_initialization_with_api_key():
     provider = TeleopsConversationProvider(api_key="test_key")
 
     assert provider.api_key == "test_key"
-    assert provider.base_url == "https://api.openmind.org/api/core/teleops/conversation"
+    assert provider.base_url == "https://api.openmind.com/api/core/teleops/conversation"
 
 
 def test_initialization_without_api_key():

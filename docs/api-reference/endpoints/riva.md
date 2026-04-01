@@ -26,7 +26,7 @@ The ASR endpoint utilizes WebSockets for efficient, low-latency communication wi
 #### Connection Endpoint
 
 ```bash
-wss://api-asr.openmind.org?api_key=<YOUR_API_KEY>
+wss://api-asr.openmind.com?api_key=<YOUR_API_KEY>
 ```
 
 #### Basic Example
@@ -42,7 +42,7 @@ import pyaudio
 
 async def stream_audio_to_asr():
     """Stream audio to ASR endpoint."""
-    uri = "wss://api-asr.openmind.org?api_key=<YOUR_API_KEY>"
+    uri = "wss://api-asr.openmind.com?api_key=<YOUR_API_KEY>"
 
     # Audio configuration
     RATE = 16000
@@ -154,7 +154,7 @@ The TTS endpoint generates speech from text using the Riva Text-to-Speech model.
 #### Endpoint
 
 ```
-POST https://api.openmind.org/api/core/riva/tts
+POST https://api.openmind.com/api/core/riva/tts
 ```
 
 #### Basic Example
@@ -164,7 +164,7 @@ import requests
 import os
 
 # API configuration
-api_url = "https://api.openmind.org/api/core/riva/tts"
+api_url = "https://api.openmind.com/api/core/riva/tts"
 api_key = os.getenv("OPENMIND_API_KEY")
 
 # Request payload
@@ -254,7 +254,7 @@ import websockets
 
 async def connect_with_api_key():
     api_key = os.getenv("OPENMIND_API_KEY")
-    uri = f"wss://api-asr.openmind.org?api_key={api_key}"
+    uri = f"wss://api-asr.openmind.com?api_key={api_key}"
 
     async with websockets.connect(uri) as websocket:
         # Your application logic here

@@ -72,7 +72,7 @@ class TestMoveZenohRemoteConnectorInit:
             config = MoveZenohRemoteConfig(api_key="secret123", URID="bot")
             MoveZenohRemoteConnector(config)
             mock_ws.assert_called_once_with(
-                url="wss://api.openmind.org/api/core/teleops/action?api_key=secret123"
+                url="wss://api.openmind.com/api/core/teleops/action?api_key=secret123"
             )
 
     def test_init_cmd_vel_without_urid(self):

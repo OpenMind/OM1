@@ -6,7 +6,7 @@ icon: webhook
 
 The OpenMind LLM API provides unified access to multiple leading large language model providers through a single, consistent interface. This endpoint enables chat completions across OpenAI, Anthropic (via OpenRouter), Google Gemini, X.AI, DeepSeek, NEAR.AI, and more.
 
-**Base URL:** `https://api.openmind.org`
+**Base URL:** `https://api.openmind.com`
 
 **Authentication:** Requires an OpenMind API key in the Authorization header as a Bearer token.
 
@@ -137,7 +137,7 @@ The request body follows the OpenAI Chat Completions API format:
 ### Basic Request Example
 
 ```bash
-curl --location 'https://api.openmind.org/api/core/openrouter/chat/completions' \
+curl --location 'https://api.openmind.com/api/core/openrouter/chat/completions' \
 --header 'Accept: application/json' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer <YOUR_KEY>' \
@@ -226,7 +226,7 @@ curl --location 'https://api.openmind.org/api/core/openrouter/chat/completions' 
 ### OpenAI GPT-4
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -249,7 +249,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 ### Anthropic Claude (via OpenRouter)
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openrouter/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openrouter/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -266,7 +266,7 @@ curl -X POST https://api.openmind.org/api/core/openrouter/chat/completions \
 ### Google Gemini
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/gemini/chat/completions \
+curl -X POST https://api.openmind.com/api/core/gemini/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -284,7 +284,7 @@ curl -X POST https://api.openmind.org/api/core/gemini/chat/completions \
 ### DeepSeek
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/deepseek/chat/completions \
+curl -X POST https://api.openmind.com/api/core/deepseek/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -301,7 +301,7 @@ curl -X POST https://api.openmind.org/api/core/deepseek/chat/completions \
 ### X.AI Grok
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/xai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/xai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -318,7 +318,7 @@ curl -X POST https://api.openmind.org/api/core/xai/chat/completions \
 ### NEAR.AI Qwen
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/nearai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/nearai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -335,7 +335,7 @@ curl -X POST https://api.openmind.org/api/core/nearai/chat/completions \
 ### Multi-Turn Conversation
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -368,7 +368,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 export OPENMIND_API_KEY="om1_live_your_api_key"
 
 # Use in requests
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer $OPENMIND_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -389,7 +389,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 Control randomness in responses (0.0 = deterministic, 2.0 = very random):
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -404,7 +404,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 Limit the maximum number of tokens in the response:
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -419,7 +419,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 Use nucleus sampling for controlled randomness:
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -434,7 +434,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 Reduce repetition in responses:
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -520,7 +520,7 @@ All errors follow this format:
 **Invalid Provider:**
 ```bash
 # Request to unsupported provider
-curl -X POST https://api.openmind.org/api/core/invalid/chat/completions \
+curl -X POST https://api.openmind.com/api/core/invalid/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{"model": "test", "messages": [{"role": "user", "content": "Hi"}]}'
@@ -531,7 +531,7 @@ curl -X POST https://api.openmind.org/api/core/invalid/chat/completions \
 **Invalid Model:**
 ```bash
 # Request with unsupported model
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-999", "messages": [{"role": "user", "content": "Hi"}]}'
@@ -542,7 +542,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 **Missing API Key:**
 ```bash
 # Request without authentication
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "Hi"}]}'
 
@@ -591,7 +591,7 @@ curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
 import requests
 
 def chat_completion(messages, model="gpt-4o", max_retries=3):
-    url = "https://api.openmind.org/api/core/openai/chat/completions"
+    url = "https://api.openmind.com/api/core/openai/chat/completions"
     headers = {
         "Authorization": f"Bearer {os.getenv('OPENMIND_API_KEY')}",
         "Content-Type": "application/json"
@@ -698,7 +698,7 @@ import requests
 class OpenMindLLM:
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("OPENMIND_API_KEY")
-        self.base_url = "https://api.openmind.org/api/core"
+        self.base_url = "https://api.openmind.com/api/core"
 
     def chat(self, provider: str, model: str, messages: list, **kwargs):
         url = f"{self.base_url}/{provider}/chat/completions"
@@ -737,7 +737,7 @@ const axios = require('axios');
 class OpenMindLLM {
     constructor(apiKey = process.env.OPENMIND_API_KEY) {
         this.apiKey = apiKey;
-        this.baseURL = 'https://api.openmind.org/api/core';
+        this.baseURL = 'https://api.openmind.com/api/core';
     }
 
     async chat(provider, model, messages, options = {}) {
@@ -777,7 +777,7 @@ client.chat('openai', 'gpt-4o', [
 Some providers support streaming responses. Set `"stream": true` in your request:
 
 ```bash
-curl -X POST https://api.openmind.org/api/core/openai/chat/completions \
+curl -X POST https://api.openmind.com/api/core/openai/chat/completions \
   -H "Authorization: Bearer om1_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -798,7 +798,7 @@ Rate limits vary by provider and your OpenMind subscription plan. Monitor your u
 
 ## Additional Resources
 
-- [OpenMind Portal](https://portal.openmind.org) - Manage API keys and view usage
+- [OpenMind Portal](https://portal.openmind.com) - Manage API keys and view usage
 - [OpenAI API Documentation](https://platform.openai.com/docs/api-reference)
 - [Anthropic Claude Documentation](https://docs.anthropic.com/)
 - [Google Gemini Documentation](https://ai.google.dev/docs)

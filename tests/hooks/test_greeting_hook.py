@@ -126,7 +126,7 @@ class TestGeetingEndHook:
             mock_provider_class.assert_called_once()
             call_kwargs = mock_provider_class.call_args[1]
             assert (
-                call_kwargs["url"] == "https://api.openmind.org/api/core/elevenlabs/tts"
+                call_kwargs["url"] == "https://api.openmind.com/api/core/elevenlabs/tts"
             )
             assert call_kwargs["voice_id"] == "JBFqnCBsd6RMkjVDRZzb"
             assert call_kwargs["model_id"] == "eleven_flash_v2_5"

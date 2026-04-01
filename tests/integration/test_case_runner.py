@@ -1027,7 +1027,7 @@ async def evaluate_with_llm(
                 return 0.0, "No API key provided for LLM evaluation"
 
         _llm_client = openai.AsyncClient(
-            base_url="https://api.openmind.org/api/core/openai", api_key=api_key
+            base_url="https://api.openmind.com/api/core/openai", api_key=api_key
         )
 
     # Check which evaluation criteria are specified
