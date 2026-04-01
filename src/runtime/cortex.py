@@ -20,6 +20,7 @@ from runtime.config import (
 )
 from runtime.manager import ModeManager
 from simulators.orchestrator import SimulatorOrchestrator
+from skills.orchestrator import SkillOrchestrator
 
 
 class ModeCortexRuntime:
@@ -92,6 +93,7 @@ class ModeCortexRuntime:
         self.background_orchestrator: Optional[BackgroundOrchestrator] = None
         self.input_orchestrator: Optional[InputOrchestrator] = None
         self.mcp_orchestrator: Optional[MCPOrchestrator] = None
+        self.skill_orchestrator: Optional[SkillOrchestrator] = None
 
         # Tasks for orchestrators
         self.input_listener_task: Optional[asyncio.Task] = None
@@ -139,6 +141,12 @@ class ModeCortexRuntime:
 
         logging.info("Setting up cortex components for mode")
 
+        if self.current_config.skills:
+            self.skill_orchestrator = SkillOrchestrator(
+                self.current_config.skills,
+                self.current_config.cortex_llm,
+            )
+
         self.fuser = Fuser(self.current_config)
         self.action_orchestrator = ActionOrchestrator(self.current_config)
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
@@ -146,7 +154,8 @@ class ModeCortexRuntime:
         if self.current_config.mcp_servers:
             await self.current_config.mcp_servers.start()
             self.mcp_orchestrator = MCPOrchestrator(
-                self.current_config.mcp_servers, self.current_config.cortex_llm
+                self.current_config.mcp_servers,
+                self.current_config.cortex_llm,
             )
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
@@ -252,6 +261,10 @@ class ModeCortexRuntime:
             logging.debug("Closing MCP connections")
             await self.mcp_orchestrator.stop()
             self.mcp_orchestrator = None
+
+        if self.skill_orchestrator:
+            logging.debug("Clearing skill orchestrator")
+            self.skill_orchestrator = None
 
         if self.input_orchestrator:
             logging.debug("Stopping input orchestrator")
@@ -614,6 +627,20 @@ class ModeCortexRuntime:
 
         if output is None:
             logging.debug("No output from LLM")
+            return
+
+        if self.skill_orchestrator:
+            skill_result = await self.skill_orchestrator.process(
+                output,
+                prompt,
+                self.current_config.cortex_llm,
+                dispatch_om1=self.action_orchestrator.promise,
+            )
+            output = skill_result.output
+            prompt = skill_result.augmented_prompt
+
+        if output is None:
+            logging.debug("No output from LLM after skill processing")
             return
 
         if self.mcp_orchestrator:
