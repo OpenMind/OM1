@@ -1,3 +1,6 @@
+# DualLLM: A system where a local and cloud LLM race to answer,
+# with smart selection based on function calls and quality evaluation.
+
 import asyncio
 import json
 import logging
