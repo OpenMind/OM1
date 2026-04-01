@@ -193,6 +193,7 @@ def test_alternative_languages_valid_list(
     """Test that valid alternative languages are mapped to correct codes."""
     config = GoogleASRSensorConfig(
         api_key="test_key",
+        api_version="v1",
         language="english",
         alternative_languages=["chinese", "japanese"],
     )
@@ -208,6 +209,7 @@ def test_alternative_languages_unsupported_skipped(
     """Test that unsupported alternative languages are skipped with a warning."""
     config = GoogleASRSensorConfig(
         api_key="test_key",
+        api_version="v1",
         alternative_languages=["klingon", "chinese"],
     )
     _ = GoogleASRInput(config=config)
@@ -223,6 +225,7 @@ def test_alternative_languages_all_unsupported(
     """Test that all unsupported alternative languages results in empty list."""
     config = GoogleASRSensorConfig(
         api_key="test_key",
+        api_version="v1",
         alternative_languages=["klingon", "elvish"],
     )
     _ = GoogleASRInput(config=config)
@@ -239,6 +242,7 @@ def test_alternative_languages_case_insensitive(
     """Test that alternative language names are case-insensitive."""
     config = GoogleASRSensorConfig(
         api_key="test_key",
+        api_version="v1",
         alternative_languages=["FRENCH", "German"],
     )
     _ = GoogleASRInput(config=config)
@@ -253,6 +257,7 @@ def test_alternative_languages_with_whitespace(
     """Test that alternative language names handle leading/trailing whitespace."""
     config = GoogleASRSensorConfig(
         api_key="test_key",
+        api_version="v1",
         alternative_languages=["  korean  ", " spanish"],
     )
     _ = GoogleASRInput(config=config)

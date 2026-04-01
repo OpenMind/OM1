@@ -499,3 +499,140 @@ def test_stop_no_session():
         sensor.session = None
 
         sensor.stop()
+
+
+def test_initialization_with_api_version_v1():
+    """Test initialization with API version v1."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider") as mock_asr,
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        mock_asr_instance = MagicMock()
+        mock_asr.return_value = mock_asr_instance
+
+        config = GoogleASRSensorConfig(api_version="v1", api_key="test_key")
+        GoogleASRInput(config=config)
+
+        call_kwargs = mock_asr.call_args[1]
+        assert (
+            call_kwargs["ws_url"]
+            == "wss://api.openmind.com/api/core/google/asr/v1?api_key=test_key"
+        )
+
+
+def test_initialization_with_api_version_v2():
+    """Test initialization with API version v2."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider") as mock_asr,
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        mock_asr_instance = MagicMock()
+        mock_asr.return_value = mock_asr_instance
+
+        config = GoogleASRSensorConfig(api_version="v2", api_key="test_key")
+        GoogleASRInput(config=config)
+
+        call_kwargs = mock_asr.call_args[1]
+        assert (
+            call_kwargs["ws_url"]
+            == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+        )
+
+
+def test_initialization_with_invalid_api_version_defaults_to_v2():
+    """Test initialization with invalid API version defaults to v2."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider") as mock_asr,
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        mock_asr_instance = MagicMock()
+        mock_asr.return_value = mock_asr_instance
+
+        config = GoogleASRSensorConfig(api_version="v3", api_key="test_key")
+        GoogleASRInput(config=config)
+
+        call_kwargs = mock_asr.call_args[1]
+        assert (
+            call_kwargs["ws_url"]
+            == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+        )
+
+
+def test_initialization_with_alternative_languages_v1():
+    """Test initialization with alternative languages using API v1."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider") as mock_asr,
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        mock_asr_instance = MagicMock()
+        mock_asr.return_value = mock_asr_instance
+
+        config = GoogleASRSensorConfig(
+            api_version="v1",
+            language="english",
+            alternative_languages=["chinese", "spanish"],
+        )
+        GoogleASRInput(config=config)
+
+        call_kwargs = mock_asr.call_args[1]
+        assert call_kwargs["language_code"] == "en-US"
+        assert "cmn-Hans-CN" in call_kwargs["alternative_language_codes"]
+        assert "es-ES" in call_kwargs["alternative_language_codes"]
+
+
+def test_initialization_with_alternative_languages_v2_ignored():
+    """Test initialization with alternative languages using API v2 (should be ignored)."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider") as mock_asr,
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        mock_asr_instance = MagicMock()
+        mock_asr.return_value = mock_asr_instance
+
+        config = GoogleASRSensorConfig(
+            api_version="v2",
+            language="english",
+            alternative_languages=["chinese", "spanish"],
+        )
+        GoogleASRInput(config=config)
+
+        call_kwargs = mock_asr.call_args[1]
+        assert call_kwargs["language_code"] == "en-US"
+        assert call_kwargs["alternative_language_codes"] == []
+
+
+def test_initialization_default_api_version_is_v2():
+    """Test that default API version is v2."""
+    with (
+        patch("inputs.plugins.google_asr.IOProvider"),
+        patch("inputs.plugins.google_asr.ASRProvider") as mock_asr,
+        patch("inputs.plugins.google_asr.SleepTickerProvider"),
+        patch("inputs.plugins.google_asr.TeleopsConversationProvider"),
+        patch("inputs.plugins.google_asr.open_zenoh_session"),
+    ):
+        mock_asr_instance = MagicMock()
+        mock_asr.return_value = mock_asr_instance
+
+        config = GoogleASRSensorConfig(api_key="test_key")
+        GoogleASRInput(config=config)
+
+        call_kwargs = mock_asr.call_args[1]
+        assert (
+            call_kwargs["ws_url"]
+            == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+        )
