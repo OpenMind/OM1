@@ -9,7 +9,7 @@ from inputs.plugins.vlm_openai_rtsp import VLMOpenAIRTSP, VLMOpenAIRTSPConfig
 def test_initialization():
     """Test basic initialization."""
     with (
-        patch("inputs.plugins.vlm_openai_rtsp.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_openai_rtsp.VLMOpenAIRTSPProvider"),
     ):
         config = VLMOpenAIRTSPConfig(api_key="test-api-key")
@@ -22,9 +22,9 @@ def test_initialization():
 async def test_poll():
     """Test _poll method."""
     with (
-        patch("inputs.plugins.vlm_openai_rtsp.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_openai_rtsp.VLMOpenAIRTSPProvider"),
-        patch("inputs.plugins.vlm_openai_rtsp.asyncio.sleep", new=AsyncMock()),
+        patch("inputs.vlm_provider_base.asyncio.sleep", new=AsyncMock()),
     ):
         config = VLMOpenAIRTSPConfig(api_key="test-api-key")
         sensor = VLMOpenAIRTSP(config=config)
@@ -36,7 +36,7 @@ async def test_poll():
 def test_formatted_latest_buffer():
     """Test formatted_latest_buffer."""
     with (
-        patch("inputs.plugins.vlm_openai_rtsp.IOProvider"),
+        patch("inputs.vlm_provider_base.IOProvider"),
         patch("inputs.plugins.vlm_openai_rtsp.VLMOpenAIRTSPProvider"),
     ):
         config = VLMOpenAIRTSPConfig(api_key="test-api-key")
