@@ -192,6 +192,8 @@ class MCPClientManager:
         config : MCPServerConfig
             The specific server configuration model to initialize.
         """
+        assert self._exit_stack is not None
+
         match config.transport:
             case TransportType.STDIO:
                 if not config.command:
