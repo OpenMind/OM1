@@ -1,3 +1,5 @@
+import contextlib
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -5,9 +7,15 @@ from mcp.types import TextContent
 
 from mcp_servers.client import (
     MCPClientManager,
+    MCPServerConfig,
     MCPTool,
-    StdioServerConfig,
+    TransportType,
 )
+
+
+@asynccontextmanager
+async def mock_stdio_client(*args, **kwargs):
+    yield "read", "write"
 
 
 class TestMCPToolSchema:
@@ -46,9 +54,10 @@ class TestMCPToolSchema:
 class TestConfigParsing:
     """Test server config validation."""
 
-    def test_stdio_config(self):
-        config = StdioServerConfig(name="test", command="python", args=["-m", "server"])
+    def test_server_config(self):
+        config = MCPServerConfig(name="test", command="python", args=["-m", "server"])
         assert config.name == "test"
+        assert config.transport == TransportType.STDIO
 
     def test_client_manager_parses_configs(self):
         configs = [
@@ -58,12 +67,15 @@ class TestConfigParsing:
         manager = MCPClientManager(configs)
 
         assert len(manager._configs) == 2
-        assert isinstance(manager._configs[0], StdioServerConfig)
-        assert isinstance(manager._configs[1], StdioServerConfig)
+        assert isinstance(manager._configs[0], MCPServerConfig)
+        assert isinstance(manager._configs[1], MCPServerConfig)
 
-    def test_missing_command_raises(self):
+    @pytest.mark.asyncio
+    async def test_missing_command_raises(self):
         with pytest.raises(Exception):
-            MCPClientManager([{"name": "bad"}])
+            manager = MCPClientManager([{"name": "bad", "transport": "stdio"}])
+            manager._exit_stack = contextlib.AsyncExitStack()
+            await manager._connect_server(manager._configs[0])
 
 
 class TestMCPClientManager:
@@ -208,8 +220,8 @@ class TestConnectAll:
 
         with (
             patch(
-                "mcp_servers.client.StdioTransport.connect",
-                return_value=("read", "write"),
+                "mcp_servers.client.stdio_client",
+                side_effect=mock_stdio_client,
             ),
             patch("mcp_servers.client.ClientSession", return_value=mock_session),
         ):
@@ -228,7 +240,7 @@ class TestConnectAll:
         manager = MCPClientManager(configs)
 
         with patch(
-            "mcp_servers.client.StdioTransport.connect",
+            "mcp_servers.client.stdio_client",
             side_effect=ConnectionError("refused"),
         ):
             await manager._connect_all()

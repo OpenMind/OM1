@@ -40,6 +40,7 @@ class MCPOrchestrator:
         llm: Any,
         max_concurrency: int = 5,
     ) -> None:
+        """Initialize orchestrator and inject MCP tools into LLM schemas."""
         self._mcp_client = mcp_client
         self._max_concurrency = max_concurrency
 
@@ -151,13 +152,37 @@ class MCPOrchestrator:
         return output
 
     def _extract_mcp_actions(self, actions: list) -> list:
-        """Return only the actions that target an MCP tool."""
+        """Return only the actions that target an MCP tool.
+
+        Parameters
+        ----------
+        actions : list
+            List of all actions from the LLM output.
+
+        Returns
+        -------
+        list
+            List of actions targeting MCP tools.
+        """
         return [
             action for action in actions if self._mcp_client.is_mcp_tool(action.type)
         ]
 
     def _filter_new_actions(self, actions: list, succeeded: Set[str]) -> list:
-        """Filter out actions whose call signature already succeeded."""
+        """Filter out actions whose call signature already succeeded.
+
+        Parameters
+        ----------
+        actions : list
+            List of MCP actions to filter.
+        succeeded : Set[str]
+            Set of already succeeded action signatures.
+
+        Returns
+        -------
+        list
+            List of new actions to execute.
+        """
         return [
             action
             for action in actions
@@ -165,12 +190,34 @@ class MCPOrchestrator:
         ]
 
     def _build_call_signature(self, action: Any) -> str:
-        """Deterministic signature for dedup: tool_key + sorted args."""
+        """Deterministic signature for dedup: tool_key + sorted args.
+
+        Parameters
+        ----------
+        action : Any
+            The action object to build a signature for.
+
+        Returns
+        -------
+        str
+            Deterministic string signature of the action.
+        """
         args = self._parse_arguments(action)
         return f"{action.type}|{json.dumps(args, sort_keys=True, default=str)}"
 
     def _parse_arguments(self, action: Any) -> Dict[str, Any]:
-        """Parse the action value into a dict suitable for MCP tool args."""
+        """Parse the action value into a dict suitable for MCP tool args.
+
+        Parameters
+        ----------
+        action : Any
+            The action object containing arguments.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Parsed dictionary of tool arguments.
+        """
         value = action.value
         if isinstance(value, dict):
             return value
@@ -187,7 +234,20 @@ class MCPOrchestrator:
     async def _execute_single_tool(
         self, action: Any, timeout: float = 10.0
     ) -> ToolResult:
-        """Execute one MCP tool call with a timeout."""
+        """Execute one MCP tool call with a timeout.
+
+        Parameters
+        ----------
+        action : Any
+            The MCP action to execute.
+        timeout : float
+            Maximum execution time in seconds.
+
+        Returns
+        -------
+        ToolResult
+            The execution result containing success and content.
+        """
         try:
             args = self._parse_arguments(action)
             content = await asyncio.wait_for(
@@ -214,7 +274,18 @@ class MCPOrchestrator:
             )
 
     async def _execute_tools(self, actions: list) -> List[ToolResult]:
-        """Execute multiple MCP tools concurrently with a semaphore."""
+        """Execute multiple MCP tools concurrently with a semaphore.
+
+        Parameters
+        ----------
+        actions : list
+            List of new MCP actions to execute.
+
+        Returns
+        -------
+        List[ToolResult]
+            List of parsed tool execution results.
+        """
         semaphore = asyncio.Semaphore(self._max_concurrency)
 
         async def _guarded(action: Any) -> ToolResult:
@@ -228,7 +299,20 @@ class MCPOrchestrator:
         original_prompt: str,
         latest_results: List[ToolResult],
     ) -> str:
-        """Build the follow-up prompt with the latest tool results."""
+        """Build the follow-up prompt with the latest tool results.
+
+        Parameters
+        ----------
+        original_prompt : str
+            The initial user prompt.
+        latest_results : List[ToolResult]
+            List of recent tool execution results.
+
+        Returns
+        -------
+        str
+            The formatted follow-up prompt string.
+        """
         lines = []
         for result in latest_results:
             status = "OK" if result.success else "FAILED"
@@ -250,7 +334,22 @@ class MCPOrchestrator:
         prompt: str,
         latest_results: List[ToolResult],
     ) -> Any:
-        """Recall LLM with the latest tool results."""
+        """Recall LLM with the latest tool results.
+
+        Parameters
+        ----------
+        llm : Any
+            The LLM instance.
+        prompt : str
+            The original user prompt.
+        latest_results : List[ToolResult]
+            List of recent tool execution results.
+
+        Returns
+        -------
+        Any
+            The output object of the next round from the LLM.
+        """
         recall_prompt = self._build_result_prompt(prompt, latest_results)
         logging.info("MCP recall LLM with latest results")
         return await llm.ask(recall_prompt)

@@ -2,21 +2,36 @@ import asyncio
 import logging
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
+import httpx
 from mcp import ClientSession, StdioServerParameters
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamable_http_client
 from mcp.types import TextContent
 from pydantic import BaseModel
 
 
-class StdioServerConfig(BaseModel):
-    """Configuration for an MCP server using stdio transport."""
+class TransportType(str, Enum):
+    """Supported MCP server transport protocols."""
+
+    STDIO = "stdio"
+    SSE = "sse"
+    HTTP = "http"
+
+
+class MCPServerConfig(BaseModel):
+    """Configuration for an MCP server."""
 
     name: str
-    command: str
+    transport: TransportType = TransportType.STDIO
+    command: Optional[str] = None
     args: List[str] = []
     env: Optional[Dict[str, str]] = None
+    url: Optional[str] = None
+    headers: Optional[Dict[str, str]] = None
 
 
 @dataclass
@@ -30,7 +45,13 @@ class MCPTool:
     input_schema: dict
 
     def convert_to_schema(self) -> dict:
-        """Convert to OpenAI function-calling schema."""
+        """Convert to OpenAI function-calling schema.
+
+        Returns
+        -------
+        dict
+            Dictionary matching the OpenAI function format.
+        """
         return {
             "type": "function",
             "function": {
@@ -41,31 +62,19 @@ class MCPTool:
         }
 
     def generate_description(self) -> str:
-        """Generate description for LLM prompts."""
+        """Generate description for LLM prompts.
+
+        Returns
+        -------
+        str
+            A formatted string describing the tool signature and purpose.
+        """
         params = self.input_schema.get("properties", {})
         param_str = ", ".join(
             f"{param_name}: {param_info.get('type', 'any')}"
             for param_name, param_info in params.items()
         )
         return f"- {self.key}({param_str}): {self.description}"
-
-
-class StdioTransport:
-    """Handles stdio transport connections to MCP servers."""
-
-    @staticmethod
-    async def connect(
-        exit_stack: AsyncExitStack, config: StdioServerConfig
-    ) -> Tuple[Any, Any]:
-        """Open a stdio connection to an MCP server."""
-        server_params = StdioServerParameters(
-            command=config.command,
-            args=config.args,
-            env=config.env,
-        )
-        client_cm = stdio_client(server_params)
-        read, write = await exit_stack.enter_async_context(client_cm)
-        return read, write
 
 
 class MCPClientManager:
@@ -78,7 +87,8 @@ class MCPClientManager:
     """
 
     def __init__(self, server_configs: List[Dict]) -> None:
-        self._configs = [StdioServerConfig(**c) for c in server_configs]
+        """Initialize the MCPClientManager with server configurations."""
+        self._configs = [MCPServerConfig(**c) for c in server_configs]
         self._sessions: Dict[str, ClientSession] = {}
         self._tools: Dict[str, MCPTool] = {}
         self._exit_stack: Optional[AsyncExitStack] = None
@@ -90,14 +100,22 @@ class MCPClientManager:
         self.task: Optional[asyncio.Task] = None
 
     async def start(self) -> None:
-        """Connect to all configured MCP servers."""
+        """Connect to all configured MCP servers.
+
+        This method triggers the connection background loop and waits
+        until all connections are established.
+        """
         if self.task is None or self.task.done():
             self.task = asyncio.create_task(self._run_event_loop())
         self._connect_event.set()
         await self._ready.wait()
 
     async def stop(self) -> None:
-        """Disconnect all MCP servers."""
+        """Disconnect all MCP servers.
+
+        This method signals the background loop to close active sessions
+        and safely tears down the task.
+        """
         if not self._ready.is_set():
             return
         self._close_event.set()
@@ -112,7 +130,11 @@ class MCPClientManager:
         self.task = None
 
     async def _run_event_loop(self) -> None:
-        """Internal loop that owns all MCP connections in a single task."""
+        """Internal loop that owns all MCP connections in a single task.
+
+        Ensures connection lifecycle elements do not tear down prematurely
+        due to task cancellation in the caller.
+        """
         try:
             while True:
                 await self._connect_event.wait()
@@ -133,7 +155,10 @@ class MCPClientManager:
             raise
 
     async def _connect_all(self) -> None:
-        """Connect to all configured MCP servers and discover tools."""
+        """Connect to all configured MCP servers and discover tools.
+
+        Iterates through the server configs and populates the internal tools map.
+        """
         self._exit_stack = AsyncExitStack()
         await self._exit_stack.__aenter__()
 
@@ -146,7 +171,10 @@ class MCPClientManager:
         logging.info(f"MCP client connected with {len(self._tools)} tools")
 
     async def _close_all(self) -> None:
-        """Close all MCP server connections."""
+        """Close all MCP server connections.
+
+        Safely closes all underlying ExitStack contexts.
+        """
         if self._exit_stack:
             try:
                 await self._exit_stack.aclose()
@@ -156,10 +184,51 @@ class MCPClientManager:
         self._sessions.clear()
         self._tools.clear()
 
-    async def _connect_server(self, config: StdioServerConfig) -> None:
-        """Connect to a single MCP server."""
-        assert self._exit_stack is not None
-        read, write = await StdioTransport.connect(self._exit_stack, config)
+    async def _connect_server(self, config: MCPServerConfig) -> None:
+        """Connect to a single MCP server.
+
+        Parameters
+        ----------
+        config : MCPServerConfig
+            The specific server configuration model to initialize.
+        """
+        match config.transport:
+            case TransportType.STDIO:
+                if not config.command:
+                    raise ValueError(
+                        f"MCP server '{config.name}' requires 'command' for stdio transport"
+                    )
+                server_params = StdioServerParameters(
+                    command=config.command,
+                    args=config.args,
+                    env=config.env,
+                )
+                client_cm = stdio_client(server_params)
+                read, write = await self._exit_stack.enter_async_context(client_cm)
+
+            case TransportType.SSE:
+                if not config.url:
+                    raise ValueError(
+                        f"MCP server '{config.name}' requires 'url' for sse transport"
+                    )
+                client_cm = sse_client(config.url, headers=config.headers)
+                read, write = await self._exit_stack.enter_async_context(client_cm)
+
+            case TransportType.HTTP:
+                if not config.url:
+                    raise ValueError(
+                        f"MCP server '{config.name}' requires 'url' for http transport"
+                    )
+                http_client = httpx.AsyncClient(
+                    headers=config.headers or {},
+                    timeout=httpx.Timeout(30.0, read=300.0),
+                )
+                await self._exit_stack.enter_async_context(http_client)
+                client_cm = streamable_http_client(config.url, http_client=http_client)
+                read, write, _ = await self._exit_stack.enter_async_context(client_cm)
+
+            case _:
+                raise ValueError(f"Unsupported transport type: {config.transport}")
 
         session = ClientSession(read, write)
         await self._exit_stack.enter_async_context(session)
@@ -184,11 +253,23 @@ class MCPClientManager:
         )
 
     def get_tool_schemas(self) -> List[Dict]:
-        """Get OpenAI-format function schemas for all MCP tools."""
+        """Get OpenAI-format function schemas for all MCP tools.
+
+        Returns
+        -------
+        List[Dict]
+            A list of dictionary schemas mapping to registered MCP tools.
+        """
         return [tool.convert_to_schema() for tool in self._tools.values()]
 
     def get_tool_descriptions(self) -> str:
-        """Get text descriptions of MCP tools for the LLM prompt."""
+        """Get text descriptions of MCP tools for the LLM prompt.
+
+        Returns
+        -------
+        str
+            A concatenated string block summarizing the tools.
+        """
         if not self._tools:
             return ""
         header = (
@@ -202,7 +283,18 @@ class MCPClientManager:
         return f"{header}{tool_lines}"
 
     def is_mcp_tool(self, tool_name: str) -> bool:
-        """Check if a tool name belongs to an MCP server."""
+        """Check if a tool name belongs to an MCP server.
+
+        Parameters
+        ----------
+        tool_name : str
+            The name of the tool to verify.
+
+        Returns
+        -------
+        bool
+            True if the tool is an MCP tool, False otherwise.
+        """
         return tool_name in self._tools
 
     async def call_tool(self, tool_key: str, arguments: Dict[str, Any]) -> str:
