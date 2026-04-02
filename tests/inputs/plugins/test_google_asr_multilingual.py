@@ -163,3 +163,104 @@ def test_language_map_has_no_duplicates():
     """Test that no two languages map to the same code."""
     codes = list(LANGUAGE_CODE_MAP.values())
     assert len(codes) == len(set(codes))
+
+
+def test_alternative_languages_none_passes_empty_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that None alternative_languages passes empty list to ASRProvider."""
+    config = GoogleASRSensorConfig(api_key="test_key", alternative_languages=None)
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["alternative_language_codes"] == []
+
+
+def test_alternative_languages_empty_passes_empty_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that empty alternative_languages passes empty list to ASRProvider."""
+    config = GoogleASRSensorConfig(api_key="test_key", alternative_languages=[])
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["alternative_language_codes"] == []
+
+
+def test_alternative_languages_valid_list(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that valid alternative languages are mapped to correct codes."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key",
+        api_version="v1",
+        language="english",
+        alternative_languages=["chinese", "japanese"],
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["alternative_language_codes"] == ["cmn-Hans-CN", "ja-JP"]
+
+
+def test_alternative_languages_unsupported_skipped(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation, caplog
+):
+    """Test that unsupported alternative languages are skipped with a warning."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key",
+        api_version="v1",
+        alternative_languages=["klingon", "chinese"],
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["alternative_language_codes"] == ["cmn-Hans-CN"]
+    assert "klingon" in caplog.text
+
+
+def test_alternative_languages_all_unsupported(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation, caplog
+):
+    """Test that all unsupported alternative languages results in empty list."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key",
+        api_version="v1",
+        alternative_languages=["klingon", "elvish"],
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["alternative_language_codes"] == []
+    assert "klingon" in caplog.text
+    assert "elvish" in caplog.text
+
+
+def test_alternative_languages_case_insensitive(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that alternative language names are case-insensitive."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key",
+        api_version="v1",
+        alternative_languages=["FRENCH", "German"],
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["alternative_language_codes"] == ["fr-FR", "de-DE"]
+
+
+def test_alternative_languages_with_whitespace(
+    mock_asr_provider, mock_sleep_ticker, mock_conversation
+):
+    """Test that alternative language names handle leading/trailing whitespace."""
+    config = GoogleASRSensorConfig(
+        api_key="test_key",
+        api_version="v1",
+        alternative_languages=["  korean  ", " spanish"],
+    )
+    _ = GoogleASRInput(config=config)
+
+    call_args = mock_asr_provider.call_args
+    assert call_args[1]["alternative_language_codes"] == ["ko-KR", "es-ES"]

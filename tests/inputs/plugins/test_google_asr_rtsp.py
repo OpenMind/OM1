@@ -78,6 +78,7 @@ def test_initialization_creates_providers_and_buffers(
     api_key = config.api_key
     rtsp_url = config.rtsp_url
     rate = config.rate
+    chunk = config.chunk
     enable_tts_interrupt = config.enable_tts_interrupt
 
     with (
@@ -105,8 +106,10 @@ def test_initialization_creates_providers_and_buffers(
     mock_asr_constructor.assert_called_once_with(
         rtsp_url=rtsp_url,
         rate=rate,
-        ws_url=f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}",
+        chunk=chunk,
+        ws_url=f"wss://api.openmind.com/api/core/google/asr/v2?api_key={api_key}",
         language_code="en-US",
+        alternative_language_codes=[],
         enable_tts_interrupt=enable_tts_interrupt,
     )
     mock_asr_instance.start.assert_called_once()
@@ -1219,3 +1222,226 @@ def test_initialization_with_enable_tts_interrupt_true(
     mock_asr_constructor.assert_called_once()
     call_kwargs = mock_asr_constructor.call_args[1]
     assert call_kwargs["enable_tts_interrupt"] is True
+
+
+def test_initialization_with_api_version_v1(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(api_version="v1", api_key="test_key")
+
+    with (
+        patch(
+            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    assert (
+        call_kwargs["ws_url"]
+        == "wss://api.openmind.com/api/core/google/asr/v1?api_key=test_key"
+    )
+
+
+def test_initialization_with_api_version_v2(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(api_version="v2", api_key="test_key")
+
+    with (
+        patch(
+            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    assert (
+        call_kwargs["ws_url"]
+        == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+    )
+
+
+def test_initialization_with_invalid_api_version_defaults_to_v2(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(api_version="v3", api_key="test_key")
+
+    with (
+        patch(
+            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    # Should default to v2
+    assert (
+        call_kwargs["ws_url"]
+        == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
+    )
+
+
+def test_initialization_with_alternative_languages_v1(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(
+        api_version="v1",
+        language="english",
+        alternative_languages=["chinese", "spanish"],
+    )
+
+    with (
+        patch(
+            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    # With v1, alternative languages should be included
+    assert call_kwargs["language_code"] == "en-US"
+    assert "cmn-Hans-CN" in call_kwargs["alternative_language_codes"]
+    assert "es-ES" in call_kwargs["alternative_language_codes"]
+
+
+def test_initialization_with_alternative_languages_v2_ignored(
+    mock_io_provider,
+    mock_asr_provider,
+    mock_sleep_ticker_provider,
+    mock_teleops_conversation_provider,
+    mock_zenoh,
+):
+    mock_asr_constructor, _ = mock_asr_provider
+    _, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    _, mock_teleops_conv_instance = mock_teleops_conversation_provider
+
+    config = GoogleASRRTSPSensorConfig(
+        api_version="v2",
+        language="english",
+        alternative_languages=["chinese", "spanish"],
+    )
+
+    with (
+        patch(
+            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
+            return_value=mock_sleep_ticker_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.TeleopsConversationProvider",
+            return_value=mock_teleops_conv_instance,
+        ),
+        patch(
+            "inputs.plugins.google_asr_rtsp.open_zenoh_session",
+            mock_zenoh["open_session"],
+        ),
+    ):
+        GoogleASRRTSPInput(config=config)
+
+    mock_asr_constructor.assert_called_once()
+    call_kwargs = mock_asr_constructor.call_args[1]
+    # With v2, alternative languages should be ignored (empty list)
+    assert call_kwargs["language_code"] == "en-US"
+    assert call_kwargs["alternative_language_codes"] == []
