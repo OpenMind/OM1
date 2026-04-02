@@ -40,10 +40,14 @@ class Fuser:
 
         self.knowledge_base = None
         self.kb_min_score = 0.0
+        self.kb_high_score = 0.92
+        self.kb_low_score = 0.75
         if config.knowledge_base:
             try:
                 kb_config = dict(config.knowledge_base)
                 self.kb_min_score = kb_config.get("min_score", 0.0)
+                self.kb_high_score = kb_config.get("high_score", 0.92)
+                self.kb_low_score = kb_config.get("low_score", 0.75)
                 if self.kb_min_score > 0:
                     logging.info(
                         f"KnowledgeBase min_score threshold: {self.kb_min_score}"
@@ -114,12 +118,33 @@ class Fuser:
                     results = await self.knowledge_base.query(
                         query_text, top_k=3, min_score=self.kb_min_score
                     )
-                    if results:
-                        kb_context = self.knowledge_base.format_context(
-                            results, max_chars=1500
+                    high = [
+                        r
+                        for r in results
+                        if r.score is not None and r.score >= self.kb_high_score
+                    ]
+                    low = [
+                        r
+                        for r in results
+                        if r.score is not None
+                        and self.kb_low_score <= r.score < self.kb_high_score
+                    ]
+                    kb_parts = []
+                    if high:
+                        kb_parts.append(
+                            self.knowledge_base.format_context(high, max_chars=1500)
                         )
+                    if low:
+                        kb_parts.append(
+                            "[Potentially relevant, low confidence]\n"
+                            + self.knowledge_base.format_context(low, max_chars=1000)
+                        )
+                    if kb_parts:
+                        kb_context = "\n".join(kb_parts)
                         logging.info(
-                            f"Knowledge base: {len(results)} docs passed to LLM"
+                            f"Knowledge base: {len(high)} high,"
+                            f" {len(low)} low confidence;"
+                            f" {len(results)} docs passed to LLM"
                         )
                     else:
                         logging.info(
@@ -130,7 +155,7 @@ class Fuser:
 
         # Add knowledge base context to inputs if available
         if kb_context:
-            inputs_fused += f"\n\nKNOWLEDGE BASE:\n{kb_context}"
+            inputs_fused += f"\n\nYOUR KNOWLEDGE BASE:\n{kb_context}"
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,
