@@ -1,0 +1,59 @@
+{
+  version: "v1.0.3",
+  name: "mcp_tool_call_test",
+  description: "Robot looks up location then weather using two MCP tool calls before producing a spoken answer.",
+  hertz: 1,
+  system_prompt_base: "You are a helpful robot. Use the available tools to answer questions. When asked about weather, first call get_location to resolve the city, then call get_weather with the result.",
+  system_governance: "",
+  system_prompt_examples: "",
+
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+    },
+  ],
+
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Buddy",
+      history_length: 5,
+    },
+  },
+
+  mcp_servers: [
+    {
+      name: "weather",
+      transport: "stdio",
+      command: "python3",
+      args: [
+        "tests/integration/mock_inputs/data_providers/mock_mcp_server_provider.py",
+      ],
+    },
+  ],
+
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "ros2",
+    },
+  ],
+
+  api_key: "openmind_free",
+
+  input: {
+    asr: ["../asr/weather_question.json"],
+  },
+
+  expected: {
+    keywords: ["72", "sunny"],
+    emotion: ["happy", "excited", "curious"],
+    minimum_score: 0.5,
+  },
+}

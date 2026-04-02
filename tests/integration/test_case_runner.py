@@ -68,6 +68,7 @@ def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
         _raw_simulators=config.get("simulators", []),
         _raw_actions=config.get("agent_actions", []),
         _raw_backgrounds=config.get("backgrounds", []),
+        _raw_mcp_servers=config.get("mcp_servers", []),
     )
     return ModeSystemConfig(
         version=config.get("version", "v1.0.3"),
@@ -683,6 +684,10 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
 
     # Clean up inputs after test completion
     await cleanup_mock_inputs(cortex.current_config.agent_inputs)
+
+    # Stop MCP orchestrator if it exists
+    if cortex.mcp_orchestrator:
+        await cortex.mcp_orchestrator.stop()
 
     # The output includes detection results and commands
     return output_results

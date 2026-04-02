@@ -145,9 +145,7 @@ class ModeCortexRuntime:
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
         if self.current_config.mcp_servers:
             await self.current_config.mcp_servers.start()
-            self.mcp_orchestrator = MCPOrchestrator(
-                self.current_config.mcp_servers, self.current_config.cortex_llm
-            )
+            self.mcp_orchestrator = MCPOrchestrator(self.current_config)
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
@@ -617,12 +615,54 @@ class ModeCortexRuntime:
             return
 
         if self.mcp_orchestrator:
-            output = await self.mcp_orchestrator.process(
-                output,
-                prompt,
-                self.current_config.cortex_llm,
-                dispatch_om1=self.action_orchestrator.promise,
-            )
+            succeeded_calls: set = set()
+            original_prompt = prompt
+
+            for round_idx in range(self.mcp_orchestrator.max_rounds):
+                mcp_actions = self.mcp_orchestrator.extract_mcp_actions(output.actions)
+                om1_actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
+
+                new_mcp_actions = [
+                    a
+                    for a in mcp_actions
+                    if self.mcp_orchestrator.build_call_signature(a)
+                    not in succeeded_calls
+                ]
+
+                if not new_mcp_actions:
+                    break
+
+                if om1_actions:
+                    await self.action_orchestrator.promise(om1_actions)
+
+                logging.info(
+                    f"MCP round {round_idx + 1}/{self.mcp_orchestrator.max_rounds}: "
+                    f"executing {len(new_mcp_actions)} tool(s)"
+                )
+
+                results = await self.mcp_orchestrator.execute_mcp_actions(
+                    new_mcp_actions
+                )
+
+                for action, result in zip(new_mcp_actions, results):
+                    if result.success:
+                        succeeded_calls.add(
+                            self.mcp_orchestrator.build_call_signature(action)
+                        )
+
+                recall_prompt = self.mcp_orchestrator.build_result_prompt(
+                    original_prompt, results
+                )
+                output = await self.current_config.cortex_llm.ask(recall_prompt)
+
+                if output is None or not hasattr(output, "actions"):
+                    output = None
+                    break
+
+            if output and hasattr(output, "actions"):
+                output.actions = self.mcp_orchestrator.extract_om1_actions(
+                    output.actions
+                )
 
         if output is None:
             logging.debug("No output from LLM after MCP processing")
