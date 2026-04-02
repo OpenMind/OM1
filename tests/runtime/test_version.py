@@ -63,10 +63,10 @@ def test_same_major_minor_version_is_supported():
 def test_different_major_version_raises_error():
     """Test that different major version raises ValueError."""
     with patch("runtime.version.latest_runtime_version", "v1.0.0"):
-        with pytest.raises(ValueError, match="Invalid version format"):
+        with pytest.raises(ValueError, match="Major version mismatch"):
             is_version_supported("v2.0.0")
 
-        with pytest.raises(ValueError, match="Invalid version format"):
+        with pytest.raises(ValueError, match="Major version mismatch"):
             is_version_supported("0.0.0")
 
 
@@ -132,11 +132,11 @@ def test_version_with_extra_dots_is_handled():
 
 def test_negative_version_numbers_behavior():
     """Test behavior with negative version numbers."""
-    with pytest.raises(ValueError, match="Invalid version format"):
+    with pytest.raises(ValueError, match="Major version mismatch"):
         is_version_supported("-1.0.0")
 
     with patch("runtime.version.latest_runtime_version", "v1.0.0"):
-        with pytest.raises(ValueError, match="Invalid version format"):
+        with pytest.raises(ValueError, match="Major version mismatch"):
             is_version_supported("-1.0.0")
 
 
