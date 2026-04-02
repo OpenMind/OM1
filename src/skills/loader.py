@@ -1,10 +1,3 @@
-"""Scan and parse SKILL.md files from a skills directory.
-
-Each subdirectory under the skills root may contain a ``SKILL.md`` file
-with YAML frontmatter (name, description) and a Markdown body that
-serves as LLM instructions for executing the skill.
-"""
-
 import logging
 import re
 from dataclasses import dataclass, field
@@ -19,19 +12,19 @@ class SkillEntry:
     Parameters
     ----------
     name : str
-        Unique skill identifier (e.g. ``weather-report``).
+        Unique skill identifier.
     description : str
         Short description shown in the prompt catalog.
     instructions : str
-        Full Markdown body — loaded lazily via ``read_skill``.
+        Full Markdown body.
     source_path : Path
         Absolute path to the ``SKILL.md`` file.
     requires_tools : list[str]
-        MCP tool names this skill depends on (informational).
+        tools required by this skill.
     max_rounds : int
-        Max execution rounds for this skill (hint for the orchestrator).
+        Max execution rounds for this skill.
     priority : int
-        Higher value = higher precedence when multiple skills exist.
+        Priority among all skills.
     """
 
     name: str
@@ -43,15 +36,14 @@ class SkillEntry:
     priority: int = 10
 
 
-# Regex to split YAML frontmatter delimited by --- ... ---
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
 
 
 def _parse_frontmatter(content: str) -> tuple:
-    """Split a SKILL.md file into (metadata_dict, body_str).
+    """Split a SKILL.md file into metadata and body.
 
-    Uses a simple regex + line-based parser to avoid hard-requiring
-    PyYAML (falls back gracefully if unavailable).
+    Uses a simple line-based parser that handles flat key: value pairs
+    and list items. No external dependencies required.
 
     Returns
     -------
@@ -65,19 +57,6 @@ def _parse_frontmatter(content: str) -> tuple:
     yaml_block = match.group(1)
     body = match.group(2).strip()
 
-    # Try PyYAML first (accurate, handles nested structures)
-    try:
-        import yaml
-
-        meta = yaml.safe_load(yaml_block)
-        if isinstance(meta, dict):
-            return meta, body
-    except ImportError:
-        pass
-    except Exception as exc:
-        logging.warning(f"YAML parse failed, falling back to regex: {exc}")
-
-    # Fallback: simple key: value line parser
     meta: Dict = {}
     current_key: Optional[str] = None
     current_list: Optional[List[str]] = None
@@ -87,14 +66,12 @@ def _parse_frontmatter(content: str) -> tuple:
         if not stripped or stripped.startswith("#"):
             continue
 
-        # List item (indented with -)
         if stripped.startswith("- ") and current_key:
             value = stripped[2:].strip().strip('"').strip("'")
             if current_list is not None:
                 current_list.append(value)
             continue
 
-        # Key: value pair
         if ":" in stripped:
             key, _, value = stripped.partition(":")
             key = key.strip()
@@ -105,7 +82,6 @@ def _parse_frontmatter(content: str) -> tuple:
                 current_key = key
                 current_list = None
             else:
-                # Start a list or nested block
                 current_key = key
                 current_list = []
                 meta[key] = current_list
@@ -114,10 +90,7 @@ def _parse_frontmatter(content: str) -> tuple:
 
 
 class SkillLoader:
-    """Load all SKILL.md files from a directory tree.
-
-    Scans ``skills_dir/*/SKILL.md`` and parses each into a
-    :class:`SkillEntry`.
+    """Scan and parse SKILL.md files from a skills directory.
 
     Parameters
     ----------
@@ -160,27 +133,21 @@ class SkillLoader:
 
         name = meta.get("name")
         if not name:
-            # Fall back to directory name
             name = path.parent.name
 
         description = meta.get("description", "")
 
-        # Extract nested metadata fields
-        metadata = meta.get("metadata", {})
-        if not isinstance(metadata, dict):
-            metadata = {}
-
-        requires_tools = metadata.get("requires_tools", [])
+        requires_tools = meta.get("requires_tools", [])
         if not isinstance(requires_tools, list):
             requires_tools = []
 
-        max_rounds = metadata.get("max_rounds", 8)
+        max_rounds = meta.get("max_rounds", 8)
         try:
             max_rounds = int(max_rounds)
         except (ValueError, TypeError):
             max_rounds = 8
 
-        priority = metadata.get("priority", 10)
+        priority = meta.get("priority", 10)
         try:
             priority = int(priority)
         except (ValueError, TypeError):

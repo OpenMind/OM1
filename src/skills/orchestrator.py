@@ -1,17 +1,3 @@
-"""Standalone skill orchestrator for read_skill tool calls.
-
-Handles the ``read_skill`` multi-round loop independently of the
-MCPOrchestrator.  Runs **before** MCPOrchestrator in the tick so
-that skill instructions are loaded first, then MCP tools are available
-for execution in the subsequent MCPOrchestrator pass.
-
-Key design constraints:
-- Only dispatches true OM1 actions (not ``mcp_*`` prefixed) to avoid
-  stealing MCP tool calls from the downstream MCPOrchestrator.
-- Returns the skill-augmented prompt so MCPOrchestrator's recall
-  rounds retain the skill context.
-"""
-
 import json
 import logging
 import os
@@ -21,7 +7,6 @@ from typing import Any, Dict, List, Set
 from llm.output_model import CortexOutputModel
 from skills.loader import SkillEntry, SkillLoader
 
-# Tool name constant
 READ_SKILL_TOOL = "read_skill"
 
 
@@ -73,12 +58,7 @@ def build_tool_schema(skills: Dict[str, SkillEntry]) -> dict:
 
 @dataclass
 class SkillProcessResult:
-    """Result from SkillOrchestrator.process().
-
-    Carries both the LLM output and the (possibly augmented) prompt
-    so downstream orchestrators can build recall prompts with full
-    skill context.
-    """
+    """Result from SkillOrchestrator.process()."""
 
     output: Any
     augmented_prompt: str
@@ -87,7 +67,7 @@ class SkillProcessResult:
 class SkillOrchestrator:
     """Multi-round orchestrator for read_skill tool calls.
 
-    Loads skills from ``<project_root>/skills/``, filters by whitelist,
+    Loads skills from ``skills/``, filters by whitelist,
     and registers the ``read_skill`` function schema on the LLM.
 
     Parameters
@@ -98,7 +78,6 @@ class SkillOrchestrator:
         The LLM instance whose function_schemas will be extended.
     """
 
-    # Fixed skills directory: <project_root>/skills/
     SKILLS_DIR = os.path.normpath(
         os.path.join(os.path.dirname(__file__), "../../skills")
     )
@@ -117,7 +96,6 @@ class SkillOrchestrator:
             logging.warning("No valid skills loaded")
             return
 
-        # Register read_skill schema on the LLM
         schema = build_tool_schema(self._skills)
         llm.function_schemas = [
             s
@@ -140,14 +118,6 @@ class SkillOrchestrator:
         max_rounds: int = 3,
     ) -> SkillProcessResult:
         """Execute read_skill calls in a multi-round loop.
-
-        Only handles ``read_skill`` tool calls. All other actions
-        (MCP tools, OM1 actions) are left in the output for downstream
-        processing.
-
-        Only true OM1 actions (those not prefixed with ``mcp_``) are
-        dispatched immediately. MCP-prefixed actions are preserved
-        for the MCPOrchestrator.
 
         Parameters
         ----------
@@ -189,7 +159,7 @@ class SkillOrchestrator:
             if not new_actions:
                 break
 
-            # Dispatch ONLY true OM1 actions (not mcp_ and not read_skill)
+            # Dispatch OM1 actions
             om1_only_actions = [
                 a
                 for a in output.actions
@@ -198,7 +168,6 @@ class SkillOrchestrator:
             if om1_only_actions and dispatch_om1:
                 await dispatch_om1(om1_only_actions)
 
-            # Keep read_skill + mcp actions in output
             output.actions = [
                 a
                 for a in output.actions
@@ -224,7 +193,7 @@ class SkillOrchestrator:
             if output is None or not hasattr(output, "actions"):
                 return SkillProcessResult(output=None, augmented_prompt=current_prompt)
 
-        # Remove any remaining read_skill actions, keep everything else
+        # Remove any remaining read_skill actions
         if output and hasattr(output, "actions"):
             final_actions = [a for a in output.actions if a.type != READ_SKILL_TOOL]
             output = CortexOutputModel(actions=final_actions)
