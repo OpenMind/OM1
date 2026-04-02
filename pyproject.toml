@@ -35,7 +35,7 @@ dependencies = [
     "uvicorn==0.34.0",
     "websockets==13.1",
     "om1-modules @ git+https://github.com/OpenMind/om1-modules.git@56fbb4f498e67b666306d9b11f7422d9447db92b",
-    "aiohttp==3.13.3",
+    "aiohttp==3.13.4",
     "pynput==1.8.1",
     "dimo-python-sdk @ git+https://github.com/openminddev/dimo-python-sdk.git@6b47fcd28654a4145cedee649a0999a8eb08a2f6",
     "nest-asyncio==1.6.0",
