@@ -25,6 +25,7 @@ class ASRProvider:
         rate: Optional[int] = None,
         chunk: Optional[int] = None,
         language_code: Optional[str] = None,
+        alternative_language_codes: Optional[list[str]] = None,
         remote_input: bool = False,
         enable_tts_interrupt: bool = False,
     ):
@@ -45,6 +46,8 @@ class ASRProvider:
             The audio chunk size for the audio stream; used the 200ms default if None
         language_code : str
             The language code for language in the audio stream; used the en-US default if None
+        alternative_language_codes : list[str]
+            A list of alternative language codes for the audio stream; used for multilingual ASR
         remote_input : bool
             If True, the audio input is processed remotely; defaults to False.
         enable_tts_interrupt : bool
@@ -58,6 +61,7 @@ class ASRProvider:
             device=device_id,
             device_name=microphone_name,  # type: ignore
             audio_data_callback=self.ws_client.send_message,
+            alternative_language_codes=alternative_language_codes,
             language_code=language_code,
             remote_input=remote_input,
             enable_tts_interrupt=enable_tts_interrupt,
