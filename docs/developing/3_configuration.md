@@ -84,6 +84,22 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
           },
         },
       ],
+      mcp_servers: [
+        {
+          name: "weather",
+          transport: "stdio",
+          command: "npx",
+          args: ["-y", "@h1deya/mcp-server-weather"],
+        },
+        {
+          name: "github",
+          transport: "http",
+          url: "https://api.githubcopilot.com/mcp/",
+          headers: {
+            Authorization: "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}", // pragma: allowlist secret
+          },
+        },
+      ]
     },
   },
 
@@ -279,6 +295,23 @@ Defines the agent's available capabilities, including action names, their implem
 ```
 
 You can customize the actions following the [Action Plugin Guide](6_actions.md)
+
+## MCP servers (new)
+
+MCP servers can be added to a config to give OM1 agent capability to interact with different MCP tools. Example:
+
+```python
+mcp_servers: [
+    {
+      name: "weather",
+      transport: "stdio",
+      command: "npx",
+      args: ["-y", "@h1deya/mcp-server-weather"],
+    },
+  ]
+```
+
+Refer [MCP Integration](mcp-integration.md) to understand the complete architecture and how to configure new mcp tools with OM1.
 
 ## Transition rules
 
