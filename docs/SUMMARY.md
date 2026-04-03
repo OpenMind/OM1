@@ -6,6 +6,9 @@
 * [Introduction](developing/0_introduction.md)
 * [Quick Start](developing/1_get-started.md)
 * [Architecture](developing/2_architecture.md)
+
+## Core Concepts <a href="#core-concepts" id="core-concepts"></a>
+
 * [Understanding Core Concepts](concepts.md)
     * [Project Structure](developing/7_project_structure.md)
     * [Configuration](developing/3_configuration.md)
@@ -13,11 +16,15 @@
     * [LLMs](developing/5_llms.md)
     * [Actions](developing/6_actions.md)
     * [Backgrounds](developing/8_backgrounds.md)
-* [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
 * [Middleware](developing/middleware.md)
     * [CycloneDDS](developing/cyclonedds.md)
     * [ROS2-humble](developing/ros2-humble.md)
     * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
+* [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
+
+## MCP Integration <a href="#mcp-integration" id="mcp-integration"></a>
+
+* [MCP Integration](developing/mcp-integration.md)
 
 ## Developer Cookbook <a href="#developer-cookbook" id="developer-cookbook"></a>
 
