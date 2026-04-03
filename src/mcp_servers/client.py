@@ -173,7 +173,8 @@ class MCPClientManager:
 
             ready_event.set()
 
-            await self._close_event.wait()
+            if self._close_event:
+                await self._close_event.wait()
 
         except asyncio.CancelledError:
             pass
