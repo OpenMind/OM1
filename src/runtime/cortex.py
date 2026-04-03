@@ -659,7 +659,6 @@ class ModeCortexRuntime:
                     raise
 
                 if output is None:
-                    output = None
                     break
 
                 output.actions = self.mcp_orchestrator.extract_om1_actions(
