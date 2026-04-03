@@ -79,7 +79,7 @@ async def test_parallel_llm_initialization_filters_actions(
     parallel_llm_config_two_llms, mock_available_actions
 ):
     """Test that ParallelLLM correctly filters actions for each LLM."""
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         # Mock LLM class and instances
         mock_llm_class = MagicMock()
         mock_llm_instance1 = MagicMock()
@@ -119,7 +119,7 @@ async def test_parallel_llm_ask_stream_yields_as_llms_complete(
     parallel_llm_config_two_llms,
 ):
     """Test that ask_stream yields results as each LLM completes."""
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         # Create mock LLM instances
         mock_llm1 = MagicMock()
         mock_llm2 = MagicMock()
@@ -189,7 +189,7 @@ async def test_parallel_llm_ask_stream_skips_empty_results(
     parallel_llm_config_two_llms,
 ):
     """Test that ask_stream doesn't yield results with no actions."""
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
         mock_llm2 = MagicMock()
 
@@ -229,7 +229,7 @@ async def test_parallel_llm_ask_stream_handles_llm_failures(
     parallel_llm_config_two_llms,
 ):
     """Test that ask_stream continues when one LLM fails."""
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
         mock_llm2 = MagicMock()
 
@@ -270,7 +270,7 @@ async def test_parallel_llm_ask_stream_cancellation_cleans_up_tasks(
     parallel_llm_config_two_llms,
 ):
     """Test that cancelling ask_stream cleans up remaining tasks."""
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
         mock_llm2 = MagicMock()
 
@@ -329,7 +329,7 @@ async def test_parallel_llm_ask_stream_cancellation_cleans_up_tasks(
 @pytest.mark.asyncio
 async def test_parallel_llm_works_with_three_llms(parallel_llm_config_three_llms):
     """Test that ParallelLLM works correctly with 3 LLMs."""
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
         mock_llm2 = MagicMock()
         mock_llm3 = MagicMock()
@@ -390,7 +390,7 @@ async def test_parallel_llm_works_with_three_llms(parallel_llm_config_three_llms
 @pytest.mark.asyncio
 async def test_parallel_llm_ask_combines_all_actions(parallel_llm_config_two_llms):
     """Test that ask() combines actions from all LLMs."""
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
         mock_llm2 = MagicMock()
 
@@ -435,7 +435,7 @@ async def test_parallel_llm_batch_mode_waits_for_all(parallel_llm_config_two_llm
     # Set batch mode
     parallel_llm_config_two_llms.execute_immediately = False
 
-    with patch("llm.plugins.parrall_llm.get_llm_class") as mock_get_class:
+    with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
         mock_llm2 = MagicMock()
 
