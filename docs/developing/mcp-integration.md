@@ -1,6 +1,7 @@
 ---
 title: MCP Integration
 description: "Connect your OM1 agent to external tools via Model Context Protocol"
+icon: "toolbox"
 ---
 
 OM1 agents can now connect to external tools like Slack, Notion, weather APIs, and more — all through the Model Context Protocol (MCP). No custom integrations required.
