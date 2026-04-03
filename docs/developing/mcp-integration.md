@@ -27,7 +27,7 @@ MCP is an open standard that lets AI agents discover and use tools dynamically. 
 
 ### Per-Mode MCP Servers
 
-Each mode operates independently with its own set of MCP servers:
+Each mode operates independently with its own set of MCP servers. For example:
 
 ```
 Mode 1 ──► [Slack, Google Maps]     ──► MCPClientManager instance 1
