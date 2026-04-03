@@ -211,7 +211,10 @@ def cortex_runtime_with_mode_transition(
         runtime.simulator_orchestrator = Mock()
         runtime.simulator_orchestrator.promise = AsyncMock()
         runtime.mcp_orchestrator = Mock()
-        runtime.mcp_orchestrator.process = AsyncMock()
+        runtime.mcp_orchestrator.max_rounds = 3
+        runtime.mcp_orchestrator.extract_mcp_actions = Mock(return_value=[])
+        runtime.mcp_orchestrator.extract_om1_actions = Mock(return_value=[])
+        runtime.mcp_orchestrator.build_call_signature = Mock(return_value="sig")
 
         return runtime, {
             "mode_manager": mock_mode_manager,
@@ -253,7 +256,10 @@ def cortex_runtime(mock_system_config, mock_io_provider, mock_mode_manager):
         runtime.action_orchestrator.promise = AsyncMock()
         runtime.simulator_orchestrator = None
         runtime.mcp_orchestrator = Mock()
-        runtime.mcp_orchestrator.process = AsyncMock()
+        runtime.mcp_orchestrator.max_rounds = 3
+        runtime.mcp_orchestrator.extract_mcp_actions = Mock(return_value=[])
+        runtime.mcp_orchestrator.extract_om1_actions = Mock(return_value=[])
+        runtime.mcp_orchestrator.build_call_signature = Mock(return_value="sig")
 
         runtime._pending_mode_transition = None
         runtime._mode_transition_event = Mock()
@@ -328,7 +334,7 @@ async def test_tick_with_no_mode_transition_input_continues_normally(
     runtime._mode_transition_event.set.assert_not_called()
 
     runtime.action_orchestrator.promise.assert_called_once()
-    runtime.mcp_orchestrator.process.assert_called_once()
+    runtime.mcp_orchestrator.extract_mcp_actions.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -352,7 +358,7 @@ async def test_tick_with_unrecognized_input_continues_normally(
     runtime._mode_transition_event.set.assert_not_called()
 
     runtime.action_orchestrator.promise.assert_called_once()
-    runtime.mcp_orchestrator.process.assert_called_once()
+    runtime.mcp_orchestrator.extract_mcp_actions.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -721,7 +727,7 @@ async def test_no_mode_transition_input_continues_normal_processing(cortex_runti
 
     runtime.current_config.cortex_llm.ask.assert_called_once_with("test prompt")
     runtime.action_orchestrator.promise.assert_called_once()
-    runtime.mcp_orchestrator.process.assert_called_once()
+    runtime.mcp_orchestrator.extract_mcp_actions.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -751,7 +757,7 @@ async def test_unrecognized_input_does_not_trigger_transition(cortex_runtime):
     runtime._mode_transition_event.set.assert_not_called()
 
     runtime.action_orchestrator.promise.assert_called_once()
-    runtime.mcp_orchestrator.process.assert_called_once()
+    runtime.mcp_orchestrator.extract_mcp_actions.assert_called_once()
 
 
 @pytest.mark.asyncio

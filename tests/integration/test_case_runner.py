@@ -644,6 +644,10 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     # Mock LLM ask method to capture raw response
     original_llm_ask = cortex.current_config.cortex_llm.ask
 
+    # Scripted responses (opt-in per test case via mock_llm_responses in JSON5)
+    scripted_responses = config.get("mock_llm_responses", [])
+    call_index = [0]  # mutable counter for the closure
+
     async def mock_llm_ask(
         prompt: str, messages: Optional[List[Dict[str, str]]] = None
     ):
@@ -651,6 +655,20 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
             f"Generated prompt: {prompt[:200]}..."
         )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
+
+        # If the test case has scripted responses, return the next one
+        if scripted_responses and call_index[0] < len(scripted_responses):
+            response_dict = scripted_responses[call_index[0]]
+            call_index[0] += 1
+            logging.info(
+                f"Using scripted mock LLM response #{call_index[0]}: {response_dict}"
+            )
+            return CortexOutputModel(
+                actions=[
+                    Action(type=a["type"], value=a["value"])
+                    for a in response_dict.get("actions", [])
+                ]
+            )
 
         try:
             response = await original_llm_ask(prompt, messages or [])

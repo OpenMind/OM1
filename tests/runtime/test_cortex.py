@@ -209,8 +209,8 @@ class TestModeCortexRuntime:
             assert runtime.mcp_orchestrator is None
 
     @pytest.mark.asyncio
-    async def test_tick_calls_mcp_process(self, cortex_runtime):
-        """Test that _tick calls mcp_orchestrator.process with correct args."""
+    async def test_tick_calls_mcp_extract(self, cortex_runtime):
+        """Test that _tick enters the MCP branch and calls extract_mcp_actions."""
         runtime, mocks = cortex_runtime
 
         mock_output = Mock()
@@ -227,7 +227,10 @@ class TestModeCortexRuntime:
         runtime.action_orchestrator.flush_promises = AsyncMock(return_value=([], None))
         runtime.action_orchestrator.promise = AsyncMock()
         runtime.mcp_orchestrator = Mock()
-        runtime.mcp_orchestrator.process = AsyncMock(return_value=mock_output)
+        runtime.mcp_orchestrator.max_rounds = 3
+        runtime.mcp_orchestrator.extract_mcp_actions = Mock(return_value=[])
+        runtime.mcp_orchestrator.extract_om1_actions = Mock(return_value=[])
+        runtime.mcp_orchestrator.build_call_signature = Mock(return_value="sig")
 
         # Mock io_provider with mode_transition_input context manager
         ctx = Mock()
@@ -246,11 +249,8 @@ class TestModeCortexRuntime:
 
         await runtime._tick(0)
 
-        runtime.mcp_orchestrator.process.assert_called_once_with(
-            mock_output,
-            "test prompt",
-            runtime.current_config.cortex_llm,
-            dispatch_om1=runtime.action_orchestrator.promise,
+        runtime.mcp_orchestrator.extract_mcp_actions.assert_called_once_with(
+            mock_output.actions
         )
 
     @pytest.mark.asyncio

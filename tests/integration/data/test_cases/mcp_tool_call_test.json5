@@ -1,7 +1,7 @@
 {
   version: "v1.0.3",
   name: "mcp_tool_call_test",
-  description: "Robot looks up location then weather using two MCP tool calls before producing a spoken answer.",
+  description: "Robot calls get_location then get_weather via MCP (scripted mock) and speaks the result.",
   hertz: 1,
   system_prompt_base: "You are a helpful robot. Use the available tools to answer questions. When asked about weather, first call get_location to resolve the city, then call get_weather with the result.",
   system_governance: "",
@@ -48,8 +48,34 @@
   api_key: "openmind_free",
 
   input: {
-    asr: ["../asr/weather_question.json"],
+    asr: ["../asr/weather_sf_question.json"],
   },
+
+  // Scripted LLM responses to drive the MCP loop deterministically (no real LLM needed).
+  // Round 0: LLM calls get_location tool.
+  // Round 1: LLM calls get_weather with the location result.
+  // Round 2: LLM produces final OM1 actions (speak + emotion).
+  mock_llm_responses: [
+    {
+      actions: [
+        { type: "mcp_get_location", value: '{"city": "San Francisco"}' },
+      ],
+    },
+    {
+      actions: [
+        { type: "mcp_get_weather", value: '{"location": "San Francisco, CA"}' },
+      ],
+    },
+    {
+      actions: [
+        {
+          type: "speak",
+          value: "It is 72 degrees and sunny in San Francisco!",
+        },
+        { type: "emotion", value: "happy" },
+      ],
+    },
+  ],
 
   expected: {
     keywords: ["72", "sunny"],
