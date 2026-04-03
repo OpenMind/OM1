@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from llm.output_model import Action, CortexOutputModel
-from llm.plugins.parrall_llm import LLMSpecConfig, ParallelLLM, ParallelLLMConfig
+from llm.plugins.parallel_llm import LLMSpecConfig, ParallelLLM, ParallelLLMConfig
 
 
 @pytest.fixture
