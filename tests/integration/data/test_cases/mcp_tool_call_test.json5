@@ -58,12 +58,18 @@
   mock_llm_responses: [
     {
       actions: [
-        { type: "mcp_get_location", value: '{"city": "San Francisco"}' },
+        {
+          type: "mcp_weather_get_location",
+          value: '{"city": "San Francisco"}',
+        },
       ],
     },
     {
       actions: [
-        { type: "mcp_get_weather", value: '{"location": "San Francisco, CA"}' },
+        {
+          type: "mcp_weather_get_weather",
+          value: '{"location": "San Francisco, CA"}',
+        },
       ],
     },
     {
