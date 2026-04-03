@@ -697,6 +697,10 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         if hasattr(input_obj, "set_cortex_runtime"):
             input_obj.set_cortex_runtime(cortex)  # type: ignore
 
+    # Start MCP orchestrator if present — normally done by _start_orchestrators(),
+    if cortex.mcp_orchestrator:
+        await cortex.mcp_orchestrator.start()
+
     # Run a single tick of the cortex loop
     await cortex._tick(cortex._cortex_loop_generation)
 

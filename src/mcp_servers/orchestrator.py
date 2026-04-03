@@ -38,7 +38,7 @@ class MCPOrchestrator:
         max_rounds: int = 5,
     ) -> None:
         self._config = config
-        self._mcp_client: MCPClientManager = config.mcp_servers
+        self._mcp_client: MCPClientManager = config.mcp_servers  # type: ignore
         self._max_concurrency = max_concurrency
         self.max_rounds = max_rounds
 
