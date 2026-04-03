@@ -74,13 +74,11 @@ class MCPOrchestrator:
             (results, mcp_actions) if there are new actions to execute,
             (None, None) if no new actions remain
         """
-        origin_mcp_actions = [
-            a for a in actions if self._mcp_client.is_mcp_tool(a.type)
-        ]
+        all_mcp_actions = [a for a in actions if self._mcp_client.is_mcp_tool(a.type)]
 
         mcp_actions = [
             a
-            for a in origin_mcp_actions
+            for a in all_mcp_actions
             if self.build_call_signature(a) not in succeeded_calls
         ]
 
