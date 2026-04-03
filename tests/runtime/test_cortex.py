@@ -560,7 +560,6 @@ class TestMCPModeTransition:
 
             await runtime._initialize_mode("test_mode")
 
-        # start() is called by _start_orchestrators, not _initialize_mode.
         # Verify the orchestrator was created.
         mock_mcp_class.assert_called_once()
         assert runtime.mcp_orchestrator is not None
