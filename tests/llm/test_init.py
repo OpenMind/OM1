@@ -149,7 +149,7 @@ async def test_llm_ask_stream_is_async_generator(config):
 
     # Check it's an async generator
     assert hasattr(result, "__anext__")
-    assert hasattr(result, "ascend")
+    assert hasattr(result, "asend")
     assert hasattr(result, "athrow")
 
 
