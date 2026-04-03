@@ -140,6 +140,7 @@ async def test_parallel_llm_initialization_filters_by_llm_label_only():
     captured_actions = []
 
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
+
         def create_llm_instance(config, available_actions):
             captured_actions.append(available_actions)
             return MagicMock()
@@ -151,6 +152,7 @@ async def test_parallel_llm_initialization_filters_by_llm_label_only():
         assert len(captured_actions) == 1
         assert captured_actions[0] == [face_action]
         assert parallel_llm._llms[0][1] == ["emotion"]
+
 
 @pytest.mark.asyncio
 async def test_parallel_llm_ask_stream_yields_as_llms_complete(
@@ -632,9 +634,7 @@ async def test_parallel_llm_call_llm_filters_out_of_schema_actions():
 
         parallel_llm = ParallelLLM(config, [])
 
-        result = await parallel_llm._call_llm(
-            mock_llm, "test", "TestLLM", ["speak"]
-        )
+        result = await parallel_llm._call_llm(mock_llm, "test", "TestLLM", ["speak"])
 
         # Should only have one action after filtering
         assert len(result["result"].actions) == 1
@@ -676,9 +676,7 @@ async def test_parallel_llm_call_llm_keeps_actions_for_llm_label_filter():
 
         parallel_llm = ParallelLLM(config, [face_action])
 
-        result = await parallel_llm._call_llm(
-            mock_llm, "test", "TestLLM", ["emotion"]
-        )
+        result = await parallel_llm._call_llm(mock_llm, "test", "TestLLM", ["emotion"])
 
         assert [action.type for action in result["result"].actions] == [
             "emotion",
