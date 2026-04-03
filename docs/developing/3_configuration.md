@@ -311,7 +311,7 @@ mcp_servers: [
   ]
 ```
 
-Refer [MCP Integration](mcp-integration.md) to understand the complete architecture and how to configure new mcp tools with OM1.
+Refer to [MCP Integration](mcp-integration.md) to understand the complete architecture and how to configure new MCP tools with OM1.
 
 ## Transition rules
 
