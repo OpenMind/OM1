@@ -667,7 +667,16 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
             )
             return _create_mock_llm_response(config.get("expected", {}))
 
+    async def mock_llm_ask_stream(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
+        """Stream wrapper that yields single result from ask."""
+        result = await mock_llm_ask(prompt, messages)
+        if result is not None:
+            yield result
+
     cortex.current_config.cortex_llm.ask = mock_llm_ask
+    cortex.current_config.cortex_llm.ask_stream = mock_llm_ask_stream
 
     # Initialize inputs manually for testing
     # This step is needed because we're not starting the full runtime
@@ -1670,7 +1679,16 @@ def _setup_mode_transition_mocks(
     ):
         return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
+    async def mock_llm_ask_stream(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
+        """Stream wrapper that yields single result from ask."""
+        result = await mock_llm_ask(prompt, messages)
+        if result is not None:
+            yield result
+
     cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
+    cortex.current_config.cortex_llm.ask_stream = mock_llm_ask_stream  # type: ignore[union-attr]
 
     return asyncio.create_task(cortex._handle_mode_transitions())
 
@@ -1918,7 +1936,15 @@ async def test_cooldown_prevents_transition():
     ):
         return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
+    async def mock_llm_ask_stream(
+        prompt: str, messages: Optional[List[Dict[str, str]]] = None
+    ):
+        result = await mock_llm_ask(prompt, messages)
+        if result is not None:
+            yield result
+
     cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
+    cortex.current_config.cortex_llm.ask_stream = mock_llm_ask_stream  # type: ignore[union-attr]
 
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
     await cortex._tick(cortex._cortex_loop_generation)

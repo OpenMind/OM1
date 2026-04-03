@@ -589,29 +589,34 @@ class ModeCortexRuntime:
             return
 
         try:
-            output = await self.current_config.cortex_llm.ask(prompt)
+            async for output in self.current_config.cortex_llm.ask_stream(prompt):
+                if cortex_generation != self._cortex_loop_generation:
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
+                    )
+                    return
+
+                if output is None:
+                    logging.info("Received empty output from LLM, skipping")
+                    return
+
+                if (
+                    self._is_reloading
+                    or cortex_generation != self._cortex_loop_generation
+                ):
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
+                    )
+                    return
+
+                if self.simulator_orchestrator:
+                    await self.simulator_orchestrator.promise(output.actions)
+
+                await self.action_orchestrator.promise(output.actions)
+
         except asyncio.CancelledError:
             logging.info("LLM call cancelled during mode transition")
             raise
-
-        if cortex_generation != self._cortex_loop_generation:
-            logging.info(
-                f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
-            )
-            return
-
-        if output is None:
-            logging.debug("No output from LLM")
-            return
-
-        if self._is_reloading or cortex_generation != self._cortex_loop_generation:
-            logging.debug("Skipping action execution due to mode transition")
-            return
-
-        if self.simulator_orchestrator:
-            await self.simulator_orchestrator.promise(output.actions)
-
-        await self.action_orchestrator.promise(output.actions)
 
     def get_mode_info(self) -> dict:
         """

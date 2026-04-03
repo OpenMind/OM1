@@ -70,15 +70,9 @@ def dual_llm(mock_llm_classes):
 
 
 def test_extract_voice_input():
-    assert (
-        _extract_voice_input("INPUT: Voice // START create a folder // END")
-        == "create a folder"
-    )
+    assert _extract_voice_input("INPUT: Voice: create a folder") == "create a folder"
     assert _extract_voice_input("Normal prompt") == ""
-    assert (
-        _extract_voice_input("INPUT: Voice // START   multi line \n input  // END")
-        == "multi line \n input"
-    )
+    assert _extract_voice_input("INPUT: Voice: multi line input") == "multi line input"
 
 
 @pytest.mark.asyncio
