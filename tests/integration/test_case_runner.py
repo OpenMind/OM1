@@ -656,20 +656,21 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
-        if mock_llm_responses and mock_response_index["current"] < len(mock_llm_responses):
+        if mock_llm_responses and mock_response_index["current"] < len(
+            mock_llm_responses
+        ):
             response_config = mock_llm_responses[mock_response_index["current"]]
             mock_response_index["current"] += 1
 
             actions = []
             for action_config in response_config.get("actions", []):
                 actions.append(
-                    Action(
-                        type=action_config["type"],
-                        value=action_config["value"]
-                    )
+                    Action(type=action_config["type"], value=action_config["value"])
                 )
 
-            logging.info(f"Using scripted mock response {mock_response_index['current']}/{len(mock_llm_responses)}: {actions}")
+            logging.info(
+                f"Using scripted mock response {mock_response_index['current']}/{len(mock_llm_responses)}: {actions}"
+            )
             return CortexOutputModel(actions=actions)
 
         return _create_mock_llm_response(config.get("expected", {}))
