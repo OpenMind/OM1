@@ -332,6 +332,30 @@ class ModeCortexRuntime:
         self.action_task = None
         self.background_task = None
 
+    def _is_generation_valid(
+        self, cortex_generation: int, context: str = "operation"
+    ) -> bool:
+        """Check if the cortex generation is still valid.
+
+        Parameters
+        ----------
+        cortex_generation : int
+            The generation to check against current generation
+        context : str
+            Context description for logging (default: "operation")
+
+        Returns
+        -------
+        bool
+            True if valid (continue execution), False if invalid (should return early)
+        """
+        if cortex_generation != self._cortex_loop_generation:
+            logging.warning(
+                f"Invalidating current {context}. Cortex generation mismatch: {cortex_generation} vs current {self._cortex_loop_generation}."
+            )
+            return False
+        return True
+
     async def _start_orchestrators(self):
         """
         Start orchestrators for the current mode.
@@ -514,10 +538,7 @@ class ModeCortexRuntime:
 
         try:
             while True:
-                if cortex_generation != self._cortex_loop_generation:
-                    logging.info(
-                        f"Cortex loop generation {cortex_generation} invalidated, stopping gracefully"
-                    )
+                if not self._is_generation_valid(cortex_generation, "cortex loop"):
                     return
 
                 skip_status = self.sleep_ticker_provider.skip_sleep
@@ -560,10 +581,7 @@ class ModeCortexRuntime:
             logging.debug("Skipping tick during config reload")
             return
 
-        if cortex_generation != self._cortex_loop_generation:
-            logging.debug(
-                f"Cortex loop generation {cortex_generation} does not match current generation {self._cortex_loop_generation}, skipping tick"
-            )
+        if not self._is_generation_valid(cortex_generation, "tick"):
             return
 
         tick_num = self.io_provider.increment_tick()
@@ -604,10 +622,7 @@ class ModeCortexRuntime:
             logging.info("LLM call cancelled during mode transition")
             raise
 
-        if cortex_generation != self._cortex_loop_generation:
-            logging.info(
-                f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
-            )
+        if not self._is_generation_valid(cortex_generation, "LLM call"):
             return
 
         if output is None:
@@ -628,10 +643,7 @@ class ModeCortexRuntime:
                 if results is None:
                     break
 
-                if cortex_generation != self._cortex_loop_generation:
-                    logging.info(
-                        f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
-                    )
+                if not self._is_generation_valid(cortex_generation, "MCP execution"):
                     return
 
                 if om1_actions:
@@ -646,10 +658,9 @@ class ModeCortexRuntime:
                     original_prompt, results
                 )
 
-                if cortex_generation != self._cortex_loop_generation:
-                    logging.info(
-                        f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
-                    )
+                if not self._is_generation_valid(
+                    cortex_generation, "MCP recall prompt"
+                ):
                     return
 
                 try:
