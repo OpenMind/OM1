@@ -1,11 +1,10 @@
 ---
 name: weather-report
 description: "Query weather for New York and San Francisco and report the results"
-metadata:
-  requires_tools:
-    - mcp_weather_get-forecast
-  max_rounds: 5
-  priority: 10
+requires_tools:
+  - mcp_weather_get-forecast
+max_rounds: 5
+priority: 10
 ---
 
 # Weather Report Skill

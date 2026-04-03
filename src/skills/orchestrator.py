@@ -267,6 +267,6 @@ class SkillOrchestrator:
             f"[Skill Instructions]\n{result_block}\n\n"
             f"[Next Step]\n"
             f"Follow the skill instructions above. "
-            f"Use speak to report progress at each step. "
+            f"Batch tool calls silently; use speak only after completing a key milestone. "
             f"Call only the necessary tools.\n"
         )
