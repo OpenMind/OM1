@@ -91,109 +91,114 @@ class MCPClientManager:
         self._configs = [MCPServerConfig(**c) for c in server_configs]
         self._sessions: Dict[str, ClientSession] = {}
         self._tools: Dict[str, MCPTool] = {}
-        self._exit_stack: Optional[AsyncExitStack] = None
 
-        self._connect_event = asyncio.Event()
-        self._close_event = asyncio.Event()
-        self._ready = asyncio.Event()
-        self._closed = asyncio.Event()
-        self.task: Optional[asyncio.Task] = None
+        self._close_event: Optional[asyncio.Event] = None
+        self._tasks: List[asyncio.Task] = []
+        self._started = False
 
     async def start(self) -> None:
         """Connect to all configured MCP servers.
 
-        This method triggers the connection background loop and waits
-        until all connections are established.
+        This method spawns independent background tasks for each server
+        and waits until all connections are either established or failed.
         """
-        if self.task is None or self.task.done():
-            self.task = asyncio.create_task(self._run_event_loop())
-        self._connect_event.set()
-        await self._ready.wait()
+        if self._started:
+            return
+
+        if self._close_event is None:
+            self._close_event = asyncio.Event()
+        self._close_event.clear()
+
+        init_events = []
+        for config in self._configs:
+            ready_event = asyncio.Event()
+            init_events.append(ready_event)
+            task = asyncio.create_task(self._run_server_task(config, ready_event))
+            self._tasks.append(task)
+
+        if init_events:
+            await asyncio.gather(*(e.wait() for e in init_events))
+
+        self._started = True
 
     async def stop(self) -> None:
         """Disconnect all MCP servers.
 
-        This method signals the background loop to close active sessions
-        and safely tears down the task.
+        This method signals all server tasks to close and waits for teardown.
         """
-        if not self._ready.is_set():
+        if not self._started:
             return
-        self._close_event.set()
-        await self._closed.wait()
 
-        if self.task is not None and not self.task.done():
-            self.task.cancel()
-            try:
-                await self.task
-            except asyncio.CancelledError:
-                pass
-        self.task = None
+        if self._close_event:
+            self._close_event.set()
 
-    async def _run_event_loop(self) -> None:
-        """Internal loop that owns all MCP connections in a single task.
+        if self._tasks:
+            done, pending = await asyncio.wait(self._tasks, timeout=5.0)
+            if pending:
+                for t in pending:
+                    t.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+            self._tasks.clear()
 
-        Ensures connection lifecycle elements do not tear down prematurely
-        due to task cancellation in the caller.
-        """
-        try:
-            while True:
-                await self._connect_event.wait()
-                self._connect_event.clear()
-                self._closed.clear()
-
-                await self._connect_all()
-                self._ready.set()
-
-                await self._close_event.wait()
-                self._close_event.clear()
-                self._ready.clear()
-
-                await self._close_all()
-                self._closed.set()
-        except asyncio.CancelledError:
-            await self._close_all()
-            raise
-
-    async def _connect_all(self) -> None:
-        """Connect to all configured MCP servers and discover tools.
-
-        Iterates through the server configs and populates the internal tools map.
-        """
-        self._exit_stack = AsyncExitStack()
-        await self._exit_stack.__aenter__()
-
-        for config in self._configs:
-            try:
-                await self._connect_server(config)
-            except Exception as e:
-                logging.error(f"Failed to connect to MCP server '{config.name}': {e}")
-
-        logging.info(f"MCP client connected with {len(self._tools)} tools")
-
-    async def _close_all(self) -> None:
-        """Close all MCP server connections.
-
-        Safely closes all underlying ExitStack contexts.
-        """
-        if self._exit_stack:
-            try:
-                await self._exit_stack.aclose()
-            except Exception as e:
-                logging.error(f"Error closing MCP connections: {e}")
-            self._exit_stack = None
         self._sessions.clear()
         self._tools.clear()
+        self._started = False
 
-    async def _connect_server(self, config: MCPServerConfig) -> None:
-        """Connect to a single MCP server.
+    async def _run_server_task(
+        self, config: MCPServerConfig, ready_event: asyncio.Event
+    ) -> None:
+        """Independent event loop task for a single MCP server."""
+        exit_stack = AsyncExitStack()
+        try:
+            await exit_stack.__aenter__()
+            session = await self._connect_server(config, exit_stack)
+            self._sessions[config.name] = session
 
-        Parameters
-        ----------
-        config : MCPServerConfig
-            The specific server configuration model to initialize.
-        """
-        assert self._exit_stack is not None
+            tools_result = await session.list_tools()
+            for tool in tools_result.tools:
+                mcp_tool = MCPTool(
+                    key=f"mcp_{config.name}_{tool.name}",
+                    server_name=config.name,
+                    original_name=tool.name,
+                    description=tool.description or f"MCP tool: {tool.name}",
+                    input_schema=tool.inputSchema
+                    or {"type": "object", "properties": {}},
+                )
+                self._tools[mcp_tool.key] = mcp_tool
 
+            logging.info(
+                f"MCP server '{config.name}': {len(tools_result.tools)} tools "
+                f"({[t.name for t in tools_result.tools]})"
+            )
+
+            ready_event.set()
+
+            await self._close_event.wait()
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logging.error(f"MCP server '{config.name}' disconnected unexpectedly: {e}")
+        finally:
+            ready_event.set()
+            try:
+                await exit_stack.aclose()
+            except Exception as e:
+                logging.error(f"Error closing MCP connection '{config.name}': {e}")
+
+            if config.name in self._sessions:
+                del self._sessions[config.name]
+
+            keys_to_remove = [
+                k for k, v in self._tools.items() if v.server_name == config.name
+            ]
+            for k in keys_to_remove:
+                del self._tools[k]
+
+    async def _connect_server(
+        self, config: MCPServerConfig, exit_stack: AsyncExitStack
+    ) -> ClientSession:
+        """Establish the connection boundaries for a specific transport."""
         match config.transport:
             case TransportType.STDIO:
                 if not config.command:
@@ -206,7 +211,7 @@ class MCPClientManager:
                     env=config.env,
                 )
                 client_cm = stdio_client(server_params)
-                read, write = await self._exit_stack.enter_async_context(client_cm)
+                read, write = await exit_stack.enter_async_context(client_cm)
 
             case TransportType.SSE:
                 if not config.url:
@@ -214,7 +219,7 @@ class MCPClientManager:
                         f"MCP server '{config.name}' requires 'url' for sse transport"
                     )
                 client_cm = sse_client(config.url, headers=config.headers)
-                read, write = await self._exit_stack.enter_async_context(client_cm)
+                read, write = await exit_stack.enter_async_context(client_cm)
 
             case TransportType.HTTP:
                 if not config.url:
@@ -225,34 +230,17 @@ class MCPClientManager:
                     headers=config.headers or {},
                     timeout=httpx.Timeout(30.0, read=300.0),
                 )
-                await self._exit_stack.enter_async_context(http_client)
+                await exit_stack.enter_async_context(http_client)
                 client_cm = streamable_http_client(config.url, http_client=http_client)
-                read, write, _ = await self._exit_stack.enter_async_context(client_cm)
+                read, write, _ = await exit_stack.enter_async_context(client_cm)
 
             case _:
                 raise ValueError(f"Unsupported transport type: {config.transport}")
 
         session = ClientSession(read, write)
-        await self._exit_stack.enter_async_context(session)
+        await exit_stack.enter_async_context(session)
         await session.initialize()
-
-        tools_result = await session.list_tools()
-        self._sessions[config.name] = session
-
-        for tool in tools_result.tools:
-            mcp_tool = MCPTool(
-                key=f"mcp_{config.name}_{tool.name}",
-                server_name=config.name,
-                original_name=tool.name,
-                description=tool.description or f"MCP tool: {tool.name}",
-                input_schema=tool.inputSchema or {"type": "object", "properties": {}},
-            )
-            self._tools[mcp_tool.key] = mcp_tool
-
-        logging.info(
-            f"MCP server '{config.name}': {len(tools_result.tools)} tools "
-            f"({[t.name for t in tools_result.tools]})"
-        )
+        return session
 
     def get_tool_schemas(self) -> List[Dict]:
         """Get OpenAI-format function schemas for all MCP tools.
