@@ -628,6 +628,12 @@ class ModeCortexRuntime:
                 if results is None:
                     break
 
+                if cortex_generation != self._cortex_loop_generation:
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
+                    )
+                    return
+
                 if om1_actions:
                     await self.action_orchestrator.promise(om1_actions)
 
@@ -639,13 +645,23 @@ class ModeCortexRuntime:
                 recall_prompt = self.mcp_orchestrator.build_result_prompt(
                     original_prompt, results
                 )
-                output = await self.current_config.cortex_llm.ask(recall_prompt)
 
-                if output is None or not hasattr(output, "actions"):
+                if cortex_generation != self._cortex_loop_generation:
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
+                    )
+                    return
+
+                try:
+                    output = await self.current_config.cortex_llm.ask(recall_prompt)
+                except asyncio.CancelledError:
+                    logging.info("LLM call cancelled during mode transition")
+                    raise
+
+                if output is None:
                     output = None
                     break
 
-            if output and hasattr(output, "actions"):
                 output.actions = self.mcp_orchestrator.extract_om1_actions(
                     output.actions
                 )
