@@ -139,8 +139,12 @@ class ModeCortexRuntime:
 
         self.fuser = Fuser(self.current_config)
         self.action_orchestrator = ActionOrchestrator(self.current_config)
-        self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
-        self.background_orchestrator = BackgroundOrchestrator(self.current_config)
+
+        if self.current_config.simulators:
+            self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
+
+        if self.current_config.backgrounds:
+            self.background_orchestrator = BackgroundOrchestrator(self.current_config)
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 

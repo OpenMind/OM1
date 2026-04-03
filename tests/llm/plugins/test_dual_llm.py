@@ -58,7 +58,10 @@ def dual_llm(mock_llm_classes):
     config = DualLLMConfig(
         local_llm_type="MockLocal", cloud_llm_type="MockCloud", api_key="test_key"
     )
-    with patch("openai.AsyncClient"):
+    mock_client = MagicMock()
+    mock_client.aclose = AsyncMock()
+
+    with patch("openai.AsyncClient", return_value=mock_client):
         llm = DualLLM(config)
 
     llm._local_llm = mock_llm_classes[0]
