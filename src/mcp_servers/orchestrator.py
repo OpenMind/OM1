@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from mcp_servers.client import MCPClientManager
+from runtime.config import RuntimeConfig
 
 
 @dataclass
@@ -24,7 +25,7 @@ class MCPOrchestrator:
 
     Parameters
     ----------
-    config : Any
+    config : RuntimeConfig
         The runtime configuration object
     max_concurrency : int
         Maximum number of concurrent tool executions per round.
@@ -32,16 +33,20 @@ class MCPOrchestrator:
 
     def __init__(
         self,
-        config: Any,
+        config: RuntimeConfig,
         max_concurrency: int = 5,
         max_rounds: int = 5,
     ) -> None:
-        """Initialize and inject MCP tool schemas into the LLM."""
+        self._config = config
         self._mcp_client: MCPClientManager = config.mcp_servers
         self._max_concurrency = max_concurrency
         self.max_rounds = max_rounds
 
-        llm = config.cortex_llm
+    async def start(self) -> None:
+        """Connect to MCP servers and inject their tool schemas into the LLM."""
+        await self._mcp_client.start()
+
+        llm = self._config.cortex_llm
         mcp_schemas = self._mcp_client.get_tool_schemas()
         base_schemas = [
             schema
@@ -51,7 +56,7 @@ class MCPOrchestrator:
         llm.function_schemas = base_schemas + mcp_schemas
 
         logging.info(
-            f"MCP Orchestrator initialized with {len(mcp_schemas)} MCP tools, "
+            f"MCP Orchestrator started with {len(mcp_schemas)} MCP tools, "
             f"{len(base_schemas)} base tools"
         )
 

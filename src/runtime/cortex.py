@@ -144,7 +144,6 @@ class ModeCortexRuntime:
         self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
         self.background_orchestrator = BackgroundOrchestrator(self.current_config)
         if self.current_config.mcp_servers:
-            await self.current_config.mcp_servers.start()
             self.mcp_orchestrator = MCPOrchestrator(self.current_config)
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
@@ -377,6 +376,10 @@ class ModeCortexRuntime:
             self.action_task = self.action_orchestrator.start()
         if self.background_orchestrator:
             self.background_task = self.background_orchestrator.start()
+
+        # Start MCP orchestrator
+        if self.mcp_orchestrator:
+            await self.mcp_orchestrator.start()
 
         # Start cortex task
         self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
