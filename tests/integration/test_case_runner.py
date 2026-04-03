@@ -697,13 +697,17 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         if hasattr(input_obj, "set_cortex_runtime"):
             input_obj.set_cortex_runtime(cortex)  # type: ignore
 
+    # Start the MCP orchestrator.
+    if cortex.mcp_orchestrator:
+        await cortex.mcp_orchestrator.start()
+
     # Run a single tick of the cortex loop
     await cortex._tick(cortex._cortex_loop_generation)
 
     # Clean up inputs after test completion
     await cleanup_mock_inputs(cortex.current_config.agent_inputs)
 
-    # Stop MCP orchestrator if it exists
+    # Stop the MCP orchestrator.
     if cortex.mcp_orchestrator:
         await cortex.mcp_orchestrator.stop()
 

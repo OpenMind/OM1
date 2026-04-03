@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from mcp_servers.client import MCPClientManager
+from runtime.config import RuntimeConfig
 
 
 @dataclass
@@ -24,7 +25,7 @@ class MCPOrchestrator:
 
     Parameters
     ----------
-    config : Any
+    config : RuntimeConfig
         The runtime configuration object
     max_concurrency : int
         Maximum number of concurrent tool executions per round.
@@ -32,16 +33,20 @@ class MCPOrchestrator:
 
     def __init__(
         self,
-        config: Any,
+        config: RuntimeConfig,
         max_concurrency: int = 5,
         max_rounds: int = 5,
     ) -> None:
-        """Initialize and inject MCP tool schemas into the LLM."""
-        self._mcp_client: MCPClientManager = config.mcp_servers
+        self._config = config
+        self._mcp_client: MCPClientManager = config.mcp_servers  # type: ignore
         self._max_concurrency = max_concurrency
         self.max_rounds = max_rounds
 
-        llm = config.cortex_llm
+    async def start(self) -> None:
+        """Connect to MCP servers and inject their tool schemas into the LLM."""
+        await self._mcp_client.start()
+
+        llm = self._config.cortex_llm
         mcp_schemas = self._mcp_client.get_tool_schemas()
         base_schemas = [
             schema
@@ -51,24 +56,47 @@ class MCPOrchestrator:
         llm.function_schemas = base_schemas + mcp_schemas
 
         logging.info(
-            f"MCP Orchestrator initialized with {len(mcp_schemas)} MCP tools, "
+            f"MCP Orchestrator started with {len(mcp_schemas)} MCP tools, "
             f"{len(base_schemas)} base tools"
         )
 
-    def extract_mcp_actions(self, actions: list) -> list:
-        """Return only the actions that target an MCP tool.
+    async def execute_mcp_actions(self, actions: list, succeeded_calls: set) -> tuple:
+        """Execute MCP actions that haven't succeeded yet.
+
+        Filters out already-succeeded actions, executes new ones,
+        and updates the succeeded_calls set in-place.
 
         Parameters
         ----------
         actions : list
-            List of all actions from the LLM output.
+            All actions from LLM output
+        succeeded_calls : set
+            Set of already-succeeded action signatures (updated in-place)
 
         Returns
         -------
-        list
-            List of actions that target an MCP tool.
+        tuple
+            (results, mcp_actions) if there are new actions to execute,
+            (None, None) if no new actions remain
         """
-        return [a for a in actions if self._mcp_client.is_mcp_tool(a.type)]
+        all_mcp_actions = [a for a in actions if self._mcp_client.is_mcp_tool(a.type)]
+
+        mcp_actions = [
+            a
+            for a in all_mcp_actions
+            if self.build_call_signature(a) not in succeeded_calls
+        ]
+
+        if not mcp_actions:
+            return None, None
+
+        results = await self._execute_mcp_actions(mcp_actions)
+
+        for action, result in zip(mcp_actions, results):
+            if result.success:
+                succeeded_calls.add(self.build_call_signature(action))
+
+        return results, mcp_actions
 
     def extract_om1_actions(self, actions: list) -> list:
         """Extract OM1 actions from a list of actions.
@@ -85,7 +113,7 @@ class MCPOrchestrator:
         """
         return [a for a in actions if not self._mcp_client.is_mcp_tool(a.type)]
 
-    async def execute_mcp_actions(self, actions: list) -> List[ToolResult]:
+    async def _execute_mcp_actions(self, actions: list) -> List[ToolResult]:
         """Execute a list of MCP actions concurrently.
 
         Parameters

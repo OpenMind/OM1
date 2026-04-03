@@ -1,10 +1,11 @@
 import asyncio
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import pytest
 
 from llm.output_model import Action, CortexOutputModel
 from mcp_servers.orchestrator import MCPOrchestrator, ToolResult
+from runtime.config import RuntimeConfig
 
 
 class MockMCPClient:
@@ -37,6 +38,9 @@ class MockMCPClient:
                 raise resp
             return resp
         return f'{{"ok":true,"tool":"{tool_key}"}}'
+
+    async def start(self) -> None:
+        pass
 
     async def close_all(self):
         pass
@@ -85,43 +89,50 @@ def make_output():
 @pytest.fixture
 def orch(mock_client):
     llm = MockLLM([])
-    return MCPOrchestrator(MockConfig(mock_client, llm))
+    return MCPOrchestrator(cast(RuntimeConfig, MockConfig(mock_client, llm)))
 
 
 class TestInit:
-    """MCPOrchestrator.__init__ injects MCP schemas into the LLM."""
+    """MCPOrchestrator.start() connects and injects MCP schemas into the LLM."""
 
-    def test_extends_function_schemas(self, mock_client):
+    @pytest.mark.asyncio
+    async def test_extends_function_schemas(self, mock_client):
         llm = MockLLM([])
         llm.function_schemas = [{"type": "function", "function": {"name": "speak"}}]
 
-        MCPOrchestrator(MockConfig(mock_client, llm))
+        orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(mock_client, llm)))
+        await orch.start()
 
         names = [s["function"]["name"] for s in llm.function_schemas]
         assert "speak" in names
         assert len(names) == 1 + len(mock_client._tools)
 
-    def test_does_not_duplicate_mcp_schemas_on_reinit(self, mock_client):
+    @pytest.mark.asyncio
+    async def test_does_not_duplicate_mcp_schemas_on_reinit(self, mock_client):
         llm = MockLLM([])
         llm.function_schemas = [
             {"type": "function", "function": {"name": "mcp_weather_get"}}
         ]
 
-        MCPOrchestrator(MockConfig(mock_client, llm))
+        orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(mock_client, llm)))
+        await orch.start()
 
         names = [s["function"]["name"] for s in llm.function_schemas]
         assert names.count("mcp_weather_get") == 1
 
 
 class TestActionSplitting:
-    """extract_mcp_actions / extract_om1_actions."""
+    """extract_om1_actions filters out MCP tools; execute_mcp_actions handles MCP."""
 
-    def test_extract_mcp_actions_returns_only_mcp(self, orch, make_output):
+    @pytest.mark.asyncio
+    async def test_extract_mcp_actions_returns_only_mcp(self, orch, make_output):
         output = make_output(
             [("speak", "hi"), ("mcp_weather_get", "{}"), ("emotion", "happy")]
         )
-        mcp = orch.extract_mcp_actions(output.actions)
-        assert [a.type for a in mcp] == ["mcp_weather_get"]
+        results, mcp_actions = await orch.execute_mcp_actions(output.actions, set())
+        assert results is not None
+        assert len(mcp_actions) == 1
+        assert mcp_actions[0].type == "mcp_weather_get"
 
     def test_extract_om1_actions_returns_non_mcp(self, orch, make_output):
         output = make_output(
@@ -130,17 +141,23 @@ class TestActionSplitting:
         om1 = orch.extract_om1_actions(output.actions)
         assert {a.type for a in om1} == {"speak", "emotion"}
 
-    def test_empty_actions_returns_empty_lists(self, orch):
-        assert orch.extract_mcp_actions([]) == []
+    @pytest.mark.asyncio
+    async def test_empty_actions_returns_empty_lists(self, orch):
+        results, mcp_actions = await orch.execute_mcp_actions([], set())
+        assert results is None
+        assert mcp_actions is None
         assert orch.extract_om1_actions([]) == []
 
     def test_all_mcp_returns_empty_om1(self, orch, make_output):
         output = make_output([("mcp_weather_get", "{}"), ("mcp_slack_post", "{}")])
         assert orch.extract_om1_actions(output.actions) == []
 
-    def test_all_om1_returns_empty_mcp(self, orch, make_output):
+    @pytest.mark.asyncio
+    async def test_all_om1_returns_empty_mcp(self, orch, make_output):
         output = make_output([("speak", "hi"), ("emotion", "happy")])
-        assert orch.extract_mcp_actions(output.actions) == []
+        results, mcp_actions = await orch.execute_mcp_actions(output.actions, set())
+        assert results is None
+        assert mcp_actions is None
 
 
 class TestExecuteMcpActions:
@@ -149,10 +166,10 @@ class TestExecuteMcpActions:
     @pytest.mark.asyncio
     async def test_successful_tool_call(self, make_output):
         client = MockMCPClient(tool_responses={"mcp_weather_get": '{"temp":72}'})
-        orch = MCPOrchestrator(MockConfig(client, MockLLM([])))
+        orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(client, MockLLM([]))))
 
         actions = make_output([("mcp_weather_get", '{"city":"SF"}')]).actions
-        results = await orch.execute_mcp_actions(actions)
+        results, _ = await orch.execute_mcp_actions(actions, set())
 
         assert len(results) == 1
         assert results[0].success is True
@@ -161,21 +178,23 @@ class TestExecuteMcpActions:
     @pytest.mark.asyncio
     async def test_failed_tool_call_marked_failed(self, make_output):
         client = MockMCPClient(tool_responses={"mcp_weather_get": Exception("timeout")})
-        orch = MCPOrchestrator(MockConfig(client, MockLLM([])))
+        orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(client, MockLLM([]))))
 
         actions = make_output([("mcp_weather_get", '{"city":"SF"}')]).actions
-        results = await orch.execute_mcp_actions(actions)
+        results, _ = await orch.execute_mcp_actions(actions, set())
 
         assert results[0].success is False
         assert "timeout" in results[0].content
 
     @pytest.mark.asyncio
     async def test_multiple_tools_executed_concurrently(self, mock_client, make_output):
-        orch = MCPOrchestrator(MockConfig(mock_client, MockLLM([])))
+        orch = MCPOrchestrator(
+            cast(RuntimeConfig, MockConfig(mock_client, MockLLM([])))
+        )
         actions = make_output(
             [("mcp_weather_get", "{}"), ("mcp_slack_post", "{}")]
         ).actions
-        results = await orch.execute_mcp_actions(actions)
+        results, _ = await orch.execute_mcp_actions(actions, set())
 
         assert len(results) == 2
         assert all(r.success for r in results)
@@ -188,12 +207,25 @@ class TestExecuteMcpActions:
 
         client = MockMCPClient()
         client.call_tool = slow_call
-        orch = MCPOrchestrator(MockConfig(client, MockLLM([])))
+        orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(client, MockLLM([]))))
 
         actions = make_output([("mcp_weather_get", '{"city":"SF"}')]).actions
-        results = await orch.execute_mcp_actions(actions)
+        results, _ = await orch.execute_mcp_actions(actions, set())
 
         assert results[0].success is False
+
+    @pytest.mark.asyncio
+    async def test_dedup_skips_already_succeeded_call(self, make_output):
+        client = MockMCPClient(tool_responses={"mcp_weather_get": '{"temp":72}'})
+        orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(client, MockLLM([]))))
+
+        actions = make_output([("mcp_weather_get", '{"city":"SF"}')]).actions
+        sig = orch.build_call_signature(actions[0])
+        succeeded = {sig}
+
+        results, mcp_actions = await orch.execute_mcp_actions(actions, succeeded)
+        assert results is None
+        assert mcp_actions is None
 
 
 class TestBuildResultPrompt:
