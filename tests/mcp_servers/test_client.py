@@ -1,4 +1,4 @@
-import contextlib
+import asyncio
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -72,10 +72,11 @@ class TestConfigParsing:
 
     @pytest.mark.asyncio
     async def test_missing_command_raises(self):
-        with pytest.raises(Exception):
-            manager = MCPClientManager([{"name": "bad", "transport": "stdio"}])
-            manager._exit_stack = contextlib.AsyncExitStack()
-            await manager._connect_server(manager._configs[0])
+        manager = MCPClientManager([{"name": "bad", "transport": "stdio"}])
+        event = asyncio.Event()
+        await manager._run_server_task(manager._configs[0], event)
+        assert event.is_set()
+        assert len(manager._sessions) == 0
 
 
 class TestMCPClientManager:
@@ -162,45 +163,39 @@ class TestMCPClientManager:
             await manager.call_tool("mcp_nonexistent", {})
 
     @pytest.mark.asyncio
-    async def test_close_all_clears_state(self):
+    async def test_stop_clears_state(self):
         manager = self._make_manager_with_tools()
         manager._sessions = {"weather": Mock()}
-        manager._exit_stack = AsyncMock()
+        manager._started = True
+        manager._close_event = asyncio.Event()
 
-        await manager._close_all()
+        # Add a dummy task that will be cancelled
+        async def dummy_task():
+            await asyncio.sleep(10)
 
-        assert manager._exit_stack is None
+        task = asyncio.create_task(dummy_task())
+        manager._tasks = [task]
+
+        await manager.stop()
+
+        assert len(manager._tasks) == 0
         assert len(manager._sessions) == 0
         assert len(manager._tools) == 0
+        assert manager._started is False
+        assert task.cancelled()
 
     @pytest.mark.asyncio
-    async def test_close_all_handles_error(self):
-        manager = self._make_manager_with_tools()
-        manager._sessions = {"weather": Mock()}
-        mock_stack = AsyncMock()
-        mock_stack.aclose = AsyncMock(side_effect=Exception("close error"))
-        manager._exit_stack = mock_stack
-
-        await manager._close_all()
-
-        assert manager._exit_stack is None
-        assert len(manager._sessions) == 0
-
-    @pytest.mark.asyncio
-    async def test_close_all_noop_when_no_stack(self):
+    async def test_stop_noop_when_not_started(self):
         manager = MCPClientManager([])
-        manager._exit_stack = None
-
-        await manager._close_all()
-
-        assert manager._exit_stack is None
+        await manager.stop()
+        assert manager._started is False
 
 
 class TestConnectAll:
     """Test connect_all with mocked transports."""
 
     @pytest.mark.asyncio
-    async def test_connect_discovers_tools(self):
+    async def test_start_discovers_tools(self):
         mock_tool = Mock()
         mock_tool.name = "get_weather"
         mock_tool.description = "Get weather info"
@@ -225,15 +220,17 @@ class TestConnectAll:
             ),
             patch("mcp_servers.client.ClientSession", return_value=mock_session),
         ):
-            await manager._connect_all()
+            await manager.start()
 
+        assert manager._started is True
         assert "mcp_weather_get_weather" in manager._tools
         assert (
             manager._tools["mcp_weather_get_weather"].description == "Get weather info"
         )
+        await manager.stop()
 
     @pytest.mark.asyncio
-    async def test_connect_handles_server_failure(self):
+    async def test_start_handles_server_failure(self):
         configs = [
             {"name": "bad_server", "command": "fail", "args": []},
         ]
@@ -243,7 +240,9 @@ class TestConnectAll:
             "mcp_servers.client.stdio_client",
             side_effect=ConnectionError("refused"),
         ):
-            await manager._connect_all()
+            await manager.start()
 
+        assert manager._started is True
         assert len(manager._tools) == 0
         assert len(manager._sessions) == 0
+        await manager.stop()
