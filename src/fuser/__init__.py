@@ -150,6 +150,12 @@ class Fuser:
             if desc:
                 actions_fused += desc + "\n\n"
 
+        # descriptions of MCP tools
+        if self.config.mcp_servers:
+            mcp_descriptions = self.config.mcp_servers.get_tool_descriptions()
+            if mcp_descriptions:
+                actions_fused += mcp_descriptions + "\n\n"
+
         question_prompt = "What will you do? Actions:"
 
         # this is the final prompt:
