@@ -217,10 +217,14 @@ class TestModeCortexRuntime:
 
         mock_output = Mock()
         mock_output.actions = []
+
+        async def stream_output(_: str):
+            yield mock_output
+
         runtime.current_config = Mock()
         runtime.current_config.hertz = 10.0
         runtime.current_config.cortex_llm = Mock()
-        runtime.current_config.cortex_llm.ask = AsyncMock(return_value=mock_output)
+        runtime.current_config.cortex_llm.ask_stream = Mock(side_effect=stream_output)
         runtime.current_config.agent_inputs = []
 
         runtime.fuser = Mock()
@@ -262,10 +266,14 @@ class TestModeCortexRuntime:
 
         mock_output = Mock()
         mock_output.actions = []
+
+        async def stream_output(_: str):
+            yield mock_output
+
         runtime.current_config = Mock()
         runtime.current_config.hertz = 10.0
         runtime.current_config.cortex_llm = Mock()
-        runtime.current_config.cortex_llm.ask = AsyncMock(return_value=mock_output)
+        runtime.current_config.cortex_llm.ask_stream = Mock(side_effect=stream_output)
         runtime.current_config.agent_inputs = []
 
         runtime.fuser = Mock()

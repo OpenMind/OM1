@@ -645,6 +645,9 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     cortex.action_orchestrator.promise = mock_action_promise
 
     # Mock the LLM's ask and ask_stream methods to return a response based on expected outputs
+    mock_llm_responses = config.get("mock_llm_responses", [])
+    mock_response_index = {"current": 0}
+
     async def mock_llm_ask(
         prompt: str, messages: Optional[List[Dict[str, str]]] = None
     ):
@@ -653,7 +656,22 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
-        # In test environment, always return mock response
+        if mock_llm_responses and mock_response_index["current"] < len(mock_llm_responses):
+            response_config = mock_llm_responses[mock_response_index["current"]]
+            mock_response_index["current"] += 1
+
+            actions = []
+            for action_config in response_config.get("actions", []):
+                actions.append(
+                    Action(
+                        type=action_config["type"],
+                        value=action_config["value"]
+                    )
+                )
+
+            logging.info(f"Using scripted mock response {mock_response_index['current']}/{len(mock_llm_responses)}: {actions}")
+            return CortexOutputModel(actions=actions)
+
         return _create_mock_llm_response(config.get("expected", {}))
 
     async def mock_llm_ask_stream(
