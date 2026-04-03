@@ -630,7 +630,7 @@ class ModeCortexRuntime:
             return
 
         if self.mcp_orchestrator:
-            succeeded_calls: set = set()
+            succeeded_calls = set()
             original_prompt = prompt
 
             for round_idx in range(self.mcp_orchestrator.max_rounds):
