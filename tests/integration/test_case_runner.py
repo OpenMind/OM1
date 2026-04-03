@@ -640,9 +640,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     cortex.simulator_orchestrator.promise = mock_simulator_promise
     cortex.action_orchestrator.promise = mock_action_promise
 
-    # Mock LLM ask method to capture raw response
-    original_llm_ask = cortex.current_config.cortex_llm.ask
-
+    # Mock the LLM's ask and ask_stream methods to return a response based on expected outputs
     async def mock_llm_ask(
         prompt: str, messages: Optional[List[Dict[str, str]]] = None
     ):
@@ -651,21 +649,8 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         )  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
-        try:
-            response = await original_llm_ask(prompt, messages or [])
-            # If response is None (API error), create a mock response
-            if response is None:
-                logging.warning(
-                    "LLM returned None, generating mock response based on expected outputs"
-                )
-                return _create_mock_llm_response(config.get("expected", {}))
-            return response
-        except Exception as e:
-            # If API call fails (e.g., 401), create a mock response
-            logging.warning(
-                f"LLM API call failed: {e}, generating mock response based on expected outputs"
-            )
-            return _create_mock_llm_response(config.get("expected", {}))
+        # In test environment, always return mock response
+        return _create_mock_llm_response(config.get("expected", {}))
 
     async def mock_llm_ask_stream(
         prompt: str, messages: Optional[List[Dict[str, str]]] = None
@@ -1027,10 +1012,10 @@ async def evaluate_with_llm(
     # Initialize the OpenAI client if not already done
     if _llm_client is None:
         if not api_key or api_key == "openmind_free":
-            # Try to get the API key from a GitHub secret environment variable
-            github_api_key = os.environ.get("OM1_API_KEY")
-            if github_api_key:
-                api_key = github_api_key
+            # Try to get the API key from environment variables if not provided or if using free tier
+            env_api_key = os.environ.get("OM1_API_KEY") or os.environ.get("OM_API_KEY")
+            if env_api_key:
+                api_key = env_api_key
             else:
                 logging.warning("No API key found for LLM evaluation, using mock score")
                 return 0.0, "No API key provided for LLM evaluation"

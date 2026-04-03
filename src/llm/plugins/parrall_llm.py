@@ -312,11 +312,11 @@ class ParallelLLM(LLM[R]):
         if messages is None:
             messages = []
 
+        tasks = []
         try:
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
 
-            tasks = []
             for idx, (llm, action_filter) in enumerate(self._llms):
                 llm_name = f"{llm.__class__.__name__}_{idx}"
                 task = asyncio.create_task(
@@ -350,8 +350,15 @@ class ParallelLLM(LLM[R]):
 
             self.io_provider.llm_end_time = time.time()
 
+        except asyncio.CancelledError:
+            logging.info("ParallelLLM stream cancelled, cleaning up tasks")
+            raise
         except Exception as e:
             logging.error(f"ParallelLLM stream error: {e}")
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
