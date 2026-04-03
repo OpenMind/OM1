@@ -5,13 +5,13 @@ redirects:
   developing/0_introduction: developing/0_introduction.md
   developing/1_get_started: developing/1_get-started.md
   developing/2_architecture: developing/2_architecture.md
-  core-concepts/3_configuration: core-concepts/3_configuration.md
-  core-concepts/4_inputs: core-concepts/4_inputs.md
-  core-concepts/5_llms: core-concepts/5_llms.md
-  core-concepts/6_actions: core-concepts/6_actions.md
-  core-concepts/7_project_structure: core-concepts/7_project_structure.md
-  core-concepts/8_backgrounds: core-concepts/8_backgrounds.md
-  core-concepts/9_troubleshooting_guide: core-concepts/9_troubleshooting_guide.md
+  developing/3_configuration: developing/3_configuration.md
+  developing/4_inputs: developing/4_inputs.md
+  developing/5_llms: developing/5_llms.md
+  developing/6_actions: developing/6_actions.md
+  developing/7_project_structure: developing/7_project_structure.md
+  developing/8_backgrounds: developing/8_backgrounds.md
+  developing/9_troubleshooting_guide: developing/9_troubleshooting_guide.md
   developing/mcp-integration: developing/mcp_integration.md
   api-reference/introduction: api-reference/introduction.md
   api-reference/api_pricing: api-reference/api_pricing.md

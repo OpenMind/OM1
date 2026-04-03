@@ -296,7 +296,7 @@ Defines the agent's available capabilities, including action names, their implem
 
 You can customize the actions following the [Action Plugin Guide](6_actions.md)
 
-## MCP servers (new)
+## MCP servers
 
 MCP servers can be added to a config to give OM1 agent capability to interact with different MCP tools. Example:
 
