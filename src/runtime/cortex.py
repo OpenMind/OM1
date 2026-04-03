@@ -632,10 +632,7 @@ class ModeCortexRuntime:
 
         try:
             async for output in self.current_config.cortex_llm.ask_stream(prompt):
-                if cortex_generation != self._cortex_loop_generation:
-                    logging.info(
-                        f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
-                    )
+                if not self._is_generation_valid(cortex_generation, "LLM streaming"):
                     return
 
                 if output is None:
@@ -644,7 +641,7 @@ class ModeCortexRuntime:
 
                 if (
                     self._is_reloading
-                    or cortex_generation != self._cortex_loop_generation
+                    or not self._is_generation_valid(cortex_generation, "LLM streaming")
                 ):
                     logging.info(
                         f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
@@ -690,18 +687,19 @@ class ModeCortexRuntime:
                             async for stream_output in self.current_config.cortex_llm.ask_stream(
                                 recall_prompt
                             ):
-                                if cortex_generation != self._cortex_loop_generation:
-                                    logging.info(
-                                        f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
-                                    )
+                                if not self._is_generation_valid(
+                                    cortex_generation, "MCP recall streaming"
+                                ):
                                     return
 
                                 if stream_output is None:
                                     logging.info("Received empty output from LLM, skipping")
-                                    streamed_output = None
-                                    break
+                                    continue
 
-                                streamed_output = stream_output
+                                if streamed_output is None:
+                                    streamed_output = stream_output
+                                else:
+                                    streamed_output.actions.extend(stream_output.actions)
 
                             output = streamed_output
                         except asyncio.CancelledError:
@@ -720,7 +718,9 @@ class ModeCortexRuntime:
                     logging.debug("No output from LLM after MCP processing")
                     return
 
-                if self._is_reloading or cortex_generation != self._cortex_loop_generation:
+                if self._is_reloading or not self._is_generation_valid(
+                    cortex_generation, "action execution"
+                ):
                     logging.debug("Skipping action execution due to mode transition")
                     return
 
