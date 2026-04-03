@@ -326,6 +326,9 @@ class ModeCortexRuntime:
         self.action_task = None
         self.background_task = None
 
+        self.simulator_orchestrator = None
+        self.background_orchestrator = None
+
     async def _start_orchestrators(self):
         """
         Start orchestrators for the current mode.

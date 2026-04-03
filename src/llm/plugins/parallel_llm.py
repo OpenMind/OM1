@@ -27,7 +27,7 @@ class LLMSpecConfig(BaseModel):
     ----------
     llm_type : str
         Class name of the LLM (e.g., "OpenAILLM", "QwenLLM").
-    llm_config : dict
+    llm_config : LLMConfig
         Configuration for the LLM.
     action_filter : list[str], optional
         List of action types (llm_labels) this LLM can generate.
@@ -37,8 +37,8 @@ class LLMSpecConfig(BaseModel):
     """
 
     llm_type: str = Field(..., description="Class name of the LLM")
-    llm_config: T.Dict[str, T.Any] = Field(
-        default_factory=dict, description="Configuration for the LLM"
+    llm_config: LLMConfig = Field(
+        default_factory=LLMConfig, description="Configuration for the LLM"
     )
     action_filter: T.Optional[T.List[str]] = Field(
         default=None,
@@ -142,11 +142,17 @@ class ParallelLLM(LLM[R]):
         # Initialize each LLM with filtered actions (supports N LLMs)
         for llm_spec in self._config.llms:
             llm_type = llm_spec.llm_type
-            llm_cfg = llm_spec.llm_config.copy()
 
-            # Pass API key from main config if not in individual config
-            if "api_key" not in llm_cfg and self._config.api_key:
-                llm_cfg["api_key"] = self._config.api_key
+            llm_cfg = llm_spec.llm_config.model_copy()
+
+            if not llm_cfg.api_key and self._config.api_key:
+                llm_cfg.api_key = self._config.api_key
+            if not llm_cfg.agent_name and self._config.agent_name:
+                llm_cfg.agent_name = self._config.agent_name
+            if not llm_cfg.history_length and self._config.history_length:
+                llm_cfg.history_length = self._config.history_length
+            if not llm_cfg.timeout and self._config.timeout:
+                llm_cfg.timeout = self._config.timeout
 
             LLMClass = get_llm_class(llm_type)
 
@@ -173,7 +179,7 @@ class ParallelLLM(LLM[R]):
                 )
 
             llm_instance: LLM = LLMClass(
-                config=LLMConfig(**llm_cfg), available_actions=filtered_actions
+                config=llm_cfg, available_actions=filtered_actions
             )
 
             self._llms.append((llm_instance, llm_spec.action_filter))
@@ -194,15 +200,13 @@ class ParallelLLM(LLM[R]):
 
         logging.info(
             f"ParallelLLM initialized with {len(self._llms)} LLMs, "
-            f"execute_immediately: {self._config.execute_immediately}, "
-            f"each LLM maintains independent history"
+            f"execute_immediately: {self._config.execute_immediately}."
         )
 
     async def _call_llm(
         self,
         llm: LLM,
         prompt: str,
-        messages: T.List[T.Dict[str, T.Any]],
         llm_name: str,
         action_filter: T.Optional[T.List[str]],
     ) -> dict:
@@ -215,8 +219,6 @@ class ParallelLLM(LLM[R]):
             The LLM instance to call.
         prompt : str
             The prompt to send.
-        messages : list[dict]
-            Conversation history.
         llm_name : str
             Identifier for the LLM.
         action_filter : list[str], optional
@@ -230,7 +232,7 @@ class ParallelLLM(LLM[R]):
         """
         start = time.time()
         try:
-            result = await llm.ask(prompt, messages)
+            result = await llm.ask(prompt)
             elapsed = time.time() - start
 
             # Safety check: Filter actions in case LLM somehow generated actions
@@ -301,7 +303,7 @@ class ParallelLLM(LLM[R]):
         prompt : str
             The input prompt to send to all LLMs.
         messages : list of dict, optional
-            Conversation history.
+            Conversation history
 
         Yields
         ------
@@ -309,9 +311,6 @@ class ParallelLLM(LLM[R]):
             CortexOutputModel containing actions from each LLM as it completes.
             Will yield N times for N LLMs configured (only if they have actions).
         """
-        if messages is None:
-            messages = []
-
         tasks = []
         try:
             self.io_provider.llm_start_time = time.time()
@@ -320,7 +319,7 @@ class ParallelLLM(LLM[R]):
             for idx, (llm, action_filter) in enumerate(self._llms):
                 llm_name = f"{llm.__class__.__name__}_{idx}"
                 task = asyncio.create_task(
-                    self._call_llm(llm, prompt, messages, llm_name, action_filter)
+                    self._call_llm(llm, prompt, llm_name, action_filter)
                 )
                 tasks.append(task)
 
@@ -361,7 +360,6 @@ class ParallelLLM(LLM[R]):
                     task.cancel()
 
     @AvatarLLMState.trigger_thinking()
-    @LLMHistoryManager.update_history()
     async def ask(
         self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
     ) -> R | None:
@@ -387,9 +385,6 @@ class ParallelLLM(LLM[R]):
         R or None
             Combined response containing all actions from all configured LLMs, or None if all failed.
         """
-        if messages is None:
-            messages = []
-
         try:
             self.io_provider.llm_start_time = time.time()
             self.io_provider.set_llm_prompt(prompt)
@@ -398,7 +393,7 @@ class ParallelLLM(LLM[R]):
             for idx, (llm, action_filter) in enumerate(self._llms):
                 llm_name = f"{llm.__class__.__name__}_{idx}"
                 task = asyncio.create_task(
-                    self._call_llm(llm, prompt, messages, llm_name, action_filter)
+                    self._call_llm(llm, prompt, llm_name, action_filter)
                 )
                 tasks.append(task)
 
