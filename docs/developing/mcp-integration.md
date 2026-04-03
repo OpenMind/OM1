@@ -39,7 +39,7 @@ This enables:
 - **Isolation**: Different modes access different tools
 - **Flexibility**: Hot-swap capabilities without code changes
 
-### 1. Add MCP Servers to Your Config
+### Add MCP Servers to Your Config
 
 | Field | Type | Required | Description | Example |
 |-------|------|----------|-------------|---------|
@@ -50,22 +50,6 @@ This enables:
 | `env` | *object* | Optional | Environment variables required by the server (e.g., API keys, tokens) | `{"API_KEY": "your-api-key"}` |
 | `url` | *string* | Required for `sse`/`http` | Server endpoint URL | `"http://localhost:3000/sse"` |
 | `headers` | *object* | Optional | HTTP headers for `sse`/`http` transport | `{"Authorization": "Bearer token"}` |
-
-
-### 2. Set Environment Variables
-
-If you want to configure a slack bot, you might need the following
-
-```bash
-export SLACK_BOT_TOKEN="xoxb-your-token"
-export SLACK_TEAM_ID="T12345678"
-```
-
-### 3. Run Your Agent
-
-```bash
-uv run src/run.py your_mode
-```
 
 ## How It Works
 
