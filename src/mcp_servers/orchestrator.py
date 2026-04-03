@@ -55,20 +55,45 @@ class MCPOrchestrator:
             f"{len(base_schemas)} base tools"
         )
 
-    def extract_mcp_actions(self, actions: list) -> list:
-        """Return only the actions that target an MCP tool.
+    async def execute_mcp_actions(self, actions: list, succeeded_calls: set) -> tuple:
+        """Execute MCP actions that haven't succeeded yet.
+
+        Filters out already-succeeded actions, executes new ones,
+        and updates the succeeded_calls set in-place.
 
         Parameters
         ----------
         actions : list
-            List of all actions from the LLM output.
+            All actions from LLM output
+        succeeded_calls : set
+            Set of already-succeeded action signatures (updated in-place)
 
         Returns
         -------
-        list
-            List of actions that target an MCP tool.
+        tuple
+            (results, mcp_actions) if there are new actions to execute,
+            (None, None) if no new actions remain
         """
-        return [a for a in actions if self._mcp_client.is_mcp_tool(a.type)]
+        origin_mcp_actions = [
+            a for a in actions if self._mcp_client.is_mcp_tool(a.type)
+        ]
+
+        mcp_actions = [
+            a
+            for a in origin_mcp_actions
+            if self.build_call_signature(a) not in succeeded_calls
+        ]
+
+        if not mcp_actions:
+            return None, None
+
+        results = await self._execute_mcp_actions(mcp_actions)
+
+        for action, result in zip(mcp_actions, results):
+            if result.success:
+                succeeded_calls.add(self.build_call_signature(action))
+
+        return results, mcp_actions
 
     def extract_om1_actions(self, actions: list) -> list:
         """Extract OM1 actions from a list of actions.
@@ -85,7 +110,7 @@ class MCPOrchestrator:
         """
         return [a for a in actions if not self._mcp_client.is_mcp_tool(a.type)]
 
-    async def execute_mcp_actions(self, actions: list) -> List[ToolResult]:
+    async def _execute_mcp_actions(self, actions: list) -> List[ToolResult]:
         """Execute a list of MCP actions concurrently.
 
         Parameters

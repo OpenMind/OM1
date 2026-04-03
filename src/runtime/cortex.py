@@ -619,17 +619,13 @@ class ModeCortexRuntime:
             original_prompt = prompt
 
             for round_idx in range(self.mcp_orchestrator.max_rounds):
-                mcp_actions = self.mcp_orchestrator.extract_mcp_actions(output.actions)
                 om1_actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
 
-                new_mcp_actions = [
-                    a
-                    for a in mcp_actions
-                    if self.mcp_orchestrator.build_call_signature(a)
-                    not in succeeded_calls
-                ]
+                results, mcp_actions = await self.mcp_orchestrator.execute_mcp_actions(
+                    output.actions, succeeded_calls
+                )
 
-                if not new_mcp_actions:
+                if results is None:
                     break
 
                 if om1_actions:
@@ -637,18 +633,8 @@ class ModeCortexRuntime:
 
                 logging.info(
                     f"MCP round {round_idx + 1}/{self.mcp_orchestrator.max_rounds}: "
-                    f"executing {len(new_mcp_actions)} tool(s)"
+                    f"executing {len(mcp_actions)} tool(s)"
                 )
-
-                results = await self.mcp_orchestrator.execute_mcp_actions(
-                    new_mcp_actions
-                )
-
-                for action, result in zip(new_mcp_actions, results):
-                    if result.success:
-                        succeeded_calls.add(
-                            self.mcp_orchestrator.build_call_signature(action)
-                        )
 
                 recall_prompt = self.mcp_orchestrator.build_result_prompt(
                     original_prompt, results
