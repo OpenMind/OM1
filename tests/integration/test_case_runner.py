@@ -615,29 +615,32 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     await cortex._initialize_mode("default")
 
     assert cortex.current_config is not None
-    assert cortex.simulator_orchestrator is not None
     assert cortex.action_orchestrator is not None
 
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}
 
     # Capture output from simulators and actions
-    original_simulator_promise = cortex.simulator_orchestrator.promise
     original_action_promise = cortex.action_orchestrator.promise
 
     # Mock the simulator and action promises to capture outputs
-    async def mock_simulator_promise(actions):
-        output_results["actions"] = actions
-        logging.info(f"Simulator received commands: {actions}")
-        return await original_simulator_promise(actions)
+    if cortex.simulator_orchestrator:
+        original_simulator_promise = cortex.simulator_orchestrator.promise
+
+        async def mock_simulator_promise(actions):
+            output_results["actions"] = actions
+            logging.info(f"Simulator received commands: {actions}")
+            return await original_simulator_promise(actions)
+
+        # Replace the original method with our mocked version
+        cortex.simulator_orchestrator.promise = mock_simulator_promise
 
     async def mock_action_promise(actions):
         output_results["actions"] = actions
         logging.info(f"Action orchestrator received commands: {actions}")
         return await original_action_promise(actions)
 
-    # Replace the original methods with our mocked versions
-    cortex.simulator_orchestrator.promise = mock_simulator_promise
+    # Replace the original method with our mocked version
     cortex.action_orchestrator.promise = mock_action_promise
 
     # Mock the LLM's ask and ask_stream methods to return a response based on expected outputs
