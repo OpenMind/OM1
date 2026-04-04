@@ -1,7 +1,7 @@
 ---
 title: Examples
 description: "Examples Overview"
-icon: circle
+icon: link-simple
 ---
 
 ## Examples
