@@ -141,8 +141,13 @@ class ModeCortexRuntime:
 
         self.fuser = Fuser(self.current_config)
         self.action_orchestrator = ActionOrchestrator(self.current_config)
-        self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
-        self.background_orchestrator = BackgroundOrchestrator(self.current_config)
+
+        if self.current_config.simulators:
+            self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
+
+        if self.current_config.backgrounds:
+            self.background_orchestrator = BackgroundOrchestrator(self.current_config)
+
         if self.current_config.mcp_servers:
             self.mcp_orchestrator = MCPOrchestrator(self.current_config)
 
@@ -330,6 +335,10 @@ class ModeCortexRuntime:
         self.simulator_task = None
         self.action_task = None
         self.background_task = None
+
+        self.simulator_orchestrator = None
+        self.background_orchestrator = None
+        self.mcp_orchestrator = None
 
     def _is_generation_valid(
         self, cortex_generation: int, context: str = "operation"
@@ -619,8 +628,118 @@ class ModeCortexRuntime:
             logging.debug("Skipping LLM call during mode transition")
             return
 
+        output = None
+
         try:
-            output = await self.current_config.cortex_llm.ask(prompt)
+            async for output in self.current_config.cortex_llm.ask_stream(prompt):
+                if not self._is_generation_valid(cortex_generation, "LLM streaming"):
+                    return
+
+                if output is None:
+                    logging.info("Received empty output from LLM, skipping")
+                    return
+
+                if self._is_reloading or not self._is_generation_valid(
+                    cortex_generation, "LLM streaming"
+                ):
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
+                    )
+                    return
+
+                if self.mcp_orchestrator:
+                    succeeded_calls = set()
+                    original_prompt = prompt
+
+                    for round_idx in range(self.mcp_orchestrator.max_rounds):
+                        om1_actions = self.mcp_orchestrator.extract_om1_actions(
+                            output.actions
+                        )
+
+                        results, mcp_actions = (
+                            await self.mcp_orchestrator.execute_mcp_actions(
+                                output.actions, succeeded_calls
+                            )
+                        )
+
+                        if results is None:
+                            break
+
+                        if not self._is_generation_valid(
+                            cortex_generation, "MCP execution"
+                        ):
+                            return
+
+                        if om1_actions:
+                            await self.action_orchestrator.promise(om1_actions)
+
+                        logging.info(
+                            f"MCP round {round_idx + 1}/{self.mcp_orchestrator.max_rounds}: "
+                            f"executing {len(mcp_actions)} tool(s)"
+                        )
+
+                        recall_prompt = self.mcp_orchestrator.build_result_prompt(
+                            original_prompt, results
+                        )
+
+                        if not self._is_generation_valid(
+                            cortex_generation, "MCP recall prompt"
+                        ):
+                            return
+
+                        try:
+                            streamed_output = None
+                            async for (
+                                stream_output
+                            ) in self.current_config.cortex_llm.ask_stream(
+                                recall_prompt
+                            ):
+                                if not self._is_generation_valid(
+                                    cortex_generation, "MCP recall streaming"
+                                ):
+                                    return
+
+                                if stream_output is None:
+                                    logging.info(
+                                        "Received empty output from LLM, skipping"
+                                    )
+                                    continue
+
+                                if streamed_output is None:
+                                    streamed_output = stream_output
+                                else:
+                                    streamed_output.actions.extend(
+                                        stream_output.actions
+                                    )
+
+                            output = streamed_output
+                        except asyncio.CancelledError:
+                            logging.info("LLM call cancelled during mode transition")
+                            raise
+
+                        if output is None:
+                            break
+
+                    if output is not None:
+                        output.actions = self.mcp_orchestrator.extract_om1_actions(
+                            output.actions
+                        )
+
+                if output is None:
+                    logging.debug("No output from LLM after MCP processing")
+                    return
+
+                if self._is_reloading or not self._is_generation_valid(
+                    cortex_generation, "action execution"
+                ):
+                    logging.debug("Skipping action execution due to mode transition")
+                    return
+
+                if self.simulator_orchestrator:
+                    await self.simulator_orchestrator.promise(output.actions)
+
+                await self.action_orchestrator.promise(output.actions)
+
         except asyncio.CancelledError:
             logging.info("LLM call cancelled during mode transition")
             raise
@@ -631,67 +750,6 @@ class ModeCortexRuntime:
         if output is None:
             logging.debug("No output from LLM")
             return
-
-        if self.mcp_orchestrator:
-            succeeded_calls = set()
-            original_prompt = prompt
-
-            for round_idx in range(self.mcp_orchestrator.max_rounds):
-                om1_actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
-
-                results, mcp_actions = await self.mcp_orchestrator.execute_mcp_actions(
-                    output.actions, succeeded_calls
-                )
-
-                if results is None:
-                    break
-
-                if not self._is_generation_valid(cortex_generation, "MCP execution"):
-                    return
-
-                if om1_actions:
-                    await self.action_orchestrator.promise(om1_actions)
-
-                logging.info(
-                    f"MCP round {round_idx + 1}/{self.mcp_orchestrator.max_rounds}: "
-                    f"executing {len(mcp_actions)} tool(s)"
-                )
-
-                recall_prompt = self.mcp_orchestrator.build_result_prompt(
-                    original_prompt, results
-                )
-
-                if not self._is_generation_valid(
-                    cortex_generation, "MCP recall prompt"
-                ):
-                    return
-
-                try:
-                    output = await self.current_config.cortex_llm.ask(recall_prompt)
-                except asyncio.CancelledError:
-                    logging.info("LLM call cancelled during mode transition")
-                    raise
-
-                if output is None:
-                    break
-
-            if output is not None:
-                output.actions = self.mcp_orchestrator.extract_om1_actions(
-                    output.actions
-                )
-
-        if output is None:
-            logging.debug("No output from LLM after MCP processing")
-            return
-
-        if self._is_reloading or cortex_generation != self._cortex_loop_generation:
-            logging.debug("Skipping action execution due to mode transition")
-            return
-
-        if self.simulator_orchestrator:
-            await self.simulator_orchestrator.promise(output.actions)
-
-        await self.action_orchestrator.promise(output.actions)
 
     def get_mode_info(self) -> dict:
         """
