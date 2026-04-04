@@ -157,11 +157,8 @@ class RuntimeConfig:
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
-<<<<<<< long-term-memory
     memory: Optional[Dict[str, Any]] = None
-=======
     mcp_servers: Optional[Any] = None
->>>>>>> main
 
 
 def add_meta(
@@ -382,11 +379,8 @@ class ModeConfig:
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
             knowledge_base=global_config.knowledge_base,
-<<<<<<< long-term-memory
             memory=global_config.memory,
-=======
             mcp_servers=self.mcp_servers,
->>>>>>> main
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
