@@ -52,9 +52,7 @@ class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
         lidar_config = self._extract_lidar_config(config)
 
         # Create real RPLidarProvider but prevent hardware connections
-        self.lidar: UnitreeGo2RPLidarProvider = self._create_mock_lidar_provider(
-            **lidar_config
-        )
+        self.lidar: UnitreeGo2RPLidarProvider = self._create_mock_lidar_provider(**lidar_config)
 
         # Store the last processed time to rate-limit our mock data
         self.last_processed_time = 0
@@ -71,9 +69,7 @@ class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
         # Store reference to cortex runtime for cleanup (will be set by test runner)
         self.cortex_runtime = None
 
-        logging.info(
-            f"MockRPLidar initialized with {self.lidar_provider.scan_count} scan data sets"
-        )
+        logging.info(f"MockRPLidar initialized with {self.lidar_provider.scan_count} scan data sets")
 
     def set_cortex_runtime(self, cortex):
         """
@@ -101,9 +97,7 @@ class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
         def mock_start():
             """Mock start method that doesn't try to connect to hardware."""
             provider.running = True
-            logging.info(
-                "MockRPLidar: RPLidarProvider start() called (hardware connections prevented)"
-            )
+            logging.info("MockRPLidar: RPLidarProvider start() called (hardware connections prevented)")
 
         provider.start = mock_start
 
@@ -156,9 +150,7 @@ class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
             # scan_array is already in the format (angle, distance) that _path_processor expects
             self.lidar._path_processor(scan_array)
 
-            logging.info(
-                f"MockRPLidar: Processed mock scan ({self.lidar_provider.remaining_scans} remaining)"
-            )
+            logging.info(f"MockRPLidar: Processed mock scan ({self.lidar_provider.remaining_scans} remaining)")
 
             # Return the processed lidar string from the real provider
             return self.lidar.lidar_string
@@ -187,35 +179,21 @@ class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
             if hasattr(cortex, "action_orchestrator") and cortex.action_orchestrator:
                 logging.info("MockRPLidar: Cleaning up action orchestrator")
 
-                if (
-                    hasattr(cortex.action_orchestrator, "_config")
-                    and cortex.action_orchestrator._config
-                ):
+                if hasattr(cortex.action_orchestrator, "_config") and cortex.action_orchestrator._config:
                     if hasattr(cortex.action_orchestrator._config, "agent_actions"):
                         agent_actions = cortex.action_orchestrator._config.agent_actions
 
                         for agent_action in agent_actions:
-                            if (
-                                hasattr(agent_action, "connector")
-                                and agent_action.connector
-                            ):
+                            if hasattr(agent_action, "connector") and agent_action.connector:
                                 # Close Zenoh sessions in action connectors
-                                if (
-                                    hasattr(agent_action.connector, "session")
-                                    and agent_action.connector.session
-                                ):
+                                if hasattr(agent_action.connector, "session") and agent_action.connector.session:
                                     try:
                                         agent_action.connector.session.close()
                                     except Exception as e:
-                                        logging.warning(
-                                            f"MockRPLidar: Error closing Zenoh session: {e}"
-                                        )
+                                        logging.warning(f"MockRPLidar: Error closing Zenoh session: {e}")
 
                                 # Also close OdomProvider Zenoh session if it exists
-                                if (
-                                    hasattr(agent_action.connector, "odom")
-                                    and agent_action.connector.odom
-                                ):
+                                if hasattr(agent_action.connector, "odom") and agent_action.connector.odom:
                                     if (
                                         hasattr(agent_action.connector.odom, "session")
                                         and agent_action.connector.odom.session
@@ -237,9 +215,7 @@ class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
                                 try:
                                     input_obj.lidar.zen.close()
                                 except Exception as e:
-                                    logging.warning(
-                                        f"MockRPLidar: Error closing lidar Zenoh session: {e}"
-                                    )
+                                    logging.warning(f"MockRPLidar: Error closing lidar Zenoh session: {e}")
 
             # Force cleanup of any remaining Zenoh sessions
             await self._force_cleanup_zenoh_sessions()
@@ -274,9 +250,7 @@ class MockUnitreeGo2RPLidar(UnitreeGo2RPLidar):
                     non_daemon_threads.append(thread)
 
             if non_daemon_threads:
-                logging.warning(
-                    f"MockRPLidar: {len(non_daemon_threads)} non-daemon threads still active"
-                )
+                logging.warning(f"MockRPLidar: {len(non_daemon_threads)} non-daemon threads still active")
 
                 # Try to force-kill the Zenoh threads by setting them as daemon
                 for thread in non_daemon_threads:

@@ -133,9 +133,7 @@ class TestMoveTronSDKConnectorConnect:
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
         with patch("actions.move_tron.connector.tron_sdk.logging") as mock_logging:
             await disconnected_connector.connect(move_input)
-            mock_logging.error.assert_called_with(
-                "Tron webSocket client is not connected."
-            )
+            mock_logging.error.assert_called_with("Tron webSocket client is not connected.")
             disconnected_connector.client.send_message.assert_not_called()
 
     @pytest.mark.asyncio

@@ -46,9 +46,7 @@ class MockVideoStream(VideoStream):
         self.loop_thread = threading.Thread(target=self._start_loop, daemon=True)
         self.loop_thread.start()
 
-        logging.info(
-            "MockVideoStream initialized with %d callbacks", len(self.frame_callbacks)
-        )
+        logging.info("MockVideoStream initialized with %d callbacks", len(self.frame_callbacks))
 
     def register_frame_callback(self, frame_callback):
         """Register a new frame callback - exactly like the original."""
@@ -72,24 +70,16 @@ class MockVideoStream(VideoStream):
             Maximum time to wait for connections in seconds
         """
         if not self.vlm_provider:
-            logging.warning(
-                "MockVideoStream: No VLM provider reference, skipping connection wait"
-            )
+            logging.warning("MockVideoStream: No VLM provider reference, skipping connection wait")
             return True
 
         start_time = time.time()
         while time.time() - start_time < timeout:
             # Check if both WebSocket clients are connected
-            main_connected = (
-                hasattr(self.vlm_provider, "ws_client")
-                and self.vlm_provider.ws_client.is_connected()
-            )
+            main_connected = hasattr(self.vlm_provider, "ws_client") and self.vlm_provider.ws_client.is_connected()
 
             stream_connected = True  # Default to True if no stream client
-            if (
-                hasattr(self.vlm_provider, "stream_ws_client")
-                and self.vlm_provider.stream_ws_client
-            ):
+            if hasattr(self.vlm_provider, "stream_ws_client") and self.vlm_provider.stream_ws_client:
                 stream_connected = self.vlm_provider.stream_ws_client.is_connected()
 
             if main_connected and stream_connected:
@@ -101,9 +91,7 @@ class MockVideoStream(VideoStream):
             )
             time.sleep(0.5)
 
-        logging.warning(
-            f"MockVideoStream: Connection timeout after {timeout}s, proceeding anyway"
-        )
+        logging.warning(f"MockVideoStream: Connection timeout after {timeout}s, proceeding anyway")
         return False
 
     def on_video(self):
@@ -113,9 +101,7 @@ class MockVideoStream(VideoStream):
         logging.info("MockVideoStream: Starting video processing")
 
         if not self._wait_for_connections():
-            logging.warning(
-                "MockVideoStream: Proceeding without all connections established"
-            )
+            logging.warning("MockVideoStream: Proceeding without all connections established")
 
         frame_time = 1.0 / self.fps
         last_frame_time = time.perf_counter()
@@ -130,9 +116,7 @@ class MockVideoStream(VideoStream):
                 mock_image = get_next_opencv_image()
                 if mock_image is None:
                     # Reset the image provider and try again instead of stopping
-                    logging.debug(
-                        "MockVideoStream: Resetting image provider to loop images"
-                    )
+                    logging.debug("MockVideoStream: Resetting image provider to loop images")
                     from tests.integration.mock_inputs.data_providers.mock_image_provider import (
                         get_image_provider,
                     )
@@ -141,9 +125,7 @@ class MockVideoStream(VideoStream):
                     mock_image = get_next_opencv_image()
 
                     if mock_image is None:
-                        logging.error(
-                            "MockVideoStream: No images available even after reset"
-                        )
+                        logging.error("MockVideoStream: No images available even after reset")
                         self.running = False
                         break
 
@@ -156,15 +138,11 @@ class MockVideoStream(VideoStream):
                     for frame_callback in self.frame_callbacks:
                         try:
                             if asyncio.iscoroutinefunction(frame_callback):
-                                asyncio.run_coroutine_threadsafe(
-                                    frame_callback(frame_data), self.loop
-                                )
+                                asyncio.run_coroutine_threadsafe(frame_callback(frame_data), self.loop)
                             else:
                                 frame_callback(frame_data)
                         except Exception as e:
-                            logging.error(
-                                f"MockVideoStream: Error calling frame callback: {e}"
-                            )
+                            logging.error(f"MockVideoStream: Error calling frame callback: {e}")
 
                     images_sent += 1
 
@@ -240,9 +218,7 @@ class MockVLM_Vila(VLMVila):
             "stream_base_url",
             f"wss://api.openmind.com/api/core/teleops/stream/video?api_key={api_key}",
         )
-        self.vlm: VLMVilaProvider = VLMVilaProvider(
-            ws_url=base_url, stream_url=stream_base_url
-        )
+        self.vlm: VLMVilaProvider = VLMVilaProvider(ws_url=base_url, stream_url=stream_base_url)
         self.vlm.video_stream.stop()
         logging.debug("MockVLM_Vila: Stopped original video stream")
         self.vlm.video_stream = MockVideoStream(self.vlm.video_stream, self.vlm)

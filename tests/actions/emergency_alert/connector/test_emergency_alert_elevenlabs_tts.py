@@ -19,22 +19,12 @@ def mock_dependencies():
 
     with (
         patch("actions.emergency_alert.connector.elevenlabs_tts.IOProvider") as mock_io,
-        patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.open_zenoh_session"
-        ) as mock_zenoh_session,
-        patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.ASRRTSPProvider"
-        ) as mock_asr,
-        patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.ElevenLabsTTSProvider"
-        ) as mock_tts,
-        patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.TeleopsConversationProvider"
-        ) as mock_conv,
+        patch("actions.emergency_alert.connector.elevenlabs_tts.open_zenoh_session") as mock_zenoh_session,
+        patch("actions.emergency_alert.connector.elevenlabs_tts.ASRRTSPProvider") as mock_asr,
+        patch("actions.emergency_alert.connector.elevenlabs_tts.ElevenLabsTTSProvider") as mock_tts,
+        patch("actions.emergency_alert.connector.elevenlabs_tts.TeleopsConversationProvider") as mock_conv,
         patch("actions.emergency_alert.connector.elevenlabs_tts.prepare_header"),
-        patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.AudioStatus"
-        ) as mock_audio_status,
+        patch("actions.emergency_alert.connector.elevenlabs_tts.AudioStatus") as mock_audio_status,
         patch("actions.emergency_alert.connector.elevenlabs_tts.String"),
     ):
         mock_io_instance = Mock()
@@ -115,24 +105,14 @@ class TestEmergencyAlertConnectorInit:
         """Test initialization when Zenoh session fails."""
         with (
             patch("actions.emergency_alert.connector.elevenlabs_tts.IOProvider"),
-            patch(
-                "actions.emergency_alert.connector.elevenlabs_tts.open_zenoh_session"
-            ) as mock_zenoh_session,
+            patch("actions.emergency_alert.connector.elevenlabs_tts.open_zenoh_session") as mock_zenoh_session,
             patch("actions.emergency_alert.connector.elevenlabs_tts.ASRRTSPProvider"),
-            patch(
-                "actions.emergency_alert.connector.elevenlabs_tts.ElevenLabsTTSProvider"
-            ) as mock_tts,
-            patch(
-                "actions.emergency_alert.connector.elevenlabs_tts.TeleopsConversationProvider"
-            ),
+            patch("actions.emergency_alert.connector.elevenlabs_tts.ElevenLabsTTSProvider") as mock_tts,
+            patch("actions.emergency_alert.connector.elevenlabs_tts.TeleopsConversationProvider"),
             patch("actions.emergency_alert.connector.elevenlabs_tts.prepare_header"),
-            patch(
-                "actions.emergency_alert.connector.elevenlabs_tts.AudioStatus"
-            ) as mock_audio_status,
+            patch("actions.emergency_alert.connector.elevenlabs_tts.AudioStatus") as mock_audio_status,
             patch("actions.emergency_alert.connector.elevenlabs_tts.String"),
-            patch(
-                "actions.emergency_alert.connector.elevenlabs_tts.logging"
-            ) as mock_logging,
+            patch("actions.emergency_alert.connector.elevenlabs_tts.logging") as mock_logging,
         ):
             mock_zenoh_session.side_effect = Exception("Zenoh connection failed")
             mock_audio_status.STATUS_MIC.UNKNOWN.value = 0
@@ -155,9 +135,7 @@ class TestEmergencyAlertConnectorConnect:
         """Test connect when TTS is disabled."""
         connector.tts_enabled = False
         alert_input = EmergencyAlertInput(action="Fire!")
-        with patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.logging"
-        ) as mock_logging:
+        with patch("actions.emergency_alert.connector.elevenlabs_tts.logging") as mock_logging:
             await connector.connect(alert_input)
             mock_logging.info.assert_any_call("TTS is disabled, skipping TTS action")
 
@@ -177,36 +155,26 @@ class TestEmergencyAlertConnectorConnect:
     @pytest.mark.asyncio
     async def test_connect_too_many_pending(self, connector, mock_dependencies):
         """Test connect skips when too many pending messages."""
-        mock_dependencies["tts"].create_pending_message.return_value = {
-            "text": "Alert!"
-        }
+        mock_dependencies["tts"].create_pending_message.return_value = {"text": "Alert!"}
         mock_dependencies["tts"].get_pending_message_count.return_value = 5
         mock_dependencies["io"].llm_prompt = None
 
         alert_input = EmergencyAlertInput(action="Alert!")
-        with patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.logging"
-        ) as mock_logging:
+        with patch("actions.emergency_alert.connector.elevenlabs_tts.logging") as mock_logging:
             await connector.connect(alert_input)
-            mock_logging.warning.assert_any_call(
-                "Too many pending TTS messages, skipping adding new message"
-            )
+            mock_logging.warning.assert_any_call("Too many pending TTS messages, skipping adding new message")
 
     @pytest.mark.asyncio
     async def test_connect_stores_conversation(self, connector, mock_dependencies):
         """Test connect stores robot message when Voice input detected."""
-        mock_dependencies["tts"].create_pending_message.return_value = {
-            "text": "Emergency!"
-        }
+        mock_dependencies["tts"].create_pending_message.return_value = {"text": "Emergency!"}
         mock_dependencies["tts"].get_pending_message_count.return_value = 0
         mock_dependencies["io"].llm_prompt = 'Voice: "help"'
 
         alert_input = EmergencyAlertInput(action="Emergency!")
         await connector.connect(alert_input)
 
-        mock_dependencies["conv"].store_robot_message.assert_called_once_with(
-            "Emergency!"
-        )
+        mock_dependencies["conv"].store_robot_message.assert_called_once_with("Emergency!")
 
     @pytest.mark.asyncio
     async def test_connect_no_audio_pub_uses_tts(self, connector, mock_dependencies):
@@ -236,9 +204,7 @@ class TestZenohTTSStatusRequest:
         mock_tts_status.code = 1
         mock_dependencies["audio_status"].return_value = mock_tts_status
 
-        with patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.TTSStatusRequest"
-        ) as mock_tts_req:
+        with patch("actions.emergency_alert.connector.elevenlabs_tts.TTSStatusRequest") as mock_tts_req:
             mock_tts_req.deserialize.return_value = mock_tts_status
             connector._zenoh_tts_status_request(mock_data)
 
@@ -253,9 +219,7 @@ class TestZenohTTSStatusRequest:
         mock_tts_status = Mock()
         mock_tts_status.code = 0
 
-        with patch(
-            "actions.emergency_alert.connector.elevenlabs_tts.TTSStatusRequest"
-        ) as mock_tts_req:
+        with patch("actions.emergency_alert.connector.elevenlabs_tts.TTSStatusRequest") as mock_tts_req:
             mock_tts_req.deserialize.return_value = mock_tts_status
             connector._zenoh_tts_status_request(mock_data)
 

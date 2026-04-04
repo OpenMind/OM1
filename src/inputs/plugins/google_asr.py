@@ -59,21 +59,13 @@ class GoogleASRSensorConfig(SensorConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    api_version: str = Field(
-        default="v2", description="API version to use for the ASR service"
-    )
+    api_version: str = Field(default="v2", description="API version to use for the ASR service")
     rate: int = Field(default=48000, description="Sampling rate")
     chunk: int = Field(default=4800, description="Chunk size")
-    base_url: Optional[str] = Field(
-        default=None, description="Base URL for the ASR service"
-    )
-    microphone_device_id: Optional[int] = Field(
-        default=None, description="Microphone Device ID"
-    )
+    base_url: Optional[str] = Field(default=None, description="Base URL for the ASR service")
+    microphone_device_id: Optional[int] = Field(default=None, description="Microphone Device ID")
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
-    language: str = Field(
-        default="english", description="Language for speech recognition"
-    )
+    language: str = Field(default="english", description="Language for speech recognition")
     alternative_languages: Optional[List[str]] = Field(
         default=None,
         description="List of alternative languages for multilingual speech recognition",
@@ -121,15 +113,10 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 
         api_version = self.config.api_version.strip().lower()
         if api_version not in ["v1", "v2"]:
-            logging.warning(
-                f"API version {api_version} not recognized. Defaulting to v2."
-            )
+            logging.warning(f"API version {api_version} not recognized. Defaulting to v2.")
             api_version = "v2"
 
-        base_url = (
-            self.config.base_url
-            or f"wss://api.openmind.com/api/core/google/asr/{api_version}?api_key={api_key}"
-        )
+        base_url = self.config.base_url or f"wss://api.openmind.com/api/core/google/asr/{api_version}?api_key={api_key}"
 
         microphone_device_id = self.config.microphone_device_id
         microphone_name = self.config.microphone_name
@@ -154,13 +141,9 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
                 if alt_lang in LANGUAGE_CODE_MAP:
                     alt_code = LANGUAGE_CODE_MAP[alt_lang]
                     alternative_language_codes.append(alt_code)
-                    logging.info(
-                        f"Adding alternative language code {alt_code} for language {alt_lang}"
-                    )
+                    logging.info(f"Adding alternative language code {alt_code} for language {alt_lang}")
                 else:
-                    logging.warning(
-                        f"Alternative language {alt_lang} not supported. Skipping."
-                    )
+                    logging.warning(f"Alternative language {alt_lang} not supported. Skipping.")
         elif api_version == "v2" and len(alternative_languages) > 0:
             logging.warning(
                 "Alternative languages are not supported in API version v2. Ignoring alternative languages."
@@ -300,9 +283,7 @@ class GoogleASRInput(FuserInput[GoogleASRSensorConfig, Optional[str]]):
 {self.descriptor_for_LLM}: "{self.messages[-1]}"
 """
         # Add to IO provider and conversation provider
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1], time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1], time.time())
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
 

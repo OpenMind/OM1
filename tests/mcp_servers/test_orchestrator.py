@@ -11,9 +11,7 @@ from runtime.config import RuntimeConfig
 class MockMCPClient:
     """Mock MCP client that tracks tool calls."""
 
-    def __init__(
-        self, tool_responses: Optional[Dict[str, Union[str, Exception]]] = None
-    ):
+    def __init__(self, tool_responses: Optional[Dict[str, Union[str, Exception]]] = None):
         self._tools = {"mcp_weather_get", "mcp_slack_post", "mcp_maps_geocode"}
         self._responses = tool_responses or {}
         self.calls: List[tuple] = []
@@ -110,9 +108,7 @@ class TestInit:
     @pytest.mark.asyncio
     async def test_does_not_duplicate_mcp_schemas_on_reinit(self, mock_client):
         llm = MockLLM([])
-        llm.function_schemas = [
-            {"type": "function", "function": {"name": "mcp_weather_get"}}
-        ]
+        llm.function_schemas = [{"type": "function", "function": {"name": "mcp_weather_get"}}]
 
         orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(mock_client, llm)))
         await orch.start()
@@ -126,18 +122,14 @@ class TestActionSplitting:
 
     @pytest.mark.asyncio
     async def test_extract_mcp_actions_returns_only_mcp(self, orch, make_output):
-        output = make_output(
-            [("speak", "hi"), ("mcp_weather_get", "{}"), ("emotion", "happy")]
-        )
+        output = make_output([("speak", "hi"), ("mcp_weather_get", "{}"), ("emotion", "happy")])
         results, mcp_actions = await orch.execute_mcp_actions(output.actions, set())
         assert results is not None
         assert len(mcp_actions) == 1
         assert mcp_actions[0].type == "mcp_weather_get"
 
     def test_extract_om1_actions_returns_non_mcp(self, orch, make_output):
-        output = make_output(
-            [("speak", "hi"), ("mcp_weather_get", "{}"), ("emotion", "happy")]
-        )
+        output = make_output([("speak", "hi"), ("mcp_weather_get", "{}"), ("emotion", "happy")])
         om1 = orch.extract_om1_actions(output.actions)
         assert {a.type for a in om1} == {"speak", "emotion"}
 
@@ -188,12 +180,8 @@ class TestExecuteMcpActions:
 
     @pytest.mark.asyncio
     async def test_multiple_tools_executed_concurrently(self, mock_client, make_output):
-        orch = MCPOrchestrator(
-            cast(RuntimeConfig, MockConfig(mock_client, MockLLM([])))
-        )
-        actions = make_output(
-            [("mcp_weather_get", "{}"), ("mcp_slack_post", "{}")]
-        ).actions
+        orch = MCPOrchestrator(cast(RuntimeConfig, MockConfig(mock_client, MockLLM([]))))
+        actions = make_output([("mcp_weather_get", "{}"), ("mcp_slack_post", "{}")]).actions
         results, _ = await orch.execute_mcp_actions(actions, set())
 
         assert len(results) == 2

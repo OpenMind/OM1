@@ -21,9 +21,7 @@ def mock_external_modules(monkeypatch):
     monkeypatch.setitem(sys.modules, "zenoh_msgs", mock_zenoh_msgs)
     monkeypatch.setitem(sys.modules, "hid", mock_hid)
     monkeypatch.setitem(sys.modules, "unitree", mock_unitree)
-    monkeypatch.setitem(
-        sys.modules, "unitree.unitree_sdk2py", mock_unitree.unitree_sdk2py
-    )
+    monkeypatch.setitem(sys.modules, "unitree.unitree_sdk2py", mock_unitree.unitree_sdk2py)
     monkeypatch.setitem(
         sys.modules,
         "unitree.unitree_sdk2py.go2",
@@ -55,9 +53,7 @@ def go2_module(mock_external_modules):
         "actions.move_game_controller.connector.go2_game_controller",
         None,
     )
-    return importlib.import_module(
-        "actions.move_game_controller.connector.go2_game_controller"
-    )
+    return importlib.import_module("actions.move_game_controller.connector.go2_game_controller")
 
 
 @pytest.fixture
@@ -122,21 +118,11 @@ class TestGo2GameControllerConnector:
     ):
         """Test initialization of Go2GameControllerConnector."""
         with (
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.hid"
-            ) as mock_hid_module,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.SportClient"
-            ) as mock_sport_client_class,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"
-            ),
+            patch("actions.move_game_controller.connector.go2_game_controller.hid") as mock_hid_module,
+            patch("actions.move_game_controller.connector.go2_game_controller.SportClient") as mock_sport_client_class,
+            patch("actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"),
         ):
             mock_client_instance = Mock()
             mock_sport_client_class.return_value = mock_client_instance
@@ -156,21 +142,11 @@ class TestGo2GameControllerConnector:
     ):
         """Test initialization with custom configuration."""
         with (
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.hid"
-            ) as mock_hid_module,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.SportClient"
-            ) as mock_sport_client_class,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"
-            ),
+            patch("actions.move_game_controller.connector.go2_game_controller.hid") as mock_hid_module,
+            patch("actions.move_game_controller.connector.go2_game_controller.SportClient") as mock_sport_client_class,
+            patch("actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"),
         ):
             mock_client_instance = Mock()
             mock_sport_client_class.return_value = mock_client_instance
@@ -190,21 +166,11 @@ class TestGo2GameControllerConnector:
     ):
         """Test initialization when SportClient fails."""
         with (
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.hid"
-            ) as mock_hid_module,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.SportClient"
-            ) as mock_sport_client_class,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"
-            ),
+            patch("actions.move_game_controller.connector.go2_game_controller.hid") as mock_hid_module,
+            patch("actions.move_game_controller.connector.go2_game_controller.SportClient") as mock_sport_client_class,
+            patch("actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"),
         ):
             mock_sport_client_class.side_effect = Exception("Connection error")
             mock_hid_module.enumerate.return_value = []
@@ -222,21 +188,11 @@ class TestGo2GameControllerConnector:
     ):
         """Test connect method (passes through)."""
         with (
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.hid"
-            ) as mock_hid_module,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.SportClient"
-            ) as mock_sport_client_class,
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"
-            ),
-            patch(
-                "actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"
-            ),
+            patch("actions.move_game_controller.connector.go2_game_controller.hid") as mock_hid_module,
+            patch("actions.move_game_controller.connector.go2_game_controller.SportClient") as mock_sport_client_class,
+            patch("actions.move_game_controller.connector.go2_game_controller.open_zenoh_session"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2OdomProvider"),
+            patch("actions.move_game_controller.connector.go2_game_controller.UnitreeGo2StateProvider"),
         ):
             mock_client_instance = Mock()
             mock_sport_client_class.return_value = mock_client_instance

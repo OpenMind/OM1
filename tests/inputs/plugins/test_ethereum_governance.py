@@ -19,9 +19,7 @@ def mock_io_provider():
 @pytest.fixture
 def governance_instance(mock_io_provider):
     config = SensorConfig()
-    with patch(
-        "inputs.plugins.ethereum_governance.IOProvider", return_value=mock_io_provider
-    ):
+    with patch("inputs.plugins.ethereum_governance.IOProvider", return_value=mock_io_provider):
         instance = GovernanceEthereum(config=config)
     return instance
 
@@ -53,9 +51,7 @@ async def test_load_rules_from_blockchain_success_scenario(governance_instance):
     mock_client_session_cm.__aexit__.return_value = None
 
     with (
-        patch.object(
-            governance_instance, "decode_eth_response", return_value=expected_decoded
-        ),
+        patch.object(governance_instance, "decode_eth_response", return_value=expected_decoded),
         patch(
             "inputs.plugins.ethereum_governance.aiohttp.ClientSession",
             return_value=mock_client_session_cm,
@@ -100,9 +96,7 @@ async def test_load_rules_from_blockchain_http_error(governance_instance, caplog
 
 
 @pytest.mark.asyncio
-async def test_load_rules_from_blockchain_no_result_in_response(
-    governance_instance, caplog
-):
+async def test_load_rules_from_blockchain_no_result_in_response(governance_instance, caplog):
     mock_response_json = {"error": "Something went wrong"}
     mock_response = AsyncMock()
     mock_response.status = 200
@@ -136,9 +130,7 @@ async def test_load_rules_from_blockchain_no_result_in_response(
 @pytest.mark.asyncio
 async def test_load_rules_from_blockchain_exception(governance_instance, caplog):
     mock_session_post_cm = AsyncMock()
-    mock_session_post_cm.__aenter__.side_effect = asyncio.TimeoutError(
-        "Request timed out"
-    )
+    mock_session_post_cm.__aenter__.side_effect = asyncio.TimeoutError("Request timed out")
     mock_session_post_cm.__aexit__.return_value = None
 
     mock_session = Mock()
@@ -183,9 +175,7 @@ def test_decode_eth_response_invalid_hex_returns_none(governance_instance, caplo
     assert "Decoding error" in caplog.text
 
 
-def test_decode_eth_response_short_hex_returns_something_or_none(
-    governance_instance, caplog
-):
+def test_decode_eth_response_short_hex_returns_something_or_none(governance_instance, caplog):
     """
     Test with a short hex that might cause an error inside the try block.
     This should ideally trigger the except clause.
@@ -202,15 +192,9 @@ def test_initialization_sets_defaults(governance_instance, mock_io_provider):
     assert governance_instance.io_provider is not None
     assert governance_instance.POLL_INTERVAL == 5.0
     assert governance_instance.rpc_url == "https://holesky.drpc.org"
-    assert (
-        governance_instance.contract_address
-        == "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
-    )
+    assert governance_instance.contract_address == "0xe706b7e30e378b89c7b2ee7bfd8ce2b91959d695"
     assert governance_instance.function_selector == "0x1db3d5ff"
-    assert (
-        governance_instance.function_argument
-        == "0000000000000000000000000000000000000000000000000000000000000002"
-    )
+    assert governance_instance.function_argument == "0000000000000000000000000000000000000000000000000000000000000002"
     assert governance_instance.universal_rule is None
     assert hasattr(governance_instance, "messages")
     assert isinstance(governance_instance.messages, list)
@@ -296,9 +280,7 @@ def test_formatted_latest_buffer_empty(governance_instance):
     assert result is None
 
 
-def test_formatted_latest_buffer_formats_latest_message(
-    governance_instance, mock_io_provider
-):
+def test_formatted_latest_buffer_formats_latest_message(governance_instance, mock_io_provider):
     msg = Message(timestamp=1234.0, message="formatted buffered message")
     governance_instance.messages = [msg]
 
@@ -308,6 +290,4 @@ def test_formatted_latest_buffer_formats_latest_message(
     assert "Universal Laws" in result
     assert "formatted buffered message" in result
     assert len(governance_instance.messages) == 1
-    mock_io_provider.add_input.assert_called_once_with(
-        "Universal Laws", "formatted buffered message", 1234.0
-    )
+    mock_io_provider.add_input.assert_called_once_with("Universal Laws", "formatted buffered message", 1234.0)

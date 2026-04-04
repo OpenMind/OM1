@@ -31,9 +31,7 @@ class TestUnitreeGo2Odom:
 
     def test_initialization(self):
         """Test background initialization."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -46,9 +44,7 @@ class TestUnitreeGo2Odom:
 
     def test_initialization_with_none_ethernet(self):
         """Test background initialization with None unitree_ethernet."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -61,9 +57,7 @@ class TestUnitreeGo2Odom:
 
     def test_initialization_logging(self, caplog):
         """Test that initialization logs the correct message."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -75,9 +69,7 @@ class TestUnitreeGo2Odom:
 
     def test_initialization_logging_with_none(self, caplog):
         """Test that initialization logs correctly with None ethernet."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -89,9 +81,7 @@ class TestUnitreeGo2Odom:
 
     def test_provider_initialization_with_correct_ethernet(self):
         """Test that provider is initialized with the correct ethernet channel."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -101,9 +91,7 @@ class TestUnitreeGo2Odom:
 
     def test_config_stored_correctly(self):
         """Test that config is stored correctly in the background instance."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -115,9 +103,7 @@ class TestUnitreeGo2Odom:
 
     def test_multiple_instances_with_different_ethernet(self):
         """Test that multiple instances can be created with different ethernet channels."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class:
             mock_provider1 = MagicMock()
             mock_provider2 = MagicMock()
             mock_provider_class.side_effect = [mock_provider1, mock_provider2]

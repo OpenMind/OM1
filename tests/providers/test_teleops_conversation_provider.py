@@ -25,9 +25,7 @@ def test_message_type_enum():
 
 def test_conversation_message_to_dict():
     """Test converting ConversationMessage to a dictionary."""
-    msg = ConversationMessage(
-        message_type=MessageType.USER, content="Hello", timestamp=1234567890.0
-    )
+    msg = ConversationMessage(message_type=MessageType.USER, content="Hello", timestamp=1234567890.0)
 
     msg_dict = msg.to_dict()
 

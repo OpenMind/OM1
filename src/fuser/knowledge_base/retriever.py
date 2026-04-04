@@ -60,14 +60,9 @@ class KnowledgeBase:
 
             index_path = self.kb_dir / f"{knowledge_base_name}.faiss"
             metadata_path = self.kb_dir / f"{knowledge_base_name}.pkl"
-            self.retriever = FAISSRetriever(
-                index_path=index_path, metadata_path=metadata_path
-            )
+            self.retriever = FAISSRetriever(index_path=index_path, metadata_path=metadata_path)
         else:
-            raise ValueError(
-                f"Unknown retriever type: {retriever_type}. "
-                f"Supported types: 'faiss'"
-            )
+            raise ValueError(f"Unknown retriever type: {retriever_type}. " f"Supported types: 'faiss'")
 
         logging.info(
             f"KnowledgeBase initialized: kb='{knowledge_base_name}', "
@@ -77,9 +72,7 @@ class KnowledgeBase:
             f"dim={self.retriever.dimension}"
         )
 
-    async def query(
-        self, query_text: str, top_k: int = 5, min_score: float = 0.0
-    ) -> list[Document]:
+    async def query(self, query_text: str, top_k: int = 5, min_score: float = 0.0) -> list[Document]:
         """
         Query the knowledge base with text input.
 
@@ -103,26 +96,18 @@ class KnowledgeBase:
 
         if min_score > 0:
             before_count = len(results)
-            results = [
-                doc
-                for doc in results
-                if doc.score is not None and doc.score >= min_score
-            ]
+            results = [doc for doc in results if doc.score is not None and doc.score >= min_score]
             logging.info(
                 f"Query: '{query_text[:50]}...' | "
                 f"top_k={top_k}, min_score={min_score:.2f} | "
                 f"{before_count} retrieved → {len(results)} after threshold"
             )
         else:
-            logging.info(
-                f"Query: '{query_text[:50]}...' | Retrieved {len(results)} results"
-            )
+            logging.info(f"Query: '{query_text[:50]}...' | Retrieved {len(results)} results")
 
         return results
 
-    async def query_batch(
-        self, query_texts: list[str], top_k: int = 5, min_score: float = 0.0
-    ) -> list[list[Document]]:
+    async def query_batch(self, query_texts: list[str], top_k: int = 5, min_score: float = 0.0) -> list[list[Document]]:
         """
         Query the knowledge base with multiple text inputs.
 
@@ -146,17 +131,11 @@ class KnowledgeBase:
 
         if min_score > 0:
             all_results = [
-                [
-                    doc
-                    for doc in results
-                    if doc.score is not None and doc.score >= min_score
-                ]
-                for results in all_results
+                [doc for doc in results if doc.score is not None and doc.score >= min_score] for results in all_results
             ]
 
         logging.info(
-            f"Batch query: {len(query_texts)} queries | "
-            f"Retrieved {sum(len(r) for r in all_results)} total results"
+            f"Batch query: {len(query_texts)} queries | " f"Retrieved {sum(len(r) for r in all_results)} total results"
         )
         return all_results
 

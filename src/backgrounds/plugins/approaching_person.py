@@ -37,9 +37,7 @@ class ApproachingPerson(Background[BackgroundConfig]):
 
         try:
             self.session = open_zenoh_session()
-            self.session.declare_subscriber(
-                self.person_greeting_topic, self._on_person_greeting
-            )
+            self.session.declare_subscriber(self.person_greeting_topic, self._on_person_greeting)
         except Exception as e:
             logging.error(f"Error opening Zenoh session in ApproachingPerson: {e}")
 
@@ -56,14 +54,9 @@ class ApproachingPerson(Background[BackgroundConfig]):
         """
         logging.debug("Person greeting detected via Zenoh message.")
 
-        person_greeting_status = PersonGreetingStatus.deserialize(
-            data.payload.to_bytes()
-        )
+        person_greeting_status = PersonGreetingStatus.deserialize(data.payload.to_bytes())
 
-        if (
-            person_greeting_status.status
-            == PersonGreetingStatus.STATUS.APPROACHED.value
-        ):
+        if person_greeting_status.status == PersonGreetingStatus.STATUS.APPROACHED.value:
             with self._lock:
                 logging.info("Person is approaching. Triggering greeting mode.")
                 self._is_person_approached = True

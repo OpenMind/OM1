@@ -75,9 +75,7 @@ def test_load_background_invalid_type():
         mock_module.InvalidBackground = InvalidBackground
         mock_import.return_value = mock_module
 
-        with pytest.raises(
-            ValueError, match="'InvalidBackground' is not a valid background subclass"
-        ):
+        with pytest.raises(ValueError, match="'InvalidBackground' is not a valid background subclass"):
             load_background({"type": "InvalidBackground"})
 
 

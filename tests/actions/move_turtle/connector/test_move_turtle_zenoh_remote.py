@@ -14,9 +14,7 @@ def mock_dependencies():
     """Mock all external dependencies."""
 
     with (
-        patch(
-            "actions.move_turtle.connector.zenoh_remote.open_zenoh_session"
-        ) as mock_open_session,
+        patch("actions.move_turtle.connector.zenoh_remote.open_zenoh_session") as mock_open_session,
         patch("actions.move_turtle.connector.zenoh_remote.ws.Client") as mock_ws,
     ):
         mock_session = Mock()
@@ -59,9 +57,7 @@ class TestMoveZenohRemoteConnectorInit:
         assert connector.cmd_vel == "test_robot/c3/cmd_vel"
         assert connector.session == mock_dependencies["session"]
         mock_dependencies["ws"].start.assert_called_once()
-        mock_dependencies["ws"].register_message_callback.assert_called_once_with(
-            connector._on_message
-        )
+        mock_dependencies["ws"].register_message_callback.assert_called_once_with(connector._on_message)
 
     def test_init_ws_url_contains_api_key(self):
         """Test WebSocket URL is constructed with api_key."""
@@ -71,9 +67,7 @@ class TestMoveZenohRemoteConnectorInit:
         ):
             config = MoveZenohRemoteConfig(api_key="secret123", URID="bot")
             MoveZenohRemoteConnector(config)
-            mock_ws.assert_called_once_with(
-                url="wss://api.openmind.com/api/core/teleops/action?api_key=secret123"
-            )
+            mock_ws.assert_called_once_with(url="wss://api.openmind.com/api/core/teleops/action?api_key=secret123")
 
     def test_init_cmd_vel_without_urid(self):
         """Test cmd_vel topic when URID is None."""
@@ -88,9 +82,7 @@ class TestMoveZenohRemoteConnectorInit:
     def test_init_zenoh_error(self):
         """Test initialization when Zenoh fails."""
         with (
-            patch(
-                "actions.move_turtle.connector.zenoh_remote.open_zenoh_session"
-            ) as mock_session,
+            patch("actions.move_turtle.connector.zenoh_remote.open_zenoh_session") as mock_session,
             patch("actions.move_turtle.connector.zenoh_remote.ws.Client"),
             patch("actions.move_turtle.connector.zenoh_remote.logging") as mock_logging,
         ):
@@ -107,17 +99,13 @@ class TestMoveZenohRemoteConnectorOnMessage:
     def test_on_message_no_session(self, connector, mock_dependencies):
         """Test on_message when session is None."""
         connector.session = None
-        with patch(
-            "actions.move_turtle.connector.zenoh_remote.logging"
-        ) as mock_logging:
+        with patch("actions.move_turtle.connector.zenoh_remote.logging") as mock_logging:
             connector._on_message('{"vx": 0.5, "vyaw": 0.0}')
             mock_logging.info.assert_any_call("No open Zenoh session, returning")
 
     def test_on_message_valid(self, connector, mock_dependencies):
         """Test on_message with valid command."""
-        with patch(
-            "actions.move_turtle.connector.zenoh_remote.CommandStatus"
-        ) as mock_cmd:
+        with patch("actions.move_turtle.connector.zenoh_remote.CommandStatus") as mock_cmd:
             mock_status = Mock()
             mock_status.vx = 0.5
             mock_status.vyaw = 0.0
@@ -132,9 +120,7 @@ class TestMoveZenohRemoteConnectorOnMessage:
 
     def test_on_message_error(self, connector, mock_dependencies):
         """Test on_message with invalid message."""
-        with patch(
-            "actions.move_turtle.connector.zenoh_remote.logging"
-        ) as mock_logging:
+        with patch("actions.move_turtle.connector.zenoh_remote.logging") as mock_logging:
             connector._on_message("invalid json{{{")
             mock_logging.error.assert_called()
 

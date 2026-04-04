@@ -31,12 +31,8 @@ class VLMVilaZenohConfig(SensorConfig):
         default="wss://api-vila.openmind.com",
         description="Base URL for the VLM service",
     )
-    topic: str = Field(
-        default="rgb_image", description="Zenoh topic for receiving images"
-    )
-    decode_format: str = Field(
-        default="H264", description='Image decode format (e.g., "H264")'
-    )
+    topic: str = Field(default="rgb_image", description="Zenoh topic for receiving images")
+    decode_format: str = Field(default="H264", description='Image decode format (e.g., "H264")')
 
 
 class VLMVilaZenoh(FuserInput[VLMVilaZenohConfig, Optional[str]]):
@@ -74,9 +70,7 @@ class VLMVilaZenoh(FuserInput[VLMVilaZenohConfig, Optional[str]]):
         topic = self.config.topic
         decode_format = self.config.decode_format
 
-        self.vlm: VLMVilaZenohProvider = VLMVilaZenohProvider(
-            ws_url=base_url, topic=topic, decode_format=decode_format
-        )
+        self.vlm: VLMVilaZenohProvider = VLMVilaZenohProvider(ws_url=base_url, topic=topic, decode_format=decode_format)
         self.vlm.start()
         self.vlm.register_message_callback(self._handle_vlm_message)
 
@@ -191,9 +185,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

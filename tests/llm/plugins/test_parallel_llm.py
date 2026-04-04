@@ -76,9 +76,7 @@ def parallel_llm_config_three_llms():
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_initialization_filters_actions(
-    parallel_llm_config_two_llms, mock_available_actions
-):
+async def test_parallel_llm_initialization_filters_actions(parallel_llm_config_two_llms, mock_available_actions):
     """Test that ParallelLLM correctly filters actions for each LLM."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         # Mock LLM class and instances
@@ -167,15 +165,11 @@ async def test_parallel_llm_ask_stream_yields_as_llms_complete(
         # Make LLM1 complete faster than LLM2
         async def llm1_ask(prompt):
             await asyncio.sleep(0.01)
-            return CortexOutputModel(
-                actions=[Action(type="speak", value="Hello from LLM1")]
-            )
+            return CortexOutputModel(actions=[Action(type="speak", value="Hello from LLM1")])
 
         async def llm2_ask(prompt):
             await asyncio.sleep(0.05)
-            return CortexOutputModel(
-                actions=[Action(type="move", value="Moving from LLM2")]
-            )
+            return CortexOutputModel(actions=[Action(type="move", value="Moving from LLM2")])
 
         mock_llm1.ask = llm1_ask
         mock_llm2.ask = llm2_ask
@@ -857,9 +851,7 @@ async def test_parallel_llm_merge_actions_from_multiple_results():
         # Create mock results
         results = [
             {
-                "result": CortexOutputModel(
-                    actions=[Action(type="speak", value="Hello")]
-                ),
+                "result": CortexOutputModel(actions=[Action(type="speak", value="Hello")]),
                 "llm_name": "LLM1",
             },
             {

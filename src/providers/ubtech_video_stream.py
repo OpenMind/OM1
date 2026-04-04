@@ -70,9 +70,7 @@ class UbtechCameraVideoStream(VideoStream):
 
         try:
             self.resolution = self.resolution or (640, 480)
-            YanAPI.open_vision_stream(
-                resolution=f"{self.resolution[0]}x{self.resolution[1]}"
-            )
+            YanAPI.open_vision_stream(resolution=f"{self.resolution[0]}x{self.resolution[1]}")
             time.sleep(2)
 
             self.stream_client = MJPEGClient(self.url)
@@ -99,9 +97,7 @@ class UbtechCameraVideoStream(VideoStream):
                             if width > height
                             else (int(self.resolution[1] * ratio), self.resolution[1])
                         )
-                        resized = cv2.resize(
-                            frame, (new_width, new_height), interpolation=cv2.INTER_AREA
-                        )
+                        resized = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
                         _, buffer = cv2.imencode(".jpg", resized, self.encode_quality)
                         frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 

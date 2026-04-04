@@ -28,9 +28,7 @@ class MockSensorConfig(SensorConfig):
     """
 
     input_name: str = Field(default="Mock Input", description="Name of the input")
-    host: str = Field(
-        default="localhost", description="Host address for the WebSocket server"
-    )
+    host: str = Field(default="localhost", description="Host address for the WebSocket server")
     port: int = Field(default=8765, description="Port number for the WebSocket server")
 
 
@@ -104,9 +102,7 @@ class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
         self.loop = None
 
         # Start WebSocket server in a separate thread
-        self.server_thread = threading.Thread(
-            target=self._start_server_thread, daemon=True
-        )
+        self.server_thread = threading.Thread(target=self._start_server_thread, daemon=True)
         self.server_thread.start()
 
     def _start_server_thread(self):
@@ -127,18 +123,12 @@ class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
         Start the WebSocket server.
         """
         try:
-            self.server = await websockets.serve(
-                self._handle_client, self.host, self.port
-            )
-            logging.info(
-                f"Mock Input webSocket server started at ws://{self.host}:{self.port}"
-            )
+            self.server = await websockets.serve(self._handle_client, self.host, self.port)
+            logging.info(f"Mock Input webSocket server started at ws://{self.host}:{self.port}")
         except Exception as e:
             logging.error(f"Failed to start Mock Input webSocket server: {e}")
 
-    async def _handle_client(
-        self, websocket: websockets.WebSocketServerProtocol, path: str
-    ):
+    async def _handle_client(self, websocket: websockets.WebSocketServerProtocol, path: str):
         """
         Handle a client connection.
 
@@ -161,9 +151,7 @@ class MockInput(FuserInput[MockSensorConfig, Optional[str]]):
                         try:
                             text = message.decode("utf-8")
                         except Exception as e:
-                            logging.warning(
-                                f"Received binary data that couldn't be decoded. Skipping: {e}"
-                            )
+                            logging.warning(f"Received binary data that couldn't be decoded. Skipping: {e}")
                             continue
 
                     logging.info(f"Received message: {text}")
@@ -259,8 +247,6 @@ INPUT: {self.descriptor_for_LLM}
 {self.messages[-1]}
 // END
 """
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1].message, time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1].message, time.time())
         self.messages = []
         return result

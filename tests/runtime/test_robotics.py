@@ -25,9 +25,7 @@ class TestLoadUnitree:
         ):
             load_unitree(adapter)
 
-        mock_logging.info.assert_any_call(
-            f"Using {adapter} as the Unitree Network Ethernet Adapter"
-        )
+        mock_logging.info.assert_any_call(f"Using {adapter} as the Unitree Network Ethernet Adapter")
         mock_logging.info.assert_any_call("Booting Unitree and CycloneDDS")
         mock_channel_init_func.assert_called_once_with(0, adapter)
 
@@ -50,20 +48,14 @@ class TestLoadUnitree:
         ):
             load_unitree(adapter)
 
-        mock_logging.info.assert_any_call(
-            f"Using {adapter} as the Unitree Network Ethernet Adapter"
-        )
+        mock_logging.info.assert_any_call(f"Using {adapter} as the Unitree Network Ethernet Adapter")
         mock_logging.info.assert_any_call("Booting Unitree and CycloneDDS")
-        mock_logging.error.assert_called_once_with(
-            f"Failed to initialize Unitree Ethernet channel: {error_msg}"
-        )
+        mock_logging.error.assert_called_once_with(f"Failed to initialize Unitree Ethernet channel: {error_msg}")
 
     @patch("src.runtime.robotics.logging")
     def test_load_unitree_with_none(self, mock_logging):
         load_unitree(None)
-        mock_logging.info.assert_called_once_with(
-            "No robot hardware ethernet port provided."
-        )
+        mock_logging.info.assert_called_once_with("No robot hardware ethernet port provided.")
         mock_logging.error.assert_not_called()
 
     @patch("src.runtime.robotics.logging")
@@ -84,9 +76,7 @@ class TestLoadUnitree:
         ):
             load_unitree(adapter)
 
-        mock_logging.info.assert_any_call(
-            f"Using {adapter} as the Unitree Network Ethernet Adapter"
-        )
+        mock_logging.info.assert_any_call(f"Using {adapter} as the Unitree Network Ethernet Adapter")
         mock_logging.info.assert_any_call("Booting Unitree and CycloneDDS")
 
     @patch("src.runtime.robotics.logging")
@@ -108,10 +98,6 @@ class TestLoadUnitree:
         ):
             load_unitree(adapter)
 
-        mock_logging.info.assert_any_call(
-            f"Using {adapter} as the Unitree Network Ethernet Adapter"
-        )
+        mock_logging.info.assert_any_call(f"Using {adapter} as the Unitree Network Ethernet Adapter")
         mock_logging.info.assert_any_call("Booting Unitree and CycloneDDS")
-        mock_logging.error.assert_called_once_with(
-            f"Failed to initialize Unitree Ethernet channel: {error_msg}"
-        )
+        mock_logging.error.assert_called_once_with(f"Failed to initialize Unitree Ethernet channel: {error_msg}")

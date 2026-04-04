@@ -55,10 +55,7 @@ class MCPOrchestrator:
         ]
         llm.function_schemas = base_schemas + mcp_schemas
 
-        logging.info(
-            f"MCP Orchestrator started with {len(mcp_schemas)} MCP tools, "
-            f"{len(base_schemas)} base tools"
-        )
+        logging.info(f"MCP Orchestrator started with {len(mcp_schemas)} MCP tools, " f"{len(base_schemas)} base tools")
 
     async def execute_mcp_actions(self, actions: list, succeeded_calls: set) -> tuple:
         """Execute MCP actions that haven't succeeded yet.
@@ -81,11 +78,7 @@ class MCPOrchestrator:
         """
         all_mcp_actions = [a for a in actions if self._mcp_client.is_mcp_tool(a.type)]
 
-        mcp_actions = [
-            a
-            for a in all_mcp_actions
-            if self.build_call_signature(a) not in succeeded_calls
-        ]
+        mcp_actions = [a for a in all_mcp_actions if self.build_call_signature(a) not in succeeded_calls]
 
         if not mcp_actions:
             return None, None
@@ -134,9 +127,7 @@ class MCPOrchestrator:
 
         return await asyncio.gather(*(_guarded(a) for a in actions))
 
-    async def _execute_single_tool(
-        self, action: Any, timeout: float = 10.0
-    ) -> ToolResult:
+    async def _execute_single_tool(self, action: Any, timeout: float = 10.0) -> ToolResult:
         """Execute one MCP tool call with a timeout.
 
         Parameters
@@ -153,17 +144,13 @@ class MCPOrchestrator:
         """
         try:
             args = self._parse_arguments(action)
-            content = await asyncio.wait_for(
-                self._mcp_client.call_tool(action.type, args), timeout=timeout
-            )
+            content = await asyncio.wait_for(self._mcp_client.call_tool(action.type, args), timeout=timeout)
             logging.info(f"MCP tool {action.type} returned: {content}")
 
             try:
                 parsed = json.loads(content)
                 if isinstance(parsed, dict) and "error" in parsed:
-                    return ToolResult(
-                        tool_key=action.type, success=False, content=content
-                    )
+                    return ToolResult(tool_key=action.type, success=False, content=content)
             except (json.JSONDecodeError, TypeError):
                 pass
 

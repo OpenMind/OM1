@@ -43,10 +43,7 @@ class TestRtk:
         with caplog.at_level("INFO"):
             Rtk(config)
 
-        assert (
-            "Initiated RTK Provider with serial port: /dev/ttyUSB0 in background"
-            in caplog.text
-        )
+        assert "Initiated RTK Provider with serial port: /dev/ttyUSB0 in background" in caplog.text
 
     @patch("backgrounds.plugins.rtk.RtkProvider")
     def test_initialization_with_none_port_early_return(self, mock_provider_class):

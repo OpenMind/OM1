@@ -466,9 +466,7 @@ def test_stop_with_exceptions():
         patch("inputs.plugins.google_asr.open_zenoh_session") as mock_zenoh,
     ):
         mock_asr_instance = MagicMock()
-        mock_asr_instance.unregister_message_callback.side_effect = Exception(
-            "Unregister failed"
-        )
+        mock_asr_instance.unregister_message_callback.side_effect = Exception("Unregister failed")
         mock_asr_instance.stop.side_effect = Exception("Stop failed")
         mock_asr.return_value = mock_asr_instance
 
@@ -517,10 +515,7 @@ def test_initialization_with_api_version_v1():
         GoogleASRInput(config=config)
 
         call_kwargs = mock_asr.call_args[1]
-        assert (
-            call_kwargs["ws_url"]
-            == "wss://api.openmind.com/api/core/google/asr/v1?api_key=test_key"
-        )
+        assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v1?api_key=test_key"
 
 
 def test_initialization_with_api_version_v2():
@@ -539,10 +534,7 @@ def test_initialization_with_api_version_v2():
         GoogleASRInput(config=config)
 
         call_kwargs = mock_asr.call_args[1]
-        assert (
-            call_kwargs["ws_url"]
-            == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
-        )
+        assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
 
 
 def test_initialization_with_invalid_api_version_defaults_to_v2():
@@ -561,10 +553,7 @@ def test_initialization_with_invalid_api_version_defaults_to_v2():
         GoogleASRInput(config=config)
 
         call_kwargs = mock_asr.call_args[1]
-        assert (
-            call_kwargs["ws_url"]
-            == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
-        )
+        assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
 
 
 def test_initialization_with_alternative_languages_v1():
@@ -632,7 +621,4 @@ def test_initialization_default_api_version_is_v2():
         GoogleASRInput(config=config)
 
         call_kwargs = mock_asr.call_args[1]
-        assert (
-            call_kwargs["ws_url"]
-            == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
-        )
+        assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"

@@ -93,9 +93,7 @@ class ModeStatusRequest(IdlStruct, typename="ModeStatusRequest"):
     header: Header
     request_id: String
     code: int8
-    mode: String = field(
-        default_factory=lambda: String("")
-    )  # Target mode for SWITCH_MODE, ignored for STATUS
+    mode: String = field(default_factory=lambda: String(""))  # Target mode for SWITCH_MODE, ignored for STATUS
 
 
 @dataclass
