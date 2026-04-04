@@ -27,9 +27,7 @@ class WalletCoinbaseConfig(SensorConfig):
     """
 
     asset_id: str = Field(default="eth", description="Asset ID to query")
-    wallet_address: Optional[str] = Field(
-        default=None, description="Wallet address to monitor"
-    )
+    wallet_address: Optional[str] = Field(default=None, description="Wallet address to monitor")
     network: str = Field(default="base", description="Network to use")
 
 
@@ -63,13 +61,9 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
         self.messages: List[Message] = []
 
         self.POLL_INTERVAL = 0.5  # seconds between blockchain data updates
-        self.COINBASE_WALLET_ADDRESS = (
-            self.config.wallet_address or os.environ.get("COINBASE_WALLET_ADDRESS")
-        )
+        self.COINBASE_WALLET_ADDRESS = self.config.wallet_address or os.environ.get("COINBASE_WALLET_ADDRESS")
         if self.COINBASE_WALLET_ADDRESS:
-            logging.info(
-                f"Coinbase wallet address configured: {self.COINBASE_WALLET_ADDRESS}"
-            )
+            logging.info(f"Coinbase wallet address configured: {self.COINBASE_WALLET_ADDRESS}")
         else:
             logging.warning("COINBASE_WALLET_ADDRESS environment variable not set")
 
@@ -78,15 +72,11 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
         API_KEY_SECRET = os.environ.get("CDP_API_KEY_SECRET")
 
         if not API_KEY_ID or not API_KEY_SECRET:
-            logging.error(
-                "CDP_API_KEY_ID and CDP_API_KEY_SECRET environment variables are not set"
-            )
+            logging.error("CDP_API_KEY_ID and CDP_API_KEY_SECRET environment variables are not set")
             self.cdp_client = None
         else:
             try:
-                self.cdp_client = CdpClient(
-                    api_key_id=API_KEY_ID, api_key_secret=API_KEY_SECRET
-                )
+                self.cdp_client = CdpClient(api_key_id=API_KEY_ID, api_key_secret=API_KEY_SECRET)
                 logging.info("CDP Client initialized successfully")
             except Exception as e:
                 logging.error(f"Error initializing CDP Client: {e}")
@@ -97,7 +87,6 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
         self.balance_previous = 0.0
 
         logging.info("Testing: WalletCoinbase: Initialized")
-
 
     async def _fetch_balance(self) -> float:
         """
@@ -126,8 +115,7 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
                     decimals = getattr(balance_item, "decimals", 18)
                     balance_value = float(amount) / (10**decimals)
                     logging.debug(
-                        f"Balance for {self.asset_id}: {balance_value} "
-                        f"(raw: {amount}, decimals: {decimals})"
+                        f"Balance for {self.asset_id}: {balance_value} " f"(raw: {amount}, decimals: {decimals})"
                     )
                     return balance_value
 
@@ -138,9 +126,7 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
             return 0.0
 
         except AttributeError as e:
-            logging.error(
-                f"CDP SDK API structure mismatch. The API may have changed: {e}"
-            )
+            logging.error(f"CDP SDK API structure mismatch. The API may have changed: {e}")
             return 0.0
         except Exception as e:
             logging.error(f"Error fetching token balance: {e}")

@@ -25,9 +25,7 @@ def test_initialization_with_client_init_failure():
     }
     with (
         patch.dict(os.environ, env, clear=True),
-        patch(
-            "inputs.plugins.wallet_coinbase.CdpClient"
-        ) as mock_cdp_client_class,
+        patch("inputs.plugins.wallet_coinbase.CdpClient") as mock_cdp_client_class,
     ):
         mock_cdp_client_class.side_effect = Exception("Network error")
 
@@ -63,9 +61,7 @@ def test_initialization_with_successful_client_init_default_asset():
         assert wallet.balance == 0.0
         assert wallet.balance_previous == 0.0
 
-        mock_cdp_client_class.assert_called_once_with(
-            api_key_id="test_key_id", api_key_secret="test_secret"
-        )
+        mock_cdp_client_class.assert_called_once_with(api_key_id="test_key_id", api_key_secret="test_secret")
 
 
 def test_initialization_with_custom_asset_id():
