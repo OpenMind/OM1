@@ -573,6 +573,8 @@ class ConfigSchemaGenerator:
         if value_node is None:
             return None
         if isinstance(value_node, ast.Constant):
+            if value_node.value is ...:
+                return None
             return value_node.value
         if isinstance(value_node, ast.Call):
             if isinstance(value_node.func, ast.Name) and value_node.func.id == "Field":
