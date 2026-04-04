@@ -3,7 +3,6 @@ import pickle
 from pathlib import Path
 from typing import Any, Union
 
-import faiss
 import numpy as np
 
 from ..base_retriever import BaseRetriever, Document
@@ -33,6 +32,9 @@ class FAISSRetriever(BaseRetriever):
         """
         Load FAISS index and document metadata from disk.
         """
+        # lazy import - must happen after multiprocessing context is set
+        import faiss
+
         if not self.index_path.exists():
             raise FileNotFoundError(f"Index not found: {self.index_path}")
         if not self.metadata_path.exists():

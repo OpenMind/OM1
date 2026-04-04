@@ -1,4 +1,7 @@
-## Docker image
+---
+title: Docker Images
+icon: docker
+---
 
 The video-processor is provided as a Docker image for easy setup.
 ```bash
