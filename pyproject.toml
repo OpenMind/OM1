@@ -24,7 +24,7 @@ dependencies = [
     "deepface==0.0.93",
     "web3==7.6.0",
     "numpy==2.0.2",
-    "cdp-sdk==0.21.0",
+    "cdp-sdk==1.40.0",
     "hid==1.0.6",
     "cv_bridge==1.13.0.post0",
     "torch==2.8.0",
