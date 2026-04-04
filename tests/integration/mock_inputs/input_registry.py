@@ -64,9 +64,7 @@ def register_mock_inputs():
         "inputs.plugins.mock_vlm_openai": {"MockVLM_OpenAI": MockVLM_OpenAI},
         "inputs.plugins.mock_vlm_gemini": {"MockVLM_Gemini": MockVLM_Gemini},
         "inputs.plugins.mock_vlm_vila": {"MockVLM_Vila": MockVLM_Vila},
-        "inputs.plugins.mock_unitree_go2_rplidar": {
-            "MockUnitreeGo2RPLidar": MockUnitreeGo2RPLidar
-        },
+        "inputs.plugins.mock_unitree_go2_rplidar": {"MockUnitreeGo2RPLidar": MockUnitreeGo2RPLidar},
         "inputs.plugins.mock_google_asr": {"MockGoogleASR": MockGoogleASR},
         "inputs.plugins.mock_battery": {"MockUnitreeGo2Battery": MockUnitreeGo2Battery},
         "inputs.plugins.mock_odometry": {"MockUnitreeGo2Odom": MockUnitreeGo2Odom},

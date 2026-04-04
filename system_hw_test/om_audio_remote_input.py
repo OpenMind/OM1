@@ -15,9 +15,7 @@ from typing import Optional
 import pyaudio
 from om1_utils import ws
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 OM_API_KEY = os.environ.get("OM_API_KEY", None)
 if not OM_API_KEY:
@@ -75,9 +73,7 @@ class RemoteAudioInput:
         device: Optional[int] = None,
         device_name: str = None,
     ):
-        self.ws_client: ws.Client = ws.Client(
-            url=f"wss://api.openmind.com/api/core/teleops/audio?api_key={OM_API_KEY}"
-        )
+        self.ws_client: ws.Client = ws.Client(url=f"wss://api.openmind.com/api/core/teleops/audio?api_key={OM_API_KEY}")
         self.ws_client.start()
 
         self._rate = rate
@@ -98,12 +94,8 @@ class RemoteAudioInput:
             logging.info(f"Found {device_count} audio devices")
 
             if self._device is not None:
-                input_device = self._audio_interface.get_device_info_by_index(
-                    self._device
-                )
-                logging.info(
-                    f"Selected input device: {input_device['name']} ({self._device})"
-                )
+                input_device = self._audio_interface.get_device_info_by_index(self._device)
+                logging.info(f"Selected input device: {input_device['name']} ({self._device})")
                 if input_device["maxInputChannels"] == 0:
                     logging.warning(
                         f"Selected input device does not advertise input channels: {input_device['name']} ({self._device})"
@@ -125,16 +117,12 @@ class RemoteAudioInput:
             else:
                 input_device = self._audio_interface.get_default_input_device_info()
                 self._device = input_device["index"]
-                logging.info(
-                    f"Default input device: {input_device['name']} ({self._device})"
-                )
+                logging.info(f"Default input device: {input_device['name']} ({self._device})")
 
             if input_device is None:
                 raise ValueError("No input device found")
 
-            logging.info(
-                f"Selected input device: {input_device['name']} ({self._device})"
-            )
+            logging.info(f"Selected input device: {input_device['name']} ({self._device})")
 
             if rate is None:
                 self._rate = int(input_device.get("defaultSampleRate", 16000))
@@ -145,15 +133,11 @@ class RemoteAudioInput:
 
             if chunk is None:
                 self._chunk = int(self._rate * 0.2)  # ~200ms of audio
-                logging.info(
-                    f"Using calculated chunk size: {self._chunk} frames (~200ms)"
-                )
+                logging.info(f"Using calculated chunk size: {self._chunk} frames (~200ms)")
             else:
                 self._chunk = chunk
                 chunk_duration_ms = (self._chunk / self._rate) * 1000
-                logging.info(
-                    f"Using specified chunk size: {self._chunk} frames (~{chunk_duration_ms:.1f}ms)"
-                )
+                logging.info(f"Using specified chunk size: {self._chunk} frames (~{chunk_duration_ms:.1f}ms)")
 
         except Exception as e:
             logging.error(f"Error initializing audio input: {e}")
@@ -222,9 +206,7 @@ class RemoteAudioInput:
         """
         if self.ws_client.is_connected():
             encode_audio = base64.b64encode(in_data).decode("utf-8")
-            audio_input = AudioInput(
-                audio=encode_audio, rate=self._rate, language_code="en-US"
-            )
+            audio_input = AudioInput(audio=encode_audio, rate=self._rate, language_code="en-US")
             self.ws_client.send_message(json.dumps(audio_input.to_dict()))
         return None, pyaudio.paContinue
 

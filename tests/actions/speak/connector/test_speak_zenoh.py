@@ -45,9 +45,7 @@ class TestSpeakZenohConnector:
         """Test connect queues the speak message via publisher."""
         speak_input = SpeakInput(action="Hello from Zenoh!")
         await connector.connect(speak_input)
-        mock_publisher["instance"].add_pending_message.assert_called_once_with(
-            "Hello from Zenoh!"
-        )
+        mock_publisher["instance"].add_pending_message.assert_called_once_with("Hello from Zenoh!")
 
     @pytest.mark.asyncio
     async def test_connect_empty_message(self, connector, mock_publisher):

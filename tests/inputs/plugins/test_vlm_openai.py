@@ -45,9 +45,7 @@ def test_formatted_latest_buffer():
         result = sensor.formatted_latest_buffer()
         assert result is None
 
-        test_message = Message(
-            timestamp=123.456, message="I see a person sitting at a desk"
-        )
+        test_message = Message(timestamp=123.456, message="I see a person sitting at a desk")
         sensor.messages.append(test_message)
 
         result = sensor.formatted_latest_buffer()

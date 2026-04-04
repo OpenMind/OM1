@@ -55,9 +55,7 @@ def mock_llm_classes():
 
 @pytest.fixture
 def dual_llm(mock_llm_classes):
-    config = DualLLMConfig(
-        local_llm_type="MockLocal", cloud_llm_type="MockCloud", api_key="test_key"
-    )
+    config = DualLLMConfig(local_llm_type="MockLocal", cloud_llm_type="MockCloud", api_key="test_key")
     mock_client = MagicMock()
     mock_client.aclose = AsyncMock()
 
@@ -170,9 +168,7 @@ async def test_race_both_fast_both_functions_eval(dual_llm):
 
     mock_eval_response = MagicMock()
     mock_eval_response.choices = [MagicMock(message=MagicMock(content="B"))]
-    dual_llm._eval_client.chat.completions.create = AsyncMock(
-        return_value=mock_eval_response
-    )
+    dual_llm._eval_client.chat.completions.create = AsyncMock(return_value=mock_eval_response)
 
     response = await dual_llm.ask("test prompt")
 

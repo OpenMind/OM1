@@ -74,9 +74,7 @@ def test_major_version_mismatch_error_details():
     """Test that we can verify the specific major version error handling."""
     with patch("runtime.version.latest_runtime_version", "v1.0.0"):
         with patch("runtime.version.is_version_supported") as mock_is_version:
-            mock_is_version.side_effect = ValueError(
-                "Major version mismatch: expected 1, got 2"
-            )
+            mock_is_version.side_effect = ValueError("Major version mismatch: expected 1, got 2")
 
             with pytest.raises(ValueError, match="Major version mismatch"):
                 mock_is_version("v2.0.0")
@@ -172,9 +170,7 @@ def test_verify_major_version_mismatch_raises_error(caplog):
     """Test that major version mismatch raises ValueError."""
     with patch("runtime.version.latest_runtime_version", "v1.0.0"):
         with caplog.at_level(logging.ERROR):
-            with pytest.raises(
-                ValueError, match="is incompatible with runtime version"
-            ):
+            with pytest.raises(ValueError, match="is incompatible with runtime version"):
                 verify_runtime_version("v2.0.0", "test_config")
             assert "Version compatibility check failed for test_config" in caplog.text
 
@@ -220,10 +216,7 @@ def test_verify_unexpected_error_handling(mock_is_version_supported, caplog):
     with caplog.at_level(logging.ERROR):
         with pytest.raises(RuntimeError, match="Unexpected error"):
             verify_runtime_version("v1.0.0", "test_config")
-        assert (
-            "Unexpected error during version verification for test_config"
-            in caplog.text
-        )
+        assert "Unexpected error during version verification for test_config" in caplog.text
 
 
 def test_verify_logs_contain_correct_versions(caplog):
@@ -237,10 +230,7 @@ def test_verify_logs_contain_correct_versions(caplog):
             log_messages = [record.message for record in caplog.records]
 
             # Check that both versions are logged
-            assert any(
-                "Loading test_config with version: v1.0.0" in msg
-                for msg in log_messages
-            )
+            assert any("Loading test_config with version: v1.0.0" in msg for msg in log_messages)
             assert any("Runtime version: v1.0.0" in msg for msg in log_messages)
 
 

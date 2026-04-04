@@ -39,9 +39,7 @@ class RtkProvider:
 
         self.serial_connection = None
         try:
-            self.serial_connection = serial.Serial(
-                serial_port, baudrate, timeout=timeout
-            )
+            self.serial_connection = serial.Serial(serial_port, baudrate, timeout=timeout)
             self.serial_connection.reset_input_buffer()
             logging.info(f"Connected to {serial_port} at {baudrate} baud")
         except serial.SerialException as e:
@@ -82,9 +80,7 @@ class RtkProvider:
         local_date = datetime.date.today()
 
         # Combine local date with provided UTC time
-        dt = datetime.datetime.combine(local_date, utc_time_obj).replace(
-            tzinfo=datetime.timezone.utc
-        )
+        dt = datetime.datetime.combine(local_date, utc_time_obj).replace(tzinfo=datetime.timezone.utc)
 
         # Convert to Unix timestamp
         return dt.timestamp()
@@ -98,9 +94,7 @@ class RtkProvider:
         nmea_data : str
             The block of NMEA data as a string.
         """
-        pattern = re.compile(
-            r"(\$GNGGA,(?P<time>\d{6}(?:\.\d+)?),[^*]*\*[0-9A-Fa-f]{2})", re.MULTILINE
-        )
+        pattern = re.compile(r"(\$GNGGA,(?P<time>\d{6}(?:\.\d+)?),[^*]*\*[0-9A-Fa-f]{2})", re.MULTILINE)
 
         gngga_entries = []
 

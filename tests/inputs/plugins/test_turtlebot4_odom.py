@@ -16,10 +16,7 @@ def test_initialization():
         sensor = Turtlebot4Odom(config=config)
 
         assert sensor.messages == []
-        assert (
-            "location" in sensor.descriptor_for_LLM.lower()
-            or "pose" in sensor.descriptor_for_LLM.lower()
-        )
+        assert "location" in sensor.descriptor_for_LLM.lower() or "pose" in sensor.descriptor_for_LLM.lower()
 
 
 def test_initialization_with_urid():
@@ -50,9 +47,7 @@ def test_initialization_with_none_urid():
 async def test_poll_with_position_data():
     """Test _poll with position data available."""
     with (
-        patch(
-            "inputs.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class,
         patch("inputs.plugins.turtlebot4_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -72,9 +67,7 @@ async def test_poll_with_position_data():
 async def test_poll_with_no_data():
     """Test _poll when no position data available."""
     with (
-        patch(
-            "inputs.plugins.turtlebot4_odom.TurtleBot4OdomProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.turtlebot4_odom.TurtleBot4OdomProvider") as mock_provider_class,
         patch("inputs.plugins.turtlebot4_odom.IOProvider"),
     ):
         mock_provider = MagicMock()

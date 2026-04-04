@@ -39,18 +39,14 @@ def test_formatted_latest_buffer():
         patch("inputs.plugins.simple_paths.IOProvider"),
         patch("inputs.plugins.simple_paths.SimplePathsProvider") as mock_rplidar,
     ):
-        mock_rplidar.return_value.lidar_string = (
-            "Hello from RPLidar: objects and walls detected."
-        )
+        mock_rplidar.return_value.lidar_string = "Hello from RPLidar: objects and walls detected."
         config = SensorConfig()
         sensor = SimplePaths(config=config)
 
         result = sensor.formatted_latest_buffer()
         assert result is None
 
-        test_message = Message(
-            timestamp=123.456, message="Wall detected at 0.5m ahead, clear path on left"
-        )
+        test_message = Message(timestamp=123.456, message="Wall detected at 0.5m ahead, clear path on left")
         sensor.messages.append(test_message)
 
         result = sensor.formatted_latest_buffer()

@@ -29,9 +29,7 @@ class ConfigSchemaGenerator:
         self.backgrounds_dir = os.path.join(self.src_dir, "backgrounds/plugins")
         self.actions_dir = os.path.join(self.src_dir, "actions")
         self.hooks_dir = os.path.join(self.src_dir, "hooks")
-        self.schema_path = os.path.join(
-            root_dir, "config/schema/multi_mode_schema.json"
-        )
+        self.schema_path = os.path.join(root_dir, "config/schema/multi_mode_schema.json")
 
     def generate(self) -> str:
         """Generate complete configuration schema and save to JSON5 file.
@@ -100,11 +98,7 @@ class ConfigSchemaGenerator:
                             sensor_node = node
 
                 if sensor_node:
-                    fields = (
-                        self._parse_pydantic_fields_from_node(config_node)
-                        if config_node
-                        else []
-                    )
+                    fields = self._parse_pydantic_fields_from_node(config_node) if config_node else []
 
                     results.append(
                         {
@@ -195,11 +189,7 @@ class ConfigSchemaGenerator:
                             background_node = node
 
                 if background_node:
-                    fields = (
-                        self._parse_pydantic_fields_from_node(config_node)
-                        if config_node
-                        else []
-                    )
+                    fields = self._parse_pydantic_fields_from_node(config_node) if config_node else []
 
                     results.append(
                         {
@@ -257,11 +247,7 @@ class ConfigSchemaGenerator:
                             fields = []
 
                         connector = os.path.basename(filepath)[:-3]
-                        type_name = (
-                            action_name
-                            if connector == "default"
-                            else f"{action_name}_{connector}"
-                        )
+                        type_name = action_name if connector == "default" else f"{action_name}_{connector}"
 
                         results.append(
                             {
@@ -308,9 +294,7 @@ class ConfigSchemaGenerator:
             with open(self.schema_path, "r") as f:
                 schema = json.load(f)
 
-            hooks_schema = schema.get("properties", {}).get(
-                "global_lifecycle_hooks", {}
-            )
+            hooks_schema = schema.get("properties", {}).get("global_lifecycle_hooks", {})
             if hooks_schema:
                 return hooks_schema.get("items", {}).get("properties", {})
             return {}
@@ -335,11 +319,7 @@ class ConfigSchemaGenerator:
                 module_name = os.path.basename(filepath)[:-3]
                 tree = ast.parse(open(filepath, "r", encoding="utf-8").read())
 
-                functions = [
-                    node.name
-                    for node in tree.body
-                    if isinstance(node, ast.AsyncFunctionDef)
-                ]
+                functions = [node.name for node in tree.body if isinstance(node, ast.AsyncFunctionDef)]
 
                 if functions:
                     results.append({"module_name": module_name, "functions": functions})
@@ -398,11 +378,7 @@ class ConfigSchemaGenerator:
         List[str]
             List of absolute paths to Python files.
         """
-        return [
-            os.path.join(directory, f)
-            for f in os.listdir(directory)
-            if f.endswith(".py") and f != "__init__.py"
-        ]
+        return [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".py") and f != "__init__.py"]
 
     def _extends(self, node: ast.ClassDef, base_classes: List[str]) -> bool:
         """Check if a class extends any of the specified base classes.
@@ -448,9 +424,7 @@ class ConfigSchemaGenerator:
                     return True
         return False
 
-    def _parse_pydantic_class(
-        self, class_name: str, file_path: str
-    ) -> List[Dict[str, Any]]:
+    def _parse_pydantic_class(self, class_name: str, file_path: str) -> List[Dict[str, Any]]:
         """Extract fields from a Pydantic BaseModel class definition.
 
         Parameters
@@ -477,9 +451,7 @@ class ConfigSchemaGenerator:
             logging.error(f"Error parsing Pydantic class: {e}")
         return []
 
-    def _parse_pydantic_fields_from_node(
-        self, node: ast.ClassDef
-    ) -> List[Dict[str, Any]]:
+    def _parse_pydantic_fields_from_node(self, node: ast.ClassDef) -> List[Dict[str, Any]]:
         """Extract fields from a Pydantic ClassDef node.
 
         Parameters
@@ -494,9 +466,7 @@ class ConfigSchemaGenerator:
         """
         fields = []
         for item in node.body:
-            if not (
-                isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name)
-            ):
+            if not (isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name)):
                 continue
 
             name = item.target.id
@@ -515,9 +485,7 @@ class ConfigSchemaGenerator:
                     and item.value.func.id == "Field"
                 ):
                     for keyword in item.value.keywords:
-                        if keyword.arg == "description" and isinstance(
-                            keyword.value, ast.Constant
-                        ):
+                        if keyword.arg == "description" and isinstance(keyword.value, ast.Constant):
                             description = keyword.value.value
             else:
                 default = None

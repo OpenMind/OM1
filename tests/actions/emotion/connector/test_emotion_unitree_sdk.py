@@ -89,9 +89,7 @@ class TestEmotionUnitreeConnectorConnect:
         """Test sad emotion sets yellow LED."""
         emotion_input = EmotionInput(action=EmotionAction.SAD)
         await connector_with_client.connect(emotion_input)
-        connector_with_client.ao_client.LedControlNoReply.assert_called_with(
-            255, 255, 0
-        )
+        connector_with_client.ao_client.LedControlNoReply.assert_called_with(255, 255, 0)
 
     @pytest.mark.asyncio
     async def test_connect_mad(self, connector_with_client):

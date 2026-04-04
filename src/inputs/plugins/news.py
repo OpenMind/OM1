@@ -36,9 +36,7 @@ class NewsConfig(SensorConfig):
     category: str = Field(default="general", description="News category")
     query: str = Field(default="", description="Optional search query")
     max_headlines: int = Field(default=5, description="Maximum headlines to return")
-    poll_interval: float = Field(
-        default=900.0, description="Seconds between news updates"
-    )
+    poll_interval: float = Field(default=900.0, description="Seconds between news updates")
 
 
 class NewsInput(FuserInput[NewsConfig, Optional[dict]]):
@@ -106,20 +104,14 @@ class NewsInput(FuserInput[NewsConfig, Optional[dict]]):
                     if response.status == 200:
                         data = await response.json()
                         if data.get("status") == "ok":
-                            logging.debug(
-                                f"NewsInput: Fetched {len(data.get('articles', []))} articles"
-                            )
+                            logging.debug(f"NewsInput: Fetched {len(data.get('articles', []))} articles")
                             return data
                         else:
-                            logging.error(
-                                f"NewsInput: API error: {data.get('message')}"
-                            )
+                            logging.error(f"NewsInput: API error: {data.get('message')}")
                             return None
                     else:
                         error_text = await response.text()
-                        logging.error(
-                            f"NewsInput: API error {response.status}: {error_text}"
-                        )
+                        logging.error(f"NewsInput: API error {response.status}: {error_text}")
                         return None
         except asyncio.TimeoutError:
             logging.error("NewsInput: Request timed out")
@@ -218,14 +210,9 @@ class NewsInput(FuserInput[NewsConfig, Optional[dict]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

@@ -140,9 +140,7 @@ class TestElevenLabsTTS:
         call_order = []
         mock_provider = MagicMock()
         mock_provider.start.side_effect = lambda: call_order.append("start")
-        mock_provider.configure.side_effect = lambda **kwargs: call_order.append(
-            "configure"
-        )
+        mock_provider.configure.side_effect = lambda **kwargs: call_order.append("configure")
         mock_provider_class.return_value = mock_provider
 
         config = ElevenLabsTTSConfig()

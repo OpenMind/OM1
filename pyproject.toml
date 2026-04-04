@@ -102,7 +102,7 @@ show_missing = true
 skip_covered = false
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ["py312"]
 include = '\.pyi?$'
 exclude = "(.venv)|(/src/unitree)|(/src/ubtech)"
@@ -110,12 +110,12 @@ exclude = "(.venv)|(/src/unitree)|(/src/ubtech)"
 [tool.isort]
 profile = "black"
 multi_line_output = 3
-line_length = 88
+line_length = 120
 sources = ["src", "tests"]
 skip_glob = [".venv*", "/src/unitree", "/src/ubtech"]
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 indent-width = 4
 src = ["src"]
 exclude = ["src/unitree", "src/ubtech"]

@@ -37,9 +37,7 @@ class LLMSpecConfig(BaseModel):
     """
 
     llm_type: str = Field(..., description="Class name of the LLM")
-    llm_config: LLMConfig = Field(
-        default_factory=LLMConfig, description="Configuration for the LLM"
-    )
+    llm_config: LLMConfig = Field(default_factory=LLMConfig, description="Configuration for the LLM")
     action_filter: T.Optional[T.List[str]] = Field(
         default=None,
         description="List of action llm_labels this LLM can generate. "
@@ -62,9 +60,7 @@ class ParallelLLMConfig(LLMConfig):
         Default is True for streaming.
     """
 
-    llms: T.List[LLMSpecConfig] = Field(
-        ..., description="List of LLM specifications to run in parallel"
-    )
+    llms: T.List[LLMSpecConfig] = Field(..., description="List of LLM specifications to run in parallel")
     execute_immediately: bool = Field(
         default=True,
         description="Process results as each LLM completes (streaming mode)",
@@ -164,9 +160,7 @@ class ParallelLLM(LLM[R]):
             filtered_actions = available_actions
             if llm_spec.action_filter and available_actions:
                 filtered_actions = [
-                    action
-                    for action in available_actions
-                    if action.llm_label in llm_spec.action_filter
+                    action for action in available_actions if action.llm_label in llm_spec.action_filter
                 ]
                 logging.info(
                     f"Filtered function schemas for {llm_type}: "
@@ -174,13 +168,9 @@ class ParallelLLM(LLM[R]):
                     f"(excluded {len(available_actions) - len(filtered_actions)} actions)"
                 )
             elif available_actions:
-                logging.info(
-                    f"No filter for {llm_type}, using all {len(available_actions)} actions"
-                )
+                logging.info(f"No filter for {llm_type}, using all {len(available_actions)} actions")
 
-            llm_instance: LLM = LLMClass(
-                config=llm_cfg, available_actions=filtered_actions
-            )
+            llm_instance: LLM = LLMClass(config=llm_cfg, available_actions=filtered_actions)
 
             self._llms.append((llm_instance, llm_spec.action_filter))
 
@@ -238,9 +228,7 @@ class ParallelLLM(LLM[R]):
             # Safety check: Filter actions in case LLM somehow generated actions
             # outside its function schema (shouldn't happen, but validate anyway)
             if result and hasattr(result, "actions") and action_filter:
-                filtered_actions = [
-                    action for action in result.actions if action.type in action_filter
-                ]
+                filtered_actions = [action for action in result.actions if action.type in action_filter]
                 if len(filtered_actions) != len(result.actions):
                     logging.warning(
                         f"{llm_name} generated {len(result.actions) - len(filtered_actions)} "
@@ -318,19 +306,13 @@ class ParallelLLM(LLM[R]):
 
             for idx, (llm, action_filter) in enumerate(self._llms):
                 llm_name = f"{llm.__class__.__name__}_{idx}"
-                task = asyncio.create_task(
-                    self._call_llm(llm, prompt, llm_name, action_filter)
-                )
+                task = asyncio.create_task(self._call_llm(llm, prompt, llm_name, action_filter))
                 tasks.append(task)
 
             for coro in asyncio.as_completed(tasks):
                 try:
                     result = await coro
-                    if (
-                        result
-                        and not isinstance(result, Exception)
-                        and result["result"]
-                    ):
+                    if result and not isinstance(result, Exception) and result["result"]:
                         actions = result["result"].actions
                         if actions:
                             logging.info(
@@ -340,10 +322,7 @@ class ParallelLLM(LLM[R]):
                             )
                             yield T.cast(R, result["result"])
                         else:
-                            logging.info(
-                                f"{result['llm_name']} completed in "
-                                f"{result['time']:.3f}s with no actions"
-                            )
+                            logging.info(f"{result['llm_name']} completed in " f"{result['time']:.3f}s with no actions")
                 except Exception:
                     logging.exception("LLM task raised exception during streaming")
 
@@ -360,9 +339,7 @@ class ParallelLLM(LLM[R]):
                     task.cancel()
 
     @AvatarLLMState.trigger_thinking()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
-    ) -> R | None:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None) -> R | None:
         """
         Send prompt to all configured LLMs in parallel and collect actions as they complete.
 
@@ -392,9 +369,7 @@ class ParallelLLM(LLM[R]):
             tasks = []
             for idx, (llm, action_filter) in enumerate(self._llms):
                 llm_name = f"{llm.__class__.__name__}_{idx}"
-                task = asyncio.create_task(
-                    self._call_llm(llm, prompt, llm_name, action_filter)
-                )
+                task = asyncio.create_task(self._call_llm(llm, prompt, llm_name, action_filter))
                 tasks.append(task)
 
             all_results = []
@@ -407,9 +382,7 @@ class ParallelLLM(LLM[R]):
                         if result and not isinstance(result, Exception):
                             all_results.append(result)
 
-                            if result["result"] and hasattr(
-                                result["result"], "actions"
-                            ):
+                            if result["result"] and hasattr(result["result"], "actions"):
                                 actions = result["result"].actions
                                 if actions:
                                     logging.info(
@@ -419,8 +392,7 @@ class ParallelLLM(LLM[R]):
                                     )
                                 else:
                                     logging.info(
-                                        f"{result['llm_name']} completed in "
-                                        f"{result['time']:.3f}s with no actions"
+                                        f"{result['llm_name']} completed in " f"{result['time']:.3f}s with no actions"
                                     )
                     except Exception as e:
                         logging.error(f"LLM task raised exception: {e}")
@@ -436,9 +408,7 @@ class ParallelLLM(LLM[R]):
                         all_results.append(result)
 
                 for result in all_results:
-                    logging.info(
-                        f"{result['llm_name']} completed in {result['time']:.3f}s"
-                    )
+                    logging.info(f"{result['llm_name']} completed in {result['time']:.3f}s")
 
             if not all_results:
                 logging.warning("All LLMs failed or returned no results")

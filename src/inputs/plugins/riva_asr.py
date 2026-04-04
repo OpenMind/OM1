@@ -41,13 +41,9 @@ class RivaASRSensorConfig(SensorConfig):
     api_key: Optional[str] = Field(default=None, description="API Key")
     rate: int = Field(default=48000, description="Sampling rate")
     chunk: int = Field(default=12144, description="Chunk size")
-    base_url: str = Field(
-        default="wss://api-asr.openmind.com", description="Base URL for the ASR service"
-    )
+    base_url: str = Field(default="wss://api-asr.openmind.com", description="Base URL for the ASR service")
     stream_base_url: Optional[str] = Field(default=None, description="Stream Base URL")
-    microphone_device_id: Optional[int] = Field(
-        default=None, description="Microphone Device ID"
-    )
+    microphone_device_id: Optional[int] = Field(default=None, description="Microphone Device ID")
     microphone_name: Optional[str] = Field(default=None, description="Microphone Name")
     remote_input: bool = Field(default=False, description="Whether to use remote input")
     enable_tts_interrupt: bool = Field(
@@ -225,9 +221,7 @@ class RivaASRInput(FuserInput[RivaASRSensorConfig, Optional[str]]):
 {self.descriptor_for_LLM}: "{self.messages[-1]}"
 """
         # Add to IO provider and conversation provider
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1], time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1], time.time())
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
 

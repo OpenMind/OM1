@@ -26,9 +26,7 @@ def io_provider():
 def test_add_input_with_timestamp(io_provider):
     timestamp = time.time()
     io_provider.add_input("key1", "value1", timestamp)
-    assert io_provider.inputs["key1"] == Input(
-        input="value1", timestamp=timestamp, tick=0
-    )
+    assert io_provider.inputs["key1"] == Input(input="value1", timestamp=timestamp, tick=0)
 
 
 def test_remove_input(io_provider):

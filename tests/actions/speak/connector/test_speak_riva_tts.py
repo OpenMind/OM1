@@ -200,9 +200,7 @@ class TestSpeakRivaTTSConnector:
 
     def test_init_zenoh_failure(self, default_config, common_mocks):
         """Test initialization when Zenoh session fails to open."""
-        common_mocks["open_zenoh_session"].side_effect = Exception(
-            "Zenoh connection failed"
-        )
+        common_mocks["open_zenoh_session"].side_effect = Exception("Zenoh connection failed")
 
         connector = SpeakRivaTTSConnector(default_config)
 
@@ -223,19 +221,13 @@ class TestConnect:
 
         await connector.connect(speak_input)
 
-        common_mocks[
-            "tts_instance"
-        ].register_tts_state_callback.assert_called_once_with(
+        common_mocks["tts_instance"].register_tts_state_callback.assert_called_once_with(
             common_mocks["asr_instance"].audio_stream.on_tts_state_change
         )
-        common_mocks["tts_instance"].add_pending_message.assert_called_once_with(
-            "Hello, world!"
-        )
+        common_mocks["tts_instance"].add_pending_message.assert_called_once_with("Hello, world!")
 
     @pytest.mark.asyncio
-    async def test_connect_tts_disabled(
-        self, default_config, common_mocks, speak_input
-    ):
+    async def test_connect_tts_disabled(self, default_config, common_mocks, speak_input):
         """Test connect method when TTS is disabled."""
         connector = SpeakRivaTTSConnector(default_config)
         connector.tts_enabled = False
@@ -273,9 +265,7 @@ class TestZenohTTSStatusRequest:
         tts_status = create_tts_status_mock(code)
 
         with (
-            patch(
-                "actions.speak.connector.riva_tts.TTSStatusRequest"
-            ) as mock_request_class,
+            patch("actions.speak.connector.riva_tts.TTSStatusRequest") as mock_request_class,
             patch("actions.speak.connector.riva_tts.TTSStatusResponse"),
         ):
             mock_request_class.deserialize.return_value = tts_status
@@ -295,9 +285,7 @@ class TestZenohTTSStatusRequest:
         tts_status = create_tts_status_mock(2)
 
         with (
-            patch(
-                "actions.speak.connector.riva_tts.TTSStatusRequest"
-            ) as mock_request_class,
+            patch("actions.speak.connector.riva_tts.TTSStatusRequest") as mock_request_class,
             patch("actions.speak.connector.riva_tts.TTSStatusResponse"),
         ):
             mock_request_class.deserialize.return_value = tts_status

@@ -6,9 +6,7 @@ from typing import Optional
 from actions.base import ActionConfig, ActionConnector, AgentAction, Interface
 
 
-def describe_action(
-    action_name: str, llm_label: str, exclude_from_prompt: bool
-) -> Optional[str]:
+def describe_action(action_name: str, llm_label: str, exclude_from_prompt: bool) -> Optional[str]:
     """
     Generate a description of the action for use in prompts.
 
@@ -47,9 +45,7 @@ def describe_action(
     hints = {}
     input_interface = T.get_type_hints(interface)["input"]
     for field_name, field_type in T.get_type_hints(input_interface).items():
-        if hasattr(field_type, "__origin__") and isinstance(
-            field_type.__origin__, type
-        ):
+        if hasattr(field_type, "__origin__") and isinstance(field_type.__origin__, type):
             # Handle generic types
             hints[field_name] = str(field_type)
         elif isinstance(field_type, type) and issubclass(field_type, Enum):
@@ -94,20 +90,14 @@ def load_action(
     if interface is None:
         raise ValueError(f"No interface found for action {action_config['name']}")
 
-    connector = importlib.import_module(
-        f"actions.{action_config['name']}.connector.{action_config['connector']}"
-    )
+    connector = importlib.import_module(f"actions.{action_config['name']}.connector.{action_config['connector']}")
 
     connector_class = None
     config_class = None
     for obj in connector.__dict__.values():
         if isinstance(obj, type) and issubclass(obj, ActionConnector):
             connector_class = obj
-        if (
-            isinstance(obj, type)
-            and issubclass(obj, ActionConfig)
-            and obj != ActionConfig
-        ):
+        if isinstance(obj, type) and issubclass(obj, ActionConfig) and obj != ActionConfig:
             config_class = obj
 
     if connector_class is None:

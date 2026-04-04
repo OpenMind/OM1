@@ -36,9 +36,7 @@ def find_module_with_class(class_name: str) -> T.Optional[str]:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            pattern = (
-                rf"^class\s+{re.escape(class_name)}\s*\([^)]*FuserInput[^)]*\)\s*:"
-            )
+            pattern = rf"^class\s+{re.escape(class_name)}\s*\([^)]*FuserInput[^)]*\)\s*:"
 
             if re.search(pattern, content, re.MULTILINE):
                 return plugin_file[:-3]
@@ -73,31 +71,19 @@ def load_input(input_config: T.Dict[str, T.Any]) -> Sensor:
         module = importlib.import_module(f"inputs.plugins.{module_name}")
         input_class = getattr(module, class_name)
 
-        if not (
-            inspect.isclass(input_class)
-            and issubclass(input_class, Sensor)
-            and input_class != Sensor
-        ):
+        if not (inspect.isclass(input_class) and issubclass(input_class, Sensor) and input_class != Sensor):
             raise ValueError(f"'{class_name}' is not a valid input subclass")
 
         config_class = None
         for obj in module.__dict__.values():
-            if (
-                isinstance(obj, type)
-                and issubclass(obj, SensorConfig)
-                and obj != SensorConfig
-            ):
+            if isinstance(obj, type) and issubclass(obj, SensorConfig) and obj != SensorConfig:
                 config_class = obj
 
         config_dict = input_config.get("config", {})
         if config_class is not None:
-            config = config_class(
-                **(config_dict if isinstance(config_dict, dict) else {})
-            )
+            config = config_class(**(config_dict if isinstance(config_dict, dict) else {}))
         else:
-            config = SensorConfig(
-                **(config_dict if isinstance(config_dict, dict) else {})
-            )
+            config = SensorConfig(**(config_dict if isinstance(config_dict, dict) else {}))
 
         logging.debug(f"Loaded input {class_name} from {module_name}.py")
         return input_class(config=config)
@@ -105,6 +91,4 @@ def load_input(input_config: T.Dict[str, T.Any]) -> Sensor:
     except ImportError as e:
         raise ValueError(f"Could not import input module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in input module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in input module '{module_name}'")

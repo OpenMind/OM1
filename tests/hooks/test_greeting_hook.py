@@ -49,9 +49,7 @@ class TestGeetingEndHookContext:
 
     def test_context_extra_fields_allowed(self):
         """Test that extra fields are allowed in the context."""
-        context = GeetingEndHookContext(
-            message="Test", extra_field="extra_value"  # type: ignore
-        )
+        context = GeetingEndHookContext(message="Test", extra_field="extra_value")  # type: ignore
         # Should not raise an error due to Config.extra = "allow"
         assert context.message == "Test"
 
@@ -104,9 +102,7 @@ class TestGeetingEndHook:
     """Tests for geeting_end_hook function."""
 
     @pytest.mark.asyncio
-    async def test_hook_with_elevenlabs_default_params(
-        self, mock_elevenlabs_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_with_elevenlabs_default_params(self, mock_elevenlabs_provider, mock_greeting_state_provider):
         """Test hook with ElevenLabs provider and default parameters."""
         context = {"tts_provider": "elevenlabs"}
         mock_greeting_state_provider.turn_count = 3
@@ -114,9 +110,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -125,9 +119,7 @@ class TestGeetingEndHook:
 
             mock_provider_class.assert_called_once()
             call_kwargs = mock_provider_class.call_args[1]
-            assert (
-                call_kwargs["url"] == "https://api.openmind.com/api/core/elevenlabs/tts"
-            )
+            assert call_kwargs["url"] == "https://api.openmind.com/api/core/elevenlabs/tts"
             assert call_kwargs["voice_id"] == "JBFqnCBsd6RMkjVDRZzb"
             assert call_kwargs["model_id"] == "eleven_flash_v2_5"
             assert call_kwargs["output_format"] == "pcm_16000"
@@ -140,9 +132,7 @@ class TestGeetingEndHook:
             assert "nice talking with you" in message.lower()
 
     @pytest.mark.asyncio
-    async def test_hook_with_elevenlabs_custom_params(
-        self, mock_elevenlabs_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_with_elevenlabs_custom_params(self, mock_elevenlabs_provider, mock_greeting_state_provider):
         """Test hook with ElevenLabs provider and custom parameters."""
         context = {
             "tts_provider": "elevenlabs",
@@ -160,9 +150,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -180,9 +168,7 @@ class TestGeetingEndHook:
             assert call_kwargs["enable_tts_interrupt"] is True
 
     @pytest.mark.asyncio
-    async def test_hook_with_kokoro_default_params(
-        self, mock_kokoro_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_with_kokoro_default_params(self, mock_kokoro_provider, mock_greeting_state_provider):
         """Test hook with Kokoro provider and default parameters."""
         context = {"tts_provider": "kokoro"}
         mock_greeting_state_provider.turn_count = 2
@@ -190,9 +176,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.KokoroTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -211,9 +195,7 @@ class TestGeetingEndHook:
             mock_kokoro_provider.add_pending_message.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_hook_with_kokoro_custom_params(
-        self, mock_kokoro_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_with_kokoro_custom_params(self, mock_kokoro_provider, mock_greeting_state_provider):
         """Test hook with Kokoro provider and custom parameters."""
         context = {
             "tts_provider": "Kokoro",  # Test case-insensitive
@@ -229,9 +211,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.KokoroTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -248,9 +228,7 @@ class TestGeetingEndHook:
             assert call_kwargs["enable_tts_interrupt"] is True
 
     @pytest.mark.asyncio
-    async def test_hook_with_riva_default_params(
-        self, mock_riva_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_with_riva_default_params(self, mock_riva_provider, mock_greeting_state_provider):
         """Test hook with Riva provider and default parameters."""
         context = {"tts_provider": "riva"}
         mock_greeting_state_provider.turn_count = 1
@@ -258,9 +236,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.RivaTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -274,9 +250,7 @@ class TestGeetingEndHook:
             mock_riva_provider.add_pending_message.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_hook_with_riva_custom_params(
-        self, mock_riva_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_with_riva_custom_params(self, mock_riva_provider, mock_greeting_state_provider):
         """Test hook with Riva provider and custom parameters."""
         context = {
             "tts_provider": "RIVA",  # Test case-insensitive
@@ -287,9 +261,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.RivaTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -301,9 +273,7 @@ class TestGeetingEndHook:
             assert call_kwargs["api_key"] == "riva-api-key"
 
     @pytest.mark.asyncio
-    async def test_hook_max_turn_count_reached(
-        self, mock_elevenlabs_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_max_turn_count_reached(self, mock_elevenlabs_provider, mock_greeting_state_provider):
         """Test hook when max turn count is reached."""
         context = {"tts_provider": "elevenlabs"}
         mock_greeting_state_provider.turn_count = 5
@@ -311,9 +281,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -327,9 +295,7 @@ class TestGeetingEndHook:
             assert "i hope you enjoy the rest of nvidia gtc" in message.lower()
 
     @pytest.mark.asyncio
-    async def test_hook_turn_count_exceeded(
-        self, mock_kokoro_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_turn_count_exceeded(self, mock_kokoro_provider, mock_greeting_state_provider):
         """Test hook when turn count exceeds max."""
         context = {"tts_provider": "kokoro"}
         mock_greeting_state_provider.turn_count = 10
@@ -337,9 +303,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.KokoroTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_kokoro_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -350,9 +314,7 @@ class TestGeetingEndHook:
             assert "i hope you enjoy the rest of nvidia gtc" in message.lower()
 
     @pytest.mark.asyncio
-    async def test_hook_zero_turn_count(
-        self, mock_riva_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_zero_turn_count(self, mock_riva_provider, mock_greeting_state_provider):
         """Test hook when turn count is zero."""
         context = {"tts_provider": "riva"}
         mock_greeting_state_provider.turn_count = 0
@@ -360,9 +322,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.RivaTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_riva_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -379,38 +339,28 @@ class TestGeetingEndHook:
         context = {"tts_provider": "unsupported_provider"}
         mock_greeting_state_provider.turn_count = 1
 
-        with patch(
-            "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-        ) as mock_state_class:
+        with patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class:
             mock_state_class.return_value = mock_greeting_state_provider
 
             await geeting_end_hook(context)
 
     @pytest.mark.asyncio
-    async def test_hook_provider_initialization_error(
-        self, mock_greeting_state_provider
-    ):
+    async def test_hook_provider_initialization_error(self, mock_greeting_state_provider):
         """Test hook when provider initialization fails."""
         context = {"tts_provider": "elevenlabs"}
         mock_greeting_state_provider.turn_count = 1
 
         with (
             patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
-            mock_provider_class.side_effect = Exception(
-                "Provider initialization failed"
-            )
+            mock_provider_class.side_effect = Exception("Provider initialization failed")
             mock_state_class.return_value = mock_greeting_state_provider
 
             await geeting_end_hook(context)
 
     @pytest.mark.asyncio
-    async def test_hook_provider_start_error(
-        self, mock_elevenlabs_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_provider_start_error(self, mock_elevenlabs_provider, mock_greeting_state_provider):
         """Test hook when provider.start() fails."""
         context = {"tts_provider": "elevenlabs"}
         mock_greeting_state_provider.turn_count = 1
@@ -418,9 +368,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -428,18 +376,14 @@ class TestGeetingEndHook:
             await geeting_end_hook(context)
 
     @pytest.mark.asyncio
-    async def test_hook_empty_context(
-        self, mock_elevenlabs_provider, mock_greeting_state_provider
-    ):
+    async def test_hook_empty_context(self, mock_elevenlabs_provider, mock_greeting_state_provider):
         """Test hook with empty context defaults to elevenlabs."""
         context = {}
         mock_greeting_state_provider.turn_count = 1
 
         with (
             patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.return_value = mock_elevenlabs_provider
             mock_state_class.return_value = mock_greeting_state_provider
@@ -457,9 +401,7 @@ class TestGeetingEndHook:
 
         with (
             patch("hooks.greeting_hook.ElevenLabsTTSProvider") as mock_provider_class,
-            patch(
-                "hooks.greeting_hook.GreetingConversationStateMachineProvider"
-            ) as mock_state_class,
+            patch("hooks.greeting_hook.GreetingConversationStateMachineProvider") as mock_state_class,
         ):
             mock_provider_class.side_effect = ValueError("Test error")
             mock_state_class.return_value = mock_greeting_state_provider

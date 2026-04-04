@@ -117,12 +117,8 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             self.session = open_zenoh_session()
             self.audio_pub = self.session.declare_publisher(self.audio_topic)
             self.session.declare_subscriber(self.audio_topic, self.zenoh_audio_message)
-            self.session.declare_subscriber(
-                self.tts_status_request_topic, self._zenoh_tts_status_request
-            )
-            self._zenoh_tts_status_response_pub = self.session.declare_publisher(
-                self.tts_status_response_topic
-            )
+            self.session.declare_subscriber(self.tts_status_request_topic, self._zenoh_tts_status_request)
+            self._zenoh_tts_status_response_pub = self.session.declare_publisher(self.tts_status_response_topic)
 
             if self.audio_pub:
                 self.audio_pub.put(self.audio_status.serialize())
@@ -201,9 +197,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
             and "Voice:" not in self.io_provider.llm_prompt
         ):
             self.silence_counter += 1
-            logging.info(
-                f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}"
-            )
+            logging.info(f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}")
             return
 
         self.silence_counter = 0
@@ -212,10 +206,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
         pending_message = self.tts.create_pending_message(output_interface.action)
 
         # Store robot message to conversation history only if there was ASR input
-        if (
-            self.io_provider.llm_prompt is not None
-            and "Voice:" in self.io_provider.llm_prompt
-        ):
+        if self.io_provider.llm_prompt is not None and "Voice:" in self.io_provider.llm_prompt:
             self.conversation_provider.store_robot_message(output_interface.action)
 
         state = AudioStatus(
@@ -253,14 +244,10 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
                     header=prepare_header(tts_status.header.frame_id),
                     request_id=request_id,
                     code=1 if self.tts_enabled else 0,
-                    status=String(
-                        data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                    ),
+                    status=String(data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")),
                 )
                 if self._zenoh_tts_status_response_pub:
-                    self._zenoh_tts_status_response_pub.put(
-                        tts_status_response.serialize()
-                    )
+                    self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
                 return
 
             # Enable the TTS
@@ -275,9 +262,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
                     status=String(data="TTS Enabled"),
                 )
                 if self._zenoh_tts_status_response_pub:
-                    self._zenoh_tts_status_response_pub.put(
-                        tts_status_response.serialize()
-                    )
+                    self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
                 return
 
             # Disable the TTS
@@ -291,9 +276,7 @@ class SpeakKokoroTTSConnector(ActionConnector[SpeakKokoroTTSConfig, SpeakInput])
                     status=String(data="TTS Disabled"),
                 )
                 if self._zenoh_tts_status_response_pub:
-                    self._zenoh_tts_status_response_pub.put(
-                        tts_status_response.serialize()
-                    )
+                    self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
                 return
 
         except Exception as e:

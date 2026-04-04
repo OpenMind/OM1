@@ -73,24 +73,16 @@ class MockLidarProvider:
                     scan_array[:, 1] = scan_array[:, 1] / 1000.0
 
                     scans.append(scan_array)
-                    logging.info(
-                        f"MockLidarProvider: Loaded {len(scan_data)} scan points from {lidar_file_path}"
-                    )
+                    logging.info(f"MockLidarProvider: Loaded {len(scan_data)} scan points from {lidar_file_path}")
                 else:
-                    logging.warning(
-                        f"MockLidarProvider: No scan_data found in {lidar_file_path}"
-                    )
+                    logging.warning(f"MockLidarProvider: No scan_data found in {lidar_file_path}")
 
             except FileNotFoundError:
                 logging.error(f"MockLidarProvider: File not found: {lidar_file_path}")
             except json.JSONDecodeError as e:
-                logging.error(
-                    f"MockLidarProvider: Invalid JSON in {lidar_file_path}: {e}"
-                )
+                logging.error(f"MockLidarProvider: Invalid JSON in {lidar_file_path}: {e}")
             except Exception as e:
-                logging.error(
-                    f"MockLidarProvider: Error loading {lidar_file_path}: {e}"
-                )
+                logging.error(f"MockLidarProvider: Error loading {lidar_file_path}: {e}")
 
         self.load_scans(scans)
 

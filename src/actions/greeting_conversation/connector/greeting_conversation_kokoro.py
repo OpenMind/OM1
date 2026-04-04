@@ -62,9 +62,7 @@ class SpeakKokoroTTSConfig(ActionConfig):
     )
 
 
-class GreetingConversationConnector(
-    BaseGreetingConversationConnector[SpeakKokoroTTSConfig]
-):
+class GreetingConversationConnector(BaseGreetingConversationConnector[SpeakKokoroTTSConfig]):
     """
     Connector that manages greeting conversations using Kokoro TTS.
     """
