@@ -1,0 +1,83 @@
+{
+  // Test case metadata
+  version: "v1.0.3",
+  name: "parallel_llm_three_test",
+  description: "Test ParallelLLM with 3 LLMs - specialized for speech, movement, and emotion separately",
+  hertz: 1,
+  system_prompt_base: "You are a friendly robot assistant. When greeting someone, respond with appropriate speech, movement, and emotional expression.",
+  system_governance: "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  system_prompt_examples: "Here are some examples of interactions you might encounter:\n\n1. If someone says 'Hello!', you might:\n Move: 'wag tail'\n Speak: {{'Hello there! Nice to see you!'}}\n Emotion: 'happy'\n\n2. If someone says 'Good morning!', you might:\n Move: 'stand still'\n Speak: {{'Good morning! How can I help you today?'}}\n Emotion: 'cheerful'",
+
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+    },
+  ],
+
+  // Parallel LLM configuration with 3 LLMs
+  cortex_llm: {
+    type: "ParallelLLM",
+    config: {
+      llms: [
+        {
+          llm_type: "GeminiLLM",
+          llm_config: {
+            agent_name: "SpeechSpecialist",
+            history_length: 5,
+          },
+          action_filter: ["speak"], // LLM 1: Speech only
+        },
+        {
+          llm_type: "GeminiLLM",
+          llm_config: {
+            agent_name: "MovementSpecialist",
+            history_length: 5,
+          },
+          action_filter: ["move"], // LLM 2: Movement only
+        },
+        {
+          llm_type: "OpenAILLM",
+          llm_config: {
+            agent_name: "EmotionSpecialist",
+            history_length: 5,
+          },
+          action_filter: ["emotion"], // LLM 3: Emotion only
+        },
+      ],
+      execute_immediately: true,
+    },
+  },
+
+  agent_actions: [
+    {
+      name: "move",
+      llm_label: "move",
+      connector: "ros2",
+    },
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "ros2",
+    },
+  ],
+
+  api_key: "openmind_free",
+
+  // Input data
+  input: {
+    asr: ["../asr/greeting.json"],
+  },
+
+  // Expected output - should have speech, movement, AND emotion (all 3)
+  expected: {
+    keywords: ["hello", "hi", "greet"],
+    movement: ["wag tail", "stand still", "walk", "dance"],
+    emotion: ["happy", "excited", "friendly", "cheerful"],
+    minimum_score: 0.6,
+  },
+}
