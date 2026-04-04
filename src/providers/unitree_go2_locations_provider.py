@@ -87,9 +87,7 @@ class UnitreeGo2LocationsProvider:
             resp = requests.get(self.base_url, timeout=self.timeout)
 
             if resp.status_code < 200 or resp.status_code >= 300:
-                logging.error(
-                    f"Location list API returned {resp.status_code}: {resp.text}"
-                )
+                logging.error(f"Location list API returned {resp.status_code}: {resp.text}")
                 return
 
             data = resp.json()
@@ -99,9 +97,7 @@ class UnitreeGo2LocationsProvider:
                 try:
                     locations = json.loads(raw_message)
                 except Exception:
-                    logging.error(
-                        "Failed to parse nested message JSON from location list"
-                    )
+                    logging.error("Failed to parse nested message JSON from location list")
                     return
             elif isinstance(data, dict) and "message" not in data:
                 locations = data

@@ -65,18 +65,14 @@ def get_simulator_class(class_name: str) -> T.Type[Simulator]:
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
-        raise ValueError(
-            f"Class '{class_name}' not found in any simulator plugin module"
-        )
+        raise ValueError(f"Class '{class_name}' not found in any simulator plugin module")
 
     try:
         module = importlib.import_module(f"simulators.plugins.{module_name}")
         simulator_class = getattr(module, class_name)
 
         if not (
-            inspect.isclass(simulator_class)
-            and issubclass(simulator_class, Simulator)
-            and simulator_class != Simulator
+            inspect.isclass(simulator_class) and issubclass(simulator_class, Simulator) and simulator_class != Simulator
         ):
             raise ValueError(f"'{class_name}' is not a valid Simulator subclass")
 
@@ -86,9 +82,7 @@ def get_simulator_class(class_name: str) -> T.Type[Simulator]:
     except ImportError as e:
         raise ValueError(f"Could not import simulator module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in simulator module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in simulator module '{module_name}'")
 
 
 def load_simulator(simulator_config: T.Dict[str, T.Any]) -> Simulator:
@@ -109,39 +103,27 @@ def load_simulator(simulator_config: T.Dict[str, T.Any]) -> Simulator:
     module_name = find_module_with_class(class_name)
 
     if module_name is None:
-        raise ValueError(
-            f"Class '{class_name}' not found in any simulator plugin module"
-        )
+        raise ValueError(f"Class '{class_name}' not found in any simulator plugin module")
 
     try:
         module = importlib.import_module(f"simulators.plugins.{module_name}")
         simulator_class = getattr(module, class_name)
 
         if not (
-            inspect.isclass(simulator_class)
-            and issubclass(simulator_class, Simulator)
-            and simulator_class != Simulator
+            inspect.isclass(simulator_class) and issubclass(simulator_class, Simulator) and simulator_class != Simulator
         ):
             raise ValueError(f"'{class_name}' is not a valid simulator subclass")
 
         config_class = None
         for obj in module.__dict__.values():
-            if (
-                isinstance(obj, type)
-                and issubclass(obj, SimulatorConfig)
-                and obj != SimulatorConfig
-            ):
+            if isinstance(obj, type) and issubclass(obj, SimulatorConfig) and obj != SimulatorConfig:
                 config_class = obj
 
         config_dict = simulator_config.get("config", {})
         if config_class is not None:
-            config = config_class(
-                **(config_dict if isinstance(config_dict, dict) else {})
-            )
+            config = config_class(**(config_dict if isinstance(config_dict, dict) else {}))
         else:
-            config = SimulatorConfig(
-                **(config_dict if isinstance(config_dict, dict) else {})
-            )
+            config = SimulatorConfig(**(config_dict if isinstance(config_dict, dict) else {}))
 
         logging.debug(f"Loaded simulator {class_name} from {module_name}.py")
         return simulator_class(config=config)
@@ -149,6 +131,4 @@ def load_simulator(simulator_config: T.Dict[str, T.Any]) -> Simulator:
     except ImportError as e:
         raise ValueError(f"Could not import simulator module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in simulator module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in simulator module '{module_name}'")

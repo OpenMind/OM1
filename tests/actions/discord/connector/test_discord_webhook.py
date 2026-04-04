@@ -39,9 +39,7 @@ class TestDiscordInterface:
 
 class TestDiscordWebhookConfig:
     def test_with_webhook_url(self):
-        config = DiscordWebhookConfig(
-            webhook_url="https://discord.com/api/webhooks/123/abc"
-        )
+        config = DiscordWebhookConfig(webhook_url="https://discord.com/api/webhooks/123/abc")
         assert config.webhook_url == "https://discord.com/api/webhooks/123/abc"
         assert config.username is None
         assert config.avatar_url is None
@@ -59,29 +57,21 @@ class TestDiscordWebhookConfig:
 
 class TestDiscordWebhookConnector:
     def test_init_with_webhook_url(self):
-        config = DiscordWebhookConfig(
-            webhook_url="https://discord.com/api/webhooks/123/abc"
-        )
+        config = DiscordWebhookConfig(webhook_url="https://discord.com/api/webhooks/123/abc")
         connector = DiscordWebhookConnector(config)
-        assert (
-            connector.config.webhook_url == "https://discord.com/api/webhooks/123/abc"
-        )
+        assert connector.config.webhook_url == "https://discord.com/api/webhooks/123/abc"
 
     def test_init_without_webhook_url(self):
         with patch("actions.discord.connector.webhook.logging.warning") as mock_warning:
             config = DiscordWebhookConfig(webhook_url="")
             DiscordWebhookConnector(config)
-            mock_warning.assert_called_with(
-                "Discord webhook URL not provided in configuration"
-            )
+            mock_warning.assert_called_with("Discord webhook URL not provided in configuration")
 
 
 class TestDiscordWebhookConnectorConnect:
     @pytest.fixture
     def connector_with_url(self):
-        config = DiscordWebhookConfig(
-            webhook_url="https://discord.com/api/webhooks/123/abc"
-        )
+        config = DiscordWebhookConfig(webhook_url="https://discord.com/api/webhooks/123/abc")
         return DiscordWebhookConnector(config)
 
     @pytest.fixture
@@ -96,9 +86,7 @@ class TestDiscordWebhookConnectorConnect:
     @pytest.fixture
     def mock_discord_session(self):
         """Reusable aiohttp.ClientSession mock for Discord webhook tests."""
-        with patch(
-            "actions.discord.connector.webhook.aiohttp.ClientSession"
-        ) as mock_session:
+        with patch("actions.discord.connector.webhook.aiohttp.ClientSession") as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 204
 
@@ -108,9 +96,7 @@ class TestDiscordWebhookConnectorConnect:
 
             mock_session_instance = MagicMock()
             mock_session_instance.post = MagicMock(return_value=mock_post)
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
 
             mock_session.return_value = mock_session_instance
@@ -146,9 +132,7 @@ class TestDiscordWebhookConnectorConnect:
             mock_info.assert_any_call("SendThisToDiscord: Test notification")
 
     @pytest.mark.asyncio
-    async def test_connect_sends_correct_payload(
-        self, connector_with_url, mock_discord_session
-    ):
+    async def test_connect_sends_correct_payload(self, connector_with_url, mock_discord_session):
         input_obj = DiscordInput(action="Hello Discord!")
         await connector_with_url.connect(input_obj)
 
@@ -159,9 +143,7 @@ class TestDiscordWebhookConnectorConnect:
         assert call_args[1]["json"] == {"content": "Hello Discord!"}
 
     @pytest.mark.asyncio
-    async def test_connect_includes_username_and_avatar(
-        self, connector_with_options, mock_discord_session
-    ):
+    async def test_connect_includes_username_and_avatar(self, connector_with_options, mock_discord_session):
         input_obj = DiscordInput(action="Hello!")
         await connector_with_options.connect(input_obj)
 
@@ -173,39 +155,29 @@ class TestDiscordWebhookConnectorConnect:
         assert payload["avatar_url"] == "https://example.com/avatar.png"
 
     @pytest.mark.asyncio
-    async def test_connect_logs_success_on_204(
-        self, connector_with_url, mock_discord_session
-    ):
+    async def test_connect_logs_success_on_204(self, connector_with_url, mock_discord_session):
         mock_discord_session["response"].status = 204
 
         with patch("actions.discord.connector.webhook.logging.info") as mock_info:
             input_obj = DiscordInput(action="Test")
             await connector_with_url.connect(input_obj)
 
-            success_logged = any(
-                "successfully" in str(call).lower() for call in mock_info.call_args_list
-            )
+            success_logged = any("successfully" in str(call).lower() for call in mock_info.call_args_list)
             assert success_logged
 
     @pytest.mark.asyncio
-    async def test_connect_logs_success_on_200(
-        self, connector_with_url, mock_discord_session
-    ):
+    async def test_connect_logs_success_on_200(self, connector_with_url, mock_discord_session):
         mock_discord_session["response"].status = 200
 
         with patch("actions.discord.connector.webhook.logging.info") as mock_info:
             input_obj = DiscordInput(action="Test")
             await connector_with_url.connect(input_obj)
 
-            success_logged = any(
-                "successfully" in str(call).lower() for call in mock_info.call_args_list
-            )
+            success_logged = any("successfully" in str(call).lower() for call in mock_info.call_args_list)
             assert success_logged
 
     @pytest.mark.asyncio
-    async def test_connect_raises_on_error_response(
-        self, connector_with_url, mock_discord_session
-    ):
+    async def test_connect_raises_on_error_response(self, connector_with_url, mock_discord_session):
         mock_discord_session["response"].status = 400
         mock_discord_session["response"].text = AsyncMock(return_value="Bad Request")
         mock_discord_session["response"].request_info = MagicMock()
@@ -216,9 +188,7 @@ class TestDiscordWebhookConnectorConnect:
             await connector_with_url.connect(input_obj)
 
     @pytest.mark.asyncio
-    async def test_connect_raises_on_rate_limit(
-        self, connector_with_url, mock_discord_session
-    ):
+    async def test_connect_raises_on_rate_limit(self, connector_with_url, mock_discord_session):
         mock_discord_session["response"].status = 429
         mock_discord_session["response"].text = AsyncMock(return_value="Rate limited")
         mock_discord_session["response"].request_info = MagicMock()
@@ -230,9 +200,7 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_handles_network_error(self, connector_with_url):
-        with patch(
-            "actions.discord.connector.webhook.aiohttp.ClientSession"
-        ) as mock_session:
+        with patch("actions.discord.connector.webhook.aiohttp.ClientSession") as mock_session:
             mock_session.side_effect = aiohttp.ClientError("Connection refused")
 
             with pytest.raises(aiohttp.ClientError):
@@ -241,9 +209,7 @@ class TestDiscordWebhookConnectorConnect:
 
     @pytest.mark.asyncio
     async def test_connect_handles_generic_exception(self, connector_with_url):
-        with patch(
-            "actions.discord.connector.webhook.aiohttp.ClientSession"
-        ) as mock_session:
+        with patch("actions.discord.connector.webhook.aiohttp.ClientSession") as mock_session:
             mock_session.side_effect = RuntimeError("Unexpected error")
 
             with pytest.raises(RuntimeError):
@@ -251,9 +217,7 @@ class TestDiscordWebhookConnectorConnect:
                 await connector_with_url.connect(input_obj)
 
     @pytest.mark.asyncio
-    async def test_connect_truncates_long_message(
-        self, connector_with_url, mock_discord_session
-    ):
+    async def test_connect_truncates_long_message(self, connector_with_url, mock_discord_session):
         long_message = "x" * 2500
         input_obj = DiscordInput(action=long_message)
         await connector_with_url.connect(input_obj)
@@ -264,9 +228,7 @@ class TestDiscordWebhookConnectorConnect:
         assert len(sent_content) == DISCORD_MAX_CONTENT_LENGTH
 
     @pytest.mark.asyncio
-    async def test_connect_does_not_truncate_short_message(
-        self, connector_with_url, mock_discord_session
-    ):
+    async def test_connect_does_not_truncate_short_message(self, connector_with_url, mock_discord_session):
         short_message = "x" * 100
         input_obj = DiscordInput(action=short_message)
         await connector_with_url.connect(input_obj)

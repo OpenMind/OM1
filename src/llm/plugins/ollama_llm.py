@@ -31,9 +31,7 @@ class OllamaLLMConfig(LLMConfig):
         Context window size
     """
 
-    base_url: T.Optional[str] = Field(
-        default="http://localhost:11434", description="Base URL for Ollama API"
-    )
+    base_url: T.Optional[str] = Field(default="http://localhost:11434", description="Base URL for Ollama API")
     model: T.Optional[str] = Field(default="llama3.2", description="Ollama model name")
     temperature: float = Field(default=0.7, description="Sampling temperature")
     num_ctx: int = Field(default=4096, description="Context window size")
@@ -76,9 +74,7 @@ class OllamaLLM(LLM[R]):
         self._client = httpx.AsyncClient(timeout=config.timeout)
 
         # Initialize history manager
-        self.history_manager = LLMHistoryManager(
-            self._config, self._client  # type: ignore
-        )
+        self.history_manager = LLMHistoryManager(self._config, self._client)  # type: ignore
 
         logging.info(f"OllamaLLM initialized with model: {config.model}")
         logging.info(f"Ollama endpoint: {self._chat_url}")
@@ -111,9 +107,7 @@ class OllamaLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Send a prompt to Ollama and get a structured response.
 
@@ -140,8 +134,7 @@ class OllamaLLM(LLM[R]):
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 
@@ -167,9 +160,7 @@ class OllamaLLM(LLM[R]):
             )
 
             if response.status_code != 200:
-                logging.error(
-                    f"Ollama API error: {response.status_code} - {response.text}"
-                )
+                logging.error(f"Ollama API error: {response.status_code} - {response.text}")
                 return None
 
             result = response.json()
@@ -207,9 +198,7 @@ class OllamaLLM(LLM[R]):
             return None
 
         except httpx.ConnectError as e:
-            logging.error(
-                f"Cannot connect to Ollama at {self._base_url}. Is Ollama running?"
-            )
+            logging.error(f"Cannot connect to Ollama at {self._base_url}. Is Ollama running?")
             logging.error("Start Ollama with: ollama serve")
             logging.error(f"Error: {e}")
             return None

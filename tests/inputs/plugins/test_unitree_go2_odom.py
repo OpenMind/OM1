@@ -17,18 +17,13 @@ def test_initialization():
         sensor = UnitreeGo2Odom(config=config)
 
         assert sensor.messages == []
-        assert (
-            "location" in sensor.descriptor_for_LLM.lower()
-            or "pose" in sensor.descriptor_for_LLM.lower()
-        )
+        assert "location" in sensor.descriptor_for_LLM.lower() or "pose" in sensor.descriptor_for_LLM.lower()
 
 
 def test_initialization_with_unitree_ethernet():
     """Test initialization with Unitree ethernet channel."""
     with (
-        patch(
-            "inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider,
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         config = UnitreeGo2OdomConfig(unitree_ethernet="eth0")
@@ -41,9 +36,7 @@ def test_initialization_with_unitree_ethernet():
 async def test_poll_with_position_data():
     """Test _poll with position data available."""
     with (
-        patch(
-            "inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class,
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -63,9 +56,7 @@ async def test_poll_with_position_data():
 async def test_poll_with_no_data():
     """Test _poll when no position data available."""
     with (
-        patch(
-            "inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider"
-        ) as mock_provider_class,
+        patch("inputs.plugins.unitree_go2_odom.UnitreeGo2OdomProvider") as mock_provider_class,
         patch("inputs.plugins.unitree_go2_odom.IOProvider"),
     ):
         mock_provider = MagicMock()
@@ -98,10 +89,7 @@ async def test_raw_to_text_with_valid_input():
 
         assert result is not None
         assert result.timestamp == 1234.0
-        assert (
-            "standing still" in result.message.lower()
-            or "can move" in result.message.lower()
-        )
+        assert "standing still" in result.message.lower() or "can move" in result.message.lower()
 
 
 @pytest.mark.asyncio

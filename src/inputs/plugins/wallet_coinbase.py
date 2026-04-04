@@ -254,8 +254,6 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, result_message.message, result_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, result_message.message, result_message.timestamp)
         self.messages = []
         return result

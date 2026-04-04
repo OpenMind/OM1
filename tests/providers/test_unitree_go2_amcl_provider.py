@@ -31,9 +31,7 @@ def mock_zenoh():
 
 def test_initialization(mock_zenoh):
     """Test UnitreeGo2AMCLProvider initialization."""
-    provider = UnitreeGo2AMCLProvider(
-        topic="test/amcl", pose_tolerance=0.5, yaw_tolerance=0.3
-    )
+    provider = UnitreeGo2AMCLProvider(topic="test/amcl", pose_tolerance=0.5, yaw_tolerance=0.3)
 
     assert provider.sub_topic == "test/amcl"
     assert provider.pose_tolerance == 0.5

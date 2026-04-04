@@ -118,9 +118,7 @@ class TestNewsInputFetch:
 
             mock_session_instance = MagicMock()
             mock_session_instance.get = MagicMock(return_value=mock_get)
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
 
             mock_session.return_value = mock_session_instance
@@ -145,9 +143,7 @@ class TestNewsInputFetch:
 
             mock_session_instance = MagicMock()
             mock_session_instance.get = MagicMock(return_value=mock_get)
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
 
             mock_session.return_value = mock_session_instance
@@ -187,9 +183,7 @@ class TestNewsInputFetch:
 
             mock_session_instance = MagicMock()
             mock_session_instance.get = MagicMock(return_value=mock_get)
-            mock_session_instance.__aenter__ = AsyncMock(
-                return_value=mock_session_instance
-            )
+            mock_session_instance.__aenter__ = AsyncMock(return_value=mock_session_instance)
             mock_session_instance.__aexit__ = AsyncMock(return_value=None)
 
             mock_session.return_value = mock_session_instance
@@ -220,9 +214,7 @@ class TestNewsInputPoll:
             "status": "ok",
             "articles": [{"source": {"name": "BBC"}, "title": "News"}],
         }
-        with patch.object(
-            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
-        ):
+        with patch.object(news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data):
             result = await news_input._poll()
             assert result is not None
             assert result["status"] == "ok"
@@ -234,9 +226,7 @@ class TestNewsInputPoll:
             "status": "ok",
             "articles": [{"source": {"name": "BBC"}, "title": "News"}],
         }
-        with patch.object(
-            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
-        ):
+        with patch.object(news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data):
             await news_input._poll()
             result = await news_input._poll()
             assert result is None
@@ -248,9 +238,7 @@ class TestNewsInputPoll:
             "status": "ok",
             "articles": [{"source": {"name": "BBC"}, "title": "Fresh news"}],
         }
-        with patch.object(
-            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
-        ):
+        with patch.object(news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data):
             await news_input._poll()
 
             news_input._last_poll_time = time.time() - 20.0
@@ -266,9 +254,7 @@ class TestNewsInputPoll:
             "status": "ok",
             "articles": [{"source": {"name": "BBC"}, "title": "Breaking"}],
         }
-        with patch.object(
-            news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data
-        ):
+        with patch.object(news_input, "_fetch_news", new_callable=AsyncMock, return_value=mock_data):
             result1 = await news_input._poll()
             await news_input.raw_to_text(result1)
             assert len(news_input.messages) == 1

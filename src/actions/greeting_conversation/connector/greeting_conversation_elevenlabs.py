@@ -50,9 +50,7 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
     )
 
 
-class GreetingConversationConnector(
-    BaseGreetingConversationConnector[SpeakElevenLabsTTSConfig]
-):
+class GreetingConversationConnector(BaseGreetingConversationConnector[SpeakElevenLabsTTSConfig]):
     """
     Connector that manages greeting conversations using ElevenLabs TTS.
     """

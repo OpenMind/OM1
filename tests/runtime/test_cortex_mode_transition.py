@@ -120,9 +120,7 @@ def mock_io_provider():
         if io_provider._mode_transition_input is None:
             io_provider._mode_transition_input = input_text
         else:
-            io_provider._mode_transition_input = (
-                io_provider._mode_transition_input + " " + input_text
-            )
+            io_provider._mode_transition_input = io_provider._mode_transition_input + " " + input_text
 
     def get_mode_transition_input():
         return io_provider._mode_transition_input
@@ -183,9 +181,7 @@ def mock_mode_manager():
 
 
 @pytest.fixture
-def cortex_runtime_with_mode_transition(
-    mock_system_config, mock_io_provider, mock_mode_manager
-):
+def cortex_runtime_with_mode_transition(mock_system_config, mock_io_provider, mock_mode_manager):
     """ModeCortexRuntime instance configured for mode transition testing."""
     with (
         patch("runtime.cortex.ModeManager") as mock_manager_class,
@@ -207,9 +203,7 @@ def cortex_runtime_with_mode_transition(
         mock_runtime_config.cortex_llm = Mock()
         mock_result = Mock(actions=[])
         mock_runtime_config.cortex_llm.ask = AsyncMock(return_value=mock_result)
-        mock_runtime_config.cortex_llm.ask_stream = Mock(
-            return_value=_mock_ask_stream_generator(mock_result)
-        )
+        mock_runtime_config.cortex_llm.ask_stream = Mock(return_value=_mock_ask_stream_generator(mock_result))
         mock_runtime_config.agent_inputs = []
 
         runtime.current_config = mock_runtime_config
@@ -223,9 +217,7 @@ def cortex_runtime_with_mode_transition(
         runtime.mcp_orchestrator = Mock()
         runtime.mcp_orchestrator.max_rounds = 3
         runtime.mcp_orchestrator.extract_om1_actions = Mock(return_value=[])
-        runtime.mcp_orchestrator.execute_mcp_actions = AsyncMock(
-            return_value=(None, None)
-        )
+        runtime.mcp_orchestrator.execute_mcp_actions = AsyncMock(return_value=(None, None))
         runtime.mcp_orchestrator.build_call_signature = Mock(return_value="sig")
 
         return runtime, {
@@ -259,9 +251,7 @@ def cortex_runtime(mock_system_config, mock_io_provider, mock_mode_manager):
         mock_runtime_config.cortex_llm = Mock()
         mock_result = Mock(actions=[])
         mock_runtime_config.cortex_llm.ask = AsyncMock(return_value=mock_result)
-        mock_runtime_config.cortex_llm.ask_stream = Mock(
-            return_value=_mock_ask_stream_generator(mock_result)
-        )
+        mock_runtime_config.cortex_llm.ask_stream = Mock(return_value=_mock_ask_stream_generator(mock_result))
         mock_runtime_config.agent_inputs = []
 
         runtime.current_config = mock_runtime_config
@@ -274,9 +264,7 @@ def cortex_runtime(mock_system_config, mock_io_provider, mock_mode_manager):
         runtime.mcp_orchestrator = Mock()
         runtime.mcp_orchestrator.max_rounds = 3
         runtime.mcp_orchestrator.extract_om1_actions = Mock(return_value=[])
-        runtime.mcp_orchestrator.execute_mcp_actions = AsyncMock(
-            return_value=(None, None)
-        )
+        runtime.mcp_orchestrator.execute_mcp_actions = AsyncMock(return_value=(None, None))
         runtime.mcp_orchestrator.build_call_signature = Mock(return_value="sig")
 
         runtime._pending_mode_transition = None
@@ -442,9 +430,7 @@ async def test_tick_handles_llm_returning_none(cortex_runtime_with_mode_transiti
     runtime, mocks = cortex_runtime_with_mode_transition
 
     runtime.current_config.cortex_llm.ask.return_value = None
-    runtime.current_config.cortex_llm.ask_stream = Mock(
-        return_value=_mock_ask_stream_generator(None)
-    )
+    runtime.current_config.cortex_llm.ask_stream = Mock(return_value=_mock_ask_stream_generator(None))
 
     runtime._pending_mode_transition = None
     runtime._mode_transition_event = Mock()
@@ -500,9 +486,7 @@ async def test_handle_mode_transitions_processes_pending_transition(
             target_mode = runtime._pending_mode_transition
             runtime._pending_mode_transition = None
 
-            success = await mocks["mode_manager"]._execute_transition(
-                target_mode, "input_triggered"
-            )
+            success = await mocks["mode_manager"]._execute_transition(target_mode, "input_triggered")
 
         runtime._mode_transition_event.clear()
         return success
@@ -510,9 +494,7 @@ async def test_handle_mode_transitions_processes_pending_transition(
     success = await limited_handle_transitions()
 
     assert success is True
-    mocks["mode_manager"]._execute_transition.assert_called_once_with(
-        "emergency", "input_triggered"
-    )
+    mocks["mode_manager"]._execute_transition.assert_called_once_with("emergency", "input_triggered")
 
 
 @pytest.mark.asyncio
@@ -536,9 +518,7 @@ async def test_handle_mode_transitions_handles_failed_transition(
             target_mode = runtime._pending_mode_transition
             runtime._pending_mode_transition = None
 
-            success = await mocks["mode_manager"]._execute_transition(
-                target_mode, "input_triggered"
-            )
+            success = await mocks["mode_manager"]._execute_transition(target_mode, "input_triggered")
 
         runtime._mode_transition_event.clear()
         return success
@@ -547,9 +527,7 @@ async def test_handle_mode_transitions_handles_failed_transition(
 
     assert success is False
     assert success is False
-    mocks["mode_manager"]._execute_transition.assert_called_once_with(
-        "invalid_mode", "input_triggered"
-    )
+    mocks["mode_manager"]._execute_transition.assert_called_once_with("invalid_mode", "input_triggered")
 
 
 @pytest.mark.asyncio
@@ -599,9 +577,7 @@ async def test_request_mode_change_integration(cortex_runtime_with_mode_transiti
     result = await runtime.request_mode_change("emergency")
 
     assert result is True
-    mocks["mode_manager"].request_transition.assert_called_once_with(
-        "emergency", "manual"
-    )
+    mocks["mode_manager"].request_transition.assert_called_once_with("emergency", "manual")
 
 
 def test_get_available_modes_returns_correct_structure(
@@ -681,9 +657,7 @@ async def test_mode_transition_with_simulator_orchestrator(
     mock_output = Mock()
     mock_output.actions = ["action1", "action2"]
     runtime.current_config.cortex_llm.ask.return_value = mock_output
-    runtime.current_config.cortex_llm.ask_stream = Mock(
-        return_value=_mock_ask_stream_generator(mock_output)
-    )
+    runtime.current_config.cortex_llm.ask_stream = Mock(return_value=_mock_ask_stream_generator(mock_output))
 
     runtime._pending_mode_transition = None
     runtime._mode_transition_event = Mock()
@@ -696,9 +670,7 @@ async def test_mode_transition_with_simulator_orchestrator(
     if runtime._pending_mode_transition:
         pass
     else:
-        runtime.simulator_orchestrator.promise.assert_called_once_with(
-            mock_output.actions
-        )
+        runtime.simulator_orchestrator.promise.assert_called_once_with(mock_output.actions)
 
 
 @pytest.mark.asyncio
@@ -710,9 +682,7 @@ async def test_mode_transition_input_triggers_advanced_mode(cortex_runtime):
 
     await runtime._tick(runtime._cortex_loop_generation)
 
-    components["mode_manager"].process_tick.assert_called_once_with(
-        "switch to advanced mode"
-    )
+    components["mode_manager"].process_tick.assert_called_once_with("switch to advanced mode")
 
     assert runtime._pending_mode_transition == "advanced"
     runtime._mode_transition_event.set.assert_called_once()
@@ -727,9 +697,7 @@ async def test_mode_transition_input_triggers_emergency_mode(cortex_runtime):
 
     await runtime._tick(runtime._cortex_loop_generation)
 
-    components["mode_manager"].process_tick.assert_called_once_with(
-        "emergency help needed!"
-    )
+    components["mode_manager"].process_tick.assert_called_once_with("emergency help needed!")
 
     assert runtime._pending_mode_transition == "emergency"
     runtime._mode_transition_event.set.assert_called_once()
@@ -840,9 +808,7 @@ async def test_manual_mode_change_delegation_to_manager(cortex_runtime):
 
     result = await runtime.request_mode_change("emergency")
 
-    components["mode_manager"].request_transition.assert_called_once_with(
-        "emergency", "manual"
-    )
+    components["mode_manager"].request_transition.assert_called_once_with("emergency", "manual")
     assert result is True
 
 

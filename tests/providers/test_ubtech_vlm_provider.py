@@ -26,9 +26,7 @@ def mock_dependencies():
     """Mock dependencies for UbtechVLMProvider."""
     with (
         patch("providers.ubtech_vlm_provider.ws.Client") as mock_ws_client,
-        patch(
-            "providers.ubtech_vlm_provider.UbtechCameraVideoStream"
-        ) as mock_video_stream,
+        patch("providers.ubtech_vlm_provider.UbtechCameraVideoStream") as mock_video_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -82,12 +80,8 @@ def test_initialization_without_stream_url(mock_dependencies):
 
 def test_singleton_pattern(mock_dependencies):
     """Test that UbtechVLMProvider follows singleton pattern."""
-    provider1 = UbtechVLMProvider(
-        ws_url="ws://localhost:8000", robot_ip="192.168.1.100"
-    )
-    provider2 = UbtechVLMProvider(
-        ws_url="ws://localhost:8001", robot_ip="192.168.1.101"
-    )
+    provider1 = UbtechVLMProvider(ws_url="ws://localhost:8000", robot_ip="192.168.1.100")
+    provider2 = UbtechVLMProvider(ws_url="ws://localhost:8001", robot_ip="192.168.1.101")
     assert provider1 is provider2
 
 
@@ -100,9 +94,7 @@ def test_register_message_callback(mock_dependencies):
 
     provider.register_message_callback(callback)
 
-    mock_dependencies["ws_instance"].register_message_callback.assert_called_once_with(
-        callback
-    )
+    mock_dependencies["ws_instance"].register_message_callback.assert_called_once_with(callback)
 
 
 def test_register_message_callback_none(mock_dependencies):

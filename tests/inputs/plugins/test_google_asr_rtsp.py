@@ -67,12 +67,8 @@ def test_initialization_creates_providers_and_buffers(
     mock_zenoh,
 ):
     mock_asr_constructor, mock_asr_instance = mock_asr_provider
-    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = (
-        mock_sleep_ticker_provider
-    )
-    mock_teleops_conv_constructor, mock_teleops_conv_instance = (
-        mock_teleops_conversation_provider
-    )
+    mock_sleep_ticker_constructor, mock_sleep_ticker_instance = mock_sleep_ticker_provider
+    mock_teleops_conv_constructor, mock_teleops_conv_instance = mock_teleops_conversation_provider
 
     config = GoogleASRRTSPSensorConfig()
     api_key = config.api_key
@@ -82,12 +78,8 @@ def test_initialization_creates_providers_and_buffers(
     enable_tts_interrupt = config.enable_tts_interrupt
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             new=mock_sleep_ticker_constructor,
@@ -144,9 +136,7 @@ async def test_poll_returns_message_from_buffer(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -188,9 +178,7 @@ async def test_poll_returns_none_if_buffer_empty(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -229,9 +217,7 @@ async def test_poll_has_delay(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -269,9 +255,7 @@ def test_handle_asr_message_processes_valid_json_with_asr_reply_longer_than_one_
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -314,9 +298,7 @@ def test_handle_asr_message_ignores_json_without_asr_reply(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -358,9 +340,7 @@ def test_handle_asr_message_ignores_json_with_asr_reply_shorter_than_two_words(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -402,9 +382,7 @@ def test_handle_asr_message_ignores_invalid_json(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -447,9 +425,7 @@ async def test_raw_to_text_converts_string_to_message(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -494,9 +470,7 @@ async def test_raw_to_text_returns_none_if_input_none(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -534,9 +508,7 @@ async def test_raw_to_text_adds_message_to_buffer(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -580,9 +552,7 @@ async def test_raw_to_text_appends_to_existing_message(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -625,9 +595,7 @@ async def test_raw_to_text_sets_skip_sleep_if_none_input_and_messages_exist(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -669,9 +637,7 @@ async def test_raw_to_text_does_not_set_skip_sleep_if_none_input_and_messages_em
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -712,9 +678,7 @@ def test_formatted_latest_buffer_empty(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -752,9 +716,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     config = GoogleASRRTSPSensorConfig()
     fixed_timestamp = 1234.0
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -784,9 +746,7 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     assert "Voice" in result
     assert msg_content in result
     assert len(instance.messages) == 0
-    mock_io_provider.add_input.assert_called_once_with(
-        "Voice", msg_content, fixed_timestamp
-    )
+    mock_io_provider.add_input.assert_called_once_with("Voice", msg_content, fixed_timestamp)
     mock_io_provider.add_mode_transition_input.assert_called_once_with(msg_content)
     mock_teleops_conv_instance.store_user_message.assert_called_once_with(msg_content)
     if instance.asr_publisher:
@@ -807,9 +767,7 @@ def test_stop_clears_buffers_and_stops_asr(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -855,9 +813,7 @@ def test_stop_handles_exceptions_gracefully(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -877,9 +833,7 @@ def test_stop_handles_exceptions_gracefully(
     ):
         instance = GoogleASRRTSPInput(config=config)
 
-    mock_asr_instance.unregister_message_callback.side_effect = Exception(
-        "Unregister failed"
-    )
+    mock_asr_instance.unregister_message_callback.side_effect = Exception("Unregister failed")
     mock_asr_instance.stop.side_effect = Exception("Stop failed")
     mock_zenoh["publisher"].undeclare.side_effect = Exception("Undeclare failed")
 
@@ -902,9 +856,7 @@ async def test_poll_returns_none_when_stopped(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -946,12 +898,8 @@ def test_initialization_with_unsupported_language(
     config = GoogleASRRTSPSensorConfig(language="unsupported_language")
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -986,12 +934,8 @@ def test_initialization_with_supported_language_chinese(
     config = GoogleASRRTSPSensorConfig(language="chinese")
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1027,12 +971,8 @@ def test_initialization_with_custom_base_url(
     config = GoogleASRRTSPSensorConfig(base_url=custom_base_url)
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1066,12 +1006,8 @@ def test_initialization_with_zenoh_failure(
     config = GoogleASRRTSPSensorConfig()
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1104,9 +1040,7 @@ def test_formatted_latest_buffer_handles_zenoh_publish_exception(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -1150,9 +1084,7 @@ def test_formatted_latest_buffer_without_zenoh_publisher(
 
     config = GoogleASRRTSPSensorConfig()
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
         patch(
             "inputs.plugins.google_asr_rtsp.ASRRTSPProvider",
             return_value=mock_asr_instance,
@@ -1198,12 +1130,8 @@ def test_initialization_with_enable_tts_interrupt_true(
     config = GoogleASRRTSPSensorConfig(enable_tts_interrupt=True)
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1238,12 +1166,8 @@ def test_initialization_with_api_version_v1(
     config = GoogleASRRTSPSensorConfig(api_version="v1", api_key="test_key")
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1261,10 +1185,7 @@ def test_initialization_with_api_version_v1(
 
     mock_asr_constructor.assert_called_once()
     call_kwargs = mock_asr_constructor.call_args[1]
-    assert (
-        call_kwargs["ws_url"]
-        == "wss://api.openmind.com/api/core/google/asr/v1?api_key=test_key"
-    )
+    assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v1?api_key=test_key"
 
 
 def test_initialization_with_api_version_v2(
@@ -1281,12 +1202,8 @@ def test_initialization_with_api_version_v2(
     config = GoogleASRRTSPSensorConfig(api_version="v2", api_key="test_key")
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1304,10 +1221,7 @@ def test_initialization_with_api_version_v2(
 
     mock_asr_constructor.assert_called_once()
     call_kwargs = mock_asr_constructor.call_args[1]
-    assert (
-        call_kwargs["ws_url"]
-        == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
-    )
+    assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
 
 
 def test_initialization_with_invalid_api_version_defaults_to_v2(
@@ -1324,12 +1238,8 @@ def test_initialization_with_invalid_api_version_defaults_to_v2(
     config = GoogleASRRTSPSensorConfig(api_version="v3", api_key="test_key")
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1348,10 +1258,7 @@ def test_initialization_with_invalid_api_version_defaults_to_v2(
     mock_asr_constructor.assert_called_once()
     call_kwargs = mock_asr_constructor.call_args[1]
     # Should default to v2
-    assert (
-        call_kwargs["ws_url"]
-        == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
-    )
+    assert call_kwargs["ws_url"] == "wss://api.openmind.com/api/core/google/asr/v2?api_key=test_key"
 
 
 def test_initialization_with_alternative_languages_v1(
@@ -1372,12 +1279,8 @@ def test_initialization_with_alternative_languages_v1(
     )
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,
@@ -1419,12 +1322,8 @@ def test_initialization_with_alternative_languages_v2_ignored(
     )
 
     with (
-        patch(
-            "inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider
-        ),
-        patch(
-            "inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor
-        ),
+        patch("inputs.plugins.google_asr_rtsp.IOProvider", return_value=mock_io_provider),
+        patch("inputs.plugins.google_asr_rtsp.ASRRTSPProvider", new=mock_asr_constructor),
         patch(
             "inputs.plugins.google_asr_rtsp.SleepTickerProvider",
             return_value=mock_sleep_ticker_instance,

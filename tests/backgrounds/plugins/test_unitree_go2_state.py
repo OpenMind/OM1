@@ -51,9 +51,7 @@ class TestUnitreeGo2State:
         assert "Unitree Go2 State Provider initialized in background" in caplog.text
 
     @patch("backgrounds.plugins.unitree_go2_state.UnitreeGo2StateProvider")
-    def test_initialization_with_none_ethernet_raises_value_error(
-        self, mock_provider_class
-    ):
+    def test_initialization_with_none_ethernet_raises_value_error(self, mock_provider_class):
         """Test that None ethernet raises ValueError."""
         config = UnitreeGo2StateConfig()
 
@@ -66,9 +64,7 @@ class TestUnitreeGo2State:
         mock_provider_class.assert_not_called()
 
     @patch("backgrounds.plugins.unitree_go2_state.UnitreeGo2StateProvider")
-    def test_initialization_with_none_ethernet_error_log(
-        self, mock_provider_class, caplog
-    ):
+    def test_initialization_with_none_ethernet_error_log(self, mock_provider_class, caplog):
         """Test that None ethernet logs an error before raising."""
         config = UnitreeGo2StateConfig()
 
@@ -76,15 +72,10 @@ class TestUnitreeGo2State:
             with pytest.raises(ValueError):
                 UnitreeGo2State(config)
 
-        assert (
-            "Unitree Go2 Ethernet channel is not set in the configuration"
-            in caplog.text
-        )
+        assert "Unitree Go2 Ethernet channel is not set in the configuration" in caplog.text
 
     @patch("backgrounds.plugins.unitree_go2_state.UnitreeGo2StateProvider")
-    def test_initialization_with_empty_string_raises_value_error(
-        self, mock_provider_class
-    ):
+    def test_initialization_with_empty_string_raises_value_error(self, mock_provider_class):
         """Test that empty string ethernet raises ValueError."""
         config = UnitreeGo2StateConfig(unitree_ethernet="")
 

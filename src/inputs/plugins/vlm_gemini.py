@@ -76,8 +76,7 @@ class VLMGemini(FuserInput[VLMGeminiConfig, Optional[str]]):
 
         base_url = self.config.base_url
         stream_base_url = (
-            self.config.stream_base_url
-            or f"wss://api.openmind.com/api/core/teleops/stream/video?api_key={api_key}"
+            self.config.stream_base_url or f"wss://api.openmind.com/api/core/teleops/stream/video?api_key={api_key}"
         )
         camera_index = self.config.camera_index
 
@@ -199,9 +198,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

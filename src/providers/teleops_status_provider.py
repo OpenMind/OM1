@@ -160,9 +160,7 @@ class TeleopsStatus:
 
     update_time: str
     battery_status: BatteryStatus
-    action_status: ActionStatus = field(
-        default_factory=lambda: ActionStatus(ActionType.AI, time.time())
-    )
+    action_status: ActionStatus = field(default_factory=lambda: ActionStatus(ActionType.AI, time.time()))
     machine_name: str = "unknown"
     video_connected: bool = False
 
@@ -249,9 +247,7 @@ class TeleopsStatusProvider:
             if request.status_code == 200:
                 return request.json()
             else:
-                logging.error(
-                    f"Failed to get status: {request.status_code} - {request.text}"
-                )
+                logging.error(f"Failed to get status: {request.status_code} - {request.text}")
         except requests.exceptions.RequestException as e:
             logging.error(f"TeleopsStatusProvider: Error getting status: {e}")
 
@@ -282,9 +278,7 @@ class TeleopsStatusProvider:
             if request.status_code == 200:
                 logging.debug(f"Status shared successfully: {request.json()}")
             else:
-                logging.error(
-                    f"Failed to share status: {request.status_code} - {request.text}"
-                )
+                logging.error(f"Failed to share status: {request.status_code} - {request.text}")
         except Exception as e:
             logging.error(f"Error sharing status: {str(e)}")
 

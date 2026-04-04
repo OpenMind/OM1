@@ -45,9 +45,7 @@ class FAISSRetriever(BaseRetriever):
             raise ValueError(f"Failed to load FAISS index from {self.index_path}")
 
         self.dimension = self.index.d  # type: ignore
-        logging.info(
-            f"Loaded FAISS index: {self.index.ntotal} vectors, dim={self.dimension}"  # type: ignore
-        )
+        logging.info(f"Loaded FAISS index: {self.index.ntotal} vectors, dim={self.dimension}")  # type: ignore
 
         with open(self.metadata_path, "rb") as f:
             metadata = pickle.load(f)
@@ -59,9 +57,7 @@ class FAISSRetriever(BaseRetriever):
                 questions = metadata["questions"]
                 answers = metadata["answers"]
                 self.documents = [
-                    Document(
-                        text=q, metadata={"answer": a, "type": "qa_pair", "index": i}
-                    )
+                    Document(text=q, metadata={"answer": a, "type": "qa_pair", "index": i})
                     for i, (q, a) in enumerate(zip(questions, answers))
                 ]
             else:
@@ -70,16 +66,12 @@ class FAISSRetriever(BaseRetriever):
                     f"'questions'/'answers' keys, got dict with keys: {list(metadata.keys())}"
                 )
         else:
-            raise ValueError(
-                f"Unsupported metadata format. Expected list or dict, got {type(metadata)}"
-            )
+            raise ValueError(f"Unsupported metadata format. Expected list or dict, got {type(metadata)}")
 
         logging.info(f"Loaded {len(self.documents)} documents")
 
         if len(self.documents) != self.index.ntotal:
-            logging.warning(
-                f"Mismatch: {len(self.documents)} docs != {self.index.ntotal} vectors"
-            )
+            logging.warning(f"Mismatch: {len(self.documents)} docs != {self.index.ntotal} vectors")
 
     def search(self, query_embedding: np.ndarray, top_k: int = 5) -> list[Document]:
         """
@@ -104,9 +96,7 @@ class FAISSRetriever(BaseRetriever):
             If query embedding dimension doesn't match index dimension.
         """
         if query_embedding.shape[0] != self.dimension:
-            raise ValueError(
-                f"Query dim={query_embedding.shape[0]} != index dim={self.dimension}"
-            )
+            raise ValueError(f"Query dim={query_embedding.shape[0]} != index dim={self.dimension}")
 
         query_vec = query_embedding.reshape(1, -1).astype("float32")
 
@@ -127,21 +117,14 @@ class FAISSRetriever(BaseRetriever):
                 continue
             seen_answers.add(answer_text)
             score = float(dist)
-            results.append(
-                Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
-            )
+            results.append(Document(text=doc.text, metadata=doc.metadata.copy(), score=score))
             if len(results) >= top_k:
                 break
 
-        logging.debug(
-            f"Retrieved {len(results)} unique documents "
-            f"(searched {search_k}, top_k={top_k})"
-        )
+        logging.debug(f"Retrieved {len(results)} unique documents " f"(searched {search_k}, top_k={top_k})")
         return results
 
-    def batch_search(
-        self, query_embeddings: np.ndarray, top_k: int = 5
-    ) -> list[list[Document]]:
+    def batch_search(self, query_embeddings: np.ndarray, top_k: int = 5) -> list[list[Document]]:
         """
         Batch search for multiple query embeddings.
         Results are deduplicated by answer text per query.
@@ -164,9 +147,7 @@ class FAISSRetriever(BaseRetriever):
             If query embedding dimension doesn't match index dimension.
         """
         if query_embeddings.shape[1] != self.dimension:
-            raise ValueError(
-                f"Query dim={query_embeddings.shape[1]} != index dim={self.dimension}"
-            )
+            raise ValueError(f"Query dim={query_embeddings.shape[1]} != index dim={self.dimension}")
 
         if self.index is None:
             raise ValueError("FAISS index not loaded")
@@ -188,9 +169,7 @@ class FAISSRetriever(BaseRetriever):
                     continue
                 seen_answers.add(answer_text)
                 score = float(dist)
-                results.append(
-                    Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
-                )
+                results.append(Document(text=doc.text, metadata=doc.metadata.copy(), score=score))
                 if len(results) >= top_k:
                     break
             all_results.append(results)

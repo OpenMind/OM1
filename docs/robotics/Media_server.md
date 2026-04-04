@@ -1,3 +1,8 @@
+---
+title: Install Zenoh Middleware
+icon: plug
+---
+
 # Video Test System
 
 Goal: Try out alternative system for sharing video and audio data with LLMs and human teleoperators.

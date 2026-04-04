@@ -157,9 +157,7 @@ class TestFAISSRetriever:
 
         assert len(all_results) == num_queries
         assert all(len(results) == 2 for results in all_results)
-        assert all(
-            isinstance(doc, Document) for results in all_results for doc in results
-        )
+        assert all(isinstance(doc, Document) for results in all_results for doc in results)
 
     def test_batch_search_wrong_dimension_raises_error(self, mock_faiss_index):
         """Test that batch_search raises ValueError for wrong embedding dimension."""

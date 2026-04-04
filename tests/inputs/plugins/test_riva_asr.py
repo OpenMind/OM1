@@ -467,9 +467,7 @@ def test_stop_asr_unregister_failure():
     ):
 
         mock_asr_instance = MagicMock()
-        mock_asr_instance.unregister_message_callback.side_effect = Exception(
-            "Unregister failed"
-        )
+        mock_asr_instance.unregister_message_callback.side_effect = Exception("Unregister failed")
         mock_asr.return_value = mock_asr_instance
 
         mock_session = MagicMock()

@@ -30,22 +30,15 @@ def test_presence_snapshot_to_text_variants():
     assert snap.to_text() == "In Camera View: 1 known (wendy)."
 
     # 3 known, 2 unknown (ordering and 'and' grammar)
-    snap = PresenceSnapshot(
-        ts=1.0, names=["wendy", "alice", "bob"], unknown_faces=2, raw={}
-    )
-    assert (
-        snap.to_text()
-        == "In Camera View: 3 known (wendy, alice and bob) and 2 unknown faces."
-    )
+    snap = PresenceSnapshot(ts=1.0, names=["wendy", "alice", "bob"], unknown_faces=2, raw={})
+    assert snap.to_text() == "In Camera View: 3 known (wendy, alice and bob) and 2 unknown faces."
 
     # 0 known, 1 unknown (singular form)
     snap = PresenceSnapshot(ts=1.0, names=[], unknown_faces=1, raw={})
     assert snap.to_text() == "In Camera View: 1 unknown face."
 
     # duplicates and 'unknown' should be cleaned out
-    snap = PresenceSnapshot(
-        ts=1.0, names=["wendy", "wendy", "unknown"], unknown_faces=0, raw={}
-    )
+    snap = PresenceSnapshot(ts=1.0, names=["wendy", "wendy", "unknown"], unknown_faces=0, raw={})
     assert snap.to_text() == "In Camera View: 1 known (wendy)."
 
     # nothing

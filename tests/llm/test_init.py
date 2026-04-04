@@ -166,9 +166,7 @@ def test_llm_config():
         )
     )
     assert llm_config.config_key == "config_value"  # type: ignore
-    with pytest.raises(
-        AttributeError, match="'LLMConfig' object has no attribute 'invalid_key'"
-    ):
+    with pytest.raises(AttributeError, match="'LLMConfig' object has no attribute 'invalid_key'"):
         llm_config.invalid_key  # type: ignore
 
 
@@ -216,9 +214,7 @@ def test_load_llm_invalid_type():
         setattr(mock_module, "InvalidLLM", InvalidLLM)
         mock_import.return_value = mock_module
 
-        with pytest.raises(
-            ValueError, match="'InvalidLLM' is not a valid LLM subclass"
-        ):
+        with pytest.raises(ValueError, match="'InvalidLLM' is not a valid LLM subclass"):
             load_llm({"type": "InvalidLLM"})
 
 

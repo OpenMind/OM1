@@ -28,9 +28,7 @@ class FabricClosestPeerConfig(SensorConfig):
         Mock longitude.
     """
 
-    fabric_endpoint: str = Field(
-        default="http://localhost:8545", description="Fabric Endpoint"
-    )
+    fabric_endpoint: str = Field(default="http://localhost:8545", description="Fabric Endpoint")
     mock_mode: bool = Field(default=True, description="Mock Mode")
     mock_lat: Optional[float] = Field(default=None, description="Mock Latitude")
     mock_lon: Optional[float] = Field(default=None, description="Mock Longitude")
@@ -79,9 +77,7 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
         if self.mock_mode:
             peer_lat = self.config.mock_lat
             peer_lon = self.config.mock_lon
-            logging.info(
-                f"FabricClosestPeer (mock): fabricated peer {peer_lat:.6f},{peer_lon:.6f}"
-            )
+            logging.info(f"FabricClosestPeer (mock): fabricated peer {peer_lat:.6f},{peer_lon:.6f}")
         else:
             try:
                 lat = self.io.get_dynamic_variable("latitude")
@@ -89,9 +85,7 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
                 if lat is None or lon is None:
                     logging.error("FabricClosestPeer: latitude or longitude not set.")
                     return None
-                logging.info(
-                    f"FabricClosestPeer: fetching closest peer for {lat:.6f}, {lon:.6f}"
-                )
+                logging.info(f"FabricClosestPeer: fetching closest peer for {lat:.6f}, {lon:.6f}")
                 timeout = aiohttp.ClientTimeout(total=3.0)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.post(
@@ -113,9 +107,7 @@ class FabricClosestPeer(FuserInput[FabricClosestPeerConfig, Optional[str]]):
                 peer_lat = peer_info["latitude"]
                 peer_lon = peer_info["longitude"]
             except Exception as exc:  # pylint: disable=broad-except
-                logging.error(
-                    f"FabricClosestPeer: error calling Fabric endpoint – {exc}"
-                )
+                logging.error(f"FabricClosestPeer: error calling Fabric endpoint – {exc}")
                 return None
 
         self.io.add_dynamic_variable("closest_peer_lat", peer_lat)
