@@ -33,9 +33,7 @@ def mock_cv2():
 
 def test_video_stream_initialization(mock_cv2):
     """Test UnitreeRealSenseDevVideoStream initialization."""
-    stream = UnitreeRealSenseDevVideoStream(
-        fps=30, resolution=(640, 480), jpeg_quality=70
-    )
+    stream = UnitreeRealSenseDevVideoStream(fps=30, resolution=(640, 480), jpeg_quality=70)
 
     assert stream.fps == 30
     assert stream.resolution == (640, 480)
@@ -107,9 +105,7 @@ def test_vlm_provider_initialization():
     """Test UnitreeRealSenseDevVLMProvider initialization."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ) as mock_stream,
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -130,9 +126,7 @@ def test_vlm_provider_singleton():
     """Test that UnitreeRealSenseDevVLMProvider follows singleton pattern."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client"),
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ),
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"),
     ):
 
         provider1 = UnitreeRealSenseDevVLMProvider(ws_url="ws://localhost:8000")
@@ -144,9 +138,7 @@ def test_vlm_provider_register_message_callback():
     """Test registering message callback."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ),
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"),
     ):
 
         mock_ws_instance = MagicMock()
@@ -166,9 +158,7 @@ def test_vlm_provider_register_message_callback_none():
     """Test registering None callback."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ),
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"),
     ):
 
         mock_ws_instance = MagicMock()
@@ -185,9 +175,7 @@ def test_vlm_provider_start():
     """Test starting the VLM provider."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ) as mock_stream,
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -208,9 +196,7 @@ def test_vlm_provider_start_already_running():
     """Test starting when already running."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ) as mock_stream,
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -235,9 +221,7 @@ def test_vlm_provider_stop():
     """Test stopping the VLM provider."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ) as mock_stream,
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()
@@ -259,9 +243,7 @@ def test_vlm_provider_video_stream_parameters():
     """Test that video stream is created with correct parameters."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client"),
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ) as mock_stream,
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream") as mock_stream,
     ):
 
         UnitreeRealSenseDevVLMProvider(
@@ -281,9 +263,7 @@ def test_vlm_provider_ws_client_callback():
     """Test that ws_client.send_message is used as frame callback."""
     with (
         patch("providers.unitree_realsense_dev_vlm_provider.ws.Client") as mock_ws,
-        patch(
-            "providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream"
-        ) as mock_stream,
+        patch("providers.unitree_realsense_dev_vlm_provider.UnitreeRealSenseDevVideoStream") as mock_stream,
     ):
 
         mock_ws_instance = MagicMock()

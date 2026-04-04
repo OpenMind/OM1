@@ -21,9 +21,7 @@ class _MockConversationProvider:
     """
 
     def store_user_message(self, message: str) -> None:
-        logging.debug(
-            f"MockConversationProvider: stored message ({len(message)} chars)"
-        )
+        logging.debug(f"MockConversationProvider: stored message ({len(message)} chars)")
 
 
 class MockGoogleASR(GoogleASRInput):
@@ -100,9 +98,7 @@ class MockGoogleASR(GoogleASRInput):
 
         result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n{self.messages[-1]}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, self.messages[-1], time.time()
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, self.messages[-1], time.time())
         self.io_provider.add_mode_transition_input(self.messages[-1])
         self.conversation_provider.store_user_message(self.messages[-1])
 

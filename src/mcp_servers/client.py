@@ -71,8 +71,7 @@ class MCPTool:
         """
         params = self.input_schema.get("properties", {})
         param_str = ", ".join(
-            f"{param_name}: {param_info.get('type', 'any')}"
-            for param_name, param_info in params.items()
+            f"{param_name}: {param_info.get('type', 'any')}" for param_name, param_info in params.items()
         )
         return f"- {self.key}({param_str}): {self.description}"
 
@@ -144,9 +143,7 @@ class MCPClientManager:
         self._tools.clear()
         self._started = False
 
-    async def _run_server_task(
-        self, config: MCPServerConfig, ready_event: asyncio.Event
-    ) -> None:
+    async def _run_server_task(self, config: MCPServerConfig, ready_event: asyncio.Event) -> None:
         """Independent event loop task for a single MCP server."""
         exit_stack = AsyncExitStack()
         try:
@@ -161,8 +158,7 @@ class MCPClientManager:
                     server_name=config.name,
                     original_name=tool.name,
                     description=tool.description or f"MCP tool: {tool.name}",
-                    input_schema=tool.inputSchema
-                    or {"type": "object", "properties": {}},
+                    input_schema=tool.inputSchema or {"type": "object", "properties": {}},
                 )
                 self._tools[mcp_tool.key] = mcp_tool
 
@@ -190,22 +186,16 @@ class MCPClientManager:
             if config.name in self._sessions:
                 del self._sessions[config.name]
 
-            keys_to_remove = [
-                k for k, v in self._tools.items() if v.server_name == config.name
-            ]
+            keys_to_remove = [k for k, v in self._tools.items() if v.server_name == config.name]
             for k in keys_to_remove:
                 del self._tools[k]
 
-    async def _connect_server(
-        self, config: MCPServerConfig, exit_stack: AsyncExitStack
-    ) -> ClientSession:
+    async def _connect_server(self, config: MCPServerConfig, exit_stack: AsyncExitStack) -> ClientSession:
         """Establish the connection boundaries for a specific transport."""
         match config.transport:
             case TransportType.STDIO:
                 if not config.command:
-                    raise ValueError(
-                        f"MCP server '{config.name}' requires 'command' for stdio transport"
-                    )
+                    raise ValueError(f"MCP server '{config.name}' requires 'command' for stdio transport")
                 server_params = StdioServerParameters(
                     command=config.command,
                     args=config.args,
@@ -216,17 +206,13 @@ class MCPClientManager:
 
             case TransportType.SSE:
                 if not config.url:
-                    raise ValueError(
-                        f"MCP server '{config.name}' requires 'url' for sse transport"
-                    )
+                    raise ValueError(f"MCP server '{config.name}' requires 'url' for sse transport")
                 client_cm = sse_client(config.url, headers=config.headers)
                 read, write = await exit_stack.enter_async_context(client_cm)
 
             case TransportType.HTTP:
                 if not config.url:
-                    raise ValueError(
-                        f"MCP server '{config.name}' requires 'url' for http transport"
-                    )
+                    raise ValueError(f"MCP server '{config.name}' requires 'url' for http transport")
                 http_client = httpx.AsyncClient(
                     headers=config.headers or {},
                     timeout=httpx.Timeout(30.0, read=300.0),
@@ -268,9 +254,7 @@ class MCPClientManager:
             "Use these tools to get external information. "
             "Call the tool first, then use the result to respond.\n"
         )
-        tool_lines = "\n".join(
-            tool.generate_description() for tool in self._tools.values()
-        )
+        tool_lines = "\n".join(tool.generate_description() for tool in self._tools.values())
         return f"{header}{tool_lines}"
 
     def is_mcp_tool(self, tool_name: str) -> bool:

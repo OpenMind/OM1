@@ -95,9 +95,7 @@ class ASRProvider:
             self.ws_client.message_callback = None
             logging.info("Unregistered message callback")
         else:
-            logging.debug(
-                "Callback already replaced by newer instance, skipping unregister"
-            )
+            logging.debug("Callback already replaced by newer instance, skipping unregister")
 
     def start(self):
         """

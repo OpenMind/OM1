@@ -26,10 +26,7 @@ async def test_poll():
         sensor = LidarLocalizationInput(config=config)
 
         result = await sensor._poll()
-        assert (
-            result
-            == "NOT LOCALIZED: Robot position uncertain. DO NOT attempt navigation until localized."
-        )
+        assert result == "NOT LOCALIZED: Robot position uncertain. DO NOT attempt navigation until localized."
 
 
 def test_formatted_latest_buffer():
@@ -41,9 +38,7 @@ def test_formatted_latest_buffer():
         result = sensor.formatted_latest_buffer()
         assert result is None
 
-        test_message = Message(
-            timestamp=123.456, message="LOCALIZED: Robot position is confirmed."
-        )
+        test_message = Message(timestamp=123.456, message="LOCALIZED: Robot position is confirmed.")
         sensor.messages.append(test_message)
 
         result = sensor.formatted_latest_buffer()

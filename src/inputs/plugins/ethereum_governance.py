@@ -73,13 +73,9 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
                             logging.debug(f"Decoded blockchain data: {decoded_data}")
                             return decoded_data
                         else:
-                            logging.error(
-                                "Error: No valid result in blockchain response"
-                            )
+                            logging.error("Error: No valid result in blockchain response")
                     else:
-                        logging.error(
-                            f"Error: Blockchain request failed with status {response.status}"
-                        )
+                        logging.error(f"Error: Blockchain request failed with status {response.status}")
         except Exception as e:
             logging.error(f"Error loading rules from blockchain: {e}")
 
@@ -152,9 +148,7 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         self.universal_rule: Optional[str] = None
         self.messages: list[Message] = []
 
-        logging.info(
-            "GovernanceEthereum initialized, rules will be loaded on first poll"
-        )
+        logging.info("GovernanceEthereum initialized, rules will be loaded on first poll")
 
     async def _poll(self) -> Optional[str]:
         """
@@ -233,9 +227,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         # no need to blank because we are only saving rare law changes
         # self.messages = []
         return result

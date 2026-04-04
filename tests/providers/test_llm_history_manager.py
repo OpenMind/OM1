@@ -79,9 +79,7 @@ async def test_start_summary_task(history_manager):
 
     # Replace summarize_messages with a mock
     history_manager.summarize_messages = AsyncMock()
-    history_manager.summarize_messages.return_value = ChatMessage(
-        role="assistant", content="New summary"
-    )
+    history_manager.summarize_messages.return_value = ChatMessage(role="assistant", content="New summary")
 
     # Run the summary task
     await history_manager.start_summary_task(messages)
@@ -376,9 +374,7 @@ async def test_summarization_failure_truncates_to_history_length(history_manager
 
     # Mock summarization to return an error
     history_manager.summarize_messages = AsyncMock()
-    history_manager.summarize_messages.return_value = ChatMessage(
-        role="system", content="Error: API request timed out"
-    )
+    history_manager.summarize_messages.return_value = ChatMessage(role="system", content="Error: API request timed out")
 
     # Run the summary task
     await history_manager.start_summary_task(messages)
@@ -753,9 +749,7 @@ async def test_summarize_messages_api_error():
     chat_mock = MagicMock()
     completions_mock = MagicMock()
 
-    error = openai.APIError(
-        message="Service unavailable", request=MagicMock(), body=None
-    )
+    error = openai.APIError(message="Service unavailable", request=MagicMock(), body=None)
     completions_mock.create = AsyncMock(side_effect=error)
     chat_mock.completions = completions_mock
     client.chat = chat_mock
@@ -813,9 +807,7 @@ async def test_start_summary_task_unexpected_summary_result():
     ]
 
     history_manager.summarize_messages = AsyncMock()
-    history_manager.summarize_messages.return_value = ChatMessage(
-        role="user", content="Unexpected user role"
-    )
+    history_manager.summarize_messages.return_value = ChatMessage(role="user", content="Unexpected user role")
 
     await history_manager.start_summary_task(messages)
     await asyncio.sleep(0.1)
@@ -866,9 +858,7 @@ async def test_start_summary_task_exception_in_start():
     ]
 
     # Mock summarize_messages to raise an exception during task creation
-    history_manager.summarize_messages = MagicMock(
-        side_effect=Exception("Task creation failed")
-    )
+    history_manager.summarize_messages = MagicMock(side_effect=Exception("Task creation failed"))
 
     # This should handle the exception gracefully
     await history_manager.start_summary_task(messages)

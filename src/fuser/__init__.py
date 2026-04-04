@@ -47,18 +47,12 @@ class Fuser:
                 kb_config = dict(config.knowledge_base)
                 self.kb_min_score = kb_config.get("min_score", 0.0)
                 if self.kb_min_score > 0:
-                    logging.info(
-                        f"KnowledgeBase min_score threshold: {self.kb_min_score}"
-                    )
+                    logging.info(f"KnowledgeBase min_score threshold: {self.kb_min_score}")
 
                 self.knowledge_base = KnowledgeBase(**kb_config)
-                logging.info(
-                    f"KnowledgeBase enabled with config: {config.knowledge_base}"
-                )
+                logging.info(f"KnowledgeBase enabled with config: {config.knowledge_base}")
             except Exception:
-                logging.exception(
-                    "Failed to initialize KnowledgeBase with provided config"
-                )
+                logging.exception("Failed to initialize KnowledgeBase with provided config")
                 self.knowledge_base = None
 
         self.memory_reader = None
@@ -78,6 +72,7 @@ class Fuser:
     async def fuse(
         self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
     ) -> T.Optional[str]:
+    async def fuse(self, inputs: Sequence[Sensor], finished_promises: list[T.Any]) -> T.Optional[str]:
         """
         Combine all inputs into a single formatted prompt string.
 
@@ -105,11 +100,7 @@ class Fuser:
 
         # Combine all inputs, memories, and configurations into a single prompt
         today = datetime.now().strftime("%B %-d, %Y")
-        system_prompt = (
-            "\nBASIC CONTEXT:\n"
-            + self.config.system_prompt_base
-            + f"\n\nToday is {today}.\n"
-        )
+        system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + f"\n\nToday is {today}.\n"
 
         inputs_fused = "".join([s for s in input_strings if s is not None])
 
@@ -126,21 +117,18 @@ class Fuser:
         kb_context = ""
         if self.knowledge_base and inputs_fused:
             try:
+                query_text = None
+                voice_input = self.io_provider.get_input("Voice")
+                if voice_input and voice_input.input and self.io_provider.tick_counter == voice_input.tick:
+                    query_text = voice_input.input.strip()
+
                 if query_text:
-                    results = await self.knowledge_base.query(
-                        query_text, top_k=3, min_score=self.kb_min_score
-                    )
+                    results = await self.knowledge_base.query(query_text, top_k=3, min_score=self.kb_min_score)
                     if results:
-                        kb_context = self.knowledge_base.format_context(
-                            results, max_chars=1500
-                        )
-                        logging.info(
-                            f"Knowledge base: {len(results)} docs passed to LLM"
-                        )
+                        kb_context = self.knowledge_base.format_context(results, max_chars=1500)
+                        logging.info(f"Knowledge base: {len(results)} docs passed to LLM")
                     else:
-                        logging.info(
-                            "Knowledge base: 0 docs passed threshold, skipping context"
-                        )
+                        logging.info("Knowledge base: 0 docs passed threshold, skipping context")
             except Exception as e:
                 logging.error(f"Error querying knowledge base: {e}")
 
@@ -183,9 +171,7 @@ class Fuser:
         actions_fused = ""
 
         for action in self.config.agent_actions:
-            desc = describe_action(
-                action.name, action.llm_label, action.exclude_from_prompt
-            )
+            desc = describe_action(action.name, action.llm_label, action.exclude_from_prompt)
             if desc:
                 actions_fused += desc + "\n\n"
 

@@ -210,9 +210,7 @@ class FacePresenceProvider:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(
-            target=self._loop, name="face-presence-poll", daemon=True
-        )
+        self._thread = threading.Thread(target=self._loop, name="face-presence-poll", daemon=True)
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
@@ -310,10 +308,7 @@ class FacePresenceProvider:
 
             if frames_recent > 0:
                 unknown_frac = frames_with_unknown / float(frames_recent)
-                if (
-                    frames_recent >= self.min_obs_window
-                    and unknown_frac < self.unknown_frac_threshold
-                ):
+                if frames_recent >= self.min_obs_window and unknown_frac < self.unknown_frac_threshold:
                     unknown_faces = 0  # suppress brief/rare unknowns
                 else:
                     unknown_faces = unknown_peak  # report the maximum unknown seen in any single frame
@@ -339,9 +334,7 @@ class FacePresenceProvider:
 
         self._unknown_faces = int(unknown_faces)
 
-        return PresenceSnapshot(
-            ts=ts, names=names, unknown_faces=unknown_faces, raw=data
-        )
+        return PresenceSnapshot(ts=ts, names=names, unknown_faces=unknown_faces, raw=data)
 
     @property
     def unknown_faces(self) -> int:

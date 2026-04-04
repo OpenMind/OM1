@@ -36,9 +36,7 @@ class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
         self.messages: List[Message] = []
 
         # Descriptive text for LLM context
-        self.descriptor_for_LLM = (
-            "Robot localization status - indicates if navigation is safe to proceed."
-        )
+        self.descriptor_for_LLM = "Robot localization status - indicates if navigation is safe to proceed."
 
         logging.info("LocalizationInput plugin initialized")
 
@@ -61,9 +59,7 @@ class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
             if is_localized and pose is not None:
                 status_msg = "LOCALIZED: Robot position is confirmed. Navigation commands are safe to execute."
                 pos = pose.position
-                logging.debug(
-                    f"Robot localized at position x:{pos.x:.2f}, y:{pos.y:.2f}, z:{pos.z:.2f}"
-                )
+                logging.debug(f"Robot localized at position x:{pos.x:.2f}, y:{pos.y:.2f}, z:{pos.z:.2f}")
             else:
                 status_msg = "NOT LOCALIZED: Robot position uncertain. DO NOT attempt navigation until localized."
                 logging.debug("Robot localization status: NOT LOCALIZED")
@@ -132,14 +128,9 @@ class AMCLLocalizationInput(FuserInput[SensorConfig, Optional[str]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

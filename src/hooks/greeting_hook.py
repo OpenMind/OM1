@@ -126,8 +126,7 @@ async def geeting_end_hook(context: Dict[str, Any]):
             )
         else:
             raise ValueError(
-                f"Unsupported TTS provider: {tts_provider}. "
-                f"Supported providers are: elevenlabs, kokoro, riva"
+                f"Unsupported TTS provider: {tts_provider}. " f"Supported providers are: elevenlabs, kokoro, riva"
             )
 
         provider.start()

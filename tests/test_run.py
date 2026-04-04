@@ -100,9 +100,7 @@ def test_start_with_multi_mode_config():
 
         mock_setup_logging.assert_called_once_with("test_config", "INFO", False)
         mock_load_mode_config.assert_called_once_with("test_config")
-        mock_runtime_class.assert_called_once_with(
-            mock_mode_config, "test_config", hot_reload=True, check_interval=60
-        )
+        mock_runtime_class.assert_called_once_with(mock_mode_config, "test_config", hot_reload=True, check_interval=60)
         mock_asyncio_run.assert_called_once()
 
 
@@ -176,9 +174,7 @@ def test_start_with_hot_reload_disabled():
             log_to_file=False,
         )
 
-        mock_runtime_class.assert_called_once_with(
-            mock_mode_config, "test_config", hot_reload=False, check_interval=60
-        )
+        mock_runtime_class.assert_called_once_with(mock_mode_config, "test_config", hot_reload=False, check_interval=60)
 
 
 def test_start_with_custom_check_interval():
@@ -209,9 +205,7 @@ def test_start_with_custom_check_interval():
             log_to_file=False,
         )
 
-        mock_runtime_class.assert_called_once_with(
-            mock_mode_config, "test_config", hot_reload=True, check_interval=120
-        )
+        mock_runtime_class.assert_called_once_with(mock_mode_config, "test_config", hot_reload=True, check_interval=120)
 
 
 def test_start_with_custom_log_level():

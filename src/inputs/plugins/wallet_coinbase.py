@@ -63,9 +63,7 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
         API_KEY = os.environ.get("COINBASE_API_KEY")
         API_SECRET = os.environ.get("COINBASE_API_SECRET")
         if not API_KEY or not API_SECRET:
-            logging.error(
-                "COINBASE_API_KEY or COINBASE_API_SECRET environment variable is not set"
-            )
+            logging.error("COINBASE_API_KEY or COINBASE_API_SECRET environment variable is not set")
         else:
             Cdp.configure(API_KEY, API_SECRET)
 
@@ -191,8 +189,6 @@ class WalletCoinbase(FuserInput[WalletCoinbaseConfig, List[float]]):
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, result_message.message, result_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, result_message.message, result_message.timestamp)
         self.messages = []
         return result

@@ -82,9 +82,7 @@ class UnitreeG1NavigationProvider:
         self.ai_status_pub = None
         if self.session:
             try:
-                self.ai_status_pub = self.session.declare_publisher(
-                    self.ai_status_topic
-                )
+                self.ai_status_pub = self.session.declare_publisher(self.ai_status_topic)
             except Exception as e:
                 logging.error(f"Error declaring AI status publisher: {e}")
 
@@ -93,14 +91,10 @@ class UnitreeG1NavigationProvider:
         Start the navigation provider by registering the message callback and starting the listener.
         """
         if self.session is None:
-            logging.error(
-                "Cannot start navigation provider; Zenoh session is not available."
-            )
+            logging.error("Cannot start navigation provider; Zenoh session is not available.")
             return
         if not self.running:
-            self.session.declare_subscriber(
-                self.navigation_status_topic, self.navigation_status_message_callback
-            )
+            self.session.declare_subscriber(self.navigation_status_topic, self.navigation_status_message_callback)
             logging.info(
                 "Subscribed to navigation status topic: %s",
                 self.navigation_status_topic,
@@ -120,9 +114,7 @@ class UnitreeG1NavigationProvider:
             The Zenoh sample received, which should have a 'payload' attribute.
         """
         if data.payload:
-            message: nav_msgs.Nav2Status = nav_msgs.Nav2Status.deserialize(
-                data.payload.to_bytes()
-            )
+            message: nav_msgs.Nav2Status = nav_msgs.Nav2Status.deserialize(data.payload.to_bytes())
             logging.debug("Received Navigation Status message: %s", message)
             status_list = message.status_list
             if status_list:
@@ -179,15 +171,11 @@ class UnitreeG1NavigationProvider:
                 code=1 if enabled else 0,
             )
             self.ai_status_pub.put(status_msg.serialize())
-            logging.info(
-                "AI mode %s during navigation", "enabled" if enabled else "disabled"
-            )
+            logging.info("AI mode %s during navigation", "enabled" if enabled else "disabled")
         except Exception as e:
             logging.error(f"Error publishing AI status: {e}")
 
-    def publish_goal_pose(
-        self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None
-    ):
+    def publish_goal_pose(self, pose: geometry_msgs.PoseStamped, destination_name: Optional[str] = None):
         """
         Publish a goal pose to the navigation topic.
 

@@ -144,9 +144,7 @@ class TestEmbeddingClientUnit:
     @pytest.mark.asyncio
     async def test_embed_with_server_error(self):
         """Test that embed raises exception on server error."""
-        client = EmbeddingClient(
-            base_url="http://localhost:9999"
-        )  # Non-existent server
+        client = EmbeddingClient(base_url="http://localhost:9999")  # Non-existent server
 
         with pytest.raises(aiohttp.ClientError):
             await client.embed("test query")
@@ -154,9 +152,7 @@ class TestEmbeddingClientUnit:
     @pytest.mark.asyncio
     async def test_embed_batch_with_server_error(self):
         """Test that embed_batch raises exception on server error."""
-        client = EmbeddingClient(
-            base_url="http://localhost:9999"
-        )  # Non-existent server
+        client = EmbeddingClient(base_url="http://localhost:9999")  # Non-existent server
 
         with pytest.raises(aiohttp.ClientError):
             await client.embed_batch(["query 1", "query 2"])
@@ -170,15 +166,11 @@ class TestEmbeddingClientUnit:
         mock_response.raise_for_status = MagicMock()
         mock_embedding = np.random.randn(384).astype("float32")
         mock_embedding_b64 = base64.b64encode(mock_embedding.tobytes()).decode("utf-8")
-        mock_response.json = AsyncMock(
-            return_value={"embedding_b64": mock_embedding_b64, "latency_ms": 10.0}
-        )
+        mock_response.json = AsyncMock(return_value={"embedding_b64": mock_embedding_b64, "latency_ms": 10.0})
 
         mock_session = MagicMock()
         mock_session.post = MagicMock()
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
+        mock_session.post.return_value.__aenter__ = AsyncMock(return_value=mock_response)
         mock_session.post.return_value.__aexit__ = AsyncMock()
         mock_session.close = AsyncMock()  # Add async close method
 
@@ -203,15 +195,11 @@ class TestEmbeddingClientUnit:
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json = AsyncMock(
-            return_value={"embedding_b64": embedding_b64, "latency_ms": 10.0}
-        )
+        mock_response.json = AsyncMock(return_value={"embedding_b64": embedding_b64, "latency_ms": 10.0})
 
         mock_session = MagicMock()
         mock_session.post = MagicMock()
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
+        mock_session.post.return_value.__aenter__ = AsyncMock(return_value=mock_response)
         mock_session.post.return_value.__aexit__ = AsyncMock()
         mock_session.close = AsyncMock()  # Add async close method
 
@@ -231,22 +219,15 @@ class TestEmbeddingClientUnit:
             np.array([1.0, 2.0, 3.0], dtype="float32"),
             np.array([4.0, 5.0, 6.0], dtype="float32"),
         ]
-        embeddings_b64 = [
-            base64.b64encode(emb.tobytes()).decode("utf-8")
-            for emb in expected_embeddings
-        ]
+        embeddings_b64 = [base64.b64encode(emb.tobytes()).decode("utf-8") for emb in expected_embeddings]
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json = AsyncMock(
-            return_value={"embeddings_b64": embeddings_b64, "latency_ms": 15.0}
-        )
+        mock_response.json = AsyncMock(return_value={"embeddings_b64": embeddings_b64, "latency_ms": 15.0})
 
         mock_session = MagicMock()
         mock_session.post = MagicMock()
-        mock_session.post.return_value.__aenter__ = AsyncMock(
-            return_value=mock_response
-        )
+        mock_session.post.return_value.__aenter__ = AsyncMock(return_value=mock_response)
         mock_session.post.return_value.__aexit__ = AsyncMock()
         mock_session.close = AsyncMock()  # Add async close method
 

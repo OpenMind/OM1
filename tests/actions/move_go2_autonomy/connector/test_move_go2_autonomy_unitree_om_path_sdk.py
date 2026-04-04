@@ -16,24 +16,12 @@ from providers.unitree_go2_odom_provider import RobotState
 def mock_dependencies():
     """Mock all external dependencies."""
     with (
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"
-        ) as mock_paths,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"
-        ) as mock_state,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
-        ) as mock_sport,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"
-        ) as mock_odom,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
-        ) as mock_face,
-        patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"
-        ) as mock_zenoh_session,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider") as mock_paths,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider") as mock_state,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient") as mock_sport,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider") as mock_odom,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider") as mock_face,
+        patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session") as mock_zenoh_session,
     ):
         # Setup mock instances
         mock_paths_instance = Mock()
@@ -140,34 +128,18 @@ class TestMoveUnitreeOMPathSDKConnectorInit:
 
         assert connector.session is not None
         mock_dependencies["zenoh_session"].declare_subscriber.assert_called_once()
-        mock_dependencies["zenoh_session"].declare_publisher.assert_called_once_with(
-            "om/ai/response"
-        )
+        mock_dependencies["zenoh_session"].declare_publisher.assert_called_once_with("om/ai/response")
 
     def test_initialization_sport_client_error(self):
         """Test initialization when sport client fails."""
         with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
-            ) as mock_sport,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging"
-            ) as mock_logging,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient") as mock_sport,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging") as mock_logging,
         ):
             mock_sport.side_effect = Exception("Connection failed")
 
@@ -180,27 +152,13 @@ class TestMoveUnitreeOMPathSDKConnectorInit:
     def test_initialization_zenoh_error(self):
         """Test initialization when Zenoh session fails."""
         with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"
-            ),
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session"
-            ) as mock_zenoh,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging"
-            ) as mock_logging,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.SimplePathsProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2StateProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.SportClient"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.UnitreeGo2OdomProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.FacePresenceProvider"),
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.open_zenoh_session") as mock_zenoh,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging") as mock_logging,
         ):
             mock_zenoh.side_effect = Exception("Zenoh connection failed")
 
@@ -270,9 +228,7 @@ class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_movement_already_pending(self, connector, mock_dependencies):
         """Test connect when movement is already pending."""
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False))
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
 
         await connector.connect(move_input)
@@ -280,9 +236,7 @@ class TestConnect:
         assert connector.pending_movements.qsize() == 1
 
     @pytest.mark.asyncio
-    async def test_connect_waiting_for_location_data(
-        self, connector, mock_dependencies
-    ):
+    async def test_connect_waiting_for_location_data(self, connector, mock_dependencies):
         """Test connect when waiting for location data."""
         mock_dependencies["odom"].position["odom_x"] = 0.0
         move_input = MoveInput(action=MovementAction.MOVE_FORWARDS)
@@ -482,9 +436,7 @@ class TestMoveRobot:
         """Test move robot when exception occurs."""
         mock_dependencies["sport"].Move.side_effect = Exception("Movement failed")
 
-        with patch(
-            "actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging"
-        ) as mock_logging:
+        with patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.logging") as mock_logging:
             connector._move_robot(0.5, 0.0, 0.0)
 
             mock_logging.error.assert_called()
@@ -496,9 +448,7 @@ class TestCleanAbort:
     def test_clean_abort_with_pending_movement(self, connector, mock_dependencies):
         """Test clean abort with pending movement."""
         connector.movement_attempts = 5
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False))
 
         connector.clean_abort()
 
@@ -623,9 +573,7 @@ class TestTick:
     def test_tick_movement_timeout(self, connector, mock_dependencies):
         """Test tick when movement times out."""
         connector.movement_attempts = 20
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=False))
 
         with patch.object(connector, "sleep"):
             connector.tick()
@@ -636,9 +584,7 @@ class TestTick:
     def test_tick_turn_phase_large_gap(self, connector, mock_dependencies):
         """Test tick during turn phase with large gap."""
         mock_dependencies["odom"].position["odom_yaw_m180_p180"] = 0.0
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=45.0, start_x=0.0, start_y=0.0, turn_complete=False)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=45.0, start_x=0.0, start_y=0.0, turn_complete=False))
 
         with patch.object(connector, "_execute_turn", return_value=True):
             with patch.object(connector, "sleep"):
@@ -650,11 +596,7 @@ class TestTick:
         """Test tick during turn phase with small gap (between 5 and 10 degrees)."""
         # Gap = current - target = -38 - (-45) = 7 degrees (small gap)
         mock_dependencies["odom"].position["odom_yaw_m180_p180"] = -38.0
-        connector.pending_movements.put(
-            MoveCommand(
-                dx=0.5, yaw=-45.0, start_x=1.0, start_y=0.0, turn_complete=False
-            )
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=-45.0, start_x=1.0, start_y=0.0, turn_complete=False))
 
         with patch.object(connector, "sleep"):
             connector.tick()
@@ -665,9 +607,7 @@ class TestTick:
     def test_tick_turn_complete(self, connector, mock_dependencies):
         """Test tick when turn is complete."""
         mock_dependencies["odom"].position["odom_yaw_m180_p180"] = -43.0
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=45.0, start_x=0.0, start_y=0.0, turn_complete=False)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=45.0, start_x=0.0, start_y=0.0, turn_complete=False))
 
         with patch.object(connector, "sleep"):
             connector.tick()
@@ -677,9 +617,7 @@ class TestTick:
 
     def test_tick_movement_phase_no_distance(self, connector, mock_dependencies):
         """Test tick during movement phase with no distance required."""
-        connector.pending_movements.put(
-            MoveCommand(dx=0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True))
 
         with patch.object(connector, "sleep"):
             connector.tick()
@@ -692,9 +630,7 @@ class TestTick:
         # odom_x must be non-zero to avoid early return in tick()
         mock_dependencies["odom"].position["odom_x"] = 1.0
         mock_dependencies["odom"].position["odom_y"] = 0.0
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=0.0, start_x=1.0, start_y=0.0, turn_complete=True)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=0.0, start_x=1.0, start_y=0.0, turn_complete=True))
 
         with patch.object(connector, "sleep"):
             connector.tick()
@@ -707,9 +643,7 @@ class TestTick:
         # odom_x must be non-zero to avoid early return in tick()
         mock_dependencies["odom"].position["odom_x"] = 1.0
         mock_dependencies["odom"].position["odom_y"] = 0.0
-        connector.pending_movements.put(
-            MoveCommand(dx=-0.5, yaw=0.0, start_x=1.0, start_y=0.0, turn_complete=True)
-        )
+        connector.pending_movements.put(MoveCommand(dx=-0.5, yaw=0.0, start_x=1.0, start_y=0.0, turn_complete=True))
 
         with patch.object(connector, "sleep"):
             connector.tick()
@@ -720,9 +654,7 @@ class TestTick:
         """Test tick during movement phase continuing to move."""
         mock_dependencies["odom"].position["odom_x"] = 0.2
         mock_dependencies["odom"].position["odom_y"] = 0.0
-        connector.pending_movements.put(
-            MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True)
-        )
+        connector.pending_movements.put(MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True))
 
         with patch.object(connector, "sleep"):
             connector.tick()
@@ -735,9 +667,7 @@ class TestTick:
         mock_dependencies["odom"].position["odom_x"] = 0.5
         mock_dependencies["odom"].position["odom_y"] = 0.0
         connector.pending_movements.put(
-            MoveCommand(
-                dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True, speed=0.5
-            )
+            MoveCommand(dx=0.5, yaw=0.0, start_x=0.0, start_y=0.0, turn_complete=True, speed=0.5)
         )
 
         with patch.object(connector, "sleep"):
@@ -760,12 +690,8 @@ class TestZenohAIStatus:
 
         # Mock AIStatusRequest with proper header
         with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest"
-            ) as mock_request,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse"
-            ) as mock_response,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest") as mock_request,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse") as mock_response,
         ):
             mock_header = Mock()
             mock_header.frame_id = "test_frame"
@@ -795,12 +721,8 @@ class TestZenohAIStatus:
         mock_sample.payload = mock_payload
 
         with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest"
-            ) as mock_request,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse"
-            ) as mock_response,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest") as mock_request,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse") as mock_response,
         ):
             mock_header = Mock()
             mock_header.frame_id = "test_frame"
@@ -831,12 +753,8 @@ class TestZenohAIStatus:
 
         # Mock AIStatusRequest with proper header
         with (
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest"
-            ) as mock_request,
-            patch(
-                "actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse"
-            ) as mock_response,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusRequest") as mock_request,
+            patch("actions.move_go2_autonomy.connector.unitree_om_path_sdk.AIStatusResponse") as mock_response,
         ):
             mock_header = Mock()
             mock_header.frame_id = "test_frame"

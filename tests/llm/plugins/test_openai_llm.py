@@ -57,9 +57,7 @@ def mock_avatar_components():
         patch("llm.plugins.openai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.openai_llm.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
-        patch(
-            "providers.avatar_llm_state_provider.AvatarProvider"
-        ) as mock_avatar_llm_state_provider,
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as mock_avatar_llm_state_provider,
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
@@ -92,16 +90,10 @@ async def test_init_empty_key():
 
 
 @pytest.mark.asyncio
-async def test_ask_success_with_tool_calls(
-    llm, mock_completion_response_with_tool_calls
-):
-    with patch.object(
-        llm._client.chat.completions, "create", new_callable=AsyncMock
-    ) as mock_create:
+async def test_ask_success_with_tool_calls(llm, mock_completion_response_with_tool_calls):
+    with patch.object(llm._client.chat.completions, "create", new_callable=AsyncMock) as mock_create:
         mock_create.return_value = mock_completion_response_with_tool_calls
-        with patch(
-            "llm.plugins.openai_llm.convert_function_calls_to_actions"
-        ) as mock_convert:
+        with patch("llm.plugins.openai_llm.convert_function_calls_to_actions") as mock_convert:
             expected_action = Action(type="test_function", value="value1")
             mock_convert.return_value = [expected_action]
             result = await llm.ask("test prompt")
@@ -117,16 +109,10 @@ async def test_ask_success_with_tool_calls(
 
 
 @pytest.mark.asyncio
-async def test_ask_success_without_tool_calls(
-    llm, mock_completion_response_without_tool_calls
-):
-    with patch.object(
-        llm._client.chat.completions, "create", new_callable=AsyncMock
-    ) as mock_create:
+async def test_ask_success_without_tool_calls(llm, mock_completion_response_without_tool_calls):
+    with patch.object(llm._client.chat.completions, "create", new_callable=AsyncMock) as mock_create:
         mock_create.return_value = mock_completion_response_without_tool_calls
-        with patch(
-            "llm.plugins.openai_llm.convert_function_calls_to_actions"
-        ) as mock_convert:
+        with patch("llm.plugins.openai_llm.convert_function_calls_to_actions") as mock_convert:
             result = await llm.ask("test prompt")
             mock_create.assert_called_once()
             call_kwargs = mock_create.call_args.kwargs
@@ -140,9 +126,7 @@ async def test_ask_success_without_tool_calls(
 
 @pytest.mark.asyncio
 async def test_ask_api_error(llm):
-    with patch.object(
-        llm._client.chat.completions, "create", new_callable=AsyncMock
-    ) as mock_create:
+    with patch.object(llm._client.chat.completions, "create", new_callable=AsyncMock) as mock_create:
         mock_create.side_effect = Exception("API error")
         result = await llm.ask("test prompt")
         mock_create.assert_called_once()
@@ -153,9 +137,7 @@ async def test_ask_api_error(llm):
 async def test_ask_empty_choices(llm):
     mock_response_empty_choices = MagicMock()
     mock_response_empty_choices.choices = []
-    with patch.object(
-        llm._client.chat.completions, "create", new_callable=AsyncMock
-    ) as mock_create:
+    with patch.object(llm._client.chat.completions, "create", new_callable=AsyncMock) as mock_create:
         mock_create.return_value = mock_response_empty_choices
         result = await llm.ask("test prompt")
         mock_create.assert_called_once()

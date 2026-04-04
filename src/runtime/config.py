@@ -53,9 +53,7 @@ def _load_schema(schema_file: str) -> dict:
     schema_path = Path(__file__).parent / "../../config/schema" / schema_file
 
     if not schema_path.exists():
-        raise FileNotFoundError(
-            f"Schema file not found: {schema_path}. Cannot validate configuration."
-        )
+        raise FileNotFoundError(f"Schema file not found: {schema_path}. Cannot validate configuration.")
 
     with open(schema_path, "r") as f:
         return json.load(f)
@@ -530,14 +528,10 @@ class ModeSystemConfig:
 
         context.update({"system_name": self.name, "is_global_hook": True})
 
-        return await execute_lifecycle_hooks(
-            self.global_lifecycle_hooks, hook_type, context
-        )
+        return await execute_lifecycle_hooks(self.global_lifecycle_hooks, hook_type, context)
 
 
-def load_mode_config(
-    config_name: str, mode_source_path: Optional[str] = None
-) -> ModeSystemConfig:
+def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -> ModeSystemConfig:
     """
     Load a mode-aware configuration from a JSON5 file.
 
@@ -564,9 +558,7 @@ def load_mode_config(
         try:
             raw_config = json5.load(f)
         except Exception as e:
-            raise ValueError(
-                f"Failed to parse configuration file '{config_path}': {e}"
-            ) from e
+            raise ValueError(f"Failed to parse configuration file '{config_path}': {e}") from e
 
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
@@ -599,9 +591,7 @@ def load_mode_config(
         knowledge_base=raw_config.get("knowledge_base"),
         memory=raw_config.get("memory"),
         global_cortex_llm=raw_config.get("cortex_llm"),
-        global_lifecycle_hooks=parse_lifecycle_hooks(
-            raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key
-        ),
+        global_lifecycle_hooks=parse_lifecycle_hooks(raw_config.get("global_lifecycle_hooks", []), api_key=g_api_key),
         _raw_global_lifecycle_hooks=raw_config.get("global_lifecycle_hooks", []),
     )
 
@@ -613,9 +603,7 @@ def load_mode_config(
             description=mode_data.get("description", ""),
             system_prompt_base=mode_data["system_prompt_base"],
             hertz=mode_data.get("hertz", 1.0),
-            lifecycle_hooks=parse_lifecycle_hooks(
-                mode_data.get("lifecycle_hooks", []), api_key=g_api_key
-            ),
+            lifecycle_hooks=parse_lifecycle_hooks(mode_data.get("lifecycle_hooks", []), api_key=g_api_key),
             timeout_seconds=mode_data.get("timeout_seconds"),
             remember_locations=mode_data.get("remember_locations", False),
             save_interactions=mode_data.get("save_interactions", False),
@@ -758,9 +746,7 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         raise ValueError(f"No LLM configuration found for mode {mode_config.name}")
 
     # Load MCP servers
-    mode_config.mcp_servers = (
-        load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
-    )
+    mode_config.mcp_servers = load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
 
 
 def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:

@@ -80,9 +80,7 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
     try:
         async with aiohttp.ClientSession() as session:
             for attempt in range(max_retries):
-                logging.info(
-                    f"Person Follow: Enrolling (attempt {attempt + 1}/{max_retries})"
-                )
+                logging.info(f"Person Follow: Enrolling (attempt {attempt + 1}/{max_retries})")
 
                 try:
                     async with session.post(
@@ -110,9 +108,7 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
                                 status_data = await status_response.json()
                                 if status_data.get("is_tracked", False):
                                     logging.info("Person Follow: Tracking started")
-                                    elevenlabs_provider.add_pending_message(
-                                        "I see you! I'll follow you now."
-                                    )
+                                    elevenlabs_provider.add_pending_message("I see you! I'll follow you now.")
                                     return {
                                         "status": "success",
                                         "message": "Person enrolled and tracking",
@@ -121,14 +117,10 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
                     except Exception as e:
                         logging.warning(f"Person Follow: Status poll failed: {e}")
 
-                logging.info(
-                    f"Person Follow: Attempt {attempt + 1} - not tracking, retrying"
-                )
+                logging.info(f"Person Follow: Attempt {attempt + 1} - not tracking, retrying")
 
             logging.info("Person Follow: Awaiting person detection")
-            elevenlabs_provider.add_pending_message(
-                "Person following mode activated. Please stand in front of me."
-            )
+            elevenlabs_provider.add_pending_message("Person following mode activated. Please stand in front of me.")
             return {
                 "status": "success",
                 "message": "Enrolled but awaiting person detection",
@@ -137,9 +129,7 @@ async def start_person_follow_hook(context: Dict[str, Any]) -> Dict[str, Any]:
 
     except aiohttp.ClientError as e:
         logging.error(f"Person Follow: Connection error: {str(e)}")
-        elevenlabs_provider.add_pending_message(
-            "I couldn't connect to the person following system."
-        )
+        elevenlabs_provider.add_pending_message("I couldn't connect to the person following system.")
         return {"status": "error", "message": f"Connection error: {str(e)}"}
 
 

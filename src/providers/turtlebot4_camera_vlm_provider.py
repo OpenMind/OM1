@@ -72,9 +72,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
         try:
             self.session = open_zenoh_session()
             topic = f"{URID}/pi/oakd/rgb/preview/image_raw"
-            logging.info(
-                f"TurtleBot4 Camera listener starting with URID: {URID} and topic: {topic}"
-            )
+            logging.info(f"TurtleBot4 Camera listener starting with URID: {URID} and topic: {topic}")
             self.camera = self.session.declare_subscriber(topic, self.camera_listener)
             logging.info("Zenoh TurtleBot4 Camera subscriber created")
         except Exception as e:
@@ -123,9 +121,7 @@ class TurtleBot4CameraVideoStream(VideoStream):
                     image = self.image
 
                 if image is not None:
-                    resized_image = cv2.resize(
-                        image, self.resolution, interpolation=cv2.INTER_AREA
-                    )
+                    resized_image = cv2.resize(image, self.resolution, interpolation=cv2.INTER_AREA)
                     _, buffer = cv2.imencode(".jpg", resized_image, self.encode_quality)
                     frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
@@ -190,9 +186,7 @@ class TurtleBot4CameraVLMProvider:
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=ws_url)
-        self.stream_ws_client: Optional[ws.Client] = (
-            ws.Client(url=stream_url) if stream_url else None
-        )
+        self.stream_ws_client: Optional[ws.Client] = ws.Client(url=stream_url) if stream_url else None
         self.video_stream: VideoStream = TurtleBot4CameraVideoStream(
             self.ws_client.send_message,
             fps=fps,
@@ -231,9 +225,7 @@ class TurtleBot4CameraVLMProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.start()
-            self.video_stream.register_frame_callback(
-                self.stream_ws_client.send_message
-            )
+            self.video_stream.register_frame_callback(self.stream_ws_client.send_message)
 
         logging.info("TurtleBot4 Camera VLM provider started")
 

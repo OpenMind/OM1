@@ -27,9 +27,7 @@ def mock_dependencies():
     """Mock dependencies."""
     with (
         patch("providers.zenoh_listener_provider.open_zenoh_session") as mock_zenoh,
-        patch(
-            "providers.unitree_go2_frontier_exploration.ContextProvider"
-        ) as mock_context,
+        patch("providers.unitree_go2_frontier_exploration.ContextProvider") as mock_context,
     ):
 
         mock_session = MagicMock()

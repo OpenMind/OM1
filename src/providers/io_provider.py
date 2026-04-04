@@ -89,9 +89,7 @@ class IOProvider:
         """
         with self._lock:
             ts = timestamp if timestamp is not None else time.time()
-            self._inputs[key] = Input(
-                input=value, timestamp=ts, tick=self._tick_counter
-            )
+            self._inputs[key] = Input(input=value, timestamp=ts, tick=self._tick_counter)
 
     def remove_input(self, key: str) -> None:
         """
@@ -428,9 +426,7 @@ class IOProvider:
             if self._mode_transition_input is None:
                 self._mode_transition_input = input_text
             else:
-                self._mode_transition_input = (
-                    self._mode_transition_input + " " + input_text
-                )
+                self._mode_transition_input = self._mode_transition_input + " " + input_text
 
     @contextmanager
     def mode_transition_input(self):

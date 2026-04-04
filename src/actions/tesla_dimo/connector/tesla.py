@@ -88,9 +88,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                 )
 
             try:
-                auth_header = self.dimo.auth.get_dev_jwt(
-                    client_id=client_id, domain=domain, private_key=private_key
-                )
+                auth_header = self.dimo.auth.get_dev_jwt(client_id=client_id, domain=domain, private_key=private_key)
                 self.dev_jwt = auth_header["access_token"]
 
                 get_vehicle_jwt = self.dimo.token_exchange.exchange(
@@ -100,9 +98,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                 self.vehicle_jwt = get_vehicle_jwt["token"]
                 self.vehicle_jwt_expires = time.time() + 8 * 60
             except Exception as e:
-                logging.error(
-                    f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}"
-                )
+                logging.error(f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}")
                 self.vehicle_jwt = None
 
     async def connect(self, output_interface: TeslaInput) -> None:
@@ -134,9 +130,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                     self.vehicle_jwt = get_vehicle_jwt["token"]
                     self.vehicle_jwt_expires = time.time() + 8 * 60
                 except Exception as e:
-                    logging.error(
-                        f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}"
-                    )
+                    logging.error(f"DIMOTeslaConnector: Error getting DIMO vehicle jwt: {e}")
                     self.vehicle_jwt = None
                     return None
 
@@ -168,9 +162,7 @@ class DIMOTeslaConnector(ActionConnector[DIMOTeslaConfig, TeslaInput]):
                                 logging.info(f"DIMO Tesla: {success_msg}")
                             else:
                                 text = await response.text()
-                                logging.error(
-                                    f"Error {error_msg}: {response.status} {text}"
-                                )
+                                logging.error(f"Error {error_msg}: {response.status} {text}")
                 else:
                     logging.error(f"Unknown action: {output_interface.action}")
             else:

@@ -224,9 +224,7 @@ class TestConnectAll:
 
         assert manager._started is True
         assert "mcp_weather_get_weather" in manager._tools
-        assert (
-            manager._tools["mcp_weather_get_weather"].description == "Get weather info"
-        )
+        assert manager._tools["mcp_weather_get_weather"].description == "Get weather info"
         await manager.stop()
 
     @pytest.mark.asyncio

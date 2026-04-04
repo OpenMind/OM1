@@ -165,23 +165,15 @@ class ModeCortexRuntime:
 
                 if self._pending_mode_transition:
                     target_mode = self._pending_mode_transition
-                    transition_reason = (
-                        self._pending_transition_reason or "input_triggered"
-                    )
+                    transition_reason = self._pending_transition_reason or "input_triggered"
                     self._pending_mode_transition = None
                     self._pending_transition_reason = None
 
-                    logging.info(
-                        f"Processing mode transition to: {target_mode} (reason: {transition_reason})"
-                    )
+                    logging.info(f"Processing mode transition to: {target_mode} (reason: {transition_reason})")
 
-                    success = await self.mode_manager._execute_transition(
-                        target_mode, transition_reason
-                    )
+                    success = await self.mode_manager._execute_transition(target_mode, transition_reason)
                     if success:
-                        logging.info(
-                            f"Mode transition completed successfully: {target_mode}"
-                        )
+                        logging.info(f"Mode transition completed successfully: {target_mode}")
                     else:
                         logging.error(f"Mode transition failed: {target_mode}")
 
@@ -295,24 +287,12 @@ class ModeCortexRuntime:
                     return_when=asyncio.ALL_COMPLETED,
                 )
                 if pending:
-                    pending_names = [
-                        name
-                        for name, task in tasks_to_cancel.items()
-                        if task in pending
-                    ]
-                    completed_names = [
-                        name for name, task in tasks_to_cancel.items() if task in done
-                    ]
+                    pending_names = [name for name, task in tasks_to_cancel.items() if task in pending]
+                    completed_names = [name for name, task in tasks_to_cancel.items() if task in done]
 
-                    logging.warning(
-                        f"Abandoning {len(pending)} unresponsive tasks: {pending_names}"
-                    )
-                    logging.info(
-                        f"Successfully cancelled {len(done)} tasks: {completed_names}"
-                    )
-                    logging.info(
-                        "Continuing with reload without waiting for unresponsive tasks"
-                    )
+                    logging.warning(f"Abandoning {len(pending)} unresponsive tasks: {pending_names}")
+                    logging.info(f"Successfully cancelled {len(done)} tasks: {completed_names}")
+                    logging.info("Continuing with reload without waiting for unresponsive tasks")
                 else:
                     logging.info(f"All {len(done)} tasks cancelled successfully!")
                     for name, task in tasks_to_cancel.items():
@@ -322,9 +302,7 @@ class ModeCortexRuntime:
                         except asyncio.CancelledError:
                             logging.info(f"  {name}: Successfully cancelled")
                         except Exception as e:
-                            logging.warning(
-                                f"  {name}: Exception - {type(e).__name__}: {e}"
-                            )
+                            logging.warning(f"  {name}: Exception - {type(e).__name__}: {e}")
 
             except Exception as e:
                 logging.warning(f"Error during task cancellation: {e}")
@@ -340,9 +318,7 @@ class ModeCortexRuntime:
         self.background_orchestrator = None
         self.mcp_orchestrator = None
 
-    def _is_generation_valid(
-        self, cortex_generation: int, context: str = "operation"
-    ) -> bool:
+    def _is_generation_valid(self, cortex_generation: int, context: str = "operation") -> bool:
         """Check if the cortex generation is still valid.
 
         Parameters
@@ -395,9 +371,7 @@ class ModeCortexRuntime:
 
         # Start mode transition task
         if not self.mode_transition_task or self.mode_transition_task.done():
-            self.mode_transition_task = asyncio.create_task(
-                self._handle_mode_transitions()
-            )
+            self.mode_transition_task = asyncio.create_task(self._handle_mode_transitions())
 
         logging.debug("Orchestrators started successfully")
 
@@ -463,29 +437,20 @@ class ModeCortexRuntime:
                 self._mode_initialized = True
 
                 # Execute initial mode startup hooks
-                initial_mode_config = self.mode_config.modes[
-                    self.mode_manager.current_mode_name
-                ]
-                await initial_mode_config.execute_lifecycle_hooks(
-                    LifecycleHookType.ON_STARTUP, startup_context
-                )
+                initial_mode_config = self.mode_config.modes[self.mode_manager.current_mode_name]
+                await initial_mode_config.execute_lifecycle_hooks(LifecycleHookType.ON_STARTUP, startup_context)
 
             await self._start_orchestrators()
 
             if self.hot_reload and self.config_path:
-                self.config_watcher_task = asyncio.create_task(
-                    self._check_config_changes()
-                )
+                self.config_watcher_task = asyncio.create_task(self._check_config_changes())
 
             while True:
                 try:
                     awaitables: List[Union[asyncio.Task, asyncio.Future]] = []
                     if self.cortex_loop_task and not self.cortex_loop_task.done():
                         awaitables.append(self.cortex_loop_task)
-                    if (
-                        self.mode_transition_task
-                        and not self.mode_transition_task.done()
-                    ):
+                    if self.mode_transition_task and not self.mode_transition_task.done():
                         awaitables.append(self.mode_transition_task)
                     if self.config_watcher_task and not self.config_watcher_task.done():
                         awaitables.append(self.config_watcher_task)
@@ -501,9 +466,7 @@ class ModeCortexRuntime:
                     await asyncio.gather(*awaitables)
 
                 except asyncio.CancelledError:
-                    logging.debug(
-                        "Tasks cancelled during mode transition, continuing..."
-                    )
+                    logging.debug("Tasks cancelled during mode transition, continuing...")
 
                     await asyncio.sleep(0.1)
 
@@ -523,18 +486,12 @@ class ModeCortexRuntime:
             }
 
             # Execute current mode shutdown hooks
-            current_config = self.mode_config.modes.get(
-                self.mode_manager.current_mode_name
-            )
+            current_config = self.mode_config.modes.get(self.mode_manager.current_mode_name)
             if current_config:
-                await current_config.execute_lifecycle_hooks(
-                    LifecycleHookType.ON_SHUTDOWN, shutdown_context
-                )
+                await current_config.execute_lifecycle_hooks(LifecycleHookType.ON_SHUTDOWN, shutdown_context)
 
             # Execute global shutdown hooks
-            await self.mode_config.execute_global_lifecycle_hooks(
-                LifecycleHookType.ON_SHUTDOWN, shutdown_context
-            )
+            await self.mode_config.execute_global_lifecycle_hooks(LifecycleHookType.ON_SHUTDOWN, shutdown_context)
 
             await self._cleanup_tasks()
 
@@ -544,9 +501,7 @@ class ModeCortexRuntime:
         """
         current_mode = self.mode_manager.current_mode_name
         cortex_generation = self._cortex_loop_generation
-        logging.info(
-            f"Starting cortex loop for mode: {current_mode} (generation {cortex_generation})"
-        )
+        logging.info(f"Starting cortex loop for mode: {current_mode} (generation {cortex_generation})")
 
         try:
             while True:
@@ -554,9 +509,7 @@ class ModeCortexRuntime:
                     return
 
                 skip_status = self.sleep_ticker_provider.skip_sleep
-                sleep_duration = (
-                    1 / self.current_config.hertz if self.current_config else 1
-                )
+                sleep_duration = 1 / self.current_config.hertz if self.current_config else 1
                 if not skip_status and self.current_config:
                     await self.sleep_ticker_provider.sleep(sleep_duration)
 
@@ -566,14 +519,10 @@ class ModeCortexRuntime:
                 await self._tick(cortex_generation)
                 self.sleep_ticker_provider.skip_sleep = False
         except asyncio.CancelledError:
-            logging.info(
-                f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully"
-            )
+            logging.info(f"Cortex loop for mode '{current_mode}' cancelled, exiting gracefully")
             raise
         except Exception as e:
-            logging.error(
-                f"Unexpected error in cortex loop for mode '{current_mode}': {e}"
-            )
+            logging.error(f"Unexpected error in cortex loop for mode '{current_mode}': {e}")
             raise
 
     async def _tick(self, cortex_generation: int) -> None:
@@ -601,9 +550,7 @@ class ModeCortexRuntime:
 
         finished_promises, _ = await self.action_orchestrator.flush_promises()
 
-        prompt = await self.fuser.fuse(
-            self.current_config.agent_inputs, finished_promises
-        )
+        prompt = await self.fuser.fuse(self.current_config.agent_inputs, finished_promises)
         if prompt is None:
             logging.debug("No prompt to fuse")
             return
@@ -619,9 +566,7 @@ class ModeCortexRuntime:
             self._pending_mode_transition = new_mode
             self._pending_transition_reason = transition_reason
             self._mode_transition_event.set()
-            logging.info(
-                f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})"
-            )
+            logging.info(f"Scheduled mode transition to: {new_mode} (reason: {transition_reason})")
             return
 
         if self._is_reloading or self._pending_mode_transition:
@@ -639,12 +584,8 @@ class ModeCortexRuntime:
                     logging.info("Received empty output from LLM, skipping")
                     return
 
-                if self._is_reloading or not self._is_generation_valid(
-                    cortex_generation, "LLM streaming"
-                ):
-                    logging.info(
-                        f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
-                    )
+                if self._is_reloading or not self._is_generation_valid(cortex_generation, "LLM streaming"):
+                    logging.info(f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping")
                     return
 
                 if self.mcp_orchestrator:
@@ -652,22 +593,16 @@ class ModeCortexRuntime:
                     original_prompt = prompt
 
                     for round_idx in range(self.mcp_orchestrator.max_rounds):
-                        om1_actions = self.mcp_orchestrator.extract_om1_actions(
-                            output.actions
-                        )
+                        om1_actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
 
-                        results, mcp_actions = (
-                            await self.mcp_orchestrator.execute_mcp_actions(
-                                output.actions, succeeded_calls
-                            )
+                        results, mcp_actions = await self.mcp_orchestrator.execute_mcp_actions(
+                            output.actions, succeeded_calls
                         )
 
                         if results is None:
                             break
 
-                        if not self._is_generation_valid(
-                            cortex_generation, "MCP execution"
-                        ):
+                        if not self._is_generation_valid(cortex_generation, "MCP execution"):
                             return
 
                         if om1_actions:
@@ -678,39 +613,25 @@ class ModeCortexRuntime:
                             f"executing {len(mcp_actions)} tool(s)"
                         )
 
-                        recall_prompt = self.mcp_orchestrator.build_result_prompt(
-                            original_prompt, results
-                        )
+                        recall_prompt = self.mcp_orchestrator.build_result_prompt(original_prompt, results)
 
-                        if not self._is_generation_valid(
-                            cortex_generation, "MCP recall prompt"
-                        ):
+                        if not self._is_generation_valid(cortex_generation, "MCP recall prompt"):
                             return
 
                         try:
                             streamed_output = None
-                            async for (
-                                stream_output
-                            ) in self.current_config.cortex_llm.ask_stream(
-                                recall_prompt
-                            ):
-                                if not self._is_generation_valid(
-                                    cortex_generation, "MCP recall streaming"
-                                ):
+                            async for stream_output in self.current_config.cortex_llm.ask_stream(recall_prompt):
+                                if not self._is_generation_valid(cortex_generation, "MCP recall streaming"):
                                     return
 
                                 if stream_output is None:
-                                    logging.info(
-                                        "Received empty output from LLM, skipping"
-                                    )
+                                    logging.info("Received empty output from LLM, skipping")
                                     continue
 
                                 if streamed_output is None:
                                     streamed_output = stream_output
                                 else:
-                                    streamed_output.actions.extend(
-                                        stream_output.actions
-                                    )
+                                    streamed_output.actions.extend(stream_output.actions)
 
                             output = streamed_output
                         except asyncio.CancelledError:
@@ -721,17 +642,13 @@ class ModeCortexRuntime:
                             break
 
                     if output is not None:
-                        output.actions = self.mcp_orchestrator.extract_om1_actions(
-                            output.actions
-                        )
+                        output.actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
 
                 if output is None:
                     logging.debug("No output from LLM after MCP processing")
                     return
 
-                if self._is_reloading or not self._is_generation_valid(
-                    cortex_generation, "action execution"
-                ):
+                if self._is_reloading or not self._is_generation_valid(cortex_generation, "action execution"):
                     logging.debug("Skipping action execution due to mode transition")
                     return
 
@@ -823,9 +740,7 @@ class ModeCortexRuntime:
                 current_mtime = self._get_file_mtime()
 
                 if self.last_modified and current_mtime > self.last_modified:
-                    logging.info(
-                        f"Runtime config file changed, reloading: {self.config_path}"
-                    )
+                    logging.info(f"Runtime config file changed, reloading: {self.config_path}")
                     await self._reload_config()
                     self.last_modified = current_mtime
 
@@ -844,9 +759,7 @@ class ModeCortexRuntime:
         from the original configuration source and then regenerate the runtime config.
         """
         try:
-            logging.info(
-                f"Runtime config file changed, triggering reload: {self.config_path}"
-            )
+            logging.info(f"Runtime config file changed, triggering reload: {self.config_path}")
 
             self._is_reloading = True
 
@@ -872,17 +785,13 @@ class ModeCortexRuntime:
             self.mode_manager.state.current_mode = current_mode
             self.mode_manager.state.mode_start_time = time.time()
             self.mode_manager.state.last_transition_time = time.time()
-            self.mode_manager.state.transition_history.append(
-                f"config_reload->{current_mode}:hot_reload"
-            )
+            self.mode_manager.state.transition_history.append(f"config_reload->{current_mode}:hot_reload")
 
             await self._initialize_mode(current_mode)
 
             await self._start_orchestrators()
 
-            logging.info(
-                f"Mode configuration reloaded successfully, active mode: {current_mode}"
-            )
+            logging.info(f"Mode configuration reloaded successfully, active mode: {current_mode}")
 
         except Exception as e:
             logging.error(f"Failed to reload mode configuration: {e}")

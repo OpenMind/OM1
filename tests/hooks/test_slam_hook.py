@@ -163,9 +163,7 @@ class TestStopSlamHook:
         mock_stop_response = create_mock_response(200, stop_response)
 
         mock_session = MagicMock()
-        mock_session.post = MagicMock(
-            side_effect=[mock_save_response, mock_stop_response]
-        )
+        mock_session.post = MagicMock(side_effect=[mock_save_response, mock_stop_response])
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -176,9 +174,7 @@ class TestStopSlamHook:
         assert result["message"] == "SLAM process stopped"
         assert result["response"] == stop_response
 
-        mock_elevenlabs_provider.add_pending_message.assert_called_once_with(
-            "Map has been saved successfully."
-        )
+        mock_elevenlabs_provider.add_pending_message.assert_called_once_with("Map has been saved successfully.")
 
     @pytest.mark.asyncio
     async def test_stop_slam_success_custom_params(self, mock_elevenlabs_provider):
@@ -191,9 +187,7 @@ class TestStopSlamHook:
         mock_stop_response = create_mock_response(200, stop_response)
 
         mock_session = MagicMock()
-        mock_session.post = MagicMock(
-            side_effect=[mock_save_response, mock_stop_response]
-        )
+        mock_session.post = MagicMock(side_effect=[mock_save_response, mock_stop_response])
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -258,9 +252,7 @@ class TestStopSlamHook:
         mock_stop_response = create_mock_response(500, error_response)
 
         mock_session = MagicMock()
-        mock_session.post = MagicMock(
-            side_effect=[mock_save_response, mock_stop_response]
-        )
+        mock_session.post = MagicMock(side_effect=[mock_save_response, mock_stop_response])
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -293,9 +285,7 @@ class TestStopSlamHook:
         mock_stop_response = create_mock_response(200, stop_response)
 
         mock_session = MagicMock()
-        mock_session.post = MagicMock(
-            side_effect=[mock_save_response, mock_stop_response]
-        )
+        mock_session.post = MagicMock(side_effect=[mock_save_response, mock_stop_response])
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 

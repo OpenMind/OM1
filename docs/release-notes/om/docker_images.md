@@ -1,4 +1,7 @@
-## Docker image
+---
+title: Docker Images
+icon: docker
+---
 
 The OM1 service is provided as a Docker image for easy setup:
 ```bash
