@@ -158,6 +158,31 @@ class LLM(T.Generic[R]):
         """
         raise NotImplementedError
 
+    async def ask_stream(
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
+    ) -> T.AsyncGenerator[R, None]:
+        """
+        Send a prompt to the LLM and stream results.
+
+        Default implementation yields a single result from ask().
+        Subclasses can override for true streaming (e.g., ParallelLLM).
+
+        Parameters
+        ----------
+        prompt : str
+            Input text to send to the model
+        messages : List[Dict[str, str]]
+            List of message dictionaries to send to the model.
+
+        Yields
+        ------
+        R
+            Response matching the output_model type specification
+        """
+        result = await self.ask(prompt, messages)
+        if result is not None:
+            yield result
+
 
 def find_module_with_class(class_name: str) -> T.Optional[str]:
     """

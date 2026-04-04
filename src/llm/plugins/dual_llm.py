@@ -1,3 +1,6 @@
+# DualLLM: A system where a local and cloud LLM race to answer,
+# with smart selection based on function calls and quality evaluation.
+
 import asyncio
 import json
 import logging
@@ -29,9 +32,10 @@ def _extract_voice_input(prompt: str) -> str:
     str
         Extracted voice input text, or empty string if not found.
     """
-    match = re.search(r"INPUT: Voice\s*// START\s*(.*?)\s*// END", prompt, re.DOTALL)
+    match = re.search(r"Voice:\s*([^\n]+)", prompt)
     if match:
         return match.group(1).strip()
+
     return ""
 
 
