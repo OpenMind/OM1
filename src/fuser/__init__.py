@@ -61,17 +61,12 @@ class Fuser:
             try:
                 self.memory_reader = MemoryReader()
                 self.memory_writer = MemoryWriter()
-                logging.info(
-                    f"Memory enabled with root: {self.memory_reader.memory_root}"
-                )
+                logging.info(f"Memory enabled with root: {self.memory_reader.memory_root}")
             except Exception:
                 logging.exception("Failed to initialize Memory with provided config")
                 self.memory_reader = None
                 self.memory_writer = None
 
-    async def fuse(
-        self, inputs: Sequence[Sensor], finished_promises: list[T.Any]
-    ) -> T.Optional[str]:
     async def fuse(self, inputs: Sequence[Sensor], finished_promises: list[T.Any]) -> T.Optional[str]:
         """
         Combine all inputs into a single formatted prompt string.
@@ -106,11 +101,7 @@ class Fuser:
 
         query_text = None
         voice_input = self.io_provider.get_input("Voice")
-        if (
-            voice_input
-            and voice_input.input
-            and self.io_provider.tick_counter == voice_input.tick
-        ):
+        if voice_input and voice_input.input and self.io_provider.tick_counter == voice_input.tick:
             query_text = voice_input.input.strip()
 
         # Query the knowledge base if configured and if there are inputs to query with
@@ -146,13 +137,9 @@ class Fuser:
                 if query_text:
                     search_results = await self.memory_reader.search_daily(query_text)
 
-                memory_context = self.memory_reader.format_context(
-                    memory_md, search_results
-                )
+                memory_context = self.memory_reader.format_context(memory_md, search_results)
                 if memory_context:
-                    logging.info(
-                        f"Memory: injecting {len(memory_context)} chars into prompt"
-                    )
+                    logging.info(f"Memory: injecting {len(memory_context)} chars into prompt")
             except Exception as e:
                 logging.error(f"Error querying memory: {e}")
 
