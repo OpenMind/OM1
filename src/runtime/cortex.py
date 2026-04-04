@@ -740,33 +740,21 @@ class ModeCortexRuntime:
 
                 await self.action_orchestrator.promise(output.actions)
 
+                if self.fuser and self.fuser.memory_writer:
+                    voice_input = self.io_provider.get_input("Voice")
+                    if (
+                        voice_input
+                        and voice_input.input
+                        and voice_input.tick == tick_num
+                    ):
+                        self.fuser.memory_writer.append_interaction(
+                            user_msg=voice_input.input.strip(),
+                            actions=output.actions,
+                        )
+
         except asyncio.CancelledError:
             logging.info("LLM call cancelled during mode transition")
             raise
-
-        if not self._is_generation_valid(cortex_generation, "LLM call"):
-            return
-
-        if output is None:
-            logging.debug("No output from LLM")
-            return
-
-        if self._is_reloading or cortex_generation != self._cortex_loop_generation:
-            logging.debug("Skipping action execution due to mode transition")
-            return
-
-        if self.simulator_orchestrator:
-            await self.simulator_orchestrator.promise(output.actions)
-
-        await self.action_orchestrator.promise(output.actions)
-
-        if self.fuser and self.fuser.memory_writer:
-            voice_input = self.io_provider.get_input("Voice")
-            if voice_input and voice_input.input and voice_input.tick == tick_num:
-                self.fuser.memory_writer.append_interaction(
-                    user_msg=voice_input.input.strip(),
-                    actions=output.actions,
-                )
 
     def get_mode_info(self) -> dict:
         """
