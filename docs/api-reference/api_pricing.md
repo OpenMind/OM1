@@ -52,11 +52,11 @@ The APIs now support a new unit for billing, **OMCU (OpenMind Computational Unit
 - All features in **Pro** plan
 
 ### Custom Plan
-For custom pricing, quotas, or special requirements, please [contact our support team](mailto:support@openmind.org?subject=Inquiry&body=Hello>)
+For custom pricing, quotas, or special requirements, please [contact our support team](mailto:support@openmind.com?subject=Inquiry&body=Hello>)
 
 ## Getting Started
 
 1. Choose a plan that fits your needs
-2. Create an account at [portal.openmind.org](https://portal.openmind.org/)
+2. Create an account at [portal.openmind.com](https://portal.openmind.com/)
 3. Generate your API key
 4. Start building with the OM1 APIs

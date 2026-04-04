@@ -178,13 +178,13 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
                 retreat_danger = False
 
         if output_interface.action == "turn left":
-            # turn 90 Deg to the left (CCW)
+            # turn 30 Deg to the left (CCW)
             target_yaw = self.odom.odom_yaw_m180_p180 - 30.0
             if target_yaw <= -180:
                 target_yaw += 360.0
             self.pending_movements.put(MoveCommand(dx=0.0, yaw=target_yaw))
         elif output_interface.action == "turn right":
-            # turn 90 Deg to the right (CW)
+            # turn 30 Deg to the right (CW)
             target_yaw = self.odom.odom_yaw_m180_p180 + 30.0
             if target_yaw >= 180.0:
                 target_yaw -= 360.0

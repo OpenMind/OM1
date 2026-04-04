@@ -11,7 +11,7 @@ To ensure your configuration is valid, follow the format defined [here](https://
 
 #### Steps to build a new config file
 
-1. Start with getting your API key from [OpenMind Portal](https://portal.openmind.org/). Copy it and save it, you'll paste it into the config later.
+1. Start with getting your API key from [OpenMind Portal](https://portal.openmind.com/). Copy it and save it, you'll paste it into the config later.
 2. Create a new config file config.json5
 
 | Field                    | Type     | Required | Description                                                                      |

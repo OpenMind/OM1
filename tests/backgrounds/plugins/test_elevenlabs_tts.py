@@ -90,7 +90,7 @@ class TestElevenLabsTTS:
         ElevenLabsTTS(config)
 
         mock_provider_class.assert_called_once_with(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key="om-key",
             elevenlabs_api_key="el-key",
             voice_id="voice123",
@@ -114,7 +114,7 @@ class TestElevenLabsTTS:
         ElevenLabsTTS(config)
 
         mock_provider.configure.assert_called_once_with(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key="om-key",
             elevenlabs_api_key="el-key",
             voice_id="voice123",
@@ -160,7 +160,7 @@ class TestElevenLabsTTS:
         ElevenLabsTTS(config)
 
         mock_provider_class.assert_called_once_with(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=None,
             elevenlabs_api_key=None,
             voice_id="JBFqnCBsd6RMkjVDRZzb",

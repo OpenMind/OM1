@@ -192,7 +192,7 @@ uv pip install -r pyproject.toml --extra dds
 
 Setup your API key in `.bashrc` file and run your simulation agent:
 
-Get your API key from the [portal](https://portal.openmind.org), and add it to `bashrc`
+Get your API key from the [portal](https://portal.openmind.com), and add it to `bashrc`
 
 ```bash
 vi ~/.bashrc

@@ -452,7 +452,7 @@ class WebSim(Simulator):
                                                 GitHub
                                             </a>
                                             <a
-                                                href="https://docs.openmind.org/introduction"
+                                                href="https://docs.openmind.com/introduction"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="footer-link"

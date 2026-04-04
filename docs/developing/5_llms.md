@@ -11,7 +11,7 @@ The plugins handle authentication, API communication, prompt formatting, respons
 ## Endpoint Overview
 
 ```bash
-# Base URL: https://api.openmind.org/
+# Base URL: https://api.openmind.com/
 
 POST /api/core/{provider}/chat/completions    # Single agent
 POST /api/core/agent                          # Multi agent
@@ -132,7 +132,7 @@ The system employs four primary agents that work together:
 ### Main API Endpoint
 
 ```python
-    self.endpoint = "https://api.openmind.org/api/core/agent"
+    self.endpoint = "https://api.openmind.com/api/core/agent"
 
     headers = {
         "Authorization": f"Bearer {self._config.api_key}",
@@ -243,7 +243,7 @@ DELETE /api/core/agent/memory
 
 The RAG agent connects to the knowledge base system (`/api/core/rag`) to provide retrieval-augmented generation capabilities. To use RAG with your documents:
 
-1. **Upload Documents**: Visit [https://portal.openmind.org/machines](https://portal.openmind.org/machines) to upload your documents and files to your knowledge base
+1. **Upload Documents**: Visit [https://portal.openmind.com/machines](https://portal.openmind.com/machines) to upload your documents and files to your knowledge base
 2. **Ask Questions**: Once uploaded, you can ask questions about your documents through the multi-agent system at `/api/core/agent`
 
 The RAG agent will:

@@ -139,12 +139,12 @@ class EmergencyAlertElevenLabsTTSConnector(
         base_url = getattr(
             self.config,
             "base_url",
-            f"wss://api.openmind.org/api/core/google/asr?api_key={api_key}",
+            f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}",
         )
         self.asr = ASRRTSPProvider(ws_url=base_url)
 
         self.tts = ElevenLabsTTSProvider(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,

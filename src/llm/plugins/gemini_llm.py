@@ -31,7 +31,7 @@ class GeminiConfig(LLMConfig):
     """Gemini-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/gemini",
+        default="https://api.openmind.com/api/core/gemini",
         description="Base URL for the Gemini API endpoint",
     )
     model: T.Optional[T.Union[GeminiModel, str]] = Field(
@@ -70,7 +70,7 @@ class GeminiLLM(LLM[R]):
             self._config.model = "gemini-2.5-flash"
 
         self._client = openai.AsyncOpenAI(
-            base_url=config.base_url or "https://api.openmind.org/api/core/gemini",
+            base_url=config.base_url or "https://api.openmind.com/api/core/gemini",
             api_key=config.api_key,
         )
 

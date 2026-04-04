@@ -7,7 +7,7 @@ from providers.vlm_openai_provider import VLMOpenAIProvider
 
 @pytest.fixture
 def base_url():
-    return "https://api.openmind.org/api/core/openai"
+    return "https://api.openmind.com/api/core/openai"
 
 
 @pytest.fixture

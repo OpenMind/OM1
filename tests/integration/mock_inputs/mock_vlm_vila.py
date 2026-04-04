@@ -234,11 +234,11 @@ class MockVLM_Vila(VLMVila):
 
         # Initialize VLM provider
         api_key = getattr(self.config, "api_key", None)
-        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.org")
+        base_url = getattr(self.config, "base_url", "wss://api-vila.openmind.com")
         stream_base_url = getattr(
             self.config,
             "stream_base_url",
-            f"wss://api.openmind.org/api/core/teleops/stream/video?api_key={api_key}",
+            f"wss://api.openmind.com/api/core/teleops/stream/video?api_key={api_key}",
         )
         self.vlm: VLMVilaProvider = VLMVilaProvider(
             ws_url=base_url, stream_url=stream_base_url

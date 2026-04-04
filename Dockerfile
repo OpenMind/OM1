@@ -30,6 +30,11 @@ RUN python3 -m pip install --upgrade pip
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 RUN mkdir -p /etc/alsa && \
     ln -snf /usr/share/alsa/alsa.conf.d /etc/alsa/conf.d
 

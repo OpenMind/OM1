@@ -84,7 +84,7 @@ class TeleopsConversationProvider:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.openmind.org/api/core/teleops/conversation",
+        base_url: str = "https://api.openmind.com/api/core/teleops/conversation",
     ):
         """
         Initialize the Teleops conversation provider.
@@ -94,7 +94,7 @@ class TeleopsConversationProvider:
         api_key : str, optional
             API key for authenticating requests to the Teleops backend.
             If None or empty, message storage will be disabled.
-        base_url : str, default="https://api.openmind.org/api/core/teleops/conversation"
+        base_url : str, default="https://api.openmind.com/api/core/teleops/conversation"
             Base URL for the Teleops conversation API endpoint.
         """
         self.api_key = api_key

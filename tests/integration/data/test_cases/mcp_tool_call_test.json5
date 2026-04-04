@@ -1,0 +1,91 @@
+{
+  version: "v1.0.3",
+  name: "mcp_tool_call_test",
+  description: "Robot calls get_location then get_weather via MCP (scripted mock) and speaks the result.",
+  hertz: 1,
+  system_prompt_base: "You are a helpful robot. Use the available tools to answer questions. When asked about weather, first call get_location to resolve the city, then call get_weather with the result.",
+  system_governance: "",
+  system_prompt_examples: "",
+
+  agent_inputs: [
+    {
+      type: "GoogleASRInput",
+    },
+  ],
+
+  cortex_llm: {
+    type: "OpenAILLM",
+    config: {
+      agent_name: "Buddy",
+      history_length: 5,
+    },
+  },
+
+  mcp_servers: [
+    {
+      name: "weather",
+      transport: "stdio",
+      command: "python3",
+      args: [
+        "tests/integration/mock_inputs/data_providers/mock_mcp_server_provider.py",
+      ],
+    },
+  ],
+
+  agent_actions: [
+    {
+      name: "speak",
+      llm_label: "speak",
+      connector: "ros2",
+    },
+    {
+      name: "face",
+      llm_label: "emotion",
+      connector: "ros2",
+    },
+  ],
+
+  api_key: "openmind_free",
+
+  input: {
+    asr: ["../asr/weather_sf_question.json"],
+  },
+
+  // Scripted LLM responses to drive the MCP loop deterministically (no real LLM needed).
+  // Round 0: LLM calls get_location tool.
+  // Round 1: LLM calls get_weather with the location result.
+  // Round 2: LLM produces final OM1 actions (speak + emotion).
+  mock_llm_responses: [
+    {
+      actions: [
+        {
+          type: "mcp_weather_get_location",
+          value: '{"city": "San Francisco"}',
+        },
+      ],
+    },
+    {
+      actions: [
+        {
+          type: "mcp_weather_get_weather",
+          value: '{"location": "San Francisco, CA"}',
+        },
+      ],
+    },
+    {
+      actions: [
+        {
+          type: "speak",
+          value: "It is 72 degrees and sunny in San Francisco!",
+        },
+        { type: "emotion", value: "happy" },
+      ],
+    },
+  ],
+
+  expected: {
+    keywords: ["72", "sunny"],
+    emotion: ["happy", "excited", "curious"],
+    minimum_score: 0.5,
+  },
+}

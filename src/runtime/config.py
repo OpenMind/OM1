@@ -16,6 +16,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from mcp_servers import load_mcp
 from runtime.converter import convert_to_multi_mode
 from runtime.env import load_env_vars
 from runtime.hook import (
@@ -156,7 +157,11 @@ class RuntimeConfig:
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
+<<<<<<< long-term-memory
     memory: Optional[Dict[str, Any]] = None
+=======
+    mcp_servers: Optional[Any] = None
+>>>>>>> main
 
 
 def add_meta(
@@ -331,12 +336,14 @@ class ModeConfig:
 
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
+    mcp_servers: Optional[Any] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
     _raw_simulators: List[Dict] = field(default_factory=list)
     _raw_actions: List[Dict] = field(default_factory=list)
     _raw_backgrounds: List[Dict] = field(default_factory=list)
+    _raw_mcp_servers: List[Dict] = field(default_factory=list)
 
     def to_runtime_config(self, global_config: "ModeSystemConfig") -> RuntimeConfig:
         """
@@ -375,7 +382,11 @@ class ModeConfig:
             action_execution_mode=self.action_execution_mode,
             action_dependencies=self.action_dependencies,
             knowledge_base=global_config.knowledge_base,
+<<<<<<< long-term-memory
             memory=global_config.memory,
+=======
+            mcp_servers=self.mcp_servers,
+>>>>>>> main
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -622,6 +633,7 @@ def load_mode_config(
             _raw_actions=mode_data.get("agent_actions", []),
             _raw_backgrounds=mode_data.get("backgrounds", []),
             _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
+            _raw_mcp_servers=mode_data.get("mcp_servers", []),
         )
 
         mode_system_config.modes[mode_name] = mode_config
@@ -750,6 +762,11 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         )
     else:
         raise ValueError(f"No LLM configuration found for mode {mode_config.name}")
+
+    # Load MCP servers
+    mode_config.mcp_servers = (
+        load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
+    )
 
 
 def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:

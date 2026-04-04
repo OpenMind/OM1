@@ -29,7 +29,7 @@ class RivaASRRTSPSensorConfig(SensorConfig):
     rate : int
         Sampling rate. Default is 16000.
     base_url : str
-        Base URL for the ASR service. Default is "wss://api-asr.openmind.org".
+        Base URL for the ASR service. Default is "wss://api-asr.openmind.com".
     enable_tts_interrupt : bool
         Enable TTS interrupt when ASR detects speech during playback.
     """
@@ -41,7 +41,7 @@ class RivaASRRTSPSensorConfig(SensorConfig):
     )
     rate: int = Field(default=16000, description="Sampling rate")
     base_url: str = Field(
-        default="wss://api-asr.openmind.org", description="Base URL for the ASR service"
+        default="wss://api-asr.openmind.com", description="Base URL for the ASR service"
     )
     enable_tts_interrupt: bool = Field(
         default=False,
