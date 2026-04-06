@@ -57,11 +57,11 @@ class Fuser:
 
         self.memory_reader = None
         self.memory_writer = None
-        if config.memory and config.memory.get("enabled", False):
+        if isinstance(config.memory, dict) and config.memory.get("enabled", False):
             try:
                 self.memory_reader = MemoryReader()
                 self.memory_writer = MemoryWriter()
-                logging.info(f"Memory enabled with root: {self.memory_reader.memory_root}")
+                logging.info(f"Memory enabled, root: {self.memory_reader.memory_root}")
             except Exception:
                 logging.exception("Failed to initialize Memory with provided config")
                 self.memory_reader = None

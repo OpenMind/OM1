@@ -132,6 +132,8 @@ class RuntimeConfig:
         Optional mapping of action dependencies.
     knowledge_base : Optional[Dict[str, Any]]
         Optional knowledge base configuration for document retrieval.
+    memory : Optional[Dict[str, Any]]
+        Optional long-term memory configuration.
     """
 
     version: str
@@ -462,6 +464,8 @@ class ModeSystemConfig:
         Global system prompt examples.
     knowledge_base : Optional[Dict[str, Any]]
         Optional knowledge base configuration for document retrieval.
+    memory : Optional[Dict[str, Any]]
+        Optional long-term memory configuration.
     global_cortex_llm : Optional[Dict]
         Global default LLM configuration if mode doesn't override.
     global_lifecycle_hooks : List[LifecycleHook], optional
