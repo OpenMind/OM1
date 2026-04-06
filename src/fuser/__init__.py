@@ -144,7 +144,12 @@ class Fuser:
                 logging.error(f"Error querying memory: {e}")
 
         if memory_context:
-            inputs_fused += f"\n\nMEMORY:\n{memory_context}"
+            inputs_fused += (
+                f"\n\nMEMORY:\n{memory_context}"
+                "\n\nWhen answering questions about prior conversations, people, preferences, "
+                "decisions, dates, or recurring topics — prioritize the MEMORY section above "
+                "over your own parametric knowledge."
+            )
 
         # if we provide laws from blockchain, these override the locally stored rules
         # the rules are not provided in the system prompt, but as a separate INPUT,

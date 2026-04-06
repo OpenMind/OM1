@@ -85,31 +85,6 @@ class MemoryIndex:
         logging.info(f"Memory search: '{query[:50]}' → {len(results)} results " f"(from {self.size} chunks)")
         return results
 
-    async def add_chunk(self, text: str, metadata: dict) -> None:
-        """Add a single chunk to the index at runtime (hot update).
-
-        Skips if the chunk hash already exists in cache.
-
-        Parameters
-        ----------
-        text : str
-            The chunk text content.
-        metadata : dict
-            Chunk metadata (source file, timestamp).
-        """
-        text_hash = _hash_text(text)
-        if text_hash in self._cache:
-            return
-
-        try:
-            async with self.embedding_client:
-                embedding = await self.embedding_client.embed(text)
-            doc = Document(text=text, metadata=metadata)
-            self._cache[text_hash] = (embedding, doc)
-            logging.debug(f"Memory index: added chunk (total: {self.size})")
-        except Exception as e:
-            logging.error(f"Memory index: failed to embed chunk: {e}")
-
     async def load_chunks_batch(self, chunks: list[Document]) -> int:
         """Load multiple chunks into the index in batch (used at startup).
 

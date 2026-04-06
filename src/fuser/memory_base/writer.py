@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 
 class MemoryWriter:
@@ -15,7 +14,7 @@ class MemoryWriter:
 
     def __init__(
         self,
-        memory_root: Optional[str | Path] = None,
+        memory_root: str | Path | None = None,
     ):
         if memory_root is None:
             project_root = Path(__file__).parent.parent.parent.parent
@@ -42,7 +41,7 @@ class MemoryWriter:
         self,
         user_msg: str,
         actions: list,
-    ) -> Optional[tuple[str, str]]:
+    ) -> None:
         """Append a user-robot interaction to today's daily log.
 
         Parameters
@@ -51,15 +50,9 @@ class MemoryWriter:
             ASR input.
         actions : list
             LLM output actions.
-
-        Returns
-        -------
-        Optional[tuple[str, str]]
-            A tuple of (entry_text, daily_filename) if written successfully,
-            or None if the message was empty or write failed.
         """
         if not user_msg.strip():
-            return None
+            return
 
         daily_path = self._get_daily_path()
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -74,7 +67,5 @@ class MemoryWriter:
             with open(daily_path, "a", encoding="utf-8") as f:
                 f.write(entry)
             logging.debug(f"Memory: appended interaction to {daily_path.name}")
-            return entry, daily_path.name
         except Exception as e:
             logging.error(f"Memory: failed to write interaction: {e}")
-            return None

@@ -657,10 +657,10 @@ class ModeCortexRuntime:
 
                 await self.action_orchestrator.promise(output.actions)
 
-                if self.fuser:
+                if self.fuser and self.fuser.memory_writer:
                     voice_input = self.io_provider.get_input("Voice")
                     if voice_input and voice_input.input and voice_input.tick == tick_num:
-                        self.fuser.record_interaction(
+                        self.fuser.memory_writer.append_interaction(
                             user_msg=voice_input.input.strip(),
                             actions=output.actions,
                         )
