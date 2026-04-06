@@ -6,7 +6,7 @@ icon: brain-circuit
 
 OM1's LLM integration is intended to make it easy to (1) send `input` information to LLMs and then (2) route LLM responses to various system actions, such as `speak` and `move`. The OM1 system integrates various concrete implementations of Large Language Models (LLMs), each designed to address different requirements and interaction patterns. These implementations manage API communication, conversation history, and the processing of structured responses, particularly for function calls that trigger agent actions. The framework ensures a consistent interface, allowing the system to interchangeably utilize diverse LLM backends.
 
-OM1 supports per-mode LLM configuration. If a mode specifies its own LLM, it takes precedence over the top-level cortex_llm setting. This allows different modes to use different models based on their specific requirements.
+OM1 also supports per-mode LLM configuration. If a mode specifies its own LLM, it takes precedence over the top-level cortex_llm setting. This allows different modes to use different models based on their specific requirements.
 
 The plugins handle authentication, API communication, prompt formatting, response parsing, and conversation history management. LLM plugin examples are located in `src/llm/plugins`: [**Code**](https://github.com/OpenMind/OM1/tree/main/src/llm/plugins).
 
@@ -19,7 +19,17 @@ POST /api/core/{provider}/chat/completions    # Single agent
 DELETE /api/core/agent/memory                 # Multi agent memory wipe
 ```
 
-### Single-Agent LLM Integration
+## LLM Modes
+
+OM1 supports three LLM execution strategies depending on your latency, quality, and reliability requirements.
+
+| Mode | Description | Performance |
+|------|-------------|----------|
+| **Single** | One LLM processes all requests | Good for simple use cases |
+| **Dual** | Local + cloud LLMs in parallel | Slow but with better performance |
+| **Parallel** | N specialized LLMs run simultaneously | Best |
+
+### Single LLM Integration
 
 For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via a `POST /api/core/{provider}/chat/completions` endpoint. Each LLM plugin takes fused input data (the `prompt`) and sends it to an LLM. The response is then parsed and provided to `runtime/cortex.py` for distribution to the system actions:
 
@@ -58,7 +68,21 @@ OM1 implements a dual-LLM response mechanism that combines both local and cloud-
 - Local model: Qwen3-30B (on-device)
 - Cloud model: GPT-4.1
 
-### How It Works
+Example config:
+
+```bash
+  "cortex_llm": {
+    "type": "DualLLM",
+    "config": {
+        "local_llm_type": "QwenLLM",
+        "local_llm_config": {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},
+        "cloud_llm_type": "OpenAILLM",
+        "cloud_llm_config": {"model": "gpt-4.1"}
+    }
+}
+```
+
+**How It Works**
 
 1. For each request, OM1 sends the prompt to both the local and cloud LLMs in parallel.
 
@@ -78,10 +102,35 @@ This approach ensures fast responses while leveraging cloud models for higher-qu
 
 ### Parallel LLM
 
-A system where N LLMs (any number: 1, 2, 3, or more) run in parallel,
-each generating specific actions they are capable of handling.
-Results are yielded as each LLM completes, allowing the cortex
-to execute actions immediately without waiting for all LLMs.
+Multiple LLMs run in parallel, each handling specific actions they are capable of. Results stream as they complete, allowing the cortex to execute actions immediately without waiting for all LLMs.
+
+Example config:
+
+```bash
+  "cortex_llm": {
+    "type": "ParallelLLM",
+    "config": {
+        "llms": [
+            {
+                "llm_type": "OpenAILLM",
+                "llm_config": {"model": "gpt-4.1"},
+                "action_filter": ["speak", "emotion"]
+            },
+            {
+                "llm_type": "QwenLLM",
+                "llm_config": {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},
+                "action_filter": ["move", "navigate"]
+            },
+            {
+                "llm_type": "DeepSeekLLM",
+                "llm_config": {"model": "deepseek-chat"},
+                "action_filter": ["search", "analyze"]
+            }
+        ],
+        "execute_immediately": true
+    }
+}
+```
 
 ## Local LLMs
 
