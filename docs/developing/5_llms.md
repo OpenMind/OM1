@@ -4,7 +4,9 @@ description: "LLM Integration"
 icon: brain-circuit
 ---
 
-OM1's LLM integration is intended to make it easy to (1) send `input` information to LLMs and then (2) route LLM responses to various system actions, such as `speak` and `move`. The OM1 system integrates various concrete implementations of Large Language Models (LLMs) and specialized agents, each designed to address different requirements and interaction patterns. These implementations manage API communication, conversation history, and the processing of structured responses, particularly for function calls that trigger agent actions. The framework ensures a consistent interface, allowing the system to interchangeably utilize diverse LLM backends.
+OM1's LLM integration is intended to make it easy to (1) send `input` information to LLMs and then (2) route LLM responses to various system actions, such as `speak` and `move`. The OM1 system integrates various concrete implementations of Large Language Models (LLMs), each designed to address different requirements and interaction patterns. These implementations manage API communication, conversation history, and the processing of structured responses, particularly for function calls that trigger agent actions. The framework ensures a consistent interface, allowing the system to interchangeably utilize diverse LLM backends.
+
+OM1 supports per-mode LLM configuration. If a mode specifies its own LLM, it takes precedence over the top-level cortex_llm setting. This allows different modes to use different models based on their specific requirements.
 
 The plugins handle authentication, API communication, prompt formatting, response parsing, and conversation history management. LLM plugin examples are located in `src/llm/plugins`: [**Code**](https://github.com/OpenMind/OM1/tree/main/src/llm/plugins).
 
@@ -14,13 +16,10 @@ The plugins handle authentication, API communication, prompt formatting, respons
 # Base URL: https://api.openmind.com/
 
 POST /api/core/{provider}/chat/completions    # Single agent
-POST /api/core/agent                          # Multi agent
 DELETE /api/core/agent/memory                 # Multi agent memory wipe
-GET /api/core/rag                             # RAG knowledge base
-POST /api/core/agent/medical                  # Healthcare focused multi agent system
 ```
 
-## Single-Agent LLM Integration
+### Single-Agent LLM Integration
 
 For testing and introductory educational purposes, we integrate with multiple language models (LLMs) to provide chat completion via a `POST /api/core/{provider}/chat/completions` endpoint. Each LLM plugin takes fused input data (the `prompt`) and sends it to an LLM. The response is then parsed and provided to `runtime/cortex.py` for distribution to the system actions:
 
@@ -40,8 +39,6 @@ return parsed_response
 
 The standard `pydantic` output model is defined in `src/llm/output_model.py`.
 
-### Single-Agent LLM Configuration
-
 ```bash
   "cortex_llm": {
     "type": "OpenAILLM",     // The class name of the LLM plugin you wish to use
@@ -54,14 +51,37 @@ The standard `pydantic` output model is defined in `src/llm/output_model.py`.
   }
 ```
 
-## Multi-Agent LLM Integration
+### Dual LLM support
 
-The Multi-Agent endpoint at `/api/core/agent` utilizes a collaborative system of specialized agents to perform more complex robotics tasks. The multi-agent system:
+OM1 implements a dual-LLM response mechanism that combines both local and cloud-based models to optimize response quality and latency.
 
-- Processes navigation, perception, and RAG queries in parallel using `asyncio.gather()`
-- Sends results to the team agent for synthesis
-- Returns comprehensive response with individual agent outputs
-- Tracks usage and duration metrics for each agent
+- Local model: Qwen3-30B (on-device)
+- Cloud model: GPT-4.1
+
+### How It Works
+
+1. For each request, OM1 sends the prompt to both the local and cloud LLMs in parallel.
+
+2. The system waits up to 3.2 seconds for responses.
+
+3. If both models return a response within the threshold:
+
+    - The two responses are evaluated by the local LLM.
+
+    - The local LLM selects the better response as the final output.
+
+4. If only one model responds within the threshold:
+
+    That response is used directly as the final output.
+
+This approach ensures fast responses while leveraging cloud models for higher-quality outputs when available.
+
+### Parallel LLM
+
+A system where N LLMs (any number: 1, 2, 3, or more) run in parallel,
+each generating specific actions they are capable of handling.
+Results are yielded as each LLM completes, allowing the cortex
+to execute actions immediately without waiting for all LLMs.
 
 ## Local LLMs
 
@@ -94,31 +114,6 @@ The system supports on-device inference using the Qwen3-30B local LLM. This enab
 ```bash
 uv run src/run.py ollama
 ```
-
-### Dual LLM support
-
-OM1 implements a dual-LLM response mechanism that combines both local and cloud-based models to optimize response quality and latency.
-
-- Local model: Qwen3-30B (on-device)
-- Cloud model: GPT-4.1
-
-### How It Works
-
-1. For each request, OM1 sends the prompt to both the local and cloud LLMs in parallel.
-
-2. The system waits up to 3.2 seconds for responses.
-
-3. If both models return a response within the threshold:
-
-    - The two responses are evaluated by the local LLM.
-
-    - The local LLM selects the better response as the final output.
-
-4. If only one model responds within the threshold:
-
-    That response is used directly as the final output.
-
-This approach ensures fast responses while leveraging cloud models for higher-quality outputs when available.
 
 ### Agent Architecture
 
@@ -260,25 +255,3 @@ Imagine you would like to program a smart dog. Describe the desired capabilities
 ```bash
 "system_prompt_base": "You are an intelligent robotic dog companion designed to be helpful, loyal, and engaging. Your primary goals are to: (1) Provide companionship through interactive play and conversation, (2) Assist with basic household tasks and monitoring, (3) Learn and adapt to your owner's preferences and routines, and (4) Maintain a playful yet responsible demeanor. You can move around, speak clearly, express emotions through body language, and respond to voice commands. Always prioritize safety and be eager to please while maintaining your dog-like personality traits of curiosity, loyalty, and enthusiasm."
 ```
-
-### Medical Robot
-
-To convert the robotic dog (example above) into a four-legged medical doctor, you can change the prompt and route traffic to a specialized healthcare optimized endpoint (`/api/core/agent/medical`). This endpoint emphasizes the careful, responsible delivery of general health-related non-diagnostic responses. A suitable prompt might be:
-
-```bash
-"system_prompt_base": "You are a helpful medical assistant. Your goal is to provide accurate and helpful information about health-related topics. You can ask clarifying questions to better understand the person's concerns. Always provide evidence-based information and avoid diagnosing specific conditions. In general, prompt humans to see their licensed medical professionals for all important medical and health issues.",
-"system_governance": "Here are the laws that govern your actions. Do not violate these laws.\nFirst Law: Do not provide medical diagnoses, as you are not a licensed medical professional.\nSecond Law: Always recommend seeking professional medical advice for serious concerns.\nThird Law: Be empathetic and respectful when discussing sensitive health topics.\nFourth Law: Clearly indicate when information is general knowledge versus specific medical advice.",
-```
-
-> **Note:** The system does not provide medical diagnoses and is informational only. If you are a human, please seek care from a licensed medical professional for all your important medical issues.
-
-```bash
-POST /api/core/agent/medical
-```
-
-This endpoint uses two agents:
-
-- **Verifier Agent**: Validates medical information
-- **Questioner Agent**: Manages medical consultation flow
-
-When you wish to convert the doctor back to a playful dog, just change the system prompt and route queries back to the general `/agent` endpoint.
