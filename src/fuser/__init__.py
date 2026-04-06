@@ -148,7 +148,7 @@ class Fuser:
                 f"\n\nMEMORY:\n{memory_context}"
                 "\n\nWhen answering questions about prior conversations, people, preferences, "
                 "decisions, dates, or recurring topics — prioritize the MEMORY section above "
-                "over your own parametric knowledge."
+                "over your own parametric knowledge.\n\n"
             )
 
         # if we provide laws from blockchain, these override the locally stored rules
