@@ -41,7 +41,6 @@ def k1_odom_processor(
             odom: Odometer = Odometer.deserialize(data.payload.to_bytes())
             logging.debug(f"K1 Zenoh odom handler: x={odom.x}, y={odom.y}, theta={odom.theta}")
 
-            # Put the odometer data directly in the queue
             data_queue.put(
                 {
                     "x": odom.x,
