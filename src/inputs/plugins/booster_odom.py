@@ -22,9 +22,7 @@ class BoosterOdomConfig(SensorConfig):
         The Zenoh topic to subscribe to for odometry data.
     """
 
-    topic: str = Field(
-        default="odometer_state", description="Zenoh topic for Booster odometry data"
-    )
+    topic: str = Field(default="odometer_state", description="Zenoh topic for Booster odometry data")
 
 
 class BoosterOdom(FuserInput[BoosterOdomConfig, Optional[dict]]):
@@ -156,14 +154,9 @@ class BoosterOdom(FuserInput[BoosterOdomConfig, Optional[dict]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

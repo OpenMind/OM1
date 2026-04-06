@@ -54,9 +54,7 @@ class BoosterZenohBridge(Node):
         # 3. Register Zenoh Query Responder
         # This listens for the session.get() calls from your test script
         print(f"Registering Zenoh responder on: {self.zenoh_key}")
-        self.queryable = self.zenoh_session.declare_queryable(
-            self.zenoh_key, self.zenoh_query_handler
-        )
+        self.queryable = self.zenoh_session.declare_queryable(self.zenoh_key, self.zenoh_query_handler)
 
         # Try to subscribe immediately; if /om/paths isn't available yet, retry.
         self._try_subscribe_paths()
@@ -81,14 +79,10 @@ class BoosterZenohBridge(Node):
         try:
             msg_type = get_message(type_str)
         except Exception as e:
-            print(
-                f"Cannot resolve ROS2 message type for {self.ros2_odom_topic}: {type_str} ({e})"
-            )
+            print(f"Cannot resolve ROS2 message type for {self.ros2_odom_topic}: {type_str} ({e})")
             return
 
-        print(
-            f"Subscribing to ROS2 {self.ros2_odom_topic} [{type_str}] -> Zenoh {self.zenoh_odom_key}"
-        )
+        print(f"Subscribing to ROS2 {self.ros2_odom_topic} [{type_str}] -> Zenoh {self.zenoh_odom_key}")
         self._odom_sub = self.create_subscription(
             msg_type,
             self.ros2_odom_topic,
@@ -114,14 +108,10 @@ class BoosterZenohBridge(Node):
                 pose = getattr(msg, "pose", None)
                 pose_inner = getattr(pose, "pose", pose) if pose is not None else None
                 position = getattr(pose_inner, "position", None) if pose_inner else None
-                orientation = (
-                    getattr(pose_inner, "orientation", None) if pose_inner else None
-                )
+                orientation = getattr(pose_inner, "orientation", None) if pose_inner else None
 
                 if position is None or orientation is None:
-                    raise ValueError(
-                        "Unsupported odom message layout (need x/y/theta or pose.position+orientation)"
-                    )
+                    raise ValueError("Unsupported odom message layout (need x/y/theta or pose.position+orientation)")
 
                 x = float(getattr(position, "x", 0.0))
                 y = float(getattr(position, "y", 0.0))
@@ -149,14 +139,10 @@ class BoosterZenohBridge(Node):
         try:
             msg_type = get_message(type_str)
         except Exception as e:
-            print(
-                f"Cannot resolve ROS2 message type for {self.ros2_paths_topic}: {type_str} ({e})"
-            )
+            print(f"Cannot resolve ROS2 message type for {self.ros2_paths_topic}: {type_str} ({e})")
             return
 
-        print(
-            f"Subscribing to ROS2 {self.ros2_paths_topic} [{type_str}] -> Zenoh {self.zenoh_paths_key}"
-        )
+        print(f"Subscribing to ROS2 {self.ros2_paths_topic} [{type_str}] -> Zenoh {self.zenoh_paths_key}")
         self._paths_sub = self.create_subscription(
             msg_type,
             self.ros2_paths_topic,
@@ -179,12 +165,8 @@ class BoosterZenohBridge(Node):
             )
 
             paths = list(getattr(msg, "paths", []) or [])
-            blocked_by_obstacle_idx = list(
-                getattr(msg, "blocked_by_obstacle_idx", []) or []
-            )
-            blocked_by_hazard_idx = list(
-                getattr(msg, "blocked_by_hazard_idx", []) or []
-            )
+            blocked_by_obstacle_idx = list(getattr(msg, "blocked_by_obstacle_idx", []) or [])
+            blocked_by_hazard_idx = list(getattr(msg, "blocked_by_hazard_idx", []) or [])
 
             z_paths = zenoh_sensor_msgs.Paths(
                 header=z_header,
@@ -219,19 +201,13 @@ class BoosterZenohBridge(Node):
 
             if future.result() is not None:
                 ros2_resp = future.result()
-                print(
-                    f"ROS 2 Response - Status: {ros2_resp.msg.status}, Body: {ros2_resp.msg.body}"
-                )
+                print(f"ROS 2 Response - Status: {ros2_resp.msg.status}, Body: {ros2_resp.msg.body}")
 
                 # Convert ROS 2 response to Zenoh response
-                api_resp = BoosterApiRespMsg(
-                    status=ros2_resp.msg.status, body=ros2_resp.msg.body
-                )
+                api_resp = BoosterApiRespMsg(status=ros2_resp.msg.status, body=ros2_resp.msg.body)
             else:
                 print("ROS 2 service call failed or timed out")
-                error_body = json.dumps(
-                    {"status": "error", "message": "ROS 2 service call failed"}
-                )
+                error_body = json.dumps({"status": "error", "message": "ROS 2 service call failed"})
                 api_resp = BoosterApiRespMsg(status=-1, body=error_body)
 
             # Wrap back into the RpcServiceResponse expected by your client

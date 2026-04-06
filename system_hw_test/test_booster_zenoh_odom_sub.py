@@ -2,6 +2,7 @@
 """
 Simple Zenoh subscriber to verify /odometer_state data transfer
 """
+
 import zenoh
 
 # Connect to zenoh on localhost:7447

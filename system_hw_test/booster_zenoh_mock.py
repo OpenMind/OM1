@@ -19,9 +19,7 @@ class BoosterZenohMock:
 
         # Register Zenoh Query Responder
         print(f"Registering Zenoh responder on: {self.zenoh_key}")
-        self.queryable = self.zenoh_session.declare_queryable(
-            self.zenoh_key, self.zenoh_query_handler
-        )
+        self.queryable = self.zenoh_session.declare_queryable(self.zenoh_key, self.zenoh_query_handler)
         print("Bridge is ready. Waiting for Zenoh requests...")
 
     def zenoh_query_handler(self, query):
@@ -39,9 +37,7 @@ class BoosterZenohMock:
 
             # --- Mock Response Logic ---
             # Simulate ROS 2 service success:
-            response_body = json.dumps(
-                {"status": "success", "message": "Robot moved (MOCKED)"}
-            )
+            response_body = json.dumps({"status": "success", "message": "Robot moved (MOCKED)"})
             api_resp = BoosterApiRespMsg(status=0, body=response_body)
 
             # Wrap back into the RpcServiceResponse expected by client

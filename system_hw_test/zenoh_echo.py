@@ -58,18 +58,10 @@ def on_message(sample):
 
 
 async def main():
-    parser = argparse.ArgumentParser(
-        description="Echo Zenoh messages like 'ros2 topic echo'"
-    )
-    parser.add_argument(
-        "topic", nargs="?", default="**", help="Topic to subscribe to (default: '**')"
-    )
-    parser.add_argument(
-        "--endpoint", default="tcp/127.0.0.1:7447", help="Zenoh endpoint to connect to"
-    )
-    parser.add_argument(
-        "--no-multicast", action="store_true", help="Disable multicast discovery"
-    )
+    parser = argparse.ArgumentParser(description="Echo Zenoh messages like 'ros2 topic echo'")
+    parser.add_argument("topic", nargs="?", default="**", help="Topic to subscribe to (default: '**')")
+    parser.add_argument("--endpoint", default="tcp/127.0.0.1:7447", help="Zenoh endpoint to connect to")
+    parser.add_argument("--no-multicast", action="store_true", help="Disable multicast discovery")
 
     args = parser.parse_args()
 

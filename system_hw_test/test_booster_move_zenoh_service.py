@@ -61,9 +61,7 @@ class BoosterMoveZenohClient:
             Serialized service request payload (CDR format, wrapped in RpcServiceRequest)
         """
         # Create the inner request message using BoosterApiReqMsg
-        inner_request = BoosterApiReqMsg(
-            api_id=self.API_MOVE, body=json.dumps({"vx": vx, "vy": vy, "vyaw": vyaw})
-        )
+        inner_request = BoosterApiReqMsg(api_id=self.API_MOVE, body=json.dumps({"vx": vx, "vy": vy, "vyaw": vyaw}))
 
         # Wrap it in RpcServiceRequest to match ROS 2 service definition
         request = RpcServiceRequest(msg=inner_request)
@@ -73,9 +71,7 @@ class BoosterMoveZenohClient:
         # print(f"Serialized request (hex): {serialized_request.hex()}")
         return serialized_request
 
-    async def _call_service(
-        self, request_payload: bytes, timeout: float = 10.0
-    ) -> Optional[BoosterApiRespMsg]:
+    async def _call_service(self, request_payload: bytes, timeout: float = 10.0) -> Optional[BoosterApiRespMsg]:
         """
         Call the ROS 2 service using session.get().
 
@@ -104,9 +100,7 @@ class BoosterMoveZenohClient:
                 if reply.ok:
                     try:
                         # Deserialize to RpcServiceResponse wrapper
-                        service_response = RpcServiceResponse.deserialize(
-                            reply.ok.payload.to_bytes()
-                        )
+                        service_response = RpcServiceResponse.deserialize(reply.ok.payload.to_bytes())
                         # Return the inner msg (BoosterApiRespMsg)
                         return service_response.msg
                     except Exception as e:
@@ -120,9 +114,7 @@ class BoosterMoveZenohClient:
             print(f"Service call failed: {e}")
             return None
 
-    async def send_move_command(
-        self, vx: float, vy: float, vyaw: float, duration: float = 1.0
-    ):
+    async def send_move_command(self, vx: float, vy: float, vyaw: float, duration: float = 1.0):
         """
         Send a movement command to the robot via Zenoh service.
 
@@ -286,9 +278,7 @@ async def main():
         await client.interactive_mode()
     else:
         print("Running automated tests...")
-        print(
-            "(Use 'python test_booster_move_zenoh_service.py interactive' for manual control)"
-        )
+        print("(Use 'python test_booster_move_zenoh_service.py interactive' for manual control)")
         await client.run_all_tests()
 
     print("\nTest complete!")

@@ -79,11 +79,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         self.session = None
 
         odom_topic = self.config.odom_topic
-        self.rpc_service_name = (
-            self.config.rpc_service_name
-            or self.config.cmd_vel_topic
-            or "booster_rpc_service"
-        )
+        self.rpc_service_name = self.config.rpc_service_name or self.config.cmd_vel_topic or "booster_rpc_service"
 
         try:
             self.session = open_zenoh_session()
@@ -147,9 +143,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         try:
             API_MOVE = 2001
             # Create the inner request message
-            inner_request = BoosterApiReqMsg(
-                api_id=API_MOVE, body=json.dumps({"vx": vx, "vy": vy, "vyaw": vyaw})
-            )
+            inner_request = BoosterApiReqMsg(api_id=API_MOVE, body=json.dumps({"vx": vx, "vy": vy, "vyaw": vyaw}))
             # Wrap it in RpcServiceRequest
             request = RpcServiceRequest(msg=inner_request)
             # Serialize for Zenoh bridge
@@ -163,9 +157,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             for reply in replies:
                 if reply.ok:
                     try:
-                        service_response = RpcServiceResponse.deserialize(
-                            reply.ok.payload.to_bytes()
-                        )
+                        service_response = RpcServiceResponse.deserialize(reply.ok.payload.to_bytes())
                         logging.info(
                             f"RPC response status: {service_response.msg.status}, body: {service_response.msg.body}"
                         )
@@ -197,9 +189,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
         if not self._has_fresh_odom():
             if self.config.allow_move_without_odom:
-                logging.warning(
-                    "ODOM missing/stale but allow_move_without_odom=true; sending direct test command"
-                )
+                logging.warning("ODOM missing/stale but allow_move_without_odom=true; sending direct test command")
 
                 action = output_interface.action
                 if action == "move forwards":
@@ -274,16 +264,12 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
 
             current_target = target[0]
 
-            logging.info(
-                f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}"
-            )
+            logging.info(f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}")
 
             if self.movement_attempts > self.movement_attempt_limit:
                 # abort - we are not converging
                 self.clean_abort()
-                logging.info(
-                    f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()"
-                )
+                logging.info(f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()")
                 return
 
             goal_dx = current_target.dx
@@ -293,9 +279,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             if not current_target.turn_complete:
                 # Turning resets consecutive retreat accounting.
                 self._consecutive_retreat_cmds = 0
-                gap = self._calculate_angle_gap(
-                    -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
-                )
+                gap = self._calculate_angle_gap(-1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw)
                 logging.info(f"Phase 1 - Turning remaining GAP: {gap}DEG")
 
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -350,8 +334,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                 speed = current_target.speed
 
                 distance_traveled = math.sqrt(
-                    (self.odom.position["odom_x"] - s_x) ** 2
-                    + (self.odom.position["odom_y"] - s_y) ** 2
+                    (self.odom.position["odom_x"] - s_x) ** 2 + (self.odom.position["odom_y"] - s_y) ** 2
                 )
                 gap = round(abs(goal_dx - distance_traveled), 2)
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -385,16 +368,12 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
                         else:
                             self._consecutive_retreat_cmds = 0
                     elif distance_traveled > abs(goal_dx):
-                        logging.debug(
-                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
-                        )
+                        logging.debug(f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m")
                         self._run_move_robot(-1 * fb * 0.15, 0.0, 0.0)
                         # Overshoot correction is opposite direction; reset retreat accounting.
                         self._consecutive_retreat_cmds = 0
                 else:
-                    logging.info(
-                        "Phase 2 - Movement completed normally, processing next AI command"
-                    )
+                    logging.info("Phase 2 - Movement completed normally, processing next AI command")
                     self.clean_abort()
 
         self.sleep(0.1)
@@ -410,9 +389,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         path = random.choice(self.path_provider.turn_left)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.0,
@@ -434,9 +411,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         path = random.choice(self.path_provider.turn_right)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.0,
@@ -458,9 +433,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
         path = random.choice(self.path_provider.advance)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.1,
@@ -496,9 +469,7 @@ class MoveBoosterZenohConnector(ActionConnector[MoveBoosterZenohConfig, MoveInpu
             logging.warning("Front not clear (path 4 not safe); staying stopped")
             return False
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"]
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"])
         self.pending_movements.put(
             MoveCommand(
                 dx=dx,

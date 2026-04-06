@@ -39,9 +39,7 @@ def k1_odom_processor(
         """
         try:
             odom: Odometer = Odometer.deserialize(data.payload.to_bytes())
-            logging.debug(
-                f"K1 Zenoh odom handler: x={odom.x}, y={odom.y}, theta={odom.theta}"
-            )
+            logging.debug(f"K1 Zenoh odom handler: x={odom.x}, y={odom.y}, theta={odom.theta}")
 
             # Put the odometer data directly in the queue
             data_queue.put(
@@ -127,9 +125,7 @@ class K1OdomProvider(OdomProviderBase):
             return
         else:
             logging.info("Starting K1 Odom processor thread")
-            self._odom_processor_thread = threading.Thread(
-                target=self.process_odom, daemon=True
-            )
+            self._odom_processor_thread = threading.Thread(target=self.process_odom, daemon=True)
             self._odom_processor_thread.start()
 
     def _update_body_state(self, pose):
@@ -186,9 +182,7 @@ class K1OdomProvider(OdomProviderBase):
 
             if delta > 0.01 or self.move_history > 0.01:
                 self.moving = True
-                logging.info(
-                    f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
-                )
+                logging.info(f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}")
             else:
                 self.moving = False
 
