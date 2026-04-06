@@ -72,11 +72,11 @@
 #     mock_pub.put.assert_called_once()
 
 #     mock_asr_provider.assert_called_once_with(
-#         ws_url="wss://api.openmind.org/api/core/google/asr?api_key=test_api_key"
+#         ws_url="wss://api.openmind.com/api/core/google/asr?api_key=test_api_key"
 #     )
 
 #     mock_tts_provider.assert_called_once_with(
-#         url="https://api.openmind.org/api/core/elevenlabs/tts",
+#         url="https://api.openmind.com/api/core/elevenlabs/tts",
 #         api_key="test_api_key",
 #         elevenlabs_api_key="test_elevenlabs_key",
 #         voice_id="test_voice_id",
@@ -115,7 +115,7 @@
 #     connector = SpeakElevenLabsTTSConnector(mock_minimal_config)
 
 #     mock_tts_provider.assert_called_once_with(
-#         url="https://api.openmind.org/api/core/elevenlabs/tts",
+#         url="https://api.openmind.com/api/core/elevenlabs/tts",
 #         api_key=None,
 #         elevenlabs_api_key=None,
 #         voice_id="JBFqnCBsd6RMkjVDRZzb",  # default
@@ -124,7 +124,7 @@
 #     )
 
 #     mock_asr_provider.assert_called_once_with(
-#         ws_url="wss://api.openmind.org/api/core/google/asr?api_key=None"
+#         ws_url="wss://api.openmind.com/api/core/google/asr?api_key=None"
 #     )
 
 #     connector.stop()

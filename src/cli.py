@@ -42,12 +42,8 @@ def modes(config_name: str) -> None:
         print("-" * 32)
         print(f"Mode System: {mode_config.name}")
         print(f"Default Mode: {mode_config.default_mode}")
-        print(
-            f"Manual Switching: {'Enabled' if mode_config.allow_manual_switching else 'Disabled'}"
-        )
-        print(
-            f"Mode Memory: {'Enabled' if mode_config.mode_memory_enabled else 'Disabled'}"
-        )
+        print(f"Manual Switching: {'Enabled' if mode_config.allow_manual_switching else 'Disabled'}")
+        print(f"Mode Memory: {'Enabled' if mode_config.mode_memory_enabled else 'Disabled'}")
 
         if mode_config.global_lifecycle_hooks:
             print(f"Global Lifecycle Hooks: {len(mode_config.global_lifecycle_hooks)}")
@@ -72,11 +68,7 @@ def modes(config_name: str) -> None:
         print("Transition Rules:")
         print("-" * 50)
         for rule in mode_config.transition_rules:
-            from_display = (
-                mode_config.modes[rule.from_mode].display_name
-                if rule.from_mode != "*"
-                else "Any Mode"
-            )
+            from_display = mode_config.modes[rule.from_mode].display_name if rule.from_mode != "*" else "Any Mode"
             to_display = mode_config.modes[rule.to_mode].display_name
             print(f"• {from_display} → {to_display}")
             print(f"  Type: {rule.transition_type.value}")
@@ -136,9 +128,7 @@ def validate_config(
         ...,
         help="Configuration file name or path (e.g., 'test' or 'config/test.json5')",
     ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show detailed validation information"
-    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed validation information"),
     check_components: bool = typer.Option(
         True,
         "--check-components",
@@ -208,12 +198,8 @@ def validate_config(
 
         # Schema validation
         is_multi_mode = "modes" in raw_config and "default_mode" in raw_config
-        schema_file = (
-            "multi_mode_schema.json" if is_multi_mode else "single_mode_schema.json"
-        )
-        schema_path = os.path.join(
-            os.path.dirname(__file__), "../config/schema", schema_file
-        )
+        schema_file = "multi_mode_schema.json" if is_multi_mode else "single_mode_schema.json"
+        schema_path = os.path.join(os.path.dirname(__file__), "../config/schema", schema_file)
 
         with open(schema_path, "r") as f:
             schema = json.load(f)
@@ -710,7 +696,7 @@ def _check_api_key(raw_config: dict, verbose: bool):
     if (not api_key or api_key == "openmind_free") and not env_api_key:
         print()
         print("Warning: No API key configured")
-        print("   Get a free key at: https://portal.openmind.org")
+        print("   Get a free key at: https://portal.openmind.com")
         print("   Or set OM_API_KEY in your .env file")
     elif verbose:
         if env_api_key:

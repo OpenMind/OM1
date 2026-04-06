@@ -27,9 +27,7 @@ def test_initialization_with_custom_config():
         patch("inputs.plugins.ubtech_camera_vlm_input.IOProvider"),
         patch("inputs.plugins.ubtech_camera_vlm_input.UbtechVLMProvider"),
     ):
-        config = UbtechCameraVLMSensorConfig(
-            robot_ip="192.168.1.100", base_url="wss://test.com"
-        )
+        config = UbtechCameraVLMSensorConfig(robot_ip="192.168.1.100", base_url="wss://test.com")
         sensor = UbtechCameraVLMInput(config=config)
 
         assert sensor.config.robot_ip == "192.168.1.100"

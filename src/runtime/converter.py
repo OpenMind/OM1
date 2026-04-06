@@ -44,9 +44,7 @@ class ConfigConverter:
         logging.info(f"Converting single-mode config '{mode_name}'")
 
         converted_config = ConfigConverter._build_global_section(raw_config, mode_name)
-        converted_config["modes"] = {
-            mode_name: ConfigConverter._build_mode_section(raw_config)
-        }
+        converted_config["modes"] = {mode_name: ConfigConverter._build_mode_section(raw_config)}
         converted_config["transition_rules"] = []
 
         ConfigConverter._validate(converted_config, mode_name)
@@ -110,10 +108,9 @@ class ConfigConverter:
             "backgrounds": raw_config.get("backgrounds", []),
             "simulators": raw_config.get("simulators", []),
             "cortex_llm": raw_config.get("cortex_llm"),
-            "action_execution_mode": raw_config.get(
-                "action_execution_mode", "concurrent"
-            ),
+            "action_execution_mode": raw_config.get("action_execution_mode", "concurrent"),
             "action_dependencies": raw_config.get("action_dependencies", {}),
+            "mcp_servers": raw_config.get("mcp_servers", []),
         }
 
     @staticmethod
@@ -135,21 +132,15 @@ class ConfigConverter:
         global_required = ["default_mode", "modes"]
         for key in global_required:
             if key not in converted_config or converted_config[key] is None:
-                raise ValueError(
-                    f"Conversion failed: missing global required field '{key}'"
-                )
+                raise ValueError(f"Conversion failed: missing global required field '{key}'")
         if mode_name not in converted_config["modes"]:
-            raise ValueError(
-                f"Conversion failed: default_mode '{mode_name}' not in modes"
-            )
+            raise ValueError(f"Conversion failed: default_mode '{mode_name}' not in modes")
 
         mode_required = ["display_name", "description"]
         mode = converted_config["modes"][mode_name]
         for key in mode_required:
             if key not in mode or mode[key] is None:
-                raise ValueError(
-                    f"Conversion failed: missing required field '{key}' in mode '{mode_name}'"
-                )
+                raise ValueError(f"Conversion failed: missing required field '{key}' in mode '{mode_name}'")
 
         logging.info(f"Conversion validated: config '{mode_name}'")
 

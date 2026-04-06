@@ -59,9 +59,7 @@ class TestUnitreeG1RememberLocationConnector:
 
     @pytest.fixture
     def g1_connector(self):
-        with patch(
-            "actions.remember_location.connector.unitree_g1_location.ElevenLabsTTSProvider"
-        ) as mock_tts:
+        with patch("actions.remember_location.connector.unitree_g1_location.ElevenLabsTTSProvider") as mock_tts:
             mock_tts_instance = Mock()
             mock_tts.return_value = mock_tts_instance
             config = UnitreeG1RememberLocationConfig()
@@ -84,9 +82,7 @@ class TestUnitreeG1RememberLocationConnector:
                 "actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="kitchen")
             await connector.connect(loc_input)
@@ -96,25 +92,19 @@ class TestUnitreeG1RememberLocationConnector:
             assert call_kwargs["json"]["label"] == "kitchen"
             assert call_kwargs["json"]["map_name"] == "map"
             mock_logging.info.assert_called()
-            mock_tts.add_pending_message.assert_called_once_with(
-                "Location kitchen remembered !"
-            )
+            mock_tts.add_pending_message.assert_called_once_with("Location kitchen remembered !")
 
     @pytest.mark.asyncio
     async def test_connect_api_error(self, g1_connector):
         connector, mock_tts = g1_connector
-        mock_session_cm, mock_session = create_aiohttp_mock(
-            status=500, text="Internal Server Error"
-        )
+        mock_session_cm, mock_session = create_aiohttp_mock(status=500, text="Internal Server Error")
 
         with (
             patch(
                 "actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="office")
             await connector.connect(loc_input)
@@ -127,26 +117,18 @@ class TestUnitreeG1RememberLocationConnector:
         connector, mock_tts = g1_connector
         connector.base_url = ""
 
-        with patch(
-            "actions.remember_location.connector.unitree_g1_location.logging"
-        ) as mock_logging:
+        with patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging:
             loc_input = RememberLocationInput(action="somewhere")
             await connector.connect(loc_input)
-            mock_logging.error.assert_called_with(
-                "RememberLocationG1 connector missing 'base_url' in config"
-            )
+            mock_logging.error.assert_called_with("RememberLocationG1 connector missing 'base_url' in config")
 
     @pytest.mark.asyncio
     async def test_connect_timeout_error(self, g1_connector):
         connector, mock_tts = g1_connector
 
         with (
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession"
-            ) as mock_cls,
-            patch(
-                "actions.remember_location.connector.unitree_g1_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_g1_location.aiohttp.ClientSession") as mock_cls,
+            patch("actions.remember_location.connector.unitree_g1_location.logging") as mock_logging,
         ):
             mock_cm = Mock()
             mock_cm.__aenter__ = AsyncMock(side_effect=asyncio.TimeoutError())
@@ -155,9 +137,7 @@ class TestUnitreeG1RememberLocationConnector:
 
             loc_input = RememberLocationInput(action="garden")
             await connector.connect(loc_input)
-            mock_logging.error.assert_called_with(
-                "RememberLocationG1 API request timed out"
-            )
+            mock_logging.error.assert_called_with("RememberLocationG1 API request timed out")
 
 
 class TestUnitreeGo2RememberLocationConfig:
@@ -185,9 +165,7 @@ class TestUnitreeGo2RememberLocationConnector:
 
     @pytest.fixture
     def go2_connector(self):
-        with patch(
-            "actions.remember_location.connector.unitree_go2_location.ElevenLabsTTSProvider"
-        ) as mock_tts:
+        with patch("actions.remember_location.connector.unitree_go2_location.ElevenLabsTTSProvider") as mock_tts:
             mock_tts_instance = Mock()
             mock_tts.return_value = mock_tts_instance
             config = UnitreeGo2RememberLocationConfig()
@@ -210,9 +188,7 @@ class TestUnitreeGo2RememberLocationConnector:
                 "actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="charging_station")
             await connector.connect(loc_input)
@@ -228,18 +204,14 @@ class TestUnitreeGo2RememberLocationConnector:
     @pytest.mark.asyncio
     async def test_connect_api_error(self, go2_connector):
         connector, mock_tts = go2_connector
-        mock_session_cm, mock_session = create_aiohttp_mock(
-            status=404, text="Not Found"
-        )
+        mock_session_cm, mock_session = create_aiohttp_mock(status=404, text="Not Found")
 
         with (
             patch(
                 "actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession",
                 return_value=mock_session_cm,
             ),
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging,
         ):
             loc_input = RememberLocationInput(action="hall")
             await connector.connect(loc_input)
@@ -250,31 +222,21 @@ class TestUnitreeGo2RememberLocationConnector:
         connector, mock_tts = go2_connector
         connector.base_url = ""
 
-        with patch(
-            "actions.remember_location.connector.unitree_go2_location.logging"
-        ) as mock_logging:
+        with patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging:
             loc_input = RememberLocationInput(action="somewhere")
             await connector.connect(loc_input)
-            mock_logging.error.assert_called_with(
-                "RememberLocationGo2 connector missing 'base_url' in config"
-            )
+            mock_logging.error.assert_called_with("RememberLocationGo2 connector missing 'base_url' in config")
 
     @pytest.mark.asyncio
     async def test_connect_exception(self, go2_connector):
         connector, mock_tts = go2_connector
 
         with (
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession"
-            ) as mock_cls,
-            patch(
-                "actions.remember_location.connector.unitree_go2_location.logging"
-            ) as mock_logging,
+            patch("actions.remember_location.connector.unitree_go2_location.aiohttp.ClientSession") as mock_cls,
+            patch("actions.remember_location.connector.unitree_go2_location.logging") as mock_logging,
         ):
             mock_cm = Mock()
-            mock_cm.__aenter__ = AsyncMock(
-                side_effect=ConnectionError("Connection refused")
-            )
+            mock_cm.__aenter__ = AsyncMock(side_effect=ConnectionError("Connection refused"))
             mock_cm.__aexit__ = AsyncMock(return_value=None)
             mock_cls.return_value = mock_cm
 

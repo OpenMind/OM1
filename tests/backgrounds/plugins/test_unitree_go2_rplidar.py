@@ -37,9 +37,7 @@ class TestUnitreeGo2RPLidarConfig:
 
     def test_custom_distance_values(self):
         """Test custom distance configuration values."""
-        config = UnitreeGo2RPLidarConfig(
-            relevant_distance_max=2.0, relevant_distance_min=0.1
-        )
+        config = UnitreeGo2RPLidarConfig(relevant_distance_max=2.0, relevant_distance_min=0.1)
         assert config.relevant_distance_max == 2.0
         assert config.relevant_distance_min == 0.1
 
@@ -78,9 +76,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_initialization(self):
         """Test background initialization."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -93,9 +89,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_initialization_with_default_config(self):
         """Test background initialization with default configuration."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -108,9 +102,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_provider_initialization_with_correct_parameters(self):
         """Test that provider is initialized with correct parameters."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -136,9 +128,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_initialization_logging(self, caplog):
         """Test that initialization logs the correct message."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -150,9 +140,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_provider_start_is_called(self):
         """Test that provider.start() is called during initialization."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -164,9 +152,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_config_stored_correctly(self):
         """Test that config is stored correctly in the background instance."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 
@@ -178,9 +164,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_multiple_instances_with_different_configs(self):
         """Test that multiple instances can be created with different configs."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider1 = MagicMock()
             mock_provider2 = MagicMock()
             mock_provider_class.side_effect = [mock_provider1, mock_provider2]
@@ -202,9 +186,7 @@ class TestUnitreeGo2RPLidar:
 
     def test_lidar_config_extraction(self):
         """Test that lidar config is extracted correctly from background config."""
-        with patch(
-            "backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_provider_class:
+        with patch("backgrounds.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_provider_class:
             mock_provider = MagicMock()
             mock_provider_class.return_value = mock_provider
 

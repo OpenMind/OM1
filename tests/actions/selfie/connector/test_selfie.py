@@ -148,9 +148,7 @@ class TestSelfieConnectorConnect:
         selfie_input = SelfieInput(action="")
         with patch("actions.selfie.connector.selfie.logging") as mock_logging:
             await connector.connect(selfie_input)
-            mock_logging.error.assert_called_with(
-                "Selfie requires a non-empty `id` (e.g., 'wendy')."
-            )
+            mock_logging.error.assert_called_with("Selfie requires a non-empty `id` (e.g., 'wendy').")
 
     @pytest.mark.asyncio
     async def test_connect_successful_enrollment(self, connector, mock_dependencies):
@@ -159,14 +157,10 @@ class TestSelfieConnectorConnect:
         selfie_input = SelfieInput(action="wendy", timeout_sec=5)
 
         with (
-            patch.object(
-                connector, "_get_config", return_value={"config": {"blur": True}}
-            ),
+            patch.object(connector, "_get_config", return_value={"config": {"blur": True}}),
             patch.object(connector, "_set_blur") as mock_blur,
             patch.object(connector, "_wait_single_face", return_value=True),
-            patch.object(
-                connector, "_post_json", return_value={"ok": True}
-            ) as mock_post,
+            patch.object(connector, "_post_json", return_value={"ok": True}) as mock_post,
         ):
             await connector.connect(selfie_input)
             mock_post.assert_called_with("/selfie", {"id": "wendy"})
@@ -182,9 +176,7 @@ class TestSelfieConnectorConnect:
         selfie_input = SelfieInput(action="wendy", timeout_sec=5)
 
         with (
-            patch.object(
-                connector, "_get_config", return_value={"config": {"blur": False}}
-            ),
+            patch.object(connector, "_get_config", return_value={"config": {"blur": False}}),
             patch.object(connector, "_set_blur"),
             patch.object(connector, "_wait_single_face", return_value=False),
             patch.object(
@@ -204,9 +196,7 @@ class TestSelfieConnectorConnect:
         selfie_input = SelfieInput(action="wendy", timeout_sec=5)
 
         with (
-            patch.object(
-                connector, "_get_config", return_value={"config": {"blur": True}}
-            ),
+            patch.object(connector, "_get_config", return_value={"config": {"blur": True}}),
             patch.object(connector, "_set_blur"),
             patch.object(connector, "_wait_single_face", return_value=True),
             patch.object(connector, "_post_json", return_value={"ok": False}),

@@ -71,9 +71,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
             self.session = open_zenoh_session()
             logging.info(f"Zenoh move client opened {self.session}")
             logging.info(f"TurtleBot4 hazard listener starting with URID: {URID}")
-            self.session.declare_subscriber(
-                f"{URID}/c3/hazard_detection", self.listen_hazard
-            )
+            self.session.declare_subscriber(f"{URID}/c3/hazard_detection", self.listen_hazard)
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
 
@@ -90,19 +88,11 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
         data : zenoh.Sample
             The Zenoh sample containing the hazard detection data.
         """
-        self.hazard = sensor_msgs.HazardDetectionVector.deserialize(
-            data.payload.to_bytes()
-        )
-        if (
-            self.hazard is not None
-            and self.hazard.detections
-            and len(self.hazard.detections) > 0  # type: ignore
-        ):
+        self.hazard = sensor_msgs.HazardDetectionVector.deserialize(data.payload.to_bytes())
+        if self.hazard is not None and self.hazard.detections and len(self.hazard.detections) > 0:  # type: ignore
             for haz in self.hazard.detections:  # type: ignore
                 if haz.type == 1:
-                    logging.info(
-                        f"Hazard Type:{haz.type} direction:{haz.header.frame_id}"
-                    )
+                    logging.info(f"Hazard Type:{haz.type} direction:{haz.header.frame_id}")
                     if "right" in haz.header.frame_id:
                         self.hazard = "TURN_LEFT"
                     elif "left" in haz.header.frame_id:
@@ -178,13 +168,13 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
                 retreat_danger = False
 
         if output_interface.action == "turn left":
-            # turn 90 Deg to the left (CCW)
+            # turn 30 Deg to the left (CCW)
             target_yaw = self.odom.odom_yaw_m180_p180 - 30.0
             if target_yaw <= -180:
                 target_yaw += 360.0
             self.pending_movements.put(MoveCommand(dx=0.0, yaw=target_yaw))
         elif output_interface.action == "turn right":
-            # turn 90 Deg to the right (CW)
+            # turn 30 Deg to the right (CW)
             target_yaw = self.odom.odom_yaw_m180_p180 + 30.0
             if target_yaw >= 180.0:
                 target_yaw -= 360.0
@@ -334,17 +324,13 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
 
             current_target = target[0]
 
-            logging.debug(
-                f"Target: {current_target} current yaw: {self.odom.odom_yaw_m180_p180}"
-            )
+            logging.debug(f"Target: {current_target} current yaw: {self.odom.odom_yaw_m180_p180}")
 
             goal_dx = current_target.dx
             goal_yaw = current_target.yaw
 
             if not current_target.turn_complete:
-                gap = self._calculate_angle_gap(
-                    -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
-                )
+                gap = self._calculate_angle_gap(-1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw)
                 logging.info(f"Phase 1 - Turning remaining GAP: {gap}DEG")
 
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -384,9 +370,7 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
 
                 s_x = current_target.start_x
                 s_y = current_target.start_y
-                distance_traveled = math.sqrt(
-                    (self.odom.x - s_x) ** 2 + (self.odom.y - s_y) ** 2
-                )
+                distance_traveled = math.sqrt((self.odom.x - s_x) ** 2 + (self.odom.y - s_y) ** 2)
                 remaining = abs(goal_dx - distance_traveled)
                 logging.info(f"remaining advance GAP: {round(remaining,2)}")
 
@@ -405,14 +389,10 @@ class MoveZenohConnector(ActionConnector[MoveZenohConfig, MoveInput]):
                         logging.debug(f"keep moving. remaining:{remaining} ")
                         self.move(fb * 0.4, 0.0)
                     elif distance_traveled > goal_dx:  # you moved too far
-                        logging.debug(
-                            f"OVERSHOOT: move other way. remaining:{remaining} "
-                        )
+                        logging.debug(f"OVERSHOOT: move other way. remaining:{remaining} ")
                         self.move(-1 * fb * 0.1, 0.0)
                 else:
-                    logging.info(
-                        "advance is completed, gap is small enough, done, pop 1 off queue"
-                    )
+                    logging.info("advance is completed, gap is small enough, done, pop 1 off queue")
                     self.pending_movements.get()
 
     def _execute_turn(self, gap: float) -> bool:

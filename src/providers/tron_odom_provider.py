@@ -51,9 +51,7 @@ def tron_odom_processor(
         odom: Odometry = nav_msgs.Odometry.deserialize(data.payload.to_bytes())
         logging.debug(f"Tron Zenoh odom handler: {odom}")
 
-        data_queue.put(
-            PoseWithCovarianceStamped(header=odom.header, pose=odom.pose)  # type: ignore
-        )
+        data_queue.put(PoseWithCovarianceStamped(header=odom.header, pose=odom.pose))  # type: ignore
 
     try:
         session = open_zenoh_session()
@@ -127,9 +125,7 @@ class TronOdomProvider(OdomProviderBase):
             return
         else:
             logging.info("Starting Tron Odom processor thread")
-            self._odom_processor_thread = threading.Thread(
-                target=self.process_odom, daemon=True
-            )
+            self._odom_processor_thread = threading.Thread(target=self.process_odom, daemon=True)
             self._odom_processor_thread.start()
 
     def _update_body_state(self, pose):

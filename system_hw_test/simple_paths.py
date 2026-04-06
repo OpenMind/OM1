@@ -19,9 +19,7 @@ class SimplePaths:
     def paths_callback(self, msg):
         try:
             paths_msg = sensor_msgs.Paths.deserialize(msg.payload.to_bytes())
-            msg_time = (
-                paths_msg.header.stamp.sec + paths_msg.header.stamp.nanosec * 1e-9
-            )
+            msg_time = paths_msg.header.stamp.sec + paths_msg.header.stamp.nanosec * 1e-9
             current_time = time.time()
             latency = current_time - msg_time
             logging.debug(f"Received paths with latency: {latency:.6f} seconds")

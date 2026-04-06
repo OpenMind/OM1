@@ -82,9 +82,7 @@ class BaseRetriever(ABC):
         pass
 
     @abstractmethod
-    def batch_search(
-        self, query_embeddings: np.ndarray, top_k: int = 5
-    ) -> list[list[Document]]:
+    def batch_search(self, query_embeddings: np.ndarray, top_k: int = 5) -> list[list[Document]]:
         """
         Batch search for multiple query embeddings.
 

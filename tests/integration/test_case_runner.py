@@ -68,6 +68,7 @@ def build_mode_system_config_from_test_case(config: dict) -> ModeSystemConfig:
         _raw_simulators=config.get("simulators", []),
         _raw_actions=config.get("agent_actions", []),
         _raw_backgrounds=config.get("backgrounds", []),
+        _raw_mcp_servers=config.get("mcp_servers", []),
     )
     return ModeSystemConfig(
         version=config.get("version", "v1.0.3"),
@@ -157,23 +158,15 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
+        patch("llm.plugins.deepseek_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.openai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.openrouter.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.gemini_llm.AvatarLLMState.trigger_thinking", mock_decorator),
-        patch(
-            "llm.plugins.near_ai_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
+        patch("llm.plugins.near_ai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.xai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
-        patch(
-            "providers.avatar_llm_state_provider.AvatarLLMState"
-        ) as mock_avatar_state,
+        patch("providers.avatar_llm_state_provider.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
-        patch(
-            "providers.avatar_llm_state_provider.AvatarProvider"
-        ) as mock_avatar_llm_state_provider,
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as mock_avatar_llm_state_provider,
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
@@ -306,10 +299,7 @@ def process_env_vars(config_dict):
         if isinstance(value, dict):
             result[key] = process_env_vars(value)
         elif isinstance(value, list):
-            result[key] = [
-                process_env_vars(item) if isinstance(item, dict) else item
-                for item in value
-            ]
+            result[key] = [process_env_vars(item) if isinstance(item, dict) else item for item in value]
         elif isinstance(value, str):
             # Find all ${ENV_VAR} patterns and replace them
             env_vars = re.findall(r"\${([^}]+)}", value)
@@ -353,9 +343,7 @@ def load_test_case(test_case_path: Path) -> Dict[str, Any]:
     if config.get("api_key") == "openmind_free":
         env_api_key = os.environ.get("OM1_API_KEY")
         if not env_api_key:
-            logging.warning(
-                "OM1_API_KEY environment variable not found, using default free tier"
-            )
+            logging.warning("OM1_API_KEY environment variable not found, using default free tier")
         config["api_key"] = env_api_key or "openmind_free"
 
     return config
@@ -419,18 +407,12 @@ def _create_mock_llm_response(expected_outputs: Dict[str, Any]) -> CortexOutputM
 
     if "movement" in expected_outputs and expected_outputs["movement"]:
         movement_options = expected_outputs["movement"]
-        movement_value = (
-            movement_options[0]
-            if isinstance(movement_options, list)
-            else movement_options
-        )
+        movement_value = movement_options[0] if isinstance(movement_options, list) else movement_options
         actions.append(Action(type="move", value=movement_value))
 
     if "emotion" in expected_outputs and expected_outputs["emotion"]:
         emotion_options = expected_outputs["emotion"]
-        emotion_value = (
-            emotion_options[0] if isinstance(emotion_options, list) else emotion_options
-        )
+        emotion_value = emotion_options[0] if isinstance(emotion_options, list) else emotion_options
         actions.append(Action(type="emotion", value=emotion_value))
 
     if not actions:
@@ -578,9 +560,7 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         # Load test images
         images = load_test_images_from_config(config)
         if not images:
-            raise ValueError(
-                "No valid test images found in configuration for image-based inputs"
-            )
+            raise ValueError("No valid test images found in configuration for image-based inputs")
 
         logging.info(f"Loaded {len(images)} test images for test case")
 
@@ -615,59 +595,65 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
     await cortex._initialize_mode("default")
 
     assert cortex.current_config is not None
-    assert cortex.simulator_orchestrator is not None
     assert cortex.action_orchestrator is not None
 
     # Store the outputs for validation
     output_results = {"actions": [], "raw_response": None}
 
     # Capture output from simulators and actions
-    original_simulator_promise = cortex.simulator_orchestrator.promise
     original_action_promise = cortex.action_orchestrator.promise
 
     # Mock the simulator and action promises to capture outputs
-    async def mock_simulator_promise(actions):
-        output_results["actions"] = actions
-        logging.info(f"Simulator received commands: {actions}")
-        return await original_simulator_promise(actions)
+    if cortex.simulator_orchestrator:
+        original_simulator_promise = cortex.simulator_orchestrator.promise
+
+        async def mock_simulator_promise(actions):
+            output_results["actions"] = actions
+            logging.info(f"Simulator received commands: {actions}")
+            return await original_simulator_promise(actions)
+
+        # Replace the original method with our mocked version
+        cortex.simulator_orchestrator.promise = mock_simulator_promise
 
     async def mock_action_promise(actions):
         output_results["actions"] = actions
         logging.info(f"Action orchestrator received commands: {actions}")
         return await original_action_promise(actions)
 
-    # Replace the original methods with our mocked versions
-    cortex.simulator_orchestrator.promise = mock_simulator_promise
+    # Replace the original method with our mocked version
     cortex.action_orchestrator.promise = mock_action_promise
 
-    # Mock LLM ask method to capture raw response
-    original_llm_ask = cortex.current_config.cortex_llm.ask
+    # Mock the LLM's ask and ask_stream methods to return a response based on expected outputs
+    mock_llm_responses = config.get("mock_llm_responses", [])
+    mock_response_index = {"current": 0}
 
-    async def mock_llm_ask(
-        prompt: str, messages: Optional[List[Dict[str, str]]] = None
-    ):
-        logging.info(
-            f"Generated prompt: {prompt[:200]}..."
-        )  # Log first 200 chars of prompt
+    async def mock_llm_ask(prompt: str, messages: Optional[List[Dict[str, str]]] = None):
+        logging.info(f"Generated prompt: {prompt[:200]}...")  # Log first 200 chars of prompt
         output_results["raw_response"] = prompt
 
-        try:
-            response = await original_llm_ask(prompt, messages or [])
-            # If response is None (API error), create a mock response
-            if response is None:
-                logging.warning(
-                    "LLM returned None, generating mock response based on expected outputs"
-                )
-                return _create_mock_llm_response(config.get("expected", {}))
-            return response
-        except Exception as e:
-            # If API call fails (e.g., 401), create a mock response
-            logging.warning(
-                f"LLM API call failed: {e}, generating mock response based on expected outputs"
+        if mock_llm_responses and mock_response_index["current"] < len(mock_llm_responses):
+            response_config = mock_llm_responses[mock_response_index["current"]]
+            mock_response_index["current"] += 1
+
+            actions = []
+            for action_config in response_config.get("actions", []):
+                actions.append(Action(type=action_config["type"], value=action_config["value"]))
+
+            logging.info(
+                f"Using scripted mock response {mock_response_index['current']}/{len(mock_llm_responses)}: {actions}"
             )
-            return _create_mock_llm_response(config.get("expected", {}))
+            return CortexOutputModel(actions=actions)
+
+        return _create_mock_llm_response(config.get("expected", {}))
+
+    async def mock_llm_ask_stream(prompt: str, messages: Optional[List[Dict[str, str]]] = None):
+        """Stream wrapper that yields single result from ask."""
+        result = await mock_llm_ask(prompt, messages)
+        if result is not None:
+            yield result
 
     cortex.current_config.cortex_llm.ask = mock_llm_ask
+    cortex.current_config.cortex_llm.ask_stream = mock_llm_ask_stream
 
     # Initialize inputs manually for testing
     # This step is needed because we're not starting the full runtime
@@ -678,11 +664,19 @@ async def run_test_case(config: Dict[str, Any]) -> Dict[str, Any]:
         if hasattr(input_obj, "set_cortex_runtime"):
             input_obj.set_cortex_runtime(cortex)  # type: ignore
 
+    # Start the MCP orchestrator.
+    if cortex.mcp_orchestrator:
+        await cortex.mcp_orchestrator.start()
+
     # Run a single tick of the cortex loop
     await cortex._tick(cortex._cortex_loop_generation)
 
     # Clean up inputs after test completion
     await cleanup_mock_inputs(cortex.current_config.agent_inputs)
+
+    # Stop the MCP orchestrator.
+    if cortex.mcp_orchestrator:
+        await cortex.mcp_orchestrator.stop()
 
     # The output includes detection results and commands
     return output_results
@@ -741,14 +735,10 @@ async def initialize_mock_inputs(inputs):
                     logging.info(f"Initialized mock input: {type(input_obj).__name__}")
                     break
                 else:
-                    logging.info(
-                        f"Waiting for input data from {type(input_obj).__name__}..."
-                    )
+                    logging.info(f"Waiting for input data from {type(input_obj).__name__}...")
                     await asyncio.sleep(0.1)  # Check every 100ms
             else:
-                logging.warning(
-                    f"Timeout waiting for input data from {type(input_obj).__name__}"
-                )
+                logging.warning(f"Timeout waiting for input data from {type(input_obj).__name__}")
 
 
 async def cleanup_mock_inputs(inputs):
@@ -773,9 +763,7 @@ async def cleanup_mock_inputs(inputs):
             if hasattr(input_obj, "async_cleanup"):
                 await input_obj.async_cleanup()
             # Try async stop method
-            elif hasattr(input_obj, "stop") and asyncio.iscoroutinefunction(
-                input_obj.stop
-            ):
+            elif hasattr(input_obj, "stop") and asyncio.iscoroutinefunction(input_obj.stop):
                 await input_obj.stop()
             # Try synchronous cleanup method
             elif hasattr(input_obj, "cleanup"):
@@ -784,9 +772,7 @@ async def cleanup_mock_inputs(inputs):
             elif hasattr(input_obj, "stop"):
                 input_obj.stop()
             else:
-                logging.warning(
-                    f"cleanup_mock_inputs: No cleanup method found for {input_name}"
-                )
+                logging.warning(f"cleanup_mock_inputs: No cleanup method found for {input_name}")
 
         except Exception as e:
             logging.error(f"cleanup_mock_inputs: Error cleaning up {input_name}: {e}")
@@ -908,22 +894,16 @@ def _build_llm_evaluation_prompts(
             comparison_sections.append(f'- Movement command: "{movement_list[0]}"')
         else:
             movement_options = ", ".join([f'"{m}"' for m in movement_list])
-            comparison_sections.append(
-                f"- Movement command (any of): {movement_options}"
-            )
+            comparison_sections.append(f"- Movement command (any of): {movement_options}")
     if has_keywords:
-        comparison_sections.append(
-            f"- Should detect keywords: {formatted_expected['keywords']}"
-        )
+        comparison_sections.append(f"- Should detect keywords: {formatted_expected['keywords']}")
     if has_emotion:
         emotion_list = formatted_expected["emotion"]
         if len(emotion_list) == 1:
             comparison_sections.append(f'- Expected emotion: "{emotion_list[0]}"')
         else:
             emotion_options = ", ".join([f'"{e}"' for e in emotion_list])
-            comparison_sections.append(
-                f"- Expected emotion (any of): {emotion_options}"
-            )
+            comparison_sections.append(f"- Expected emotion (any of): {emotion_options}")
 
     expected_text = "\n    ".join(comparison_sections)
 
@@ -931,9 +911,7 @@ def _build_llm_evaluation_prompts(
     if has_movement:
         actual_sections.append(f'- Movement command: "{formatted_actual["movement"]}"')
     if has_keywords:
-        actual_sections.append(
-            f"- Keywords successfully detected: {formatted_actual['keywords_found']}"
-        )
+        actual_sections.append(f"- Keywords successfully detected: {formatted_actual['keywords_found']}")
     if has_emotion:
         actual_sections.append(f'- Actual emotion: "{formatted_actual["emotion"]}"')
 
@@ -943,28 +921,19 @@ def _build_llm_evaluation_prompts(
     comparison_questions = []
     if has_movement:
         if len(formatted_expected["movement"]) == 1:
-            comparison_questions.append(
-                "Does the actual movement match the expected movement?"
-            )
+            comparison_questions.append("Does the actual movement match the expected movement?")
         else:
-            comparison_questions.append(
-                "Does the actual movement match any of the expected movements?"
-            )
+            comparison_questions.append("Does the actual movement match any of the expected movements?")
     if has_keywords:
         comparison_questions.append("Were the expected keywords detected?")
     if has_emotion:
         if len(formatted_expected["emotion"]) == 1:
-            comparison_questions.append(
-                "Does the actual emotion match the expected emotion?"
-            )
+            comparison_questions.append("Does the actual emotion match the expected emotion?")
         else:
-            comparison_questions.append(
-                "Does the actual emotion match any of the expected emotions?"
-            )
+            comparison_questions.append("Does the actual emotion match any of the expected emotions?")
 
     comparison_text = (
-        " ".join(comparison_questions)
-        + " Does the response make sense for what was detected in the scene?"
+        " ".join(comparison_questions) + " Does the response make sense for what was detected in the scene?"
     )
 
     user_prompt = f"""
@@ -1018,30 +987,22 @@ async def evaluate_with_llm(
     # Initialize the OpenAI client if not already done
     if _llm_client is None:
         if not api_key or api_key == "openmind_free":
-            # Try to get the API key from a GitHub secret environment variable
-            github_api_key = os.environ.get("OM1_API_KEY")
-            if github_api_key:
-                api_key = github_api_key
+            # Try to get the API key from environment variables if not provided or if using free tier
+            env_api_key = os.environ.get("OM1_API_KEY") or os.environ.get("OM_API_KEY")
+            if env_api_key:
+                api_key = env_api_key
             else:
                 logging.warning("No API key found for LLM evaluation, using mock score")
                 return 0.0, "No API key provided for LLM evaluation"
 
-        _llm_client = openai.AsyncClient(
-            base_url="https://api.openmind.org/api/core/openai", api_key=api_key
-        )
+        _llm_client = openai.AsyncClient(base_url="https://api.openmind.com/api/core/openai", api_key=api_key)
 
     # Check which evaluation criteria are specified
-    has_movement = (
-        "movement" in expected_output and expected_output["movement"] is not None
-    )
+    has_movement = "movement" in expected_output and expected_output["movement"] is not None
     has_keywords = (
-        "keywords" in expected_output
-        and expected_output["keywords"]
-        and len(expected_output["keywords"]) > 0
+        "keywords" in expected_output and expected_output["keywords"] and len(expected_output["keywords"]) > 0
     )
-    has_emotion = (
-        "emotion" in expected_output and expected_output["emotion"] is not None
-    )
+    has_emotion = "emotion" in expected_output and expected_output["emotion"] is not None
 
     # If neither movement nor keywords nor emotion are specified, return perfect score
     if not has_movement and not has_keywords and not has_emotion:
@@ -1055,16 +1016,11 @@ async def evaluate_with_llm(
 
     # Format actual and expected results for evaluation
     formatted_actual = {
-        "movement": extract_movement_from_actions(
-            actual_output.get("actions", []), movement_types
-        ),
+        "movement": extract_movement_from_actions(actual_output.get("actions", []), movement_types),
         "keywords_found": [
             kw
             for kw in expected_output.get("keywords", [])
-            if any(
-                kw.lower() in result.lower()
-                for result in actual_output.get("raw_response", [])
-            )
+            if any(kw.lower() in result.lower() for result in actual_output.get("raw_response", []))
         ],
         "emotion": _extract_emotion(actual_output.get("actions", [])),
     }
@@ -1094,15 +1050,11 @@ async def evaluate_with_llm(
 
         # Parse the rating and reasoning
         try:
-            rating_match = (
-                re.search(r"Rating:\s*(\d*\.?\d+)", content) if content else None
-            )
+            rating_match = re.search(r"Rating:\s*(\d*\.?\d+)", content) if content else None
             rating = float(rating_match.group(1)) if rating_match else 0.5
 
             # Extract reasoning
-            reasoning_match = (
-                re.search(r"Reasoning:\s*(.*)", content, re.DOTALL) if content else None
-            )
+            reasoning_match = re.search(r"Reasoning:\s*(.*)", content, re.DOTALL) if content else None
             reasoning = reasoning_match.group(1).strip() if reasoning_match else content
 
             return rating, reasoning if reasoning is not None else ""
@@ -1143,11 +1095,7 @@ async def evaluate_test_results(
     """
     # Check which evaluation criteria are specified
     has_movement = "movement" in expected and expected["movement"] is not None
-    has_keywords = (
-        "keywords" in expected
-        and expected["keywords"]
-        and len(expected["keywords"]) > 0
-    )
+    has_keywords = "keywords" in expected and expected["keywords"] and len(expected["keywords"]) > 0
     has_emotion = "emotion" in expected and expected["emotion"] is not None
 
     # If neither movement nor keywords nor emotion are specified, return perfect score
@@ -1162,9 +1110,7 @@ async def evaluate_test_results(
     movement_types = get_movement_types_for_config(config) if config else VLM_MOVE_TYPES
 
     input_type = _detect_input_type(config)
-    logging.info(
-        f"Heuristic evaluation using {input_type} movement types: {movement_types}"
-    )
+    logging.info(f"Heuristic evaluation using {input_type} movement types: {movement_types}")
 
     # Extract movement from commands using context-aware movement types
     movement = extract_movement_from_actions(results.get("actions", []), movement_types)
@@ -1196,11 +1142,7 @@ async def evaluate_test_results(
                 if keyword.lower() in results["raw_response"].lower():
                     keyword_matches.append(keyword)
 
-        keyword_match_ratio = (
-            len(set(keyword_matches)) / len(expected_keywords)
-            if expected_keywords
-            else 1.0
-        )
+        keyword_match_ratio = len(set(keyword_matches)) / len(expected_keywords) if expected_keywords else 1.0
         evaluation_components.append("keywords")
 
     if has_emotion:
@@ -1225,9 +1167,7 @@ async def evaluate_test_results(
             heuristic_score += component_weight if emotion_match else 0.0
 
     # Get LLM-based evaluation with config context
-    llm_score, llm_reasoning = await evaluate_with_llm(
-        results, expected, api_key, config
-    )
+    llm_score, llm_reasoning = await evaluate_with_llm(results, expected, api_key, config)
 
     # Combine scores (equal weighting)
     final_score = (heuristic_score + llm_score) / 2.0
@@ -1238,14 +1178,10 @@ async def evaluate_test_results(
     if has_movement:
         expected_movements = normalize_expected_value(expected["movement"])
         if len(expected_movements) == 1:
-            details.append(
-                f"- Movement: {movement}, Expected: {expected_movements[0]}, Match: {movement_match}"
-            )
+            details.append(f"- Movement: {movement}, Expected: {expected_movements[0]}, Match: {movement_match}")
         else:
             movement_options = ", ".join(expected_movements)
-            details.append(
-                f"- Movement: {movement}, Expected (any of): [{movement_options}], Match: {movement_match}"
-            )
+            details.append(f"- Movement: {movement}, Expected (any of): [{movement_options}], Match: {movement_match}")
 
     if has_keywords:
         expected_keywords = expected.get("keywords", [])
@@ -1262,9 +1198,7 @@ async def evaluate_test_results(
         actual_emotion = _extract_emotion(results.get("actions", []))
         expected_emotions = normalize_expected_value(expected["emotion"])
         if len(expected_emotions) == 1:
-            details.append(
-                f"- Emotion: {actual_emotion}, Expected: {expected_emotions[0]}, Match: {emotion_match}"
-            )
+            details.append(f"- Emotion: {actual_emotion}, Expected: {expected_emotions[0]}, Match: {emotion_match}")
         else:
             emotion_options = ", ".join(expected_emotions)
             details.append(
@@ -1410,8 +1344,7 @@ def discover_mode_transition_test_cases() -> List[Path]:
 
             # Time-based configs have dedicated test_time_based_transition()
             has_time_based_rules = any(
-                r.get("transition_type") == "time_based"
-                for r in config.get("transition_rules", [])
+                r.get("transition_type") == "time_based" for r in config.get("transition_rules", [])
             )
             if has_time_based_rules:
                 continue
@@ -1439,11 +1372,7 @@ def get_test_cases_by_tags(tags: Optional[List[str]] = None) -> List[Path]:
     """
     if not tags:
         # If no tags specified, return all test cases
-        return [
-            test_case
-            for category in discover_test_cases().values()
-            for test_case in category.test_cases
-        ]
+        return [test_case for category in discover_test_cases().values() for test_case in category.test_cases]
 
     matching_tests = []
     for category in discover_test_cases().values():
@@ -1493,9 +1422,7 @@ async def test_from_config(test_case_path: Path):
         config = load_test_case(test_case_path)
 
         # Log test information
-        logging.info(
-            f"Running test case: {config['name']} ({config.get('category', 'uncategorized')})"
-        )
+        logging.info(f"Running test case: {config['name']} ({config.get('category', 'uncategorized')})")
         logging.info(f"Description: {config['description']}")
 
         # Log expected inputs based on type
@@ -1503,19 +1430,13 @@ async def test_from_config(test_case_path: Path):
         if "images" in input_section:
             logging.info(f"Expected images for test: {len(input_section['images'])}")
         if "lidar" in input_section:
-            logging.info(
-                f"Expected lidar files for test: {len(input_section['lidar'])}"
-            )
+            logging.info(f"Expected lidar files for test: {len(input_section['lidar'])}")
         if "asr" in input_section:
             logging.info(f"Expected ASR files for test: {len(input_section['asr'])}")
         if "battery" in input_section:
-            logging.info(
-                f"Expected battery files for test: {len(input_section['battery'])}"
-            )
+            logging.info(f"Expected battery files for test: {len(input_section['battery'])}")
         if "odometry" in input_section:
-            logging.info(
-                f"Expected odometry files for test: {len(input_section['odometry'])}"
-            )
+            logging.info(f"Expected odometry files for test: {len(input_section['odometry'])}")
         if "gps" in input_section:
             logging.info(f"Expected GPS files for test: {len(input_section['gps'])}")
 
@@ -1523,17 +1444,13 @@ async def test_from_config(test_case_path: Path):
         results = await run_test_case(config)
 
         # Evaluate results
-        passed, score, message = await evaluate_test_results(
-            results, config["expected"], config["api_key"], config
-        )
+        passed, score, message = await evaluate_test_results(results, config["expected"], config["api_key"], config)
 
         # Log detailed results
         logging.info(f"Test results for {config['name']}:\n{message}")
 
         # Assert test passed
-        assert (
-            passed
-        ), f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
+        assert passed, f"Test case failed: {config['name']} (Score: {score:.2f})\n{message}"
 
         logging.info(f"test_from_config: Test {config['name']} completed successfully")
 
@@ -1600,9 +1517,7 @@ def get_movement_types_for_config(config: Dict[str, Any]) -> set:
 
     # State-based tests (battery, odometry, GPS) without images
     if (
-        "battery" in input_section
-        or "odometry" in input_section
-        or "gps" in input_section
+        "battery" in input_section or "odometry" in input_section or "gps" in input_section
     ) and "images" not in input_section:
         return STATE_MOVE_TYPES
 
@@ -1665,12 +1580,17 @@ def _setup_mode_transition_mocks(
 
     cortex._start_orchestrators = noop_start_orchestrators  # type: ignore[assignment]
 
-    async def mock_llm_ask(
-        prompt: str, messages: Optional[List[Dict[str, str]]] = None
-    ):
+    async def mock_llm_ask(prompt: str, messages: Optional[List[Dict[str, str]]] = None):
         return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
+    async def mock_llm_ask_stream(prompt: str, messages: Optional[List[Dict[str, str]]] = None):
+        """Stream wrapper that yields single result from ask."""
+        result = await mock_llm_ask(prompt, messages)
+        if result is not None:
+            yield result
+
     cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
+    cortex.current_config.cortex_llm.ask_stream = mock_llm_ask_stream  # type: ignore[union-attr]
 
     return asyncio.create_task(cortex._handle_mode_transitions())
 
@@ -1740,9 +1660,7 @@ async def run_mode_transition_test(config: Dict[str, Any]) -> Dict[str, Any]:
         await asyncio.sleep(0.5)
 
     final_mode = cortex.mode_manager.state.current_mode
-    final_prompt = (
-        cortex.current_config.system_prompt_base if cortex.current_config else None
-    )
+    final_prompt = cortex.current_config.system_prompt_base if cortex.current_config else None
     logging.info(f"Mode transition test: final_mode={final_mode}")
 
     await _cleanup_mode_transition_test(cortex, transition_handler_task)
@@ -1777,12 +1695,10 @@ async def test_mode_transition(test_case_path: Path):
     expected_final = config["expected"]["final_mode"]
 
     assert results["initial_mode"] == expected_initial, (
-        f"Initial mode mismatch: got {results['initial_mode']}, "
-        f"expected {expected_initial}"
+        f"Initial mode mismatch: got {results['initial_mode']}, " f"expected {expected_initial}"
     )
     assert results["final_mode"] == expected_final, (
-        f"Final mode mismatch: got {results['final_mode']}, "
-        f"expected {expected_final}"
+        f"Final mode mismatch: got {results['final_mode']}, " f"expected {expected_final}"
     )
 
     # Only verify config reinitialization when a transition actually occurred
@@ -1862,12 +1778,10 @@ async def test_time_based_transition():
     results = await run_time_based_transition_test(config)
 
     assert results["initial_mode"] == config["expected"]["initial_mode"], (
-        f"Initial mode mismatch: got {results['initial_mode']}, "
-        f"expected {config['expected']['initial_mode']}"
+        f"Initial mode mismatch: got {results['initial_mode']}, " f"expected {config['expected']['initial_mode']}"
     )
     assert results["final_mode"] == config["expected"]["final_mode"], (
-        f"Final mode mismatch: got {results['final_mode']}, "
-        f"expected {config['expected']['final_mode']}"
+        f"Final mode mismatch: got {results['final_mode']}, " f"expected {config['expected']['final_mode']}"
     )
 
 
@@ -1900,8 +1814,7 @@ async def test_cooldown_prevents_transition():
     first_mode = cortex.mode_manager.state.current_mode
     logging.info(f"Cooldown test: after first transition: {first_mode}")
     assert first_mode == config["expected"]["first_transition_mode"], (
-        f"First transition failed: got {first_mode}, "
-        f"expected {config['expected']['first_transition_mode']}"
+        f"First transition failed: got {first_mode}, " f"expected {config['expected']['first_transition_mode']}"
     )
 
     # Manually reset mode back to calm to test cooldown
@@ -1913,12 +1826,16 @@ async def test_cooldown_prevents_transition():
     load_test_asr_data(config)
     await cortex._initialize_mode("calm")
 
-    async def mock_llm_ask(
-        prompt: str, messages: Optional[List[Dict[str, str]]] = None
-    ):
+    async def mock_llm_ask(prompt: str, messages: Optional[List[Dict[str, str]]] = None):
         return CortexOutputModel(actions=[Action(type="move", value="stand still")])
 
+    async def mock_llm_ask_stream(prompt: str, messages: Optional[List[Dict[str, str]]] = None):
+        result = await mock_llm_ask(prompt, messages)
+        if result is not None:
+            yield result
+
     cortex.current_config.cortex_llm.ask = mock_llm_ask  # type: ignore[union-attr]
+    cortex.current_config.cortex_llm.ask_stream = mock_llm_ask_stream  # type: ignore[union-attr]
 
     await initialize_mock_inputs(cortex.current_config.agent_inputs)
     await cortex._tick(cortex._cortex_loop_generation)
@@ -1931,8 +1848,7 @@ async def test_cooldown_prevents_transition():
 
     # Should still be calm because cooldown (60s) hasn't expired
     assert second_mode == config["expected"]["second_transition_mode"], (
-        f"Cooldown failed: mode changed to {second_mode}, "
-        f"expected {config['expected']['second_transition_mode']}"
+        f"Cooldown failed: mode changed to {second_mode}, " f"expected {config['expected']['second_transition_mode']}"
     )
 
     await _cleanup_mode_transition_test(cortex, transition_handler_task)

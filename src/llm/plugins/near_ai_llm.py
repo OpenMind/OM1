@@ -31,7 +31,7 @@ class NearAIConfig(LLMConfig):
     """NearAI-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/nearai",
+        default="https://api.openmind.com/api/core/nearai",
         description="Base URL for the NearAI API endpoint",
     )
     model: T.Optional[T.Union[NearAIModel, str]] = Field(
@@ -71,7 +71,7 @@ class NearAILLM(LLM[R]):
             self._config.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.org/api/core/nearai",
+            base_url=config.base_url or "https://api.openmind.com/api/core/nearai",
             api_key=config.api_key,
         )
 
@@ -80,9 +80,7 @@ class NearAILLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Send a prompt to the NearAI API and get a structured response.
 
@@ -109,8 +107,7 @@ class NearAILLM(LLM[R]):
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 

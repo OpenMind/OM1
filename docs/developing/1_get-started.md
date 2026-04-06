@@ -27,7 +27,7 @@ Ensure you have the following installed on your machine:
 - `uv` >= 0.6.2 as the Python package manager and virtual environment
 - `portaudio` for audio input and output
 - `ffmpeg` for video processing
-- Get your OpenMind API key [here](https://portal.openmind.org/)
+- Get your OpenMind API key [here](https://portal.openmind.com/)
 
 #### UV (A Rust and Python package manager)
 
@@ -109,7 +109,7 @@ uv venv
 
 2. Set the configuration variables
 
-Locate the `config` folder and add your OpenMind API key to `/config/spot.json5` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.org/.
+Locate the `config` folder and add your OpenMind API key to `/config/spot.json5` (for example). If you do not already have one, you can obtain a free access key at https://portal.openmind.com/.
 
 ```bash
 # /config/spot.json5
@@ -225,7 +225,7 @@ command: emotion
 
 What will you do? Command:
 
-INFO:httpx:HTTP Request: POST https://api.openmind.org/api/core/openai/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.openmind.com/api/core/openai/chat/completions "HTTP/1.1 200 OK"
 INFO:root:OpenAI LLM output: commands=[Command(type='move', value='wag tail'), Command(type='speak', value="Hi there! I see you and I'm excited!"), Command(type='emotion', value='joy')]
 ```
 

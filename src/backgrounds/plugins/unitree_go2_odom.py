@@ -17,9 +17,7 @@ class UnitreeGo2OdomConfig(BackgroundConfig):
         Unitree Ethernet channel.
     """
 
-    unitree_ethernet: Optional[str] = Field(
-        default=None, description="Unitree Ethernet channel"
-    )
+    unitree_ethernet: Optional[str] = Field(default=None, description="Unitree Ethernet channel")
 
 
 class UnitreeGo2Odom(Background[UnitreeGo2OdomConfig]):

@@ -46,9 +46,7 @@ class MockConnector(ActionConnector[ActionConfig, MockInput]):
     async def connect(self, output_interface: MockInput) -> None:
         """Record when this action executes."""
         MockConnector.execution_order.append(self.action_name)
-        MockConnector.execution_times[self.action_name] = (
-            asyncio.get_event_loop().time()
-        )
+        MockConnector.execution_times[self.action_name] = asyncio.get_event_loop().time()
 
         self.connected_values.append(output_interface.action)
 
@@ -101,9 +99,7 @@ class TestActionOrchestratorConcurrent:
         MockConnector.reset()
 
     @pytest.mark.asyncio
-    async def test_concurrent_execution_all_start_together(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_concurrent_execution_all_start_together(self, mock_runtime_config, create_agent_action):
         """Test that concurrent mode starts all actions at the same time."""
         action1 = create_agent_action("move", "move")
         action2 = create_agent_action("speak", "speak")
@@ -125,9 +121,7 @@ class TestActionOrchestratorConcurrent:
         assert set(MockConnector.execution_order) == {"move", "speak", "gesture"}
 
     @pytest.mark.asyncio
-    async def test_concurrent_execution_timing(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_concurrent_execution_timing(self, mock_runtime_config, create_agent_action):
         """Test that concurrent actions start almost simultaneously."""
         action1 = create_agent_action("action1", "action1")
         action2 = create_agent_action("action2", "action2")
@@ -158,9 +152,7 @@ class TestActionOrchestratorSequential:
         MockConnector.reset()
 
     @pytest.mark.asyncio
-    async def test_sequential_execution_order(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_sequential_execution_order(self, mock_runtime_config, create_agent_action):
         """Test that sequential mode executes actions in order."""
         action1 = create_agent_action("first", "first")
         action2 = create_agent_action("second", "second")
@@ -182,9 +174,7 @@ class TestActionOrchestratorSequential:
         assert MockConnector.execution_order == ["first", "second", "third"]
 
     @pytest.mark.asyncio
-    async def test_sequential_execution_timing(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_sequential_execution_timing(self, mock_runtime_config, create_agent_action):
         """Test that sequential actions execute one after another."""
         action1 = create_agent_action("action1", "action1")
         action2 = create_agent_action("action2", "action2")
@@ -206,9 +196,7 @@ class TestActionOrchestratorSequential:
         assert time2 > time1 + 0.009
 
     @pytest.mark.asyncio
-    async def test_sequential_with_single_action(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_sequential_with_single_action(self, mock_runtime_config, create_agent_action):
         """Test sequential mode with just one action."""
         action = create_agent_action("solo", "solo")
 
@@ -232,9 +220,7 @@ class TestActionOrchestratorDependencies:
         MockConnector.reset()
 
     @pytest.mark.asyncio
-    async def test_simple_dependency_chain(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_simple_dependency_chain(self, mock_runtime_config, create_agent_action):
         """Test simple dependency: B depends on A."""
         action_a = create_agent_action("action_a", "action_a")
         action_b = create_agent_action("action_b", "action_b")
@@ -253,14 +239,10 @@ class TestActionOrchestratorDependencies:
         await orchestrator.promise(actions)
         await orchestrator.flush_promises()
 
-        assert MockConnector.execution_order.index(
-            "action_a"
-        ) < MockConnector.execution_order.index("action_b")
+        assert MockConnector.execution_order.index("action_a") < MockConnector.execution_order.index("action_b")
 
     @pytest.mark.asyncio
-    async def test_multiple_dependencies(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_multiple_dependencies(self, mock_runtime_config, create_agent_action):
         """Test action waiting for multiple dependencies."""
         action_a = create_agent_action("action_a", "action_a")
         action_b = create_agent_action("action_b", "action_b")
@@ -289,9 +271,7 @@ class TestActionOrchestratorDependencies:
         assert c_index > b_index
 
     @pytest.mark.asyncio
-    async def test_parallel_with_dependencies(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_parallel_with_dependencies(self, mock_runtime_config, create_agent_action):
         """Test that independent actions can run in parallel while respecting dependencies."""
         action_a = create_agent_action("action_a", "action_a")
         action_b = create_agent_action("action_b", "action_b")
@@ -320,9 +300,7 @@ class TestActionOrchestratorDependencies:
         assert time_c > time_b + 0.009
 
     @pytest.mark.asyncio
-    async def test_complex_dependency_graph(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_complex_dependency_graph(self, mock_runtime_config, create_agent_action):
         """Test complex dependency graph: finale depends on gesture, gesture depends on speak."""
         speak = create_agent_action("speak", "speak")
         gesture = create_agent_action("gesture", "gesture")
@@ -354,9 +332,7 @@ class TestActionOrchestratorDependencies:
         assert order.index("move") < order.index("finale")
 
     @pytest.mark.asyncio
-    async def test_no_dependencies_acts_like_concurrent(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_no_dependencies_acts_like_concurrent(self, mock_runtime_config, create_agent_action):
         """Test that dependency mode with no dependencies acts like concurrent mode."""
         action1 = create_agent_action("action1", "action1")
         action2 = create_agent_action("action2", "action2")
@@ -440,9 +416,7 @@ class TestActionOrchestratorEdgeCases:
         assert len(pending) == 0
 
     @pytest.mark.asyncio
-    async def test_promise_queue_tracking(
-        self, mock_runtime_config, create_agent_action
-    ):
+    async def test_promise_queue_tracking(self, mock_runtime_config, create_agent_action):
         """Test that promise queue correctly tracks pending and completed actions."""
         action = create_agent_action("test", "test")
         mock_runtime_config.agent_actions = [action]
@@ -560,9 +534,7 @@ class TestLLMResultParser:
         return _create
 
     @pytest.mark.asyncio
-    async def test_parse_simple_string_value(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_simple_string_value(self, mock_runtime_config, create_typed_action):
         """Test parsing a simple string value (non-JSON)."""
 
         @dataclass
@@ -581,9 +553,7 @@ class TestLLMResultParser:
         assert action.connector.connected_values[0] == "forward"
 
     @pytest.mark.asyncio
-    async def test_parse_json_string_value(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_json_string_value(self, mock_runtime_config, create_typed_action):
         """Test parsing a JSON string value."""
 
         @dataclass
@@ -602,9 +572,7 @@ class TestLLMResultParser:
         assert action.connector.connected_values[0] == "turn left"
 
     @pytest.mark.asyncio
-    async def test_parse_json_non_dict_value(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_json_non_dict_value(self, mock_runtime_config, create_typed_action):
         """Test parsing a JSON value that's not a dictionary."""
 
         @dataclass
@@ -623,9 +591,7 @@ class TestLLMResultParser:
         assert action.connector.connected_values[0] == '["item1", "item2"]'
 
     @pytest.mark.asyncio
-    async def test_parse_multiple_parameters(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_multiple_parameters(self, mock_runtime_config, create_typed_action):
         """Test parsing multiple parameters from JSON."""
 
         @dataclass
@@ -646,9 +612,7 @@ class TestLLMResultParser:
         assert len(MockConnector.execution_order) == 1
 
     @pytest.mark.asyncio
-    async def test_parse_float_conversion(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_float_conversion(self, mock_runtime_config, create_typed_action):
         """Test automatic type conversion for float."""
 
         @dataclass
@@ -686,9 +650,7 @@ class TestLLMResultParser:
         assert len(MockConnector.execution_order) == 1
 
     @pytest.mark.asyncio
-    async def test_parse_bool_conversion_true(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_bool_conversion_true(self, mock_runtime_config, create_typed_action):
         """Test automatic type conversion for bool (true values)."""
 
         @dataclass
@@ -709,9 +671,7 @@ class TestLLMResultParser:
             assert len(MockConnector.execution_order) == 1
 
     @pytest.mark.asyncio
-    async def test_parse_bool_conversion_false(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_bool_conversion_false(self, mock_runtime_config, create_typed_action):
         """Test automatic type conversion for bool (false values)."""
 
         @dataclass
@@ -731,9 +691,7 @@ class TestLLMResultParser:
             assert len(MockConnector.execution_order) == 1
 
     @pytest.mark.asyncio
-    async def test_parse_enum_conversion(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_enum_conversion(self, mock_runtime_config, create_typed_action):
         """Test automatic type conversion for Enum."""
 
         class Direction(Enum):
@@ -831,9 +789,7 @@ class TestLLMResultParser:
         assert action.connector.connected_values[0] == ""
 
     @pytest.mark.asyncio
-    async def test_parse_extra_parameters_ignored(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_extra_parameters_ignored(self, mock_runtime_config, create_typed_action):
         """Test that extra parameters not in type hints are safely ignored."""
 
         @dataclass
@@ -854,9 +810,7 @@ class TestLLMResultParser:
         assert len(MockConnector.execution_order) == 1
 
     @pytest.mark.asyncio
-    async def test_parse_only_valid_parameters(
-        self, mock_runtime_config, create_typed_action
-    ):
+    async def test_parse_only_valid_parameters(self, mock_runtime_config, create_typed_action):
         """Test that when only valid parameters are provided, parsing succeeds."""
 
         @dataclass

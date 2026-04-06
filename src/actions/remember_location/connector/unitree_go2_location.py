@@ -38,9 +38,7 @@ class UnitreeGo2RememberLocationConfig(ActionConfig):
     )
 
 
-class UnitreeGo2RememberLocationConnector(
-    ActionConnector[UnitreeGo2RememberLocationConfig, RememberLocationInput]
-):
+class UnitreeGo2RememberLocationConnector(ActionConnector[UnitreeGo2RememberLocationConfig, RememberLocationInput]):
     """
     Connector that persists a remembered location for Unitree Go2 by POSTing to an HTTP API.
     """
@@ -93,16 +91,12 @@ class UnitreeGo2RememberLocationConnector(
                 ) as resp:
                     text = await resp.text()
                     if resp.status >= 200 and resp.status < 300:
-                        logging.info(
-                            f"RememberLocationGo2: stored '{output_interface.action}' -> {resp.status} {text}"
-                        )
+                        logging.info(f"RememberLocationGo2: stored '{output_interface.action}' -> {resp.status} {text}")
                         self.elevenlabs_provider.add_pending_message(
                             f"Location {output_interface.action} remembered for Go2. Woof! Woof!"
                         )
                     else:
-                        logging.error(
-                            f"RememberLocationGo2 API returned {resp.status}: {text}"
-                        )
+                        logging.error(f"RememberLocationGo2 API returned {resp.status}: {text}")
         except asyncio.TimeoutError:
             logging.error("RememberLocationGo2 API request timed out")
         except Exception as e:

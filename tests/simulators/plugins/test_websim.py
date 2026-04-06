@@ -54,21 +54,15 @@ class TestWebSim:
         inputs = {
             "Camera": MockInput(input_type="Camera", input="image", timestamp=10.0),
             "Voice": MockInput(input_type="Voice", input="hello", timestamp=5.0),
-            "GovernanceEthereum": MockInput(
-                input_type="GovernanceEthereum", input="", timestamp=100.0
-            ),
-            "Universal Laws": MockInput(
-                input_type="Universal Laws", input="", timestamp=200.0
-            ),
+            "GovernanceEthereum": MockInput(input_type="GovernanceEthereum", input="", timestamp=100.0),
+            "Universal Laws": MockInput(input_type="Universal Laws", input="", timestamp=200.0),
         }
         assert websim.get_earliest_time(inputs) == 5.0
 
     def test_get_earliest_time_no_valid(self, websim):
         """Test when no valid inputs, return 0.0."""
         inputs = {
-            "GovernanceEthereum": MockInput(
-                input_type="GovernanceEthereum", input="", timestamp=100.0
-            ),
+            "GovernanceEthereum": MockInput(input_type="GovernanceEthereum", input="", timestamp=100.0),
         }
         assert websim.get_earliest_time(inputs) == 0.0
 
@@ -104,9 +98,7 @@ class TestWebSim:
     def test_tick_calls_broadcast_state(self, websim):
         """Test tick runs broadcast_state in event loop."""
         websim._initialized = True
-        with patch.object(
-            websim, "broadcast_state", new_callable=AsyncMock
-        ) as mock_broadcast:
+        with patch.object(websim, "broadcast_state", new_callable=AsyncMock) as mock_broadcast:
             with patch("asyncio.get_event_loop") as mock_get_loop:
                 mock_loop = Mock()
                 mock_get_loop.return_value = mock_loop
@@ -117,15 +109,11 @@ class TestWebSim:
                 mock_loop.run_until_complete.assert_called_once()
                 mock_broadcast.assert_called_once()
 
-    @pytest.mark.filterwarnings(
-        "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited"
-    )
+    @pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited")
     def test_tick_not_initialized(self, websim):
         """Test tick does nothing if not initialized."""
         websim._initialized = False
-        with patch.object(
-            websim, "broadcast_state", new_callable=AsyncMock
-        ) as mock_broadcast:
+        with patch.object(websim, "broadcast_state", new_callable=AsyncMock) as mock_broadcast:
             websim.tick()
             mock_broadcast.assert_not_called()
 
@@ -160,9 +148,7 @@ class TestWebSim:
         assert "inputs" in websim.state_dict
         mock_tick.assert_called_once()
 
-    @pytest.mark.filterwarnings(
-        "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited"
-    )
+    @pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited")
     def test_sim_not_initialized(self, websim):
         """Test sim does nothing if not initialized."""
         websim._initialized = False

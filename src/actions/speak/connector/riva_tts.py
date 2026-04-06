@@ -77,12 +77,8 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
 
         try:
             self.session = open_zenoh_session()
-            self.session.declare_subscriber(
-                self.tts_status_request_topic, self._zenoh_tts_status_request
-            )
-            self._zenoh_tts_status_response_pub = self.session.declare_publisher(
-                self.tts_status_response_topic
-            )
+            self.session.declare_subscriber(self.tts_status_request_topic, self._zenoh_tts_status_request)
+            self._zenoh_tts_status_response_pub = self.session.declare_publisher(self.tts_status_response_topic)
 
             logging.info("Riva TTS Zenoh client opened")
         except Exception as e:
@@ -90,12 +86,12 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
 
         # Initialize ASR and TTS providers
         self.asr = ASRProvider(
-            ws_url="wss://api-asr.openmind.org",
+            ws_url="wss://api-asr.openmind.com",
             device_id=microphone_device_id,
             microphone_name=microphone_name,
         )
         self.tts = RivaTTSProvider(
-            url="https://api.openmind.org/api/core/riva/tts",
+            url="https://api.openmind.com/api/core/riva/tts",
             api_key=api_key,
         )
 
@@ -145,13 +141,9 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,
                 code=1 if self.tts_enabled else 0,
-                status=String(
-                    data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                ),
+                status=String(data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
 
         # Enable the TTS
         if code == 1:
@@ -164,9 +156,7 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
                 code=1,
                 status=String(data="TTS Enabled"),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())
 
         # Disable the TTS
         if code == 0:
@@ -179,6 +169,4 @@ class SpeakRivaTTSConnector(ActionConnector[SpeakRivaTTSConfig, SpeakInput]):
                 status=String(data="TTS Disabled"),
             )
 
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())

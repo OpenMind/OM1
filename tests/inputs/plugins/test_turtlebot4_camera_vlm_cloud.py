@@ -47,9 +47,7 @@ async def test_poll():
     with (
         patch("inputs.plugins.turtlebot4_camera_vlm_cloud.IOProvider"),
         patch("inputs.plugins.turtlebot4_camera_vlm_cloud.TurtleBot4CameraVLMProvider"),
-        patch(
-            "inputs.plugins.turtlebot4_camera_vlm_cloud.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.turtlebot4_camera_vlm_cloud.asyncio.sleep", new=AsyncMock()),
     ):
         config = TurtleBot4CameraVLMCloudConfig()
         sensor = TurtleBot4CameraVLMCloud(config=config)

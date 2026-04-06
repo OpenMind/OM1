@@ -18,7 +18,7 @@ class ElevenLabsTTSProvider:
 
     def __init__(
         self,
-        url: str = "https://api.openmind.org/api/core/elevenlabs/tts",
+        url: str = "https://api.openmind.com/api/core/elevenlabs/tts",
         api_key: Optional[str] = None,
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
@@ -38,7 +38,7 @@ class ElevenLabsTTSProvider:
         ----------
         url : str, optional
             The URL endpoint for the TTS service.
-            Defaults to "https://api.openmind.org/api/core/elevenlabs/tts".
+            Defaults to "https://api.openmind.com/api/core/elevenlabs/tts".
         api_key : str, optional
             The primary API key for the TTS service. If provided, it's used in the
             request headers as "x-api-key". Defaults to None.
@@ -75,11 +75,7 @@ class ElevenLabsTTSProvider:
             rate=rate or 16000,
             api_key=api_key,
             enable_tts_interrupt=enable_tts_interrupt,
-            extra_body=(
-                {"elevenlabs_api_key": self.elevenlabs_api_key}
-                if self.elevenlabs_api_key
-                else {}
-            ),
+            extra_body=({"elevenlabs_api_key": self.elevenlabs_api_key} if self.elevenlabs_api_key else {}),
         )
 
         # Set Eleven Labs TTS parameters
@@ -90,7 +86,7 @@ class ElevenLabsTTSProvider:
 
     def configure(
         self,
-        url: str = "https://api.openmind.org/api/core/elevenlabs/tts",
+        url: str = "https://api.openmind.com/api/core/elevenlabs/tts",
         api_key: Optional[str] = None,
         elevenlabs_api_key: Optional[str] = None,
         voice_id: Optional[str] = "JBFqnCBsd6RMkjVDRZzb",
@@ -155,11 +151,7 @@ class ElevenLabsTTSProvider:
             rate=rate or 16000,
             enable_tts_interrupt=enable_tts_interrupt,
             api_key=api_key,
-            extra_body=(
-                {"elevenlabs_api_key": self.elevenlabs_api_key}
-                if self.elevenlabs_api_key
-                else {}
-            ),
+            extra_body=({"elevenlabs_api_key": self.elevenlabs_api_key} if self.elevenlabs_api_key else {}),
         )
         self._audio_stream.start()
 
@@ -207,9 +199,7 @@ class ElevenLabsTTSProvider:
             The message to be added, typically containing text and TTS parameters.
         """
         if not self.running:
-            logging.warning(
-                "TTS provider is not running. Call start() before adding messages."
-            )
+            logging.warning("TTS provider is not running. Call start() before adding messages.")
             return
 
         if isinstance(message, str):

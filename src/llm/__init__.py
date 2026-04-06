@@ -33,24 +33,12 @@ class LLMConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    base_url: T.Optional[str] = Field(
-        default=None, description="Base URL for the LLM API endpoint"
-    )
-    api_key: T.Optional[str] = Field(
-        default=None, description="Authentication key for the LLM service"
-    )
-    model: T.Optional[str] = Field(
-        default=None, description="Name of the LLM model to use"
-    )
-    timeout: T.Optional[int] = Field(
-        default=10, description="Request timeout in seconds"
-    )
-    agent_name: T.Optional[str] = Field(
-        default="IRIS", description="Name of the agent identity"
-    )
-    history_length: T.Optional[int] = Field(
-        default=0, description="Number of past interactions to keep in context"
-    )
+    base_url: T.Optional[str] = Field(default=None, description="Base URL for the LLM API endpoint")
+    api_key: T.Optional[str] = Field(default=None, description="Authentication key for the LLM service")
+    model: T.Optional[str] = Field(default=None, description="Name of the LLM model to use")
+    timeout: T.Optional[int] = Field(default=10, description="Request timeout in seconds")
+    agent_name: T.Optional[str] = Field(default="IRIS", description="Name of the agent identity")
+    history_length: T.Optional[int] = Field(default=0, description="Number of past interactions to keep in context")
     extra_params: T.Dict[str, T.Any] = Field(default_factory=dict)
 
     def __getitem__(self, item: str) -> T.Any:
@@ -120,12 +108,8 @@ class LLM(T.Generic[R]):
         self._available_actions = available_actions or []
         self.function_schemas = []
         if self._available_actions:
-            self.function_schemas = generate_function_schemas_from_actions(
-                self._available_actions
-            )
-            logging.info(
-                f"LLM initialized with {len(self.function_schemas)} function schemas"
-            )
+            self.function_schemas = generate_function_schemas_from_actions(self._available_actions)
+            logging.info(f"LLM initialized with {len(self.function_schemas)} function schemas")
 
         # Set up the IO provider
         self.io_provider = IOProvider()
@@ -133,9 +117,7 @@ class LLM(T.Generic[R]):
         # Enable state management by default
         self._skip_state_management: bool = False
 
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Send a prompt to the LLM and receive a typed response.
 
@@ -157,6 +139,31 @@ class LLM(T.Generic[R]):
             Must be implemented by subclasses
         """
         raise NotImplementedError
+
+    async def ask_stream(
+        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
+    ) -> T.AsyncGenerator[R, None]:
+        """
+        Send a prompt to the LLM and stream results.
+
+        Default implementation yields a single result from ask().
+        Subclasses can override for true streaming (e.g., ParallelLLM).
+
+        Parameters
+        ----------
+        prompt : str
+            Input text to send to the model
+        messages : List[Dict[str, str]]
+            List of message dictionaries to send to the model.
+
+        Yields
+        ------
+        R
+            Response matching the output_model type specification
+        """
+        result = await self.ask(prompt, messages)
+        if result is not None:
+            yield result
 
 
 def find_module_with_class(class_name: str) -> T.Optional[str]:
@@ -222,11 +229,7 @@ def get_llm_class(class_name: str) -> T.Type[LLM]:
         module = importlib.import_module(f"llm.plugins.{module_name}")
         llm_class = getattr(module, class_name)
 
-        if not (
-            inspect.isclass(llm_class)
-            and issubclass(llm_class, LLM)
-            and llm_class != LLM
-        ):
+        if not (inspect.isclass(llm_class) and issubclass(llm_class, LLM) and llm_class != LLM):
             raise ValueError(f"'{class_name}' is not a valid LLM subclass")
 
         logging.debug(f"Got LLM class {class_name} from {module_name}.py")
@@ -235,9 +238,7 @@ def get_llm_class(class_name: str) -> T.Type[LLM]:
     except ImportError as e:
         raise ValueError(f"Could not import LLM module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in LLM module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in LLM module '{module_name}'")
 
 
 def load_llm(
@@ -269,27 +270,17 @@ def load_llm(
         module = importlib.import_module(f"llm.plugins.{module_name}")
         llm_class = getattr(module, class_name)
 
-        if not (
-            inspect.isclass(llm_class)
-            and issubclass(llm_class, LLM)
-            and llm_class != LLM
-        ):
+        if not (inspect.isclass(llm_class) and issubclass(llm_class, LLM) and llm_class != LLM):
             raise ValueError(f"'{class_name}' is not a valid LLM subclass")
 
         config_class = None
         for obj in module.__dict__.values():
-            if (
-                isinstance(obj, type)
-                and issubclass(obj, LLMConfig)
-                and obj != LLMConfig
-            ):
+            if isinstance(obj, type) and issubclass(obj, LLMConfig) and obj != LLMConfig:
                 config_class = obj
 
         config_dict = llm_config.get("config", {})
         if config_class is not None:
-            config = config_class(
-                **(config_dict if isinstance(config_dict, dict) else {})
-            )
+            config = config_class(**(config_dict if isinstance(config_dict, dict) else {}))
         else:
             config = LLMConfig(**(config_dict if isinstance(config_dict, dict) else {}))
 
@@ -299,6 +290,4 @@ def load_llm(
     except ImportError as e:
         raise ValueError(f"Could not import LLM module '{module_name}': {e}")
     except AttributeError:
-        raise ValueError(
-            f"Class '{class_name}' not found in LLM module '{module_name}'"
-        )
+        raise ValueError(f"Class '{class_name}' not found in LLM module '{module_name}'")

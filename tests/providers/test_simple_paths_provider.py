@@ -29,7 +29,9 @@ def test_generate_movement_string_all_options(simple_paths_provider):
     simple_paths_provider.turn_right = [6, 7, 8]
     simple_paths_provider.retreat = True
 
-    expected = "The safe movement directions are: {'turn left', 'move forwards', 'turn right', 'move back', 'stand still'}. "
+    expected = (
+        "The safe movement directions are: {'turn left', 'move forwards', 'turn right', 'move back', 'stand still'}. "
+    )
     result = simple_paths_provider._generate_movement_string(["dummy"])
     assert result == expected
 
@@ -80,9 +82,7 @@ def test_generate_movement_string_no_options(simple_paths_provider):
 def test_generate_movement_string_none_paths(simple_paths_provider):
     """Test behavior when _valid_paths is None (though logic might not reach this string generation path directly)."""
     simple_paths_provider.advance = [3, 4, 5]
-    expected_with_internal_state = (
-        "The safe movement directions are: {'move forwards', 'stand still'}. "
-    )
+    expected_with_internal_state = "The safe movement directions are: {'move forwards', 'stand still'}. "
     result = simple_paths_provider._generate_movement_string(["dummy"])
     assert result == expected_with_internal_state
 

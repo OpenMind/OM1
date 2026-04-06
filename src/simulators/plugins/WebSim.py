@@ -91,8 +91,7 @@ class WebSim(Simulator):
 
         @self.app.get("/")
         async def get_index():
-            return HTMLResponse(
-                """
+            return HTMLResponse("""
             <!DOCTYPE html>
             <html>
                 <head>
@@ -453,7 +452,7 @@ class WebSim(Simulator):
                                                 GitHub
                                             </a>
                                             <a
-                                                href="https://docs.openmind.org/introduction"
+                                                href="https://docs.openmind.com/introduction"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="footer-link"
@@ -470,8 +469,7 @@ class WebSim(Simulator):
                     </script>
                 </body>
             </html>
-            """
-            )
+            """)
 
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
@@ -601,9 +599,7 @@ class WebSim(Simulator):
 
                 try:
                     if loop.is_running():
-                        future = asyncio.run_coroutine_threadsafe(
-                            self.broadcast_state(), loop
-                        )
+                        future = asyncio.run_coroutine_threadsafe(self.broadcast_state(), loop)
                         try:
                             future.result(timeout=1.0)
                         except TimeoutError:
@@ -640,10 +636,7 @@ class WebSim(Simulator):
                 input_rezeroed = []
                 for input_type, input_info in self.io_provider.inputs.items():
                     timestamp = 0
-                    if (
-                        input_type != "GovernanceEthereum"
-                        and input_info.timestamp is not None
-                    ):
+                    if input_type != "GovernanceEthereum" and input_info.timestamp is not None:
                         timestamp = input_info.timestamp - earliest_time
                     input_rezeroed.append(
                         {
@@ -659,26 +652,10 @@ class WebSim(Simulator):
                 llm_end_time = self.io_provider.llm_end_time or 0
 
                 system_latency = {
-                    "fuse_time": (
-                        fuser_end_time - fuser_start_time
-                        if (fuser_end_time and fuser_start_time)
-                        else 0
-                    ),
-                    "llm_start": (
-                        llm_start_time - fuser_start_time
-                        if (llm_start_time and fuser_start_time)
-                        else 0
-                    ),
-                    "processing": (
-                        llm_end_time - llm_start_time
-                        if (llm_end_time and llm_start_time)
-                        else 0
-                    ),
-                    "complete": (
-                        llm_end_time - fuser_start_time
-                        if (llm_end_time and fuser_start_time)
-                        else 0
-                    ),
+                    "fuse_time": (fuser_end_time - fuser_start_time if (fuser_end_time and fuser_start_time) else 0),
+                    "llm_start": (llm_start_time - fuser_start_time if (llm_start_time and fuser_start_time) else 0),
+                    "processing": (llm_end_time - llm_start_time if (llm_end_time and llm_start_time) else 0),
+                    "complete": (llm_end_time - fuser_start_time if (llm_end_time and fuser_start_time) else 0),
                 }
 
                 for action in actions:

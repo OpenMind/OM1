@@ -72,9 +72,7 @@ async def start_slam_hook(context: Dict[str, Any]):
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"SLAM started successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"SLAM started successfully: {result.get('message', 'Success')}")
                     return {
                         "status": "success",
                         "message": "SLAM process initiated",
@@ -85,12 +83,8 @@ async def start_slam_hook(context: Dict[str, Any]):
                         error_info = await response.json()
                     except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(
-                        f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
-                    raise Exception(
-                        f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
+                    logging.error(f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}")
+                    raise Exception(f"Failed to start SLAM: {error_info.get('message', 'Unknown error')}")
 
     except aiohttp.ClientError as e:
         logging.error(f"Error calling SLAM API: {str(e)}")
@@ -127,23 +121,15 @@ async def stop_slam_hook(context: Dict[str, Any]):
 
                 if save_response.status == 200:
                     save_result = await save_response.json()
-                    logging.info(
-                        f"SLAM map saved successfully: {save_result.get('message', 'Success')}"
-                    )
-                    elevenlabs_provider.add_pending_message(
-                        "Map has been saved successfully."
-                    )
+                    logging.info(f"SLAM map saved successfully: {save_result.get('message', 'Success')}")
+                    elevenlabs_provider.add_pending_message("Map has been saved successfully.")
                 else:
                     try:
                         error_info = await save_response.json()
                     except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(
-                        f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}"
-                    )
-                    raise Exception(
-                        f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}"
-                    )
+                    logging.error(f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}")
+                    raise Exception(f"Failed to save SLAM map: {error_info.get('message', 'Unknown error')}")
 
             # Stop the SLAM process
             async with session.post(
@@ -154,9 +140,7 @@ async def stop_slam_hook(context: Dict[str, Any]):
 
                 if response.status == 200:
                     result = await response.json()
-                    logging.info(
-                        f"SLAM stopped successfully: {result.get('message', 'Success')}"
-                    )
+                    logging.info(f"SLAM stopped successfully: {result.get('message', 'Success')}")
                     return {
                         "status": "success",
                         "message": "SLAM process stopped",
@@ -167,12 +151,8 @@ async def stop_slam_hook(context: Dict[str, Any]):
                         error_info = await response.json()
                     except Exception as _:
                         error_info = {"message": "Unknown error"}
-                    logging.error(
-                        f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
-                    raise Exception(
-                        f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}"
-                    )
+                    logging.error(f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}")
+                    raise Exception(f"Failed to stop SLAM: {error_info.get('message', 'Unknown error')}")
 
     except aiohttp.ClientError as e:
         logging.error(f"Error calling SLAM API: {str(e)}")

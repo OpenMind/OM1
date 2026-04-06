@@ -33,7 +33,7 @@ class OpenRouterConfig(LLMConfig):
     """OpenRouter-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/openrouter",
+        default="https://api.openmind.com/api/core/openrouter",
         description="Base URL for the OpenRouter API endpoint",
     )
     model: T.Optional[T.Union[OpenRouterModel, str]] = Field(
@@ -74,7 +74,7 @@ class OpenRouter(LLM[R]):
             self._config.model = "meta-llama/llama-3.3-70b-instruct"
 
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.org/api/core/openrouter",
+            base_url=config.base_url or "https://api.openmind.com/api/core/openrouter",
             api_key=config.api_key,
         )
 
@@ -83,9 +83,7 @@ class OpenRouter(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Send a prompt to the OpenRouter API and get a structured response.
 
@@ -112,8 +110,7 @@ class OpenRouter(LLM[R]):
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 

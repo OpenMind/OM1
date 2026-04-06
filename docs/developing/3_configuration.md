@@ -84,6 +84,22 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
           },
         },
       ],
+      mcp_servers: [
+        {
+          name: "weather",
+          transport: "stdio",
+          command: "npx",
+          args: ["-y", "@h1deya/mcp-server-weather"],
+        },
+        {
+          name: "github",
+          transport: "http",
+          url: "https://api.githubcopilot.com/mcp/",
+          headers: {
+            Authorization: "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}", // pragma: allowlist secret
+          },
+        },
+      ]
     },
   },
 
@@ -128,7 +144,7 @@ Agents are configured via JSON5 files in the `/config` directory. The configurat
 
 * **hertz** Defines the base tick rate of the agent. This rate can be adjusted to allow the agent to respond quickly to changing environments, but comes at the expense of reducing the time available for LLMs to finish generating tokens. Note: time critical tasks such as collision avoidance should be handled through low level control loops operating in parallel to the LLM-based logic, using event-triggered callbacks through real-time middleware.
 * **name** A unique identifier for the agent.
-* **api_key** The API key for the agent. You can get your API key from the [OpenMind Portal](https://portal.openmind.org/).
+* **api_key** The API key for the agent. You can get your API key from the [OpenMind Portal](https://portal.openmind.com/).
 * **URID** The Universal Robot ID for the robot. Used to join a decentralized machine-to-machine coordination and communication system (FABRIC).
 * **system_prompt_base** Defines the agent's personality and behavior.
 * **system_governance** The agent's laws and constitution.
@@ -279,6 +295,23 @@ Defines the agent's available capabilities, including action names, their implem
 ```
 
 You can customize the actions following the [Action Plugin Guide](6_actions.md)
+
+## MCP servers
+
+MCP servers can be added to a config to give OM1 agent capability to interact with different MCP tools. Example:
+
+```python
+mcp_servers: [
+    {
+      name: "weather",
+      transport: "stdio",
+      command: "npx",
+      args: ["-y", "@h1deya/mcp-server-weather"],
+    },
+  ]
+```
+
+Refer to [MCP Integration](mcp-integration.md) to understand the complete architecture and how to configure new MCP tools with OM1.
 
 ## Transition rules
 

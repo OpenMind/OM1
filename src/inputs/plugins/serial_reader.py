@@ -94,9 +94,7 @@ class SerialReader(FuserInput[SerialReaderConfig, Optional[str]]):
 
         try:
             # Open the serial port
-            self.ser = serial.Serial(
-                config.port, config.baudrate, timeout=config.timeout
-            )
+            self.ser = serial.Serial(config.port, config.baudrate, timeout=config.timeout)
             logging.info(f"Connected to {config.port} at {config.baudrate} baud")
         except serial.SerialException as e:
             logging.error(f"Error: {e}")
@@ -198,9 +196,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

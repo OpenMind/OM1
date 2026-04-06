@@ -28,9 +28,7 @@ class TestSpeakRos2Connector:
         speak_input = SpeakInput(action="Hello, world!")
         with patch("actions.speak.connector.ros2.logging") as mock_logging:
             await connector.connect(speak_input)
-            mock_logging.info.assert_called_once_with(
-                "SendThisToROS2: {'speak': 'Hello, world!'}"
-            )
+            mock_logging.info.assert_called_once_with("SendThisToROS2: {'speak': 'Hello, world!'}")
 
     @pytest.mark.asyncio
     async def test_connect_empty_text(self, connector):

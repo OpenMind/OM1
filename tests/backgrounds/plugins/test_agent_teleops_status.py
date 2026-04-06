@@ -80,9 +80,7 @@ class TestAgentTeleopsStatusBackground:
     @patch("backgrounds.plugins.agent_teleops_status.time.sleep")
     @patch("backgrounds.plugins.agent_teleops_status.time.time")
     @patch("backgrounds.plugins.agent_teleops_status.TeleopsStatusProvider")
-    def test_run_battery_status_from_empty_dict(
-        self, mock_provider_class, mock_time, mock_sleep
-    ):
+    def test_run_battery_status_from_empty_dict(self, mock_provider_class, mock_time, mock_sleep):
         """Test that battery status is created from empty dict."""
         mock_time.return_value = 1234567890.0
         mock_provider = MagicMock()

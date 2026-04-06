@@ -8,9 +8,7 @@ from actions.greeting_conversation.connector.base_greeting_conversation import (
     BaseGreetingConversationConnector,
     normalize_tts_text,
 )
-from actions.greeting_conversation.interface import (
-    ConversationState as InterfaceConversationState,
-)
+from actions.greeting_conversation.interface import ConversationState as InterfaceConversationState
 from actions.greeting_conversation.interface import (
     GreetingConversationInput,
 )
@@ -52,12 +50,8 @@ def mock_providers(mock_tts):
         patch(
             "actions.greeting_conversation.connector.base_greeting_conversation.GreetingConversationStateMachineProvider"
         ) as mock_state_cls,
-        patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.ContextProvider"
-        ) as mock_ctx_cls,
-        patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.open_zenoh_session"
-        ) as mock_zenoh,
+        patch("actions.greeting_conversation.connector.base_greeting_conversation.ContextProvider") as mock_ctx_cls,
+        patch("actions.greeting_conversation.connector.base_greeting_conversation.open_zenoh_session") as mock_zenoh,
     ):
         mock_state = Mock()
         mock_ctx = Mock()
@@ -143,50 +137,36 @@ class TestBaseGreetingConversationConnector:
     def test_init_handles_zenoh_failure(self, mock_providers, make_connector):
         """Test initialization handles Zenoh session failure gracefully."""
         mock_providers["zenoh"].side_effect = Exception("Connection failed")
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector = make_connector()
         assert connector.session is None
         assert connector.audio_pub is None
 
     @pytest.mark.asyncio
-    async def test_connect_logs_conversation_details(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_logs_conversation_details(self, connector, greeting_input, mock_providers):
         """Test connect logs all conversation details."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
         }
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ) as mock_log:
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging") as mock_log:
             await connector.connect(greeting_input)
             assert mock_log.info.call_count >= 4
 
     @pytest.mark.asyncio
-    async def test_connect_publishes_audio_status_via_zenoh(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_publishes_audio_status_via_zenoh(self, connector, greeting_input, mock_providers):
         """Test connect publishes AudioStatus via Zenoh with UUID tracking."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
         }
-        mock_providers["tts"].create_pending_message.return_value = {
-            "text": "Hello! Nice to meet you."
-        }
+        mock_providers["tts"].create_pending_message.return_value = {"text": "Hello! Nice to meet you."}
         await connector.connect(greeting_input)
-        mock_providers["tts"].create_pending_message.assert_called_once_with(
-            "Hello! Nice to meet you."
-        )
+        mock_providers["tts"].create_pending_message.assert_called_once_with("Hello! Nice to meet you.")
         mock_providers["audio_pub"].put.assert_called_once()
         assert connector.tts_playing is True
         assert connector.tts_request_id is not None
 
     @pytest.mark.asyncio
-    async def test_connect_does_not_set_tts_playing_without_audio_pub(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_does_not_set_tts_playing_without_audio_pub(self, connector, greeting_input, mock_providers):
         """Test tts_playing stays False when audio_pub is None."""
         connector.audio_pub = None
         mock_providers["state"].process_conversation.return_value = {
@@ -195,9 +175,7 @@ class TestBaseGreetingConversationConnector:
         await connector.connect(greeting_input)
         assert connector.tts_playing is False
 
-    def test_on_audio_status_resets_tts_playing_on_match(
-        self, connector, mock_providers
-    ):
+    def test_on_audio_status_resets_tts_playing_on_match(self, connector, mock_providers):
         """Test _on_audio_status resets tts_playing when UUID and READY status match."""
         connector.tts_request_id = "test-uuid-123"
         connector.tts_playing = True
@@ -208,9 +186,7 @@ class TestBaseGreetingConversationConnector:
         mock_status.header.frame_id = "test-uuid-123"
         mock_status.status_speaker = 1  # READY
 
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
-        ) as mock_audio_cls:
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus") as mock_audio_cls:
             mock_audio_cls.deserialize.return_value = mock_status
             mock_audio_cls.STATUS_SPEAKER.READY.value = 1
             connector._on_audio_status(mock_data)
@@ -218,9 +194,7 @@ class TestBaseGreetingConversationConnector:
         assert connector.tts_playing is False
         mock_providers["ctx"].update_context.assert_not_called()
 
-    def test_on_audio_status_triggers_deferred_context_update(
-        self, connector, mock_providers
-    ):
+    def test_on_audio_status_triggers_deferred_context_update(self, connector, mock_providers):
         """Test _on_audio_status calls update_context when pending_finished_update is True."""
         connector.tts_request_id = "test-uuid-123"
         connector.tts_playing = True
@@ -231,18 +205,14 @@ class TestBaseGreetingConversationConnector:
         mock_status.header.frame_id = "test-uuid-123"
         mock_status.status_speaker = 1  # READY
 
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
-        ) as mock_audio_cls:
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus") as mock_audio_cls:
             mock_audio_cls.deserialize.return_value = mock_status
             mock_audio_cls.STATUS_SPEAKER.READY.value = 1
             connector._on_audio_status(mock_data)
 
         assert connector.tts_playing is False
         assert connector.pending_finished_update is False
-        mock_providers["ctx"].update_context.assert_called_once_with(
-            {"greeting_conversation_finished": True}
-        )
+        mock_providers["ctx"].update_context.assert_called_once_with({"greeting_conversation_finished": True})
 
     def test_on_audio_status_ignores_non_matching_uuid(self, connector, mock_providers):
         """Test _on_audio_status does not reset tts_playing for a different UUID."""
@@ -254,9 +224,7 @@ class TestBaseGreetingConversationConnector:
         mock_status.header.frame_id = "different-uuid-456"
         mock_status.status_speaker = 1  # READY
 
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
-        ) as mock_audio_cls:
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus") as mock_audio_cls:
             mock_audio_cls.deserialize.return_value = mock_status
             mock_audio_cls.STATUS_SPEAKER.READY.value = 1
             connector._on_audio_status(mock_data)
@@ -273,9 +241,7 @@ class TestBaseGreetingConversationConnector:
         mock_status.header.frame_id = "test-uuid-123"
         mock_status.status_speaker = 2  # ACTIVE
 
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus"
-        ) as mock_audio_cls:
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.AudioStatus") as mock_audio_cls:
             mock_audio_cls.deserialize.return_value = mock_status
             mock_audio_cls.STATUS_SPEAKER.READY.value = 1
             connector._on_audio_status(mock_data)
@@ -283,9 +249,7 @@ class TestBaseGreetingConversationConnector:
         assert connector.tts_playing is True
 
     @pytest.mark.asyncio
-    async def test_connect_processes_conversation(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_processes_conversation(self, connector, greeting_input, mock_providers):
         """Test connect calls state machine process_conversation with llm_output."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
@@ -301,9 +265,7 @@ class TestBaseGreetingConversationConnector:
         )
 
     @pytest.mark.asyncio
-    async def test_connect_updates_greeting_status(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_updates_greeting_status(self, connector, greeting_input, mock_providers):
         """Test connect updates the greeting status from state machine."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONCLUDING.value
@@ -312,9 +274,7 @@ class TestBaseGreetingConversationConnector:
         assert connector.greeting_status == ConversationState.CONCLUDING.value
 
     @pytest.mark.asyncio
-    async def test_connect_calls_publish_countdown_status(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_calls_publish_countdown_status(self, connector, greeting_input, mock_providers):
         """Test connect calls publish_countdown_status with current state."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
@@ -324,9 +284,7 @@ class TestBaseGreetingConversationConnector:
             mock_report.assert_called_once_with(ConversationState.CONVERSING.value)
 
     @pytest.mark.asyncio
-    async def test_connect_finished_defers_context_update(
-        self, connector, mock_providers
-    ):
+    async def test_connect_finished_defers_context_update(self, connector, mock_providers):
         """Test connect sets pending flag when TTS is playing."""
         finished_input = GreetingConversationInput(
             response="Goodbye!",
@@ -334,18 +292,14 @@ class TestBaseGreetingConversationConnector:
             confidence=0.95,
             speech_clarity=0.9,
         )
-        mock_providers["state"].process_conversation.return_value = {
-            "current_state": ConversationState.FINISHED.value
-        }
+        mock_providers["state"].process_conversation.return_value = {"current_state": ConversationState.FINISHED.value}
         await connector.connect(finished_input)
         mock_providers["ctx"].update_context.assert_not_called()
         assert connector.pending_finished_update is True
         assert connector.conversation_finished_sent is True
 
     @pytest.mark.asyncio
-    async def test_connect_finished_updates_context_when_not_playing(
-        self, connector, mock_providers
-    ):
+    async def test_connect_finished_updates_context_when_not_playing(self, connector, mock_providers):
         """Test connect updates context immediately when TTS is not playing."""
         connector.audio_pub = None  # No Zenoh → tts_playing stays False
         finished_input = GreetingConversationInput(
@@ -354,19 +308,13 @@ class TestBaseGreetingConversationConnector:
             confidence=0.95,
             speech_clarity=0.9,
         )
-        mock_providers["state"].process_conversation.return_value = {
-            "current_state": ConversationState.FINISHED.value
-        }
+        mock_providers["state"].process_conversation.return_value = {"current_state": ConversationState.FINISHED.value}
         await connector.connect(finished_input)
-        mock_providers["ctx"].update_context.assert_called_once_with(
-            {"greeting_conversation_finished": True}
-        )
+        mock_providers["ctx"].update_context.assert_called_once_with({"greeting_conversation_finished": True})
         assert connector.conversation_finished_sent is True
 
     @pytest.mark.asyncio
-    async def test_connect_finished_only_sets_flag_once(
-        self, connector, mock_providers
-    ):
+    async def test_connect_finished_only_sets_flag_once(self, connector, mock_providers):
         """Test connect only sets pending flag once even if called multiple times."""
         finished_input = GreetingConversationInput(
             response="Goodbye!",
@@ -374,17 +322,13 @@ class TestBaseGreetingConversationConnector:
             confidence=0.95,
             speech_clarity=0.9,
         )
-        mock_providers["state"].process_conversation.return_value = {
-            "current_state": ConversationState.FINISHED.value
-        }
+        mock_providers["state"].process_conversation.return_value = {"current_state": ConversationState.FINISHED.value}
         await connector.connect(finished_input)
         await connector.connect(finished_input)
         mock_providers["ctx"].update_context.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_connect_not_finished_no_context_update(
-        self, connector, greeting_input, mock_providers
-    ):
+    async def test_connect_not_finished_no_context_update(self, connector, greeting_input, mock_providers):
         """Test connect does not update context when conversation is not finished."""
         mock_providers["state"].process_conversation.return_value = {
             "current_state": ConversationState.CONVERSING.value
@@ -401,9 +345,7 @@ class TestBaseGreetingConversationConnector:
             "silence_duration": 2.0,
         }
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
             patch.object(connector, "sleep") as mock_sleep,
         ):
             connector.tick()
@@ -414,9 +356,7 @@ class TestBaseGreetingConversationConnector:
         connector.tts_playing = True
         connector.tts_playing_start_time = time.time()
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
             patch.object(connector, "sleep"),
         ):
             connector.tick()
@@ -431,9 +371,7 @@ class TestBaseGreetingConversationConnector:
             "silence_duration": 2.0,
         }
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
             patch.object(connector, "sleep"),
         ):
             connector.tick()
@@ -448,9 +386,7 @@ class TestBaseGreetingConversationConnector:
             "silence_duration": 3.5,
         }
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
             patch.object(connector, "sleep"),
         ):
             connector.tick()
@@ -465,9 +401,7 @@ class TestBaseGreetingConversationConnector:
             "silence_duration": 2.0,
         }
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
             patch.object(connector, "sleep"),
             patch.object(connector, "publish_countdown_status") as mock_report,
         ):
@@ -483,15 +417,11 @@ class TestBaseGreetingConversationConnector:
             "silence_duration": 5.0,
         }
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
             patch.object(connector, "sleep"),
         ):
             connector.tick()
-        mock_providers["ctx"].update_context.assert_called_once_with(
-            {"greeting_conversation_finished": True}
-        )
+        mock_providers["ctx"].update_context.assert_called_once_with({"greeting_conversation_finished": True})
         assert connector.conversation_finished_sent is True
 
     def test_tick_finished_only_updates_context_once(self, connector, mock_providers):
@@ -503,9 +433,7 @@ class TestBaseGreetingConversationConnector:
             "silence_duration": 5.0,
         }
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
             patch.object(connector, "sleep"),
         ):
             connector.tick()
@@ -518,18 +446,12 @@ class TestBaseGreetingConversationConnector:
         # Reset mock before testing
         mock_providers["session"].put.reset_mock()
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.uuid4"
-            ) as mock_uuid,
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.uuid4") as mock_uuid,
             patch(
                 "actions.greeting_conversation.connector.base_greeting_conversation.PersonGreetingStatus"
             ) as mock_status_cls,
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"
-            ) as mock_header,
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.prepare_header") as mock_header,
         ):
             mock_uuid.return_value = "test-uuid"
             mock_status = Mock()
@@ -548,18 +470,12 @@ class TestBaseGreetingConversationConnector:
         # Reset mock before testing
         mock_providers["session"].put.reset_mock()
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.uuid4"
-            ) as mock_uuid,
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.uuid4") as mock_uuid,
             patch(
                 "actions.greeting_conversation.connector.base_greeting_conversation.PersonGreetingStatus"
             ) as mock_status_cls,
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"),
         ):
             mock_uuid.return_value = "test-uuid"
             mock_status = Mock()
@@ -570,25 +486,17 @@ class TestBaseGreetingConversationConnector:
 
             mock_providers["session"].put.assert_called_once()
 
-    def test_publish_countdown_status_finished_state_publishes_zero(
-        self, connector, mock_providers
-    ):
+    def test_publish_countdown_status_finished_state_publishes_zero(self, connector, mock_providers):
         """Test publish_countdown_status publishes 0 seconds for FINISHED state."""
         # Reset mock before testing
         mock_providers["session"].put.reset_mock()
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ),
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.uuid4"
-            ) as mock_uuid,
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.uuid4") as mock_uuid,
             patch(
                 "actions.greeting_conversation.connector.base_greeting_conversation.PersonGreetingStatus"
             ) as mock_status_cls,
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"),
         ):
             mock_uuid.return_value = "test-uuid"
             mock_status = Mock()
@@ -599,62 +507,41 @@ class TestBaseGreetingConversationConnector:
 
             mock_providers["session"].put.assert_called_once()
 
-    def test_publish_countdown_status_no_session_no_publish(
-        self, connector, mock_providers
-    ):
+    def test_publish_countdown_status_no_session_no_publish(self, connector, mock_providers):
         """Test publish_countdown_status does not publish when session is None."""
         connector.session = None
         # Reset any previous calls
         mock_providers["session"].put.reset_mock()
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector.publish_countdown_status(ConversationState.CONVERSING.value)
         # Should not be called since session is None
         mock_providers["session"].put.assert_not_called()
 
-    def test_publish_countdown_status_handles_publish_error(
-        self, connector, mock_providers
-    ):
+    def test_publish_countdown_status_handles_publish_error(self, connector, mock_providers):
         """Test publish_countdown_status handles publishing errors gracefully."""
         # Reset and configure mock to raise exception
         mock_providers["session"].put.reset_mock()
         mock_providers["session"].put.side_effect = Exception("Publish failed")
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ) as mock_log,
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.uuid4"
-            ),
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.PersonGreetingStatus"
-            ),
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"
-            ),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging") as mock_log,
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.uuid4"),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.PersonGreetingStatus"),
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.prepare_header"),
         ):
             connector.publish_countdown_status(ConversationState.CONVERSING.value)
             # Should log error
-            assert any(
-                "Error publishing" in str(call)
-                for call in mock_log.error.call_args_list
-            )
+            assert any("Error publishing" in str(call) for call in mock_log.error.call_args_list)
 
     def test_stop_closes_zenoh_session(self, connector, mock_providers):
         """Test stop closes the Zenoh session."""
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector.stop()
         mock_providers["session"].close.assert_called_once()
 
     def test_stop_handles_no_session(self, connector, mock_providers):
         """Test stop handles missing Zenoh session gracefully."""
         connector.session = None
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector.stop()
         # No exception should be raised
 
@@ -670,9 +557,7 @@ class TestBaseGreetingConversationConnector:
         """Test tick resets tts_playing after timeout to prevent system freeze
         when Zenoh READY message is lost."""
         connector.tts_playing = True
-        connector.tts_playing_start_time = (
-            time.time() - 31
-        )  # 31s ago, exceeds 30s timeout
+        connector.tts_playing_start_time = time.time() - 31  # 31s ago, exceeds 30s timeout
 
         mock_providers["state"].update_state_without_llm.return_value = {
             "current_state": ConversationState.CONVERSING.value,
@@ -681,9 +566,7 @@ class TestBaseGreetingConversationConnector:
         }
 
         with (
-            patch(
-                "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-            ) as mock_logging,
+            patch("actions.greeting_conversation.connector.base_greeting_conversation.logging") as mock_logging,
             patch.object(connector, "sleep"),
             patch.object(connector, "publish_countdown_status"),
         ):
@@ -704,14 +587,10 @@ class TestBaseGreetingConversationConnector:
 
         session_ref.close = track_session_on_close
 
-        with patch(
-            "actions.greeting_conversation.connector.base_greeting_conversation.logging"
-        ):
+        with patch("actions.greeting_conversation.connector.base_greeting_conversation.logging"):
             connector.stop()
 
-        assert session_none_during_close == [
-            True
-        ], "self.session should be None when close() is called"
+        assert session_none_during_close == [True], "self.session should be None when close() is called"
 
 
 class TestNormalizeTTSText:
@@ -814,10 +693,7 @@ class TestNormalizeTTSText:
 
     def test_multiple_abbreviations_same_type(self):
         """Test text with multiple abbreviations of the same type."""
-        assert (
-            normalize_tts_text("From Jan to Feb to Mar")
-            == "From January to February to March"
-        )
+        assert normalize_tts_text("From Jan to Feb to Mar") == "From January to February to March"
         assert normalize_tts_text("Main St and Oak Ave") == "Main Street and Oak Avenue"
 
     def test_empty_string(self):
@@ -836,14 +712,8 @@ class TestNormalizeTTSText:
 
     def test_time_patterns_in_context(self):
         """Test time patterns in realistic contexts."""
-        assert (
-            normalize_tts_text("The meeting is from 9:00 to 5:30 daily.")
-            == "The meeting is from 9 to 5 30 daily."
-        )
-        assert (
-            normalize_tts_text("Call between 10:15 and 12:00")
-            == "Call between 10 15 and 12"
-        )
+        assert normalize_tts_text("The meeting is from 9:00 to 5:30 daily.") == "The meeting is from 9 to 5 30 daily."
+        assert normalize_tts_text("Call between 10:15 and 12:00") == "Call between 10 15 and 12"
 
     def test_all_transformations_combined(self):
         """Test text requiring all types of transformations."""

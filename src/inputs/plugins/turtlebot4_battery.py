@@ -82,12 +82,8 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
         logging.info(f"Using TurtleBot4 URID: {self.URID}")
 
         logging.info("Creating Zenoh TurtleBot4 Subscribers")
-        self.batts = self.z.declare_subscriber(
-            f"{self.URID}/c3/battery_state", self.listener_battery
-        )
-        self.dock = self.z.declare_subscriber(
-            f"{self.URID}/c3/dock_status", self.listener_dock
-        )
+        self.batts = self.z.declare_subscriber(f"{self.URID}/c3/battery_state", self.listener_battery)
+        self.dock = self.z.declare_subscriber(f"{self.URID}/c3/dock_status", self.listener_dock)
 
         # Simple description of sensor output to help LLM understand its importance and utility
         self.descriptor_for_LLM = "Energy Level"
@@ -112,13 +108,11 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
 
         if self.battery_percentage < 5:
             self.battery_status = (
-                "CRITICAL: your battery is almost empty. "
-                "Immediately move to your charging station and recharge."
+                "CRITICAL: your battery is almost empty. " "Immediately move to your charging station and recharge."
             )
         elif self.battery_percentage < 15:
             self.battery_status = (
-                "IMPORTANT: your battery is low. "
-                "Consider finding your charging station and recharging."
+                "IMPORTANT: your battery is low. " "Consider finding your charging station and recharging."
             )
         else:
             self.battery_status = None
@@ -164,9 +158,7 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
         await asyncio.sleep(2.0)
         await self.report_status()
 
-        logging.info(
-            f"TB4 batt percent:{self.battery_percentage} low?: {self.battery_status}"
-        )
+        logging.info(f"TB4 batt percent:{self.battery_percentage} low?: {self.battery_status}")
 
         if self.battery_status is not None:
             return [self.battery_status]
@@ -223,14 +215,9 @@ class TurtleBot4Battery(FuserInput[TurtleBot4BatteryConfig, List[str]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

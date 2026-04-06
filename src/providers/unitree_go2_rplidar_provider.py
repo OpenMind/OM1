@@ -283,10 +283,7 @@ class UnitreeGo2RPLidarProvider:
         """
         self.running = True
 
-        if (
-            not self._rplidar_processor_thread
-            or not self._rplidar_processor_thread.is_alive()
-        ):
+        if not self._rplidar_processor_thread or not self._rplidar_processor_thread.is_alive():
             self._rplidar_processor_thread = mp.Process(
                 target=rplidar_processor,
                 args=(
@@ -300,13 +297,8 @@ class UnitreeGo2RPLidarProvider:
             )
             self._rplidar_processor_thread.start()
 
-        if (
-            not self._serial_processor_thread
-            or not self._serial_processor_thread.is_alive()
-        ):
-            self._serial_processor_thread = threading.Thread(
-                target=self._serial_processor, daemon=True
-            )
+        if not self._serial_processor_thread or not self._serial_processor_thread.is_alive():
+            self._serial_processor_thread = threading.Thread(target=self._serial_processor, daemon=True)
             self._serial_processor_thread.start()
             logging.info("RPLidar processing thread started")
 
@@ -446,9 +438,7 @@ class UnitreeGo2RPLidarProvider:
                         if y >= 0:  # Skip obstacles in front of or beside the robot
                             continue
 
-                    dist_to_line = self.distance_point_to_line_segment(
-                        x, y, start_x, start_y, end_x, end_y
-                    )
+                    dist_to_line = self.distance_point_to_line_segment(x, y, start_x, start_y, end_x, end_y)
 
                     if dist_to_line < self.half_width_robot:
                         # too close - this path will not work
@@ -484,9 +474,7 @@ class UnitreeGo2RPLidarProvider:
         self._lidar_string = return_string
         self._valid_paths = ppl
 
-        logging.debug(
-            f"RPLidar Provider string: {self._lidar_string}\nValid paths: {self._valid_paths}"
-        )
+        logging.debug(f"RPLidar Provider string: {self._lidar_string}\nValid paths: {self._valid_paths}")
 
     def _serial_processor(self):
         """
@@ -646,14 +634,9 @@ class UnitreeGo2RPLidarProvider:
         List[np.ndarray]
             A list of NumPy arrays representing the paths.
         """
-        return [
-            self._create_straight_path_from_angle(angle, length=1.0)
-            for angle in self.path_angles
-        ]
+        return [self._create_straight_path_from_angle(angle, length=1.0) for angle in self.path_angles]
 
-    def distance_point_to_line_segment(
-        self, px: float, py: float, x1: float, y1: float, x2: float, y2: float
-    ) -> float:
+    def distance_point_to_line_segment(self, px: float, py: float, x1: float, y1: float, x2: float, y2: float) -> float:
         """
         Calculate the distance from a point to a line segment.
         This method computes the shortest distance from a point (px, py) to a line segment defined by two endpoints (x1, y1) and (x2, y2).

@@ -43,9 +43,7 @@ class UnitreeGo2ChargingProvider(ZenohListenerProvider):
         """
         if data.payload:
             try:
-                message: ChargingStatus = ChargingStatus.deserialize(
-                    data.payload.to_bytes()
-                )
+                message: ChargingStatus = ChargingStatus.deserialize(data.payload.to_bytes())
                 self.latest_status = message.code
                 self.status_history.append(message.code)
                 logging.info("Received charging status: %s", message.code)

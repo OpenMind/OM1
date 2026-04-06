@@ -22,9 +22,7 @@ async def test_poll():
         patch("inputs.plugins.selfie_status_input.IOProvider") as mock_io_provider,
         patch("inputs.plugins.selfie_status_input.asyncio.sleep", new=AsyncMock()),
     ):
-        mock_rec = type(
-            "obj", (object,), {"timestamp": 123.456, "input": "ok id=wendy"}
-        )()
+        mock_rec = type("obj", (object,), {"timestamp": 123.456, "input": "ok id=wendy"})()
         mock_io_provider.return_value.inputs.get.return_value = mock_rec
         config = SensorConfig()
         sensor = SelfieStatus(config=config)

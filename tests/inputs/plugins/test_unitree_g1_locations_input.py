@@ -44,12 +44,8 @@ async def test_poll():
     """Test _poll method."""
     with (
         patch("inputs.plugins.unitree_g1_locations_input.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_g1_locations_input.UnitreeG1LocationsProvider"
-        ) as mock_provider,
-        patch(
-            "inputs.plugins.unitree_g1_locations_input.asyncio.sleep", new=AsyncMock()
-        ),
+        patch("inputs.plugins.unitree_g1_locations_input.UnitreeG1LocationsProvider") as mock_provider,
+        patch("inputs.plugins.unitree_g1_locations_input.asyncio.sleep", new=AsyncMock()),
     ):
         config = UnitreeG1LocationsSensorConfig()
         sensor = UnitreeG1LocationsInput(config=config)
@@ -77,9 +73,7 @@ def test_formatted_latest_buffer():
         result = sensor.formatted_latest_buffer()
         assert result is None
 
-        test_message = Message(
-            timestamp=123.456, message="Available locations: Kitchen, Living Room"
-        )
+        test_message = Message(timestamp=123.456, message="Available locations: Kitchen, Living Room")
         sensor.messages.append(test_message)
 
         result = sensor.formatted_latest_buffer()

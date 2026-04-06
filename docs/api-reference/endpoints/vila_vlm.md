@@ -6,7 +6,7 @@ icon: webhook
 
 The VILA VLM API provides real-time vision-language model analysis of video streams. This WebSocket-based endpoint enables low-latency streaming of video frames and receiving intelligent visual descriptions and analysis.
 
-**Base URL:** `wss://api-vila.openmind.org`
+**Base URL:** `wss://api-vila.openmind.com`
 
 **Authentication:** Requires an OpenMind API key passed as a query parameter.
 
@@ -14,7 +14,7 @@ The VILA VLM API provides real-time vision-language model analysis of video stre
 
 Establish a persistent WebSocket connection for streaming video frames and receiving real-time VLM analysis.
 
-**Endpoint:** `wss://api-vila.openmind.org?api_key=YOUR_API_KEY`
+**Endpoint:** `wss://api-vila.openmind.com?api_key=YOUR_API_KEY`
 
 ### Connection Parameters
 
@@ -30,7 +30,7 @@ import websockets
 
 async def connect_to_vlm():
     async with websockets.connect(
-        "wss://api-vila.openmind.org?api_key=om1_live_your_api_key"
+        "wss://api-vila.openmind.com?api_key=om1_live_your_api_key"
     ) as websocket:
         # Send and receive messages
         pass
@@ -96,7 +96,7 @@ from om1_vlm import VideoStream
 
 async def stream_with_vlm():
     """Stream video to VILA VLM using VideoStream wrapper."""
-    uri = "wss://api-vila.openmind.org?api_key=om1_live_your_api_key"
+    uri = "wss://api-vila.openmind.com?api_key=om1_live_your_api_key"
 
     async with websockets.connect(uri) as websocket:
         # Initialize video stream
@@ -151,7 +151,7 @@ import time
 async def stream_video_to_vlm():
     """Stream video frames to VILA VLM."""
     api_key = "om1_live_your_api_key"
-    ws_url = f"wss://api-vila.openmind.org?api_key={api_key}"
+    ws_url = f"wss://api-vila.openmind.com?api_key={api_key}"
 
     # Open camera
     cap = cv2.VideoCapture(0)
@@ -208,7 +208,7 @@ const WebSocket = require('ws');
 const { createCanvas, loadImage } = require('canvas');
 
 const API_KEY = 'om1_live_your_api_key';
-const WS_URL = `wss://api-vila.openmind.org?api_key=${API_KEY}`;
+const WS_URL = `wss://api-vila.openmind.com?api_key=${API_KEY}`;
 
 // Connect to WebSocket
 const ws = new WebSocket(WS_URL);
