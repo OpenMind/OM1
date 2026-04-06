@@ -7,7 +7,7 @@ from fuser.knowledge_base.faiss.embedding_client import EmbeddingClient
 from fuser.memory_base.indexer import (
     DEFAULT_MIN_SCORE,
     MemoryIndex,
-    populate_index,
+    build_index,
 )
 
 DEFAULT_MEMORY_MD_CHARS = 500
@@ -17,14 +17,13 @@ DEFAULT_CONTEXT_MAX_CHARS = 1000
 class MemoryReader:
     """Read and search long-term memory files.
 
-    Provides two retrieval mechanisms:
-    1. MEMORY.md — read in full (facts)
-    2. Daily logs — cosine similarity search for relevant context
+    1. MEMORY.md — read in full (include facts)
+    2. Daily logs — top 3 relevant chunks
 
     Parameters
     ----------
     memory_root : str or Path, optional
-        Root directory for memory storage. Defaults to ``<project_root>/memory``.
+        Root directory for memory storage.
     base_url : str
         Base URL for the embedding service.
     min_score : float
@@ -50,10 +49,9 @@ class MemoryReader:
         self._index_initialized = False
 
     async def ensure_index(self) -> MemoryIndex:
-        """Lazy-load the memory index on first use.
+        """Initialize the memory index on first use.
 
-        Populates the shared index from all existing daily files.
-        Subsequent calls return the cached index.
+        Build the index from all existing daily files for one time.
 
         Returns
         -------
@@ -61,13 +59,13 @@ class MemoryReader:
             The in-memory embedding index.
         """
         if not self._index_initialized:
-            await populate_index(self.index, self.daily_dir)
+            await build_index(self.index, self.daily_dir)
             self._index_initialized = True
             logging.info(f"Memory: index initialized with {self.index.size} chunks")
         return self.index
 
     def read_memory_md(self, max_chars: int = DEFAULT_MEMORY_MD_CHARS) -> str:
-        """Read MEMORY.md contents, truncated to max_chars.
+        """Read MEMORY.md, truncated to max_chars.
 
         Parameters
         ----------
@@ -85,11 +83,7 @@ class MemoryReader:
         try:
             content = self.memory_file.read_text(encoding="utf-8")
             lines = content.strip().split("\n")
-            content_lines = [
-                line
-                for line in lines
-                if not line.startswith("# ") and not line.startswith("<!--")
-            ]
+            content_lines = [line for line in lines if not line.startswith("# ") and not line.startswith("<!--")]
             result = "\n".join(content_lines).strip()
             if len(result) > max_chars:
                 result = result[:max_chars] + "..."
@@ -98,9 +92,7 @@ class MemoryReader:
             logging.error(f"Memory: failed to read MEMORY.md: {e}")
             return ""
 
-    async def search_daily(
-        self, query_text: str, top_k: int = 3, min_score: Optional[float] = None
-    ) -> list[Document]:
+    async def search_daily(self, query_text: str, top_k: int = 3, min_score: Optional[float] = None) -> list[Document]:
         """Search daily logs using cosine similarity.
 
         Parameters
@@ -124,9 +116,7 @@ class MemoryReader:
 
         try:
             index = await self.ensure_index()
-            return await index.search(
-                query_text, top_k=top_k, min_score=score_threshold
-            )
+            return await index.search(query_text, top_k=top_k, min_score=score_threshold)
         except Exception as e:
             logging.error(f"Memory: search failed: {e}")
             return []
@@ -164,8 +154,7 @@ class MemoryReader:
         for doc in search_results:
             if total_chars >= max_chars:
                 break
-            # source is the daily file name e.g. "2026-03-30.md"
-            source = doc.metadata.get("source", "unknown")
+            source = doc.metadata.get("source", "unknown")  # date of the daily memory
             date_str = source.replace(".md", "")
             section = f"[{date_str}]\n{doc.text}"
             if total_chars + len(section) > max_chars:

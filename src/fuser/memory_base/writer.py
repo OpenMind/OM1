@@ -10,8 +10,7 @@ class MemoryWriter:
     Parameters
     ----------
     memory_root : str or Path, optional
-        Root directory for memory storage (contains MEMORY.md and daily/).
-        Defaults to ``<project_root>/memory``.
+        Root directory for memory storage.
     """
 
     def __init__(
@@ -31,8 +30,7 @@ class MemoryWriter:
         self.daily_dir.mkdir(parents=True, exist_ok=True)
         if not self.memory_file.exists():
             self.memory_file.write_text(
-                "# Long-Term Memory\n\n"
-                "<!-- Persistent facts, preferences, and important context -->\n"
+                "# Long-Term Memory\n\n" "<!-- Persistent facts, preferences, and important context -->\n"
             )
 
     def _get_daily_path(self) -> Path:
@@ -44,18 +42,24 @@ class MemoryWriter:
         self,
         user_msg: str,
         actions: list,
-    ) -> None:
+    ) -> Optional[tuple[str, str]]:
         """Append a user-robot interaction to today's daily log.
 
         Parameters
         ----------
         user_msg : str
-            The user's input (typically from Voice).
+            ASR input.
         actions : list
-            The robot's output actions.
+            LLM output actions.
+
+        Returns
+        -------
+        Optional[tuple[str, str]]
+            A tuple of (entry_text, daily_filename) if written successfully,
+            or None if the message was empty or write failed.
         """
         if not user_msg.strip():
-            return
+            return None
 
         daily_path = self._get_daily_path()
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -70,49 +74,7 @@ class MemoryWriter:
             with open(daily_path, "a", encoding="utf-8") as f:
                 f.write(entry)
             logging.debug(f"Memory: appended interaction to {daily_path.name}")
+            return entry, daily_path.name
         except Exception as e:
             logging.error(f"Memory: failed to write interaction: {e}")
-
-    def append_summary(self, summary: str) -> None:
-        """Append a history summary to today's daily log.
-
-        Parameters
-        ----------
-        summary : str
-            The LLM-generated summary of recent history.
-        """
-        if not summary.strip():
-            return
-
-        daily_path = self._get_daily_path()
-        timestamp = datetime.now().strftime("%H:%M:%S")
-
-        entry = f"\n## Summary {timestamp}\n"
-        entry += f"{summary.strip()}\n"
-
-        try:
-            with open(daily_path, "a", encoding="utf-8") as f:
-                f.write(entry)
-            logging.debug(f"Memory: appended summary to {daily_path.name}")
-        except Exception as e:
-            logging.error(f"Memory: failed to write summary: {e}")
-
-    def write_fact(self, fact: str) -> None:
-        """Append a persistent fact to MEMORY.md.
-
-        Parameters
-        ----------
-        fact : str
-            The fact or preference to persist.
-        """
-        if not fact.strip():
-            return
-
-        entry = f"\n- {fact.strip()}\n"
-
-        try:
-            with open(self.memory_file, "a", encoding="utf-8") as f:
-                f.write(entry)
-            logging.info(f"Memory: wrote fact to MEMORY.md: {fact[:50]}...")
-        except Exception as e:
-            logging.error(f"Memory: failed to write fact: {e}")
+            return None

@@ -8,7 +8,6 @@ import numpy as np
 from fuser.knowledge_base.base_embedding import BaseEmbeddingClient
 from fuser.knowledge_base.base_retriever import Document
 
-# --- Constants ---
 DEFAULT_MIN_SCORE = 0.3
 DEFAULT_VALID_DURATION_DAYS = 14
 
@@ -45,74 +44,7 @@ class MemoryIndex:
         """Number of cached chunks."""
         return len(self._cache)
 
-    async def add_chunk(self, text: str, metadata: dict) -> None:
-        """Add a single chunk to the index.
-
-        Skips if the chunk hash already exists in cache.
-
-        Parameters
-        ----------
-        text : str
-            The chunk text content.
-        metadata : dict
-            Chunk metadata (source file, timestamp).
-        """
-        text_hash = _hash_text(text)
-        if text_hash in self._cache:
-            return
-
-        try:
-            async with self.embedding_client:
-                embedding = await self.embedding_client.embed(text)
-            doc = Document(text=text, metadata=metadata)
-            self._cache[text_hash] = (embedding, doc)
-            logging.debug(f"Memory index: added chunk (total: {self.size})")
-        except Exception as e:
-            logging.error(f"Memory index: failed to embed chunk: {e}")
-
-    async def add_chunks_batch(self, chunks: list[Document]) -> int:
-        """Add multiple chunks to the index in batch.
-
-        Parameters
-        ----------
-        chunks : list of Document
-            Chunks to add.
-
-        Returns
-        -------
-        int
-            Number of new chunks actually embedded.
-        """
-        new_chunks = []
-        new_hashes = []
-        for chunk in chunks:
-            text_hash = _hash_text(chunk.text)
-            if text_hash not in self._cache:
-                new_chunks.append(chunk)
-                new_hashes.append(text_hash)
-
-        if not new_chunks:
-            return 0
-
-        try:
-            texts = [c.text for c in new_chunks]
-            async with self.embedding_client:
-                embeddings = await self.embedding_client.embed_batch(texts)
-
-            for i, (text_hash, chunk) in enumerate(zip(new_hashes, new_chunks)):
-                self._cache[text_hash] = (embeddings[i], chunk)
-
-            logging.info(
-                f"Memory index: added {len(new_chunks)} chunks (total: {self.size})"
-            )
-            return len(new_chunks)
-        except Exception as e:
-            logging.error(f"Memory index: batch embed failed: {e}")
-            return 0
-
-    async def search(
-        self, query: str, top_k: int = 1, min_score: float = DEFAULT_MIN_SCORE
-    ) -> list[Document]:
+    async def search(self, query: str, top_k: int = 1, min_score: float = DEFAULT_MIN_SCORE) -> list[Document]:
         """Search for most similar chunks using cosine similarity.
 
         Parameters
@@ -148,15 +80,73 @@ class MemoryIndex:
         scored.sort(key=lambda x: x[0], reverse=True)
         results = []
         for score, doc in scored[:top_k]:
-            results.append(
-                Document(text=doc.text, metadata=doc.metadata.copy(), score=score)
-            )
+            results.append(Document(text=doc.text, metadata=doc.metadata.copy(), score=score))
 
-        logging.info(
-            f"Memory search: '{query[:50]}' → {len(results)} results "
-            f"(from {self.size} chunks)"
-        )
+        logging.info(f"Memory search: '{query[:50]}' → {len(results)} results " f"(from {self.size} chunks)")
         return results
+
+    async def add_chunk(self, text: str, metadata: dict) -> None:
+        """Add a single chunk to the index at runtime (hot update).
+
+        Skips if the chunk hash already exists in cache.
+
+        Parameters
+        ----------
+        text : str
+            The chunk text content.
+        metadata : dict
+            Chunk metadata (source file, timestamp).
+        """
+        text_hash = _hash_text(text)
+        if text_hash in self._cache:
+            return
+
+        try:
+            async with self.embedding_client:
+                embedding = await self.embedding_client.embed(text)
+            doc = Document(text=text, metadata=metadata)
+            self._cache[text_hash] = (embedding, doc)
+            logging.debug(f"Memory index: added chunk (total: {self.size})")
+        except Exception as e:
+            logging.error(f"Memory index: failed to embed chunk: {e}")
+
+    async def load_chunks_batch(self, chunks: list[Document]) -> int:
+        """Load multiple chunks into the index in batch (used at startup).
+
+        Parameters
+        ----------
+        chunks : list of Document
+            Chunks to load.
+
+        Returns
+        -------
+        int
+            Number of new chunks actually embedded.
+        """
+        new_chunks = []
+        new_hashes = []
+        for chunk in chunks:
+            text_hash = _hash_text(chunk.text)
+            if text_hash not in self._cache:
+                new_chunks.append(chunk)
+                new_hashes.append(text_hash)
+
+        if not new_chunks:
+            return 0
+
+        try:
+            texts = [c.text for c in new_chunks]
+            async with self.embedding_client:
+                embeddings = await self.embedding_client.embed_batch(texts)
+
+            for i, (text_hash, chunk) in enumerate(zip(new_hashes, new_chunks)):
+                self._cache[text_hash] = (embeddings[i], chunk)
+
+            logging.info(f"Memory index: loaded {len(new_chunks)} chunks (total: {self.size})")
+            return len(new_chunks)
+        except Exception as e:
+            logging.error(f"Memory index: batch embed failed: {e}")
+            return 0
 
 
 def parse_daily_file(filepath: Path) -> list[Document]:
@@ -216,12 +206,12 @@ def parse_daily_file(filepath: Path) -> list[Document]:
     return chunks
 
 
-async def populate_index(
+async def build_index(
     index: MemoryIndex,
     daily_dir: Path,
     valid_duration: int = DEFAULT_VALID_DURATION_DAYS,
 ) -> None:
-    """Populate an existing MemoryIndex from recent daily markdown files.
+    """Build an existing MemoryIndex from recent daily markdown files.
 
     Expired files (older than ``valid_duration`` days) are deleted.
 
@@ -255,7 +245,7 @@ async def populate_index(
         all_chunks.extend(chunks)
 
     if all_chunks:
-        count = await index.add_chunks_batch(all_chunks)
+        count = await index.load_chunks_batch(all_chunks)
         logging.info(
             f"Memory: populated index with {len(all_chunks)} chunks, {count} new "
             f"(valid_duration: {valid_duration} days)"
