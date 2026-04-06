@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import Callable, Optional, Union
 
 from om1_speech import AudioOutputLiveStream
@@ -167,47 +166,13 @@ class KokoroTTSProvider:
         dict
             A dictionary containing the TTS request parameters.
         """
-        sanitized_text = self._sanitize_text(text)
-        logging.info(f"audio_stream: {sanitized_text}")
+        logging.info(f"audio_stream: {text}")
         return {
-            "text": sanitized_text,
+            "text": text,
             "voice_id": self._voice_id,
             "model_id": self._model_id,
             "output_format": self._output_format,
         }
-
-    def _sanitize_text(self, text: str) -> str:
-        """
-        Remove emoji characters, emoji shortcodes like :smile:, and common ASCII emoticons
-        to avoid the TTS engine speaking icon descriptions.
-        """
-        if not text:
-            return text
-
-        # Remove emoji shortcodes like :smile:
-        text = re.sub(r":[a-z0-9_+-]+:", "", text, flags=re.IGNORECASE)
-
-        # Remove common ASCII emoticons like :) :-D ;)
-        text = re.sub(r"[:;=8][\-^]?[)DPp\(\]\\]", "", text)
-
-        # Remove unicode emoji ranges
-        emoji_pattern = re.compile(
-            "["
-            "\U0001f600-\U0001f64f"  # emoticons
-            "\U0001f300-\U0001f5ff"  # symbols & pictographs
-            "\U0001f680-\U0001f6ff"  # transport & map symbols
-            "\U0001f1e0-\U0001f1ff"  # flags
-            "\U00002702-\U000027b0"
-            "\U000024c2-\U0001f251"
-            "]+",
-            flags=re.UNICODE,
-        )
-        text = emoji_pattern.sub("", text)
-
-        # Collapse multiple spaces and trim
-        text = re.sub(r"\s+", " ", text).strip()
-
-        return text
 
     def add_pending_message(self, message: Union[str, dict]):
         """
@@ -219,9 +184,7 @@ class KokoroTTSProvider:
             The message to be added, typically containing text and TTS parameters.
         """
         if not self.running:
-            logging.warning(
-                "TTS provider is not running. Call start() before adding messages."
-            )
+            logging.warning("TTS provider is not running. Call start() before adding messages.")
             return
 
         if isinstance(message, str):
@@ -245,9 +208,7 @@ class KokoroTTSProvider:
             if count > 0:
                 logging.info(f"Cleared {count} pending TTS messages")
         else:
-            logging.debug(
-                "AudioOutputLiveStream has no _pending_requests queue to clear"
-            )
+            logging.debug("AudioOutputLiveStream has no _pending_requests queue to clear")
 
     def get_pending_message_count(self) -> int:
         """

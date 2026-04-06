@@ -167,3 +167,10 @@ class BoosterOdom(FuserInput[BoosterOdomConfig, Optional[dict]]):
         self.messages = []
 
         return result
+
+    def stop(self):
+        """
+        Stop the Booster Odom provider and clean up resources.
+        """
+        if self.odom:
+            self.odom.stop()
