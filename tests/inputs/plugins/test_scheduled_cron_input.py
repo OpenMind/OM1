@@ -1,0 +1,256 @@
+import json
+import os
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from inputs.plugins.scheduled_cron_input import ScheduledCronInput, ScheduledCronInputConfig
+
+
+@pytest.fixture(autouse=True)
+def reset_instance():
+    ScheduledCronInput._instance = None
+    yield
+    ScheduledCronInput._instance = None
+
+
+@pytest.fixture
+def plugin(tmp_path):
+    schedule_file = str(tmp_path / "cron.json")
+    config = ScheduledCronInputConfig(schedule_file=schedule_file)
+    with patch("inputs.plugins.scheduled_cron_input.IOProvider"):
+        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+            return ScheduledCronInput(config)
+
+
+# ---------------------------------------------------------------------------
+# _parse_schedule_time
+# ---------------------------------------------------------------------------
+
+
+class TestParseScheduleTime:
+    def test_space_with_seconds(self, plugin):
+        dt = plugin._parse_schedule_time("2026-04-07 10:30:00")
+        assert dt == datetime(2026, 4, 7, 10, 30, 0)
+
+    def test_T_with_seconds(self, plugin):
+        dt = plugin._parse_schedule_time("2026-04-07T10:30:00")
+        assert dt == datetime(2026, 4, 7, 10, 30, 0)
+
+    def test_space_without_seconds(self, plugin):
+        dt = plugin._parse_schedule_time("2026-04-07 10:30")
+        assert dt == datetime(2026, 4, 7, 10, 30)
+
+    def test_T_without_seconds(self, plugin):
+        dt = plugin._parse_schedule_time("2026-04-07T10:30")
+        assert dt == datetime(2026, 4, 7, 10, 30)
+
+    def test_strips_whitespace(self, plugin):
+        dt = plugin._parse_schedule_time("  2026-04-07 10:30:00  ")
+        assert dt == datetime(2026, 4, 7, 10, 30, 0)
+
+    def test_invalid_returns_none(self, plugin):
+        result = plugin._parse_schedule_time("not-a-date")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# _recurrence_delta
+# ---------------------------------------------------------------------------
+
+
+class TestRecurrenceDelta:
+    def test_empty_string(self, plugin):
+        assert plugin._recurrence_delta("") is None
+
+    def test_once(self, plugin):
+        assert plugin._recurrence_delta("once") is None
+
+    def test_once_uppercase(self, plugin):
+        assert plugin._recurrence_delta("ONCE") is None
+
+    def test_hourly(self, plugin):
+        assert plugin._recurrence_delta("hourly") == timedelta(hours=1)
+
+    def test_daily(self, plugin):
+        assert plugin._recurrence_delta("daily") == timedelta(days=1)
+
+    def test_weekly(self, plugin):
+        assert plugin._recurrence_delta("weekly") == timedelta(weeks=1)
+
+    def test_every_minutes(self, plugin):
+        assert plugin._recurrence_delta("every 30m") == timedelta(minutes=30)
+
+    def test_every_hours(self, plugin):
+        assert plugin._recurrence_delta("every 2h") == timedelta(hours=2)
+
+    def test_every_days(self, plugin):
+        assert plugin._recurrence_delta("every 3d") == timedelta(days=3)
+
+    def test_every_seconds(self, plugin):
+        assert plugin._recurrence_delta("every 10s") == timedelta(seconds=10)
+
+    def test_every_full_word_minutes(self, plugin):
+        assert plugin._recurrence_delta("every 5 minutes") == timedelta(minutes=5)
+
+    def test_every_full_word_hours(self, plugin):
+        assert plugin._recurrence_delta("every 1 hour") == timedelta(hours=1)
+
+    def test_unknown_pattern_returns_none(self, plugin):
+        assert plugin._recurrence_delta("fortnightly") is None
+
+
+# ---------------------------------------------------------------------------
+# _is_due
+# ---------------------------------------------------------------------------
+
+
+class TestIsDue:
+    def _make_entry(self, schedule_time: str) -> dict:
+        return {"schedule_time": schedule_time}
+
+    def test_past_entry_is_due(self, plugin):
+        now = datetime(2026, 4, 7, 12, 0, 0)
+        entry = self._make_entry("2026-04-07 11:59:00")
+        assert plugin._is_due(entry, now) is True
+
+    def test_exact_time_is_due(self, plugin):
+        now = datetime(2026, 4, 7, 12, 0, 0)
+        entry = self._make_entry("2026-04-07 12:00:00")
+        assert plugin._is_due(entry, now) is True
+
+    def test_future_entry_not_due(self, plugin):
+        now = datetime(2026, 4, 7, 12, 0, 0)
+        entry = self._make_entry("2026-04-07 13:00:00")
+        assert plugin._is_due(entry, now) is False
+
+    def test_missing_schedule_time_not_due(self, plugin):
+        assert plugin._is_due({}, datetime.now()) is False
+
+    def test_run_previous_false_skips_old_entries(self, plugin):
+        plugin.config.run_previous = False
+        plugin._start_dt = datetime(2026, 4, 7, 12, 0, 0)
+        now = datetime(2026, 4, 7, 12, 0, 0)
+        entry = self._make_entry("2026-04-07 11:00:00")
+        assert plugin._is_due(entry, now) is False
+
+    def test_run_previous_true_includes_old_entries(self, plugin):
+        plugin.config.run_previous = True
+        plugin._start_dt = datetime(2026, 4, 7, 12, 0, 0)
+        now = datetime(2026, 4, 7, 12, 0, 0)
+        entry = self._make_entry("2026-04-07 11:00:00")
+        assert plugin._is_due(entry, now) is True
+
+
+# ---------------------------------------------------------------------------
+# _read_file / _write_all
+# ---------------------------------------------------------------------------
+
+
+class TestFileIO:
+    def test_write_and_read(self, plugin, tmp_path):
+        entries = [{"function": "foo", "timestamp": 1000.0}]
+        plugin._write_all(entries)
+        result = plugin._read_file()
+        assert result == entries
+
+    def test_read_missing_file_returns_empty(self, tmp_path):
+        config = ScheduledCronInputConfig(schedule_file=str(tmp_path / "nonexistent.json"))
+        with patch("inputs.plugins.scheduled_cron_input.IOProvider"):
+            with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+                p = ScheduledCronInput(config)
+        os.remove(config.schedule_file)
+        result = p._read_file()
+        assert result == []
+
+    def test_read_invalid_json_returns_empty(self, plugin):
+        with open(plugin.config.schedule_file, "w") as f:
+            f.write("not json")
+        result = plugin._read_file()
+        assert result == []
+
+    def test_read_non_list_json_returns_empty(self, plugin):
+        with open(plugin.config.schedule_file, "w") as f:
+            json.dump({"key": "value"}, f)
+        result = plugin._read_file()
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# _add_entry
+# ---------------------------------------------------------------------------
+
+
+class TestAddEntry:
+    def test_add_entry_appears_in_cache(self, plugin):
+        entry = {"function": "speak", "timestamp": 9999.0, "schedule_time": "2026-04-07 10:00:00"}
+        plugin._add_entry(entry)
+        assert entry in plugin._entries
+
+    def test_entries_sorted_by_timestamp(self, plugin):
+        plugin._add_entry({"function": "b", "timestamp": 200.0, "schedule_time": "2026-04-07 10:00:00"})
+        plugin._add_entry({"function": "a", "timestamp": 100.0, "schedule_time": "2026-04-07 09:00:00"})
+        assert plugin._entries[0]["function"] == "a"
+        assert plugin._entries[1]["function"] == "b"
+
+    def test_add_entry_persists_to_file(self, plugin):
+        entry = {"function": "speak", "timestamp": 9999.0, "schedule_time": "2026-04-07 10:00:00"}
+        plugin._add_entry(entry)
+        assert os.path.exists(plugin.config.schedule_file)
+        with open(plugin.config.schedule_file) as f:
+            data = json.load(f)
+        assert any(e["function"] == "speak" for e in data)
+
+
+# ---------------------------------------------------------------------------
+# _tick — one-time entry dispatch and removal
+# ---------------------------------------------------------------------------
+
+
+class TestTick:
+    def _past_entry(self, function="speak", recurrence=""):
+        return {
+            "function": function,
+            "schedule_time": "2020-01-01 00:00:00",
+            "timestamp": 1000.0,
+            "recurrence": recurrence,
+        }
+
+    def test_one_time_entry_removed_after_tick(self, plugin):
+        entry = self._past_entry()
+        plugin._entries = [entry]
+        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+            plugin._tick()
+        assert plugin._entries == []
+
+    def test_one_time_entry_dispatched(self, plugin):
+        entry = self._past_entry()
+        plugin._entries = [entry]
+        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+            plugin._tick()
+        assert len(plugin.messages) == 1
+        assert plugin.messages[0].message == "speak"
+
+    def test_recurring_entry_rescheduled(self, plugin):
+        entry = self._past_entry(recurrence="daily")
+        plugin._entries = [entry]
+        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+            plugin._tick()
+        assert len(plugin._entries) == 1
+        rescheduled = plugin._entries[0]
+        new_dt = datetime.strptime(rescheduled["schedule_time"], "%Y-%m-%d %H:%M:%S")
+        assert new_dt > datetime.now()
+
+    def test_future_entry_not_dispatched(self, plugin):
+        entry = {
+            "function": "speak",
+            "schedule_time": "2099-01-01 00:00:00",
+            "timestamp": 9999999999.0,
+            "recurrence": "",
+        }
+        plugin._entries = [entry]
+        original_entries = list(plugin._entries)
+        plugin._tick()
+        assert plugin._entries == original_entries
+        assert plugin.messages == []

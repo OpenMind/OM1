@@ -10,7 +10,6 @@ from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
-from providers.execute_cron_job_provider import ExecuteCronJobProvider
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.config import (
@@ -35,8 +34,6 @@ class ModeCortexRuntime:
     io_provider: IOProvider
     sleep_ticker_provider: SleepTickerProvider
     config_provider: ConfigProvider
-    execute_cron_job_provider: Optional[ExecuteCronJobProvider]
-
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
     action_orchestrator: Optional[ActionOrchestrator]
@@ -71,8 +68,6 @@ class ModeCortexRuntime:
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
-        self.execute_cron_job_provider: Optional[ExecuteCronJobProvider] = None
-
         # Hot-reload configuration
         self.hot_reload = hot_reload
         self.check_interval = check_interval
@@ -413,10 +408,6 @@ class ModeCortexRuntime:
         # Stop ConfigProvider
         self.config_provider.stop()
 
-        # Stop ExecuteCronJobProvider if it was started
-        if self.execute_cron_job_provider is not None:
-            self.execute_cron_job_provider.stop()
-
         logging.debug("Tasks cleaned up successfully")
 
     async def run(self) -> None:
@@ -448,14 +439,6 @@ class ModeCortexRuntime:
                 await initial_mode_config.execute_lifecycle_hooks(LifecycleHookType.ON_STARTUP, startup_context)
 
             await self._start_orchestrators()
-
-            # Start the cron job scheduler (always, falling back to defaults if not configured)
-            cs_cfg = (self.current_config.cron_job or {}) if self.current_config else {}
-            self.execute_cron_job_provider = ExecuteCronJobProvider(
-                poll_interval=float(cs_cfg.get("interval", 1)),
-                run_previous=bool(cs_cfg.get("run_previous", True)),
-            )
-            self.execute_cron_job_provider.start()
 
             if self.hot_reload and self.config_path:
                 self.config_watcher_task = asyncio.create_task(self._check_config_changes())

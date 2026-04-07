@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -7,16 +7,6 @@ from actions.schedule_cron_job.connector.schedule_cron_job_json import (
     ScheduleCronJobJSONConnector,
 )
 from actions.schedule_cron_job.interface import ScheduleCronJobInput
-
-
-@pytest.fixture(autouse=True)
-def reset_singleton():
-    """Reset ExecuteCronJobProvider singleton between tests."""
-    from providers.execute_cron_job_provider import ExecuteCronJobProvider
-
-    ExecuteCronJobProvider.reset()  # type: ignore
-    yield
-    ExecuteCronJobProvider.reset()  # type: ignore
 
 
 @pytest.fixture
@@ -79,11 +69,7 @@ class TestParseScheduleTime:
 class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_calls_add_entry(self, connector):
-        mock_provider = MagicMock()
-        with patch(
-            "providers.execute_cron_job_provider.ExecuteCronJobProvider",
-            return_value=mock_provider,
-        ):
+        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",
@@ -92,8 +78,8 @@ class TestConnect:
             )
             await connector.connect(inp)
 
-        mock_provider._add_entry.assert_called_once()
-        entry = mock_provider._add_entry.call_args[0][0]
+        mock_add.assert_called_once()
+        entry = mock_add.call_args[0][0]
         assert entry["function"] == "speak"
         assert entry["args"] == {"action": "hello"}
         assert entry["recurrence"] == "daily"
@@ -103,26 +89,18 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_connect_invalid_schedule_time_logs_and_returns(self, connector):
-        mock_provider = MagicMock()
-        with patch(
-            "providers.execute_cron_job_provider.ExecuteCronJobProvider",
-            return_value=mock_provider,
-        ):
+        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="not-a-date",
                 function="speak",
             )
             await connector.connect(inp)
 
-        mock_provider._add_entry.assert_not_called()
+        mock_add.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_connect_non_json_args_stored_as_raw(self, connector):
-        mock_provider = MagicMock()
-        with patch(
-            "providers.execute_cron_job_provider.ExecuteCronJobProvider",
-            return_value=mock_provider,
-        ):
+        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",
@@ -130,16 +108,12 @@ class TestConnect:
             )
             await connector.connect(inp)
 
-        entry = mock_provider._add_entry.call_args[0][0]
+        entry = mock_add.call_args[0][0]
         assert entry["args"] == {"raw": "not-json"}
 
     @pytest.mark.asyncio
     async def test_connect_non_dict_json_args_wrapped(self, connector):
-        mock_provider = MagicMock()
-        with patch(
-            "providers.execute_cron_job_provider.ExecuteCronJobProvider",
-            return_value=mock_provider,
-        ):
+        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",
@@ -147,21 +121,17 @@ class TestConnect:
             )
             await connector.connect(inp)
 
-        entry = mock_provider._add_entry.call_args[0][0]
+        entry = mock_add.call_args[0][0]
         assert entry["args"] == {"value": "just a string"}
 
     @pytest.mark.asyncio
     async def test_connect_default_recurrence_is_empty(self, connector):
-        mock_provider = MagicMock()
-        with patch(
-            "providers.execute_cron_job_provider.ExecuteCronJobProvider",
-            return_value=mock_provider,
-        ):
+        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",
             )
             await connector.connect(inp)
 
-        entry = mock_provider._add_entry.call_args[0][0]
+        entry = mock_add.call_args[0][0]
         assert entry["recurrence"] == ""

@@ -21,9 +21,9 @@ class ScheduleCronJobConfig(ActionConfig):
 
 
 class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, ScheduleCronJobInput]):
-    """Connector that persists scheduled cron jobs via the ExecuteCronJobProvider cache.
+    """Connector that persists scheduled cron jobs via ScheduledCronInput.
 
-    Delegates storage to ``ExecuteCronJobProvider._add_entry()`` so that the
+    Delegates storage to ``ScheduledCronInput.add_entry()`` so that the
     in-memory cache and the JSON file are always updated together in a single
     atomic operation.
 
@@ -73,7 +73,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
     # ------------------------------------------------------------------
 
     async def connect(self, output_interface: ScheduleCronJobInput) -> None:
-        """Persist a scheduled cron job entry and register it with ExecuteCronJobProvider."""
+        """Persist a scheduled cron job entry via ScheduledCronInput."""
         try:
             timestamp = self._parse_schedule_time(output_interface.schedule_time)
         except ValueError as exc:
@@ -102,10 +102,10 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             "registered_at": time.time(),
         }
 
-        # Update the provider's in-memory cache and flush to file atomically.
-        from providers.execute_cron_job_provider import ExecuteCronJobProvider
+        # Update the in-memory cache and flush to file atomically.
+        from inputs.plugins.scheduled_cron_input import ScheduledCronInput
 
-        ExecuteCronJobProvider()._add_entry(entry)
+        ScheduledCronInput.add_entry(entry)
 
         logger.info(
             "Scheduled cron job registered: function=%s at '%s' (timestamp=%.3f, recurrence=%r)",
