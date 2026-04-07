@@ -57,6 +57,9 @@ from .idl import (
     Twist,
     TwistWithCovariance,
     TwistWithCovarianceStamped,
+    UnitreeRequest,
+    UnitreeRequestHeader,
+    UnitreeRequestIdentity,
     Vector3,
     geographic_msgs,
     geometry_msgs,
@@ -134,6 +137,10 @@ __all__ = [
     "LaserScan",
     "DockStatus",
     "Paths",
+    # unitree_api_msgs
+    "UnitreeRequest",
+    "UnitreeRequestHeader",
+    "UnitreeRequestIdentity",
     # session
     "create_zenoh_config",
     "open_zenoh_session",

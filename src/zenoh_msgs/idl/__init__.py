@@ -52,6 +52,11 @@ from .status_msgs import (
     TTSStatusResponse,
 )
 from .std_msgs import ColorRGBA, Duration, Header, String, Time, prepare_header
+from .unitree_api_msgs import Request as UnitreeRequest
+from .unitree_api_msgs import RequestHeader as UnitreeRequestHeader
+from .unitree_api_msgs import RequestIdentity as UnitreeRequestIdentity
+from .unitree_api_msgs import RequestLease as UnitreeRequestLease
+from .unitree_api_msgs import RequestPolicy as UnitreeRequestPolicy
 
 __all__ = [
     # std_msgs
@@ -119,4 +124,10 @@ __all__ = [
     "LaserScan",
     "DockStatus",
     "Paths",
+    # unitree_api_msgs
+    "UnitreeRequest",
+    "UnitreeRequestHeader",
+    "UnitreeRequestIdentity",
+    "UnitreeRequestLease",
+    "UnitreeRequestPolicy",
 ]
