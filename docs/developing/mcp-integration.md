@@ -40,6 +40,19 @@ This enables:
 - **Isolation**: Different modes access different tools
 - **Flexibility**: Hot-swap capabilities without code changes
 
+### Install Node
+
+MCP servers typically run via `npx`, which requires Node.js to be installed.
+
+Check if you already have it installed by running the following commands -
+
+```bash
+node --version
+npm --version
+```
+
+If you don't have node installed on your system, follow the steps [here](https://nodejs.org/en/download/current).
+
 ### Add MCP Servers to Your Config
 
 | Field | Type | Required | Description | Example |

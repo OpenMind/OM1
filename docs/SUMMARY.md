@@ -22,7 +22,7 @@
     * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
 
-## MCP Integration <a href="#mcp-integration" id="mcp-integration"></a>
+## MCP Integration <a href="#mcp" id="mcp"></a>
 
 * [MCP Integration](developing/mcp-integration.md)
 
@@ -43,12 +43,6 @@
     * [TurtleBot4](robotics/turtlebot4_zenoh.md)
     * [UBTech Yanshee](robotics/ubtech_yanshee.md)
 
-## Simulators <a href="#simulators" id="simulators"></a>
-
-* [Gazebo](simulators/gazebo.md)
-* [Isaac Sim](simulators/isaac-sim.md)
-* [Troubleshooting Guidelines](simulators/troubleshooting.md)
-
 ## Full Autonomy Guidelines <a href="#full-autonomy-guidelines" id="full-autonomy-guidelines"></a>
 
 * [Brainpack Introduction](full_autonomy_guidelines/brainpack_introduction.md)
@@ -56,12 +50,20 @@
 * [Setup BrainPack](full_autonomy_guidelines/setup_system.md)
 * [System Config](full_autonomy_guidelines/system_config.md)
 * [OTA Setup](full_autonomy_guidelines/ota_setup.md)
-* [Modes and Lifecycle](full_autonomy_guidelines/modes.md)
-    * [Modes](full_autonomy_guidelines/modes.md)
-    * [Mode Selection](full_autonomy_guidelines/mode_selection.md)
-    * [Transition Rules](full_autonomy_guidelines/transition_rules.md)
-    * [Lifecycle](full_autonomy_guidelines/lifecycle.md)
 * [NVIDIA Thor](robotics/nvidia_thor.md)
+
+## Modes and Lifecycle <a href="#modes-and-lifecycle" id="modes-and-lifecycle"></a>
+
+* [Modes](full_autonomy_guidelines/modes.md)
+* [Mode Selection](full_autonomy_guidelines/mode_selection.md)
+* [Transition Rules](full_autonomy_guidelines/transition_rules.md)
+* [Lifecycle](full_autonomy_guidelines/lifecycle.md)
+
+## Simulators <a href="#simulators" id="simulators"></a>
+
+* [Gazebo](simulators/gazebo.md)
+* [Isaac Sim](simulators/isaac-sim.md)
+* [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
 ## API References <a href="#api-reference" id="api-reference"></a>
 
