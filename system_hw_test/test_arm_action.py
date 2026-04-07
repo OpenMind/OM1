@@ -68,8 +68,7 @@ async def publish_custom_action(action_name: str) -> None:
 
 async def publish_builtin_action(action_name: str, action_id: int) -> None:
     msg = (
-        "{header: {identity: {api_id: " + str(BUILTIN_API_ID) + "}}, "
-        'parameter: \'{"data": ' + str(action_id) + "}'}"
+        "{header: {identity: {api_id: " + str(BUILTIN_API_ID) + "}}, " 'parameter: \'{"data": ' + str(action_id) + "}'}"
     )
 
     cmd = ["ros2", "topic", "pub", "--once", ROS2_TOPIC, ROS2_MSG_TYPE, msg]
@@ -101,9 +100,7 @@ async def main() -> None:
         await publish_custom_action(action)
     elif action in BUILTIN_ACTIONS:
         action_id = BUILTIN_ACTIONS[action]
-        print(
-            f"Sending BUILT-IN action: {action} (api_id={BUILTIN_API_ID}, data={action_id})"
-        )
+        print(f"Sending BUILT-IN action: {action} (api_id={BUILTIN_API_ID}, data={action_id})")
         await publish_builtin_action(action, action_id)
     else:
         print(f"Unknown action: {action}")

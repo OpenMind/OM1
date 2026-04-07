@@ -45,9 +45,7 @@ class TestARMZenohConnectorInit:
     def test_init_handles_zenoh_error(self):
         """Test that init handles Zenoh session errors."""
         with (
-            patch(
-                "actions.arm_g1.connector.zenoh.open_zenoh_session"
-            ) as mock_open_session,
+            patch("actions.arm_g1.connector.zenoh.open_zenoh_session") as mock_open_session,
             patch("actions.arm_g1.connector.zenoh.logging") as mock_logging,
         ):
             mock_open_session.side_effect = Exception("Connection refused")
@@ -73,9 +71,7 @@ class TestARMZenohConnectorConnect:
     async def test_connect_no_session(self):
         """Test connect with no Zenoh session logs error."""
         with (
-            patch(
-                "actions.arm_g1.connector.zenoh.open_zenoh_session"
-            ) as mock_open_session,
+            patch("actions.arm_g1.connector.zenoh.open_zenoh_session") as mock_open_session,
             patch("actions.arm_g1.connector.zenoh.logging") as mock_logging,
         ):
             mock_open_session.side_effect = Exception("No connection")
@@ -85,9 +81,7 @@ class TestARMZenohConnectorConnect:
             arm_input = ArmInput(action=ArmAction.SHAKE_HAND)
             await conn.connect(arm_input)
 
-            mock_logging.error.assert_any_call(
-                "ARMZenohConnector: No Zenoh session available"
-            )
+            mock_logging.error.assert_any_call("ARMZenohConnector: No Zenoh session available")
 
     @pytest.mark.asyncio
     async def test_connect_unknown_action(self, connector, mock_dependencies):
@@ -164,9 +158,7 @@ class TestARMZenohConnectorStop:
 
     def test_stop_no_session(self):
         """Test stop with no session does nothing."""
-        with patch(
-            "actions.arm_g1.connector.zenoh.open_zenoh_session"
-        ) as mock_open_session:
+        with patch("actions.arm_g1.connector.zenoh.open_zenoh_session") as mock_open_session:
             mock_open_session.side_effect = Exception("No connection")
             config = ActionConfig()
             conn = ARMZenohConnector(config)
