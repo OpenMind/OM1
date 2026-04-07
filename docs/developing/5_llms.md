@@ -27,7 +27,7 @@ OM1 supports three LLM execution strategies depending on your latency, quality, 
 |------|-------------|----------|
 | **Single** | One LLM processes all requests | Good for simple use cases |
 | **Dual** | Local + cloud LLMs in parallel | Slow but with better performance |
-| **Parallel** | N specialized LLMs run simultaneously | Best |
+| **Parallel** | N specialized LLMs run simultaneously | Best performance |
 
 ### Single LLM Integration
 
@@ -48,6 +48,8 @@ return parsed_response
 ```
 
 The standard `pydantic` output model is defined in `src/llm/output_model.py`.
+
+Example config:
 
 ```bash
   "cortex_llm": {
@@ -72,12 +74,12 @@ Example config:
 
 ```bash
   "cortex_llm": {
-    "type": "DualLLM",
+    "type": "DualLLM",      // The class name of the LLM plugin you wish to use
     "config": {
-        "local_llm_type": "QwenLLM",
-        "local_llm_config": {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},
-        "cloud_llm_type": "OpenAILLM",
-        "cloud_llm_config": {"model": "gpt-4.1"}
+        "local_llm_type": "QwenLLM",                // The class name of the LLM plugin you wish to use for local llm
+        "local_llm_config": {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},        // model name you wish to use
+        "cloud_llm_type": "OpenAILLM",              // The class name of the LLM plugin you wish to use for cloud llm
+        "cloud_llm_config": {"model": "gpt-4.1"}    // model name you wish to use
     }
 }
 ```
@@ -108,23 +110,23 @@ Example config:
 
 ```bash
   "cortex_llm": {
-    "type": "ParallelLLM",
+    "type": "ParallelLLM",      // The class name of the LLM plugin you wish to use
     "config": {
         "llms": [
             {
-                "llm_type": "OpenAILLM",
-                "llm_config": {"model": "gpt-4.1"},
-                "action_filter": ["speak", "emotion"]
+                "llm_type": "OpenAILLM",                // The class name of the LLM plugin you wish to use
+                "llm_config": {"model": "gpt-4.1"},     // model name you wish to use
+                "action_filter": ["speak", "emotion"]   // preferred action for the model
             },
             {
-                "llm_type": "QwenLLM",
-                "llm_config": {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},
-                "action_filter": ["move", "navigate"]
+                "llm_type": "QwenLLM",                       // The class name of the LLM plugin you wish to use
+                "llm_config": {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},      // model name you wish to use
+                "action_filter": ["move", "navigate"]       // preferred action for the model
             },
             {
-                "llm_type": "DeepSeekLLM",
-                "llm_config": {"model": "deepseek-chat"},
-                "action_filter": ["search", "analyze"]
+                "llm_type": "DeepSeekLLM",                   // The class name of the LLM plugin you wish to use
+                "llm_config": {"model": "deepseek-chat"},    // preferred action for the model
+                "action_filter": ["search", "analyze"]       // preferred action for the model
             }
         ],
         "execute_immediately": true
@@ -176,7 +178,7 @@ The system employs four primary agents that work together:
 ### Main API Endpoint
 
 ```python
-    self.endpoint = "https://api.openmind.com/api/core/agent"
+    self.endpoint = "/api/core/{provider}/chat/completions"
 
     headers = {
         "Authorization": f"Bearer {self._config.api_key}",
@@ -191,9 +193,9 @@ The system employs four primary agents that work together:
         "structured_outputs": True,
     }
 
-    logging.debug(f"MultiLLM system_prompt: {request['system_prompt']}")
-    logging.debug(f"MultiLLM inputs: {request['inputs']}")
-    logging.debug(f"MultiLLM available_actions: {request['available_actions']}")
+    logging.debug(f"System_prompt: {request['system_prompt']}")
+    logging.debug(f"Inputs: {request['inputs']}")
+    logging.debug(f"Available_actions: {request['available_actions']}")
 
     response = requests.post(
         self.endpoint,
@@ -203,37 +205,6 @@ The system employs four primary agents that work together:
 
     output = response.json().get("content")
     return self._output_model.model_validate_json(output)
-```
-
-### API Debug Response Structure
-
-In addition to the response flowing to OM1, which contains actions the robot should perform, there is an additional response you can use for debugging and to observe token usage ("usage").
-
-```json
-{
-    "content": "Synthesized response from team agent",
-    "model": "gpt-4.1-nano",
-    "agent_contents": {
-        "team_agent": "Team agent output",
-        "navigation_agent": "Navigation agent output",
-        "perception_agent": "Perception agent output",
-        "rag_agent": "RAG agent context"
-    },
-    "conversation_id": "unique-conversation-id",
-    "usage": {
-        "team_agent": {},
-        "navigation_agent": {},
-        "perception_agent": {},
-        "rag_agent": {}
-    },
-    "duration": {
-        "team_agent": 0.5,
-        "navigation_agent": 0.3,
-        "perception_agent": 0.4,
-        "rag_agent": 0.2
-    },
-    "total_duration": 1.4
-}
 ```
 
 ### Supported Models
