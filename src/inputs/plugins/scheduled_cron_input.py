@@ -74,7 +74,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         await asyncio.sleep(0.1)
         return None
 
-    async def raw_to_text(self, raw_input: Optional[str]) -> None:
+    async def raw_to_text(self, raw_input: Optional[str]):
         """No-op: messages are injected directly via inject() and formatted_latest_buffer()."""
         pass
 
