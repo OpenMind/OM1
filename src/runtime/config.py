@@ -156,6 +156,7 @@ class RuntimeConfig:
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
     mcp_servers: Optional[Any] = None
+    cron_job: Optional[Dict[str, Any]] = None
 
 
 def add_meta(
@@ -331,6 +332,7 @@ class ModeConfig:
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
     mcp_servers: Optional[Any] = None
+    cron_job: Optional[Dict[str, Any]] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
@@ -377,6 +379,7 @@ class ModeConfig:
             action_dependencies=self.action_dependencies,
             knowledge_base=global_config.knowledge_base,
             mcp_servers=self.mcp_servers,
+            cron_job=self.cron_job,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -603,6 +606,7 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
             save_interactions=mode_data.get("save_interactions", False),
             action_execution_mode=mode_data.get("action_execution_mode"),
             action_dependencies=mode_data.get("action_dependencies"),
+            cron_job=mode_data.get("cron_job"),
             _raw_inputs=mode_data.get("agent_inputs", []),
             _raw_llm=mode_data.get("cortex_llm"),
             _raw_simulators=mode_data.get("simulators", []),
@@ -718,6 +722,14 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         )
         for bg in mode_config._raw_backgrounds
     ]
+
+    # Patch ScheduleCall docstring based on cron_job.use_program_input so the
+    # LLM sees the correct instructions before its schema/prompt is generated.
+    cs_cfg = mode_config.cron_job
+    if cs_cfg is not None:
+        from actions.schedule_cron_job.interface import configure_docstring
+
+        configure_docstring(bool(cs_cfg.get("use_program_input", False)))
 
     # Load LLM
     llm_config = mode_config._raw_llm or system_config.global_cortex_llm

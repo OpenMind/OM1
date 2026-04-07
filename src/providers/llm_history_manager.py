@@ -27,6 +27,7 @@ ACTION_MAP = {
     "emotion": "**** felt: {}.",
     "speak": "**** said: {}",
     "move": "**** performed this motion: {}.",
+    "schedule_cron_job": "**** registered a scheduled cron job: {}.",
 }
 
 
@@ -76,6 +77,10 @@ class LLMHistoryManager:
 
         # history buffer
         self.history: List[ChatMessage] = []
+
+        # When True, exchanges where the LLM calls schedule_cron_job are not
+        # recorded in history so they don't repeat on subsequent turns.
+        self.suppress_schedule_history: bool = False
 
         # io provider
         self.io_provider = IOProvider()
@@ -314,23 +319,37 @@ class LLMHistoryManager:
 
                 if response is not None:
 
-                    action_message = "Given that information, **** took these actions: " + (
-                        " | ".join(
-                            ACTION_MAP[action.type.lower()].format(action.value if action.value else "")
+                    # Suppress cron-job scheduling exchanges from history so the
+                    # LLM doesn't see them on subsequent turns and re-schedule.
+                    is_cron_exchange = (
+                        self.history_manager.suppress_schedule_history
+                        and any(
+                            action.type.lower() == "schedule_cron_job"
                             for action in response.actions  # type: ignore
-                            if action.type.lower() in ACTION_MAP
                         )
                     )
 
-                    action_message = action_message.replace("****", self.agent_name)
+                    if is_cron_exchange:
+                        # Remove the user input appended before the LLM call.
+                        if self.history_manager.history and self.history_manager.history[-1].role == "user":
+                            self.history_manager.history.pop()
+                        logging.debug("suppress_schedule_history: dropped cron-job exchange from history")
+                    else:
+                        action_message = "Given that information, **** took these actions: " + (
+                            " | ".join(
+                                ACTION_MAP[action.type.lower()].format(action.value if action.value else "")
+                                for action in response.actions  # type: ignore
+                                if action.type.lower() in ACTION_MAP
+                            )
+                        )
+                        action_message = action_message.replace("****", self.agent_name)
+                        self.history_manager.history.append(ChatMessage(role="assistant", content=action_message))
 
-                    self.history_manager.history.append(ChatMessage(role="assistant", content=action_message))
-
-                    if (
-                        self.history_manager.config.history_length > 0
-                        and len(self.history_manager.history) > self.history_manager.config.history_length
-                    ):
-                        await self.history_manager.start_summary_task(self.history_manager.history)
+                        if (
+                            self.history_manager.config.history_length > 0
+                            and len(self.history_manager.history) > self.history_manager.config.history_length
+                        ):
+                            await self.history_manager.start_summary_task(self.history_manager.history)
                 else:
                     if self.history_manager.history and self.history_manager.history[-1].role == "user":
                         logging.warning("LLM response failed, removing unpaired user message")

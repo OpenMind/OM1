@@ -80,8 +80,12 @@ class Fuser:
         logging.debug(f"InputMessageArray: {input_strings}")
 
         # Combine all inputs, memories, and configurations into a single prompt
-        today = datetime.now().strftime("%B %-d, %Y")
-        system_prompt = "\nBASIC CONTEXT:\n" + self.config.system_prompt_base + f"\n\nToday is {today}.\n"
+        now = datetime.now().strftime("%B %-d, %Y %H:%M:%S")
+        system_prompt = (
+            "\nBASIC CONTEXT:\n"
+            + self.config.system_prompt_base
+            + f"\n\nCurrent time is {now}.\n"
+        )
 
         inputs_fused = "".join([s for s in input_strings if s is not None])
 

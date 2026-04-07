@@ -11,6 +11,7 @@ from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
 from providers.io_provider import IOProvider
+from providers.execute_cron_job_provider import ExecuteCronJobProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.config import (
     LifecycleHookType,
@@ -34,6 +35,7 @@ class ModeCortexRuntime:
     io_provider: IOProvider
     sleep_ticker_provider: SleepTickerProvider
     config_provider: ConfigProvider
+    execute_cron_job_provider: Optional[ExecuteCronJobProvider]
 
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
@@ -69,6 +71,7 @@ class ModeCortexRuntime:
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
+        self.execute_cron_job_provider: Optional[ExecuteCronJobProvider] = None
 
         # Hot-reload configuration
         self.hot_reload = hot_reload
@@ -410,6 +413,10 @@ class ModeCortexRuntime:
         # Stop ConfigProvider
         self.config_provider.stop()
 
+        # Stop ExecuteCronJobProvider if it was started
+        if self.execute_cron_job_provider is not None:
+            self.execute_cron_job_provider.stop()
+
         logging.debug("Tasks cleaned up successfully")
 
     async def run(self) -> None:
@@ -441,6 +448,40 @@ class ModeCortexRuntime:
                 await initial_mode_config.execute_lifecycle_hooks(LifecycleHookType.ON_STARTUP, startup_context)
 
             await self._start_orchestrators()
+
+            # Start the cron job scheduler if configured
+            cs_cfg = self.current_config.cron_job if self.current_config else None
+            if cs_cfg is not None:
+                self.execute_cron_job_provider = ExecuteCronJobProvider(
+                    poll_interval=float(cs_cfg.get("interval", 1)),
+                    run_previous=bool(cs_cfg.get("run_previous", True)),
+                    use_program_input=bool(cs_cfg.get("use_program_input", False)),
+                )
+                self.execute_cron_job_provider.register_actions(
+                    self.current_config.agent_actions if self.current_config else []
+                )
+                running_loop = asyncio.get_running_loop()
+                if self.current_config and self.current_config.mcp_servers:
+                    self.execute_cron_job_provider.register_mcp(
+                        self.current_config.mcp_servers,
+                        running_loop,
+                    )
+                if self.action_orchestrator:
+                    self.execute_cron_job_provider.register_action_orchestrator(
+                        self.action_orchestrator,
+                        running_loop,
+                    )
+                self.execute_cron_job_provider.start()
+
+                if cs_cfg.get("suppress_history", False) and self.current_config:
+                    llm = self.current_config.cortex_llm
+                    history_manager = getattr(llm, "history_manager", None)
+                    if history_manager is not None:
+                        history_manager.suppress_schedule_history = True
+                        logging.info(
+                            "ExecuteCronJobProvider: suppress_history enabled — "
+                            "schedule_cron_job exchanges will not be stored in LLM history"
+                        )
 
             if self.hot_reload and self.config_path:
                 self.config_watcher_task = asyncio.create_task(self._check_config_changes())
@@ -591,6 +632,9 @@ class ModeCortexRuntime:
                 if self.mcp_orchestrator:
                     succeeded_calls = set()
                     original_prompt = prompt
+                    # Track OM1 action types dispatched during MCP rounds so the
+                    # final recall response doesn't re-execute the same actions.
+                    dispatched_om1_types: set = set()
 
                     for round_idx in range(self.mcp_orchestrator.max_rounds):
                         om1_actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
@@ -607,6 +651,7 @@ class ModeCortexRuntime:
 
                         if om1_actions:
                             await self.action_orchestrator.promise(om1_actions)
+                            dispatched_om1_types.update(a.type.lower() for a in om1_actions)
 
                         logging.info(
                             f"MCP round {round_idx + 1}/{self.mcp_orchestrator.max_rounds}: "
@@ -643,6 +688,11 @@ class ModeCortexRuntime:
 
                     if output is not None:
                         output.actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
+                        if dispatched_om1_types:
+                            output.actions = [
+                                a for a in output.actions
+                                if a.type.lower() not in dispatched_om1_types
+                            ]
 
                 if output is None:
                     logging.debug("No output from LLM after MCP processing")
@@ -651,6 +701,19 @@ class ModeCortexRuntime:
                 if self._is_reloading or not self._is_generation_valid(cortex_generation, "action execution"):
                     logging.debug("Skipping action execution due to mode transition")
                     return
+
+                # Prevent cron-triggered ticks from re-registering jobs:
+                # if the input came from ScheduledCronInput, strip any
+                # schedule_cron_job actions the LLM may have emitted.
+                try:
+                    from inputs.plugins.scheduled_cron_input import ScheduledCronInput
+                    if ScheduledCronInput.cron_triggered:
+                        output.actions = [
+                            a for a in output.actions
+                            if a.type.lower() != "schedule_cron_job"
+                        ]
+                except ImportError:
+                    pass
 
                 if self.simulator_orchestrator:
                     await self.simulator_orchestrator.promise(output.actions)
