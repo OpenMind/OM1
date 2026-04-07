@@ -66,6 +66,3 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
 
         logging.info(f"Executing action with ID: {action_id}")
         self.client.ExecuteAction(action_id)
-
-        logging.info(f"Executing action with ID: {action_id}")
-        self.client.ExecuteAction(action_id)

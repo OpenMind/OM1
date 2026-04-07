@@ -8,9 +8,7 @@ from pycdr2.types import int32, int64, uint8
 
 
 @dataclass
-class RequestIdentity(
-    IdlStruct, typename="unitree_api::msg::dds_::RequestIdentity_"
-):
+class RequestIdentity(IdlStruct, typename="unitree_api::msg::dds_::RequestIdentity_"):
     """Request identity containing API routing information."""
 
     id: int64 = 0
