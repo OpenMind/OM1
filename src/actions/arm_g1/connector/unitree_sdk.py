@@ -44,40 +44,28 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
             logging.info("No action to perform, returning.")
             return
 
-        # Custom actions (api_id=9001) are not supported via the SDK connector.
-        # Use the Zenoh connector for custom action support.
-        custom_actions = {
-            "shake hand",
-            "face wave",
-            "hands up",
-            "stand still",
-            "show hand",
-            "wave",
-            "move",
-            "show hand1",
-            "show hand2",
-            "my gesture",
-        }
-        if output_interface.action in custom_actions:
-            logging.warning(
-                f"Custom action '{output_interface.action}' is not supported via SDK connector. "
-                "Use the Zenoh connector for custom actions."
-            )
-            return
+        action_id = None
 
-        builtin_action_map = {
-            "left kiss": 12,
-            "right kiss": 13,
-            "clap": 17,
-            "high five": 18,
-            "heart": 20,
-            "high wave": 26,
-        }
-
-        action_id = builtin_action_map.get(output_interface.action)
-        if action_id is None:
+        if output_interface.action == "left kiss":
+            action_id = 12
+        elif output_interface.action == "right kiss":
+            action_id = 13
+        elif output_interface.action == "clap":
+            action_id = 17
+        elif output_interface.action == "high five":
+            action_id = 18
+        elif output_interface.action == "shake hand":
+            action_id = 27
+        elif output_interface.action == "heart":
+            action_id = 20
+        elif output_interface.action == "high wave":
+            action_id = 26
+        else:
             logging.warning(f"Unknown action: {output_interface.action}")
             return
+
+        logging.info(f"Executing action with ID: {action_id}")
+        self.client.ExecuteAction(action_id)
 
         logging.info(f"Executing action with ID: {action_id}")
         self.client.ExecuteAction(action_id)
