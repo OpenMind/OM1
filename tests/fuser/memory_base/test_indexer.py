@@ -8,6 +8,7 @@ from src.fuser.memory_base.indexer import (
     MemoryIndex,
     _cosine_similarity,
     _hash_text,
+    parse_daily_file,
 )
 
 
@@ -189,3 +190,44 @@ class TestMemoryIndexSearch:
         if results:
             cached_doc = list(index._cache.values())[0][1]
             assert cached_doc.score is None
+
+
+class TestParseDailyFile:
+    def test_date_prefix_in_chunk_text(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text("## 10:00:00\n- **User**: hello\n- **Robot**: hi\n", encoding="utf-8")
+        chunks = parse_daily_file(f)
+        assert len(chunks) == 1
+        assert chunks[0].text.startswith("[Date: 2026-04-06]")
+
+    def test_chunk_contains_conversation(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text("## 10:00:00\n- **User**: hello\n- **Robot**: hi\n", encoding="utf-8")
+        chunks = parse_daily_file(f)
+        assert "hello" in chunks[0].text
+        assert "hi" in chunks[0].text
+
+    def test_multiple_sections_produce_multiple_chunks(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text(
+            "## 10:00:00\n- **User**: first\n\n## 11:00:00\n- **User**: second\n",
+            encoding="utf-8",
+        )
+        chunks = parse_daily_file(f)
+        assert len(chunks) == 2
+        assert all(c.text.startswith("[Date: 2026-04-06]") for c in chunks)
+
+    def test_source_metadata_is_filename(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text("## 10:00:00\n- **User**: hello\n", encoding="utf-8")
+        chunks = parse_daily_file(f)
+        assert chunks[0].metadata["source"] == "2026-04-06.md"
+
+    def test_empty_file_returns_no_chunks(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text("", encoding="utf-8")
+        assert parse_daily_file(f) == []
+
+    def test_missing_file_returns_no_chunks(self, tmp_path):
+        f = tmp_path / "missing.md"
+        assert parse_daily_file(f) == []

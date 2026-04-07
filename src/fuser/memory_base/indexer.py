@@ -145,6 +145,8 @@ def parse_daily_file(filepath: Path) -> list[Document]:
         logging.error(f"Memory: failed to read {filepath}: {e}")
         return []
 
+    date_prefix = f"[Date: {filepath.stem}]"
+
     chunks: list[Document] = []
     current_chunk = ""
     chunk_start_line = 1
@@ -153,7 +155,7 @@ def parse_daily_file(filepath: Path) -> list[Document]:
         if line.startswith("## ") and current_chunk.strip():
             chunks.append(
                 Document(
-                    text=current_chunk.strip(),
+                    text=f"{date_prefix}\n{current_chunk.strip()}",
                     metadata={
                         "source": filepath.name,
                         "chunk_id": len(chunks),
@@ -169,7 +171,7 @@ def parse_daily_file(filepath: Path) -> list[Document]:
     if current_chunk.strip():
         chunks.append(
             Document(
-                text=current_chunk.strip(),
+                text=f"{date_prefix}\n{current_chunk.strip()}",
                 metadata={
                     "source": filepath.name,
                     "chunk_id": len(chunks),
