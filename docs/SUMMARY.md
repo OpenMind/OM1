@@ -22,7 +22,7 @@
     * [Zenoh ROS2 Bridge](developing/zenoh-bridge.md)
 * [Troubleshooting Guide](developing/9_troubleshooting_guide.md)
 
-## MCP Integration <a href="#mcp" id="mcp-integration"></a>
+## MCP Integration <a href="#mcp" id="mcp"></a>
 
 * [MCP Integration](developing/mcp-integration.md)
 
