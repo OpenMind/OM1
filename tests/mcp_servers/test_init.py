@@ -29,7 +29,8 @@ class TestLoadMcp:
         ]
         client = load_mcp(configs)
 
-        assert client._exit_stack is None
+        # main's MCPClientManager uses _started / _sessions / _tools / _tasks
+        assert client._started is False
         assert len(client._sessions) == 0
         assert len(client._tools) == 0
-        assert client.task is None
+        assert client._tasks == []

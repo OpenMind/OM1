@@ -200,6 +200,55 @@ class SkillOrchestrator:
 
         return SkillProcessResult(output=output, augmented_prompt=current_prompt)
 
+    def execute_read_skills(
+        self, actions: List[Any], succeeded_calls: Set[str]
+    ) -> List[dict]:
+        """Execute read_skill calls, skipping already-succeeded ones.
+
+        Returns a list of result dicts (may be empty if all were deduped).
+        Updates succeeded_calls in-place for successful reads.
+        """
+        results = []
+        for action in actions:
+            sig = self.call_signature(action)
+            if sig in succeeded_calls:
+                continue
+            result = self._execute_read_skill(action)
+            results.append(result)
+            if result["success"]:
+                succeeded_calls.add(sig)
+        return results
+
+    def call_signature(self, action: Any) -> str:
+        """Build a dedup signature for an action."""
+        value = action.value
+        if isinstance(value, dict):
+            return f"{action.type}|{json.dumps(value, sort_keys=True)}"
+        return f"{action.type}|{value}"
+
+    def build_skill_recall_prompt(
+        self, original_prompt: str, results: List[dict]
+    ) -> str:
+        """Build recall prompt that includes skill instructions.
+
+        This prompt is also passed to downstream MCPOrchestrator
+        so that MCP recall rounds retain the skill context.
+        """
+        lines = []
+        for r in results:
+            status = "OK" if r["success"] else "FAILED"
+            lines.append(f"[{r['tool_key']}] {status}: {r['content']}")
+        result_block = "\n".join(lines)
+
+        return (
+            f"{original_prompt}\n\n"
+            f"[Skill Instructions]\n{result_block}\n\n"
+            f"[Next Step]\n"
+            f"Follow the skill instructions above. "
+            f"Batch tool calls silently; use speak only after completing a key milestone. "
+            f"Call only the necessary tools.\n"
+        )
+
     def _execute_read_skill(self, action: Any) -> dict:
         """Execute a single read_skill call."""
         try:
@@ -245,28 +294,8 @@ class SkillOrchestrator:
 
     def _call_signature(self, action: Any) -> str:
         """Build a dedup signature for an action."""
-        value = action.value
-        if isinstance(value, dict):
-            return f"{action.type}|{json.dumps(value, sort_keys=True)}"
-        return f"{action.type}|{value}"
+        return self.call_signature(action)
 
     def _build_recall_prompt(self, original_prompt: str, results: List[dict]) -> str:
-        """Build recall prompt that includes skill instructions.
-
-        This prompt is also passed to downstream MCPOrchestrator
-        so that MCP recall rounds retain the skill context.
-        """
-        lines = []
-        for r in results:
-            status = "OK" if r["success"] else "FAILED"
-            lines.append(f"[{r['tool_key']}] {status}: {r['content']}")
-        result_block = "\n".join(lines)
-
-        return (
-            f"{original_prompt}\n\n"
-            f"[Skill Instructions]\n{result_block}\n\n"
-            f"[Next Step]\n"
-            f"Follow the skill instructions above. "
-            f"Batch tool calls silently; use speak only after completing a key milestone. "
-            f"Call only the necessary tools.\n"
-        )
+        """Build recall prompt that includes skill instructions."""
+        return self.build_skill_recall_prompt(original_prompt, results)

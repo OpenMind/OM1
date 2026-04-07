@@ -342,6 +342,7 @@ class ModeConfig:
     _raw_actions: List[Dict] = field(default_factory=list)
     _raw_backgrounds: List[Dict] = field(default_factory=list)
     _raw_mcp_servers: List[Dict] = field(default_factory=list)
+    _raw_skills: List[str] = field(default_factory=list)
 
     def to_runtime_config(self, global_config: "ModeSystemConfig") -> RuntimeConfig:
         """
@@ -625,7 +626,7 @@ def load_mode_config(
             _raw_backgrounds=mode_data.get("backgrounds", []),
             _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
             _raw_mcp_servers=mode_data.get("mcp_servers", []),
-            skills=mode_data.get("skills"),
+            _raw_skills=mode_data.get("skills", []),
         )
 
         mode_system_config.modes[mode_name] = mode_config
@@ -759,6 +760,9 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
     mode_config.mcp_servers = (
         load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
     )
+
+    # Skills
+    mode_config.skills = mode_config._raw_skills if mode_config._raw_skills else None
 
 
 def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:

@@ -149,14 +149,16 @@ class ModeCortexRuntime:
 
         self.fuser = Fuser(self.current_config)
         self.action_orchestrator = ActionOrchestrator(self.current_config)
-        self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
-        self.background_orchestrator = BackgroundOrchestrator(self.current_config)
+
+        if self.current_config.simulators:
+            self.simulator_orchestrator = SimulatorOrchestrator(self.current_config)
+
+        if self.current_config.backgrounds:
+            self.background_orchestrator = BackgroundOrchestrator(self.current_config)
+
         if self.current_config.mcp_servers:
-            await self.current_config.mcp_servers.start()
-            self.mcp_orchestrator = MCPOrchestrator(
-                self.current_config.mcp_servers,
-                self.current_config.cortex_llm,
-            )
+            self.mcp_orchestrator = MCPOrchestrator(self.current_config)
+            await self.mcp_orchestrator.start()
 
         logging.info(f"Mode '{mode_name}' initialized successfully")
 
@@ -347,6 +349,35 @@ class ModeCortexRuntime:
         self.action_task = None
         self.background_task = None
 
+        self.simulator_orchestrator = None
+        self.background_orchestrator = None
+        self.mcp_orchestrator = None
+        self.skill_orchestrator = None
+
+    def _is_generation_valid(
+        self, cortex_generation: int, context: str = "operation"
+    ) -> bool:
+        """Check if the cortex generation is still valid.
+
+        Parameters
+        ----------
+        cortex_generation : int
+            The generation to check against current generation
+        context : str
+            Context description for logging (default: "operation")
+
+        Returns
+        -------
+        bool
+            True if valid (continue execution), False if invalid (should return early)
+        """
+        if cortex_generation != self._cortex_loop_generation:
+            logging.warning(
+                f"Invalidating current {context}. Cortex generation mismatch: {cortex_generation} vs current {self._cortex_loop_generation}."
+            )
+            return False
+        return True
+
     async def _start_orchestrators(self):
         """
         Start orchestrators for the current mode.
@@ -368,6 +399,10 @@ class ModeCortexRuntime:
             self.action_task = self.action_orchestrator.start()
         if self.background_orchestrator:
             self.background_task = self.background_orchestrator.start()
+
+        # Start MCP orchestrator
+        if self.mcp_orchestrator:
+            await self.mcp_orchestrator.start()
 
         # Start cortex task
         self.cortex_loop_task = asyncio.create_task(self._run_cortex_loop())
@@ -529,10 +564,7 @@ class ModeCortexRuntime:
 
         try:
             while True:
-                if cortex_generation != self._cortex_loop_generation:
-                    logging.info(
-                        f"Cortex loop generation {cortex_generation} invalidated, stopping gracefully"
-                    )
+                if not self._is_generation_valid(cortex_generation, "cortex loop"):
                     return
 
                 skip_status = self.sleep_ticker_provider.skip_sleep
@@ -575,10 +607,7 @@ class ModeCortexRuntime:
             logging.debug("Skipping tick during config reload")
             return
 
-        if cortex_generation != self._cortex_loop_generation:
-            logging.debug(
-                f"Cortex loop generation {cortex_generation} does not match current generation {self._cortex_loop_generation}, skipping tick"
-            )
+        if not self._is_generation_valid(cortex_generation, "tick"):
             return
 
         tick_num = self.io_provider.increment_tick()
@@ -613,56 +642,211 @@ class ModeCortexRuntime:
             logging.debug("Skipping LLM call during mode transition")
             return
 
+        output = None
+
         try:
-            output = await self.current_config.cortex_llm.ask(prompt)
+            async for output in self.current_config.cortex_llm.ask_stream(prompt):
+                if not self._is_generation_valid(cortex_generation, "LLM streaming"):
+                    return
+
+                if output is None:
+                    logging.info("Received empty output from LLM, skipping")
+                    return
+
+                if self._is_reloading or not self._is_generation_valid(
+                    cortex_generation, "LLM streaming"
+                ):
+                    logging.info(
+                        f"Cortex loop generation {cortex_generation} invalidated during streaming, stopping"
+                    )
+                    return
+
+                # Skill round: read_skill tool calls inject instructions before MCP
+                if self.skill_orchestrator and output is not None:
+                    skill_actions = [
+                        a for a in output.actions if a.type == "read_skill"
+                    ]
+                    if skill_actions:
+                        succeeded_skill_calls: set = set()
+                        skill_prompt = prompt
+
+                        for skill_round_idx in range(3):
+                            current_skill_actions = [
+                                a for a in output.actions if a.type == "read_skill"
+                            ]
+                            if not current_skill_actions:
+                                break
+
+                            # Dispatch OM1 actions immediately before skill recall
+                            om1_pre_skill = [
+                                a
+                                for a in output.actions
+                                if a.type != "read_skill"
+                                and not a.type.startswith("mcp_")
+                            ]
+                            if om1_pre_skill:
+                                await self.action_orchestrator.promise(om1_pre_skill)
+
+                            skill_results = self.skill_orchestrator.execute_read_skills(
+                                current_skill_actions, succeeded_skill_calls
+                            )
+                            if not skill_results:
+                                break
+
+                            skill_recall_prompt = (
+                                self.skill_orchestrator.build_skill_recall_prompt(
+                                    skill_prompt, skill_results
+                                )
+                            )
+                            skill_prompt = skill_recall_prompt
+
+                            if not self._is_generation_valid(
+                                cortex_generation, "skill recall"
+                            ):
+                                return
+
+                            try:
+                                skill_streamed_output = None
+                                async for (
+                                    skill_stream_output
+                                ) in self.current_config.cortex_llm.ask_stream(
+                                    skill_recall_prompt
+                                ):
+                                    if not self._is_generation_valid(
+                                        cortex_generation, "skill streaming"
+                                    ):
+                                        return
+                                    if skill_stream_output is None:
+                                        continue
+                                    if skill_streamed_output is None:
+                                        skill_streamed_output = skill_stream_output
+                                    else:
+                                        skill_streamed_output.actions.extend(
+                                            skill_stream_output.actions
+                                        )
+                                output = skill_streamed_output
+                            except asyncio.CancelledError:
+                                logging.info("Skill recall LLM call cancelled")
+                                raise
+
+                            if output is None:
+                                break
+
+                            # Update prompt for downstream MCP
+                            prompt = skill_prompt
+
+                        if not self._is_generation_valid(
+                            cortex_generation, "after skill processing"
+                        ):
+                            return
+
+                        if output is None:
+                            logging.debug("No output from LLM after skill processing")
+                            return
+
+                if self.mcp_orchestrator:
+                    succeeded_calls = set()
+                    original_prompt = prompt
+
+                    for round_idx in range(self.mcp_orchestrator.max_rounds):
+                        om1_actions = self.mcp_orchestrator.extract_om1_actions(
+                            output.actions
+                        )
+
+                        results, mcp_actions = (
+                            await self.mcp_orchestrator.execute_mcp_actions(
+                                output.actions, succeeded_calls
+                            )
+                        )
+
+                        if results is None:
+                            break
+
+                        if not self._is_generation_valid(
+                            cortex_generation, "MCP execution"
+                        ):
+                            return
+
+                        if om1_actions:
+                            await self.action_orchestrator.promise(om1_actions)
+
+                        logging.info(
+                            f"MCP round {round_idx + 1}/{self.mcp_orchestrator.max_rounds}: "
+                            f"executing {len(mcp_actions)} tool(s)"
+                        )
+
+                        recall_prompt = self.mcp_orchestrator.build_result_prompt(
+                            original_prompt, results
+                        )
+
+                        if not self._is_generation_valid(
+                            cortex_generation, "MCP recall prompt"
+                        ):
+                            return
+
+                        try:
+                            streamed_output = None
+                            async for (
+                                stream_output
+                            ) in self.current_config.cortex_llm.ask_stream(
+                                recall_prompt
+                            ):
+                                if not self._is_generation_valid(
+                                    cortex_generation, "MCP recall streaming"
+                                ):
+                                    return
+
+                                if stream_output is None:
+                                    logging.info(
+                                        "Received empty output from LLM, skipping"
+                                    )
+                                    continue
+
+                                if streamed_output is None:
+                                    streamed_output = stream_output
+                                else:
+                                    streamed_output.actions.extend(
+                                        stream_output.actions
+                                    )
+
+                            output = streamed_output
+                        except asyncio.CancelledError:
+                            logging.info("LLM call cancelled during mode transition")
+                            raise
+
+                        if output is None:
+                            break
+
+                    if output is not None:
+                        output.actions = self.mcp_orchestrator.extract_om1_actions(
+                            output.actions
+                        )
+
+                if output is None:
+                    logging.debug("No output from LLM after MCP processing")
+                    return
+
+                if self._is_reloading or not self._is_generation_valid(
+                    cortex_generation, "action execution"
+                ):
+                    logging.debug("Skipping action execution due to mode transition")
+                    return
+
+                if self.simulator_orchestrator:
+                    await self.simulator_orchestrator.promise(output.actions)
+
+                await self.action_orchestrator.promise(output.actions)
+
         except asyncio.CancelledError:
             logging.info("LLM call cancelled during mode transition")
             raise
 
-        if cortex_generation != self._cortex_loop_generation:
-            logging.info(
-                f"Cortex loop generation {cortex_generation} invalidated after LLM call, discarding response"
-            )
+        if not self._is_generation_valid(cortex_generation, "LLM call"):
             return
 
         if output is None:
             logging.debug("No output from LLM")
             return
-
-        if self.skill_orchestrator:
-            skill_result = await self.skill_orchestrator.process(
-                output,
-                prompt,
-                self.current_config.cortex_llm,
-                dispatch_om1=self.action_orchestrator.promise,
-            )
-            output = skill_result.output
-            prompt = skill_result.augmented_prompt
-
-        if output is None:
-            logging.debug("No output from LLM after skill processing")
-            return
-
-        if self.mcp_orchestrator:
-            output = await self.mcp_orchestrator.process(
-                output,
-                prompt,
-                self.current_config.cortex_llm,
-                dispatch_om1=self.action_orchestrator.promise,
-            )
-
-        if output is None:
-            logging.debug("No output from LLM after MCP processing")
-            return
-
-        if self._is_reloading or cortex_generation != self._cortex_loop_generation:
-            logging.debug("Skipping action execution due to mode transition")
-            return
-
-        if self.simulator_orchestrator:
-            await self.simulator_orchestrator.promise(output.actions)
-
-        await self.action_orchestrator.promise(output.actions)
 
     def get_mode_info(self) -> dict:
         """

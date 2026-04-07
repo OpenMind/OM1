@@ -1,12 +1,13 @@
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from mcp.types import TextContent
 
 from mcp_servers.client import (
     MCPClientManager,
+    MCPServerConfig,
     MCPTool,
-    StdioServerConfig,
+    TransportType,
 )
 
 
@@ -47,23 +48,49 @@ class TestConfigParsing:
     """Test server config validation."""
 
     def test_stdio_config(self):
-        config = StdioServerConfig(name="test", command="python", args=["-m", "server"])
+        config = MCPServerConfig(
+            name="test",
+            transport=TransportType.STDIO,
+            command="python",
+            args=["-m", "server"],
+        )
         assert config.name == "test"
+        assert config.transport == TransportType.STDIO
 
-    def test_client_manager_parses_configs(self):
+    def test_sse_config(self):
+        config = MCPServerConfig(
+            name="remote", transport=TransportType.SSE, url="http://localhost:8080/sse"
+        )
+        assert config.transport == TransportType.SSE
+        assert config.url == "http://localhost:8080/sse"
+
+    def test_http_config(self):
+        config = MCPServerConfig(
+            name="remote", transport=TransportType.HTTP, url="http://localhost:8080/mcp"
+        )
+        assert config.transport == TransportType.HTTP
+
+    def test_client_manager_parses_stdio_configs(self):
         configs = [
-            {"name": "s1", "command": "python", "args": []},
-            {"name": "s2", "command": "node", "args": ["-y", "server"]},
+            {"name": "s1", "transport": "stdio", "command": "python", "args": []},
+            {
+                "name": "s2",
+                "transport": "stdio",
+                "command": "node",
+                "args": ["-y", "server"],
+            },
         ]
         manager = MCPClientManager(configs)
 
         assert len(manager._configs) == 2
-        assert isinstance(manager._configs[0], StdioServerConfig)
-        assert isinstance(manager._configs[1], StdioServerConfig)
+        assert isinstance(manager._configs[0], MCPServerConfig)
+        assert manager._configs[0].transport == TransportType.STDIO
 
-    def test_missing_command_raises(self):
-        with pytest.raises(Exception):
-            MCPClientManager([{"name": "bad"}])
+    def test_client_manager_default_transport_stdio(self):
+        """If transport not specified, defaults to stdio."""
+        configs = [{"name": "s1", "command": "python", "args": []}]
+        manager = MCPClientManager(configs)
+        assert manager._configs[0].transport == TransportType.STDIO
 
 
 class TestMCPClientManager:
@@ -125,7 +152,6 @@ class TestMCPClientManager:
 
     @pytest.mark.asyncio
     async def test_call_tool_returns_text(self):
-
         manager = self._make_manager_with_tools()
 
         mock_result = Mock()
@@ -150,88 +176,81 @@ class TestMCPClientManager:
             await manager.call_tool("mcp_nonexistent", {})
 
     @pytest.mark.asyncio
-    async def test_close_all_clears_state(self):
+    async def test_stop_clears_state(self):
         manager = self._make_manager_with_tools()
-        manager._sessions = {"weather": Mock()}
-        manager._exit_stack = AsyncMock()
+        manager._started = True
+        close_event = AsyncMock()
+        close_event.set = Mock()
+        manager._close_event = close_event
 
-        await manager._close_all()
+        # No real tasks — just verify stop() doesn't error and resets state
+        manager._tasks = []
+        await manager.stop()
 
-        assert manager._exit_stack is None
+        assert manager._started is False
         assert len(manager._sessions) == 0
         assert len(manager._tools) == 0
 
     @pytest.mark.asyncio
-    async def test_close_all_handles_error(self):
-        manager = self._make_manager_with_tools()
-        manager._sessions = {"weather": Mock()}
-        mock_stack = AsyncMock()
-        mock_stack.aclose = AsyncMock(side_effect=Exception("close error"))
-        manager._exit_stack = mock_stack
-
-        await manager._close_all()
-
-        assert manager._exit_stack is None
-        assert len(manager._sessions) == 0
-
-    @pytest.mark.asyncio
-    async def test_close_all_noop_when_no_stack(self):
+    async def test_start_noop_when_already_started(self):
         manager = MCPClientManager([])
-        manager._exit_stack = None
+        manager._started = True
 
-        await manager._close_all()
+        # Should be a no-op
+        await manager.start()
+        assert manager._started is True
 
-        assert manager._exit_stack is None
 
+class TestTransportConnectDispatch:
+    """Test that _connect_server dispatches to the right transport."""
 
-class TestConnectAll:
-    """Test connect_all with mocked transports."""
+    def test_stdio_transport_dispatches(self):
+        """Verify stdio config is parsed and stored correctly."""
+        configs = [
+            {"name": "weather", "transport": "stdio", "command": "python", "args": []}
+        ]
+        mgr = MCPClientManager(configs)
+
+        assert len(mgr._configs) == 1
+        assert mgr._configs[0].transport == TransportType.STDIO
+        assert mgr._configs[0].command == "python"
+        assert mgr._started is False
 
     @pytest.mark.asyncio
-    async def test_connect_discovers_tools(self):
-        mock_tool = Mock()
-        mock_tool.name = "get_weather"
-        mock_tool.description = "Get weather info"
-        mock_tool.inputSchema = {
-            "type": "object",
-            "properties": {"city": {"type": "string"}},
-        }
-
-        mock_session = AsyncMock()
-        mock_session.initialize = AsyncMock()
-        mock_session.list_tools = AsyncMock(return_value=Mock(tools=[mock_tool]))
-
-        configs = [
-            {"name": "weather", "command": "python", "args": []},
-        ]
+    async def test_sse_missing_url_raises(self):
+        """SSE config without url should raise on connect."""
+        configs = [{"name": "remote", "transport": "sse"}]
         manager = MCPClientManager(configs)
 
-        with (
-            patch(
-                "mcp_servers.client.StdioTransport.connect",
-                return_value=("read", "write"),
-            ),
-            patch("mcp_servers.client.ClientSession", return_value=mock_session),
-        ):
-            await manager._connect_all()
+        from contextlib import AsyncExitStack
 
-        assert "mcp_weather_get_weather" in manager._tools
-        assert (
-            manager._tools["mcp_weather_get_weather"].description == "Get weather info"
-        )
+        exit_stack = AsyncExitStack()
+        async with exit_stack:
+            with pytest.raises(ValueError, match="requires 'url'"):
+                await manager._connect_server(manager._configs[0], exit_stack)
 
     @pytest.mark.asyncio
-    async def test_connect_handles_server_failure(self):
-        configs = [
-            {"name": "bad_server", "command": "fail", "args": []},
-        ]
+    async def test_http_missing_url_raises(self):
+        """HTTP config without url should raise on connect."""
+        configs = [{"name": "remote", "transport": "http"}]
         manager = MCPClientManager(configs)
 
-        with patch(
-            "mcp_servers.client.StdioTransport.connect",
-            side_effect=ConnectionError("refused"),
-        ):
-            await manager._connect_all()
+        from contextlib import AsyncExitStack
 
-        assert len(manager._tools) == 0
-        assert len(manager._sessions) == 0
+        exit_stack = AsyncExitStack()
+        async with exit_stack:
+            with pytest.raises(ValueError, match="requires 'url'"):
+                await manager._connect_server(manager._configs[0], exit_stack)
+
+    @pytest.mark.asyncio
+    async def test_stdio_missing_command_raises(self):
+        """Stdio config without command should raise on connect."""
+        configs = [{"name": "local", "transport": "stdio"}]
+        manager = MCPClientManager(configs)
+
+        from contextlib import AsyncExitStack
+
+        exit_stack = AsyncExitStack()
+        async with exit_stack:
+            with pytest.raises(ValueError, match="requires 'command'"):
+                await manager._connect_server(manager._configs[0], exit_stack)
