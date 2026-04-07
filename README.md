@@ -17,8 +17,7 @@
 * **Pre-configured Endpoints**: Supports Text-to-Speech, multiple LLMs from OpenAI, xAI, DeepSeek, Anthropic, Meta, Gemini, NearAI, Ollama (local), and multiple Visual Language Models (VLMs) with pre-configured endpoints for each service.
 
 ## Architecture Overview
-![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/dd91457d-010f-43d8-960e-d1165834aa58)
-
+![Artboard 1@4x 1 (1)](https://github.com/user-attachments/assets/0c482257-e4db-4a0a-8d83-d4548ac4beaf)
 
 ## Getting Started
 
