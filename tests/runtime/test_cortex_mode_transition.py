@@ -199,6 +199,7 @@ def cortex_runtime_with_mode_transition(mock_system_config, mock_io_provider, mo
         runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=False)
 
         mock_runtime_config = Mock()
+        mock_runtime_config.skills = None
         mock_runtime_config.hertz = 10.0
         mock_runtime_config.cortex_llm = Mock()
         mock_result = Mock(actions=[])
@@ -247,6 +248,7 @@ def cortex_runtime(mock_system_config, mock_io_provider, mock_mode_manager):
         runtime = ModeCortexRuntime(mock_system_config, "test_config", hot_reload=False)
 
         mock_runtime_config = Mock()
+        mock_runtime_config.skills = None
         mock_runtime_config.hertz = 10.0
         mock_runtime_config.cortex_llm = Mock()
         mock_result = Mock(actions=[])

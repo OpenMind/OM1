@@ -156,6 +156,7 @@ class RuntimeConfig:
     action_dependencies: Optional[Dict[str, List[str]]] = None
     knowledge_base: Optional[Dict[str, Any]] = None
     mcp_servers: Optional[Any] = None
+    skills: Optional[List[str]] = None
 
 
 def add_meta(
@@ -331,6 +332,7 @@ class ModeConfig:
     action_execution_mode: Optional[str] = None
     action_dependencies: Optional[Dict[str, List[str]]] = None
     mcp_servers: Optional[Any] = None
+    skills: Optional[List[str]] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
@@ -377,6 +379,7 @@ class ModeConfig:
             action_dependencies=self.action_dependencies,
             knowledge_base=global_config.knowledge_base,
             mcp_servers=self.mcp_servers,
+            skills=self.skills,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -610,6 +613,7 @@ def load_mode_config(config_name: str, mode_source_path: Optional[str] = None) -
             _raw_backgrounds=mode_data.get("backgrounds", []),
             _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
             _raw_mcp_servers=mode_data.get("mcp_servers", []),
+            skills=mode_data.get("skills", []),
         )
 
         mode_system_config.modes[mode_name] = mode_config

@@ -158,6 +158,7 @@ class TestModeCortexRuntime:
             mock_mcp_servers = Mock()
             mock_mcp_servers.start = AsyncMock()
             mock_mode_config.to_runtime_config.return_value = Mock(
+                skills=None,
                 mcp_servers=mock_mcp_servers,
                 cortex_llm=Mock(),
             )
@@ -190,6 +191,7 @@ class TestModeCortexRuntime:
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
             mock_mode_config.to_runtime_config.return_value = Mock(
+                skills=None,
                 mcp_servers=None,
                 cortex_llm=Mock(),
             )
@@ -456,6 +458,7 @@ class TestMCPModeTransition:
 
         mock_mcp_servers = Mock()
         mock_mode_config.to_runtime_config.return_value = Mock(
+            skills=None,
             mcp_servers=mock_mcp_servers,
             cortex_llm=Mock(),
         )
@@ -508,6 +511,7 @@ class TestMCPModeTransition:
         assert runtime.mcp_orchestrator is None
 
         mock_mode_config.to_runtime_config.return_value = Mock(
+            skills=None,
             mcp_servers=None,
             cortex_llm=Mock(),
         )
@@ -532,6 +536,7 @@ class TestMCPModeTransition:
 
         mock_mcp_servers = Mock()
         mock_mode_config.to_runtime_config.return_value = Mock(
+            skills=None,
             mcp_servers=mock_mcp_servers,
             cortex_llm=Mock(),
         )
@@ -559,7 +564,7 @@ class TestMCPModeTransition:
         """Mode transition from non-MCP mode to MCP mode."""
         runtime, mocks = cortex_runtime
 
-        runtime.current_config = Mock(mcp_servers=None)
+        runtime.current_config = Mock(skills=None, mcp_servers=None)
         runtime.mcp_orchestrator = None
 
         with patch("asyncio.wait", new_callable=AsyncMock) as mock_wait:
@@ -569,6 +574,7 @@ class TestMCPModeTransition:
         mock_mcp_servers = Mock()
         mock_mcp_servers.start = AsyncMock()
         mock_mode_config.to_runtime_config.return_value = Mock(
+            skills=None,
             mcp_servers=mock_mcp_servers,
             cortex_llm=Mock(),
         )
@@ -608,6 +614,7 @@ class TestMCPModeTransition:
         new_mcp_servers = Mock()
         new_mcp_servers.start = AsyncMock()
         mock_mode_config.to_runtime_config.return_value = Mock(
+            skills=None,
             mcp_servers=new_mcp_servers,
             cortex_llm=Mock(),
         )
