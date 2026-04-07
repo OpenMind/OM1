@@ -175,7 +175,8 @@ class TestMemoryIndexSearch:
         docs = [_make_doc(f"doc {i}") for i in range(5)]
         await index.load_chunks_batch(docs)
         results = await index.search("query", top_k=5, min_score=0.0)
-        scores = [r.score for r in results]
+        scores = [r.score for r in results if r.score is not None]
+        assert len(scores) == len(results), "all results should have a score"
         assert scores == sorted(scores, reverse=True)
 
     @pytest.mark.asyncio
