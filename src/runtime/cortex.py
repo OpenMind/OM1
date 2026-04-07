@@ -454,22 +454,7 @@ class ModeCortexRuntime:
             self.execute_cron_job_provider = ExecuteCronJobProvider(
                 poll_interval=float(cs_cfg.get("interval", 1)),
                 run_previous=bool(cs_cfg.get("run_previous", True)),
-                execute_by_llm=bool(cs_cfg.get("execute_by_llm", True)),
             )
-            self.execute_cron_job_provider.register_actions(
-                self.current_config.agent_actions if self.current_config else []
-            )
-            running_loop = asyncio.get_running_loop()
-            if self.current_config and self.current_config.mcp_servers:
-                self.execute_cron_job_provider.register_mcp(
-                    self.current_config.mcp_servers,
-                    running_loop,
-                )
-            if self.action_orchestrator:
-                self.execute_cron_job_provider.register_action_orchestrator(
-                    self.action_orchestrator,
-                    running_loop,
-                )
             self.execute_cron_job_provider.start()
 
 

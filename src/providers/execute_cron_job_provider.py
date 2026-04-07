@@ -5,66 +5,24 @@ import os
 import re
 import threading
 
-import typing as T
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from actions.orchestrator import ActionOrchestrator
-    from mcp_servers.client import MCPClientManager
-
-from actions.base import AgentAction
-from llm.output_model import Action
-from providers.arg_normalizer import build_arg_normalizer
+from typing import Any, Dict, List, Optional
 
 from .singleton import singleton
 
 logger = logging.getLogger(__name__)
 
-# Registry mapping llm_label -> callable.
-# Populated automatically via register_actions(); can also be extended manually.
-FUNCTION_REGISTRY: Dict[str, Callable[..., Any]] = {}
-
-
-def _build_action_wrapper(agent_action: AgentAction) -> Callable[..., None]:
-    """Return a plain (non-async) callable that drives agent_action.connector.connect().
-
-    Uses ``build_arg_normalizer`` to robustly coerce LLM-produced args before
-    instantiating the input dataclass.  Handles field aliasing (e.g. 'sentence'
-    → 'action'), unknown-field pruning, single-field heuristic, and type
-    coercion (Enum, int, float, bool, Optional[T]).
-    """
-    input_type = T.get_type_hints(agent_action.interface)["input"]
-    input_type_hints = T.get_type_hints(input_type)
-    normalize = build_arg_normalizer(input_type, input_type_hints, agent_action.llm_label)
-
-    def wrapper(**args: Any) -> None:
-        normalized = normalize(args)
-        try:
-            input_interface = input_type(**normalized)
-        except TypeError as exc:
-            logger.error(
-                "execute_cron_job: failed to instantiate '%s' input with args %s: %s",
-                agent_action.llm_label,
-                normalized,
-                exc,
-            )
-            return
-        asyncio.run(agent_action.connector.connect(input_interface))
-
-    return wrapper
-
 
 @singleton
 class ExecuteCronJobProvider:
-    """Heartbeat provider that dispatches scheduled function calls.
+    """Heartbeat provider that dispatches scheduled function calls via the LLM.
 
     Loads ``schedule_file`` once at startup into an in-memory cache
     (``_entries``).  Every ``poll_interval`` seconds the cache is scanned for
-    due entries; any match is dispatched in a daemon thread.  One-time entries
-    are marked ``"completed": true``; recurring entries are rescheduled to
-    their next occurrence.  All mutations update both the in-memory cache and
-    the file atomically so they stay in sync.
+    due entries; any match is injected into ``ScheduledCronInput`` so the LLM
+    can handle it.  One-time entries are dropped after dispatch; recurring
+    entries are rescheduled to their next occurrence.  All mutations update
+    both the in-memory cache and the file atomically so they stay in sync.
 
     Recurrence patterns (stored in entry field ``"recurrence"``)
     ---------------------------------------------------------------
@@ -92,7 +50,6 @@ class ExecuteCronJobProvider:
     Typical setup::
 
         provider = ExecuteCronJobProvider()
-        provider.register_actions(runtime_config.agent_actions)
         provider.start()
     """
 
@@ -101,12 +58,10 @@ class ExecuteCronJobProvider:
         schedule_file: str = "config/cron_job/cron.json",
         poll_interval: float = 1.0,
         run_previous: bool = True,
-        execute_by_llm: bool = False,
     ) -> None:
         self.schedule_file = schedule_file
         self.poll_interval = poll_interval
         self.run_previous = run_previous
-        self.execute_by_llm = execute_by_llm
 
         self._start_dt: Optional[datetime] = None  # set when start() is called
         self._stop_event = threading.Event()
@@ -116,41 +71,9 @@ class ExecuteCronJobProvider:
         # In-memory cache — loaded from file on start(), kept in sync thereafter.
         self._entries: List[dict] = []
 
-        self._mcp_client: Optional["MCPClientManager"] = None
-        self._event_loop: Optional[asyncio.AbstractEventLoop] = None
-        self._action_orchestrator: Optional["ActionOrchestrator"] = None
-
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-
-    def register_actions(self, agent_actions: List[AgentAction]) -> None:
-        """Populate FUNCTION_REGISTRY from a list of AgentActions."""
-        for action in agent_actions:
-            FUNCTION_REGISTRY[action.llm_label] = _build_action_wrapper(action)
-            logger.info(
-                "ExecuteCronJobProvider: registered action '%s'", action.llm_label
-            )
-
-    def register_mcp(
-        self,
-        mcp_client: "MCPClientManager",
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        """Register an MCP client so scheduled MCP tool calls can be dispatched."""
-        self._mcp_client = mcp_client
-        self._event_loop = loop
-        logger.info("ExecuteCronJobProvider: MCP client registered")
-
-    def register_action_orchestrator(
-        self,
-        orchestrator: "ActionOrchestrator",
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        """Register the ActionOrchestrator for normal orchestration dispatch."""
-        self._action_orchestrator = orchestrator
-        self._event_loop = loop
-        logger.info("ExecuteCronJobProvider: ActionOrchestrator registered")
 
     def start(self) -> None:
         """Start the background polling thread and load entries into cache."""
@@ -355,66 +278,11 @@ class ExecuteCronJobProvider:
             ).start()
 
     def _dispatch(self, entry: dict) -> None:
+        from inputs.plugins.scheduled_cron_input import ScheduledCronInput
+
         function_name: str = entry.get("function", "")
-        args: dict = entry.get("args", {})
-
-        # --- Known agent action: always dispatch directly, regardless of mode ---
-        if function_name in FUNCTION_REGISTRY:
-            logger.info(
-                "ExecuteCronJobProvider: dispatching action '%s' via orchestrator, args=%s",
-                function_name,
-                args,
-            )
-            if self._action_orchestrator is not None and self._event_loop is not None:
-                action = Action(type=function_name, value=json.dumps(args))
-                future = asyncio.run_coroutine_threadsafe(
-                    self._action_orchestrator.promise([action]),
-                    self._event_loop,
-                )
-                try:
-                    future.result(timeout=30)
-                except Exception:
-                    logger.exception(
-                        "ExecuteCronJobProvider: error dispatching action '%s'",
-                        function_name,
-                    )
-            else:
-                logger.warning(
-                    "ExecuteCronJobProvider: ActionOrchestrator not registered, "
-                    "skipping action '%s'",
-                    function_name,
-                )
-            return
-
-        # --- MCP tool: inject the stored command into ScheduledCronInput ---
-        if (
-            self._mcp_client is not None
-            and self._mcp_client.is_mcp_tool(function_name)
-        ):
-            from inputs.plugins.scheduled_cron_input import ScheduledCronInput
-
-            command = args.get("command", function_name)
-            logger.info(
-                "ExecuteCronJobProvider: injecting MCP command '%s' into ScheduledCronInput: %s",
-                function_name,
-                command,
-            )
-            ScheduledCronInput.inject(command)
-            return
-
-        # --- execute_by_llm fallback: function is a natural-language command ---
-        # Entries created in execute_by_llm mode store the stripped user request
-        # in `function` (not a registered action name), so inject it into the LLM.
-        if self.execute_by_llm:
-            from inputs.plugins.scheduled_cron_input import ScheduledCronInput
-
-            logger.info(
-                "ExecuteCronJobProvider: injecting natural-language command '%s' into ScheduledCronInput",
-                function_name,
-            )
-            ScheduledCronInput.inject(function_name)
-            return
-
-        logger.warning(
-            "ExecuteCronJobProvider: no function registered for '%s'", function_name
+        logger.info(
+            "ExecuteCronJobProvider: injecting '%s' into ScheduledCronInput",
+            function_name,
         )
+        ScheduledCronInput.inject(function_name)
