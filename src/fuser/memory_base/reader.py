@@ -154,9 +154,7 @@ class MemoryReader:
         for doc in search_results:
             if total_chars >= max_chars:
                 break
-            source = doc.metadata.get("source", "unknown")  # date of the daily memory
-            date_str = source.replace(".md", "")
-            section = f"[{date_str}]\n{doc.text}"
+            section = doc.text
             if total_chars + len(section) > max_chars:
                 break
             parts.append(section)

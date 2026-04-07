@@ -80,9 +80,9 @@ class TestFormatContext:
 
     def test_search_results_formatted_with_date(self, tmp_path):
         reader = self._reader(tmp_path)
-        doc = _make_doc("some memory", source="2026-04-03.md")
+        doc = _make_doc("[Date: 2026-04-03]\nsome memory", source="2026-04-03.md")
         result = reader.format_context("", [doc])
-        assert "[2026-04-03]" in result
+        assert "[Date: 2026-04-03]" in result
         assert "some memory" in result
 
     def test_multiple_results_all_included_within_budget(self, tmp_path):
