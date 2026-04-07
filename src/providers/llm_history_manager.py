@@ -65,16 +65,8 @@ class LLMHistoryManager:
         # configuration
         self.config = config
         self.agent_name = self.config.agent_name
-        self.system_prompt = (
-            system_prompt.replace("****", self.agent_name)
-            if self.agent_name
-            else system_prompt
-        )
-        self.summary_command = (
-            summary_command.replace("****", self.agent_name)
-            if self.agent_name
-            else summary_command
-        )
+        self.system_prompt = system_prompt.replace("****", self.agent_name) if self.agent_name else system_prompt
+        self.summary_command = summary_command.replace("****", self.agent_name) if self.agent_name else summary_command
 
         # frame index
         self.frame_index = 0
@@ -138,11 +130,7 @@ class LLMHistoryManager:
             summary_prompt += self.summary_command
 
             # insert actual robot name
-            summary_prompt = (
-                summary_prompt.replace("****", self.agent_name)
-                if self.agent_name
-                else summary_prompt
-            )
+            summary_prompt = summary_prompt.replace("****", self.agent_name) if self.agent_name else summary_prompt
 
             logging.info(f"Information to summarize:\n{summary_prompt}")
 
@@ -164,25 +152,19 @@ class LLMHistoryManager:
                 response = await asyncio.wait_for(
                     loop.run_in_executor(
                         None,
-                        functools.partial(
-                            self.client.chat.completions.create, **api_kwargs
-                        ),
+                        functools.partial(self.client.chat.completions.create, **api_kwargs),
                     ),
                     timeout=timeout,
                 )
 
             if not response or not response.choices:
                 logging.error("Invalid API response format")
-                return ChatMessage(
-                    role="system", content="Error: Received invalid response from API"
-                )
+                return ChatMessage(role="system", content="Error: Received invalid response from API")
 
             summary = response.choices[0].message.content
             if summary is None:
                 logging.error("Received empty summary from API")
-                return ChatMessage(
-                    role="system", content="Error: Received empty summary from API"
-                )
+                return ChatMessage(role="system", content="Error: Received empty summary from API")
             return ChatMessage(role="assistant", content=f"Previously, {summary}")
 
         except asyncio.TimeoutError:
@@ -190,9 +172,7 @@ class LLMHistoryManager:
             return ChatMessage(role="system", content="Error: API request timed out")
         except openai.APIError as e:
             logging.error(f"OpenAI API error: {e}")
-            return ChatMessage(
-                role="system", content=f"Error: API service unavailable: {str(e)}"
-            )
+            return ChatMessage(role="system", content=f"Error: API service unavailable: {str(e)}")
         except Exception as e:
             logging.error(f"Error summarizing messages: {type(e).__name__}: {e}")
             return ChatMessage(role="system", content="Error summarizing state")
@@ -224,9 +204,7 @@ class LLMHistoryManager:
 
             messages_copy = messages.copy()
             num_summarized = len(messages_copy)
-            self._summary_task = asyncio.create_task(
-                self.summarize_messages(messages_copy)
-            )
+            self._summary_task = asyncio.create_task(self.summarize_messages(messages_copy))
 
             def callback(task):
                 try:
@@ -239,13 +217,8 @@ class LLMHistoryManager:
                         del messages[:num_summarized]
                         messages.insert(0, summary_message)
                         logging.info("Successfully summarized the state")
-                    elif (
-                        summary_message.role == "system"
-                        and "Error" in summary_message.content
-                    ):
-                        logging.error(
-                            f"Summarization failed: {summary_message.content}"
-                        )
+                    elif summary_message.role == "system" and "Error" in summary_message.content:
+                        logging.error(f"Summarization failed: {summary_message.content}")
                         target_length = self.config.history_length
                         if target_length is not None and len(messages) > target_length:
                             excess = len(messages) - target_length
@@ -256,16 +229,12 @@ class LLMHistoryManager:
                     else:
                         logging.warning(f"Unexpected summary result: {summary_message}")
                 except Exception as e:
-                    logging.error(
-                        f"Error in summary task callback: {type(e).__name__}: {e}"
-                    )
+                    logging.error(f"Error in summary task callback: {type(e).__name__}: {e}")
                     target_length = self.config.history_length
                     if target_length is not None and len(messages) > target_length:
                         excess = len(messages) - target_length
                         del messages[:excess]
-                        logging.warning(
-                            f"Truncated {excess} oldest messages after exception"
-                        )
+                        logging.warning(f"Truncated {excess} oldest messages after exception")
 
             self._summary_task.add_done_callback(callback)
 
@@ -289,9 +258,7 @@ class LLMHistoryManager:
         return [{"role": msg.role, "content": msg.content} for msg in self.history]
 
     @staticmethod
-    def update_history() -> (
-        Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]
-    ):
+    def update_history() -> Callable[[Callable[..., Awaitable[R]]], Callable[..., Awaitable[R]]]:
         """
         Decorator to manage LLM history around an async function.
 
@@ -303,12 +270,18 @@ class LLMHistoryManager:
 
         def decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
             @functools.wraps(func)
-            async def wrapper(self: Any, prompt: str, *args: Any, **kwargs: Any) -> R:
+            async def wrapper(
+                self: Any,
+                prompt: str,
+                messages: Optional[List[dict]] = None,
+                *args: Any,
+                **kwargs: Any,
+            ) -> R:
                 if getattr(self, "_skip_state_management", False):
-                    return await func(self, prompt, *args, **kwargs)
+                    return await func(self, prompt, messages, *args, **kwargs)
 
                 if self._config.history_length == 0:
-                    response = await func(self, prompt, [], *args, **kwargs)
+                    response = await func(self, prompt, None, *args, **kwargs)
                     self.history_manager.frame_index += 1
                     return response
 
@@ -341,41 +314,26 @@ class LLMHistoryManager:
 
                 if response is not None:
 
-                    action_message = (
-                        "Given that information, **** took these actions: "
-                        + (
-                            " | ".join(
-                                ACTION_MAP[action.type.lower()].format(
-                                    action.value if action.value else ""
-                                )
-                                for action in response.actions  # type: ignore
-                                if action.type.lower() in ACTION_MAP
-                            )
+                    action_message = "Given that information, **** took these actions: " + (
+                        " | ".join(
+                            ACTION_MAP[action.type.lower()].format(action.value if action.value else "")
+                            for action in response.actions  # type: ignore
+                            if action.type.lower() in ACTION_MAP
                         )
                     )
 
                     action_message = action_message.replace("****", self.agent_name)
 
-                    self.history_manager.history.append(
-                        ChatMessage(role="assistant", content=action_message)
-                    )
+                    self.history_manager.history.append(ChatMessage(role="assistant", content=action_message))
 
                     if (
                         self.history_manager.config.history_length > 0
-                        and len(self.history_manager.history)
-                        > self.history_manager.config.history_length
+                        and len(self.history_manager.history) > self.history_manager.config.history_length
                     ):
-                        await self.history_manager.start_summary_task(
-                            self.history_manager.history
-                        )
+                        await self.history_manager.start_summary_task(self.history_manager.history)
                 else:
-                    if (
-                        self.history_manager.history
-                        and self.history_manager.history[-1].role == "user"
-                    ):
-                        logging.warning(
-                            "LLM response failed, removing unpaired user message"
-                        )
+                    if self.history_manager.history and self.history_manager.history[-1].role == "user":
+                        logging.warning("LLM response failed, removing unpaired user message")
                         self.history_manager.history.pop()
 
                 self.history_manager.frame_index += 1

@@ -25,16 +25,12 @@ class UnitreeG1LocationsSensorConfig(SensorConfig):
         Refresh interval in seconds.
     """
 
-    base_url: str = Field(
-        default="http://localhost:5000/maps/locations/list", description="Base URL"
-    )
+    base_url: str = Field(default="http://localhost:5000/maps/locations/list", description="Base URL")
     timeout: int = Field(default=5, description="Timeout")
     refresh_interval: int = Field(default=30, description="Refresh Interval")
 
 
-class UnitreeG1LocationsInput(
-    FuserInput[UnitreeG1LocationsSensorConfig, Optional[str]]
-):
+class UnitreeG1LocationsInput(FuserInput[UnitreeG1LocationsSensorConfig, Optional[str]]):
     """
     Input plugin that publishes available saved locations for LLM prompts (Unitree G1).
 
@@ -56,9 +52,7 @@ class UnitreeG1LocationsInput(
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
-        self.locations_provider = UnitreeG1LocationsProvider(
-            base_url, timeout, refresh_interval
-        )
+        self.locations_provider = UnitreeG1LocationsProvider(base_url, timeout, refresh_interval)
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []

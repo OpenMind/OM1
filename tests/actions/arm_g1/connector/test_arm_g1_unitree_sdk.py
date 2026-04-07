@@ -38,9 +38,7 @@ class TestARMUnitreeSDKConnectorInit:
     def test_init_handles_client_error(self):
         """Test that init handles G1ArmActionClient initialization errors."""
         with (
-            patch(
-                "actions.arm_g1.connector.unitree_sdk.G1ArmActionClient"
-            ) as mock_class,
+            patch("actions.arm_g1.connector.unitree_sdk.G1ArmActionClient") as mock_class,
             patch("actions.arm_g1.connector.unitree_sdk.logging") as mock_logging,
         ):
             mock_class.side_effect = Exception("Hardware not found")

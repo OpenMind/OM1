@@ -34,21 +34,11 @@ class RPLidarConfig(SensorConfig):
     """
 
     half_width_robot: float = Field(default=0.20, description="Half width of the robot")
-    angles_blanked: List[float] = Field(
-        default_factory=list, description="List of angles to blank out"
-    )
-    relevant_distance_max: float = Field(
-        default=1.1, description="Maximum relevant distance"
-    )
-    relevant_distance_min: float = Field(
-        default=0.08, description="Minimum relevant distance"
-    )
-    sensor_mounting_angle: float = Field(
-        default=180.0, description="Mounting angle of the sensor"
-    )
-    URID: str = Field(
-        default="", description="URID of the robot for Zenoh communication"
-    )
+    angles_blanked: List[float] = Field(default_factory=list, description="List of angles to blank out")
+    relevant_distance_max: float = Field(default=1.1, description="Maximum relevant distance")
+    relevant_distance_min: float = Field(default=0.08, description="Minimum relevant distance")
+    sensor_mounting_angle: float = Field(default=180.0, description="Mounting angle of the sensor")
+    URID: str = Field(default="", description="URID of the robot for Zenoh communication")
     log_file: bool = Field(default=False, description="Whether to log to a file")
 
 
@@ -81,12 +71,12 @@ class TurtleBot4RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
         lidar_config = self._extract_lidar_config(config)
 
         # Initialize TurtleBot4 RPLidar Provider
-        self.lidar: TurtleBot4RPLidarProvider = TurtleBot4RPLidarProvider(
-            **lidar_config
-        )
+        self.lidar: TurtleBot4RPLidarProvider = TurtleBot4RPLidarProvider(**lidar_config)
         self.lidar.start()
 
-        self.descriptor_for_LLM = "Information about objects and walls around you, to plan your movements and avoid bumping into things."
+        self.descriptor_for_LLM = (
+            "Information about objects and walls around you, to plan your movements and avoid bumping into things."
+        )
 
     async def _poll(self) -> Optional[str]:
         """
@@ -169,14 +159,9 @@ class TurtleBot4RPLidar(FuserInput[RPLidarConfig, Optional[str]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

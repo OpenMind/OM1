@@ -28,21 +28,15 @@ class TestKnowledgeBase:
     def test_initialization_default_params(self, mock_kb_structure):
         """Test KnowledgeBase initialization with default parameters."""
         with (
-            patch(
-                "src.fuser.knowledge_base.retriever.EmbeddingClient"
-            ) as mock_embedding,
-            patch(
-                "src.fuser.knowledge_base.retriever.FAISSRetriever"
-            ) as mock_retriever,
+            patch("src.fuser.knowledge_base.retriever.EmbeddingClient") as mock_embedding,
+            patch("src.fuser.knowledge_base.retriever.FAISSRetriever") as mock_retriever,
         ):
             mock_retriever_instance = MagicMock()
             mock_retriever_instance.num_documents = 10
             mock_retriever_instance.dimension = 384
             mock_retriever.return_value = mock_retriever_instance
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             assert kb.kb_dir == mock_kb_structure / "demo"
             mock_embedding.assert_called_once_with(base_url="http://localhost:8100")
@@ -51,12 +45,8 @@ class TestKnowledgeBase:
     def test_initialization_custom_params(self, mock_kb_structure):
         """Test KnowledgeBase initialization with custom parameters."""
         with (
-            patch(
-                "src.fuser.knowledge_base.retriever.EmbeddingClient"
-            ) as mock_embedding,
-            patch(
-                "src.fuser.knowledge_base.retriever.FAISSRetriever"
-            ) as mock_retriever,
+            patch("src.fuser.knowledge_base.retriever.EmbeddingClient") as mock_embedding,
+            patch("src.fuser.knowledge_base.retriever.FAISSRetriever") as mock_retriever,
         ):
             mock_retriever_instance = MagicMock()
             mock_retriever_instance.num_documents = 10
@@ -78,9 +68,7 @@ class TestKnowledgeBase:
         kb_root.mkdir()
 
         with pytest.raises(FileNotFoundError) as exc_info:
-            KnowledgeBase(
-                knowledge_base_name="nonexistent", knowledge_base_root=kb_root
-            )
+            KnowledgeBase(knowledge_base_name="nonexistent", knowledge_base_root=kb_root)
 
         assert "Knowledge base not found" in str(exc_info.value)
         assert "nonexistent" in str(exc_info.value)
@@ -100,20 +88,14 @@ class TestKnowledgeBase:
     def test_initialization_default_kb_root(self):
         """Test that default knowledge_base_root is set correctly."""
         with (
-            patch(
-                "src.fuser.knowledge_base.retriever.EmbeddingClient"
-            ) as mock_embedding,
-            patch(
-                "src.fuser.knowledge_base.retriever.FAISSRetriever"
-            ) as mock_retriever,
+            patch("src.fuser.knowledge_base.retriever.EmbeddingClient") as mock_embedding,
+            patch("src.fuser.knowledge_base.retriever.FAISSRetriever") as mock_retriever,
             patch("src.fuser.knowledge_base.retriever.Path") as mock_path,
         ):
             mock_parent = MagicMock()
             mock_parent.parent.parent.parent.parent = MagicMock()
             mock_kb_root = MagicMock()
-            mock_parent.parent.parent.parent.parent.__truediv__.return_value = (
-                mock_kb_root
-            )
+            mock_parent.parent.parent.parent.parent.__truediv__.return_value = mock_kb_root
 
             mock_kb_dir = MagicMock()
             mock_kb_dir.exists.return_value = True
@@ -134,35 +116,24 @@ class TestKnowledgeBase:
     async def test_query_single(self, mock_kb_structure):
         """Test querying knowledge base with a single query."""
         with (
-            patch(
-                "src.fuser.knowledge_base.retriever.EmbeddingClient"
-            ) as mock_embedding_cls,
-            patch(
-                "src.fuser.knowledge_base.retriever.FAISSRetriever"
-            ) as mock_retriever_cls,
+            patch("src.fuser.knowledge_base.retriever.EmbeddingClient") as mock_embedding_cls,
+            patch("src.fuser.knowledge_base.retriever.FAISSRetriever") as mock_retriever_cls,
         ):
             # Setup mocks
             mock_embedding = MagicMock()
-            mock_embedding.embed = AsyncMock(
-                return_value=np.random.randn(384).astype("float32")
-            )
+            mock_embedding.embed = AsyncMock(return_value=np.random.randn(384).astype("float32"))
             mock_embedding.__aenter__ = AsyncMock(return_value=mock_embedding)
             mock_embedding.__aexit__ = AsyncMock()
             mock_embedding_cls.return_value = mock_embedding
 
-            expected_docs = [
-                Document(text=f"doc {i}", metadata={"id": i}, score=0.9 - i * 0.1)
-                for i in range(3)
-            ]
+            expected_docs = [Document(text=f"doc {i}", metadata={"id": i}, score=0.9 - i * 0.1) for i in range(3)]
             mock_retriever = MagicMock()
             mock_retriever.search.return_value = expected_docs
             mock_retriever.num_documents = 10
             mock_retriever.dimension = 384
             mock_retriever_cls.return_value = mock_retriever
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             # Execute query
             results = await kb.query("test query", top_k=3)
@@ -177,31 +148,19 @@ class TestKnowledgeBase:
     async def test_query_batch(self, mock_kb_structure):
         """Test querying knowledge base with multiple queries."""
         with (
-            patch(
-                "src.fuser.knowledge_base.retriever.EmbeddingClient"
-            ) as mock_embedding_cls,
-            patch(
-                "src.fuser.knowledge_base.retriever.FAISSRetriever"
-            ) as mock_retriever_cls,
+            patch("src.fuser.knowledge_base.retriever.EmbeddingClient") as mock_embedding_cls,
+            patch("src.fuser.knowledge_base.retriever.FAISSRetriever") as mock_retriever_cls,
         ):
             # Setup mocks
             mock_embedding = MagicMock()
-            mock_embedding.embed_batch = AsyncMock(
-                return_value=np.random.randn(2, 384).astype("float32")
-            )
+            mock_embedding.embed_batch = AsyncMock(return_value=np.random.randn(2, 384).astype("float32"))
             mock_embedding.__aenter__ = AsyncMock(return_value=mock_embedding)
             mock_embedding.__aexit__ = AsyncMock()
             mock_embedding_cls.return_value = mock_embedding
 
             expected_results = [
-                [
-                    Document(text=f"doc {i}", metadata={"id": i}, score=0.9)
-                    for i in range(2)
-                ],
-                [
-                    Document(text=f"doc {i}", metadata={"id": i}, score=0.8)
-                    for i in range(2)
-                ],
+                [Document(text=f"doc {i}", metadata={"id": i}, score=0.9) for i in range(2)],
+                [Document(text=f"doc {i}", metadata={"id": i}, score=0.8) for i in range(2)],
             ]
             mock_retriever = MagicMock()
             mock_retriever.batch_search.return_value = expected_results
@@ -209,9 +168,7 @@ class TestKnowledgeBase:
             mock_retriever.dimension = 384
             mock_retriever_cls.return_value = mock_retriever
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             # Execute batch query
             queries = ["query 1", "query 2"]
@@ -234,9 +191,7 @@ class TestKnowledgeBase:
             mock_retriever.dimension = 384
             mock_ret.return_value = mock_retriever
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             context = kb.format_context([])
 
@@ -253,9 +208,7 @@ class TestKnowledgeBase:
             mock_retriever.dimension = 384
             mock_ret.return_value = mock_retriever
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             docs = [
                 Document(
@@ -290,9 +243,7 @@ class TestKnowledgeBase:
             mock_retriever.dimension = 384
             mock_ret.return_value = mock_retriever
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             docs = [
                 Document(
@@ -318,9 +269,7 @@ class TestKnowledgeBase:
             mock_retriever.dimension = 384
             mock_ret.return_value = mock_retriever
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             docs = [Document(text="Content with no metadata", metadata={}, score=0.95)]
 
@@ -334,17 +283,11 @@ class TestKnowledgeBase:
     async def test_query_with_different_top_k(self, mock_kb_structure):
         """Test that top_k parameter is properly passed through."""
         with (
-            patch(
-                "src.fuser.knowledge_base.retriever.EmbeddingClient"
-            ) as mock_embedding_cls,
-            patch(
-                "src.fuser.knowledge_base.retriever.FAISSRetriever"
-            ) as mock_retriever_cls,
+            patch("src.fuser.knowledge_base.retriever.EmbeddingClient") as mock_embedding_cls,
+            patch("src.fuser.knowledge_base.retriever.FAISSRetriever") as mock_retriever_cls,
         ):
             mock_embedding = MagicMock()
-            mock_embedding.embed = AsyncMock(
-                return_value=np.random.randn(384).astype("float32")
-            )
+            mock_embedding.embed = AsyncMock(return_value=np.random.randn(384).astype("float32"))
             mock_embedding.__aenter__ = AsyncMock(return_value=mock_embedding)
             mock_embedding.__aexit__ = AsyncMock()
             mock_embedding_cls.return_value = mock_embedding
@@ -355,9 +298,7 @@ class TestKnowledgeBase:
             mock_retriever.dimension = 384
             mock_retriever_cls.return_value = mock_retriever
 
-            kb = KnowledgeBase(
-                knowledge_base_name="demo", knowledge_base_root=mock_kb_structure
-            )
+            kb = KnowledgeBase(knowledge_base_name="demo", knowledge_base_root=mock_kb_structure)
 
             await kb.query("test", top_k=10)
 

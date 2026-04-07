@@ -34,9 +34,7 @@ class TestMoveUnitreeSDKConnectorConnect:
         move_input = MoveInput(action=MovementAction.STAND_STILL)
         with patch("actions.move.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_called_with(
-                "SendThisToROS2: {'move': 'stand still'}"
-            )
+            mock_logging.info.assert_called_with("SendThisToROS2: {'move': 'stand still'}")
 
     @pytest.mark.asyncio
     async def test_connect_sit(self, connector):
@@ -92,9 +90,7 @@ class TestMoveUnitreeSDKConnectorConnect:
         move_input = MoveInput(action=MovementAction.SHAKE_PAW)
         with patch("actions.move.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_called_with(
-                "SendThisToROS2: {'move': 'shake paw'}"
-            )
+            mock_logging.info.assert_called_with("SendThisToROS2: {'move': 'shake paw'}")
 
     @pytest.mark.asyncio
     async def test_connect_walk_back(self, connector):
@@ -102,9 +98,7 @@ class TestMoveUnitreeSDKConnectorConnect:
         move_input = MoveInput(action=MovementAction.WALK_BACK)
         with patch("actions.move.connector.ros2.logging") as mock_logging:
             await connector.connect(move_input)
-            mock_logging.info.assert_called_with(
-                "SendThisToROS2: {'move': 'walk back'}"
-            )
+            mock_logging.info.assert_called_with("SendThisToROS2: {'move': 'walk back'}")
 
     @pytest.mark.asyncio
     async def test_connect_unknown_action(self, connector):

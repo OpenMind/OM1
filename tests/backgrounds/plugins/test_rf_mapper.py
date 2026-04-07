@@ -98,9 +98,7 @@ class TestRFmapper:
         mock_gps_class.assert_called_once()
         mock_rtk_class.assert_called_once()
         mock_odom_class.assert_called_once()
-        mock_fds_class.assert_called_once_with(
-            api_key="test-key", write_to_local_file=True
-        )
+        mock_fds_class.assert_called_once_with(api_key="test-key", write_to_local_file=True)
 
     @patch("backgrounds.plugins.rf_mapper.threading.Thread")
     @patch("backgrounds.plugins.rf_mapper.FabricDataSubmitter")

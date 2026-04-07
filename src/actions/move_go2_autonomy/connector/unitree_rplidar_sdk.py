@@ -30,9 +30,7 @@ class MoveUnitreeRPLidarSDKConfig(ActionConfig):
     )
 
 
-class MoveUnitreeRPLidarSDKConnector(
-    ActionConnector[MoveUnitreeRPLidarSDKConfig, MoveInput]
-):
+class MoveUnitreeRPLidarSDKConnector(ActionConnector[MoveUnitreeRPLidarSDKConfig, MoveInput]):
     """
     Connector for moving Unitree Go2 robot using RPLidar for obstacle detection.
 
@@ -98,9 +96,7 @@ class MoveUnitreeRPLidarSDKConnector(
             self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
-            logging.info(
-                f"Action in progress: {self.unitree_go2_state.action_progress}"
-            )
+            logging.info(f"Action in progress: {self.unitree_go2_state.action_progress}")
             return
 
         # fallback to the odom provider
@@ -224,16 +220,12 @@ class MoveUnitreeRPLidarSDKConnector(
 
             current_target = target[0]
 
-            logging.info(
-                f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}"
-            )
+            logging.info(f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}")
 
             if self.movement_attempts > self.movement_attempt_limit:
                 # abort - we are not converging
                 self.clean_abort()
-                logging.info(
-                    f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()"
-                )
+                logging.info(f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()")
                 return
 
             goal_dx = current_target.dx
@@ -241,9 +233,7 @@ class MoveUnitreeRPLidarSDKConnector(
 
             # Phase 1: Turn to face the target direction
             if not current_target.turn_complete:
-                gap = self._calculate_angle_gap(
-                    -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
-                )
+                gap = self._calculate_angle_gap(-1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw)
                 logging.info(f"Phase 1 - Turning remaining GAP: {gap}DEG")
 
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -283,8 +273,7 @@ class MoveUnitreeRPLidarSDKConnector(
                 speed = current_target.speed
 
                 distance_traveled = math.sqrt(
-                    (self.odom.position["odom_x"] - s_x) ** 2
-                    + (self.odom.position["odom_y"] - s_y) ** 2
+                    (self.odom.position["odom_x"] - s_x) ** 2 + (self.odom.position["odom_y"] - s_y) ** 2
                 )
                 gap = round(abs(goal_dx - distance_traveled), 2)
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -314,14 +303,10 @@ class MoveUnitreeRPLidarSDKConnector(
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
                         self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
-                        logging.debug(
-                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
-                        )
+                        logging.debug(f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m")
                         self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
                 else:
-                    logging.info(
-                        "Phase 2 - Movement completed normally, processing next AI command"
-                    )
+                    logging.info("Phase 2 - Movement completed normally, processing next AI command")
                     self.clean_abort()
 
         self.sleep(0.1)
@@ -337,9 +322,7 @@ class MoveUnitreeRPLidarSDKConnector(
         path = random.choice(self.lidar.turn_left)
         path_angle = self.lidar.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -361,9 +344,7 @@ class MoveUnitreeRPLidarSDKConnector(
         path = random.choice(self.lidar.turn_right)
         path_angle = self.lidar.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -385,9 +366,7 @@ class MoveUnitreeRPLidarSDKConnector(
         path = random.choice(self.lidar.advance)
         path_angle = self.lidar.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,

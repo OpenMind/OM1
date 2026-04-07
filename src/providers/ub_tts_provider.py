@@ -38,9 +38,7 @@ class UbTtsProvider:
         """Placeholder start method for compatibility."""
         logging.info("Ubtech TTS Provider started.")
 
-    def adding_pending_message(
-        self, message: str, interrupt: bool = True, timestamp: int = 0
-    ):
+    def adding_pending_message(self, message: str, interrupt: bool = True, timestamp: int = 0):
         """
         Add a pending TTS message to be processed asynchronously.
 
@@ -61,9 +59,7 @@ class UbTtsProvider:
         """
         self.executor.shutdown(wait=True)
 
-    def _speak_worker(
-        self, message: str, interrupt: bool = True, timestamp: int = 0
-    ) -> bool:
+    def _speak_worker(self, message: str, interrupt: bool = True, timestamp: int = 0) -> bool:
         """
         Worker function to send TTS command to Ubtech TTS service.
 
@@ -103,9 +99,7 @@ class UbTtsProvider:
         """
         try:
             params = {"timestamp": timestamp}
-            response = requests.get(
-                url=self.tts_url, headers=self.headers, params=params, timeout=2
-            )
+            response = requests.get(url=self.tts_url, headers=self.headers, params=params, timeout=2)
             res = response.json()
             if res.get("code") == 0:
                 return res.get("status", "error")

@@ -33,9 +33,7 @@ class UnitreeGo2LocationsSensorConfig(SensorConfig):
     refresh_interval: int = Field(default=30, description="Refresh interval in seconds")
 
 
-class UnitreeGo2LocationsInput(
-    FuserInput[UnitreeGo2LocationsSensorConfig, Optional[str]]
-):
+class UnitreeGo2LocationsInput(FuserInput[UnitreeGo2LocationsSensorConfig, Optional[str]]):
     """
     Input plugin that publishes available saved locations for LLM prompts (Unitree Go2).
 
@@ -57,9 +55,7 @@ class UnitreeGo2LocationsInput(
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
-        self.locations_provider = UnitreeGo2LocationsProvider(
-            base_url, timeout, refresh_interval
-        )
+        self.locations_provider = UnitreeGo2LocationsProvider(base_url, timeout, refresh_interval)
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []

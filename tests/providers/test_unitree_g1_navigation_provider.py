@@ -24,12 +24,8 @@ def reset_singleton():
 def mock_dependencies():
     """Mock dependencies for UnitreeG1NavigationProvider."""
     with (
-        patch(
-            "providers.unitree_g1_navigation_provider.open_zenoh_session"
-        ) as mock_zenoh,
-        patch(
-            "providers.unitree_g1_navigation_provider.ElevenLabsTTSProvider"
-        ) as mock_tts,
+        patch("providers.unitree_g1_navigation_provider.open_zenoh_session") as mock_zenoh,
+        patch("providers.unitree_g1_navigation_provider.ElevenLabsTTSProvider") as mock_tts,
     ):
 
         mock_session = MagicMock()
@@ -93,9 +89,7 @@ def test_initialization_with_zenoh_session(mock_dependencies):
 def test_initialization_zenoh_failure():
     """Test handling of Zenoh initialization failure."""
     with (
-        patch(
-            "providers.unitree_g1_navigation_provider.open_zenoh_session"
-        ) as mock_zenoh,
+        patch("providers.unitree_g1_navigation_provider.open_zenoh_session") as mock_zenoh,
         patch("providers.unitree_g1_navigation_provider.ElevenLabsTTSProvider"),
     ):
 
@@ -110,9 +104,7 @@ def test_ai_status_publisher_initialization(mock_dependencies):
     """Test AI status publisher is created."""
     provider = UnitreeG1NavigationProvider()
 
-    mock_dependencies["session"].declare_publisher.assert_called_once_with(
-        "om/ai/request"
-    )
+    mock_dependencies["session"].declare_publisher.assert_called_once_with("om/ai/request")
     assert provider.ai_status_pub == mock_dependencies["publisher"]
 
 
@@ -129,9 +121,7 @@ def test_start(mock_dependencies):
 def test_start_without_session():
     """Test starting when session is None."""
     with (
-        patch(
-            "providers.unitree_g1_navigation_provider.open_zenoh_session"
-        ) as mock_zenoh,
+        patch("providers.unitree_g1_navigation_provider.open_zenoh_session") as mock_zenoh,
         patch("providers.unitree_g1_navigation_provider.ElevenLabsTTSProvider"),
     ):
 
@@ -211,9 +201,7 @@ def test_subscriber_callback_registration(mock_dependencies):
 def test_session_none_handling(mock_dependencies):
     """Test handling when session creation fails."""
     with (
-        patch(
-            "providers.unitree_g1_navigation_provider.open_zenoh_session"
-        ) as mock_zenoh,
+        patch("providers.unitree_g1_navigation_provider.open_zenoh_session") as mock_zenoh,
         patch("providers.unitree_g1_navigation_provider.ElevenLabsTTSProvider"),
     ):
 

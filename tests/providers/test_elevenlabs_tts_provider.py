@@ -127,9 +127,7 @@ def test_configure_restart_needed_output_format_change(provider_module):
         mock_stop.assert_called_once()
 
 
-def test_configure_no_restart_when_same_parameters(
-    provider_module, mock_external_modules
-):
+def test_configure_no_restart_when_same_parameters(provider_module, mock_external_modules):
     """Test no restart when all parameters remain the same."""
     url = "https://api.openmind.com/api/core/elevenlabs/tts"
     api_key = "same_key"
@@ -140,9 +138,7 @@ def test_configure_no_restart_when_same_parameters(
 
     mock_audio_stream = MagicMock()
     mock_audio_stream._url = url
-    mock_external_modules["om1_speech"].AudioOutputStream.return_value = (
-        mock_audio_stream
-    )
+    mock_external_modules["om1_speech"].AudioOutputStream.return_value = mock_audio_stream
 
     provider = provider_module.ElevenLabsTTSProvider(
         url=url,

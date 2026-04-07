@@ -40,9 +40,7 @@ class TestStartPersonFollowHook:
     """Tests for start_person_follow_hook function."""
 
     @pytest.mark.asyncio
-    async def test_start_person_follow_success_first_attempt(
-        self, mock_elevenlabs_provider
-    ):
+    async def test_start_person_follow_success_first_attempt(self, mock_elevenlabs_provider):
         """Test successful person follow start on first attempt."""
         context = {}
 
@@ -66,14 +64,10 @@ class TestStartPersonFollowHook:
         assert result["message"] == "Person enrolled and tracking"
         assert result["is_tracked"] is True
 
-        mock_elevenlabs_provider.add_pending_message.assert_called_once_with(
-            "I see you! I'll follow you now."
-        )
+        mock_elevenlabs_provider.add_pending_message.assert_called_once_with("I see you! I'll follow you now.")
 
     @pytest.mark.asyncio
-    async def test_start_person_follow_success_after_retries(
-        self, mock_elevenlabs_provider
-    ):
+    async def test_start_person_follow_success_after_retries(self, mock_elevenlabs_provider):
         """Test successful person follow start after multiple attempts."""
         context = {"max_retries": 3}
 
@@ -86,12 +80,8 @@ class TestStartPersonFollowHook:
         mock_status_tracked = create_mock_response(200, {"is_tracked": True})
 
         mock_session = MagicMock()
-        mock_session.post = MagicMock(
-            side_effect=[mock_enroll_fail, mock_enroll_fail, mock_enroll_success]
-        )
-        mock_session.get = MagicMock(
-            side_effect=[mock_status_not_tracked, mock_status_tracked]
-        )
+        mock_session.post = MagicMock(side_effect=[mock_enroll_fail, mock_enroll_fail, mock_enroll_success])
+        mock_session.get = MagicMock(side_effect=[mock_status_not_tracked, mock_status_tracked])
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -103,9 +93,7 @@ class TestStartPersonFollowHook:
         assert result["is_tracked"] is True
 
     @pytest.mark.asyncio
-    async def test_start_person_follow_enrolled_not_tracking(
-        self, mock_elevenlabs_provider
-    ):
+    async def test_start_person_follow_enrolled_not_tracking(self, mock_elevenlabs_provider):
         """Test person follow enrolled but not yet tracking."""
         context = {"max_retries": 2, "enroll_timeout": 1.0}
 
@@ -159,9 +147,7 @@ class TestStartPersonFollowHook:
         assert result["is_tracked"] is True
 
     @pytest.mark.asyncio
-    async def test_start_person_follow_enroll_client_error(
-        self, mock_elevenlabs_provider
-    ):
+    async def test_start_person_follow_enroll_client_error(self, mock_elevenlabs_provider):
         """Test person follow when enroll encounters client error on all attempts."""
         context = {"max_retries": 2}
 
@@ -179,9 +165,7 @@ class TestStartPersonFollowHook:
         assert result["is_tracked"] is False
 
     @pytest.mark.asyncio
-    async def test_start_person_follow_status_poll_error(
-        self, mock_elevenlabs_provider
-    ):
+    async def test_start_person_follow_status_poll_error(self, mock_elevenlabs_provider):
         """Test person follow when status polling encounters errors."""
         context = {}
 
@@ -208,9 +192,7 @@ class TestStartPersonFollowHook:
         mock_session = MagicMock()
         mock_session.post = MagicMock(side_effect=ClientError("Network unreachable"))
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(
-            side_effect=ClientError("Network unreachable")
-        )
+        mock_session.__aexit__ = AsyncMock(side_effect=ClientError("Network unreachable"))
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
             result = await start_person_follow_hook(context)
@@ -224,9 +206,7 @@ class TestStartPersonFollowHook:
         )
 
     @pytest.mark.asyncio
-    async def test_start_person_follow_default_constants(
-        self, mock_elevenlabs_provider
-    ):
+    async def test_start_person_follow_default_constants(self, mock_elevenlabs_provider):
         """Test person follow uses correct default constants."""
         context = {}
 
@@ -247,9 +227,7 @@ class TestStartPersonFollowHook:
         assert PERSON_FOLLOW_BASE_URL in enroll_call[0][0]
 
     @pytest.mark.asyncio
-    async def test_start_person_follow_timeout_configuration(
-        self, mock_elevenlabs_provider
-    ):
+    async def test_start_person_follow_timeout_configuration(self, mock_elevenlabs_provider):
         """Test that person follow uses correct timeout configuration."""
         context = {}
 

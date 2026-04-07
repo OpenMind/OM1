@@ -171,9 +171,7 @@ def test_formatted_latest_buffer_empty(face_presence_instance):
     assert result is None
 
 
-def test_formatted_latest_buffer_formats_and_clears_latest_message(
-    face_presence_instance, mock_io_provider
-):
+def test_formatted_latest_buffer_formats_and_clears_latest_message(face_presence_instance, mock_io_provider):
     msg = Message(timestamp=1234.0, message="present=[eve], unknown=1, ts=123460")
     face_presence_instance.messages = [msg]
 
@@ -183,6 +181,4 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(
     assert "Face Presence Sensor" in result
     assert "present=[eve], unknown=1, ts=123460" in result
     assert len(face_presence_instance.messages) == 0
-    mock_io_provider.add_input.assert_called_once_with(
-        "FacePresence", "present=[eve], unknown=1, ts=123460", 1234.0
-    )
+    mock_io_provider.add_input.assert_called_once_with("FacePresence", "present=[eve], unknown=1, ts=123460", 1234.0)

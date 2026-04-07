@@ -10,17 +10,53 @@ The Google ASR API provides real-time speech-to-text transcription using Google 
 
 **Authentication:** Requires an OpenMind API key passed as a query parameter.
 
+> **Quick Start:** New integrations should use the V2 endpoint (`/api/core/google/asr`) for access to the Chirp 3 model and voice activity detection. V1 remains available for backward compatibility.
+
+## API Versions
+
+The Google ASR service offers two API versions:
+
+### V2 (Recommended) - Chirp 3 Model
+- **Endpoints:** `/api/core/google/asr`, `/api/core/google/asr/v2`
+- **Model:** Google's latest Chirp 3 speech recognition model
+- **Features:**
+  - Enhanced accuracy with state-of-the-art Chirp 3 model
+  - Voice activity detection events (`speech_start`, `speech_end`, `end_of_utterance`)
+  - Configurable voice activity timeouts
+  - Multi-language support in a single request
+  - Better handling of accents and noisy environments
+- **Use when:** You need the highest accuracy and advanced features like voice activity detection
+
+> **About Chirp 3:** Google's Chirp 3 is a universal speech model trained on millions of hours of audio data, providing superior accuracy across 100+ languages and excellent performance in challenging acoustic conditions.
+
+### V1 (Legacy) - Standard Model
+- **Endpoint:** `/api/core/google/asr/v1`
+- **Model:** Google Cloud Speech-to-Text v1 standard model
+- **Features:**
+  - Standard speech recognition capabilities
+  - Alternative language code support
+  - Proven stability
+- **Use when:** You need compatibility with existing v1 implementations or prefer the standard model
+
+> **Recommendation:** Use v2 endpoints for new integrations to take advantage of the Chirp 3 model's improved accuracy and advanced features.
+
 ## Endpoints Overview
 
-| Protocol | Endpoint | Description |
-|----------|----------|-------------|
-| WebSocket | `/api/core/google/asr` | Real-time speech recognition via WebSocket connection |
+| Protocol | Endpoint | Version | Description |
+|----------|----------|---------|-------------|
+| WebSocket | `/api/core/google/asr` | V2 | Real-time speech recognition with Chirp 3 model (default) |
+| WebSocket | `/api/core/google/asr/v2` | V2 | Real-time speech recognition with Chirp 3 model (explicit) |
+| WebSocket | `/api/core/google/asr/v1` | V1 | Real-time speech recognition with standard model (legacy) |
+
+> **Note:** All endpoints also support the `/api/core/v1/` prefix for API versioning (e.g., `/api/core/v1/google/asr`).
 
 ## WebSocket Connection
 
 Establish a persistent WebSocket connection for streaming audio data and receiving real-time transcription results.
 
-**Endpoint:** `wss://api.openmind.com/api/core/google/asr?api_key=YOUR_API_KEY`
+**V2 Endpoint (Recommended):** `wss://api.openmind.com/api/core/google/asr?api_key=YOUR_API_KEY`
+
+**V1 Endpoint (Legacy):** `wss://api.openmind.com/api/core/google/asr/v1?api_key=YOUR_API_KEY`
 
 ### Connection Parameters
 
@@ -31,18 +67,31 @@ Establish a persistent WebSocket connection for streaming audio data and receivi
 ### Connection Example
 
 ```bash
-# Using wscat (install with: npm install -g wscat)
+# V2 - Using wscat (install with: npm install -g wscat)
 wscat -c "wss://api.openmind.com/api/core/google/asr?api_key=om1_live_your_api_key"
+
+# V1 - Legacy endpoint
+wscat -c "wss://api.openmind.com/api/core/google/asr/v1?api_key=om1_live_your_api_key"
 ```
 
 ### Connection Response
 
 Upon successful connection, you'll receive a confirmation message:
 
+**V2:**
 ```json
 {
   "type": "connection",
-  "message": "Connected to ASR service",
+  "message": "Connected to ASR v2 service",
+  "clientId": "1738713600000-a1b2c3d4e5f6g7h8"
+}
+```
+
+**V1:**
+```json
+{
+  "type": "connection",
+  "message": "Connected to ASR v1 service",
   "clientId": "1738713600000-a1b2c3d4e5f6g7h8"
 }
 ```
@@ -117,8 +166,50 @@ Send audio data as JSON messages over the WebSocket connection:
 |-------|------|-------------|
 | `asr_reply` | string | Final transcription result for the audio segment |
 | `clientId` | string | Unique identifier for the WebSocket session |
-| `type` | string | Message type ("connection", "error") |
+| `type` | string | Message type ("connection", "error", "speech_start", "speech_end", "end_of_utterance") |
 | `message` | string | Human-readable message for connection or error events |
+
+## V2 Voice Activity Events
+
+V2 endpoints provide real-time voice activity detection events to help your application respond to speech activity:
+
+### Event Types
+
+**Speech Activity Started:**
+```json
+{
+  "type": "speech_start",
+  "message": "Speech activity detected",
+  "clientId": "1738713600000-a1b2c3d4e5f6g7h8"
+}
+```
+
+**Speech Activity Ended:**
+```json
+{
+  "type": "speech_end",
+  "message": "Speech activity ended",
+  "clientId": "1738713600000-a1b2c3d4e5f6g7h8"
+}
+```
+
+**End of Utterance:**
+```json
+{
+  "type": "end_of_utterance",
+  "message": "End of utterance",
+  "clientId": "1738713600000-a1b2c3d4e5f6g7h8"
+}
+```
+
+### Voice Activity Use Cases
+
+- **UI Feedback:** Show visual indicators when the user is speaking
+- **Turn-taking:** Detect when the user has finished speaking to trigger responses
+- **Recording Management:** Start/stop recording based on speech presence
+- **Conversation Flow:** Implement natural dialogue timing in voice assistants
+
+> **Note:** Voice activity events are only available in V2 endpoints. V1 endpoints return transcription results only.
 
 ## Audio Specifications
 
@@ -143,7 +234,7 @@ duration_seconds = audio_bytes / (16000 × 2 × 1) = audio_bytes / 32000
 
 ## Usage Examples
 
-### Python Example
+### Python Example (V2 with Voice Activity)
 
 ```python
 import asyncio
@@ -153,7 +244,9 @@ import json
 import pyaudio
 
 API_KEY = "om1_live_your_api_key"
+# V2 endpoint (recommended)
 WS_URL = f"wss://api.openmind.com/api/core/google/asr?api_key={API_KEY}"
+# Or use V1 endpoint: WS_URL = f"wss://api.openmind.com/api/core/google/asr/v1?api_key={API_KEY}"
 
 # Audio configuration
 RATE = 16000
@@ -162,7 +255,96 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 
 async def stream_audio():
-    """Stream audio from microphone to Google ASR."""
+    """Stream audio from microphone to Google ASR with V2 features."""
+    audio = pyaudio.PyAudio()
+
+    # Open audio stream
+    stream = audio.open(
+        format=FORMAT,
+        channels=CHANNELS,
+        rate=RATE,
+        input=True,
+        frames_per_buffer=CHUNK
+    )
+
+    async with websockets.connect(WS_URL) as websocket:
+        # Receive connection confirmation
+        connection_msg = await websocket.recv()
+        print(f"Connected: {connection_msg}")
+
+        # Send first message with configuration
+        first_audio = stream.read(CHUNK)
+        first_message = {
+            "audio": base64.b64encode(first_audio).decode('utf-8'),
+            "rate": RATE,
+            "language_code": "en-US"
+        }
+        await websocket.send(json.dumps(first_message))
+
+        # Start receiving task
+        async def receive_transcriptions():
+            async for message in websocket:
+                data = json.loads(message)
+
+                # Handle transcription results
+                if "asr_reply" in data:
+                    print(f"Transcript: {data['asr_reply']}")
+
+                # Handle V2 voice activity events
+                elif data.get("type") == "speech_start":
+                    print("🎤 Speech detected")
+                elif data.get("type") == "speech_end":
+                    print("🔇 Speech ended")
+                elif data.get("type") == "end_of_utterance":
+                    print("✅ Utterance complete")
+
+                # Handle errors
+                elif data.get("type") == "error":
+                    print(f"Error: {data['message']}")
+
+        receive_task = asyncio.create_task(receive_transcriptions())
+
+        # Stream audio
+        try:
+            while True:
+                audio_data = stream.read(CHUNK)
+                message = {
+                    "audio": base64.b64encode(audio_data).decode('utf-8')
+                }
+                await websocket.send(json.dumps(message))
+                await asyncio.sleep(0.01)
+        except KeyboardInterrupt:
+            print("Stopping...")
+        finally:
+            stream.stop_stream()
+            stream.close()
+            audio.terminate()
+            receive_task.cancel()
+
+# Run the streaming client
+asyncio.run(stream_audio())
+```
+
+### Python Example (V1 - Simple Transcription)
+
+```python
+import asyncio
+import websockets
+import base64
+import json
+import pyaudio
+
+API_KEY = "om1_live_your_api_key"
+WS_URL = f"wss://api.openmind.com/api/core/google/asr/v1?api_key={API_KEY}"
+
+# Audio configuration
+RATE = 16000
+CHUNK = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
+
+async def stream_audio():
+    """Stream audio from microphone to Google ASR V1."""
     audio = pyaudio.PyAudio()
 
     # Open audio stream
@@ -227,7 +409,9 @@ const WebSocket = require('ws');
 const fs = require('fs');
 
 const API_KEY = 'om1_live_your_api_key';
+// V2 endpoint (recommended) - includes voice activity events
 const WS_URL = `wss://api.openmind.com/api/core/google/asr?api_key=${API_KEY}`;
+// Or use V1: const WS_URL = `wss://api.openmind.com/api/core/google/asr/v1?api_key=${API_KEY}`;
 
 // Connect to WebSocket
 const ws = new WebSocket(WS_URL);
@@ -271,7 +455,17 @@ ws.on('message', (data) => {
         console.log(`Client ID: ${response.clientId}`);
     } else if (response.asr_reply) {
         console.log(`Transcript: ${response.asr_reply}`);
-    } else if (response.type === 'error') {
+    }
+    // V2 voice activity events
+    else if (response.type === 'speech_start') {
+        console.log('🎤 Speech detected');
+    } else if (response.type === 'speech_end') {
+        console.log('🔇 Speech ended');
+    } else if (response.type === 'end_of_utterance') {
+        console.log('✅ Utterance complete');
+    }
+    // Errors
+    else if (response.type === 'error') {
         console.error(`Error: ${response.message}`);
     }
 });
@@ -291,8 +485,11 @@ ws.on('close', () => {
 # Install wscat
 npm install -g wscat
 
-# Connect to the WebSocket
+# Connect to V2 endpoint (recommended - with voice activity events)
 wscat -c "wss://api.openmind.com/api/core/google/asr?api_key=om1_live_your_api_key"
+
+# Connect to V1 endpoint (legacy)
+wscat -c "wss://api.openmind.com/api/core/google/asr/v1?api_key=om1_live_your_api_key"
 
 # Send a message (paste into the terminal after connection)
 {"audio":"UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQAAAAA=","rate":16000,"language_code":"en-US"}
@@ -410,10 +607,11 @@ async def connect_with_retry(max_retries=3):
 
 ### Streaming Limit
 
-Each recognition session has a maximum duration of **4 minutes (240 seconds)**. After this time:
+Each recognition session has a maximum duration of **4 minutes (240 seconds)** for both V1 and V2. After this time:
 - The current stream will automatically restart
 - A new recognition session will begin
 - Audio processing continues seamlessly
+- V2 users may receive a `"type": "info"` message indicating session restart
 
 ### Session Cleanup
 
@@ -517,7 +715,7 @@ If you see "Audio stream buffer full" in logs:
 
 ## Example: Complete Integration
 
-Here's a complete example integrating microphone input, WebSocket streaming, and real-time display:
+Here's a complete example integrating microphone input, WebSocket streaming, and real-time display with V2 voice activity events:
 
 ```python
 import asyncio
@@ -528,12 +726,21 @@ import pyaudio
 from typing import Callable
 
 class GoogleASRClient:
-    """Complete Google ASR WebSocket client."""
+    """Complete Google ASR WebSocket client with V2 voice activity support."""
 
-    def __init__(self, api_key: str, language: str = "en-US"):
+    def __init__(self, api_key: str, language: str = "en-US", use_v2: bool = True):
         self.api_key = api_key
         self.language = language
-        self.ws_url = f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}"
+
+        # Choose endpoint version
+        if use_v2:
+            self.ws_url = f"wss://api.openmind.com/api/core/google/asr?api_key={api_key}"
+            print("Using V2 endpoint with Chirp 3 model and voice activity detection")
+        else:
+            self.ws_url = f"wss://api.openmind.com/api/core/google/asr/v1?api_key={api_key}"
+            print("Using V1 endpoint with standard model")
+
+        self.use_v2 = use_v2
         self.client_id = None
 
         # Audio config
@@ -543,10 +750,28 @@ class GoogleASRClient:
         self.channels = 1
 
         self.transcript_callback = None
+        self.speech_start_callback = None
+        self.speech_end_callback = None
+        self.utterance_end_callback = None
 
     def on_transcript(self, callback: Callable[[str], None]):
         """Register callback for transcription results."""
         self.transcript_callback = callback
+        return self
+
+    def on_speech_start(self, callback: Callable[[], None]):
+        """Register callback for speech start events (V2 only)."""
+        self.speech_start_callback = callback
+        return self
+
+    def on_speech_end(self, callback: Callable[[], None]):
+        """Register callback for speech end events (V2 only)."""
+        self.speech_end_callback = callback
+        return self
+
+    def on_utterance_end(self, callback: Callable[[], None]):
+        """Register callback for end of utterance events (V2 only)."""
+        self.utterance_end_callback = callback
         return self
 
     async def start(self):
@@ -566,6 +791,7 @@ class GoogleASRClient:
                 conn_msg = json.loads(await ws.recv())
                 self.client_id = conn_msg.get('clientId')
                 print(f"Connected with ID: {self.client_id}")
+                print(f"Service: {conn_msg.get('message')}")
 
                 # Send first message with config
                 first_audio = stream.read(self.chunk)
@@ -606,24 +832,49 @@ class GoogleASRClient:
             async for message in ws:
                 data = json.loads(message)
 
+                # Transcription result
                 if "asr_reply" in data and self.transcript_callback:
                     self.transcript_callback(data["asr_reply"])
+
+                # V2 voice activity events
+                elif self.use_v2 and data.get("type") == "speech_start":
+                    if self.speech_start_callback:
+                        self.speech_start_callback()
+
+                elif self.use_v2 and data.get("type") == "speech_end":
+                    if self.speech_end_callback:
+                        self.speech_end_callback()
+
+                elif self.use_v2 and data.get("type") == "end_of_utterance":
+                    if self.utterance_end_callback:
+                        self.utterance_end_callback()
+
+                # Errors
                 elif data.get("type") == "error":
                     print(f"Error: {data.get('message')}")
         except Exception as e:
             print(f"Receive error: {e}")
 
-# Usage
+# Usage Example
 async def main():
+    # Use V2 with voice activity events
     client = GoogleASRClient(
         api_key="om1_live_your_api_key",
-        language="en-US"
+        language="en-US",
+        use_v2=True  # Set to False for V1
     )
 
-    # Register callback
-    client.on_transcript(lambda text: print(f">> {text}"))
+    # Register callbacks
+    client.on_transcript(lambda text: print(f"📝 Transcript: {text}"))
+
+    # V2-specific callbacks
+    if client.use_v2:
+        client.on_speech_start(lambda: print("🎤 Speech started"))
+        client.on_speech_end(lambda: print("🔇 Speech ended"))
+        client.on_utterance_end(lambda: print("✅ Utterance complete"))
 
     # Start streaming
+    print("Starting ASR stream... Press Ctrl+C to stop")
     await client.start()
 
 if __name__ == "__main__":
@@ -633,5 +884,7 @@ if __name__ == "__main__":
 ## Additional Resources
 
 - [Google Cloud Speech-to-Text Documentation](https://cloud.google.com/speech-to-text/docs)
+- [Google Cloud Speech-to-Text v2 Documentation](https://cloud.google.com/speech-to-text/v2/docs)
+- [Chirp 3 Model Overview](https://docs.cloud.google.com/speech-to-text/docs/models/chirp-3)
 - [Supported Languages](https://cloud.google.com/speech-to-text/docs/languages)
 - [Audio Encoding Best Practices](https://cloud.google.com/speech-to-text/docs/encoding)

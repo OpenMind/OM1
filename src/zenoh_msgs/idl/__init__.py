@@ -1,3 +1,11 @@
+from .booster_interface import (
+    BoosterApiReqMsg,
+    BoosterApiRespMsg,
+    Odometer,
+    RemoteControllerState,
+    RpcServiceRequest,
+    RpcServiceResponse,
+)
 from .geographic_msgs import GeoPoint, GeoPointStamped
 from .geometry_msgs import (
     Accel,
@@ -66,6 +74,13 @@ __all__ = [
     "ColorRGBA",
     "String",
     "prepare_header",
+    # booster_interface
+    "Odometer",
+    "RemoteControllerState",
+    "BoosterApiReqMsg",
+    "BoosterApiRespMsg",
+    "RpcServiceRequest",
+    "RpcServiceResponse",
     # status_msgs
     "AudioStatus",
     "CameraStatus",

@@ -68,14 +68,10 @@ class TelegramAPIConnector(ActionConnector[TelegramAPIConfig, TelegramInput]):
                     if response.status == 200:
                         data = await response.json()
                         message_id = data.get("result", {}).get("message_id")
-                        logging.info(
-                            f"Telegram message sent successfully! Message ID: {message_id}"
-                        )
+                        logging.info(f"Telegram message sent successfully! Message ID: {message_id}")
                     else:
                         error_text = await response.text()
-                        logging.error(
-                            f"Telegram API error: {response.status} - {error_text}"
-                        )
+                        logging.error(f"Telegram API error: {response.status} - {error_text}")
 
         except Exception as e:
             logging.error(f"Failed to send Telegram message: {str(e)}")

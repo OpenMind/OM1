@@ -1,3 +1,6 @@
+# DualLLM: A system where a local and cloud LLM race to answer,
+# with smart selection based on function calls and quality evaluation.
+
 import asyncio
 import json
 import logging
@@ -29,9 +32,10 @@ def _extract_voice_input(prompt: str) -> str:
     str
         Extracted voice input text, or empty string if not found.
     """
-    match = re.search(r"INPUT: Voice\s*// START\s*(.*?)\s*// END", prompt, re.DOTALL)
+    match = re.search(r"Voice:\s*([^\n]+)", prompt)
     if match:
         return match.group(1).strip()
+
     return ""
 
 
@@ -51,16 +55,12 @@ class DualLLMConfig(LLMConfig):
         Configuration for the cloud LLM.
     """
 
-    local_llm_type: str = Field(
-        default="QwenLLM", description="Class name of the local LLM"
-    )
+    local_llm_type: str = Field(default="QwenLLM", description="Class name of the local LLM")
     local_llm_config: T.Dict[str, T.Any] = Field(
         default_factory=lambda: {"model": "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"},
         description="Configuration for the local LLM",
     )
-    cloud_llm_type: str = Field(
-        default="OpenAILLM", description="Class name of the cloud LLM"
-    )
+    cloud_llm_type: str = Field(default="OpenAILLM", description="Class name of the cloud LLM")
     cloud_llm_config: T.Dict[str, T.Any] = Field(
         default_factory=lambda: {"model": "gpt-4.1"},
         description="Configuration for the cloud LLM",
@@ -120,28 +120,18 @@ class DualLLM(LLM[R]):
         LocalLLMClass = get_llm_class(local_type)
         CloudLLMClass = get_llm_class(cloud_type)
 
-        self._local_llm: LLM = LocalLLMClass(
-            config=LLMConfig(**local_cfg), available_actions=available_actions
-        )
-        self._cloud_llm: LLM = CloudLLMClass(
-            config=LLMConfig(**cloud_cfg), available_actions=available_actions
-        )
+        self._local_llm: LLM = LocalLLMClass(config=LLMConfig(**local_cfg), available_actions=available_actions)
+        self._cloud_llm: LLM = CloudLLMClass(config=LLMConfig(**cloud_cfg), available_actions=available_actions)
 
         self._local_llm._skip_state_management = True
         self._cloud_llm._skip_state_management = True
 
-        self._eval_client = openai.AsyncClient(
-            base_url="http://127.0.0.1:8860/v1", api_key="local"
-        )
-        self._eval_model = local_cfg.get(
-            "model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16"
-        )
+        self._eval_client = openai.AsyncClient(base_url="http://127.0.0.1:8860/v1", api_key="local")
+        self._eval_model = local_cfg.get("model", "RedHatAI/Qwen3-30B-A3B-quantized.w4a16")
 
         self.history_manager = LLMHistoryManager(self._config, self._eval_client)
 
-    async def _call_llm(
-        self, llm: LLM, prompt: str, messages: T.List[T.Dict[str, T.Any]], source: str
-    ) -> dict:
+    async def _call_llm(self, llm: LLM, prompt: str, messages: T.List[T.Dict[str, T.Any]], source: str) -> dict:
         """
         Call an LLM and return result with timing info.
 
@@ -182,13 +172,9 @@ class DualLLM(LLM[R]):
             True if result contains valid actions.
         """
         result = entry["result"]
-        return (
-            result is not None and hasattr(result, "actions") and bool(result.actions)
-        )
+        return result is not None and hasattr(result, "actions") and bool(result.actions)
 
-    async def _evaluate_quality(
-        self, local_entry: dict, cloud_entry: dict, prompt: str
-    ) -> str:
+    async def _evaluate_quality(self, local_entry: dict, cloud_entry: dict, prompt: str) -> str:
         """
         Use LLM to evaluate which response better answers the user's question.
 
@@ -207,14 +193,8 @@ class DualLLM(LLM[R]):
             "local" or "cloud" indicating the better response.
         """
         try:
-            local_actions = [
-                {"type": a.type, "value": a.value}
-                for a in local_entry["result"].actions
-            ]
-            cloud_actions = [
-                {"type": a.type, "value": a.value}
-                for a in cloud_entry["result"].actions
-            ]
+            local_actions = [{"type": a.type, "value": a.value} for a in local_entry["result"].actions]
+            cloud_actions = [{"type": a.type, "value": a.value} for a in cloud_entry["result"].actions]
 
             eval_prompt = f"""You are evaluating two AI responses to determine which better answers the user's question.
 
@@ -258,9 +238,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
             logging.warning(f"LLM quality evaluation failed, defaulting to local: {e}")
             return "local"
 
-    async def _select_best(
-        self, local_entry: dict, cloud_entry: dict, prompt: str
-    ) -> dict:
+    async def _select_best(self, local_entry: dict, cloud_entry: dict, prompt: str) -> dict:
         """
         Select best response when both LLMs respond in time.
 
@@ -294,9 +272,7 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None
-    ) -> R | None:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, T.Any]]] = None) -> R | None:
         """
         Send prompt to both LLMs and select the best response.
 
@@ -320,21 +296,15 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
             voice_input = _extract_voice_input(prompt)
 
-            local_task = asyncio.create_task(
-                self._call_llm(self._local_llm, prompt, messages, "local")
-            )
-            cloud_task = asyncio.create_task(
-                self._call_llm(self._cloud_llm, prompt, messages, "cloud")
-            )
+            local_task = asyncio.create_task(self._call_llm(self._local_llm, prompt, messages, "local"))
+            cloud_task = asyncio.create_task(self._call_llm(self._cloud_llm, prompt, messages, "cloud"))
             tasks = {"local": local_task, "cloud": cloud_task}
 
             start_time = time.time()
             in_time = {}
 
             # Wait for responses until timeout
-            while (
-                len(in_time) < 2 and (time.time() - start_time) < self.TIMEOUT_THRESHOLD
-            ):
+            while len(in_time) < 2 and (time.time() - start_time) < self.TIMEOUT_THRESHOLD:
                 pending = [t for name, t in tasks.items() if name not in in_time]
                 if not pending:
                     break
@@ -343,31 +313,22 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
                 if remaining <= 0:
                     break
 
-                done, _ = await asyncio.wait(
-                    pending, timeout=remaining, return_when=asyncio.FIRST_COMPLETED
-                )
+                done, _ = await asyncio.wait(pending, timeout=remaining, return_when=asyncio.FIRST_COMPLETED)
 
                 for task in done:
                     result = task.result()
-                    if (
-                        result["time"] <= self.TIMEOUT_THRESHOLD
-                        and result["result"] is not None
-                    ):
+                    if result["time"] <= self.TIMEOUT_THRESHOLD and result["result"] is not None:
                         in_time[result["source"]] = result
 
             # Both in time → select best
             if len(in_time) == 2:
                 logging.debug("Both LLMs responded in time, evaluating best response.")
-                chosen = await self._select_best(
-                    in_time["local"], in_time["cloud"], voice_input
-                )
+                chosen = await self._select_best(in_time["local"], in_time["cloud"], voice_input)
 
             # One in time → use it
             elif len(in_time) == 1:
                 chosen = list(in_time.values())[0]
-                logging.debug(
-                    f"One LLM responded in time, using its response. {chosen['source']} LLM selected."
-                )
+                logging.debug(f"One LLM responded in time, using its response. {chosen['source']} LLM selected.")
                 # Cancel the other task
                 for name, task in tasks.items():
                     if name not in in_time:
@@ -376,18 +337,12 @@ Respond with ONLY a single word: either "A" or "B" for the better response."""
 
             # Neither in time → wait for first to complete
             else:
-                logging.debug(
-                    "Neither LLM responded in time, waiting for first to complete."
-                )
+                logging.debug("Neither LLM responded in time, waiting for first to complete.")
                 pending = [t for t in tasks.values() if not t.done()]
                 if pending:
-                    done, rest = await asyncio.wait(
-                        pending, return_when=asyncio.FIRST_COMPLETED
-                    )
+                    done, rest = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
                     chosen = list(done)[0].result()
-                    logging.debug(
-                        f"Using first completed LLM response from {chosen['source']} LLM."
-                    )
+                    logging.debug(f"Using first completed LLM response from {chosen['source']} LLM.")
                     for task in rest:
                         task.cancel()
                         logging.debug(f"Cancelled {task} LLM task due to timeout.")

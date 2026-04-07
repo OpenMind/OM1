@@ -38,9 +38,7 @@ class GreetingConversationInput:
 
 
 @dataclass
-class GreetingConversation(
-    Interface[GreetingConversationInput, GreetingConversationInput]
-):
+class GreetingConversation(Interface[GreetingConversationInput, GreetingConversationInput]):
     """
     This action responds to the user.
     - response: The spoken text.

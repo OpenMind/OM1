@@ -23,14 +23,10 @@ async def test_poll():
     """Test _poll method."""
     with (
         patch("inputs.plugins.unitree_go2_rplidar.IOProvider"),
-        patch(
-            "inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider"
-        ) as mock_rplidar,
+        patch("inputs.plugins.unitree_go2_rplidar.UnitreeGo2RPLidarProvider") as mock_rplidar,
         patch("inputs.plugins.unitree_go2_rplidar.asyncio.sleep", new=AsyncMock()),
     ):
-        mock_rplidar.return_value.lidar_string = (
-            "Hello from RPLidar: objects and walls detected."
-        )
+        mock_rplidar.return_value.lidar_string = "Hello from RPLidar: objects and walls detected."
         config = RPLidarConfig()
         sensor = UnitreeGo2RPLidar(config=config)
 
@@ -50,9 +46,7 @@ def test_formatted_latest_buffer():
         result = sensor.formatted_latest_buffer()
         assert result is None
 
-        test_message = Message(
-            timestamp=123.456, message="Wall detected at 0.5m ahead, clear path on left"
-        )
+        test_message = Message(timestamp=123.456, message="Wall detected at 0.5m ahead, clear path on left")
         sensor.messages.append(test_message)
 
         result = sensor.formatted_latest_buffer()

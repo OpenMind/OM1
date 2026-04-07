@@ -47,10 +47,7 @@ class EnvLoader:
             return config
 
         if isinstance(config, dict):
-            return {
-                key: EnvLoader._process_load_value(value)
-                for key, value in config.items()
-            }
+            return {key: EnvLoader._process_load_value(value) for key, value in config.items()}
 
         if isinstance(config, list):
             return [EnvLoader._process_load_value(item) for item in config]
@@ -86,14 +83,10 @@ class EnvLoader:
             if env_value is not None:
                 return env_value
             elif default_value is not None:
-                logging.info(
-                    f"Environment variable '{env_var}' not found, using default: '{default_value}'"
-                )
+                logging.info(f"Environment variable '{env_var}' not found, using default: '{default_value}'")
                 return default_value
             else:
-                logging.warning(
-                    f"Environment variable '{env_var}' not found and no default was provided"
-                )
+                logging.warning(f"Environment variable '{env_var}' not found and no default was provided")
                 return match.group(0)
 
         return re.sub(pattern, replace_match, value)

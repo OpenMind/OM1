@@ -99,9 +99,7 @@ class UbtechASRProvider:
     def _run(self):
         while self.running:
             if self.just_resumed:
-                logging.debug(
-                    "UbtechASRProvider: Just resumed, adding a 1.0s delay before listening."
-                )
+                logging.debug("UbtechASRProvider: Just resumed, adding a 1.0s delay before listening.")
                 time.sleep(1.0)
                 self.just_resumed = False
 
@@ -111,34 +109,24 @@ class UbtechASRProvider:
 
             text = None
             try:
-                logging.debug(
-                    "UbtechASRProvider: _run loop iteration, attempting to get utterance."
-                )
+                logging.debug("UbtechASRProvider: _run loop iteration, attempting to get utterance.")
                 text = self._get_single_utterance()
 
                 if text:
-                    logging.debug(
-                        f"UbtechASRProvider: Successfully got utterance: '{text}'"
-                    )
+                    logging.debug(f"UbtechASRProvider: Successfully got utterance: '{text}'")
                     if self._message_callback:
-                        logging.debug(
-                            f"UbtechASRProvider: Calling message callback with: '{text}'"
-                        )
+                        logging.debug(f"UbtechASRProvider: Calling message callback with: '{text}'")
                         self._message_callback(text)
 
             except requests.RequestException as e:
-                logging.error(
-                    f"UbtechASRProvider: RequestException during _get_single_utterance: {e}"
-                )
+                logging.error(f"UbtechASRProvider: RequestException during _get_single_utterance: {e}")
             except Exception as e:
                 logging.error(
                     f"UbtechASRProvider: Unexpected error in _run's try block: {e}",
                     exc_info=True,
                 )
             finally:
-                logging.debug(
-                    "UbtechASRProvider: Reached finally block in _run, ensuring ASR is paused."
-                )
+                logging.debug("UbtechASRProvider: Reached finally block in _run, ensuring ASR is paused.")
                 self.pause()
 
                 if text:
@@ -154,15 +142,11 @@ class UbtechASRProvider:
 
     def _get_single_utterance(self) -> Optional[str]:
         ts = int(time.time())
-        logging.debug(
-            f"UbtechASRProvider: _get_single_utterance called, timestamp: {ts}"
-        )
+        logging.debug(f"UbtechASRProvider: _get_single_utterance called, timestamp: {ts}")
 
         try:
             # PREEMPTIVE STOP: Ensure any previous session is cleared before starting a new one.
-            logging.info(
-                "UbtechASRProvider: Preemptively stopping any existing ASR session."
-            )
+            logging.info("UbtechASRProvider: Preemptively stopping any existing ASR session.")
             self._stop_voice_iat()
             time.sleep(0.1)
 
@@ -172,46 +156,28 @@ class UbtechASRProvider:
                 )
                 return None
 
-            logging.debug(
-                "UbtechASRProvider: ASR session started, pausing for 0.2s before polling."
-            )
+            logging.debug("UbtechASRProvider: ASR session started, pausing for 0.2s before polling.")
             time.sleep(0.2)
 
             for i in range(100):
                 if not self.running:
-                    logging.debug(
-                        "UbtechASRProvider: Not running, exiting _get_single_utterance loop."
-                    )
+                    logging.debug("UbtechASRProvider: Not running, exiting _get_single_utterance loop.")
                     return None
                 res = self._get_voice_iat()
-                logging.debug(
-                    f"UbtechASRProvider: _get_voice_iat (attempt {i+1}) returned: {res}"
-                )
+                logging.debug(f"UbtechASRProvider: _get_voice_iat (attempt {i+1}) returned: {res}")
                 if res.get("status") == "idle" and res.get("timestamp") == ts:
                     if not res.get("data") or res.get("code") != 0:
-                        logging.debug(
-                            "UbtechASRProvider: Idle status but no data or error code."
-                        )
+                        logging.debug("UbtechASRProvider: Idle status but no data or error code.")
                         return None
                     words = res.get("data", {}).get("text", {}).get("ws", [])
-                    processed_text = (
-                        "".join(w["cw"][0]["w"] for w in words).strip().lower()
-                        if words
-                        else None
-                    )
-                    logging.debug(
-                        f"UbtechASRProvider: Processed text from idle status: '{processed_text}'"
-                    )
+                    processed_text = "".join(w["cw"][0]["w"] for w in words).strip().lower() if words else None
+                    logging.debug(f"UbtechASRProvider: Processed text from idle status: '{processed_text}'")
                     return processed_text
                 time.sleep(0.1)
-            logging.debug(
-                "UbtechASRProvider: _get_single_utterance loop finished without idle status (timeout)."
-            )
+            logging.debug("UbtechASRProvider: _get_single_utterance loop finished without idle status (timeout).")
             return None
         finally:
-            logging.debug(
-                "UbtechASRProvider: Ensuring current voice iat session is stopped (post-attempt)."
-            )
+            logging.debug("UbtechASRProvider: Ensuring current voice iat session is stopped (post-attempt).")
             self._stop_voice_iat()
 
     def _set_robot_language(self, lang_code: str):
@@ -231,15 +197,11 @@ class UbtechASRProvider:
             return False
         try:
             data = {"text": "", "timestamp": ts, "lang": self.language}
-            logging.debug(
-                f"Starting ASR session with timestamp {ts} and language {self.language}. Payload: {data}"
-            )
+            logging.debug(f"Starting ASR session with timestamp {ts} and language {self.language}. Payload: {data}")
             res = self.session.put(f"{self.basic_url}voice/iat", json=data, timeout=3)
             res.raise_for_status()
             response_json = res.json()
-            logging.debug(
-                f"UbtechASRProvider: _start_voice_iat response: {response_json}"
-            )
+            logging.debug(f"UbtechASRProvider: _start_voice_iat response: {response_json}")
             return response_json.get("code") == 0
         except requests.RequestException as e:
             logging.error(f"UbtechASRProvider: _start_voice_iat request failed: {e}")
@@ -250,9 +212,7 @@ class UbtechASRProvider:
         retry_delay = 0.5
         for attempt in range(max_retries):
             try:
-                logging.debug(
-                    f"UbtechASRProvider: Attempting to stop voice iat (attempt {attempt + 1}/{max_retries})."
-                )
+                logging.debug(f"UbtechASRProvider: Attempting to stop voice iat (attempt {attempt + 1}/{max_retries}).")
                 response = self.session.delete(f"{self.basic_url}voice/iat", timeout=2)
                 response.raise_for_status()
                 logging.debug("UbtechASRProvider: _stop_voice_iat request successful.")
@@ -270,31 +230,23 @@ class UbtechASRProvider:
                     )
                     return
             except requests.RequestException as e:
-                logging.error(
-                    f"UbtechASRProvider: _stop_voice_iat request failed (attempt {attempt + 1}): {e}"
-                )
+                logging.error(f"UbtechASRProvider: _stop_voice_iat request failed (attempt {attempt + 1}): {e}")
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
                 return
-        logging.error(
-            f"UbtechASRProvider: _stop_voice_iat failed after {max_retries} retries."
-        )
+        logging.error(f"UbtechASRProvider: _stop_voice_iat failed after {max_retries} retries.")
 
     def _get_voice_iat(self) -> Dict:
         max_retries = 3
         retry_delay = 0.5
         for attempt in range(max_retries):
             try:
-                logging.debug(
-                    f"UbtechASRProvider: Attempting to get voice iat (attempt {attempt + 1}/{max_retries})."
-                )
+                logging.debug(f"UbtechASRProvider: Attempting to get voice iat (attempt {attempt + 1}/{max_retries}).")
                 res = self.session.get(f"{self.basic_url}voice/iat", timeout=3)
                 res.raise_for_status()
                 response_json = res.json()
-                logging.debug(
-                    f"UbtechASRProvider: _get_voice_iat raw response: {response_json}"
-                )
+                logging.debug(f"UbtechASRProvider: _get_voice_iat raw response: {response_json}")
 
                 if (
                     response_json.get("data")
@@ -302,9 +254,7 @@ class UbtechASRProvider:
                     and response_json.get("code") == 0
                 ):
                     cleaned_data_str = response_json["data"].strip().rstrip("\x00")
-                    logging.debug(
-                        f"UbtechASRProvider: _get_voice_iat cleaned data string: '{cleaned_data_str}'"
-                    )
+                    logging.debug(f"UbtechASRProvider: _get_voice_iat cleaned data string: '{cleaned_data_str}'")
                     if cleaned_data_str:
                         try:
                             response_json["data"] = json.loads(cleaned_data_str)
@@ -331,9 +281,7 @@ class UbtechASRProvider:
                         "status": "error",
                     }
             except requests.RequestException as e:
-                logging.error(
-                    f"UbtechASRProvider: _get_voice_iat request failed (attempt {attempt + 1}): {e}"
-                )
+                logging.error(f"UbtechASRProvider: _get_voice_iat request failed (attempt {attempt + 1}): {e}")
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     continue
@@ -352,9 +300,7 @@ class UbtechASRProvider:
                     "status": "error",
                 }
 
-        logging.error(
-            f"UbtechASRProvider: _get_voice_iat failed after {max_retries} retries."
-        )
+        logging.error(f"UbtechASRProvider: _get_voice_iat failed after {max_retries} retries.")
         return {
             "code": -1,
             "message": "Max retries exceeded",

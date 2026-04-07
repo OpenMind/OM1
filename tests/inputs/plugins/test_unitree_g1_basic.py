@@ -41,9 +41,7 @@ def test_initialization_with_ethernet():
     with (
         patch("inputs.plugins.unitree_g1_basic.IOProvider"),
         patch("inputs.plugins.unitree_g1_basic.TeleopsStatusProvider"),
-        patch(
-            "inputs.plugins.unitree_g1_basic.ChannelSubscriber"
-        ) as mock_subscriber_cls,
+        patch("inputs.plugins.unitree_g1_basic.ChannelSubscriber") as mock_subscriber_cls,
     ):
         mock_subscriber = MagicMock()
         mock_subscriber_cls.return_value = mock_subscriber
@@ -184,6 +182,4 @@ def test_formatted_latest_buffer_with_message(sensor):
     assert "WARNING: test" in result
     assert "Energy Level" in result
     assert sensor.messages == []
-    sensor.io_provider.add_input.assert_called_once_with(
-        "Energy Level", "WARNING: test", 1000.0
-    )
+    sensor.io_provider.add_input.assert_called_once_with("Energy Level", "WARNING: test", 1000.0)

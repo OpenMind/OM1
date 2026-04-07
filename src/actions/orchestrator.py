@@ -44,9 +44,7 @@ class ActionOrchestrator:
         """
         self._config = config
         self.promise_queue = []
-        self._connector_workers = (
-            min(12, len(config.agent_actions)) if config.agent_actions else 1
-        )
+        self._connector_workers = min(12, len(config.agent_actions)) if config.agent_actions else 1
         self._connector_executor = ThreadPoolExecutor(
             max_workers=self._connector_workers,
             thread_name_prefix="action-orchestrator-connector-",
@@ -71,13 +69,8 @@ class ActionOrchestrator:
             A future object for compatibility with async interfaces.
         """
         for agent_action in self._config.agent_actions:
-            if any(
-                action.llm_label == agent_action.llm_label
-                for action in self._action_instances
-            ):
-                logging.warning(
-                    f"Connector {agent_action.llm_label} already submitted, skipping."
-                )
+            if any(action.llm_label == agent_action.llm_label for action in self._action_instances):
+                logging.warning(f"Connector {agent_action.llm_label} already submitted, skipping.")
                 continue
 
             agent_action.connector.set_stop_event(self._stop_event)
@@ -119,9 +112,7 @@ class ActionOrchestrator:
         if not self.promise_queue:
             return [], []
 
-        done, pending = await asyncio.wait(
-            self.promise_queue, return_when=asyncio.ALL_COMPLETED
-        )
+        done, pending = await asyncio.wait(self.promise_queue, return_when=asyncio.ALL_COMPLETED)
 
         self.promise_queue = []
 
@@ -141,9 +132,7 @@ class ActionOrchestrator:
         actions : list[Action]
             List of actions to promise to connectors.
         """
-        self._completed_actions = {
-            action.type.lower(): asyncio.Event() for action in actions
-        }
+        self._completed_actions = {action.type.lower(): asyncio.Event() for action in actions}
 
         if self._execution_mode == "sequential":
             await self._promise_sequential(actions)
@@ -169,9 +158,7 @@ class ActionOrchestrator:
             if agent_action is None:
                 continue
 
-            action_response = asyncio.create_task(
-                self._promise_action(agent_action, normalized_action)
-            )
+            action_response = asyncio.create_task(self._promise_action(agent_action, normalized_action))
             self.promise_queue.append(action_response)
 
     async def _promise_sequential(self, actions: list[Action]) -> None:
@@ -191,9 +178,7 @@ class ActionOrchestrator:
             if agent_action is None:
                 continue
 
-            action_response = asyncio.create_task(
-                self._promise_action(agent_action, normalized_action)
-            )
+            action_response = asyncio.create_task(self._promise_action(agent_action, normalized_action))
             self.promise_queue.append(action_response)
             await action_response
 
@@ -219,14 +204,10 @@ class ActionOrchestrator:
             if agent_action is None:
                 continue
 
-            action_response = asyncio.create_task(
-                self._promise_action_with_deps(agent_action, normalized_action)
-            )
+            action_response = asyncio.create_task(self._promise_action_with_deps(agent_action, normalized_action))
             self.promise_queue.append(action_response)
 
-    async def _promise_action_with_deps(
-        self, agent_action: AgentAction, action: Action
-    ) -> T.Any:
+    async def _promise_action_with_deps(self, agent_action: AgentAction, action: Action) -> T.Any:
         """
         Execute an action after waiting for its dependencies.
 
@@ -306,17 +287,11 @@ class ActionOrchestrator:
             The corresponding AgentAction or None if not found.
         """
         agent_action = next(
-            (
-                m
-                for m in self._config.agent_actions
-                if m.llm_label == action.type.lower()
-            ),
+            (m for m in self._config.agent_actions if m.llm_label == action.type.lower()),
             None,
         )
         if agent_action is None:
-            logging.warning(
-                f"Attempted to call non-existent action: {action.type.lower()}."
-            )
+            logging.warning(f"Attempted to call non-existent action: {action.type.lower()}.")
         return agent_action
 
     async def _promise_action(self, agent_action: AgentAction, action: Action) -> T.Any:
@@ -355,9 +330,7 @@ class ActionOrchestrator:
         for key, value in input_params.items():
             if key in input_type_hints:
                 expected_type = input_type_hints[key]
-                if hasattr(expected_type, "__mro__") and any(
-                    base.__name__ == "Enum" for base in expected_type.__mro__
-                ):
+                if hasattr(expected_type, "__mro__") and any(base.__name__ == "Enum" for base in expected_type.__mro__):
                     converted_params[key] = expected_type(value)
                 elif expected_type is float:
                     converted_params[key] = float(value)
@@ -365,9 +338,7 @@ class ActionOrchestrator:
                     converted_params[key] = int(value)
                 elif expected_type is bool:
                     converted_params[key] = (
-                        bool(value)
-                        if not isinstance(value, str)
-                        else value.lower() in ("true", "1", "yes")
+                        bool(value) if not isinstance(value, str) else value.lower() in ("true", "1", "yes")
                     )
                 else:
                     converted_params[key] = value

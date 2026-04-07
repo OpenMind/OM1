@@ -24,12 +24,8 @@ def reset_singleton():
 def mock_dependencies():
     """Mock dependencies for UnitreeGo2NavigationProvider."""
     with (
-        patch(
-            "providers.unitree_go2_navigation_provider.open_zenoh_session"
-        ) as mock_zenoh,
-        patch(
-            "providers.unitree_go2_navigation_provider.ElevenLabsTTSProvider"
-        ) as mock_tts,
+        patch("providers.unitree_go2_navigation_provider.open_zenoh_session") as mock_zenoh,
+        patch("providers.unitree_go2_navigation_provider.ElevenLabsTTSProvider") as mock_tts,
     ):
 
         mock_session = MagicMock()

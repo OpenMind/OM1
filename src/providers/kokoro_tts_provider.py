@@ -184,9 +184,7 @@ class KokoroTTSProvider:
             The message to be added, typically containing text and TTS parameters.
         """
         if not self.running:
-            logging.warning(
-                "TTS provider is not running. Call start() before adding messages."
-            )
+            logging.warning("TTS provider is not running. Call start() before adding messages.")
             return
 
         if isinstance(message, str):
@@ -210,9 +208,7 @@ class KokoroTTSProvider:
             if count > 0:
                 logging.info(f"Cleared {count} pending TTS messages")
         else:
-            logging.debug(
-                "AudioOutputLiveStream has no _pending_requests queue to clear"
-            )
+            logging.debug("AudioOutputLiveStream has no _pending_requests queue to clear")
 
     def get_pending_message_count(self) -> int:
         """

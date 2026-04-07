@@ -30,9 +30,7 @@ def reset_singleton():
 def mock_dependencies():
     """Mock dependencies for VLMOpenAIRTSPProvider."""
     with (
-        patch(
-            "providers.vlm_openai_rtsp_provider.AsyncOpenAI", new_callable=MagicMock
-        ) as mock_openai,
+        patch("providers.vlm_openai_rtsp_provider.AsyncOpenAI", new_callable=MagicMock) as mock_openai,
         patch("providers.vlm_openai_rtsp_provider.VideoRTSPStream") as mock_stream,
     ):
 
@@ -61,10 +59,7 @@ def test_initialization(mock_dependencies):
     )
 
     assert provider.running is False
-    assert (
-        provider.prompt
-        == "What is the most interesting aspect in this series of images?"
-    )
+    assert provider.prompt == "What is the most interesting aspect in this series of images?"
     assert provider.batch_size == 5
     assert provider.batch_interval == 0.5
 
@@ -76,9 +71,7 @@ def test_initialization_with_custom_prompt(mock_dependencies):
     """Test initialization with custom prompt."""
     custom_prompt = "Describe what you see"
 
-    provider = VLMOpenAIRTSPProvider(
-        base_url="http://localhost:8000", api_key="test-key", prompt=custom_prompt
-    )
+    provider = VLMOpenAIRTSPProvider(base_url="http://localhost:8000", api_key="test-key", prompt=custom_prompt)
 
     assert provider.prompt == custom_prompt
 
@@ -106,9 +99,7 @@ def test_singleton_pattern(mock_dependencies):
 
 def test_queue_frame(mock_dependencies):
     """Test queuing a frame."""
-    provider = VLMOpenAIRTSPProvider(
-        base_url="http://localhost:8000", api_key="test-key"
-    )
+    provider = VLMOpenAIRTSPProvider(base_url="http://localhost:8000", api_key="test-key")
 
     frame_data = json.dumps({"frame": "base64encodeddata"})
     provider._queue_frame(frame_data)
@@ -119,9 +110,7 @@ def test_queue_frame(mock_dependencies):
 
 def test_queue_frame_with_invalid_json(mock_dependencies):
     """Test queuing a frame with invalid JSON."""
-    provider = VLMOpenAIRTSPProvider(
-        base_url="http://localhost:8000", api_key="test-key"
-    )
+    provider = VLMOpenAIRTSPProvider(base_url="http://localhost:8000", api_key="test-key")
 
     # Should not raise exception, just log error
     provider._queue_frame("invalid json")
@@ -131,9 +120,7 @@ def test_queue_frame_with_invalid_json(mock_dependencies):
 
 def test_frame_queue_maxlen(mock_dependencies):
     """Test that frame queue respects maxlen."""
-    provider = VLMOpenAIRTSPProvider(
-        base_url="http://localhost:8000", api_key="test-key", batch_size=3
-    )
+    provider = VLMOpenAIRTSPProvider(base_url="http://localhost:8000", api_key="test-key", batch_size=3)
 
     # Add more frames than batch_size
     for i in range(5):
@@ -146,9 +133,7 @@ def test_frame_queue_maxlen(mock_dependencies):
 
 def test_register_message_callback(mock_dependencies):
     """Test registering message callback."""
-    provider = VLMOpenAIRTSPProvider(
-        base_url="http://localhost:8000", api_key="test-key"
-    )
+    provider = VLMOpenAIRTSPProvider(base_url="http://localhost:8000", api_key="test-key")
 
     def callback(message):
         pass

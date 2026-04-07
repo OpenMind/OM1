@@ -30,9 +30,7 @@ def test_initialization(mock_dependencies):
     """Test UbtechCameraVideoStream initialization."""
     robot_ip = "192.168.1.100"
 
-    stream = UbtechCameraVideoStream(
-        robot_ip=robot_ip, fps=30, resolution=(640, 480), jpeg_quality=70
-    )
+    stream = UbtechCameraVideoStream(robot_ip=robot_ip, fps=30, resolution=(640, 480), jpeg_quality=70)
 
     assert stream.robot_ip == robot_ip
     assert stream.url == f"http://{robot_ip}:8000/stream.mjpg"
@@ -62,9 +60,7 @@ def test_initialization_with_multiple_callbacks(mock_dependencies):
 
     callbacks = [callback1, callback2]
 
-    stream = UbtechCameraVideoStream(
-        robot_ip="192.168.1.100", frame_callbacks=callbacks
-    )
+    stream = UbtechCameraVideoStream(robot_ip="192.168.1.100", frame_callbacks=callbacks)
 
     assert callback1 in stream.frame_callbacks
     assert callback2 in stream.frame_callbacks
@@ -138,9 +134,7 @@ def test_multiple_frame_callbacks(mock_dependencies):
     callback1 = MagicMock()
     callback2 = MagicMock()
 
-    stream = UbtechCameraVideoStream(
-        robot_ip="192.168.1.100", frame_callbacks=[callback1, callback2]
-    )
+    stream = UbtechCameraVideoStream(robot_ip="192.168.1.100", frame_callbacks=[callback1, callback2])
 
     assert len(stream.frame_callbacks) >= 2
     assert callback1 in stream.frame_callbacks

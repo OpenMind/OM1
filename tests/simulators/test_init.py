@@ -75,9 +75,7 @@ def test_load_simulator_invalid_type():
         setattr(mock_module, "InvalidSimulator", InvalidSimulator)
         mock_import.return_value = mock_module
 
-        with pytest.raises(
-            ValueError, match="'InvalidSimulator' is not a valid simulator subclass"
-        ):
+        with pytest.raises(ValueError, match="'InvalidSimulator' is not a valid simulator subclass"):
             load_simulator({"type": "InvalidSimulator"})
 
 

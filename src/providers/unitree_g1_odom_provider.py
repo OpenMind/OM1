@@ -129,9 +129,7 @@ class UnitreeG1OdomProvider(OdomProviderBase):
             return
         else:
             logging.info("Starting Odom processor thread")
-            self._odom_processor_thread = threading.Thread(
-                target=self.process_odom, daemon=True
-            )
+            self._odom_processor_thread = threading.Thread(target=self.process_odom, daemon=True)
             self._odom_processor_thread.start()
 
     def process_odom(self):
@@ -150,9 +148,7 @@ class UnitreeG1OdomProvider(OdomProviderBase):
                 continue
 
             # Extract timestamp
-            self.odom_rockchip_ts = (
-                sport_data.stamp.sec + sport_data.stamp.nanosec * 1e-9
-            )
+            self.odom_rockchip_ts = sport_data.stamp.sec + sport_data.stamp.nanosec * 1e-9
             self.odom_subscriber_ts = time.time()
 
             # Extract position from the array [x, y, z]
@@ -176,9 +172,7 @@ class UnitreeG1OdomProvider(OdomProviderBase):
 
             if delta > 0.01 or self.move_history > 0.01:
                 self.moving = True
-                logging.info(
-                    f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}"
-                )
+                logging.info(f"delta moving (m): {round(delta, 3)} {round(self.move_history, 3)}")
             else:
                 self.moving = False
 

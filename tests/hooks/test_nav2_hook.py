@@ -97,9 +97,7 @@ class TestStartNav2Hook:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(
-                Exception, match="Failed to start Nav2: Service unavailable"
-            ):
+            with pytest.raises(Exception, match="Failed to start Nav2: Service unavailable"):
                 await start_nav2_hook(context)
 
     @pytest.mark.asyncio
@@ -129,9 +127,7 @@ class TestStartNav2Hook:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(
-                Exception, match="Error calling Nav2 API: Connection refused"
-            ):
+            with pytest.raises(Exception, match="Error calling Nav2 API: Connection refused"):
                 await start_nav2_hook(context)
 
     @pytest.mark.asyncio
@@ -228,7 +224,5 @@ class TestStopNav2Hook:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(
-                Exception, match="Error calling Nav2 stop API: Network error"
-            ):
+            with pytest.raises(Exception, match="Error calling Nav2 stop API: Network error"):
                 await stop_nav2_hook(context)
