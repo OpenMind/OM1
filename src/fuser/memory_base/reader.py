@@ -59,6 +59,7 @@ class MemoryReader:
             The in-memory embedding index.
         """
         if not self._index_initialized:
+            logging.info("Memory: building index...")
             await build_index(self.index, self.daily_dir)
             self._index_initialized = True
             logging.info(f"Memory: index initialized with {self.index.size} chunks")
@@ -115,8 +116,7 @@ class MemoryReader:
         score_threshold = min_score if min_score is not None else self.min_score
 
         try:
-            index = await self.ensure_index()
-            return await index.search(query_text, top_k=top_k, min_score=score_threshold)
+            return await self.index.search(query_text, top_k=top_k, min_score=score_threshold)
         except Exception as e:
             logging.error(f"Memory: search failed: {e}")
             return []

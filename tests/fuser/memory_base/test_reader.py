@@ -138,15 +138,6 @@ class TestSearchDaily:
         result = await reader.search_daily("query")
         assert result == []
 
-    @pytest.mark.asyncio
-    async def test_calls_ensure_index_on_first_search(self, tmp_path):
-        reader = MemoryReader(memory_root=tmp_path)
-        reader.index.search = AsyncMock(return_value=[])
-
-        with patch.object(reader, "ensure_index", new_callable=AsyncMock, return_value=reader.index) as mock_ensure:
-            await reader.search_daily("hello")
-            mock_ensure.assert_called_once()
-
 
 class TestEnsureIndex:
     @pytest.mark.asyncio
