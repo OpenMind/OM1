@@ -1,12 +1,10 @@
-import asyncio
 import json
 import logging
 import os
 import re
 import threading
-
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from .singleton import singleton
 
@@ -85,13 +83,10 @@ class ExecuteCronJobProvider:
             self._entries = self._read_file()
         self._start_dt = datetime.now().replace(microsecond=0)
         self._stop_event.clear()
-        self._thread = threading.Thread(
-            target=self._loop, name="ExecuteCronJobProvider", daemon=True
-        )
+        self._thread = threading.Thread(target=self._loop, name="ExecuteCronJobProvider", daemon=True)
         self._thread.start()
         logger.info(
-            "ExecuteCronJobProvider started (polling %s every %.1fs, run_previous=%s, "
-            "loaded %d entries)",
+            "ExecuteCronJobProvider started (polling %s every %.1fs, run_previous=%s, " "loaded %d entries)",
             self.schedule_file,
             self.poll_interval,
             self.run_previous,
@@ -162,9 +157,7 @@ class ExecuteCronJobProvider:
                 return datetime.strptime(schedule_time.strip(), fmt)
             except ValueError:
                 continue
-        logger.warning(
-            "ExecuteCronJobProvider: could not parse schedule_time '%s'", schedule_time
-        )
+        logger.warning("ExecuteCronJobProvider: could not parse schedule_time '%s'", schedule_time)
         return None
 
     # ------------------------------------------------------------------
@@ -205,9 +198,7 @@ class ExecuteCronJobProvider:
             # Normalise plural full words: "second" → "s", "minute" → "m", etc.
             unit = unit[0]  # first letter is always the canonical short form
             return timedelta(**{self._UNIT_MAP[unit]: n})
-        logger.warning(
-            "ExecuteCronJobProvider: unknown recurrence pattern '%s'", recurrence
-        )
+        logger.warning("ExecuteCronJobProvider: unknown recurrence pattern '%s'", recurrence)
         return None
 
     def _is_due(self, entry: dict, now_dt: datetime) -> bool:

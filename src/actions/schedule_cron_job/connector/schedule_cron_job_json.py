@@ -3,9 +3,10 @@ import logging
 import time
 from datetime import datetime
 
+from pydantic import Field
+
 from actions.base import ActionConfig, ActionConnector
 from actions.schedule_cron_job.interface import ScheduleCronJobInput
-from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             except ValueError:
                 continue
         raise ValueError(
-            f"Could not parse schedule_time '{schedule_time}'. "
-            f"Expected format: 'YYYY-MM-DD HH:MM:SS'."
+            f"Could not parse schedule_time '{schedule_time}'. " f"Expected format: 'YYYY-MM-DD HH:MM:SS'."
         )
 
     # ------------------------------------------------------------------

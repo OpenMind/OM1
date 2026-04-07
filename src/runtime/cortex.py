@@ -10,8 +10,8 @@ from fuser import Fuser
 from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
-from providers.io_provider import IOProvider
 from providers.execute_cron_job_provider import ExecuteCronJobProvider
+from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
 from runtime.config import (
     LifecycleHookType,
@@ -457,7 +457,6 @@ class ModeCortexRuntime:
             )
             self.execute_cron_job_provider.start()
 
-
             if self.hot_reload and self.config_path:
                 self.config_watcher_task = asyncio.create_task(self._check_config_changes())
 
@@ -664,10 +663,7 @@ class ModeCortexRuntime:
                     if output is not None:
                         output.actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
                         if dispatched_om1_types:
-                            output.actions = [
-                                a for a in output.actions
-                                if a.type.lower() not in dispatched_om1_types
-                            ]
+                            output.actions = [a for a in output.actions if a.type.lower() not in dispatched_om1_types]
 
                 if output is None:
                     logging.debug("No output from LLM after MCP processing")
@@ -682,11 +678,9 @@ class ModeCortexRuntime:
                 # schedule_cron_job actions the LLM may have emitted.
                 try:
                     from inputs.plugins.scheduled_cron_input import ScheduledCronInput
+
                     if ScheduledCronInput.cron_triggered:
-                        output.actions = [
-                            a for a in output.actions
-                            if a.type.lower() != "schedule_cron_job"
-                        ]
+                        output.actions = [a for a in output.actions if a.type.lower() != "schedule_cron_job"]
                 except ImportError:
                     pass
 

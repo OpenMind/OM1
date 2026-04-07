@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+
 from actions.base import Interface
 
 
@@ -11,7 +12,9 @@ class ScheduleCronJobInput:
     )
 
     function: str = field(
-        metadata={"description": "The name of the function or action to call. Must exactly match a function name available in the tools list."}
+        metadata={
+            "description": "The name of the function or action to call. Must exactly match a function name available in the tools list."
+        }
     )
 
     args: str = field(

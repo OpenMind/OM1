@@ -318,8 +318,7 @@ class LLMHistoryManager:
                     # Filter out cron-job scheduling exchanges from history so the
                     # LLM doesn't see them on subsequent turns and re-schedule.
                     is_cron_exchange = any(
-                        action.type.lower() == "schedule_cron_job"
-                        for action in response.actions  # type: ignore
+                        action.type.lower() == "schedule_cron_job" for action in response.actions  # type: ignore
                     )
 
                     if is_cron_exchange:

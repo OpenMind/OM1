@@ -1,22 +1,20 @@
 import asyncio
 import logging
 import time
-from queue import Empty, Queue
-from typing import Optional
+from typing import ClassVar, Optional
+
+from pydantic import Field
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
-from pydantic import Field
 
 
 class ScheduledCronInputConfig(SensorConfig):
     """Configuration for the ScheduledCronInput plugin."""
 
-    input_name: str = Field(
-        default="User Async Task", description="Label shown to the LLM for this input"
-    )
+    input_name: str = Field(default="User Async Task", description="Label shown to the LLM for this input")
 
 
 class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
@@ -25,15 +23,13 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
     ExecuteCronJobProvider) inject a natural-language command directly into
     the fuser pipeline so that it is processed by the LLM on the next tick.
 
-    The shared queue is a class-level attribute so any code that holds
-    a reference to the *class* can push messages without needing an
-    instance reference:
-
         ScheduledCronInput.inject("turn on the living-room lights")
     """
 
-    # Class-level queue shared across all instances and callers.
-    _shared_queue: Queue = Queue()
+    # Reference to the active instance so inject() can write directly to
+    # self.messages without going through the poll loop, ensuring the message
+    # is visible on the very next cortex tick.
+    _instance: ClassVar[Optional["ScheduledCronInput"]] = None
 
     # Set to True when formatted_latest_buffer() returns a message this tick,
     # so cortex can filter schedule_cron_job from the LLM response and prevent
@@ -45,6 +41,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         self.messages: list[Message] = []
         self.descriptor_for_LLM = self.config.input_name
         self.io_provider = IOProvider()
+        ScheduledCronInput._instance = self
 
     # ------------------------------------------------------------------
     # Public class-method API used by ExecuteCronJobProvider
@@ -52,14 +49,20 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
 
     @classmethod
     def inject(cls, message: str) -> None:
-        """Enqueue *message* and wake the cortex loop immediately.
+        """Inject *message* directly into the buffer and wake the cortex loop.
+
+        Writes straight to the active instance's message buffer so the message
+        is visible to formatted_latest_buffer() on the very next cortex tick.
 
         Parameters
         ----------
         message:
             The natural-language command or question to inject.
         """
-        cls._shared_queue.put(message)
+        if cls._instance is None:
+            logging.warning("ScheduledCronInput: inject() called before instance created, message dropped: %s", message)
+            return
+        cls._instance.messages.append(Message(timestamp=time.time(), message=message))
         logging.info("ScheduledCronInput: injected message: %s", message)
         SleepTickerProvider().skip_sleep = True
 
@@ -69,16 +72,11 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
 
     async def _poll(self) -> Optional[str]:
         await asyncio.sleep(0.1)
-        try:
-            return self._shared_queue.get_nowait()
-        except Empty:
-            return None
+        return None
 
     async def raw_to_text(self, raw_input: Optional[str]) -> None:
-        """Convert a raw queue item into a Message and append it to the buffer."""
-        if raw_input is None:
-            return
-        self.messages.append(Message(timestamp=time.time(), message=raw_input))
+        """No-op: messages are injected directly via inject() and formatted_latest_buffer()."""
+        pass
 
     def formatted_latest_buffer(self) -> Optional[str]:
         """Return the latest injected message formatted for the LLM, or None if empty."""
@@ -87,13 +85,8 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
             return None
 
         msg = self.messages[-1]
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n"
-            f"// START\n{msg.message}\n// END\n"
-        )
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, msg.message, time.time()
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n" f"// START\n{msg.message}\n// END\n"
+        self.io_provider.add_input(self.descriptor_for_LLM, msg.message, time.time())
         self.messages = []
         ScheduledCronInput.cron_triggered = True
         return result
