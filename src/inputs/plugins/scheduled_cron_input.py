@@ -75,11 +75,13 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
             return None
 
     async def raw_to_text(self, raw_input: Optional[str]) -> None:
+        """Convert a raw queue item into a Message and append it to the buffer."""
         if raw_input is None:
             return
         self.messages.append(Message(timestamp=time.time(), message=raw_input))
 
     def formatted_latest_buffer(self) -> Optional[str]:
+        """Return the latest injected message formatted for the LLM, or None if empty."""
         if not self.messages:
             ScheduledCronInput.cron_triggered = False
             return None

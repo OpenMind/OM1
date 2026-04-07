@@ -4,7 +4,7 @@ from actions.base import Interface
 # ---------------------------------------------------------------------------
 # Runtime-configurable docstring variants for ScheduleCronJob.
 # configure_docstring() patches ScheduleCronJob.__doc__ based on the
-# use_program_input setting so the LLM receives correct instructions.
+# execute_by_llm setting so the LLM receives correct instructions.
 # ---------------------------------------------------------------------------
 
 _DOCSTRING_PROGRAM_INPUT = (
@@ -43,14 +43,14 @@ _DOCSTRING_ORCHESTRATORS = (
 )
 
 
-def configure_docstring(use_program_input: bool) -> None:
-    """Patch ``ScheduleCronJob.__doc__`` based on the ``use_program_input`` setting.
+def configure_docstring(execute_by_llm: bool) -> None:
+    """Patch ``ScheduleCronJob.__doc__`` based on the ``execute_by_llm`` setting.
 
     Must be called before the LLM is loaded so that both text-based and
     function-calling LLMs see the correct description.
     """
     ScheduleCronJob.__doc__ = (
-        _DOCSTRING_PROGRAM_INPUT if use_program_input else _DOCSTRING_ORCHESTRATORS
+        _DOCSTRING_PROGRAM_INPUT if execute_by_llm else _DOCSTRING_ORCHESTRATORS
     )
 
 
@@ -58,31 +58,35 @@ def configure_docstring(use_program_input: bool) -> None:
 class ScheduleCronJobInput:
     """Input interface for the ScheduleCronJob action."""
 
-    schedule_time: str
-    """Date-time string for when the job should first execute (e.g. '2025-01-30 15:04:00')."""
+    schedule_time: str = field(
+        metadata={"description": "Date and time when the job should first execute, formatted as 'YYYY-MM-DD HH:MM:SS'."}
+    )
 
-    function: str
-    """use_program_input=True: the original user request with time info stripped.
-    use_program_input=False + Agent Action: the action name to call.
-    use_program_input=False + MCP Tool: the MCP tool name."""
+    function: str = field(
+        metadata={"description": "The name of the function or action to call. Must exactly match a function name available in the tools list."}
+    )
 
-    args: str = field(default="{}")
-    """use_program_input=True: leave as '{}'.
-    use_program_input=False + Agent Action: JSON string of action parameters.
-    use_program_input=False + MCP Tool: JSON string {"command": "<stripped user request>"}."""
+    args: str = field(
+        default="{}",
+        metadata={
+            "description": (
+                "JSON-encoded parameters for the function named in 'function'."
+                " Look up that function's schema in the available tools and serialize its parameters as a JSON string."
+                " Example: if function='speak' (which takes action: str), set args='{\"action\": \"Hello world\"}'."
+                " Do NOT include the function name itself inside args."
+            )
+        },
+    )
 
-    recurrence: str = field(default="")
-    """How often to repeat.  Leave empty or use 'once' for a one-time task.
-    Supported patterns:
-      - '' or 'once'   — run once at schedule_time
-      - 'hourly'       — repeat every 60 minutes
-      - 'daily'        — repeat every 24 hours
-      - 'weekly'       — repeat every 7 days
-      - 'every Xs'     — repeat every X seconds  (e.g. 'every 30s')
-      - 'every Xm'     — repeat every X minutes  (e.g. 'every 30m')
-      - 'every Xh'     — repeat every X hours    (e.g. 'every 2h')
-      - 'every Xd'     — repeat every X days     (e.g. 'every 3d')
-    """
+    recurrence: str = field(
+        default="",
+        metadata={
+            "description": (
+                "How often to repeat. Leave empty or 'once' for one-time tasks."
+                " Supported: 'hourly', 'daily', 'weekly', 'every 30s', 'every 5m', 'every 2h', 'every 3d'."
+            )
+        },
+    )
 
 
 @dataclass

@@ -34,7 +34,6 @@ def _build_action_wrapper(agent_action: AgentAction) -> Callable[..., None]:
     → 'action'), unknown-field pruning, single-field heuristic, and type
     coercion (Enum, int, float, bool, Optional[T]).
     """
-
     input_type = T.get_type_hints(agent_action.interface)["input"]
     input_type_hints = T.get_type_hints(input_type)
     normalize = build_arg_normalizer(input_type, input_type_hints, agent_action.llm_label)
@@ -97,18 +96,17 @@ class ExecuteCronJobProvider:
         provider.start()
     """
 
-
     def __init__(
         self,
         schedule_file: str = "config/cron_job/cron.json",
         poll_interval: float = 1.0,
         run_previous: bool = True,
-        use_program_input: bool = False,
+        execute_by_llm: bool = False,
     ) -> None:
         self.schedule_file = schedule_file
         self.poll_interval = poll_interval
         self.run_previous = run_previous
-        self.use_program_input = use_program_input
+        self.execute_by_llm = execute_by_llm
 
         self._start_dt: Optional[datetime] = None  # set when start() is called
         self._stop_event = threading.Event()
@@ -404,10 +402,10 @@ class ExecuteCronJobProvider:
             ScheduledCronInput.inject(command)
             return
 
-        # --- use_program_input fallback: function is a natural-language command ---
-        # Entries created in use_program_input mode store the stripped user request
+        # --- execute_by_llm fallback: function is a natural-language command ---
+        # Entries created in execute_by_llm mode store the stripped user request
         # in `function` (not a registered action name), so inject it into the LLM.
-        if self.use_program_input:
+        if self.execute_by_llm:
             from inputs.plugins.scheduled_cron_input import ScheduledCronInput
 
             logger.info(

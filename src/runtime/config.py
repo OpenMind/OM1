@@ -723,13 +723,13 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
         for bg in mode_config._raw_backgrounds
     ]
 
-    # Patch ScheduleCall docstring based on cron_job.use_program_input so the
+    # Patch ScheduleCronJob docstring based on cron_job.execute_by_llm so the
     # LLM sees the correct instructions before its schema/prompt is generated.
-    cs_cfg = mode_config.cron_job
-    if cs_cfg is not None:
-        from actions.schedule_cron_job.interface import configure_docstring
+    # Default to execute_by_llm=True when no cron_job config is present.
+    cs_cfg = mode_config.cron_job or {}
+    from actions.schedule_cron_job.interface import configure_docstring
 
-        configure_docstring(bool(cs_cfg.get("use_program_input", False)))
+    configure_docstring(bool(cs_cfg.get("execute_by_llm", True)))
 
     # Load LLM
     llm_config = mode_config._raw_llm or system_config.global_cortex_llm

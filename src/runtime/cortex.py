@@ -449,39 +449,29 @@ class ModeCortexRuntime:
 
             await self._start_orchestrators()
 
-            # Start the cron job scheduler if configured
-            cs_cfg = self.current_config.cron_job if self.current_config else None
-            if cs_cfg is not None:
-                self.execute_cron_job_provider = ExecuteCronJobProvider(
-                    poll_interval=float(cs_cfg.get("interval", 1)),
-                    run_previous=bool(cs_cfg.get("run_previous", True)),
-                    use_program_input=bool(cs_cfg.get("use_program_input", False)),
+            # Start the cron job scheduler (always, falling back to defaults if not configured)
+            cs_cfg = (self.current_config.cron_job or {}) if self.current_config else {}
+            self.execute_cron_job_provider = ExecuteCronJobProvider(
+                poll_interval=float(cs_cfg.get("interval", 1)),
+                run_previous=bool(cs_cfg.get("run_previous", True)),
+                execute_by_llm=bool(cs_cfg.get("execute_by_llm", True)),
+            )
+            self.execute_cron_job_provider.register_actions(
+                self.current_config.agent_actions if self.current_config else []
+            )
+            running_loop = asyncio.get_running_loop()
+            if self.current_config and self.current_config.mcp_servers:
+                self.execute_cron_job_provider.register_mcp(
+                    self.current_config.mcp_servers,
+                    running_loop,
                 )
-                self.execute_cron_job_provider.register_actions(
-                    self.current_config.agent_actions if self.current_config else []
+            if self.action_orchestrator:
+                self.execute_cron_job_provider.register_action_orchestrator(
+                    self.action_orchestrator,
+                    running_loop,
                 )
-                running_loop = asyncio.get_running_loop()
-                if self.current_config and self.current_config.mcp_servers:
-                    self.execute_cron_job_provider.register_mcp(
-                        self.current_config.mcp_servers,
-                        running_loop,
-                    )
-                if self.action_orchestrator:
-                    self.execute_cron_job_provider.register_action_orchestrator(
-                        self.action_orchestrator,
-                        running_loop,
-                    )
-                self.execute_cron_job_provider.start()
+            self.execute_cron_job_provider.start()
 
-                if cs_cfg.get("suppress_history", False) and self.current_config:
-                    llm = self.current_config.cortex_llm
-                    history_manager = getattr(llm, "history_manager", None)
-                    if history_manager is not None:
-                        history_manager.suppress_schedule_history = True
-                        logging.info(
-                            "ExecuteCronJobProvider: suppress_history enabled — "
-                            "schedule_cron_job exchanges will not be stored in LLM history"
-                        )
 
             if self.hot_reload and self.config_path:
                 self.config_watcher_task = asyncio.create_task(self._check_config_changes())

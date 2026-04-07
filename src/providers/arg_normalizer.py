@@ -18,7 +18,7 @@ import dataclasses
 import logging
 import typing
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Set, Tuple, Type
+from typing import Any, Callable, Dict, Set, Tuple
 
 logger = logging.getLogger(__name__)
 

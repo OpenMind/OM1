@@ -4,6 +4,7 @@ Utility functions for generating OpenAI function schemas from AgentActions.
 This module is separate from both the actions and llm modules to avoid circular imports.
 """
 
+import dataclasses
 import json
 import logging
 from enum import Enum
@@ -35,38 +36,50 @@ def generate_function_schema_from_action(action) -> dict:
     properties = {}
     required = []
 
+    # Build a lookup of field metadata descriptions from the dataclass, if available.
+    field_descriptions: dict = {}
+    if dataclasses.is_dataclass(input_interface):
+        for f in dataclasses.fields(input_interface):
+            desc = f.metadata.get("description", "")
+            if desc:
+                field_descriptions[f.name] = desc
+
     for field_name, field_type in get_type_hints(input_interface).items():
+        description = field_descriptions.get(field_name, f"The {field_name} parameter")
         if isinstance(field_type, type) and issubclass(field_type, Enum):
             enum_values = [v.value for v in field_type]
             properties[field_name] = {
                 "type": "string",
                 "enum": enum_values,
-                "description": f"The {field_name} to perform. Must be one of: {', '.join(enum_values)}",
+                "description": field_descriptions.get(
+                    field_name,
+                    f"The {field_name} to perform. Must be one of: {', '.join(enum_values)}",
+                ),
             }
         elif isinstance(field_type, str):
             properties[field_name] = {
                 "type": "string",
-                "description": f"The {field_name} parameter",
+                "description": description,
             }
         elif isinstance(field_type, int):
             properties[field_name] = {
                 "type": "integer",
-                "description": f"The {field_name} parameter",
+                "description": description,
             }
         elif isinstance(field_type, float):
             properties[field_name] = {
                 "type": "number",
-                "description": f"The {field_name} parameter",
+                "description": description,
             }
         elif isinstance(field_type, bool):
             properties[field_name] = {
                 "type": "boolean",
-                "description": f"The {field_name} parameter",
+                "description": description,
             }
         else:
             properties[field_name] = {
                 "type": "string",
-                "description": f"The {field_name} parameter",
+                "description": description,
             }
 
         required.append(field_name)

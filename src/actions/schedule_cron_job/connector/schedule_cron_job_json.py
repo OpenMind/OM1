@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class ScheduleCronJobConfig(ActionConfig):
+    """Configuration for the ScheduleCronJobJSONConnector."""
+
     schedule_file: str = Field(
         default="config/cron_job/cron.json",
         description="Path to the JSON file where scheduled cron jobs are persisted.",
@@ -71,6 +73,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
     # ------------------------------------------------------------------
 
     async def connect(self, output_interface: ScheduleCronJobInput) -> None:
+        """Persist a scheduled cron job entry and register it with ExecuteCronJobProvider."""
         try:
             timestamp = self._parse_schedule_time(output_interface.schedule_time)
         except ValueError as exc:

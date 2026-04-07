@@ -78,10 +78,6 @@ class LLMHistoryManager:
         # history buffer
         self.history: List[ChatMessage] = []
 
-        # When True, exchanges where the LLM calls schedule_cron_job are not
-        # recorded in history so they don't repeat on subsequent turns.
-        self.suppress_schedule_history: bool = False
-
         # io provider
         self.io_provider = IOProvider()
 
@@ -319,21 +315,18 @@ class LLMHistoryManager:
 
                 if response is not None:
 
-                    # Suppress cron-job scheduling exchanges from history so the
+                    # Filter out cron-job scheduling exchanges from history so the
                     # LLM doesn't see them on subsequent turns and re-schedule.
-                    is_cron_exchange = (
-                        self.history_manager.suppress_schedule_history
-                        and any(
-                            action.type.lower() == "schedule_cron_job"
-                            for action in response.actions  # type: ignore
-                        )
+                    is_cron_exchange = any(
+                        action.type.lower() == "schedule_cron_job"
+                        for action in response.actions  # type: ignore
                     )
 
                     if is_cron_exchange:
                         # Remove the user input appended before the LLM call.
                         if self.history_manager.history and self.history_manager.history[-1].role == "user":
                             self.history_manager.history.pop()
-                        logging.debug("suppress_schedule_history: dropped cron-job exchange from history")
+                        logging.debug("Filter our cronjob conversation: dropped cron-job exchange from history")
                     else:
                         action_message = "Given that information, **** took these actions: " + (
                             " | ".join(
