@@ -91,8 +91,7 @@ class WebSim(Simulator):
 
         @self.app.get("/")
         async def get_index():
-            return HTMLResponse(
-                """
+            return HTMLResponse("""
             <!DOCTYPE html>
             <html>
                 <head>
@@ -470,8 +469,7 @@ class WebSim(Simulator):
                     </script>
                 </body>
             </html>
-            """
-            )
+            """)
 
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
