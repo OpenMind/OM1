@@ -3,10 +3,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from actions.arm_g1.connector.zenoh import (
-    ARMZenohConnector,
     CUSTOM_ACTION_MAP,
-    CUSTOM_API_ID,
     SPORT_REQUEST_TOPIC,
+    ARMZenohConnector,
 )
 from actions.arm_g1.interface import ArmAction, ArmInput
 from actions.base import ActionConfig
@@ -16,9 +15,7 @@ from actions.base import ActionConfig
 def mock_dependencies():
     """Mock all external dependencies."""
     with (
-        patch(
-            "actions.arm_g1.connector.zenoh.open_zenoh_session"
-        ) as mock_open_session,
+        patch("actions.arm_g1.connector.zenoh.open_zenoh_session") as mock_open_session,
         patch("actions.arm_g1.connector.zenoh.ZBytes") as mock_zbytes,
     ):
         mock_session = Mock()
