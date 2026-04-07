@@ -25,9 +25,9 @@ OM1 supports three LLM execution strategies depending on your latency, quality, 
 
 | Mode | Description | Performance |
 |------|-------------|----------|
-| **Single** | One LLM processes all requests | Good for simple use cases |
-| **Dual** | Local + cloud LLMs in parallel | Slow but with better performance |
-| **Parallel** | N specialized LLMs run simultaneously | Best performance |
+| **Single** | One LLM processes all requests | Good — fast, but limited capability |
+| **Dual** | Local + cloud LLMs in parallel | Better — higher accuracy, but slower |
+| **Parallel** | N specialized LLMs run simultaneously | Best — fastest and most capable |
 
 ### Single LLM Integration
 
