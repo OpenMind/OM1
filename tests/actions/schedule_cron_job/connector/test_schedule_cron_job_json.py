@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from actions.schedule_cron_job.connector.schedule_cron_job_json import (
     ScheduleCronJobConfig,
@@ -13,9 +14,9 @@ def reset_singleton():
     """Reset ExecuteCronJobProvider singleton between tests."""
     from providers.execute_cron_job_provider import ExecuteCronJobProvider
 
-    ExecuteCronJobProvider.reset()
+    ExecuteCronJobProvider.reset()  # type: ignore
     yield
-    ExecuteCronJobProvider.reset()
+    ExecuteCronJobProvider.reset()  # type: ignore
 
 
 @pytest.fixture

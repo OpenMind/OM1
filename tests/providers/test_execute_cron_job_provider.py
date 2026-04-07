@@ -10,9 +10,9 @@ from providers.execute_cron_job_provider import ExecuteCronJobProvider
 
 @pytest.fixture(autouse=True)
 def reset_provider():
-    ExecuteCronJobProvider.reset()
+    ExecuteCronJobProvider.reset()  # type: ignore
     yield
-    ExecuteCronJobProvider.reset()
+    ExecuteCronJobProvider.reset()  # type: ignore
 
 
 @pytest.fixture
@@ -24,6 +24,7 @@ def provider(tmp_path):
 # ---------------------------------------------------------------------------
 # _parse_schedule_time
 # ---------------------------------------------------------------------------
+
 
 class TestParseScheduleTime:
     def test_space_with_seconds(self, provider):
@@ -54,6 +55,7 @@ class TestParseScheduleTime:
 # ---------------------------------------------------------------------------
 # _recurrence_delta
 # ---------------------------------------------------------------------------
+
 
 class TestRecurrenceDelta:
     def test_empty_string(self, provider):
@@ -100,6 +102,7 @@ class TestRecurrenceDelta:
 # _is_due
 # ---------------------------------------------------------------------------
 
+
 class TestIsDue:
     def _make_entry(self, schedule_time: str) -> dict:
         return {"schedule_time": schedule_time}
@@ -141,6 +144,7 @@ class TestIsDue:
 # _read_file / _write_all
 # ---------------------------------------------------------------------------
 
+
 class TestFileIO:
     def test_write_and_read(self, provider, tmp_path):
         entries = [{"function": "foo", "timestamp": 1000.0}]
@@ -171,6 +175,7 @@ class TestFileIO:
 # _add_entry
 # ---------------------------------------------------------------------------
 
+
 class TestAddEntry:
     def test_add_entry_appears_in_cache(self, provider):
         entry = {"function": "speak", "timestamp": 9999.0, "schedule_time": "2026-04-07 10:00:00"}
@@ -196,6 +201,7 @@ class TestAddEntry:
 # start / stop
 # ---------------------------------------------------------------------------
 
+
 class TestStartStop:
     def test_start_creates_thread(self, provider):
         provider.start()
@@ -219,6 +225,7 @@ class TestStartStop:
 # ---------------------------------------------------------------------------
 # _tick — one-time entry dispatch and removal
 # ---------------------------------------------------------------------------
+
 
 class TestTick:
     def _past_entry(self, function="speak", recurrence=""):
