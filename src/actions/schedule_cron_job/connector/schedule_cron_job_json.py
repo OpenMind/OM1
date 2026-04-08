@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from datetime import datetime
@@ -47,10 +46,6 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
         super().__init__(config)
         self.schedule_file: str = config.schedule_file
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
     _DATE_FORMATS = (
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S",
@@ -68,10 +63,6 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             f"Could not parse schedule_time '{schedule_time}'. " f"Expected format: 'YYYY-MM-DD HH:MM:SS'."
         )
 
-    # ------------------------------------------------------------------
-    # ActionConnector interface
-    # ------------------------------------------------------------------
-
     async def connect(self, output_interface: ScheduleCronJobInput) -> None:
         """Persist a scheduled cron job entry via ScheduledCronInput."""
         try:
@@ -80,18 +71,8 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             logger.error("ScheduleCronJob: %s", exc)
             return
 
-        try:
-            args = json.loads(output_interface.args)
-            if not isinstance(args, dict):
-                args = {"value": args}
-        except (json.JSONDecodeError, TypeError):
-            logger.warning(
-                "Could not parse args as JSON, storing as raw string: %s",
-                output_interface.args,
-            )
-            args = {"raw": output_interface.args}
-
-        recurrence = getattr(output_interface, "recurrence", "") or ""
+        args: dict = {}
+        recurrence = output_interface.recurrence or ""
 
         entry = {
             "timestamp": timestamp,
@@ -102,7 +83,6 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             "registered_at": time.time(),
         }
 
-        # Update the in-memory cache and flush to file atomically.
         from inputs.plugins.scheduled_cron_input import ScheduledCronInput
 
         ScheduledCronInput.add_entry(entry)
