@@ -20,26 +20,13 @@ class ScheduleCronJobConfig(ActionConfig):
 
 
 class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, ScheduleCronJobInput]):
-    """Connector that persists scheduled cron jobs via ScheduledCronInput.
+    """
+    Connector that persists scheduled cron jobs to a JSON file.
 
-    Delegates storage to ``ScheduledCronInput.add_entry()`` so that the
-    in-memory cache and the JSON file are always updated together in a single
-    atomic operation.
-
-    Each entry written has the shape::
-
-        {
-            "timestamp":     <float>   # Unix timestamp parsed from schedule_time
-            "schedule_time": <str>     # original date string from the LLM
-            "function":      <str>     # function/command name
-            "args":          <dict>    # parsed arguments
-            "recurrence":    <str>     # "" | "once" | "daily" | "weekly" |
-                                       # "hourly" | "every Xm/Xh/Xd"
-            "registered_at": <float>   # wall-clock time of registration
-        }
-
-    Entries are sorted by ascending timestamp so the heartbeat process can
-    stop scanning as soon as it reaches a future entry.
+    Delegates storage to ScheduledCronInput.add_entry() so that the in-memory
+    cache and the JSON file are updated together. Entries are sorted by ascending
+    timestamp to preserve deterministic processing order for consumers of the
+    persisted schedule.
     """
 
     def __init__(self, config: ScheduleCronJobConfig) -> None:
@@ -54,6 +41,21 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
     )
 
     def _parse_schedule_time(self, schedule_time: str) -> float:
+        """
+        Parse a schedule time string into a Unix timestamp.
+
+        Parameters
+        ----------
+        schedule_time : str
+            Date/time string to parse. Supported formats:
+            'YYYY-MM-DD HH:MM:SS', 'YYYY-MM-DDTHH:MM:SS',
+            'YYYY-MM-DD HH:MM', 'YYYY-MM-DDTHH:MM'.
+
+        Returns
+        -------
+        float
+            Unix timestamp corresponding to schedule_time.
+        """
         for fmt in self._DATE_FORMATS:
             try:
                 return datetime.strptime(schedule_time.strip(), fmt).timestamp()
@@ -83,7 +85,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             "registered_at": time.time(),
         }
 
-        from inputs.plugins.scheduled_cron_input import ScheduledCronInput
+        from inputs.plugins.schedule_cron_job_input import ScheduledCronInput
 
         ScheduledCronInput.add_entry(entry)
 

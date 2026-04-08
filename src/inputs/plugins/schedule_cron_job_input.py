@@ -28,18 +28,11 @@ class ScheduledCronInputConfig(SensorConfig):
 
 class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
     """
-    Input plugin that polls a JSON schedule file every second, dispatches due
-    entries to the LLM, and manages one-time vs recurring tasks.
+    Input plugin that polls a JSON schedule file every second and dispatches due entries to the LLM.
 
-    Recurrence patterns (stored in entry field ``"recurrence"``)
-    ---------------------------------------------------------------
-    * ``""`` or ``"once"`` — run once (default)
-    * ``"hourly"``          — repeat every 60 minutes
-    * ``"daily"``           — repeat every 24 hours
-    * ``"weekly"``          — repeat every 7 days
-    * ``"every Xm"``        — repeat every X minutes  (e.g. ``"every 30m"``)
-    * ``"every Xh"``        — repeat every X hours    (e.g. ``"every 2h"``)
-    * ``"every Xd"``        — repeat every X days     (e.g. ``"every 3d"``)
+    Manages both one-time and recurring tasks. Supported recurrence patterns:
+    "" or "once" for one-time execution; "hourly", "daily", "weekly" for fixed
+    intervals; "every Xm", "every Xh", "every Xd" for custom intervals.
     """
 
     # Reference to the active instance so add_entry() can reach it.
@@ -72,6 +65,14 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
     }
 
     def __init__(self, config: ScheduledCronInputConfig):
+        """
+        Initialize ScheduledCronInput.
+
+        Parameters
+        ----------
+        config : ScheduledCronInputConfig
+            Configuration for the scheduled cron input plugin.
+        """
         super().__init__(config)
         self.messages: list[Message] = []
         self.descriptor_for_LLM = self.config.input_name
@@ -93,7 +94,14 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
 
     @classmethod
     def add_entry(cls, entry: dict) -> None:
-        """Add a new schedule entry. Called by ScheduleCronJobJSONConnector."""
+        """
+        Add a new schedule entry to the active instance.
+
+        Parameters
+        ----------
+        entry : dict
+            Schedule entry dict as produced by ScheduleCronJobJSONConnector.
+        """
         if cls._instance is None:
             logging.warning("ScheduledCronInput: add_entry() called before instance created, entry dropped")
             return
@@ -126,6 +134,21 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
             self._write_all(self._entries)
 
     def _parse_schedule_time(self, schedule_time: str) -> Optional[datetime]:
+        """
+        Parse a schedule time string into a datetime object.
+
+        Parameters
+        ----------
+        schedule_time : str
+            Date/time string to parse. Supported formats:
+            'YYYY-MM-DD HH:MM:SS', 'YYYY-MM-DDTHH:MM:SS',
+            'YYYY-MM-DD HH:MM', 'YYYY-MM-DDTHH:MM'.
+
+        Returns
+        -------
+        Optional[datetime]
+            Parsed datetime on success, or None if no format matched.
+        """
         for fmt in self._DATE_FORMATS:
             try:
                 return datetime.strptime(schedule_time.strip(), fmt)
@@ -168,6 +191,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         return True
 
     def _tick(self) -> None:
+        """Check for due entries, dispatch them, and reschedule or remove each one."""
         now_dt = datetime.now().replace(microsecond=0)
 
         with self._file_lock:
@@ -214,16 +238,38 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         SleepTickerProvider().skip_sleep = True
 
     async def _poll(self) -> Optional[str]:
+        """
+        Sleep 1 second, then run a tick to dispatch any due entries.
+
+        Returns
+        -------
+        Optional[str]
+            Always None; dispatched messages are pushed to self.messages directly.
+        """
         await asyncio.sleep(1.0)
         self._tick()
         return None
 
     async def raw_to_text(self, raw_input: Optional[str]):
-        """No-op: messages are pushed to messages directly and consumed via formatted_latest_buffer()."""
+        """
+        No-op: messages are pushed to self.messages directly by _tick() and consumed via formatted_latest_buffer().
+
+        Parameters
+        ----------
+        raw_input : Optional[str]
+            Unused.
+        """
         pass
 
     def formatted_latest_buffer(self) -> Optional[str]:
-        """Return the latest message formatted for the LLM, or None if empty."""
+        """
+        Return the latest message formatted for the LLM, or None if the buffer is empty.
+
+        Returns
+        -------
+        Optional[str]
+            Formatted message string, or None if no messages are pending.
+        """
         if not self.messages:
             ScheduledCronInput.cron_triggered = False
             return None

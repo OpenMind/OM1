@@ -1,11 +1,11 @@
 import json
 import os
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from inputs.plugins.scheduled_cron_input import ScheduledCronInput, ScheduledCronInputConfig
+from inputs.plugins.schedule_cron_job_input import ScheduledCronInput, ScheduledCronInputConfig
 
 
 @pytest.fixture(autouse=True)
@@ -19,8 +19,8 @@ def reset_instance():
 def plugin(tmp_path):
     schedule_file = str(tmp_path / "cron.json")
     config = ScheduledCronInputConfig(schedule_file=schedule_file)
-    with patch("inputs.plugins.scheduled_cron_input.IOProvider"):
-        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+    with patch("inputs.plugins.schedule_cron_job_input.IOProvider"):
+        with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             return ScheduledCronInput(config)
 
 
@@ -157,8 +157,8 @@ class TestFileIO:
 
     def test_read_missing_file_returns_empty(self, tmp_path):
         config = ScheduledCronInputConfig(schedule_file=str(tmp_path / "nonexistent.json"))
-        with patch("inputs.plugins.scheduled_cron_input.IOProvider"):
-            with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+        with patch("inputs.plugins.schedule_cron_job_input.IOProvider"):
+            with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
                 p = ScheduledCronInput(config)
         os.remove(config.schedule_file)
         result = p._read_file()
@@ -220,14 +220,14 @@ class TestTick:
     def test_one_time_entry_removed_after_tick(self, plugin):
         entry = self._past_entry()
         plugin._entries = [entry]
-        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+        with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             plugin._tick()
         assert plugin._entries == []
 
     def test_one_time_entry_dispatched(self, plugin):
         entry = self._past_entry()
         plugin._entries = [entry]
-        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+        with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             plugin._tick()
         assert len(plugin.messages) == 1
         assert plugin.messages[0].message == "speak"
@@ -235,7 +235,7 @@ class TestTick:
     def test_recurring_entry_rescheduled(self, plugin):
         entry = self._past_entry(recurrence="daily")
         plugin._entries = [entry]
-        with patch("inputs.plugins.scheduled_cron_input.SleepTickerProvider"):
+        with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             plugin._tick()
         assert len(plugin._entries) == 1
         rescheduled = plugin._entries[0]

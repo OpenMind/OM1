@@ -69,11 +69,10 @@ class TestParseScheduleTime:
 class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_calls_add_entry(self, connector):
-        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
+        with patch("inputs.plugins.schedule_cron_job_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",
-                args='{"action": "hello"}',
                 recurrence="daily",
             )
             await connector.connect(inp)
@@ -81,7 +80,7 @@ class TestConnect:
         mock_add.assert_called_once()
         entry = mock_add.call_args[0][0]
         assert entry["function"] == "speak"
-        assert entry["args"] == {"action": "hello"}
+        assert entry["args"] == {}
         assert entry["recurrence"] == "daily"
         assert entry["schedule_time"] == "2026-04-07 10:00:00"
         assert "timestamp" in entry
@@ -89,7 +88,7 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_connect_invalid_schedule_time_logs_and_returns(self, connector):
-        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
+        with patch("inputs.plugins.schedule_cron_job_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="not-a-date",
                 function="speak",
@@ -99,34 +98,8 @@ class TestConnect:
         mock_add.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_connect_non_json_args_stored_as_raw(self, connector):
-        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
-            inp = ScheduleCronJobInput(
-                schedule_time="2026-04-07 10:00:00",
-                function="speak",
-                args="not-json",
-            )
-            await connector.connect(inp)
-
-        entry = mock_add.call_args[0][0]
-        assert entry["args"] == {"raw": "not-json"}
-
-    @pytest.mark.asyncio
-    async def test_connect_non_dict_json_args_wrapped(self, connector):
-        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
-            inp = ScheduleCronJobInput(
-                schedule_time="2026-04-07 10:00:00",
-                function="speak",
-                args='"just a string"',
-            )
-            await connector.connect(inp)
-
-        entry = mock_add.call_args[0][0]
-        assert entry["args"] == {"value": "just a string"}
-
-    @pytest.mark.asyncio
     async def test_connect_default_recurrence_is_empty(self, connector):
-        with patch("inputs.plugins.scheduled_cron_input.ScheduledCronInput.add_entry") as mock_add:
+        with patch("inputs.plugins.schedule_cron_job_input.ScheduledCronInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",

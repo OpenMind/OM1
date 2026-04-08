@@ -660,7 +660,7 @@ class ModeCortexRuntime:
                 # if the input came from ScheduledCronInput, strip any
                 # schedule_cron_job actions the LLM may have emitted.
                 try:
-                    from inputs.plugins.scheduled_cron_input import ScheduledCronInput
+                    from inputs.plugins.schedule_cron_job_input import ScheduledCronInput
 
                     if ScheduledCronInput.cron_triggered:
                         output.actions = [a for a in output.actions if a.type.lower() != "schedule_cron_job"]
