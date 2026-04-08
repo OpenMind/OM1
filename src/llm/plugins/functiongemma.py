@@ -1,6 +1,6 @@
 import logging
-import time
 import re
+import time
 import typing as T
 from enum import Enum
 
@@ -36,10 +36,12 @@ def _extract_voice_input(prompt: str) -> str:
 
     return ""
 
+
 class FunctionGemmaModel(str, Enum):
     """Available FunctionGemma models."""
 
     MULTILINGUAL = "functiongemma-finetuned-g1-multilingual"
+
 
 class FunctionGemmaConfig(LLMConfig):
     """FunctionGemma-specific configuration with model enum."""

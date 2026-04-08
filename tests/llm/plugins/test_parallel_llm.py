@@ -31,18 +31,18 @@ def mock_available_actions():
 
 
 @pytest.fixture
-def parallel_llm_config_two_llms():
+def parallel_config_two_llms():
     """Create a ParallelLLM config with 2 LLMs."""
     return ParallelLLMConfig(
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak", "emotion"],
             ),
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-3.5"),
+                config=LLMConfig(model="gpt-3.5"),
                 action_filter=["move", "search"],
             ),
         ],
@@ -51,23 +51,23 @@ def parallel_llm_config_two_llms():
 
 
 @pytest.fixture
-def parallel_llm_config_three_llms():
+def parallel_config_three_llms():
     """Create a ParallelLLM config with 3 LLMs."""
     return ParallelLLMConfig(
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak"],
             ),
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-3.5"),
+                config=LLMConfig(model="gpt-3.5"),
                 action_filter=["move"],
             ),
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4-turbo"),
+                config=LLMConfig(model="gpt-4-turbo"),
                 action_filter=["emotion", "search"],
             ),
         ],
@@ -76,7 +76,7 @@ def parallel_llm_config_three_llms():
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_initialization_filters_actions(parallel_llm_config_two_llms, mock_available_actions):
+async def test_parallel_llm_initialization_filters_actions(parallel_config_two_llms, mock_available_actions):
     """Test that ParallelLLM correctly filters actions for each LLM."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         # Mock LLM class and instances
@@ -100,7 +100,7 @@ async def test_parallel_llm_initialization_filters_actions(parallel_llm_config_t
         mock_get_class.return_value = mock_llm_class
 
         # Initialize ParallelLLM
-        ParallelLLM(parallel_llm_config_two_llms, mock_available_actions)
+        ParallelLLM(parallel_config_two_llms, mock_available_actions)
 
         # Verify first LLM got only speak and emotion actions
         assert len(captured_actions[0]) == 2
@@ -120,7 +120,7 @@ async def test_parallel_llm_initialization_filters_by_name():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["face"],
             ),
         ],
@@ -153,9 +153,7 @@ async def test_parallel_llm_initialization_filters_by_name():
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_ask_stream_yields_as_llms_complete(
-    parallel_llm_config_two_llms,
-):
+async def test_parallel_llm_ask_stream_yields_as_llms_complete(parallel_config_two_llms, mock_available_actions):
     """Test that ask_stream yields results as each LLM completes."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         # Create mock LLM instances
@@ -190,7 +188,7 @@ async def test_parallel_llm_ask_stream_yields_as_llms_complete(
         mock_get_class.return_value = mock_llm_class
 
         # Initialize and test
-        parallel_llm = ParallelLLM(parallel_llm_config_two_llms, [])
+        parallel_llm = ParallelLLM(parallel_config_two_llms, mock_available_actions)
 
         results = []
         start_time = asyncio.get_event_loop().time()
@@ -219,9 +217,7 @@ async def test_parallel_llm_ask_stream_yields_as_llms_complete(
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_ask_stream_skips_empty_results(
-    parallel_llm_config_two_llms,
-):
+async def test_parallel_llm_ask_stream_skips_empty_results(parallel_config_two_llms, mock_available_actions):
     """Test that ask_stream doesn't yield results with no actions."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
@@ -247,7 +243,7 @@ async def test_parallel_llm_ask_stream_skips_empty_results(
 
         mock_get_class.return_value = MagicMock(side_effect=create_llm)
 
-        parallel_llm = ParallelLLM(parallel_llm_config_two_llms, [])
+        parallel_llm = ParallelLLM(parallel_config_two_llms, mock_available_actions)
 
         results = []
         async for output in parallel_llm.ask_stream("test prompt"):
@@ -259,9 +255,7 @@ async def test_parallel_llm_ask_stream_skips_empty_results(
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_ask_stream_handles_llm_failures(
-    parallel_llm_config_two_llms,
-):
+async def test_parallel_llm_ask_stream_handles_llm_failures(parallel_config_two_llms, mock_available_actions):
     """Test that ask_stream continues when one LLM fails."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
@@ -287,7 +281,7 @@ async def test_parallel_llm_ask_stream_handles_llm_failures(
 
         mock_get_class.return_value = MagicMock(side_effect=create_llm)
 
-        parallel_llm = ParallelLLM(parallel_llm_config_two_llms, [])
+        parallel_llm = ParallelLLM(parallel_config_two_llms, mock_available_actions)
 
         results = []
         async for output in parallel_llm.ask_stream("test prompt"):
@@ -300,9 +294,7 @@ async def test_parallel_llm_ask_stream_handles_llm_failures(
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_ask_stream_cancellation_cleans_up_tasks(
-    parallel_llm_config_two_llms,
-):
+async def test_parallel_llm_ask_stream_cancellation_cleans_up_tasks(parallel_config_two_llms, mock_available_actions):
     """Test that cancelling ask_stream cleans up remaining tasks."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
@@ -341,7 +333,7 @@ async def test_parallel_llm_ask_stream_cancellation_cleans_up_tasks(
 
         mock_get_class.return_value = MagicMock(side_effect=create_llm)
 
-        parallel_llm = ParallelLLM(parallel_llm_config_two_llms, [])
+        parallel_llm = ParallelLLM(parallel_config_two_llms, mock_available_actions)
 
         # Start streaming but cancel after first result
         results = []
@@ -368,7 +360,7 @@ async def test_parallel_llm_ask_stream_cancellation_cleans_up_tasks(
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_works_with_three_llms(parallel_llm_config_three_llms):
+async def test_parallel_llm_works_with_three_llms(parallel_config_three_llms, mock_available_actions):
     """Test that ParallelLLM works correctly with 3 LLMs."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
@@ -412,13 +404,12 @@ async def test_parallel_llm_works_with_three_llms(parallel_llm_config_three_llms
 
         mock_get_class.return_value = MagicMock(side_effect=create_llm)
 
-        parallel_llm = ParallelLLM(parallel_llm_config_three_llms, [])
+        parallel_llm = ParallelLLM(parallel_config_three_llms, mock_available_actions)
 
         results = []
         async for output in parallel_llm.ask_stream("test prompt"):
             results.append(output)
 
-        # Should receive 3 results
         assert len(results) == 3
 
         # Results should be in order of completion (fastest first)
@@ -429,7 +420,7 @@ async def test_parallel_llm_works_with_three_llms(parallel_llm_config_three_llms
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_ask_combines_all_actions(parallel_llm_config_two_llms):
+async def test_parallel_llm_ask_combines_all_actions(parallel_config_two_llms, mock_available_actions):
     """Test that ask() combines actions from all LLMs."""
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
@@ -459,11 +450,10 @@ async def test_parallel_llm_ask_combines_all_actions(parallel_llm_config_two_llm
 
         mock_get_class.return_value = MagicMock(side_effect=create_llm)
 
-        parallel_llm = ParallelLLM(parallel_llm_config_two_llms, [])
+        parallel_llm = ParallelLLM(parallel_config_two_llms, mock_available_actions)
 
         result = await parallel_llm.ask("test prompt")
 
-        # Should combine all 3 actions
         assert result is not None
         assert len(result.actions) == 3
         action_types = {action.type for action in result.actions}
@@ -471,10 +461,9 @@ async def test_parallel_llm_ask_combines_all_actions(parallel_llm_config_two_llm
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_batch_mode_waits_for_all(parallel_llm_config_two_llms):
+async def test_parallel_llm_batch_mode_waits_for_all(parallel_config_two_llms, mock_available_actions):
     """Test that batch mode (execute_immediately=False) waits for all LLMs."""
-    # Set batch mode
-    parallel_llm_config_two_llms.execute_immediately = False
+    parallel_config_two_llms.execute_immediately = False
 
     with patch("llm.plugins.parallel_llm.get_llm_class") as mock_get_class:
         mock_llm1 = MagicMock()
@@ -508,21 +497,17 @@ async def test_parallel_llm_batch_mode_waits_for_all(parallel_llm_config_two_llm
 
         mock_get_class.return_value = MagicMock(side_effect=create_llm)
 
-        parallel_llm = ParallelLLM(parallel_llm_config_two_llms, [])
+        parallel_llm = ParallelLLM(parallel_config_two_llms, mock_available_actions)
 
         start_time = asyncio.get_event_loop().time()
         result = await parallel_llm.ask("test prompt")
         end_time = asyncio.get_event_loop().time()
 
-        # Should wait for the slower LLM (0.05s)
         elapsed = end_time - start_time
         assert elapsed >= 0.04  # Should take at least 0.05s
 
-        # Both LLMs should have completed
         assert llm1_time is not None
         assert llm2_time is not None
-
-        # Result should contain actions from both
         assert len(result.actions) == 2
 
 
@@ -533,7 +518,7 @@ async def test_parallel_llm_initialization_with_no_filter(mock_available_actions
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=None,  # No filter
             ),
         ],
@@ -552,7 +537,6 @@ async def test_parallel_llm_initialization_with_no_filter(mock_available_actions
 
         ParallelLLM(config, mock_available_actions)
 
-        # Should receive all 4 actions
         assert len(captured_actions[0]) == 4
 
 
@@ -573,7 +557,7 @@ async def test_parallel_llm_initialization_inherits_api_key():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),  # No api_key in llm_config
+                config=LLMConfig(model="gpt-4"),  # No api_key in config
                 action_filter=["speak"],
             ),
         ],
@@ -602,7 +586,7 @@ async def test_parallel_llm_call_llm_filters_out_of_schema_actions():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak"],  # Only speak allowed
             ),
         ],
@@ -626,11 +610,14 @@ async def test_parallel_llm_call_llm_filters_out_of_schema_actions():
 
         mock_get_class.return_value = MagicMock(return_value=mock_llm)
 
-        parallel_llm = ParallelLLM(config, [])
+        speak_action = MagicMock()
+        speak_action.name = "speak"
+        speak_action.llm_label = "speak"
+
+        parallel_llm = ParallelLLM(config, [speak_action])
 
         result = await parallel_llm._call_llm(mock_llm, "test", "TestLLM", ["speak"])
 
-        # Should only have one action after filtering
         assert len(result["result"].actions) == 1
 
 
@@ -641,8 +628,8 @@ async def test_parallel_llm_call_llm_keeps_actions_for_llm_label_filter():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
-                action_filter=["emotion"],
+                config=LLMConfig(model="gpt-4"),
+                action_filter=["face"],  # Filter by action name, not llm_label
             ),
         ],
         execute_immediately=True,
@@ -670,7 +657,7 @@ async def test_parallel_llm_call_llm_keeps_actions_for_llm_label_filter():
 
         parallel_llm = ParallelLLM(config, [face_action])
 
-        result = await parallel_llm._call_llm(mock_llm, "test", "TestLLM", ["emotion"])
+        result = await parallel_llm._call_llm(mock_llm, "test", "TestLLM", ["face"])
 
         assert [action.type for action in result["result"].actions] == [
             "emotion",
@@ -686,7 +673,7 @@ async def test_parallel_llm_ask_returns_none_when_all_llms_fail():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak"],
             ),
         ],
@@ -717,7 +704,7 @@ async def test_parallel_llm_ask_returns_none_when_no_actions():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak"],
             ),
         ],
@@ -735,7 +722,11 @@ async def test_parallel_llm_ask_returns_none_when_no_actions():
 
         mock_get_class.return_value = MagicMock(return_value=mock_llm)
 
-        parallel_llm = ParallelLLM(config, [])
+        speak_action = MagicMock()
+        speak_action.name = "speak"
+        speak_action.llm_label = "speak"
+
+        parallel_llm = ParallelLLM(config, [speak_action])
         result = await parallel_llm.ask("test prompt")
 
         assert result is None
@@ -748,7 +739,7 @@ async def test_parallel_llm_works_with_single_llm():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak"],
             ),
         ],
@@ -766,13 +757,16 @@ async def test_parallel_llm_works_with_single_llm():
 
         mock_get_class.return_value = MagicMock(return_value=mock_llm)
 
-        parallel_llm = ParallelLLM(config, [])
+        speak_action = MagicMock()
+        speak_action.name = "speak"
+        speak_action.llm_label = "speak"
+
+        parallel_llm = ParallelLLM(config, [speak_action])
 
         results = []
         async for output in parallel_llm.ask_stream("test prompt"):
             results.append(output)
 
-        # Should receive 1 result
         assert len(results) == 1
         assert results[0].actions[0].type == "speak"
 
@@ -784,12 +778,12 @@ async def test_parallel_llm_batch_mode_handles_exceptions():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak"],
             ),
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-3.5"),
+                config=LLMConfig(model="gpt-3.5"),
                 action_filter=["move"],
             ),
         ],
@@ -819,10 +813,17 @@ async def test_parallel_llm_batch_mode_handles_exceptions():
 
         mock_get_class.return_value = MagicMock(side_effect=create_llm)
 
-        parallel_llm = ParallelLLM(config, [])
+        speak_action = MagicMock()
+        speak_action.name = "speak"
+        speak_action.llm_label = "speak"
+
+        move_action = MagicMock()
+        move_action.name = "move"
+        move_action.llm_label = "move"
+
+        parallel_llm = ParallelLLM(config, [speak_action, move_action])
         result = await parallel_llm.ask("test prompt")
 
-        # Should still get result from successful LLM2
         assert result is not None
         assert len(result.actions) == 1
         assert result.actions[0].type == "move"
@@ -835,7 +836,7 @@ async def test_parallel_llm_merge_actions_from_multiple_results():
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
-                llm_config=LLMConfig(model="gpt-4"),
+                config=LLMConfig(model="gpt-4"),
                 action_filter=["speak"],
             ),
         ],
@@ -846,9 +847,20 @@ async def test_parallel_llm_merge_actions_from_multiple_results():
         mock_llm = MagicMock()
         mock_get_class.return_value = MagicMock(return_value=mock_llm)
 
-        parallel_llm = ParallelLLM(config, [])
+        speak_action = MagicMock()
+        speak_action.name = "speak"
+        speak_action.llm_label = "speak"
 
-        # Create mock results
+        move_action = MagicMock()
+        move_action.name = "move"
+        move_action.llm_label = "move"
+
+        search_action = MagicMock()
+        search_action.name = "search"
+        search_action.llm_label = "search"
+
+        parallel_llm = ParallelLLM(config, [speak_action, move_action, search_action])
+
         results = [
             {
                 "result": CortexOutputModel(actions=[Action(type="speak", value="Hello")]),
@@ -868,7 +880,6 @@ async def test_parallel_llm_merge_actions_from_multiple_results():
 
         merged = parallel_llm._merge_actions(results)
 
-        # Should have 3 total actions (1 + 2 + 0)
         assert len(merged) == 3
         action_types = [a.type for a in merged]
         assert "speak" in action_types

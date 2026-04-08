@@ -136,7 +136,7 @@ class ParallelLLM(LLM[R]):
         self._llms: T.List[T.Tuple[LLM, T.Optional[T.List[str]]]] = []
         self._llm_label_to_name: T.Dict[str, str] = {}
         if available_actions:
-                self._llm_label_to_name.update({a.llm_label: a.name for a in available_actions})
+            self._llm_label_to_name.update({a.llm_label: a.name for a in available_actions})
 
         # Initialize each LLM with filtered actions (supports N LLMs)
         for llm_spec in self._config.llms:
@@ -161,9 +161,7 @@ class ParallelLLM(LLM[R]):
             # actions outside its filter.
             filtered_actions = available_actions
             if llm_spec.action_filter and available_actions:
-                filtered_actions = [
-                    action for action in available_actions if action.name in llm_spec.action_filter
-                ]
+                filtered_actions = [action for action in available_actions if action.name in llm_spec.action_filter]
                 logging.info(
                     f"Filtered function schemas for {llm_type}: "
                     f"{[a.name for a in filtered_actions]} "
@@ -231,8 +229,7 @@ class ParallelLLM(LLM[R]):
             # outside its function schema (shouldn't happen, but validate anyway)
             if result and hasattr(result, "actions") and action_filter:
                 filtered_actions = [
-                    action for action in result.actions
-                    if self._llm_label_to_name.get(action.type) in action_filter
+                    action for action in result.actions if self._llm_label_to_name.get(action.type) in action_filter
                 ]
                 if len(filtered_actions) != len(result.actions):
                     logging.warning(

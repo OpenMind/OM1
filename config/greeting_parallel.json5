@@ -72,8 +72,8 @@
               llm_type: "FunctionGemmaLLM",
               action_filter: ["arm_g1", "face"],
               config: {
-                base_url: "http://localhost:8200/v1"
-              }
+                base_url: "http://localhost:8200/v1",
+              },
             },
           ],
           execute_immediately: true,
@@ -98,7 +98,7 @@
           name: "arm_g1",
           llm_label: "robot_action",
           connector: "zenoh",
-        }
+        },
       ],
       backgrounds: [],
       lifecycle_hooks: [
