@@ -233,7 +233,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         """
         Determine whether a scheduled entry should be dispatched on this tick.
 
-        Returns ``False`` if ``schedule_time`` is missing, unparseable, or still
+        Returns ``False`` if ``schedule_time`` is missing, unparsable, or still
         in the future. When ``run_previous`` is ``False``, also returns ``False``
         for entries whose ``schedule_time`` predates the plugin startup time,
         allowing stale entries to be silently skipped rather than replayed.
