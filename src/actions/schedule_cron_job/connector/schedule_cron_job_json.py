@@ -6,6 +6,7 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.schedule_cron_job.interface import ScheduleCronJobInput
+from inputs.plugins.schedule_cron_job_input import ScheduledCronInput
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,20 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
         )
 
     async def connect(self, output_interface: ScheduleCronJobInput) -> None:
-        """Persist a scheduled cron job entry via ScheduledCronInput."""
+        """
+        Persist a scheduled cron job entry to the in-memory cache and JSON file.
+
+        Parses the schedule time from output_interface, builds an entry dict, and
+        delegates to ScheduledCronInput.add_entry() so that both the in-memory cache
+        and the JSON file are updated atomically. If the schedule_time cannot be
+        parsed, logs an error and returns without writing anything.
+
+        Parameters
+        ----------
+        output_interface : ScheduleCronJobInput
+            Action output containing schedule_time (datetime string), function
+            (name of the task to dispatch), and optional recurrence pattern.
+        """
         try:
             timestamp = self._parse_schedule_time(output_interface.schedule_time)
         except ValueError as exc:
@@ -84,8 +98,6 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             "recurrence": recurrence,
             "registered_at": time.time(),
         }
-
-        from inputs.plugins.schedule_cron_job_input import ScheduledCronInput
 
         ScheduledCronInput.add_entry(entry)
 

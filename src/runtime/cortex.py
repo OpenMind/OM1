@@ -656,17 +656,6 @@ class ModeCortexRuntime:
                     logging.debug("Skipping action execution due to mode transition")
                     return
 
-                # Prevent cron-triggered ticks from re-registering jobs:
-                # if the input came from ScheduledCronInput, strip any
-                # schedule_cron_job actions the LLM may have emitted.
-                try:
-                    from inputs.plugins.schedule_cron_job_input import ScheduledCronInput
-
-                    if ScheduledCronInput.cron_triggered:
-                        output.actions = [a for a in output.actions if a.type.lower() != "schedule_cron_job"]
-                except ImportError:
-                    pass
-
                 if self.simulator_orchestrator:
                     await self.simulator_orchestrator.promise(output.actions)
 
