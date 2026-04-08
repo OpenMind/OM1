@@ -104,24 +104,24 @@ async def test_parallel_llm_initialization_filters_actions(parallel_llm_config_t
 
         # Verify first LLM got only speak and emotion actions
         assert len(captured_actions[0]) == 2
-        assert captured_actions[0][0].llm_label in ["speak", "emotion"]
-        assert captured_actions[0][1].llm_label in ["speak", "emotion"]
+        assert captured_actions[0][0].name in ["speak", "emotion"]
+        assert captured_actions[0][1].name in ["speak", "emotion"]
 
         # Verify second LLM got only move and search actions
         assert len(captured_actions[1]) == 2
-        assert captured_actions[1][0].llm_label in ["move", "search"]
-        assert captured_actions[1][1].llm_label in ["move", "search"]
+        assert captured_actions[1][0].name in ["move", "search"]
+        assert captured_actions[1][1].name in ["move", "search"]
 
 
 @pytest.mark.asyncio
-async def test_parallel_llm_initialization_filters_by_llm_label_only():
-    """Test that action_filter matches llm_label rather than internal action name."""
+async def test_parallel_llm_initialization_filters_by_name():
+    """Test that action_filter matches action name rather than llm_label."""
     config = ParallelLLMConfig(
         llms=[
             LLMSpecConfig(
                 llm_type="OpenAILLM",
                 llm_config=LLMConfig(model="gpt-4"),
-                action_filter=["emotion"],
+                action_filter=["face"],
             ),
         ],
         execute_immediately=True,
@@ -149,7 +149,7 @@ async def test_parallel_llm_initialization_filters_by_llm_label_only():
 
         assert len(captured_actions) == 1
         assert captured_actions[0] == [face_action]
-        assert parallel_llm._llms[0][1] == ["emotion"]
+        assert parallel_llm._llms[0][1] == ["face"]
 
 
 @pytest.mark.asyncio

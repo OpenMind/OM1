@@ -69,8 +69,11 @@
               action_filter: ["greeting_conversation"],
             },
             {
-              llm_type: "OpenAILLM",
-              action_filter: ["face"],
+              llm_type: "FunctionGemmaLLM",
+              action_filter: ["arm_g1", "face"],
+              config: {
+                base_url: "http://localhost:8200/v1"
+              }
             },
           ],
           execute_immediately: true,
@@ -88,9 +91,14 @@
         },
         {
           name: "face",
-          llm_label: "emotion",
+          llm_label: "show_emotion",
           connector: "avatar",
         },
+        {
+          name: "arm_g1",
+          llm_label: "robot_action",
+          connector: "zenoh",
+        }
       ],
       backgrounds: [],
       lifecycle_hooks: [
