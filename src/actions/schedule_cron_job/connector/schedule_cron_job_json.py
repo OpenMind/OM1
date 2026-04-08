@@ -6,13 +6,20 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.schedule_cron_job.interface import ScheduleCronJobInput
-from inputs.plugins.schedule_cron_job_input import ScheduledCronInput
+from inputs.plugins.schedule_cron_job_input import ScheduleCronJobInput as ScheduleCronJobInputPlugin
 
 logger = logging.getLogger(__name__)
 
 
 class ScheduleCronJobConfig(ActionConfig):
-    """Configuration for the ScheduleCronJobJSONConnector."""
+    """
+    Configuration for the ScheduleCronJobJSONConnector.
+
+    Parameters
+    ----------
+    schedule_file : str
+        Path to the JSON file where scheduled cron jobs are persisted.
+    """
 
     schedule_file: str = Field(
         default="config/cron_job/cron.json",
@@ -24,7 +31,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
     """
     Connector that persists scheduled cron jobs to a JSON file.
 
-    Delegates storage to ScheduledCronInput.add_entry() so that the in-memory
+    Delegates storage to ScheduleCronJobInputPlugin.add_entry() so that the in-memory
     cache and the JSON file are updated together. Entries are sorted by ascending
     timestamp to preserve deterministic processing order for consumers of the
     persisted schedule.
@@ -71,7 +78,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
         Persist a scheduled cron job entry to the in-memory cache and JSON file.
 
         Parses the schedule time from output_interface, builds an entry dict, and
-        delegates to ScheduledCronInput.add_entry() so that both the in-memory cache
+        delegates to ScheduleCronJobInputPlugin.add_entry() so that both the in-memory cache
         and the JSON file are updated atomically. If the schedule_time cannot be
         parsed, logs an error and returns without writing anything.
 
@@ -99,7 +106,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             "registered_at": time.time(),
         }
 
-        ScheduledCronInput.add_entry(entry)
+        ScheduleCronJobInputPlugin.add_entry(entry)
 
         logger.info(
             "Scheduled cron job registered: function=%s at '%s' (timestamp=%.3f, recurrence=%r)",

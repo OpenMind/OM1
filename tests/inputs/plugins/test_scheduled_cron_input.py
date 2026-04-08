@@ -5,23 +5,23 @@ from unittest.mock import patch
 
 import pytest
 
-from inputs.plugins.schedule_cron_job_input import ScheduledCronInput, ScheduledCronInputConfig
+from inputs.plugins.schedule_cron_job_input import ScheduleCronJobInput, ScheduleCronJobInputConfig
 
 
 @pytest.fixture(autouse=True)
 def reset_instance():
-    ScheduledCronInput._instance = None
+    ScheduleCronJobInput._instance = None
     yield
-    ScheduledCronInput._instance = None
+    ScheduleCronJobInput._instance = None
 
 
 @pytest.fixture
 def plugin(tmp_path):
     schedule_file = str(tmp_path / "cron.json")
-    config = ScheduledCronInputConfig(schedule_file=schedule_file)
+    config = ScheduleCronJobInputConfig(schedule_file=schedule_file)
     with patch("inputs.plugins.schedule_cron_job_input.IOProvider"):
         with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
-            return ScheduledCronInput(config)
+            return ScheduleCronJobInput(config)
 
 
 # ---------------------------------------------------------------------------
@@ -156,10 +156,10 @@ class TestFileIO:
         assert result == entries
 
     def test_read_missing_file_returns_empty(self, tmp_path):
-        config = ScheduledCronInputConfig(schedule_file=str(tmp_path / "nonexistent.json"))
+        config = ScheduleCronJobInputConfig(schedule_file=str(tmp_path / "nonexistent.json"))
         with patch("inputs.plugins.schedule_cron_job_input.IOProvider"):
             with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
-                p = ScheduledCronInput(config)
+                p = ScheduleCronJobInput(config)
         os.remove(config.schedule_file)
         result = p._read_file()
         assert result == []
@@ -254,3 +254,53 @@ class TestTick:
         plugin._tick()
         assert plugin._entries == original_entries
         assert plugin.messages == []
+
+    def test_multiple_due_entries_all_dispatched(self, plugin):
+        entries = [self._past_entry(function="task_a"), self._past_entry(function="task_b")]
+        plugin._entries = entries
+        with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
+            plugin._tick()
+        assert len(plugin.messages) == 2
+        assert plugin.messages[0].message == "task_a"
+        assert plugin.messages[1].message == "task_b"
+
+
+# ---------------------------------------------------------------------------
+# formatted_latest_buffer
+# ---------------------------------------------------------------------------
+
+
+class TestFormattedLatestBuffer:
+    def test_empty_buffer_returns_none(self, plugin):
+        assert plugin.formatted_latest_buffer() is None
+
+    def test_single_message_flushed(self, plugin):
+        from inputs.base import Message
+
+        plugin.messages = [Message(timestamp=1.0, message="hello")]
+        result = plugin.formatted_latest_buffer()
+        assert "hello" in result
+        assert plugin.messages == []
+
+    def test_multiple_messages_drained_one_at_a_time(self, plugin):
+        from inputs.base import Message
+
+        plugin.messages = [
+            Message(timestamp=1.0, message="task_a"),
+            Message(timestamp=2.0, message="task_b"),
+            Message(timestamp=3.0, message="task_c"),
+        ]
+        with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
+            r1 = plugin.formatted_latest_buffer()
+            assert "task_a" in r1
+            assert len(plugin.messages) == 2
+
+            r2 = plugin.formatted_latest_buffer()
+            assert "task_b" in r2
+            assert len(plugin.messages) == 1
+
+            r3 = plugin.formatted_latest_buffer()
+            assert "task_c" in r3
+            assert plugin.messages == []
+
+            assert plugin.formatted_latest_buffer() is None

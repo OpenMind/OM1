@@ -17,8 +17,8 @@ from providers.sleep_ticker_provider import SleepTickerProvider
 logger = logging.getLogger(__name__)
 
 
-class ScheduledCronInputConfig(SensorConfig):
-    """Configuration for the ScheduledCronInput plugin.
+class ScheduleCronJobInputConfig(SensorConfig):
+    """Configuration for the ScheduleCronJobInput plugin.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ class ScheduledCronInputConfig(SensorConfig):
     run_previous: bool = Field(default=True, description="If True, dispatch tasks scheduled before startup")
 
 
-class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
+class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]):
     """
     Input plugin that polls a JSON schedule file every second and dispatches due entries to the LLM.
 
@@ -44,7 +44,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
     """
 
     # Reference to the active instance so add_entry() can reach it.
-    _instance: ClassVar[Optional["ScheduledCronInput"]] = None
+    _instance: ClassVar[Optional["ScheduleCronJobInput"]] = None
 
     _DATE_FORMATS = (
         "%Y-%m-%d %H:%M:%S",
@@ -66,13 +66,13 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         "w": "weeks",
     }
 
-    def __init__(self, config: ScheduledCronInputConfig):
+    def __init__(self, config: ScheduleCronJobInputConfig):
         """
-        Initialize ScheduledCronInput.
+        Initialize ScheduleCronJobInput.
 
         Parameters
         ----------
-        config : ScheduledCronInputConfig
+        config : ScheduleCronJobInputConfig
             Configuration for the scheduled cron input plugin.
         """
         super().__init__(config)
@@ -85,12 +85,12 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
             self._write_all([])
         self._entries = self._read_file()
         logger.info(
-            "ScheduledCronInput initialized: polling %s every 1s, run_previous=%s, loaded %d entries",
+            "ScheduleCronJobInput initialized: polling %s every 1s, run_previous=%s, loaded %d entries",
             self.config.schedule_file,
             self.config.run_previous,
             len(self._entries),
         )
-        ScheduledCronInput._instance = self
+        ScheduleCronJobInput._instance = self
 
     @classmethod
     def add_entry(cls, entry: dict) -> None:
@@ -103,7 +103,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
             Schedule entry dict as produced by ScheduleCronJobJSONConnector.
         """
         if cls._instance is None:
-            logging.warning("ScheduledCronInput: add_entry() called before instance created, entry dropped")
+            logging.warning("ScheduleCronJobInput: add_entry() called before instance created, entry dropped")
             return
         cls._instance._add_entry(entry)
 
@@ -185,7 +185,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
                 return datetime.strptime(schedule_time.strip(), fmt)
             except ValueError:
                 continue
-        logger.warning("ScheduledCronInput: could not parse schedule_time '%s'", schedule_time)
+        logger.warning("ScheduleCronJobInput: could not parse schedule_time '%s'", schedule_time)
         return None
 
     def _recurrence_delta(self, recurrence: str) -> Optional[timedelta]:
@@ -226,7 +226,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
             unit = m.group(2).rstrip("s") if len(m.group(2)) > 1 else m.group(2)
             unit = unit[0]  # first letter is always the canonical short form
             return timedelta(**{self._UNIT_MAP[unit]: n})
-        logger.warning("ScheduledCronInput: unknown recurrence pattern '%s'", recurrence)
+        logger.warning("ScheduleCronJobInput: unknown recurrence pattern '%s'", recurrence)
         return None
 
     def _is_due(self, entry: dict, now_dt: datetime) -> bool:
@@ -270,6 +270,8 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         due = [e for e in self._entries if self._is_due(e, now_dt)]
 
         if not due:
+            if self.messages:
+                SleepTickerProvider().skip_sleep = True
             return
 
         keep = []
@@ -281,7 +283,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
             delta = self._recurrence_delta(recurrence)
             if delta is None:
                 logger.info(
-                    "ScheduledCronInput: removing completed one-time task '%s'",
+                    "ScheduleCronJobInput: removing completed one-time task '%s'",
                     entry.get("function"),
                 )
             else:
@@ -294,7 +296,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
                     entry["timestamp"] = next_dt.timestamp()
                     entry["last_run_at"] = now_dt.strftime("%Y-%m-%d %H:%M:%S")
                     logger.info(
-                        "ScheduledCronInput: recurring task '%s' rescheduled to %s",
+                        "ScheduleCronJobInput: recurring task '%s' rescheduled to %s",
                         entry.get("function"),
                         entry["schedule_time"],
                     )
@@ -304,7 +306,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
 
         for entry in due:
             function_name = entry.get("function", "")
-            logger.info("ScheduledCronInput: dispatching '%s'", function_name)
+            logger.info("ScheduleCronJobInput: dispatching '%s'", function_name)
             self.messages.append(Message(timestamp=time.time(), message=function_name))
         SleepTickerProvider().skip_sleep = True
 
@@ -344,8 +346,7 @@ class ScheduledCronInput(FuserInput[ScheduledCronInputConfig, Optional[str]]):
         if not self.messages:
             return None
 
-        msg = self.messages[-1]
+        msg = self.messages.pop(0)
         result = f"\nINPUT: {self.descriptor_for_LLM}\n" f"// START\n{msg.message}\n// END\n"
         self.io_provider.add_input(self.descriptor_for_LLM, msg.message, time.time())
-        self.messages = []
         return result

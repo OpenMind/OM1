@@ -69,7 +69,7 @@ class TestParseScheduleTime:
 class TestConnect:
     @pytest.mark.asyncio
     async def test_connect_calls_add_entry(self, connector):
-        with patch("inputs.plugins.schedule_cron_job_input.ScheduledCronInput.add_entry") as mock_add:
+        with patch("inputs.plugins.schedule_cron_job_input.ScheduleCronJobInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",
@@ -88,7 +88,7 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_connect_invalid_schedule_time_logs_and_returns(self, connector):
-        with patch("inputs.plugins.schedule_cron_job_input.ScheduledCronInput.add_entry") as mock_add:
+        with patch("inputs.plugins.schedule_cron_job_input.ScheduleCronJobInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="not-a-date",
                 function="speak",
@@ -99,7 +99,7 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_connect_default_recurrence_is_empty(self, connector):
-        with patch("inputs.plugins.schedule_cron_job_input.ScheduledCronInput.add_entry") as mock_add:
+        with patch("inputs.plugins.schedule_cron_job_input.ScheduleCronJobInput.add_entry") as mock_add:
             inp = ScheduleCronJobInput(
                 schedule_time="2026-04-07 10:00:00",
                 function="speak",
