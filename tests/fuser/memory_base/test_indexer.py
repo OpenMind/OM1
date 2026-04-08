@@ -126,6 +126,15 @@ class TestMemoryIndexLoadBatch:
         assert loaded2 == 1  # only "c" is new
         assert index.size == 3
 
+    @pytest.mark.asyncio
+    async def test_embed_batch_error_returns_zero(self):
+        client = _make_embedding_client()
+        client.embed_batch = AsyncMock(side_effect=RuntimeError("embed failed"))
+        index = MemoryIndex(client)
+        loaded = await index.load_chunks_batch([_make_doc("fail")])
+        assert loaded == 0
+        assert index.size == 0
+
 
 class TestMemoryIndexSearch:
     @pytest.mark.asyncio
@@ -191,6 +200,15 @@ class TestMemoryIndexSearch:
             cached_doc = list(index._cache.values())[0][1]
             assert cached_doc.score is None
 
+    @pytest.mark.asyncio
+    async def test_embed_error_returns_empty(self):
+        client = _make_embedding_client()
+        index = MemoryIndex(client)
+        await index.load_chunks_batch([_make_doc("data")])
+        client.embed = AsyncMock(side_effect=RuntimeError("embed failed"))
+        results = await index.search("query", top_k=1, min_score=0.0)
+        assert results == []
+
 
 class TestParseDailyFile:
     def test_date_prefix_in_chunk_text(self, tmp_path):
@@ -231,3 +249,27 @@ class TestParseDailyFile:
     def test_missing_file_returns_no_chunks(self, tmp_path):
         f = tmp_path / "missing.md"
         assert parse_daily_file(f) == []
+
+    def test_content_before_first_heading_is_chunk(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text("preamble text\n## 10:00:00\n- **User**: hello\n", encoding="utf-8")
+        chunks = parse_daily_file(f)
+        assert len(chunks) == 2
+        assert "preamble" in chunks[0].text
+
+    def test_chunk_ids_increment(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text(
+            "## 10:00:00\n- first\n\n## 11:00:00\n- second\n\n## 12:00:00\n- third\n",
+            encoding="utf-8",
+        )
+        chunks = parse_daily_file(f)
+        ids = [c.metadata["chunk_id"] for c in chunks]
+        assert ids == [0, 1, 2]
+
+    def test_start_line_metadata(self, tmp_path):
+        f = tmp_path / "2026-04-06.md"
+        f.write_text("## 10:00:00\n- first\n## 11:00:00\n- second\n", encoding="utf-8")
+        chunks = parse_daily_file(f)
+        assert chunks[0].metadata["start_line"] == 1
+        assert chunks[1].metadata["start_line"] == 3
