@@ -273,3 +273,56 @@ class TestParseDailyFile:
         chunks = parse_daily_file(f)
         assert chunks[0].metadata["start_line"] == 1
         assert chunks[1].metadata["start_line"] == 3
+
+
+class TestMemoryIndexAddChunk:
+    """Tests for incremental write-through add_chunk."""
+
+    @pytest.mark.asyncio
+    async def test_add_chunk_inserts_to_cache(self):
+        client = _make_embedding_client()
+        index = MemoryIndex(client)
+        doc = _make_doc("new interaction")
+        result = await index.add_chunk(doc)
+        assert result is True
+        assert index.size == 1
+
+    @pytest.mark.asyncio
+    async def test_add_chunk_deduplicates(self):
+        client = _make_embedding_client()
+        index = MemoryIndex(client)
+        doc = _make_doc("same text")
+        await index.add_chunk(doc)
+        result = await index.add_chunk(_make_doc("same text"))
+        assert result is False
+        assert index.size == 1
+
+    @pytest.mark.asyncio
+    async def test_add_chunk_searchable(self):
+        """Chunk added via add_chunk should be retrievable by search."""
+        client = _make_embedding_client()
+        index = MemoryIndex(client)
+        doc = _make_doc("the quick brown fox")
+        await index.add_chunk(doc)
+        results = await index.search("the quick brown fox", top_k=1, min_score=0.0)
+        assert len(results) >= 1
+        assert "quick brown fox" in results[0].text
+
+    @pytest.mark.asyncio
+    async def test_add_chunk_coexists_with_batch(self):
+        """Incremental adds should work alongside batch-loaded chunks."""
+        client = _make_embedding_client()
+        index = MemoryIndex(client)
+        await index.load_chunks_batch([_make_doc("batch one"), _make_doc("batch two")])
+        assert index.size == 2
+        await index.add_chunk(_make_doc("incremental three"))
+        assert index.size == 3
+
+    @pytest.mark.asyncio
+    async def test_add_chunk_embed_error_returns_false(self):
+        client = _make_embedding_client()
+        index = MemoryIndex(client)
+        client.embed = AsyncMock(side_effect=RuntimeError("embed failed"))
+        result = await index.add_chunk(_make_doc("fail"))
+        assert result is False
+        assert index.size == 0

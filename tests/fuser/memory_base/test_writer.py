@@ -120,3 +120,71 @@ class TestMemoryWriterAppendInteraction:
 
         today = datetime.now().strftime("%Y-%m-%d")
         assert (tmp_path / "daily" / f"{today}.md").exists()
+
+
+class TestMemoryWriterAppendToIndex:
+    """Tests for append_to_index (write-through indexing)."""
+
+    def _make_action(self, type_: str, value: str):
+        a = MagicMock()
+        a.type = type_
+        a.value = value
+        return a
+
+    @pytest.mark.asyncio
+    async def test_calls_add_chunk(self, tmp_path):
+        """Verify index insertion happens."""
+        from unittest.mock import AsyncMock
+
+        writer = MemoryWriter(memory_root=tmp_path)
+        actions = [self._make_action("Speak", "Hello")]
+
+        mock_reader = MagicMock()
+        mock_reader._index_initialized = True
+        mock_reader.index = MagicMock()
+        mock_reader.index.add_chunk = AsyncMock(return_value=True)
+
+        with patch("fuser.memory_base.writer.MemoryReader", return_value=mock_reader):
+            await writer.append_to_index("Hi robot", actions)
+
+        mock_reader.index.add_chunk.assert_called_once()
+        chunk_arg = mock_reader.index.add_chunk.call_args[0][0]
+        assert "Hi robot" in chunk_arg.text
+
+    @pytest.mark.asyncio
+    async def test_skips_when_not_initialized(self, tmp_path):
+        """Index update should be skipped if ensure_index hasn't run."""
+        writer = MemoryWriter(memory_root=tmp_path)
+        actions = [self._make_action("Speak", "Hello")]
+
+        mock_reader = MagicMock()
+        mock_reader._index_initialized = False
+
+        with patch("fuser.memory_base.writer.MemoryReader", return_value=mock_reader):
+            await writer.append_to_index("test", actions)
+
+        # No index call attempted
+        assert not hasattr(mock_reader.index, "add_chunk") or not mock_reader.index.add_chunk.called
+
+    @pytest.mark.asyncio
+    async def test_skips_empty_message(self, tmp_path):
+        writer = MemoryWriter(memory_root=tmp_path)
+        # Should return immediately without error
+        await writer.append_to_index("   ", [])
+
+    @pytest.mark.asyncio
+    async def test_index_error_does_not_raise(self, tmp_path):
+        """If index update fails, exception is caught and logged."""
+        from unittest.mock import AsyncMock
+
+        writer = MemoryWriter(memory_root=tmp_path)
+        actions = [self._make_action("Speak", "Hello")]
+
+        mock_reader = MagicMock()
+        mock_reader._index_initialized = True
+        mock_reader.index = MagicMock()
+        mock_reader.index.add_chunk = AsyncMock(side_effect=RuntimeError("embed failed"))
+
+        with patch("fuser.memory_base.writer.MemoryReader", return_value=mock_reader):
+            # Should not raise
+            await writer.append_to_index("test msg", actions)

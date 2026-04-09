@@ -668,6 +668,10 @@ class ModeCortexRuntime:
                             user_msg=voice_input.input.strip(),
                             actions=output.actions,
                         )
+                        await self.fuser.memory_writer.append_to_index(
+                            user_msg=voice_input.input.strip(),
+                            actions=output.actions,
+                        )
 
         except asyncio.CancelledError:
             logging.info("LLM call cancelled during mode transition")

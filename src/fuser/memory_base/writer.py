@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from fuser.knowledge_base.base_retriever import Document
 from providers.singleton import singleton
 
 
@@ -72,3 +73,41 @@ class MemoryWriter:
             logging.debug(f"Memory: appended interaction to {daily_path.name}")
         except Exception as e:
             logging.error(f"Memory: failed to write interaction: {e}")
+
+    async def append_to_index(
+        self,
+        user_msg: str,
+        actions: list,
+    ) -> None:
+        """Embed and insert a new interaction into the in-memory index.
+
+        Skipped if the index has not been initialized yet.
+
+        Parameters
+        ----------
+        user_msg : str
+            ASR input.
+        actions : list
+            LLM output actions.
+        """
+        if not user_msg.strip():
+            return
+
+        from fuser.memory_base.reader import MemoryReader
+
+        reader = MemoryReader()
+        if not reader._index_initialized:
+            return
+
+        try:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            robot_msg = " | ".join(f"{a.type}: {a.value}" for a in actions if a.value)
+
+            text = (
+                f"[Date: {date_str}]\n## {timestamp}\n" f"- **User**: {user_msg.strip()}\n" f"- **Robot**: {robot_msg}"
+            )
+            chunk = Document(text=text, metadata={"source": f"{date_str}.md"})
+            await reader.index.add_chunk(chunk)
+        except Exception as e:
+            logging.warning(f"Memory: write-through index failed: {e}")

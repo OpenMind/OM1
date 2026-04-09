@@ -123,6 +123,33 @@ class MemoryIndex:
             logging.error(f"Memory index: batch embed failed: {e}")
             return 0
 
+    async def add_chunk(self, chunk: Document) -> bool:
+        """Add a single chunk to the index.
+
+        Parameters
+        ----------
+        chunk : Document
+            The chunk to embed and cache.
+
+        Returns
+        -------
+        bool
+            True if successfully embedded and cached.
+        """
+        text_hash = _hash_text(chunk.text)
+        if text_hash in self._cache:
+            return False
+
+        try:
+            async with self.embedding_client:
+                embedding = await self.embedding_client.embed(chunk.text)
+            self._cache[text_hash] = (embedding, chunk)
+            logging.debug(f"Memory index: hot updated (total: {self.size})")
+            return True
+        except Exception as e:
+            logging.warning(f"Memory index: hot update failed: {e}")
+            return False
+
 
 def parse_daily_file(filepath: Path) -> list[Document]:
     """Parse a daily markdown file into document chunks.
