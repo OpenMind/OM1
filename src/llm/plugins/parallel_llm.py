@@ -30,17 +30,17 @@ class LLMSpecConfig(BaseModel):
     llm_config : LLMConfig
         Configuration for the LLM.
     action_filter : list[str], optional
-        List of action types (llm_labels) this LLM can generate.
+        List of action names this LLM can generate.
         This filters the function call schemas sent to the LLM - the LLM will ONLY
         see and be able to call functions for actions in this list.
         If None or empty, the LLM can generate all available actions.
     """
 
     llm_type: str = Field(..., description="Class name of the LLM")
-    llm_config: LLMConfig = Field(default_factory=LLMConfig, description="Configuration for the LLM")
+    config: LLMConfig = Field(default_factory=LLMConfig, description="Configuration for the LLM")
     action_filter: T.Optional[T.List[str]] = Field(
         default=None,
-        description="List of action llm_labels this LLM can generate. "
+        description="List of action names this LLM can generate. "
         "Filters function call schemas - LLM only sees these functions. "
         "None means all actions.",
     )
@@ -134,12 +134,14 @@ class ParallelLLM(LLM[R]):
             raise ValueError("ParallelLLM requires at least one LLM configuration")
 
         self._llms: T.List[T.Tuple[LLM, T.Optional[T.List[str]]]] = []
+        self._llm_label_to_name: T.Dict[str, str] = {}
+        if available_actions:
+            self._llm_label_to_name.update({a.llm_label: a.name for a in available_actions})
 
         # Initialize each LLM with filtered actions (supports N LLMs)
         for llm_spec in self._config.llms:
             llm_type = llm_spec.llm_type
-
-            llm_cfg = llm_spec.llm_config.model_copy()
+            llm_cfg = llm_spec.config.model_copy()
 
             if not llm_cfg.api_key and self._config.api_key:
                 llm_cfg.api_key = self._config.api_key
@@ -159,12 +161,10 @@ class ParallelLLM(LLM[R]):
             # actions outside its filter.
             filtered_actions = available_actions
             if llm_spec.action_filter and available_actions:
-                filtered_actions = [
-                    action for action in available_actions if action.llm_label in llm_spec.action_filter
-                ]
+                filtered_actions = [action for action in available_actions if action.name in llm_spec.action_filter]
                 logging.info(
                     f"Filtered function schemas for {llm_type}: "
-                    f"{[a.llm_label for a in filtered_actions]} "
+                    f"{[a.name for a in filtered_actions]} "
                     f"(excluded {len(available_actions) - len(filtered_actions)} actions)"
                 )
             elif available_actions:
@@ -212,7 +212,7 @@ class ParallelLLM(LLM[R]):
         llm_name : str
             Identifier for the LLM.
         action_filter : list[str], optional
-            Filter for allowed action types. Used for safety validation only -
+            Filter for allowed action names. Used for safety validation only -
             the function schemas were already filtered when initializing the LLM.
 
         Returns
@@ -228,7 +228,9 @@ class ParallelLLM(LLM[R]):
             # Safety check: Filter actions in case LLM somehow generated actions
             # outside its function schema (shouldn't happen, but validate anyway)
             if result and hasattr(result, "actions") and action_filter:
-                filtered_actions = [action for action in result.actions if action.type in action_filter]
+                filtered_actions = [
+                    action for action in result.actions if self._llm_label_to_name.get(action.type) in action_filter
+                ]
                 if len(filtered_actions) != len(result.actions):
                     logging.warning(
                         f"{llm_name} generated {len(result.actions) - len(filtered_actions)} "

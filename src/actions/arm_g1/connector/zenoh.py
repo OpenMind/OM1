@@ -18,16 +18,16 @@ CUSTOM_API_ID = 9001
 SPORT_REQUEST_TOPIC = "api/sport/request"
 
 CUSTOM_ACTION_MAP = {
-    "shake hand": "shake_hand",
-    "face wave": "face_wave",
-    "hands up": "hands_up",
-    "stand still": "stand_still",
-    "show hand": "show_hand",
+    "shake_hand": "shake_hand",
+    "face_wave": "face_wave",
+    "hands_up": "hands_up",
+    "stand_still": "stand_still",
+    "show_hand": "show_hand",
     "wave": "wave",
     "move": "move",
-    "show hand1": "show_hand1",
-    "show hand2": "show_hand2",
-    "my gesture": "my_gesture",
+    "show_hand1": "show_hand1",
+    "show_hand2": "show_hand2",
+    "my_gesture": "my_gesture",
 }
 
 
