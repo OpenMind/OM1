@@ -1,4 +1,5 @@
-from unittest.mock import patch
+import json
+import os
 
 import pytest
 
@@ -10,8 +11,8 @@ from actions.schedule_cron_job.interface import ScheduleCronJobInput
 
 
 @pytest.fixture
-def config():
-    return ScheduleCronJobConfig()
+def config(tmp_path):
+    return ScheduleCronJobConfig(schedule_file=str(tmp_path / "cron.json"))
 
 
 @pytest.fixture
@@ -30,8 +31,9 @@ class TestScheduleCronJobConfig:
 
 
 class TestScheduleCronJobJSONConnectorInit:
-    def test_schedule_file_set(self, config):
-        connector = ScheduleCronJobJSONConnector(config)
+    def test_schedule_file_set(self):
+        cfg = ScheduleCronJobConfig()
+        connector = ScheduleCronJobJSONConnector(cfg)
         assert connector.schedule_file == "config/cron_job/cron.json"
 
     def test_custom_schedule_file(self):
@@ -66,19 +68,60 @@ class TestParseScheduleTime:
             connector._parse_schedule_time("not-a-date")
 
 
+class TestReadWriteEntries:
+    def test_read_empty_returns_empty_list(self, connector):
+        assert connector._read_entries() == []
+
+    def test_write_and_read_round_trip(self, connector):
+        entries = [{"function": "foo", "timestamp": 1000.0}]
+        connector._write_entries(entries)
+        result = connector._read_entries()
+        assert result == entries
+
+    def test_read_invalid_json_returns_empty(self, connector):
+        with open(connector.schedule_file, "w") as f:
+            f.write("not json")
+        assert connector._read_entries() == []
+
+    def test_read_non_list_returns_empty(self, connector):
+        with open(connector.schedule_file, "w") as f:
+            json.dump({"key": "value"}, f)
+        assert connector._read_entries() == []
+
+
+class TestLockedAppend:
+    def test_locked_append_creates_file(self, connector):
+        entry = {"function": "speak", "timestamp": 1000.0}
+        connector._locked_append(entry)
+        assert os.path.exists(connector.schedule_file)
+        with open(connector.schedule_file) as f:
+            data = json.load(f)
+        assert len(data) == 1
+        assert data[0]["function"] == "speak"
+
+    def test_locked_append_sorts_by_timestamp(self, connector):
+        connector._locked_append({"function": "b", "timestamp": 200.0})
+        connector._locked_append({"function": "a", "timestamp": 100.0})
+        with open(connector.schedule_file) as f:
+            data = json.load(f)
+        assert data[0]["function"] == "a"
+        assert data[1]["function"] == "b"
+
+
 class TestConnect:
     @pytest.mark.asyncio
-    async def test_connect_calls_add_entry(self, connector):
-        with patch("inputs.plugins.schedule_cron_job_input.ScheduleCronJobInput.add_entry") as mock_add:
-            inp = ScheduleCronJobInput(
-                schedule_time="2026-04-07 10:00:00",
-                function="speak",
-                recurrence="daily",
-            )
-            await connector.connect(inp)
+    async def test_connect_persists_entry_to_file(self, connector):
+        inp = ScheduleCronJobInput(
+            schedule_time="2026-04-07 10:00:00",
+            function="speak",
+            recurrence="daily",
+        )
+        await connector.connect(inp)
 
-        mock_add.assert_called_once()
-        entry = mock_add.call_args[0][0]
+        with open(connector.schedule_file) as f:
+            data = json.load(f)
+        assert len(data) == 1
+        entry = data[0]
         assert entry["function"] == "speak"
         assert entry["args"] == {}
         assert entry["recurrence"] == "daily"
@@ -88,23 +131,22 @@ class TestConnect:
 
     @pytest.mark.asyncio
     async def test_connect_invalid_schedule_time_logs_and_returns(self, connector):
-        with patch("inputs.plugins.schedule_cron_job_input.ScheduleCronJobInput.add_entry") as mock_add:
-            inp = ScheduleCronJobInput(
-                schedule_time="not-a-date",
-                function="speak",
-            )
-            await connector.connect(inp)
+        inp = ScheduleCronJobInput(
+            schedule_time="not-a-date",
+            function="speak",
+        )
+        await connector.connect(inp)
 
-        mock_add.assert_not_called()
+        assert not os.path.exists(connector.schedule_file)
 
     @pytest.mark.asyncio
     async def test_connect_default_recurrence_is_empty(self, connector):
-        with patch("inputs.plugins.schedule_cron_job_input.ScheduleCronJobInput.add_entry") as mock_add:
-            inp = ScheduleCronJobInput(
-                schedule_time="2026-04-07 10:00:00",
-                function="speak",
-            )
-            await connector.connect(inp)
+        inp = ScheduleCronJobInput(
+            schedule_time="2026-04-07 10:00:00",
+            function="speak",
+        )
+        await connector.connect(inp)
 
-        entry = mock_add.call_args[0][0]
-        assert entry["recurrence"] == ""
+        with open(connector.schedule_file) as f:
+            data = json.load(f)
+        assert data[0]["recurrence"] == ""

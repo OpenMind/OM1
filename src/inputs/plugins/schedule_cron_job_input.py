@@ -1,11 +1,12 @@
 import asyncio
+import fcntl
 import json
 import logging
 import os
 import re
 import time
 from datetime import datetime, timedelta
-from typing import ClassVar, List, Optional
+from typing import List, Optional
 
 from pydantic import Field
 
@@ -13,8 +14,6 @@ from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
 from providers.io_provider import IOProvider
 from providers.sleep_ticker_provider import SleepTickerProvider
-
-logger = logging.getLogger(__name__)
 
 
 class ScheduleCronJobInputConfig(SensorConfig):
@@ -42,9 +41,6 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
     "" or "once" for one-time execution; "hourly", "daily", "weekly" for fixed
     intervals; "every Xm", "every Xh", "every Xd" for custom intervals.
     """
-
-    # Reference to the active instance so add_entry() can reach it.
-    _instance: ClassVar[Optional["ScheduleCronJobInput"]] = None
 
     _DATE_FORMATS = (
         "%Y-%m-%d %H:%M:%S",
@@ -79,33 +75,45 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
         self.messages: list[Message] = []
         self.descriptor_for_LLM = "User Command"
         self.io_provider = IOProvider()
-        self._start_dt: Optional[datetime] = datetime.now().replace(microsecond=0)
+        self._startup_time: Optional[datetime] = datetime.now().replace(microsecond=0)
         self._entries: List[dict] = []
         if not os.path.exists(self.config.schedule_file):
             self._write_all([])
         self._entries = self._read_file()
-        logger.info(
+        self._last_known_file_mtime: float = self._get_file_mtime()
+        logging.info(
             "ScheduleCronJobInput initialized: polling %s every 1s, run_previous=%s, loaded %d entries",
             self.config.schedule_file,
             self.config.run_previous,
             len(self._entries),
         )
-        ScheduleCronJobInput._instance = self
 
-    @classmethod
-    def add_entry(cls, entry: dict) -> None:
+    def _get_file_mtime(self) -> float:
         """
-        Add a new schedule entry to the active instance.
+        Return the modification time of the schedule file.
 
-        Parameters
-        ----------
-        entry : dict
-            Schedule entry dict as produced by ScheduleCronJobJSONConnector.
+        Returns
+        -------
+        float
+            File mtime as a Unix timestamp, or 0.0 if the file does not exist.
         """
-        if cls._instance is None:
-            logging.warning("ScheduleCronJobInput: add_entry() called before instance created, entry dropped")
-            return
-        cls._instance._add_entry(entry)
+        try:
+            return os.path.getmtime(self.config.schedule_file)
+        except OSError:
+            return 0.0
+
+    def _reload_if_changed(self) -> None:
+        """
+        Reload entries from disk if the file has been modified externally.
+        """
+        current_mtime = self._get_file_mtime()
+        if current_mtime != self._last_known_file_mtime:
+            self._entries = self._read_file()
+            self._last_known_file_mtime = current_mtime
+            logging.info(
+                "ScheduleCronJobInput: file changed, reloaded %d entries",
+                len(self._entries),
+            )
 
     def _read_file(self) -> list:
         """
@@ -118,19 +126,19 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
             file does not exist or contains invalid JSON.
         """
         try:
-            with open(self.config.schedule_file, "r") as f:
-                data = json.load(f)
+            with open(self.config.schedule_file, "r") as file_handle:
+                data = json.load(file_handle)
                 return data if isinstance(data, list) else []
         except (FileNotFoundError, json.JSONDecodeError):
             return []
 
     def _write_all(self, entries: list) -> None:
         """
-        Write all entries to the JSON schedule file atomically via a temp file.
+        Write all entries to the JSON schedule file.
 
-        Creates the parent directory if it does not exist, writes to a ``.tmp``
-        sibling, then uses ``os.replace`` for an atomic rename so a partial write
-        never corrupts the live file.
+        Creates the parent directory if it does not exist. Updates
+        ``_last_known_file_mtime`` immediately so that ``_reload_if_changed``
+        does not re-read our own write.
 
         Parameters
         ----------
@@ -141,28 +149,9 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
         dir_name = os.path.dirname(self.config.schedule_file)
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
-        temp_path = self.config.schedule_file + ".tmp"
-        with open(temp_path, "w") as f:
-            json.dump(entries, f, indent=2)
-        os.replace(temp_path, self.config.schedule_file)
-
-    def _add_entry(self, entry: dict) -> None:
-        """
-        Append a new entry to the in-memory cache and flush to disk.
-
-        Appends the entry, re-sorts by ascending timestamp, then writes the
-        full list via ``_write_all`` so the file and cache stay consistent.
-
-        Parameters
-        ----------
-        entry : dict
-            Schedule entry dict containing at least ``timestamp``,
-            ``schedule_time``, ``function``, ``args``, ``recurrence``, and
-            ``registered_at`` keys.
-        """
-        self._entries.append(entry)
-        self._entries.sort(key=lambda e: e.get("timestamp", 0))
-        self._write_all(self._entries)
+        with open(self.config.schedule_file, "w") as file_handle:
+            json.dump(entries, file_handle, indent=2)
+        self._last_known_file_mtime = self._get_file_mtime()
 
     def _parse_schedule_time(self, schedule_time: str) -> Optional[datetime]:
         """
@@ -180,12 +169,12 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
         Optional[datetime]
             Parsed datetime on success, or None if no format matched.
         """
-        for fmt in self._DATE_FORMATS:
+        for date_format in self._DATE_FORMATS:
             try:
-                return datetime.strptime(schedule_time.strip(), fmt)
+                return datetime.strptime(schedule_time.strip(), date_format)
             except ValueError:
                 continue
-        logger.warning("ScheduleCronJobInput: could not parse schedule_time '%s'", schedule_time)
+        logging.warning("ScheduleCronJobInput: could not parse schedule_time '%s'", schedule_time)
         return None
 
     def _recurrence_delta(self, recurrence: str) -> Optional[timedelta]:
@@ -211,25 +200,27 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
             ``timedelta`` matching the pattern, or ``None`` for a one-time task.
             Unknown patterns log a warning and also return ``None``.
         """
-        r = recurrence.strip().lower()
-        if not r or r == "once":
+        normalized_recurrence = recurrence.strip().lower()
+        if not normalized_recurrence or normalized_recurrence == "once":
             return None
-        if r == "hourly":
+        if normalized_recurrence == "hourly":
             return timedelta(hours=1)
-        if r == "daily":
+        if normalized_recurrence == "daily":
             return timedelta(days=1)
-        if r == "weekly":
+        if normalized_recurrence == "weekly":
             return timedelta(weeks=1)
-        m = self._EVERY_PATTERN.match(r)
-        if m:
-            n = int(m.group(1))
-            unit = m.group(2).rstrip("s") if len(m.group(2)) > 1 else m.group(2)
-            unit = unit[0]  # first letter is always the canonical short form
-            return timedelta(**{self._UNIT_MAP[unit]: n})
-        logger.warning("ScheduleCronJobInput: unknown recurrence pattern '%s'", recurrence)
+        match_result = self._EVERY_PATTERN.match(normalized_recurrence)
+        if match_result:
+            interval_value = int(match_result.group(1))
+            raw_time_unit = (
+                match_result.group(2).rstrip("s") if len(match_result.group(2)) > 1 else match_result.group(2)
+            )
+            unit_key = raw_time_unit[0]  # first letter is always the canonical short form
+            return timedelta(**{self._UNIT_MAP[unit_key]: interval_value})
+        logging.warning("ScheduleCronJobInput: unknown recurrence pattern '%s'", recurrence)
         return None
 
-    def _is_due(self, entry: dict, now_dt: datetime) -> bool:
+    def _is_due(self, entry: dict, current_time: datetime) -> bool:
         """
         Determine whether a scheduled entry should be dispatched on this tick.
 
@@ -243,7 +234,7 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
         entry : dict
             Schedule entry dict; must contain a ``"schedule_time"`` key with a
             parseable datetime string.
-        now_dt : datetime
+        current_time : datetime
             Current datetime (microseconds stripped) used as the reference point.
 
         Returns
@@ -255,58 +246,68 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
         schedule_time = entry.get("schedule_time", "")
         if not schedule_time:
             return False
-        entry_dt = self._parse_schedule_time(schedule_time)
-        if entry_dt is None or entry_dt > now_dt:
+        entry_scheduled_time = self._parse_schedule_time(schedule_time)
+        if entry_scheduled_time is None or entry_scheduled_time > current_time:
             return False
-        if not self.config.run_previous and self._start_dt is not None:
-            if entry_dt < self._start_dt:
+        if not self.config.run_previous and self._startup_time is not None:
+            if entry_scheduled_time < self._startup_time:
                 return False
         return True
 
     def _tick(self) -> None:
         """Check for due entries, dispatch them, and reschedule or remove each one."""
-        now_dt = datetime.now().replace(microsecond=0)
+        schedule_dir = os.path.dirname(self.config.schedule_file)
+        if schedule_dir:
+            os.makedirs(schedule_dir, exist_ok=True)
+        with open(self.config.schedule_file, "a") as lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            try:
+                self._reload_if_changed()
 
-        due = [e for e in self._entries if self._is_due(e, now_dt)]
+                current_time = datetime.now().replace(microsecond=0)
 
-        if not due:
-            if self.messages:
-                SleepTickerProvider().skip_sleep = True
-            return
+                due_entries = [e for e in self._entries if self._is_due(e, current_time)]
 
-        keep = []
-        for entry in self._entries:
-            if not self._is_due(entry, now_dt):
-                keep.append(entry)
-                continue
-            recurrence = entry.get("recurrence", "")
-            delta = self._recurrence_delta(recurrence)
-            if delta is None:
-                logger.info(
-                    "ScheduleCronJobInput: removing completed one-time task '%s'",
-                    entry.get("function"),
-                )
-            else:
-                current_dt = self._parse_schedule_time(entry["schedule_time"])
-                if current_dt is not None:
-                    next_dt = current_dt + delta
-                    while next_dt <= now_dt:
-                        next_dt += delta
-                    entry["schedule_time"] = next_dt.strftime("%Y-%m-%d %H:%M:%S")
-                    entry["timestamp"] = next_dt.timestamp()
-                    entry["last_run_at"] = now_dt.strftime("%Y-%m-%d %H:%M:%S")
-                    logger.info(
-                        "ScheduleCronJobInput: recurring task '%s' rescheduled to %s",
-                        entry.get("function"),
-                        entry["schedule_time"],
-                    )
-                    keep.append(entry)
-        self._entries = sorted(keep, key=lambda e: e.get("timestamp", 0))
-        self._write_all(self._entries)
+                if not due_entries:
+                    if self.messages:
+                        SleepTickerProvider().skip_sleep = True
+                    return
 
-        for entry in due:
+                remaining_entries = []
+                for entry in self._entries:
+                    if not self._is_due(entry, current_time):
+                        remaining_entries.append(entry)
+                        continue
+                    recurrence = entry.get("recurrence", "")
+                    recurrence_interval = self._recurrence_delta(recurrence)
+                    if recurrence_interval is None:
+                        logging.info(
+                            "ScheduleCronJobInput: removing completed one-time task '%s'",
+                            entry.get("function"),
+                        )
+                    else:
+                        scheduled_time = self._parse_schedule_time(entry["schedule_time"])
+                        if scheduled_time is not None:
+                            next_scheduled_time = scheduled_time + recurrence_interval
+                            while next_scheduled_time <= current_time:
+                                next_scheduled_time += recurrence_interval
+                            entry["schedule_time"] = next_scheduled_time.strftime("%Y-%m-%d %H:%M:%S")
+                            entry["timestamp"] = next_scheduled_time.timestamp()
+                            entry["last_run_at"] = current_time.strftime("%Y-%m-%d %H:%M:%S")
+                            logging.info(
+                                "ScheduleCronJobInput: recurring task '%s' rescheduled to %s",
+                                entry.get("function"),
+                                entry["schedule_time"],
+                            )
+                            remaining_entries.append(entry)
+                self._entries = sorted(remaining_entries, key=lambda e: e.get("timestamp", 0))
+                self._write_all(self._entries)
+            finally:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+        for entry in due_entries:
             function_name = entry.get("function", "")
-            logger.info("ScheduleCronJobInput: dispatching '%s'", function_name)
+            logging.info("ScheduleCronJobInput: dispatching '%s'", function_name)
             self.messages.append(Message(timestamp=time.time(), message=function_name))
         SleepTickerProvider().skip_sleep = True
 
@@ -346,7 +347,7 @@ class ScheduleCronJobInput(FuserInput[ScheduleCronJobInputConfig, Optional[str]]
         if not self.messages:
             return None
 
-        msg = self.messages.pop(0)
-        result = f"\nINPUT: {self.descriptor_for_LLM}\n" f"// START\n{msg.message}\n// END\n"
-        self.io_provider.add_input(self.descriptor_for_LLM, msg.message, time.time())
+        message = self.messages.pop(0)
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n" f"// START\n{message.message}\n// END\n"
+        self.io_provider.add_input(self.descriptor_for_LLM, message.message, time.time())
         return result

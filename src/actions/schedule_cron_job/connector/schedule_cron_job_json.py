@@ -1,4 +1,7 @@
+import fcntl
+import json
 import logging
+import os
 import time
 from datetime import datetime
 
@@ -6,9 +9,6 @@ from pydantic import Field
 
 from actions.base import ActionConfig, ActionConnector
 from actions.schedule_cron_job.interface import ScheduleCronJobInput
-from inputs.plugins.schedule_cron_job_input import ScheduleCronJobInput as ScheduleCronJobInputPlugin
-
-logger = logging.getLogger(__name__)
 
 
 class ScheduleCronJobConfig(ActionConfig):
@@ -31,10 +31,9 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
     """
     Connector that persists scheduled cron jobs to a JSON file.
 
-    Delegates storage to ScheduleCronJobInputPlugin.add_entry() so that the in-memory
-    cache and the JSON file are updated together. Entries are sorted by ascending
-    timestamp to preserve deterministic processing order for consumers of the
-    persisted schedule.
+    Reads the current entries from the JSON file, appends the new entry, sorts
+    by ascending timestamp, and writes back atomically. The input plugin detects
+    the file change via mtime and reloads on its next tick.
     """
 
     def __init__(self, config: ScheduleCronJobConfig) -> None:
@@ -64,23 +63,80 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
         float
             Unix timestamp corresponding to schedule_time.
         """
-        for fmt in self._DATE_FORMATS:
+        for date_format in self._DATE_FORMATS:
             try:
-                return datetime.strptime(schedule_time.strip(), fmt).timestamp()
+                return datetime.strptime(schedule_time.strip(), date_format).timestamp()
             except ValueError:
                 continue
         raise ValueError(
             f"Could not parse schedule_time '{schedule_time}'. " f"Expected format: 'YYYY-MM-DD HH:MM:SS'."
         )
 
+    def _read_entries(self) -> list:
+        """
+        Read the current entries from the JSON schedule file.
+
+        Returns
+        -------
+        list
+            List of entry dicts, or an empty list if the file does not exist
+            or contains invalid JSON.
+        """
+        try:
+            with open(self.schedule_file, "r") as file_handle:
+                data = json.load(file_handle)
+                return data if isinstance(data, list) else []
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    def _write_entries(self, entries: list) -> None:
+        """
+        Write entries to the JSON schedule file.
+
+        Parameters
+        ----------
+        entries : list
+            List of entry dicts to serialise.
+        """
+        dir_name = os.path.dirname(self.schedule_file)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+        with open(self.schedule_file, "w") as file_handle:
+            json.dump(entries, file_handle, indent=2)
+
+    def _locked_append(self, entry: dict) -> None:
+        """
+        Append an entry to the schedule file under an exclusive file lock.
+
+        Acquires the lock on the JSON file itself, reads current entries,
+        appends, sorts, and writes back. This prevents races with the input
+        plugin's own read-modify-write cycle.
+
+        Parameters
+        ----------
+        entry : dict
+            The schedule entry to append.
+        """
+        dir_name = os.path.dirname(self.schedule_file)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+        with open(self.schedule_file, "a") as lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            try:
+                existing_entries = self._read_entries()
+                existing_entries.append(entry)
+                existing_entries.sort(key=lambda e: e.get("timestamp", 0))
+                self._write_entries(existing_entries)
+            finally:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+
     async def connect(self, output_interface: ScheduleCronJobInput) -> None:
         """
-        Persist a scheduled cron job entry to the in-memory cache and JSON file.
+        Persist a scheduled cron job entry to the JSON file.
 
-        Parses the schedule time from output_interface, builds an entry dict, and
-        delegates to ScheduleCronJobInputPlugin.add_entry() so that both the in-memory cache
-        and the JSON file are updated atomically. If the schedule_time cannot be
-        parsed, logs an error and returns without writing anything.
+        Reads existing entries, appends the new one, sorts by timestamp, and
+        writes back atomically. The input plugin will detect the file change
+        via mtime on its next tick.
 
         Parameters
         ----------
@@ -91,7 +147,7 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
         try:
             timestamp = self._parse_schedule_time(output_interface.schedule_time)
         except ValueError as exc:
-            logger.error("ScheduleCronJob: %s", exc)
+            logging.error("ScheduleCronJob: %s", exc)
             return
 
         args: dict = {}
@@ -106,9 +162,9 @@ class ScheduleCronJobJSONConnector(ActionConnector[ScheduleCronJobConfig, Schedu
             "registered_at": time.time(),
         }
 
-        ScheduleCronJobInputPlugin.add_entry(entry)
+        self._locked_append(entry)
 
-        logger.info(
+        logging.info(
             "Scheduled cron job registered: function=%s at '%s' (timestamp=%.3f, recurrence=%r)",
             output_interface.function,
             output_interface.schedule_time,

@@ -8,13 +8,6 @@ import pytest
 from inputs.plugins.schedule_cron_job_input import ScheduleCronJobInput, ScheduleCronJobInputConfig
 
 
-@pytest.fixture(autouse=True)
-def reset_instance():
-    ScheduleCronJobInput._instance = None
-    yield
-    ScheduleCronJobInput._instance = None
-
-
 @pytest.fixture
 def plugin(tmp_path):
     schedule_file = str(tmp_path / "cron.json")
@@ -130,14 +123,14 @@ class TestIsDue:
 
     def test_run_previous_false_skips_old_entries(self, plugin):
         plugin.config.run_previous = False
-        plugin._start_dt = datetime(2026, 4, 7, 12, 0, 0)
+        plugin._startup_time = datetime(2026, 4, 7, 12, 0, 0)
         now = datetime(2026, 4, 7, 12, 0, 0)
         entry = self._make_entry("2026-04-07 11:00:00")
         assert plugin._is_due(entry, now) is False
 
     def test_run_previous_true_includes_old_entries(self, plugin):
         plugin.config.run_previous = True
-        plugin._start_dt = datetime(2026, 4, 7, 12, 0, 0)
+        plugin._startup_time = datetime(2026, 4, 7, 12, 0, 0)
         now = datetime(2026, 4, 7, 12, 0, 0)
         entry = self._make_entry("2026-04-07 11:00:00")
         assert plugin._is_due(entry, now) is True
@@ -178,29 +171,32 @@ class TestFileIO:
 
 
 # ---------------------------------------------------------------------------
-# _add_entry
+# _get_file_mtime / _reload_if_changed
 # ---------------------------------------------------------------------------
 
 
-class TestAddEntry:
-    def test_add_entry_appears_in_cache(self, plugin):
-        entry = {"function": "speak", "timestamp": 9999.0, "schedule_time": "2026-04-07 10:00:00"}
-        plugin._add_entry(entry)
-        assert entry in plugin._entries
+class TestFileMtimeReload:
+    def test_get_file_mtime_returns_float(self, plugin):
+        mtime = plugin._get_file_mtime()
+        assert isinstance(mtime, float)
+        assert mtime > 0
 
-    def test_entries_sorted_by_timestamp(self, plugin):
-        plugin._add_entry({"function": "b", "timestamp": 200.0, "schedule_time": "2026-04-07 10:00:00"})
-        plugin._add_entry({"function": "a", "timestamp": 100.0, "schedule_time": "2026-04-07 09:00:00"})
-        assert plugin._entries[0]["function"] == "a"
-        assert plugin._entries[1]["function"] == "b"
+    def test_get_file_mtime_missing_file_returns_zero(self, plugin):
+        os.remove(plugin.config.schedule_file)
+        assert plugin._get_file_mtime() == 0.0
 
-    def test_add_entry_persists_to_file(self, plugin):
-        entry = {"function": "speak", "timestamp": 9999.0, "schedule_time": "2026-04-07 10:00:00"}
-        plugin._add_entry(entry)
-        assert os.path.exists(plugin.config.schedule_file)
-        with open(plugin.config.schedule_file) as f:
-            data = json.load(f)
-        assert any(e["function"] == "speak" for e in data)
+    def test_reload_if_changed_detects_external_write(self, plugin):
+        new_entries = [{"function": "external_task", "timestamp": 5000.0}]
+        with open(plugin.config.schedule_file, "w") as f:
+            json.dump(new_entries, f)
+        plugin._reload_if_changed()
+        assert len(plugin._entries) == 1
+        assert plugin._entries[0]["function"] == "external_task"
+
+    def test_reload_if_changed_no_op_when_unchanged(self, plugin):
+        plugin._entries = [{"function": "cached"}]
+        plugin._reload_if_changed()
+        assert plugin._entries == [{"function": "cached"}]
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +216,7 @@ class TestTick:
     def test_one_time_entry_removed_after_tick(self, plugin):
         entry = self._past_entry()
         plugin._entries = [entry]
+        plugin._write_all(plugin._entries)
         with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             plugin._tick()
         assert plugin._entries == []
@@ -227,6 +224,7 @@ class TestTick:
     def test_one_time_entry_dispatched(self, plugin):
         entry = self._past_entry()
         plugin._entries = [entry]
+        plugin._write_all(plugin._entries)
         with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             plugin._tick()
         assert len(plugin.messages) == 1
@@ -235,6 +233,7 @@ class TestTick:
     def test_recurring_entry_rescheduled(self, plugin):
         entry = self._past_entry(recurrence="daily")
         plugin._entries = [entry]
+        plugin._write_all(plugin._entries)
         with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             plugin._tick()
         assert len(plugin._entries) == 1
@@ -250,6 +249,7 @@ class TestTick:
             "recurrence": "",
         }
         plugin._entries = [entry]
+        plugin._write_all(plugin._entries)
         original_entries = list(plugin._entries)
         plugin._tick()
         assert plugin._entries == original_entries
@@ -258,6 +258,7 @@ class TestTick:
     def test_multiple_due_entries_all_dispatched(self, plugin):
         entries = [self._past_entry(function="task_a"), self._past_entry(function="task_b")]
         plugin._entries = entries
+        plugin._write_all(plugin._entries)
         with patch("inputs.plugins.schedule_cron_job_input.SleepTickerProvider"):
             plugin._tick()
         assert len(plugin.messages) == 2
