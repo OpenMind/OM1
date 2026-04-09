@@ -7,8 +7,6 @@ from typing import List, Optional, Union
 from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
-from fuser.memory_base.reader import MemoryReader
-from fuser.memory_base.writer import MemoryWriter
 from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
@@ -86,19 +84,6 @@ class ModeCortexRuntime:
                 f"Hot-reload enabled for runtime config: {self.config_path} (check interval: {check_interval}s)"
             )
 
-        # Initialize long-term memory components if enabled
-        self.memory_reader: Optional[MemoryReader] = None
-        self.memory_writer: Optional[MemoryWriter] = None
-        if isinstance(mode_config.memory, dict) and mode_config.memory.get("enabled", False):
-            try:
-                self.memory_reader = MemoryReader()
-                self.memory_writer = MemoryWriter()
-                logging.info(f"Long-term memory enabled, memory root: {self.memory_reader.memory_root}")
-            except Exception:
-                logging.exception("Failed to initialize long-term memory")
-                self.memory_reader = None
-                self.memory_writer = None
-
         # Current runtime components
         self.current_config: Optional[RuntimeConfig] = None
         self.fuser: Optional[Fuser] = None
@@ -154,11 +139,11 @@ class ModeCortexRuntime:
 
         logging.info("Setting up cortex components for mode")
 
-        self.fuser = Fuser(
-            self.current_config,
-            memory_reader=self.memory_reader,
-            memory_writer=self.memory_writer,
-        )
+        self.fuser = Fuser(self.current_config)
+
+        if self.fuser.memory_reader:
+            await self.fuser.memory_reader.ensure_index()
+
         self.action_orchestrator = ActionOrchestrator(self.current_config)
 
         if self.current_config.simulators:
@@ -458,9 +443,6 @@ class ModeCortexRuntime:
                 # Execute initial mode startup hooks
                 initial_mode_config = self.mode_config.modes[self.mode_manager.current_mode_name]
                 await initial_mode_config.execute_lifecycle_hooks(LifecycleHookType.ON_STARTUP, startup_context)
-
-            if self.memory_reader:
-                await self.memory_reader.ensure_index()
 
             await self._start_orchestrators()
 

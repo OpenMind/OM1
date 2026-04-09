@@ -9,6 +9,14 @@ from src.fuser.memory_base.reader import (
 )
 
 
+@pytest.fixture(autouse=True)
+def reset_memory_reader_singleton():
+    """Reset the MemoryReader singleton before each test."""
+    MemoryReader.reset()  # type: ignore
+    yield
+    MemoryReader.reset()  # type: ignore
+
+
 def _write_memory_md(memory_root: Path, content: str) -> None:
     md = memory_root / "MEMORY.md"
     md.write_text(content, encoding="utf-8")

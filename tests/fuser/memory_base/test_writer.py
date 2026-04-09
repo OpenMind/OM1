@@ -1,7 +1,17 @@
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from src.fuser.memory_base.writer import MemoryWriter
+
+
+@pytest.fixture(autouse=True)
+def reset_memory_writer_singleton():
+    """Reset the MemoryWriter singleton before each test."""
+    MemoryWriter.reset()  # type: ignore
+    yield
+    MemoryWriter.reset()  # type: ignore
 
 
 class TestMemoryWriterInit:

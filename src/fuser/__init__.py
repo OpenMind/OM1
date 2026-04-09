@@ -3,7 +3,6 @@ import time
 import typing as T
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Optional
 
 from actions import describe_action
 from fuser.knowledge_base.retriever import KnowledgeBase
@@ -29,12 +28,7 @@ class Fuser:
         Provider for handling I/O data and timing.
     """
 
-    def __init__(
-        self,
-        config: RuntimeConfig,
-        memory_reader: Optional[MemoryReader] = None,
-        memory_writer: Optional[MemoryWriter] = None,
-    ):
+    def __init__(self, config: RuntimeConfig):
         """
         Initialize the Fuser with runtime configuration.
 
@@ -42,10 +36,6 @@ class Fuser:
         ----------
         config : RuntimeConfig
             Runtime configuration object.
-        memory_reader : MemoryReader
-            Memory reader from runtime.
-        memory_writer : MemoryWriter
-            Memory writer from runtime.
         """
         self.config = config
         self.io_provider = IOProvider()
@@ -65,8 +55,17 @@ class Fuser:
                 logging.exception("Failed to initialize KnowledgeBase with provided config")
                 self.knowledge_base = None
 
-        self.memory_reader = memory_reader
-        self.memory_writer = memory_writer
+        self.memory_reader = None
+        self.memory_writer = None
+        if isinstance(config.memory, dict) and config.memory.get("enabled", False):
+            try:
+                self.memory_reader = MemoryReader()
+                self.memory_writer = MemoryWriter()
+                logging.info(f"Long-term memory enabled, root: {self.memory_reader.memory_root}")
+            except Exception:
+                logging.exception("Failed to initialize long-term memory")
+                self.memory_reader = None
+                self.memory_writer = None
 
     async def fuse(self, inputs: Sequence[Sensor], finished_promises: list[T.Any]) -> T.Optional[str]:
         """

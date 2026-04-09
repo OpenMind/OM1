@@ -374,24 +374,30 @@ async def test_fuser_with_knowledge_base_empty_voice_input():
 
 
 @pytest.mark.asyncio
-async def test_fuser_initialization_with_memory_injected():
-    """Test that Fuser uses injected MemoryReader and MemoryWriter."""
-    config = create_mock_config()
+async def test_fuser_initialization_with_memory_enabled():
+    """Test that Fuser creates MemoryReader/MemoryWriter when config.memory is enabled."""
+    config = create_mock_config(memory={"enabled": True})
     io_provider = IOProvider()
 
     mock_reader = MagicMock()
     mock_reader.memory_root = "/tmp/memory"
     mock_writer = MagicMock()
 
-    with patch("fuser.IOProvider", return_value=io_provider):
-        fuser = Fuser(config, memory_reader=mock_reader, memory_writer=mock_writer)
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.MemoryReader", return_value=mock_reader) as reader_cls,
+        patch("fuser.MemoryWriter", return_value=mock_writer) as writer_cls,
+    ):
+        fuser = Fuser(config)
+        reader_cls.assert_called_once()
+        writer_cls.assert_called_once()
         assert fuser.memory_reader is mock_reader
         assert fuser.memory_writer is mock_writer
 
 
 @pytest.mark.asyncio
 async def test_fuser_initialization_without_memory():
-    """Test that memory is None when not injected."""
+    """Test that memory is None when config.memory is absent."""
     config = create_mock_config()
     io_provider = IOProvider()
 
@@ -402,9 +408,9 @@ async def test_fuser_initialization_without_memory():
 
 
 @pytest.mark.asyncio
-async def test_fuser_with_memory_context_injected():
+async def test_fuser_with_memory_context():
     """Test that memory context is injected into the prompt when available."""
-    config = create_mock_config()
+    config = create_mock_config(memory={"enabled": True})
     io_provider = IOProvider()
 
     voice_input = Mock()
@@ -422,8 +428,12 @@ async def test_fuser_with_memory_context_injected():
 
     inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
 
-    with patch("fuser.IOProvider", return_value=io_provider):
-        fuser = Fuser(config, memory_reader=mock_reader, memory_writer=mock_writer)
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.MemoryReader", return_value=mock_reader),
+        patch("fuser.MemoryWriter", return_value=mock_writer),
+    ):
+        fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
         assert result is not None
@@ -435,7 +445,7 @@ async def test_fuser_with_memory_context_injected():
 @pytest.mark.asyncio
 async def test_fuser_with_memory_no_context():
     """Test that MEMORY section is absent when format_context returns empty string."""
-    config = create_mock_config()
+    config = create_mock_config(memory={"enabled": True})
     io_provider = IOProvider()
 
     mock_reader = MagicMock()
@@ -446,8 +456,12 @@ async def test_fuser_with_memory_no_context():
 
     inputs: Sequence[Sensor[Any, Any]] = [MockSensor()]
 
-    with patch("fuser.IOProvider", return_value=io_provider):
-        fuser = Fuser(config, memory_reader=mock_reader)
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.MemoryReader", return_value=mock_reader),
+        patch("fuser.MemoryWriter", return_value=MagicMock()),
+    ):
+        fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
         assert result is not None
@@ -457,7 +471,7 @@ async def test_fuser_with_memory_no_context():
 @pytest.mark.asyncio
 async def test_fuser_memory_search_uses_voice_query():
     """Test that search_daily is called with the voice input text."""
-    config = create_mock_config()
+    config = create_mock_config(memory={"enabled": True})
     io_provider = IOProvider()
 
     voice_input = Mock()
@@ -472,8 +486,12 @@ async def test_fuser_memory_search_uses_voice_query():
     mock_reader.search_daily = AsyncMock(return_value=[])
     mock_reader.format_context = Mock(return_value="")
 
-    with patch("fuser.IOProvider", return_value=io_provider):
-        fuser = Fuser(config, memory_reader=mock_reader)
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.MemoryReader", return_value=mock_reader),
+        patch("fuser.MemoryWriter", return_value=MagicMock()),
+    ):
+        fuser = Fuser(config)
         await fuser.fuse([MockSensor()], [])
 
         mock_reader.search_daily.assert_called_once_with("hello world")
@@ -482,15 +500,19 @@ async def test_fuser_memory_search_uses_voice_query():
 @pytest.mark.asyncio
 async def test_fuser_memory_error_is_handled():
     """Test that exceptions during memory querying are caught and prompt is still returned."""
-    config = create_mock_config()
+    config = create_mock_config(memory={"enabled": True})
     io_provider = IOProvider()
 
     mock_reader = MagicMock()
     mock_reader.memory_root = "/tmp/memory"
     mock_reader.read_memory_md = Mock(side_effect=Exception("disk error"))
 
-    with patch("fuser.IOProvider", return_value=io_provider):
-        fuser = Fuser(config, memory_reader=mock_reader)
+    with (
+        patch("fuser.IOProvider", return_value=io_provider),
+        patch("fuser.MemoryReader", return_value=mock_reader),
+        patch("fuser.MemoryWriter", return_value=MagicMock()),
+    ):
+        fuser = Fuser(config)
         result = await fuser.fuse([MockSensor()], [])
 
         assert result is not None

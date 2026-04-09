@@ -2,7 +2,10 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from providers.singleton import singleton
 
+
+@singleton
 class MemoryWriter:
     """Write interactions and summaries to daily markdown files.
 

@@ -9,11 +9,13 @@ from fuser.memory_base.indexer import (
     MemoryIndex,
     build_index,
 )
+from providers.singleton import singleton
 
 DEFAULT_MEMORY_MD_CHARS = 500
 DEFAULT_CONTEXT_MAX_CHARS = 1000
 
 
+@singleton
 class MemoryReader:
     """Read and search long-term memory files.
 
