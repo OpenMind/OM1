@@ -149,15 +149,11 @@ class ModeCortexRuntime:
             await self.fuser.memory_reader.ensure_index()
 
             # Initialize memory summarizer
-            llm = self.current_config.cortex_llm
-            if hasattr(llm, "_client"):
-
-                self.summarizer = MemorySummarizer(
-                    memory_root=self.fuser.memory_reader.memory_root,
-                    client=llm._client,
-                    model=llm._config.model,
-                )
-                await self.summarizer.run()
+            self.summarizer = MemorySummarizer(
+                memory_root=self.fuser.memory_reader.memory_root,
+                api_key=self.current_config.api_key or "",
+            )
+            await self.summarizer.run()
 
         self.action_orchestrator = ActionOrchestrator(self.current_config)
 

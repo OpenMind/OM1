@@ -69,25 +69,30 @@ class MemorySummarizer:
     ----------
     memory_root : str or Path
         Root directory for memory storage.
-    client : openai.AsyncClient
-        OpenAI async client.
+    api_key : str
+        API key for the LLM service.
+    base_url : str
+        Base URL for the LLM API endpoint.
     model : str
         LLM model to use for summarization.
     """
 
     # Summarize when new conversations chunks is more than 10
     SUMMARY_THRESHOLD: int = 10
+    DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
+    DEFAULT_BASE_URL = "https://api.openmind.com/api/core/gemini"
 
     def __init__(
         self,
         memory_root: str | Path,
-        client: openai.AsyncClient,
-        model: str,
+        api_key: str,
+        base_url: str = DEFAULT_BASE_URL,
+        model: str = DEFAULT_MODEL,
     ):
         self.memory_root = Path(memory_root)
         self.memory_file = self.memory_root / "MEMORY.md"
         self.daily_dir = self.memory_root / "daily"
-        self._client = client
+        self._client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
         self._model = model
         self._running = False
 

@@ -45,32 +45,40 @@ def _setup(tmp_path: Path, memory: str = "", daily: Optional[dict] = None) -> Pa
     return tmp_path
 
 
+def _make_summarizer(root: Path, client: MagicMock | None = None) -> MemorySummarizer:
+    """Create a MemorySummarizer with a mocked client for testing."""
+    s = MemorySummarizer(memory_root=root, api_key="test-key")
+    if client is not None:
+        s._client = client
+    return s
+
+
 class TestReadLastSummary:
     def test_no_marker_returns_none(self, tmp_path):
         root = _setup(tmp_path)
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         assert s._read_last_summary() is None
 
     def test_parses_marker(self, tmp_path):
         root = _setup(tmp_path, "<!-- last_summary: 2026-04-08 14:30 -->\n# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         assert s._read_last_summary() == datetime(2026, 4, 8, 14, 30)
 
     def test_missing_file_returns_none(self, tmp_path):
-        s = MemorySummarizer(memory_root=tmp_path, client=MagicMock(), model="test")
+        s = _make_summarizer(tmp_path)
         assert s._read_last_summary() is None
 
 
 class TestWriteLastSummary:
     def test_inserts_marker_when_absent(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._write_last_summary()
         assert "<!-- last_summary:" in s.memory_file.read_text()
 
     def test_updates_existing_marker(self, tmp_path):
         root = _setup(tmp_path, "<!-- last_summary: 2026-01-01 00:00 -->\n# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._write_last_summary()
         content = s.memory_file.read_text()
         assert "2026-01-01" not in content
@@ -80,7 +88,7 @@ class TestWriteLastSummary:
 class TestFindUnprocessed:
     def test_all_files_when_no_marker(self, tmp_path):
         root = _setup(tmp_path, daily={"2026-04-07.md": "a", "2026-04-08.md": "b"})
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         assert len(s._find_unprocessed(None)) == 2
 
     def test_filters_by_date(self, tmp_path):
@@ -88,7 +96,7 @@ class TestFindUnprocessed:
             tmp_path,
             daily={"2026-04-06.md": "old", "2026-04-07.md": "boundary", "2026-04-08.md": "new"},
         )
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         names = [f.stem for f in s._find_unprocessed(datetime(2026, 4, 7))]
         assert "2026-04-06" not in names
         assert "2026-04-07" in names
@@ -97,19 +105,19 @@ class TestFindUnprocessed:
     def test_same_day_file_not_excluded_by_time(self, tmp_path):
         """File from today should be included even if last_summary has a later time."""
         root = _setup(tmp_path, daily={"2026-04-10.md": "content"})
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         # last_summary is 14:10 but file date is 00:00 — should still match by date
         result = s._find_unprocessed(datetime(2026, 4, 10, 14, 10))
         assert len(result) == 1
 
     def test_empty_dir(self, tmp_path):
         root = _setup(tmp_path)
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         assert s._find_unprocessed(None) == []
 
     def test_skips_non_date_files(self, tmp_path):
         root = _setup(tmp_path, daily={"notes.md": "x", "2026-04-08.md": "y"})
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         assert len(s._find_unprocessed(None)) == 1
 
 
@@ -121,7 +129,7 @@ class TestReadFiles:
                 "2026-04-10.md": "## 10:00:00\n- line1\n\n## 12:00:00\n- line2\n",
             },
         )
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         files = list((root / "daily").glob("*.md"))
         result = s._read_files(files, last_summary=None)
         assert "line1" in result
@@ -134,7 +142,7 @@ class TestReadFiles:
                 "2026-04-10.md": "## 10:00:00\n- old\n\n## 14:30:00\n- new\n",
             },
         )
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         files = list((root / "daily").glob("*.md"))
         result = s._read_files(files, last_summary=datetime(2026, 4, 10, 12, 0))
         assert "old" not in result
@@ -148,7 +156,7 @@ class TestReadFiles:
                 "2026-04-10.md": "## 12:00:00\n- exact\n\n## 12:00:01\n- after\n",
             },
         )
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         files = list((root / "daily").glob("*.md"))
         result = s._read_files(files, last_summary=datetime(2026, 4, 10, 12, 0, 0))
         assert "exact" not in result
@@ -158,7 +166,7 @@ class TestReadFiles:
 class TestCheckEligibility:
     def test_returns_false_when_running(self, tmp_path):
         root = _setup(tmp_path, daily={"2026-04-10.md": "## 10:00:00\n- a\n" * 20})
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._running = True
         assert s.check_eligibility() is False
 
@@ -169,14 +177,14 @@ class TestCheckEligibility:
                 "2026-04-10.md": "## 10:00:00\n- a\n\n## 10:01:00\n- b\n",
             },
         )
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s.SUMMARY_THRESHOLD = 5
         assert s.check_eligibility() is False
 
     def test_returns_true_when_above_threshold(self, tmp_path):
         sections = "\n\n".join(f"## 10:{i:02d}:00\n- fact {i}" for i in range(10))
         root = _setup(tmp_path, daily={"2026-04-10.md": sections})
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s.SUMMARY_THRESHOLD = 5
         assert s.check_eligibility() is True
 
@@ -188,7 +196,7 @@ class TestCheckEligibility:
             memory="<!-- last_summary: 2026-04-10 13:00 -->\n# Memory\n",
             daily={"2026-04-10.md": old_sections + "\n\n" + sections},
         )
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s.SUMMARY_THRESHOLD = 5
         assert s.check_eligibility() is True
         s.SUMMARY_THRESHOLD = 6
@@ -200,7 +208,7 @@ class TestExtractCandidates:
     async def test_returns_candidates(self, tmp_path):
         root = _setup(tmp_path)
         client = _make_client("- [IDENTITY] User name is Alice")
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         result = await s._extract_candidates("some log")
         assert "Alice" in result
 
@@ -208,7 +216,7 @@ class TestExtractCandidates:
     async def test_returns_empty_on_none(self, tmp_path):
         root = _setup(tmp_path)
         client = _make_client("NONE")
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         assert await s._extract_candidates("trivial log") == ""
 
 
@@ -227,7 +235,7 @@ class TestScoreCandidates:
             },
         ]
         client = _make_client(json.dumps(decisions))
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         result = await s._score_candidates("- [IDENTITY] User is Alice")
         assert len(result) == 1
         assert result[0]["decision"] == "PROMOTE"
@@ -238,7 +246,7 @@ class TestScoreCandidates:
         root = _setup(tmp_path)
         decisions = [{"fact": "x", "decision": "SKIP"}]
         client = _make_client(f"```json\n{json.dumps(decisions)}\n```")
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         result = await s._score_candidates("- x")
         assert len(result) == 1
 
@@ -246,14 +254,14 @@ class TestScoreCandidates:
     async def test_returns_empty_on_invalid_json(self, tmp_path):
         root = _setup(tmp_path)
         client = _make_client("not valid json at all")
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         assert await s._score_candidates("- fact") == []
 
 
 class TestApplyDecisions:
     def test_promote_appends_to_category(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._apply_decisions(
             [
                 {"fact": "User is Alice", "category": "IDENTITY", "decision": "PROMOTE"},
@@ -265,7 +273,7 @@ class TestApplyDecisions:
 
     def test_promote_defaults_to_facts(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._apply_decisions(
             [
                 {"fact": "User lives in SF", "decision": "PROMOTE"},
@@ -277,7 +285,7 @@ class TestApplyDecisions:
 
     def test_multiple_categories(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._apply_decisions(
             [
                 {"fact": "User is Alice", "category": "IDENTITY", "decision": "PROMOTE"},
@@ -292,7 +300,7 @@ class TestApplyDecisions:
 
     def test_appends_to_existing_category(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n\n## Identity\n- User is Alice\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._apply_decisions(
             [
                 {"fact": "User is 25 years old", "category": "IDENTITY", "decision": "PROMOTE"},
@@ -305,7 +313,7 @@ class TestApplyDecisions:
 
     def test_update_replaces(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n- User lives in Beijing\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._apply_decisions(
             [
                 {"fact": "User lives in Shanghai", "decision": "UPDATE", "replaces": "User lives in Beijing"},
@@ -317,7 +325,7 @@ class TestApplyDecisions:
 
     def test_update_without_match_promotes(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._apply_decisions(
             [
                 {"fact": "new fact", "decision": "UPDATE", "replaces": "nonexistent"},
@@ -327,7 +335,7 @@ class TestApplyDecisions:
 
     def test_skip_does_nothing(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._apply_decisions(
             [
                 {"fact": "trivial", "decision": "SKIP"},
@@ -337,7 +345,7 @@ class TestApplyDecisions:
 
     def test_empty_decisions_noop(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         original = s.memory_file.read_text()
         s._apply_decisions([])
         assert s.memory_file.read_text() == original
@@ -366,7 +374,7 @@ class TestDreamingPipeline:
             "- [IDENTITY] User's name is Alice",  # Stage 1
             json.dumps(decisions),  # Stage 2
         )
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         await s.run()
 
         content = s.memory_file.read_text()
@@ -378,14 +386,14 @@ class TestDreamingPipeline:
     async def test_skips_when_no_new_files(self, tmp_path):
         root = _setup(tmp_path, "<!-- last_summary: 2099-12-31 23:59 -->\n# Memory\n")
         client = _make_client()
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         await s.run()
         assert client.chat.completions.create.call_count == 0
 
     @pytest.mark.asyncio
     async def test_concurrent_guard(self, tmp_path):
         root = _setup(tmp_path)
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._running = True
         await s.run()
         assert s._running is True  # unchanged
@@ -395,7 +403,7 @@ class TestDreamingPipeline:
         root = _setup(tmp_path, daily={"2026-04-09.md": "## 10:00:00\n- data\n"})
         client = MagicMock()
         client.chat.completions.create = AsyncMock(side_effect=RuntimeError("API down"))
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         await s.run()
         assert s._running is False
 
@@ -403,7 +411,7 @@ class TestDreamingPipeline:
     async def test_none_candidates_skips_scoring(self, tmp_path):
         root = _setup(tmp_path, daily={"2026-04-09.md": "## 10:00:00\n- trivial\n"})
         client = _make_client("NONE")
-        s = MemorySummarizer(memory_root=root, client=client, model="test")
+        s = _make_summarizer(root, client)
         await s.run()
         assert client.chat.completions.create.call_count == 1
 
@@ -411,7 +419,7 @@ class TestDreamingPipeline:
 class TestSafeWrite:
     def test_atomic_write(self, tmp_path):
         root = _setup(tmp_path, "original")
-        s = MemorySummarizer(memory_root=root, client=MagicMock(), model="test")
+        s = _make_summarizer(root)
         s._safe_write("new content")
         assert s.memory_file.read_text() == "new content"
         assert not s.memory_file.with_suffix(".tmp").exists()
