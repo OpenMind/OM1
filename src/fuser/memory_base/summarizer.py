@@ -106,7 +106,7 @@ class MemorySummarizer:
                 self._write_last_summary()
                 return
 
-            log_content = self._read_files(unprocessed)
+            log_content = self._read_files(unprocessed, last_summary)
 
             candidates = await self._extract_candidates(log_content)
             if not candidates:
@@ -171,14 +171,55 @@ class MemorySummarizer:
         return results
 
     @staticmethod
-    def _read_files(files: list[Path]) -> str:
-        """Concatenate content of multiple daily files."""
+    def _read_files(files: list[Path], last_summary: Optional[datetime] = None) -> str:
+        """Concatenate content of daily files, filtering sections by timestamp."""
         parts: list[str] = []
+        section_re = re.compile(r"^## (\d{2}:\d{2}:\d{2})")
         for f in files:
             try:
-                parts.append(f.read_text(encoding="utf-8"))
+                content = f.read_text(encoding="utf-8")
             except Exception as e:
-                logging.warning(f"Dreaming: failed to read {f.name}: {e}")
+                logging.warning(f"Memory summarization: failed to read {f.name}: {e}")
+                continue
+
+            if last_summary is None:
+                parts.append(content)
+                continue
+
+            try:
+                file_date = datetime.strptime(f.stem, "%Y-%m-%d")
+            except ValueError:
+                parts.append(content)
+                continue
+
+            filtered_sections: list[str] = []
+            current_section: list[str] = []
+            current_keep = True
+            for line in content.split("\n"):
+                match = section_re.match(line)
+                if match:
+                    if current_keep and current_section:
+                        filtered_sections.append("\n".join(current_section))
+                    current_section = [line]
+                    try:
+                        t = datetime.strptime(match.group(1), "%H:%M:%S")
+                        section_dt = file_date.replace(
+                            hour=t.hour,
+                            minute=t.minute,
+                            second=t.second,
+                        )
+                        current_keep = section_dt > last_summary
+                    except ValueError:
+                        current_keep = True
+                else:
+                    current_section.append(line)
+
+            if current_keep and current_section:
+                filtered_sections.append("\n".join(current_section))
+
+            if filtered_sections:
+                parts.append("\n".join(filtered_sections))
+
         return "\n\n".join(parts)
 
     async def _extract_candidates(self, log: str) -> str:
