@@ -271,7 +271,7 @@ class MemorySummarizer:
                 {"role": "system", "content": EXTRACT_PROMPT},
                 {"role": "user", "content": log},
             ],
-            timeout=30,
+            timeout=10,
         )
         result = (response.choices[0].message.content or "").strip()
         if result.upper() == "NONE":
@@ -299,7 +299,7 @@ class MemorySummarizer:
             messages=[
                 {"role": "user", "content": prompt},
             ],
-            timeout=30,
+            timeout=10,
         )
         raw = (response.choices[0].message.content or "").strip()
 
