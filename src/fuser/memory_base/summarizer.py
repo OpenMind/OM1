@@ -73,7 +73,7 @@ class MemorySummarizer:
         LLM model to use for summarization.
     """
 
-    SUMMARY_INTERVAL = 50  # Summarize every 50 ticks
+    SUMMARY_THRESHOLD = 100  # Summarize when new conversations chunks is more than 100
 
     def __init__(
         self,
@@ -87,6 +87,39 @@ class MemorySummarizer:
         self._client = client
         self._model = model
         self._running = False
+
+    def check_eligibility(self) -> bool:
+        """Check whether new conversations chunks exceeds the threshold."""
+        if self._running:
+            return False
+        last_summary = self._read_last_summary()
+        unprocessed = self._find_unprocessed(last_summary)
+        if not unprocessed:
+            return False
+        section_re = re.compile(r"^## \d{2}:\d{2}:\d{2}")
+        count = 0
+        for f in unprocessed:
+            try:
+                file_date = datetime.strptime(f.stem, "%Y-%m-%d")
+            except ValueError:
+                continue
+            for line in f.read_text(encoding="utf-8").split("\n"):
+                match = section_re.match(line)
+                if match and last_summary:
+                    try:
+                        t = datetime.strptime(match.group(0)[3:], "%H:%M:%S")
+                        section_dt = file_date.replace(
+                            hour=t.hour,
+                            minute=t.minute,
+                            second=t.second,
+                        )
+                        if section_dt > last_summary:
+                            count += 1
+                    except ValueError:
+                        count += 1
+                elif match:
+                    count += 1
+        return count >= self.SUMMARY_THRESHOLD
 
     async def run(self) -> None:
         """Execute the pipeline.

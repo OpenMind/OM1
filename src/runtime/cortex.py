@@ -689,7 +689,7 @@ class ModeCortexRuntime:
                         )
 
                 # Background summarization task
-                if self.summarizer and tick_num % self.summarizer.SUMMARY_INTERVAL == 0:
+                if self.summarizer and self.summarizer.check_eligibility():
                     asyncio.create_task(self.summarizer.run())
 
         except asyncio.CancelledError:
