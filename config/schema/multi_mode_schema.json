@@ -25,6 +25,13 @@
                 "knowledge_base_root": {"type": "string", "description": "Root directory path for knowledge bases."}
             }
         },
+        "memory": {
+            "type": "object",
+            "description": "Optional long-term memory configuration.",
+            "properties": {
+                "enabled": {"type": "boolean", "description": "Whether to enable long-term memory."}
+            }
+        },
         "cortex_llm": {
             "$ref": "#/definitions/cortex_llm"
         },
