@@ -75,7 +75,8 @@ class MemorySummarizer:
         LLM model to use for summarization.
     """
 
-    SUMMARY_THRESHOLD = 10  # Summarize when new conversations chunks is more than 100
+    # Summarize when new conversations chunks is more than 10
+    SUMMARY_THRESHOLD: int = 10
 
     def __init__(
         self,
