@@ -93,6 +93,14 @@ class TestFindUnprocessed:
         assert "2026-04-07" in names
         assert "2026-04-08" in names
 
+    def test_same_day_file_not_excluded_by_time(self, tmp_path):
+        """File from today should be included even if last_summary has a later time."""
+        root = _setup(tmp_path, daily={"2026-04-10.md": "content"})
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        # last_summary is 14:10 but file date is 00:00 — should still match by date
+        result = s._find_unprocessed(datetime(2026, 4, 10, 14, 10))
+        assert len(result) == 1
+
     def test_empty_dir(self, tmp_path):
         root = _setup(tmp_path)
         s = MemorySummarizer(memory_root=root, client=MagicMock())
@@ -102,6 +110,88 @@ class TestFindUnprocessed:
         root = _setup(tmp_path, daily={"notes.md": "x", "2026-04-08.md": "y"})
         s = MemorySummarizer(memory_root=root, client=MagicMock())
         assert len(s._find_unprocessed(None)) == 1
+
+
+class TestReadFiles:
+    def test_no_filter_without_last_summary(self, tmp_path):
+        root = _setup(
+            tmp_path,
+            daily={
+                "2026-04-10.md": "## 10:00:00\n- line1\n\n## 12:00:00\n- line2\n",
+            },
+        )
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        files = list((root / "daily").glob("*.md"))
+        result = s._read_files(files, last_summary=None)
+        assert "line1" in result
+        assert "line2" in result
+
+    def test_filters_sections_by_timestamp(self, tmp_path):
+        root = _setup(
+            tmp_path,
+            daily={
+                "2026-04-10.md": "## 10:00:00\n- old\n\n## 14:30:00\n- new\n",
+            },
+        )
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        files = list((root / "daily").glob("*.md"))
+        result = s._read_files(files, last_summary=datetime(2026, 4, 10, 12, 0))
+        assert "old" not in result
+        assert "new" in result
+
+    def test_boundary_section_excluded(self, tmp_path):
+        """Section at exact last_summary time should be excluded (strict >)."""
+        root = _setup(
+            tmp_path,
+            daily={
+                "2026-04-10.md": "## 12:00:00\n- exact\n\n## 12:00:01\n- after\n",
+            },
+        )
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        files = list((root / "daily").glob("*.md"))
+        result = s._read_files(files, last_summary=datetime(2026, 4, 10, 12, 0, 0))
+        assert "exact" not in result
+        assert "after" in result
+
+
+class TestCheckEligibility:
+    def test_returns_false_when_running(self, tmp_path):
+        root = _setup(tmp_path, daily={"2026-04-10.md": "## 10:00:00\n- a\n" * 20})
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        s._running = True
+        assert s.check_eligibility() is False
+
+    def test_returns_false_when_below_threshold(self, tmp_path):
+        root = _setup(
+            tmp_path,
+            daily={
+                "2026-04-10.md": "## 10:00:00\n- a\n\n## 10:01:00\n- b\n",
+            },
+        )
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        s.SUMMARY_THRESHOLD = 5
+        assert s.check_eligibility() is False
+
+    def test_returns_true_when_above_threshold(self, tmp_path):
+        sections = "\n\n".join(f"## 10:{i:02d}:00\n- fact {i}" for i in range(10))
+        root = _setup(tmp_path, daily={"2026-04-10.md": sections})
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        s.SUMMARY_THRESHOLD = 5
+        assert s.check_eligibility() is True
+
+    def test_counts_only_new_sections(self, tmp_path):
+        sections = "\n\n".join(f"## 14:{i:02d}:00\n- fact {i}" for i in range(5))
+        old_sections = "\n\n".join(f"## 10:{i:02d}:00\n- old {i}" for i in range(10))
+        root = _setup(
+            tmp_path,
+            memory="<!-- last_summary: 2026-04-10 13:00 -->\n# Memory\n",
+            daily={"2026-04-10.md": old_sections + "\n\n" + sections},
+        )
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        s.SUMMARY_THRESHOLD = 5
+        assert s.check_eligibility() is True
+        s.SUMMARY_THRESHOLD = 6
+        assert s.check_eligibility() is False
 
 
 class TestExtractCandidates:
@@ -126,13 +216,21 @@ class TestScoreCandidates:
     async def test_parses_json_response(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
         decisions = [
-            {"fact": "User is Alice", "durability": 5, "novelty": 5, "significance": 4, "decision": "PROMOTE"},
+            {
+                "fact": "User is Alice",
+                "category": "IDENTITY",
+                "durability": 5,
+                "novelty": 5,
+                "significance": 4,
+                "decision": "PROMOTE",
+            },
         ]
         client = _make_client(json.dumps(decisions))
         s = MemorySummarizer(memory_root=root, client=client)
         result = await s._score_candidates("- [IDENTITY] User is Alice")
         assert len(result) == 1
         assert result[0]["decision"] == "PROMOTE"
+        assert result[0]["category"] == "IDENTITY"
 
     @pytest.mark.asyncio
     async def test_handles_markdown_fenced_json(self, tmp_path):
@@ -152,17 +250,57 @@ class TestScoreCandidates:
 
 
 class TestApplyDecisions:
-    def test_promote_appends(self, tmp_path):
+    def test_promote_appends_to_category(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n")
         s = MemorySummarizer(memory_root=root, client=MagicMock())
         s._apply_decisions(
             [
-                {"fact": "User is Alice", "decision": "PROMOTE"},
+                {"fact": "User is Alice", "category": "IDENTITY", "decision": "PROMOTE"},
             ]
         )
         content = s.memory_file.read_text()
         assert "User is Alice" in content
-        assert "Dreaming" in content
+        assert "## Identity" in content
+
+    def test_promote_defaults_to_facts(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n")
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        s._apply_decisions(
+            [
+                {"fact": "User lives in SF", "decision": "PROMOTE"},
+            ]
+        )
+        content = s.memory_file.read_text()
+        assert "## Facts" in content
+        assert "User lives in SF" in content
+
+    def test_multiple_categories(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n")
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        s._apply_decisions(
+            [
+                {"fact": "User is Alice", "category": "IDENTITY", "decision": "PROMOTE"},
+                {"fact": "User prefers dark mode", "category": "PREFERENCE", "decision": "PROMOTE"},
+                {"fact": "User lives in SF", "category": "FACT", "decision": "PROMOTE"},
+            ]
+        )
+        content = s.memory_file.read_text()
+        assert "## Identity" in content
+        assert "## Preferences" in content
+        assert "## Facts" in content
+
+    def test_appends_to_existing_category(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n\n## Identity\n- User is Alice\n")
+        s = MemorySummarizer(memory_root=root, client=MagicMock())
+        s._apply_decisions(
+            [
+                {"fact": "User is 25 years old", "category": "IDENTITY", "decision": "PROMOTE"},
+            ]
+        )
+        content = s.memory_file.read_text()
+        assert "User is Alice" in content
+        assert "User is 25 years old" in content
+        assert content.count("## Identity") == 1
 
     def test_update_replaces(self, tmp_path):
         root = _setup(tmp_path, "# Memory\n- User lives in Beijing\n")
@@ -211,10 +349,17 @@ class TestDreamingPipeline:
         root = _setup(
             tmp_path,
             memory="# Memory\n",
-            daily={"2026-04-09.md": "## 10:00\n- **User**: my name is Alice\n"},
+            daily={"2026-04-09.md": "## 10:00:00\n- **User**: my name is Alice\n"},
         )
         decisions = [
-            {"fact": "User's name is Alice", "durability": 5, "novelty": 5, "significance": 5, "decision": "PROMOTE"},
+            {
+                "fact": "User's name is Alice",
+                "category": "IDENTITY",
+                "durability": 5,
+                "novelty": 5,
+                "significance": 5,
+                "decision": "PROMOTE",
+            },
         ]
         client = _make_client(
             "- [IDENTITY] User's name is Alice",  # Stage 1
@@ -225,6 +370,7 @@ class TestDreamingPipeline:
 
         content = s.memory_file.read_text()
         assert "Alice" in content
+        assert "## Identity" in content
         assert "<!-- last_summary:" in content
 
     @pytest.mark.asyncio
@@ -233,7 +379,6 @@ class TestDreamingPipeline:
         client = _make_client()
         s = MemorySummarizer(memory_root=root, client=client)
         await s.run()
-        # No LLM calls needed
         assert client.chat.completions.create.call_count == 0
 
     @pytest.mark.asyncio
@@ -246,7 +391,7 @@ class TestDreamingPipeline:
 
     @pytest.mark.asyncio
     async def test_running_reset_on_error(self, tmp_path):
-        root = _setup(tmp_path, daily={"2026-04-09.md": "data"})
+        root = _setup(tmp_path, daily={"2026-04-09.md": "## 10:00:00\n- data\n"})
         client = MagicMock()
         client.chat.completions.create = AsyncMock(side_effect=RuntimeError("API down"))
         s = MemorySummarizer(memory_root=root, client=client)
@@ -255,11 +400,10 @@ class TestDreamingPipeline:
 
     @pytest.mark.asyncio
     async def test_none_candidates_skips_scoring(self, tmp_path):
-        root = _setup(tmp_path, daily={"2026-04-09.md": "trivial"})
+        root = _setup(tmp_path, daily={"2026-04-09.md": "## 10:00:00\n- trivial\n"})
         client = _make_client("NONE")
         s = MemorySummarizer(memory_root=root, client=client)
         await s.run()
-        # Only 1 LLM call (extract), no score call
         assert client.chat.completions.create.call_count == 1
 
 
