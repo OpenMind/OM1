@@ -7,6 +7,7 @@ from typing import List, Optional, Union
 from actions.orchestrator import ActionOrchestrator
 from backgrounds.orchestrator import BackgroundOrchestrator
 from fuser import Fuser
+from fuser.memory_base.summarizer import MemorySummarizer
 from inputs.orchestrator import InputOrchestrator
 from mcp_servers.orchestrator import MCPOrchestrator
 from providers.config_provider import ConfigProvider
@@ -110,6 +111,9 @@ class ModeCortexRuntime:
         # Flag to track if a reload is in progress
         self._is_reloading = False
 
+        # Memory summarizer
+        self.summarizer: Optional[MemorySummarizer] = None
+
         # Unique ID for cortex loop generations to manage cancellations during transitions
         self._cortex_loop_generation = 0
 
@@ -143,6 +147,17 @@ class ModeCortexRuntime:
 
         if self.fuser.memory_reader:
             await self.fuser.memory_reader.ensure_index()
+
+            # Initialize memory summarizer
+            llm = self.current_config.cortex_llm
+            if hasattr(llm, "_client"):
+
+                self.summarizer = MemorySummarizer(
+                    memory_root=self.fuser.memory_reader.memory_root,
+                    client=llm._client,
+                    model=llm._config.model,
+                )
+                await self.summarizer.run()
 
         self.action_orchestrator = ActionOrchestrator(self.current_config)
 
@@ -672,6 +687,10 @@ class ModeCortexRuntime:
                             user_msg=voice_input.input.strip(),
                             actions=output.actions,
                         )
+
+                # Background summarization task
+                if self.summarizer and tick_num % self.summarizer.SUMMARY_INTERVAL == 0:
+                    asyncio.create_task(self.summarizer.run())
 
         except asyncio.CancelledError:
             logging.info("LLM call cancelled during mode transition")
