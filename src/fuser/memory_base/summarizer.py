@@ -35,10 +35,12 @@ Score each candidate on three dimensions (1-5):
 - novelty: is this new information not already in memory?
 - significance: how important is this for understanding the user?
 
+Category must be one of: IDENTITY, PREFERENCE, FACT
+
 Decision rules:
-- Total score >= 10 AND fact is not in memory → "PROMOTE"
+- Total score >= 12 AND fact is not in memory → "PROMOTE"
 - Fact contradicts or updates existing memory → "UPDATE" (specify which line to replace)
-- Total score < 10 or already known → "SKIP"
+- Total score < 12 or already known → "SKIP"
 
 Current memory:
 {memory}
@@ -48,9 +50,9 @@ Candidate facts:
 
 Respond with a JSON array (no extra text):
 [
-  {{"fact": "...", "durability": 5, "novelty": 5, "significance": 4, "decision": "PROMOTE"}},
-  {{"fact": "...", "durability": 5, "novelty": 5, "significance": 5, "decision": "UPDATE", "replaces": "old fact text"}},
-  {{"fact": "...", "durability": 1, "novelty": 1, "significance": 1, "decision": "SKIP"}}
+  {{"fact": "...", "category": "IDENTITY", "durability": 5, "novelty": 5, "significance": 4, "decision": "PROMOTE"}},
+  {{"fact": "...", "category": "FACT", "durability": 5, "novelty": 5, "significance": 5, "decision": "UPDATE", "replaces": "old fact text"}},
+  {{"fact": "...", "category": "PREFERENCE", "durability": 1, "novelty": 1, "significance": 1, "decision": "SKIP"}}
 ]
 """
 
@@ -73,7 +75,7 @@ class MemorySummarizer:
         LLM model to use for summarization.
     """
 
-    SUMMARY_THRESHOLD = 100  # Summarize when new conversations chunks is more than 100
+    SUMMARY_THRESHOLD = 10  # Summarize when new conversations chunks is more than 100
 
     def __init__(
         self,
@@ -199,7 +201,7 @@ class MemorySummarizer:
                 file_date = datetime.strptime(f.stem, "%Y-%m-%d")
             except ValueError:
                 continue
-            if last_summary is None or file_date >= last_summary:
+            if last_summary is None or file_date.date() >= last_summary.date():
                 results.append(f)
         return results
 
@@ -313,25 +315,32 @@ class MemorySummarizer:
             logging.warning(f"Memory summarization: failed to parse score response: {e}")
             return []
 
+    _CATEGORY_MAP = {
+        "IDENTITY": "## Identity",
+        "PREFERENCE": "## Preferences",
+        "FACT": "## Facts",
+    }
+
     def _apply_decisions(self, decisions: list[dict]) -> None:
         """Execute PROMOTE / UPDATE / SKIP on MEMORY.md."""
-        promoted: list[str] = []
+        promoted: dict[str, list[str]] = {}  # category -> [facts]
         updated: list[tuple[str, str]] = []
 
         for item in decisions:
             decision = item.get("decision", "SKIP").upper()
             fact = item.get("fact", "")
+            category = item.get("category", "FACT").upper()
             if not fact:
                 continue
 
             if decision == "PROMOTE":
-                promoted.append(fact)
+                promoted.setdefault(category, []).append(fact)
             elif decision == "UPDATE":
                 old = item.get("replaces", "")
                 if old:
                     updated.append((old, fact))
                 else:
-                    promoted.append(fact)
+                    promoted.setdefault(category, []).append(fact)
 
         if not promoted and not updated:
             return
@@ -345,15 +354,18 @@ class MemorySummarizer:
                 content = content.replace(old_fact, new_fact)
                 logging.info(f"Memory summarization UPDATE: '{old_fact[:40]}' → '{new_fact[:40]}'")
             else:
-                promoted.append(new_fact)
+                promoted.setdefault("FACT", []).append(new_fact)
 
-        if promoted:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-            section = f"\n\n## Memory summarization ({timestamp})\n"
-            section += "\n".join(f"- {f}" for f in promoted) + "\n"
-            content += section
-            logging.info(f"Memory summarization PROMOTE: {len(promoted)} fact(s)")
+        for category, facts in promoted.items():
+            header = self._CATEGORY_MAP.get(category, "## Facts")
+            header_line = header + "\n"
+            new_bullets = "\n".join(f"- {f}" for f in facts) + "\n"
+            if header_line in content:
+                content = content.replace(header_line, header_line + new_bullets)
+            else:
+                content += f"\n{header}\n{new_bullets}"
 
+        logging.info(f"Memory summarization PROMOTE: " f"{sum(len(v) for v in promoted.values())} facts")
         self._safe_write(content)
 
     def _safe_write(self, content: str) -> None:
