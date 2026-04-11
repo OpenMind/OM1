@@ -144,6 +144,7 @@ class TestModeCortexRuntime:
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
             mock_fuser = Mock()
+            mock_fuser.memory_reader = None
             mock_action_orch = Mock()
             mock_simulator_orch = Mock()
             mock_background_orch = Mock()
@@ -183,12 +184,13 @@ class TestModeCortexRuntime:
         runtime, mocks = cortex_runtime
 
         with (
-            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.Fuser") as mock_fuser_class,
             patch("runtime.cortex.ActionOrchestrator"),
             patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
+            mock_fuser_class.return_value = Mock(memory_reader=None)
             mock_mode_config.to_runtime_config.return_value = Mock(
                 mcp_servers=None,
                 cortex_llm=Mock(),
@@ -462,12 +464,13 @@ class TestMCPModeTransition:
         runtime.mode_config.modes = {"test_mode": mock_mode_config}
 
         with (
-            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.Fuser") as mock_fuser_class,
             patch("runtime.cortex.ActionOrchestrator"),
             patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
+            mock_fuser_class.return_value = Mock(memory_reader=None)
             await runtime._initialize_mode("test_mode")
 
         mock_mcp_class.assert_called_once()
@@ -514,12 +517,13 @@ class TestMCPModeTransition:
         runtime.mode_config.modes = {"no_mcp_mode": mock_mode_config}
 
         with (
-            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.Fuser") as mock_fuser_class,
             patch("runtime.cortex.ActionOrchestrator"),
             patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
+            mock_fuser_class.return_value = Mock(memory_reader=None)
             await runtime._initialize_mode("no_mcp_mode")
 
         mock_mcp_class.assert_not_called()
@@ -538,12 +542,14 @@ class TestMCPModeTransition:
         runtime.mode_config.modes = {"test_mode": mock_mode_config}
 
         with (
-            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.Fuser") as mock_fuser_class,
             patch("runtime.cortex.ActionOrchestrator"),
             patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
+            mock_fuser_class.return_value = Mock(memory_reader=None)
+
             mock_mcp_orch = AsyncMock()
             mock_mcp_orch.start = AsyncMock()
             mock_mcp_class.return_value = mock_mcp_orch
@@ -575,12 +581,13 @@ class TestMCPModeTransition:
         runtime.mode_config.modes = {"mcp_mode": mock_mode_config}
 
         with (
-            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.Fuser") as mock_fuser_class,
             patch("runtime.cortex.ActionOrchestrator"),
             patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
+            mock_fuser_class.return_value = Mock(memory_reader=None)
             mock_mcp_orch = AsyncMock()
             mock_mcp_orch.start = AsyncMock()
             mock_mcp_class.return_value = mock_mcp_orch
@@ -614,12 +621,13 @@ class TestMCPModeTransition:
         runtime.mode_config.modes = {"new_mcp_mode": mock_mode_config}
 
         with (
-            patch("runtime.cortex.Fuser"),
+            patch("runtime.cortex.Fuser") as mock_fuser_class,
             patch("runtime.cortex.ActionOrchestrator"),
             patch("runtime.cortex.SimulatorOrchestrator"),
             patch("runtime.cortex.BackgroundOrchestrator"),
             patch("runtime.cortex.MCPOrchestrator") as mock_mcp_class,
         ):
+            mock_fuser_class.return_value = Mock(memory_reader=None)
             mock_new_orch = AsyncMock()
             mock_new_orch.start = AsyncMock()
             mock_mcp_class.return_value = mock_new_orch

@@ -144,7 +144,7 @@ class TestMemoryWriterAppendToIndex:
         mock_reader.index = MagicMock()
         mock_reader.index.add_chunk = AsyncMock(return_value=True)
 
-        with patch("fuser.memory_base.writer.MemoryReader", return_value=mock_reader):
+        with patch("fuser.memory_base.reader.MemoryReader", return_value=mock_reader):
             await writer.append_to_index("Hi robot", actions)
 
         mock_reader.index.add_chunk.assert_called_once()
@@ -160,7 +160,7 @@ class TestMemoryWriterAppendToIndex:
         mock_reader = MagicMock()
         mock_reader._index_initialized = False
 
-        with patch("fuser.memory_base.writer.MemoryReader", return_value=mock_reader):
+        with patch("fuser.memory_base.reader.MemoryReader", return_value=mock_reader):
             await writer.append_to_index("test", actions)
 
         # No index call attempted
@@ -185,6 +185,6 @@ class TestMemoryWriterAppendToIndex:
         mock_reader.index = MagicMock()
         mock_reader.index.add_chunk = AsyncMock(side_effect=RuntimeError("embed failed"))
 
-        with patch("fuser.memory_base.writer.MemoryReader", return_value=mock_reader):
+        with patch("fuser.memory_base.reader.MemoryReader", return_value=mock_reader):
             # Should not raise
             await writer.append_to_index("test msg", actions)
