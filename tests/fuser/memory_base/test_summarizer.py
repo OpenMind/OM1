@@ -423,3 +423,174 @@ class TestSafeWrite:
         s._safe_write("new content")
         assert s.memory_file.read_text() == "new content"
         assert not s.memory_file.with_suffix(".tmp").exists()
+
+
+class TestExtractReviewableFacts:
+    """Tests for _extract_reviewable_facts (static, no LLM)."""
+
+    def test_extracts_preferences_and_facts(self):
+        content = (
+            "# Memory\n\n"
+            "## Identity\n- User is Alice\n\n"
+            "## Preferences\n- User likes coffee <!-- expired: 0 -->\n\n"
+            "## Facts\n- User lives in SF <!-- expired: 2 -->\n"
+        )
+        result = MemorySummarizer._extract_reviewable_facts(content)
+        assert "User likes coffee" in result
+        assert "User lives in SF" in result
+        assert "User is Alice" not in result  # Identity is skipped
+
+    def test_strips_expired_marker(self):
+        content = "## Facts\n- some fact <!-- expired: 3 -->\n"
+        result = MemorySummarizer._extract_reviewable_facts(content)
+        assert result == ["some fact"]
+
+    def test_handles_no_marker(self):
+        content = "## Facts\n- plain fact\n"
+        result = MemorySummarizer._extract_reviewable_facts(content)
+        assert result == ["plain fact"]
+
+    def test_empty_memory(self):
+        assert MemorySummarizer._extract_reviewable_facts("# Memory\n") == []
+
+    def test_no_reviewable_sections(self):
+        content = "# Memory\n\n## Identity\n- User is Bob\n"
+        assert MemorySummarizer._extract_reviewable_facts(content) == []
+
+
+class TestApplyExpiration:
+    """Tests for _apply_expiration (inline counter logic, no LLM)."""
+
+    def test_increment_expired_count(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n\n## Facts\n- old fact <!-- expired: 0 -->\n")
+        s = _make_summarizer(root)
+        s._apply_expiration([{"fact": "old fact", "decision": "EXPIRED"}])
+
+        content = s.memory_file.read_text()
+        assert "<!-- expired: 1 -->" in content
+        assert "old fact" in content
+
+    def test_not_mentioned_fact_unchanged(self, tmp_path):
+        """Facts not in LLM output keep their original line."""
+        root = _setup(tmp_path, "# Memory\n\n## Facts\n- stable fact <!-- expired: 3 -->\n")
+        s = _make_summarizer(root)
+
+        s._apply_expiration([])  # LLM returned no expired facts
+
+        content = s.memory_file.read_text()
+        assert "stable fact <!-- expired: 3 -->" in content
+
+    def test_removes_fact_at_threshold(self, tmp_path):
+        root = _setup(
+            tmp_path,
+            "# Memory\n\n## Facts\n- stale fact <!-- expired: 2 -->\n- good fact <!-- expired: 0 -->\n",
+        )
+        s = _make_summarizer(root)
+        s.EXPIRE_THRESHOLD = 3
+
+        s._apply_expiration([{"fact": "stale fact", "decision": "EXPIRED"}])
+
+        content = s.memory_file.read_text()
+        assert "stale fact" not in content
+        assert "good fact" in content
+
+    def test_empty_decisions_noop(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n\n## Facts\n- fact <!-- expired: 0 -->\n")
+        s = _make_summarizer(root)
+        original = s.memory_file.read_text()
+        s._apply_expiration([])
+        assert s.memory_file.read_text() == original
+
+    def test_accumulates_across_calls(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n\n## Facts\n- ephemeral <!-- expired: 0 -->\n")
+        s = _make_summarizer(root)
+        s.EXPIRE_THRESHOLD = 3
+
+        s._apply_expiration([{"fact": "ephemeral", "decision": "EXPIRED"}])
+        assert "<!-- expired: 1 -->" in s.memory_file.read_text()
+
+        s._apply_expiration([{"fact": "ephemeral", "decision": "EXPIRED"}])
+        assert "<!-- expired: 2 -->" in s.memory_file.read_text()
+
+        # Third strike — removed
+        s._apply_expiration([{"fact": "ephemeral", "decision": "EXPIRED"}])
+        assert "ephemeral" not in s.memory_file.read_text()
+
+    def test_fact_without_marker_starts_at_zero(self, tmp_path):
+        """Facts without <!-- expired: N --> are treated as count=0."""
+        root = _setup(tmp_path, "# Memory\n\n## Facts\n- legacy fact\n")
+        s = _make_summarizer(root)
+
+        s._apply_expiration([{"fact": "legacy fact", "decision": "EXPIRED"}])
+
+        content = s.memory_file.read_text()
+        assert "<!-- expired: 1 -->" in content
+        assert "legacy fact" in content
+
+
+class TestReviewExpiration:
+    """Tests for _review_expiration (LLM call)."""
+
+    @pytest.mark.asyncio
+    async def test_calls_llm_with_reviewable_facts(self, tmp_path):
+        root = _setup(
+            tmp_path,
+            "# Memory\n\n## Preferences\n- User likes tea <!-- expired: 0 -->\n\n"
+            "## Facts\n- Today is Monday <!-- expired: 0 -->\n",
+        )
+        decisions = json.dumps(
+            [
+                {"fact": "Today is Monday", "decision": "EXPIRED"},
+            ]
+        )
+        client = _make_client(decisions)
+        s = _make_summarizer(root, client)
+
+        await s._review_expiration("recent log content")
+
+        client.chat.completions.create.assert_called_once()
+        content = s.memory_file.read_text()
+        # Tea not mentioned by LLM — unchanged
+        assert "User likes tea <!-- expired: 0 -->" in content
+        # Monday expired (counter incremented)
+        assert "Today is Monday <!-- expired: 1 -->" in content
+
+    @pytest.mark.asyncio
+    async def test_skips_when_no_reviewable_facts(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n\n## Identity\n- User is Bob\n")
+        client = _make_client()
+        s = _make_summarizer(root, client)
+
+        await s._review_expiration("log")
+
+        client.chat.completions.create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_handles_llm_error_gracefully(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n\n## Facts\n- some fact <!-- expired: 0 -->\n")
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=RuntimeError("timeout"))
+        s = _make_summarizer(root, client)
+
+        # Should not raise
+        await s._review_expiration("log")
+        assert "some fact" in s.memory_file.read_text()
+
+
+class TestPromoteWithExpiredMarker:
+    """Verify that PROMOTE adds <!-- expired: 0 --> marker."""
+
+    def test_promoted_fact_has_marker(self, tmp_path):
+        root = _setup(tmp_path, "# Memory\n\n## Facts\n")
+        s = _make_summarizer(root)
+        s._apply_decisions(
+            [
+                {
+                    "fact": "New important fact",
+                    "category": "FACT",
+                    "decision": "PROMOTE",
+                }
+            ]
+        )
+        content = s.memory_file.read_text()
+        assert "- New important fact <!-- expired: 0 -->" in content

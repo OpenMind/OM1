@@ -56,14 +56,42 @@ Respond with a JSON array (no extra text):
 ]
 """
 
+EXPIRE_PROMPT = """\
+You are a memory manager for a robot. Review the existing memory facts \
+below and determine which ones should be expired.
+
+Only review facts under ## Preferences and ## Facts sections.
+Do NOT expire facts under ## Identity — those are permanent.
+
+A fact should be marked "EXPIRED" if BOTH conditions are true:
+1. EVENT-CLOSED: It describes a specific, time-bound situation
+2. LOW-IDENTITY SIGNAL: It reveals nothing stable about the user — \
+no recurring pattern, preference, habit, relationship, or long-term goal
+
+Recent conversations (for context):
+{recent_log}
+
+Current memory facts to review:
+{facts}
+
+Only output facts you judge as EXPIRED.
+Respond with a JSON array (no extra text):
+[
+  {{"fact": "...", "decision": "EXPIRED"}}
+]
+
+If no facts should be expired, respond with: []
+"""
+
 
 @singleton
 class MemorySummarizer:
     """Long-term memory manager.
 
-    Step 1: Extract candidate from daily logs.
-    Step 2: Score candidates against existing MEMORY.md.
-    Step 3: Execute PROMOTE / UPDATE / SKIP decisions.
+    Stage 0: Review existing facts for expiration.
+    Stage 1: Extract candidate from daily logs.
+    Stage 2: Score candidates against existing MEMORY.md.
+    Stage 3: Execute PROMOTE / UPDATE / SKIP decisions.
 
     Parameters
     ----------
@@ -79,6 +107,7 @@ class MemorySummarizer:
 
     # Summarize when new conversations chunks is more than 10
     SUMMARY_THRESHOLD: int = 10
+    EXPIRE_THRESHOLD: int = 5
     DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
     DEFAULT_BASE_URL = "https://api.openmind.com/api/core/gemini"
 
@@ -151,6 +180,8 @@ class MemorySummarizer:
                 return
 
             log_content = self._read_files(unprocessed, last_summary)
+
+            await self._review_expiration(log_content)
 
             candidates = await self._extract_candidates(log_content)
             if not candidates:
@@ -409,7 +440,7 @@ class MemorySummarizer:
         for category, facts in promoted.items():
             header = self._CATEGORY_MAP.get(category, "## Facts")
             header_line = header + "\n"
-            new_bullets = "\n".join(f"- {f}" for f in facts) + "\n"
+            new_bullets = "\n".join(f"- {f} <!-- expired: 0 -->" for f in facts) + "\n"
             if header_line in content:
                 content = content.replace(header_line, header_line + new_bullets)
             else:
@@ -423,3 +454,113 @@ class MemorySummarizer:
         tmp = self.memory_file.with_suffix(".tmp")
         tmp.write_text(content, encoding="utf-8")
         tmp.replace(self.memory_file)
+
+    _EXPIRED_RE = re.compile(r"\s*<!-- expired: (\d+) -->$")
+
+    @staticmethod
+    def _extract_reviewable_facts(content: str) -> list[str]:
+        """Extract facts from ## Preferences and ## Facts sections.
+
+        Strips the inline ``<!-- expired: N -->`` marker before returning.
+        Skips ## Identity section entirely since those are permanent.
+
+        Returns
+        -------
+        list of str
+            Fact texts (without leading ``- `` or expired marker).
+        """
+        expired_re = re.compile(r"\s*<!-- expired: \d+ -->$")
+        facts: list[str] = []
+        in_reviewable = False
+        for line in content.split("\n"):
+            if line.startswith("## "):
+                section = line.strip().lower()
+                in_reviewable = section in ("## preferences", "## facts")
+                continue
+            if in_reviewable and line.startswith("- "):
+                raw = line[2:].strip()
+                clean = expired_re.sub("", raw).strip()
+                if clean:
+                    facts.append(clean)
+        return facts
+
+    async def _review_expiration(self, recent_log: str) -> None:
+        """LLM call to check existing facts for staleness."""
+        if not self.memory_file.exists():
+            return
+
+        content = self.memory_file.read_text(encoding="utf-8")
+        facts = self._extract_reviewable_facts(content)
+        if not facts:
+            return
+
+        facts_text = "\n".join(f"- {f}" for f in facts)
+        prompt = EXPIRE_PROMPT.format(
+            recent_log=recent_log[:2000],
+            facts=facts_text,
+        )
+
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[{"role": "user", "content": prompt}],
+                timeout=10,
+            )
+            raw = (response.choices[0].message.content or "").strip()
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
+            decisions = json.loads(cleaned)
+            if not isinstance(decisions, list):
+                return
+        except Exception as e:
+            logging.warning(f"Memory expiration review failed: {e}")
+            return
+
+        self._apply_expiration(decisions)
+
+    def _apply_expiration(self, decisions: list[dict]) -> None:
+        """Update inline expired counters and remove facts at threshold.
+
+        EXPIRED: increment ``<!-- expired: N -->`` counter.
+        If N >= EXPIRE_THRESHOLD, remove the line.
+        Facts not mentioned by LLM are left unchanged.
+        """
+        if not self.memory_file.exists():
+            return
+
+        expired_set: set[str] = set()
+        for item in decisions:
+            fact = item.get("fact", "").strip()
+            if fact and item.get("decision", "").upper() == "EXPIRED":
+                expired_set.add(fact)
+
+        if not expired_set:
+            return
+
+        content = self.memory_file.read_text(encoding="utf-8")
+        new_lines: list[str] = []
+        expired_re = self._EXPIRED_RE
+
+        for line in content.split("\n"):
+            if not line.startswith("- "):
+                new_lines.append(line)
+                continue
+
+            match = expired_re.search(line)
+            if match:
+                count = int(match.group(1))
+                fact_text = expired_re.sub("", line[2:]).strip()
+            else:
+                count = 0
+                fact_text = line[2:].strip()
+
+            if fact_text not in expired_set:
+                new_lines.append(line)
+                continue
+
+            count += 1
+            if count >= self.EXPIRE_THRESHOLD:
+                logging.info(f"Memory EXPIRED (removed): '{fact_text[:60]}'")
+                continue
+            new_lines.append(f"- {fact_text} <!-- expired: {count} -->")
+
+        self._safe_write("\n".join(new_lines))
