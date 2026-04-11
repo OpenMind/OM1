@@ -97,7 +97,13 @@ class MemorySummarizer:
         self._running = False
 
     def check_eligibility(self) -> bool:
-        """Check whether new conversations chunks exceeds the threshold."""
+        """Check whether new conversation sections exceed the summarization threshold.
+
+        Returns
+        -------
+        bool
+            True if the number of new sections >= SUMMARY_THRESHOLD.
+        """
         if self._running:
             return False
         last_summary = self._read_last_summary()
@@ -130,10 +136,7 @@ class MemorySummarizer:
         return count >= self.SUMMARY_THRESHOLD
 
     async def run(self) -> None:
-        """Execute the pipeline.
-
-        The main summarization thread.
-        """
+        """Execute the three-stage summarization pipeline."""
         if self._running:
             logging.debug("Summarizer already running, skipping")
             return
@@ -176,7 +179,14 @@ class MemorySummarizer:
     _MARKER_RE = re.compile(r"<!-- last_summary: (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) -->")
 
     def _read_last_summary(self) -> Optional[datetime]:
-        """Parse the latest summary date from MEMORY.md."""
+        """Parse the ``<!-- last_summary: ... -->`` marker from MEMORY.md.
+
+        Returns
+        -------
+        datetime or None
+            Timestamp of the last summarization run, or None if no
+            marker exists or the file is missing.
+        """
         if not self.memory_file.exists():
             return None
         content = self.memory_file.read_text(encoding="utf-8")
@@ -186,7 +196,7 @@ class MemorySummarizer:
         return None
 
     def _write_last_summary(self) -> None:
-        """Update the last_summary marker in MEMORY.md."""
+        """Insert or update the ``<!-- last_summary: ... -->`` marker."""
         if not self.memory_file.exists():
             return
         content = self.memory_file.read_text(encoding="utf-8")
@@ -198,7 +208,18 @@ class MemorySummarizer:
         self._safe_write(content)
 
     def _find_unprocessed(self, last_summary: Optional[datetime]) -> list[Path]:
-        """Return daily files newer than the latest summary date."""
+        """Return daily log files whose date >= the last summary date.
+
+        Parameters
+        ----------
+        last_summary : datetime or None
+            If None, all daily files are returned.
+
+        Returns
+        -------
+        list of Path
+            Sorted list of daily log file paths.
+        """
         if not self.daily_dir.exists():
             return []
         results: list[Path] = []
@@ -213,7 +234,20 @@ class MemorySummarizer:
 
     @staticmethod
     def _read_files(files: list[Path], last_summary: Optional[datetime] = None) -> str:
-        """Concatenate content of daily files, filtering sections by timestamp."""
+        """Concatenate daily log files, filtering out processed sections.
+
+        Parameters
+        ----------
+        files : list of Path
+            Daily log files to read.
+        last_summary : datetime or None
+            Cutoff timestamp. If None, all sections are included.
+
+        Returns
+        -------
+        str
+            Combined log content for LLM processing.
+        """
         parts: list[str] = []
         section_re = re.compile(r"^## (\d{2}:\d{2}:\d{2})")
         for f in files:
@@ -328,7 +362,17 @@ class MemorySummarizer:
     }
 
     def _apply_decisions(self, decisions: list[dict]) -> None:
-        """Execute PROMOTE / UPDATE / SKIP on MEMORY.md."""
+        """Execute scored decisions against MEMORY.md.
+
+        - **PROMOTE**: Append fact under its category section
+        - **UPDATE**: Replace the old fact text with the new fact.
+          Falls back to PROMOTE if the old text is not found.
+        - **SKIP**: No action taken.
+
+        Parameters
+        ----------
+        decisions : list of dict
+        """
         promoted: dict[str, list[str]] = {}  # category -> [facts]
         updated: list[tuple[str, str]] = []
 
@@ -375,7 +419,7 @@ class MemorySummarizer:
         self._safe_write(content)
 
     def _safe_write(self, content: str) -> None:
-        """Replace with tmp file."""
+        """Atomically write content to MEMORY.md via a temporary file."""
         tmp = self.memory_file.with_suffix(".tmp")
         tmp.write_text(content, encoding="utf-8")
         tmp.replace(self.memory_file)
