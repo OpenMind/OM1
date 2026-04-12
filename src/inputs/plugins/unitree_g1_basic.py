@@ -13,9 +13,7 @@ try:
     from unitree.unitree_sdk2py.core.channel import ChannelSubscriber  # type: ignore
     from unitree.unitree_sdk2py.idl.unitree_hg.msg import dds_  # type: ignore
 except ImportError:
-    logging.warning(
-        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
-    )
+    logging.warning("Unitree SDK not found. Please install the Unitree SDK to use this plugin.")
 
     class BmsState_:
         """
@@ -31,6 +29,28 @@ except ImportError:
         """
 
         def __init__(self):
+            pass
+
+    class dds_:
+        """
+        Placeholder for dds_ module when Unitree SDK is not installed.
+        """
+
+        BmsState_ = BmsState_
+        LowState_ = LowState_
+
+    class ChannelSubscriber:
+        """
+        Placeholder for ChannelSubscriber when Unitree SDK is not installed.
+        """
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def Init(self, *args, **kwargs):
+            """
+            Placeholder for Init method of ChannelSubscriber.
+            """
             pass
 
 
@@ -74,9 +94,7 @@ class UnitreeG1BasicConfig(SensorConfig):
     """
 
     api_key: Optional[str] = Field(default=None, description="API Key")
-    unitree_ethernet: Optional[str] = Field(
-        default=None, description="Unitree Ethernet Interface"
-    )
+    unitree_ethernet: Optional[str] = Field(default=None, description="Unitree Ethernet Interface")
 
 
 class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
@@ -120,11 +138,11 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         # Joint angles e.g.
         if unitree_ethernet and unitree_ethernet != "":
             # only set up if we are connected to a robot
-            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", LowState_)  # type: ignore
+            self.lowstate_subscriber = ChannelSubscriber("rt/lowstate", dds_.LowState_)  # type: ignore
             self.lowstate_subscriber.Init(self.LowStateHandler, 10)
 
             # Battery specific data
-            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", BmsState_)  # type: ignore
+            self.bmsstate_subscriber = ChannelSubscriber("rt/lf/bmsstate", dds_.BmsState_)  # type: ignore
             self.bmsstate_subscriber.Init(self.BMSStateHandler, 10)
 
         # battery state
@@ -219,9 +237,7 @@ class UnitreeG1Basic(FuserInput[UnitreeG1BasicConfig, List[float]]):
         if battery_percentage < self.g1_lowbatt_percent:
             message = "WARNING: You are low on energy. SIT DOWN NOW."
             return Message(timestamp=time.time(), message=message)
-        elif (
-            battery_percentage < self.g1_lowbatt_percent + 10.0
-        ):  # the +10% is an emergency reserve
+        elif battery_percentage < self.g1_lowbatt_percent + 10.0:  # the +10% is an emergency reserve
             message = "WARNING: You are low on energy. Consider sitting down."
             return Message(timestamp=time.time(), message=message)
 
@@ -263,9 +279,7 @@ INPUT: {self.descriptor_for_LLM}
 // END
 """
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

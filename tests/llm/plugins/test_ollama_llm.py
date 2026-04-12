@@ -63,9 +63,7 @@ def mock_avatar_components():
         patch("llm.plugins.ollama_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.ollama_llm.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
-        patch(
-            "providers.avatar_llm_state_provider.AvatarProvider"
-        ) as mock_avatar_llm_state_provider,
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as mock_avatar_llm_state_provider,
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
@@ -158,9 +156,7 @@ async def test_ask_timeout_error(llm):
     """Test handling of timeout errors"""
     import httpx
 
-    with patch.object(
-        llm._client, "post", AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
-    ):
+    with patch.object(llm._client, "post", AsyncMock(side_effect=httpx.TimeoutException("Timeout"))):
         result = await llm.ask("test prompt")
         assert result is None
 

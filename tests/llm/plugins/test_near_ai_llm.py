@@ -25,11 +25,7 @@ def config():
 def mock_response():
     """Fixture providing a valid mock API response without tool calls."""
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(content='{"test_field": "success"}', tool_calls=None)
-        )
-    ]
+    response.choices = [MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=None))]
     return response
 
 
@@ -41,13 +37,7 @@ def mock_response_with_tool_calls():
     tool_call.function.arguments = '{"arg1": "value1"}'
 
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(
-                content='{"test_field": "success"}', tool_calls=[tool_call]
-            )
-        )
-    ]
+    response.choices = [MagicMock(message=MagicMock(content='{"test_field": "success"}', tool_calls=[tool_call]))]
     return response
 
 
@@ -63,11 +53,7 @@ def mock_response_with_multiple_tool_calls():
     tool_call_2.function.arguments = '{"direction": "forward"}'
 
     response = MagicMock()
-    response.choices = [
-        MagicMock(
-            message=MagicMock(content=None, tool_calls=[tool_call_1, tool_call_2])
-        )
-    ]
+    response.choices = [MagicMock(message=MagicMock(content=None, tool_calls=[tool_call_1, tool_call_2]))]
     return response
 
 
@@ -84,14 +70,10 @@ def mock_avatar_components():
         return decorator
 
     with (
-        patch(
-            "llm.plugins.near_ai_llm.AvatarLLMState.trigger_thinking", mock_decorator
-        ),
+        patch("llm.plugins.near_ai_llm.AvatarLLMState.trigger_thinking", mock_decorator),
         patch("llm.plugins.near_ai_llm.AvatarLLMState") as mock_avatar_state,
         patch("providers.avatar_provider.AvatarProvider") as mock_avatar_provider,
-        patch(
-            "providers.avatar_llm_state_provider.AvatarProvider"
-        ) as mock_avatar_llm_state_provider,
+        patch("providers.avatar_llm_state_provider.AvatarProvider") as mock_avatar_llm_state_provider,
     ):
         mock_avatar_state._instance = None
         mock_avatar_state._lock = None
@@ -193,9 +175,7 @@ class TestNearAILLMAsk:
             assert result.actions == [Action(type="test_function", value="value1")]
 
     @pytest.mark.asyncio
-    async def test_ask_with_multiple_tool_calls(
-        self, llm, mock_response_with_multiple_tool_calls
-    ):
+    async def test_ask_with_multiple_tool_calls(self, llm, mock_response_with_multiple_tool_calls):
         """Test API request with multiple tool calls."""
         with pytest.MonkeyPatch.context() as m:
             m.setattr(
@@ -318,9 +298,7 @@ class TestNearAILLMAsk:
             assert call_args.kwargs.get("tool_choice") == "auto"
 
     @pytest.mark.asyncio
-    async def test_ask_with_function_schemas(
-        self, config, mock_response_with_tool_calls
-    ):
+    async def test_ask_with_function_schemas(self, config, mock_response_with_tool_calls):
         """Test ask() includes function schemas when available."""
         llm = NearAILLM(config, available_actions=None)
         llm.function_schemas = [{"type": "function", "function": {"name": "test"}}]

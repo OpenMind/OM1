@@ -7,7 +7,7 @@ from providers.vlm_gemini_provider import VLMGeminiProvider
 
 @pytest.fixture
 def base_url():
-    return "https://api.openmind.org/api/core/gemini"
+    return "https://api.openmind.com/api/core/gemini"
 
 
 @pytest.fixture
@@ -55,9 +55,7 @@ def test_initialization(base_url, api_key, fps, mock_dependencies):
     provider = VLMGeminiProvider(base_url, api_key, fps=fps)
 
     mock_client_class.assert_called_once_with(api_key=api_key, base_url=base_url)
-    mock_video_stream_class.assert_called_once_with(
-        frame_callback=provider._process_frame, fps=fps, device_index=0
-    )
+    mock_video_stream_class.assert_called_once_with(frame_callback=provider._process_frame, fps=fps, device_index=0)
 
     assert not provider.running
     assert provider.api_client is mock_client_instance

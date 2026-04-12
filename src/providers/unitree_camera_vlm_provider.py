@@ -13,9 +13,7 @@ from .singleton import singleton
 try:
     from unitree.unitree_sdk2py.go2.video.video_client import VideoClient
 except ImportError:
-    logging.warning(
-        "Unitree SDK not found. Please install the Unitree SDK to use this plugin."
-    )
+    logging.warning("Unitree SDK not found. Please install the Unitree SDK to use this plugin.")
 
 
 class UnitreeCameraVideoStream(VideoStream):
@@ -96,12 +94,8 @@ class UnitreeCameraVideoStream(VideoStream):
                             new_width = int(target_resolution[1] * ratio)
 
                         # Resize image
-                        resized_image = cv2.resize(
-                            image, (new_width, new_height), interpolation=cv2.INTER_AREA
-                        )
-                        _, buffer = cv2.imencode(
-                            ".jpg", resized_image, self.encode_quality
-                        )
+                        resized_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
+                        _, buffer = cv2.imencode(".jpg", resized_image, self.encode_quality)
                         frame_data = base64.b64encode(buffer.tobytes()).decode("utf-8")
 
                         if self.frame_callbacks:
@@ -160,9 +154,7 @@ class UnitreeCameraVLMProvider:
         """
         self.running: bool = False
         self.ws_client: ws.Client = ws.Client(url=base_url)
-        self.stream_ws_client: Optional[ws.Client] = (
-            ws.Client(url=stream_url) if stream_url else None
-        )
+        self.stream_ws_client: Optional[ws.Client] = ws.Client(url=stream_url) if stream_url else None
         self.video_stream: VideoStream = UnitreeCameraVideoStream(
             self.ws_client.send_message,
             fps=fps,
@@ -199,9 +191,7 @@ class UnitreeCameraVLMProvider:
 
         if self.stream_ws_client:
             self.stream_ws_client.start()
-            self.video_stream.register_frame_callback(
-                self.stream_ws_client.send_message
-            )
+            self.video_stream.register_frame_callback(self.stream_ws_client.send_message)
 
         logging.info("Unitree Camera VLM provider started")
 

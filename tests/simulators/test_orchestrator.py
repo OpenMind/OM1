@@ -64,14 +64,9 @@ async def test_start_simulators(orchestrator):
         future = orchestrator.start()
 
         assert isinstance(orchestrator._simulator_executor, ThreadPoolExecutor)
-        assert (
-            orchestrator._simulator_executor._max_workers
-            == orchestrator._simulator_workers
-        )
+        assert orchestrator._simulator_executor._max_workers == orchestrator._simulator_workers
 
-        assert len(orchestrator._simulator_instances) == len(
-            orchestrator._config.simulators
-        )
+        assert len(orchestrator._simulator_instances) == len(orchestrator._config.simulators)
         assert isinstance(future, asyncio.Future)
 
         expected_simulator_names = {bg.name for bg in orchestrator._config.simulators}
@@ -128,9 +123,7 @@ async def test_promise_simulator(orchestrator, test_action):
     with patch("logging.debug") as mock_logging:
         result = await orchestrator._promise_simulator(simulator, test_actions)
 
-        mock_logging.assert_called_with(
-            f"Calling simulator {simulator.name} with actions {test_actions}"
-        )
+        mock_logging.assert_called_with(f"Calling simulator {simulator.name} with actions {test_actions}")
         assert result is None
         assert len(simulator.actions_received) == 1
         assert simulator.actions_received[0] == test_actions[0]
@@ -147,9 +140,7 @@ async def test_concurrent_simulator_operations(orchestrator):
         orchestrator.start()
 
         # Send multiple actions
-        await asyncio.gather(
-            orchestrator.promise(test_actions1), orchestrator.promise(test_actions2)
-        )
+        await asyncio.gather(orchestrator.promise(test_actions1), orchestrator.promise(test_actions2))
 
         # Flush promises
         done_promises, pending_promises = await orchestrator.flush_promises()

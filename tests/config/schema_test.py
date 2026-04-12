@@ -23,9 +23,7 @@ def multi_mode_schema():
 
 
 def get_all_json_files():
-    return [
-        os.path.join(json_dir, f) for f in os.listdir(json_dir) if f.endswith(".json5")
-    ]
+    return [os.path.join(json_dir, f) for f in os.listdir(json_dir) if f.endswith(".json5")]
 
 
 def is_mode_config(data):

@@ -40,13 +40,13 @@ Note: choose TurtleBot4 lite image file if your TurtleBot4 is the lite version.
 
 ## Identity and API Keys
 
-**API_KEY** Go to [portal](https://portal.openmind.org/) to get a free API key for the OM1 APIs. Enter this API key in the "api_key" field in the `/config/turtlebot4.json5` file. You can also provide this API key via your `.env` - just enter it as:
+**API_KEY** Go to [portal](https://portal.openmind.com/) to get a free API key for the OM1 APIs. Enter this API key in the "api_key" field in the `/config/turtlebot4.json5` file. You can also provide this API key via your `.env` - just enter it as:
 
 ```bash
 OM_API_KEY=om1_live_e4252f1cf005af...
 ```
 
-**UNIVERSAL_ROBOT_ID (URID)** Go to "[Hello Robots, come join us](https://portal.openmind.org/robots)" to join a decentralized machine\<\>machine coordination and communication system (FABRIC). Enter machine metadata - currently an arbitrary string - and click "join". The system will provide a unique URID for your robot. The URIDs all share the same format: they begin with `OM`, then 12 alphanumeric characters (numerals and letters), adding up to 14 characters in total. They're not case sensitive. A unique URID allows multiple robots to communicate with one another, similar to how humans use different phone numbers to help them communicate and coordinate.
+**UNIVERSAL_ROBOT_ID (URID)** Go to "[Hello Robots, come join us](https://portal.openmind.com/robots)" to join a decentralized machine\<\>machine coordination and communication system (FABRIC). Enter machine metadata - currently an arbitrary string - and click "join". The system will provide a unique URID for your robot. The URIDs all share the same format: they begin with `OM`, then 12 alphanumeric characters (numerals and letters), adding up to 14 characters in total. They're not case sensitive. A unique URID allows multiple robots to communicate with one another, similar to how humans use different phone numbers to help them communicate and coordinate.
 
 Enter the URID in the "URID" field in the `/config/turtlebot4.json5` file. You can also provide the URID via your .env - just enter it as:
 

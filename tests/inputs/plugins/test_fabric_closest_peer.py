@@ -70,9 +70,7 @@ async def test_poll_mock_mode(peer_mock_mode):
 async def test_poll_uses_aiohttp_not_requests(peer_real_mode):
     """Test that _poll uses aiohttp for non-blocking HTTP."""
     mock_response = MagicMock()
-    mock_response.json = AsyncMock(
-        return_value={"result": [{"peer": {"latitude": 40.0, "longitude": -74.0}}]}
-    )
+    mock_response.json = AsyncMock(return_value={"result": [{"peer": {"latitude": 40.0, "longitude": -74.0}}]})
 
     mock_post_cm = MagicMock()
     mock_post_cm.__aenter__ = AsyncMock(return_value=mock_response)
@@ -92,9 +90,7 @@ async def test_poll_uses_aiohttp_not_requests(peer_real_mode):
             return_value=mock_session_cm,
         ),
     ):
-        peer_real_mode.io.get_dynamic_variable = MagicMock(
-            side_effect=lambda key: 40.0 if key == "latitude" else -74.0
-        )
+        peer_real_mode.io.get_dynamic_variable = MagicMock(side_effect=lambda key: 40.0 if key == "latitude" else -74.0)
 
         result = await peer_real_mode._poll()
 
@@ -106,9 +102,7 @@ async def test_poll_uses_aiohttp_not_requests(peer_real_mode):
 async def test_poll_passes_correct_json_rpc_params(peer_real_mode):
     """Test that _poll sends correct JSON-RPC parameters."""
     mock_response = MagicMock()
-    mock_response.json = AsyncMock(
-        return_value={"result": [{"peer": {"latitude": 40.0, "longitude": -74.0}}]}
-    )
+    mock_response.json = AsyncMock(return_value={"result": [{"peer": {"latitude": 40.0, "longitude": -74.0}}]})
 
     mock_post_cm = MagicMock()
     mock_post_cm.__aenter__ = AsyncMock(return_value=mock_response)
@@ -128,9 +122,7 @@ async def test_poll_passes_correct_json_rpc_params(peer_real_mode):
             return_value=mock_session_cm,
         ),
     ):
-        peer_real_mode.io.get_dynamic_variable = MagicMock(
-            side_effect=lambda key: 40.5 if key == "latitude" else -74.5
-        )
+        peer_real_mode.io.get_dynamic_variable = MagicMock(side_effect=lambda key: 40.5 if key == "latitude" else -74.5)
 
         await peer_real_mode._poll()
 
@@ -175,9 +167,7 @@ async def test_poll_returns_none_when_no_peer_found(peer_real_mode):
             return_value=mock_session_cm,
         ),
     ):
-        peer_real_mode.io.get_dynamic_variable = MagicMock(
-            side_effect=lambda key: 40.0 if key == "latitude" else -74.0
-        )
+        peer_real_mode.io.get_dynamic_variable = MagicMock(side_effect=lambda key: 40.0 if key == "latitude" else -74.0)
 
         result = await peer_real_mode._poll()
 
@@ -191,9 +181,7 @@ async def test_poll_handles_exception(peer_real_mode, caplog):
         "inputs.plugins.fabric_closest_peer.aiohttp.ClientSession",
         side_effect=Exception("Network error"),
     ):
-        peer_real_mode.io.get_dynamic_variable = MagicMock(
-            side_effect=lambda key: 40.0 if key == "latitude" else -74.0
-        )
+        peer_real_mode.io.get_dynamic_variable = MagicMock(side_effect=lambda key: 40.0 if key == "latitude" else -74.0)
 
         result = await peer_real_mode._poll()
 

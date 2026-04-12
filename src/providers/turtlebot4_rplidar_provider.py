@@ -222,7 +222,9 @@ class TurtleBot4RPLidarProvider:
         if scan is None:
             logging.info("Waiting for Zenoh Laserscan data...")
             self._raw_scan = None
-            self._lidar_string = "You might be surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
+            self._lidar_string = (
+                "You might be surrounded by objects and cannot safely move in any direction. DO NOT MOVE."
+            )
             self._valid_paths = []
         else:
             # logging.debug(f"_preprocess_zenoh: {scan}")
@@ -376,9 +378,7 @@ class TurtleBot4RPLidarProvider:
                         if y >= 0:  # Skip obstacles in front of or beside the robot
                             continue
 
-                    dist_to_line = self.distance_point_to_line_segment(
-                        x, y, start_x, start_y, end_x, end_y
-                    )
+                    dist_to_line = self.distance_point_to_line_segment(x, y, start_x, start_y, end_x, end_y)
 
                     if dist_to_line < self.half_width_robot:
                         # too close - this path will not work
@@ -414,9 +414,7 @@ class TurtleBot4RPLidarProvider:
         self._lidar_string = return_string
         self._valid_paths = ppl
 
-        logging.debug(
-            f"TurtleBot4 RPLidar Provider string: {self._lidar_string}\nValid paths: {self._valid_paths}"
-        )
+        logging.debug(f"TurtleBot4 RPLidar Provider string: {self._lidar_string}\nValid paths: {self._valid_paths}")
 
     def stop(self):
         """
@@ -522,14 +520,9 @@ class TurtleBot4RPLidarProvider:
         List[np.ndarray]
             A list of NumPy arrays representing the paths.
         """
-        return [
-            self._create_straight_path_from_angle(angle, length=1.0)
-            for angle in self.path_angles
-        ]
+        return [self._create_straight_path_from_angle(angle, length=1.0) for angle in self.path_angles]
 
-    def distance_point_to_line_segment(
-        self, px: float, py: float, x1: float, y1: float, x2: float, y2: float
-    ) -> float:
+    def distance_point_to_line_segment(self, px: float, py: float, x1: float, y1: float, x2: float, y2: float) -> float:
         """
         Calculate the distance from a point to a line segment.
         This method computes the shortest distance from a point (px, py) to a line segment defined by two endpoints (x1, y1) and (x2, y2).

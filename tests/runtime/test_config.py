@@ -176,9 +176,7 @@ class TestModeConfig:
         assert len(config.agent_actions) == 0
         assert len(config.backgrounds) == 0
 
-    def test_to_runtime_config_success(
-        self, sample_mode_config, sample_system_config, mock_llm
-    ):
+    def test_to_runtime_config_success(self, sample_mode_config, sample_system_config, mock_llm):
         """Test successful conversion to RuntimeConfig."""
         sample_mode_config.cortex_llm = mock_llm
         sample_system_config.modes = {"test_mode": sample_mode_config}
@@ -197,9 +195,7 @@ class TestModeConfig:
         assert runtime_config.URID == "test_urid"
         assert runtime_config.unitree_ethernet == "eth0"
 
-    def test_to_runtime_config_with_knowledge_base(
-        self, sample_mode_config, sample_system_config, mock_llm
-    ):
+    def test_to_runtime_config_with_knowledge_base(self, sample_mode_config, sample_system_config, mock_llm):
         """Test conversion to RuntimeConfig with knowledge_base configuration."""
         sample_mode_config.cortex_llm = mock_llm
         sample_system_config.modes = {"test_mode": sample_mode_config}
@@ -223,14 +219,10 @@ class TestModeConfig:
             sample_mode_config.to_runtime_config(sample_system_config)
 
     @patch("runtime.config._load_mode_components")
-    def test_load_components(
-        self, mock_load_components, sample_mode_config, sample_system_config
-    ):
+    def test_load_components(self, mock_load_components, sample_mode_config, sample_system_config):
         """Test load_components calls _load_mode_components."""
         sample_mode_config.load_components(sample_system_config)
-        mock_load_components.assert_called_once_with(
-            sample_mode_config, sample_system_config
-        )
+        mock_load_components.assert_called_once_with(sample_mode_config, sample_system_config)
 
 
 class TestModeSystemConfig:
@@ -308,9 +300,7 @@ class TestLoadModeComponents:
         sample_mode_config._raw_inputs = [{"type": "test_input", "config": {}}]
         sample_mode_config._raw_simulators = [{"type": "test_simulator", "config": {}}]
         sample_mode_config._raw_actions = [{"type": "test_action", "config": {}}]
-        sample_mode_config._raw_backgrounds = [
-            {"type": "test_background", "config": {}}
-        ]
+        sample_mode_config._raw_backgrounds = [{"type": "test_background", "config": {}}]
         sample_mode_config._raw_llm = {"type": "test_llm", "config": {}}
 
         _load_mode_components(sample_mode_config, sample_system_config)
@@ -353,9 +343,7 @@ class TestLoadModeComponents:
         sample_mode_config._raw_llm = None
         sample_system_config.global_cortex_llm = None
 
-        with pytest.raises(
-            ValueError, match="No LLM configuration found for mode test_mode"
-        ):
+        with pytest.raises(ValueError, match="No LLM configuration found for mode test_mode"):
             _load_mode_components(sample_mode_config, sample_system_config)
 
 
@@ -414,7 +402,8 @@ class TestLoadModeConfig:
             os.unlink(temp_file)
 
     @patch("runtime.config.load_unitree")
-    def test_load_mode_config_with_unitree_ethernet(self, mock_load_unitree):
+    @patch("runtime.config.validate_config_schema")
+    def test_load_mode_config_with_unitree_ethernet(self, mock_validate, mock_load_unitree):
         """Test that unitree_ethernet triggers load_unitree call."""
         config_data = {
             "version": "v1.0.3",

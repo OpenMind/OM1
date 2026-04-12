@@ -43,7 +43,9 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
         self.paths_provider: SimplePathsProvider = SimplePathsProvider()
         self.paths_provider.start()
 
-        self.descriptor_for_LLM = "Information about objects and walls around you, to plan your movements and avoid bumping into things."
+        self.descriptor_for_LLM = (
+            "Information about objects and walls around you, to plan your movements and avoid bumping into things."
+        )
 
     async def _poll(self) -> Optional[str]:
         """
@@ -126,14 +128,9 @@ class SimplePaths(FuserInput[SensorConfig, Optional[str]]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

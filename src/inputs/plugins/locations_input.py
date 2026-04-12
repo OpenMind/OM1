@@ -55,9 +55,7 @@ class LocationsInput(FuserInput[LocationsSensorConfig, Optional[str]]):
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
-        self.locations_provider = UnitreeGo2LocationsProvider(
-            base_url, timeout, refresh_interval
-        )
+        self.locations_provider = UnitreeGo2LocationsProvider(base_url, timeout, refresh_interval)
         self.io_provider = IOProvider()
 
         self.messages: List[Message] = []

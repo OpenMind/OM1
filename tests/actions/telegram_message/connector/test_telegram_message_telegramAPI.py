@@ -46,9 +46,7 @@ def test_init_with_credentials():
 
 def test_init_without_bot_token():
     """Test initialization without bot token logs warning."""
-    with patch(
-        "actions.telegram.connector.telegramAPI.logging.warning"
-    ) as mock_warning:
+    with patch("actions.telegram.connector.telegramAPI.logging.warning") as mock_warning:
         config = TelegramAPIConfig(bot_token="", chat_id="test-chat-id")
         connector = TelegramAPIConnector(config)
         assert connector.config.bot_token == ""
@@ -57,9 +55,7 @@ def test_init_without_bot_token():
 
 def test_init_without_chat_id():
     """Test initialization without chat id logs warning."""
-    with patch(
-        "actions.telegram.connector.telegramAPI.logging.warning"
-    ) as mock_warning:
+    with patch("actions.telegram.connector.telegramAPI.logging.warning") as mock_warning:
         config = TelegramAPIConfig(bot_token="test-token", chat_id="")
         connector = TelegramAPIConnector(config)
         assert connector.config.chat_id == ""
@@ -68,9 +64,7 @@ def test_init_without_chat_id():
 
 def test_init_without_any_credentials():
     """Test initialization without any credentials logs both warnings."""
-    with patch(
-        "actions.telegram.connector.telegramAPI.logging.warning"
-    ) as mock_warning:
+    with patch("actions.telegram.connector.telegramAPI.logging.warning") as mock_warning:
         config = TelegramAPIConfig(bot_token="", chat_id="")
         connector = TelegramAPIConnector(config)
         assert connector.config.bot_token == ""
@@ -100,9 +94,7 @@ async def test_connect_without_credentials_returns_early():
 @pytest.mark.asyncio
 async def test_connect_logs_message(connector_with_credentials):
     """Test that connect logs the message being sent."""
-    with patch(
-        "actions.telegram.connector.telegramAPI.aiohttp.ClientSession"
-    ) as mock_session:
+    with patch("actions.telegram.connector.telegramAPI.aiohttp.ClientSession") as mock_session:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"result": {"message_id": 12345}})
@@ -127,9 +119,7 @@ async def test_connect_logs_message(connector_with_credentials):
 @pytest.mark.asyncio
 async def test_connect_uses_correct_api_url(connector_with_credentials):
     """Test that connect calls correct Telegram API URL."""
-    with patch(
-        "actions.telegram.connector.telegramAPI.aiohttp.ClientSession"
-    ) as mock_session:
+    with patch("actions.telegram.connector.telegramAPI.aiohttp.ClientSession") as mock_session:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"result": {"message_id": 12345}})

@@ -29,9 +29,7 @@ class ChargingStatusUnitreeGo2(FuserInput[SensorConfig, str]):
         super().__init__(config)
 
         # Initialize providers
-        self.charging_provider: UnitreeGo2ChargingProvider = (
-            UnitreeGo2ChargingProvider()
-        )
+        self.charging_provider: UnitreeGo2ChargingProvider = UnitreeGo2ChargingProvider()
         self.charging_provider.start()
         self.io_provider = IOProvider()
 
@@ -39,9 +37,7 @@ class ChargingStatusUnitreeGo2(FuserInput[SensorConfig, str]):
         self.messages: List[Message] = []
 
         # Descriptive text for LLM context
-        self.descriptor_for_LLM = (
-            "Robot charging status - indicates the current battery charging state."
-        )
+        self.descriptor_for_LLM = "Robot charging status - indicates the current battery charging state."
 
         logging.info("ChargingStatusUnitreeGo2 plugin initialized")
 
@@ -70,9 +66,7 @@ class ChargingStatusUnitreeGo2(FuserInput[SensorConfig, str]):
                 3: "FULLY_CHARGED: Robot battery is fully charged.",
             }
 
-            status_msg = status_map.get(
-                status, f"UNKNOWN: Unrecognized charging status ({status})."
-            )
+            status_msg = status_map.get(status, f"UNKNOWN: Unrecognized charging status ({status}).")
             logging.debug(f"Charging status: {status_msg}")
 
             return status_msg
@@ -136,14 +130,9 @@ class ChargingStatusUnitreeGo2(FuserInput[SensorConfig, str]):
 
         latest_message = self.messages[-1]
 
-        result = (
-            f"\nINPUT: {self.descriptor_for_LLM}\n// START\n"
-            f"{latest_message.message}\n// END\n"
-        )
+        result = f"\nINPUT: {self.descriptor_for_LLM}\n// START\n" f"{latest_message.message}\n// END\n"
 
-        self.io_provider.add_input(
-            self.descriptor_for_LLM, latest_message.message, latest_message.timestamp
-        )
+        self.io_provider.add_input(self.descriptor_for_LLM, latest_message.message, latest_message.timestamp)
         self.messages = []
 
         return result

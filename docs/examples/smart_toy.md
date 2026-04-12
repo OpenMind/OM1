@@ -1,7 +1,7 @@
 ---
 title: Smart Toy
 description: "Combining Inputs, an LLM, and Outputs to create a smart, engaging toy."
-icon: circle
+icon: cubes-stacked
 ---
 
 ## LLM Model

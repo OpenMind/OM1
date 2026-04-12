@@ -32,12 +32,8 @@ class UnitreeGo2GPSOdomReaderConfig(SensorConfig):
 
     origin_lat: Optional[float] = Field(default=None, description="Origin Latitude")
     origin_lon: Optional[float] = Field(default=None, description="Origin Longitude")
-    origin_yaw_deg: Optional[float] = Field(
-        default=None, description="Origin Yaw Degrees"
-    )
-    unitree_ethernet: Optional[str] = Field(
-        default=None, description="Unitree Ethernet Interface"
-    )
+    origin_yaw_deg: Optional[float] = Field(default=None, description="Origin Yaw Degrees")
+    unitree_ethernet: Optional[str] = Field(default=None, description="Unitree Ethernet Interface")
 
 
 class UnitreeGo2GPSOdomReader(FuserInput[UnitreeGo2GPSOdomReaderConfig, Optional[str]]):
@@ -63,9 +59,7 @@ class UnitreeGo2GPSOdomReader(FuserInput[UnitreeGo2GPSOdomReaderConfig, Optional
         self.lon0 = self.config.origin_lon
         yaw0_deg = self.config.origin_yaw_deg
         if self.lat0 is None or self.lon0 is None or yaw0_deg is None:
-            logging.error(
-                "GPSOdomReader: origin_lat, origin_lon, and origin_yaw_deg must be set in the config."
-            )
+            logging.error("GPSOdomReader: origin_lat, origin_lon, and origin_yaw_deg must be set in the config.")
             raise ValueError("Missing origin coordinates or yaw in config.")
         self._yaw_offset = math.radians(yaw0_deg) if yaw0_deg is not None else 0.0
 
@@ -83,15 +77,49 @@ class UnitreeGo2GPSOdomReader(FuserInput[UnitreeGo2GPSOdomReaderConfig, Optional
 
     @staticmethod
     def _wrap_angle(a: float) -> float:
+        """
+        Normalize an angle to the range [-pi, pi].
+
+        Parameters
+        ----------
+        a : float
+            Input angle in radians.
+
+        Returns
+        -------
+        float
+            Normalized angle within [-pi, pi].
+        """
         return (a + math.pi) % (2 * math.pi) - math.pi
 
     def _xy_to_latlon(self, x: float, y: float):
+        """
+        Convert local cartesian coordinates to latitude and longitude.
+
+        Parameters
+        ----------
+        x : float
+            East offset in metres from origin.
+        y : float
+            North offset in metres from origin.
+
+        Returns
+        -------
+        map
+            Mapped degrees of latitude and longitude.
+        """
         φ0, λ0 = map(math.radians, (self.lat0, self.lon0))  # type: ignore
         φ = φ0 + y / R_EARTH
         λ = λ0 + x / (R_EARTH * math.cos(φ0))
         return map(math.degrees, (φ, λ))
 
     async def _update_pose(self):
+        """
+        Update robot pose from latest odometry data.
+
+        Reads x, y, and yaw from the odometry provider and applies
+        the yaw offset to compute the pose in the world frame.
+        """
         o = self.odom
         logging.debug(f"Odom data: {o}")
         self.pose_x = self.odom.x
@@ -140,9 +168,7 @@ class UnitreeGo2GPSOdomReader(FuserInput[UnitreeGo2GPSOdomReaderConfig, Optional
 
         message = self.buf[-1]
         self.buf.clear()
-        self.io_provider.add_input(
-            self.__class__.__name__, message.message, message.timestamp
-        )
+        self.io_provider.add_input(self.__class__.__name__, message.message, message.timestamp)
         return f"""
 {self.descriptor_for_LLM} INPUT
 // START

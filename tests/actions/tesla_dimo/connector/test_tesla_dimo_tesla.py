@@ -11,9 +11,7 @@ def mock_dimo():
     with patch("actions.tesla_dimo.connector.tesla.DIMO") as mock:
         mock_instance = Mock()
         mock_instance.auth.get_token.return_value = {"access_token": "test_dev_jwt"}
-        mock_instance.token_exchange.exchange.return_value = {
-            "token": "test_vehicle_jwt"
-        }
+        mock_instance.token_exchange.exchange.return_value = {"token": "test_vehicle_jwt"}
         mock.return_value = mock_instance
         yield mock_instance
 
@@ -64,9 +62,7 @@ def create_aiohttp_mock(status=200):
         ("lOcK dOoRs", "/commands/doors/lock"),
     ],
 )
-async def test_lock_doors_case_insensitive(
-    tesla_connector, action_input, expected_endpoint
-):
+async def test_lock_doors_case_insensitive(tesla_connector, action_input, expected_endpoint):
     """Test that 'lock doors' command works regardless of case."""
     mock_session_cm, mock_session = create_aiohttp_mock()
 
@@ -96,9 +92,7 @@ async def test_lock_doors_case_insensitive(
         ("UNLOCK DOORS", "/commands/doors/unlock"),
     ],
 )
-async def test_unlock_doors_case_insensitive(
-    tesla_connector, action_input, expected_endpoint
-):
+async def test_unlock_doors_case_insensitive(tesla_connector, action_input, expected_endpoint):
     """Test that 'unlock doors' command works regardless of case."""
     mock_session_cm, mock_session = create_aiohttp_mock()
 
@@ -128,9 +122,7 @@ async def test_unlock_doors_case_insensitive(
         ("OPEN FRUNK", "/commands/frunk/open"),
     ],
 )
-async def test_open_frunk_case_insensitive(
-    tesla_connector, action_input, expected_endpoint
-):
+async def test_open_frunk_case_insensitive(tesla_connector, action_input, expected_endpoint):
     """Test that 'open frunk' command works regardless of case."""
     mock_session_cm, mock_session = create_aiohttp_mock()
 
@@ -160,9 +152,7 @@ async def test_open_frunk_case_insensitive(
         ("OPEN TRUNK", "/commands/trunk/open"),
     ],
 )
-async def test_open_trunk_case_insensitive(
-    tesla_connector, action_input, expected_endpoint
-):
+async def test_open_trunk_case_insensitive(tesla_connector, action_input, expected_endpoint):
     """Test that 'open trunk' command works regardless of case."""
     mock_session_cm, mock_session = create_aiohttp_mock()
 
@@ -260,9 +250,7 @@ async def test_uses_aiohttp_not_requests(tesla_connector):
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch(
-            "actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"
-        ) as mock_timeout,
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout") as mock_timeout,
         patch(
             "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,
@@ -315,9 +303,7 @@ async def test_timeout_is_configured(tesla_connector):
     mock_session_cm, mock_session = create_aiohttp_mock()
 
     with (
-        patch(
-            "actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout"
-        ) as mock_timeout,
+        patch("actions.tesla_dimo.connector.tesla.aiohttp.ClientTimeout") as mock_timeout,
         patch(
             "actions.tesla_dimo.connector.tesla.aiohttp.ClientSession",
             return_value=mock_session_cm,

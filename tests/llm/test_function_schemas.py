@@ -232,9 +232,7 @@ def test_convert_empty_arguments():
 
 def test_convert_arguments_already_dict():
     """Test conversion when arguments is already a dict (not a JSON string)."""
-    function_calls = [
-        {"function": {"name": "move", "arguments": {"action": "forward"}}}
-    ]
+    function_calls = [{"function": {"name": "move", "arguments": {"action": "forward"}}}]
 
     actions = convert_function_calls_to_actions(function_calls)
 
@@ -352,9 +350,7 @@ def test_convert_boolean_values():
 
 def test_convert_null_values():
     """Test conversion with null/None values - should skip due to validation error."""
-    function_calls = [
-        {"function": {"name": "reset", "arguments": json.dumps({"value": None})}}
-    ]
+    function_calls = [{"function": {"name": "reset", "arguments": json.dumps({"value": None})}}]
 
     actions = convert_function_calls_to_actions(function_calls)
 

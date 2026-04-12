@@ -45,9 +45,7 @@ class MoveUnitreeOMPathSDKConfig(ActionConfig):
     )
 
 
-class MoveUnitreeOMPathSDKConnector(
-    ActionConnector[MoveUnitreeOMPathSDKConfig, MoveInput]
-):
+class MoveUnitreeOMPathSDKConnector(ActionConnector[MoveUnitreeOMPathSDKConfig, MoveInput]):
     """
     Connector for moving Unitree Go2 robot using OM Path SDK for obstacle detection.
 
@@ -108,12 +106,8 @@ class MoveUnitreeOMPathSDKConnector(
 
         try:
             self.session = open_zenoh_session()
-            self.session.declare_subscriber(
-                self.ai_status_request, self._zenoh_ai_status_request
-            )
-            self._zenoh_ai_status_response_pub = self.session.declare_publisher(
-                self.ai_status_response
-            )
+            self.session.declare_subscriber(self.ai_status_request, self._zenoh_ai_status_request)
+            self._zenoh_ai_status_response_pub = self.session.declare_publisher(self.ai_status_response)
         except Exception as e:
             logging.error(f"Error opening Zenoh client: {e}")
             self.session = None
@@ -139,9 +133,7 @@ class MoveUnitreeOMPathSDKConnector(
         logging.info(f"AI command.connect: {output_interface.action}")
 
         if self.mode == "guard" and self.face_presence_provider.unknown_faces > 0:
-            logging.info(
-                "Guard mode active and unknown face detected - disregarding AI command"
-            )
+            logging.info("Guard mode active and unknown face detected - disregarding AI command")
             return
 
         if not self.ai_control_enabled:
@@ -153,9 +145,7 @@ class MoveUnitreeOMPathSDKConnector(
             self.sport_client.BalanceStand()
 
         if self.unitree_go2_state.action_progress != 0:
-            logging.info(
-                f"Action in progress: {self.unitree_go2_state.action_progress}"
-            )
+            logging.info(f"Action in progress: {self.unitree_go2_state.action_progress}")
             return
 
         # fallback to the odom provider
@@ -279,16 +269,12 @@ class MoveUnitreeOMPathSDKConnector(
 
             current_target = target[0]
 
-            logging.info(
-                f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}"
-            )
+            logging.info(f"Target: {current_target} current yaw: {self.odom.position['odom_yaw_m180_p180']}")
 
             if self.movement_attempts > self.movement_attempt_limit:
                 # abort - we are not converging
                 self.clean_abort()
-                logging.info(
-                    f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()"
-                )
+                logging.info(f"TIMEOUT - not converging after {self.movement_attempt_limit} attempts - StopMove()")
                 return
 
             goal_dx = current_target.dx
@@ -296,9 +282,7 @@ class MoveUnitreeOMPathSDKConnector(
 
             # Phase 1: Turn to face the target direction
             if not current_target.turn_complete:
-                gap = self._calculate_angle_gap(
-                    -1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw
-                )
+                gap = self._calculate_angle_gap(-1 * self.odom.position["odom_yaw_m180_p180"], goal_yaw)
                 logging.info(f"Phase 1 - Turning remaining GAP: {gap}DEG")
 
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -338,8 +322,7 @@ class MoveUnitreeOMPathSDKConnector(
                 speed = current_target.speed
 
                 distance_traveled = math.sqrt(
-                    (self.odom.position["odom_x"] - s_x) ** 2
-                    + (self.odom.position["odom_y"] - s_y) ** 2
+                    (self.odom.position["odom_x"] - s_x) ** 2 + (self.odom.position["odom_y"] - s_y) ** 2
                 )
                 gap = round(abs(goal_dx - distance_traveled), 2)
                 progress = round(abs(self.gap_previous - gap), 2)
@@ -369,14 +352,10 @@ class MoveUnitreeOMPathSDKConnector(
                         logging.info(f"Phase 2 - Keep moving. Remaining: {gap}m ")
                         self._move_robot(fb * speed, 0.0, 0.0)
                     elif distance_traveled > abs(goal_dx):
-                        logging.debug(
-                            f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m"
-                        )
+                        logging.debug(f"Phase 2 - OVERSHOOT: move other way. Remaining: {gap}m")
                         self._move_robot(-1 * fb * 0.2, 0.0, 0.0)
                 else:
-                    logging.info(
-                        "Phase 2 - Movement completed normally, processing next AI command"
-                    )
+                    logging.info("Phase 2 - Movement completed normally, processing next AI command")
                     self.clean_abort()
 
         self.sleep(0.1)
@@ -392,9 +371,7 @@ class MoveUnitreeOMPathSDKConnector(
         path = random.choice(self.path_provider.turn_left)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -416,9 +393,7 @@ class MoveUnitreeOMPathSDKConnector(
         path = random.choice(self.path_provider.turn_right)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -440,9 +415,7 @@ class MoveUnitreeOMPathSDKConnector(
         path = random.choice(self.path_provider.advance)
         path_angle = self.path_provider.path_angles[path]
 
-        target_yaw = self._normalize_angle(
-            -1 * self.odom.position["odom_yaw_m180_p180"] + path_angle
-        )
+        target_yaw = self._normalize_angle(-1 * self.odom.position["odom_yaw_m180_p180"] + path_angle)
         self.pending_movements.put(
             MoveCommand(
                 dx=0.5,
@@ -564,17 +537,9 @@ class MoveUnitreeOMPathSDKConnector(
                 header=prepare_header(ai_control_status.header.frame_id),
                 request_id=request_id,
                 code=1 if self.ai_control_enabled else 0,
-                status=String(
-                    data=(
-                        "AI Control Enabled"
-                        if self.ai_control_enabled
-                        else "AI Control Disabled"
-                    )
-                ),
+                status=String(data=("AI Control Enabled" if self.ai_control_enabled else "AI Control Disabled")),
             )
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
 
         # Enable the AI control
         if code == 1:
@@ -587,9 +552,7 @@ class MoveUnitreeOMPathSDKConnector(
                 code=1,
                 status=String(data="AI Control Enabled"),
             )
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())
 
         # Disable the AI control
         if code == 0:
@@ -602,6 +565,4 @@ class MoveUnitreeOMPathSDKConnector(
                 status=String(data="AI Control Disabled"),
             )
 
-            return self._zenoh_ai_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_ai_status_response_pub.put(ai_status_response.serialize())

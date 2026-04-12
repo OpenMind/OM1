@@ -129,9 +129,7 @@ class GalleryIdentitiesProvider:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(
-            target=self._loop, name="gallery-identities-poll", daemon=True
-        )
+        self._thread = threading.Thread(target=self._loop, name="gallery-identities-poll", daemon=True)
         self._thread.start()
 
     def stop(self, *, wait: bool = False) -> None:
@@ -166,9 +164,7 @@ class GalleryIdentitiesProvider:
                 snap = self._fetch_snapshot()
                 self._emit(snap.to_text())
             except Exception as e:
-                logging.warning(
-                    f"Failed to fetch/emit gallery identities snapshot: {e}"
-                )
+                logging.warning(f"Failed to fetch/emit gallery identities snapshot: {e}")
 
             next_t += self.period
             if next_t < time.time() - self.period:

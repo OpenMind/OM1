@@ -135,9 +135,7 @@ class FunctionGenerator:
             if param.default != inspect.Parameter.empty:
                 desc = param_schema.get("description", f"Parameter {param_name}")
                 if "(optional)" not in desc and "(optional" not in desc:
-                    param_schema["description"] = (
-                        f"{desc} (optional, default: {param.default})"
-                    )
+                    param_schema["description"] = f"{desc} (optional, default: {param.default})"
 
             properties[param_name] = param_schema
 
@@ -176,8 +174,6 @@ class FunctionGenerator:
         for _, method in inspect.getmembers(cls_instance, predicate=inspect.ismethod):
             if getattr(method.__func__, "_llm_function", False):
                 function_schema = FunctionGenerator.extract_function_schema(method)
-                functions[getattr(method, "_llm_name", method.__name__)] = (
-                    function_schema
-                )
+                functions[getattr(method, "_llm_name", method.__name__)] = function_schema
 
         return functions

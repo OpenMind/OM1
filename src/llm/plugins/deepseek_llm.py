@@ -25,7 +25,7 @@ class DeepSeekConfig(LLMConfig):
     """DeepSeek-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/deepseek",
+        default="https://api.openmind.com/api/core/deepseek",
         description="Base URL for the DeepSeek API endpoint",
     )
     model: T.Optional[T.Union[DeepSeekModel, str]] = Field(
@@ -65,7 +65,7 @@ class DeepSeekLLM(LLM[R]):
             self._config.model = "deepseek-chat"
 
         self._client = openai.AsyncOpenAI(
-            base_url=config.base_url or "https://api.openmind.org/api/core/deepseek",
+            base_url=config.base_url or "https://api.openmind.com/api/core/deepseek",
             api_key=config.api_key,
         )
 
@@ -74,9 +74,7 @@ class DeepSeekLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Send a prompt to the DeepSeek API and get a structured response.
 
@@ -103,8 +101,7 @@ class DeepSeekLLM(LLM[R]):
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 

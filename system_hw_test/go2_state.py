@@ -15,9 +15,7 @@ class Custom:
         self.low_state = None
 
     def Init(self):
-        self.sportstate_subscriber = ChannelSubscriber(
-            "rt/sportmodestate", SportModeState_
-        )
+        self.sportstate_subscriber = ChannelSubscriber("rt/sportmodestate", SportModeState_)
         self.sportstate_subscriber.Init(self.SportStateMessageHandler, 10)
 
     def SportStateMessageHandler(self, msg: SportModeState_):

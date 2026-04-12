@@ -31,9 +31,7 @@ class TestUnitreeGo2Navigation:
         with caplog.at_level("INFO"):
             UnitreeGo2Navigation(config)
 
-        assert (
-            "Unitree Go2 Navigation Provider initialized in background" in caplog.text
-        )
+        assert "Unitree Go2 Navigation Provider initialized in background" in caplog.text
 
     @patch("backgrounds.plugins.unitree_go2_navigation.UnitreeGo2NavigationProvider")
     def test_provider_attribute(self, mock_provider_class):

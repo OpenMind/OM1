@@ -116,10 +116,7 @@ class SimplePathsProvider:
         """
         Start the SimplePathsProvider by opening a Zenoh session.
         """
-        if (
-            not self._simple_paths_processor_thread
-            or not self._simple_paths_processor_thread.is_alive()
-        ):
+        if not self._simple_paths_processor_thread or not self._simple_paths_processor_thread.is_alive():
             self._simple_paths_processor_thread = mp.Process(
                 target=simple_paths_processor,
                 args=(self.data_queue, self.control_queue, get_logging_config()),
@@ -127,10 +124,7 @@ class SimplePathsProvider:
             self._simple_paths_processor_thread.start()
             logging.info("SimplePathsProvider started.")
 
-        if (
-            not self._simple_paths_derived_thread
-            or not self._simple_paths_derived_thread.is_alive()
-        ):
+        if not self._simple_paths_derived_thread or not self._simple_paths_derived_thread.is_alive():
             self._simple_paths_derived_thread = threading.Thread(
                 target=self._simple_paths_derived_processor,
                 daemon=True,

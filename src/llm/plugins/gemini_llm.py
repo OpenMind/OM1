@@ -31,7 +31,7 @@ class GeminiConfig(LLMConfig):
     """Gemini-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/gemini",
+        default="https://api.openmind.com/api/core/gemini",
         description="Base URL for the Gemini API endpoint",
     )
     model: T.Optional[T.Union[GeminiModel, str]] = Field(
@@ -70,7 +70,7 @@ class GeminiLLM(LLM[R]):
             self._config.model = "gemini-2.5-flash"
 
         self._client = openai.AsyncOpenAI(
-            base_url=config.base_url or "https://api.openmind.org/api/core/gemini",
+            base_url=config.base_url or "https://api.openmind.com/api/core/gemini",
             api_key=config.api_key,
         )
 
@@ -79,9 +79,7 @@ class GeminiLLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Execute LLM query and parse response.
 
@@ -108,8 +106,7 @@ class GeminiLLM(LLM[R]):
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 

@@ -34,9 +34,7 @@ class InputOrchestrator:
         If one input fails, other inputs continue operating.
         """
         input_tasks = [
-            asyncio.create_task(
-                self._listen_to_input(input), name=f"input_{type(input).__name__}"
-            )
+            asyncio.create_task(self._listen_to_input(input), name=f"input_{type(input).__name__}")
             for input in self.inputs
         ]
         results = await asyncio.gather(*input_tasks, return_exceptions=True)
@@ -61,9 +59,7 @@ class InputOrchestrator:
                 try:
                     await input.raw_to_text(event)
                 except Exception as e:
-                    logging.error(
-                        f"Error processing event in {input_name}: {e}", exc_info=True
-                    )
+                    logging.error(f"Error processing event in {input_name}: {e}", exc_info=True)
         except Exception as e:
             logging.error(f"Input {input_name} listener failed: {e}", exc_info=True)
             raise

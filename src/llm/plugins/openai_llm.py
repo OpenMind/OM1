@@ -34,7 +34,7 @@ class OpenAIConfig(LLMConfig):
     """OpenAI-specific configuration with model enum."""
 
     base_url: T.Optional[str] = Field(
-        default="https://api.openmind.org/api/core/openai",
+        default="https://api.openmind.com/api/core/openai",
         description="Base URL for the OpenAI API endpoint",
     )
     model: T.Optional[T.Union[OpenAIModel, str]] = Field(
@@ -75,7 +75,7 @@ class OpenAILLM(LLM[R]):
             self._config.model = "gpt-4.1-mini"
 
         self._client = openai.AsyncClient(
-            base_url=config.base_url or "https://api.openmind.org/api/core/openai",
+            base_url=config.base_url or "https://api.openmind.com/api/core/openai",
             api_key=config.api_key,
         )
 
@@ -84,9 +84,7 @@ class OpenAILLM(LLM[R]):
 
     @AvatarLLMState.trigger_thinking()
     @LLMHistoryManager.update_history()
-    async def ask(
-        self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None
-    ) -> T.Optional[R]:
+    async def ask(self, prompt: str, messages: T.Optional[T.List[T.Dict[str, str]]] = None) -> T.Optional[R]:
         """
         Send a prompt to the OpenAI API and get a structured response.
 
@@ -113,8 +111,7 @@ class OpenAILLM(LLM[R]):
             self.io_provider.set_llm_prompt(prompt)
 
             formatted_messages = [
-                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
-                for msg in messages
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")} for msg in messages
             ]
             formatted_messages.append({"role": "user", "content": prompt})
 

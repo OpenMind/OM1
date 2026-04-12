@@ -1,15 +1,13 @@
 import json
 import logging
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from providers.safety_sandbox_provider import SafetySandboxProvider
-
 import os
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from providers.safety_sandbox_provider import SafetySandboxProvider
 
 import json5
 from jsonschema import ValidationError, validate
@@ -21,6 +19,7 @@ from backgrounds.base import Background
 from inputs import load_input
 from inputs.base import Sensor
 from llm import LLM, load_llm
+from mcp_servers import load_mcp
 from runtime.converter import convert_to_multi_mode
 from runtime.env import load_env_vars
 from runtime.hook import (
@@ -140,6 +139,8 @@ class RuntimeConfig:
         Optional safety sandbox provider instance.
     knowledge_base : Optional[Dict[str, Any]]
         Optional knowledge base configuration for document retrieval.
+    mcp_servers : Optional[Any]
+        Optional MCP servers configuration.
     """
 
     version: str
@@ -164,6 +165,7 @@ class RuntimeConfig:
     action_dependencies: Optional[Dict[str, List[str]]] = None
     safety_sandbox: Optional["SafetySandboxProvider"] = None
     knowledge_base: Optional[Dict[str, Any]] = None
+    mcp_servers: Optional[Any] = None
 
 
 def add_meta(
@@ -318,6 +320,8 @@ class ModeConfig:
         Raw action configurations before loading. Defaults to empty list.
     _raw_backgrounds : List[Dict], optional
         Raw background configurations before loading. Defaults to empty list.
+    _raw_mcp_servers : List[Dict], optional
+        Raw MCP server configurations before loading. Defaults to empty list.
     """
 
     version: str
@@ -346,12 +350,14 @@ class ModeConfig:
     safety_sandbox_config: Optional[Dict] = None
     safety_sandbox: Optional["SafetySandboxProvider"] = None
     _raw_safety_sandbox: Optional[Dict] = field(default_factory=dict)
+    mcp_servers: Optional[Any] = None
 
     _raw_inputs: List[Dict] = field(default_factory=list)
     _raw_llm: Optional[Dict] = None
     _raw_simulators: List[Dict] = field(default_factory=list)
     _raw_actions: List[Dict] = field(default_factory=list)
     _raw_backgrounds: List[Dict] = field(default_factory=list)
+    _raw_mcp_servers: List[Dict] = field(default_factory=list)
 
     def to_runtime_config(self, global_config: "ModeSystemConfig") -> RuntimeConfig:
         """
@@ -391,6 +397,7 @@ class ModeConfig:
             action_dependencies=self.action_dependencies,
             safety_sandbox=self.safety_sandbox,
             knowledge_base=global_config.knowledge_base,
+            mcp_servers=self.mcp_servers,
         )
 
     def load_components(self, system_config: "ModeSystemConfig"):
@@ -638,6 +645,7 @@ def load_mode_config(
             _raw_actions=mode_data.get("agent_actions", []),
             _raw_backgrounds=mode_data.get("backgrounds", []),
             _raw_lifecycle_hooks=mode_data.get("lifecycle_hooks", []),
+            _raw_mcp_servers=mode_data.get("mcp_servers", []),
         )
 
         mode_system_config.modes[mode_name] = mode_config
@@ -832,6 +840,9 @@ def _load_mode_components(mode_config: ModeConfig, system_config: ModeSystemConf
             logging.info("RobotStateProvider initialized and started")
         except Exception as e:
             logging.error(f"Failed to initialize RobotStateProvider: {e}")
+
+    # Load MCP servers
+    mode_config.mcp_servers = load_mcp(mode_config._raw_mcp_servers) if mode_config._raw_mcp_servers else None
 
 
 def mode_config_to_dict(config: ModeSystemConfig) -> Dict[str, Any]:

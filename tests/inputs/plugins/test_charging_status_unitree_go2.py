@@ -8,9 +8,7 @@ from inputs.plugins.charging_status_unitree_go2 import ChargingStatusUnitreeGo2
 @pytest.fixture
 def mock_charging_provider():
     """Mock UnitreeGo2ChargingProvider."""
-    with patch(
-        "inputs.plugins.charging_status_unitree_go2.UnitreeGo2ChargingProvider"
-    ) as mock:
+    with patch("inputs.plugins.charging_status_unitree_go2.UnitreeGo2ChargingProvider") as mock:
         mock_instance = Mock()
         mock_instance.charging_status = None
         mock.return_value = mock_instance
@@ -29,9 +27,7 @@ def test_initialization(mock_charging_provider, mock_io_provider):
     plugin = ChargingStatusUnitreeGo2()
 
     assert plugin.messages == []
-    assert plugin.descriptor_for_LLM == (
-        "Robot charging status - indicates the current battery charging state."
-    )
+    assert plugin.descriptor_for_LLM == ("Robot charging status - indicates the current battery charging state.")
     mock_charging_provider.start.assert_called_once()
 
 
@@ -147,14 +143,10 @@ async def test_raw_to_text_appends_to_buffer(mock_charging_provider, mock_io_pro
     await plugin.raw_to_text("DISCHARGING: Robot is running on battery power.")
 
     assert len(plugin.messages) == 1
-    assert (
-        plugin.messages[0].message == "DISCHARGING: Robot is running on battery power."
-    )
+    assert plugin.messages[0].message == "DISCHARGING: Robot is running on battery power."
 
 
-def test_formatted_latest_buffer_with_messages(
-    mock_charging_provider, mock_io_provider
-):
+def test_formatted_latest_buffer_with_messages(mock_charging_provider, mock_io_provider):
     """Test formatted_latest_buffer returns formatted message and clears buffer."""
     mock_io_instance = Mock()
     mock_io_provider.return_value = mock_io_instance
@@ -166,9 +158,7 @@ def test_formatted_latest_buffer_with_messages(
 
     from inputs.base import Message
 
-    test_message = Message(
-        timestamp=time.time(), message="CHARGING: Robot is currently charging."
-    )
+    test_message = Message(timestamp=time.time(), message="CHARGING: Robot is currently charging.")
     plugin.messages.append(test_message)
 
     result = plugin.formatted_latest_buffer()

@@ -38,9 +38,7 @@ class UnitreeG1RememberLocationConfig(ActionConfig):
     )
 
 
-class UnitreeG1RememberLocationConnector(
-    ActionConnector[UnitreeG1RememberLocationConfig, RememberLocationInput]
-):
+class UnitreeG1RememberLocationConnector(ActionConnector[UnitreeG1RememberLocationConfig, RememberLocationInput]):
     """
     Connector that persists a remembered location for Unitree G1 by POSTing to an HTTP API.
     """
@@ -86,20 +84,17 @@ class UnitreeG1RememberLocationConnector(
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    self.base_url, json=payload, headers=headers, timeout=self.timeout
+                    self.base_url,
+                    json=payload,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=self.timeout),
                 ) as resp:
                     text = await resp.text()
                     if resp.status >= 200 and resp.status < 300:
-                        logging.info(
-                            f"RememberLocationG1: stored '{output_interface.action}' -> {resp.status} {text}"
-                        )
-                        self.elevenlabs_provider.add_pending_message(
-                            f"Location {output_interface.action} remembered !"
-                        )
+                        logging.info(f"RememberLocationG1: stored '{output_interface.action}' -> {resp.status} {text}")
+                        self.elevenlabs_provider.add_pending_message(f"Location {output_interface.action} remembered !")
                     else:
-                        logging.error(
-                            f"RememberLocationG1 API returned {resp.status}: {text}"
-                        )
+                        logging.error(f"RememberLocationG1 API returned {resp.status}: {text}")
         except asyncio.TimeoutError:
             logging.error("RememberLocationG1 API request timed out")
         except Exception as e:

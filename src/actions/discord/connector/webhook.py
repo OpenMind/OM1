@@ -25,12 +25,8 @@ class DiscordWebhookConfig(ActionConfig):
     """
 
     webhook_url: str = Field(description="Discord webhook URL")
-    username: Optional[str] = Field(
-        default=None, description="Override webhook username"
-    )
-    avatar_url: Optional[str] = Field(
-        default=None, description="Override webhook avatar URL"
-    )
+    username: Optional[str] = Field(default=None, description="Override webhook username")
+    avatar_url: Optional[str] = Field(default=None, description="Override webhook avatar URL")
 
 
 class DiscordWebhookConnector(ActionConnector[DiscordWebhookConfig, DiscordInput]):
@@ -75,8 +71,7 @@ class DiscordWebhookConnector(ActionConnector[DiscordWebhookConfig, DiscordInput
 
         if len(message_text) > DISCORD_MAX_CONTENT_LENGTH:
             logging.warning(
-                f"Discord message truncated from {len(message_text)} "
-                f"to {DISCORD_MAX_CONTENT_LENGTH} characters"
+                f"Discord message truncated from {len(message_text)} " f"to {DISCORD_MAX_CONTENT_LENGTH} characters"
             )
             message_text = message_text[:DISCORD_MAX_CONTENT_LENGTH]
 
@@ -99,9 +94,7 @@ class DiscordWebhookConnector(ActionConnector[DiscordWebhookConfig, DiscordInput
                         logging.info("Discord message sent successfully!")
                     else:
                         error_text = await response.text()
-                        logging.error(
-                            f"Discord webhook error: {response.status} - {error_text}"
-                        )
+                        logging.error(f"Discord webhook error: {response.status} - {error_text}")
                         raise aiohttp.ClientResponseError(
                             response.request_info,
                             response.history,

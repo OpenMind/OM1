@@ -160,9 +160,7 @@ class TeleopsStatus:
 
     update_time: str
     battery_status: BatteryStatus
-    action_status: ActionStatus = field(
-        default_factory=lambda: ActionStatus(ActionType.AI, time.time())
-    )
+    action_status: ActionStatus = field(default_factory=lambda: ActionStatus(ActionType.AI, time.time()))
     machine_name: str = "unknown"
     video_connected: bool = False
 
@@ -211,7 +209,7 @@ class TeleopsStatusProvider:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.openmind.org/api/core/teleops/status",
+        base_url: str = "https://api.openmind.com/api/core/teleops/status",
     ):
         """
         Initialize the TeleopsStatusProvider.
@@ -225,7 +223,7 @@ class TeleopsStatusProvider:
             API key for authentication. Default is None.
         base_url : str
             Base URL for the teleops status API. Default is
-            "https://api.openmind.org/api/core/teleops/status".
+            "https://api.openmind.com/api/core/teleops/status".
         """
         self.api_key = api_key
         self.base_url = base_url
@@ -249,9 +247,7 @@ class TeleopsStatusProvider:
             if request.status_code == 200:
                 return request.json()
             else:
-                logging.error(
-                    f"Failed to get status: {request.status_code} - {request.text}"
-                )
+                logging.error(f"Failed to get status: {request.status_code} - {request.text}")
         except requests.exceptions.RequestException as e:
             logging.error(f"TeleopsStatusProvider: Error getting status: {e}")
 
@@ -282,9 +278,7 @@ class TeleopsStatusProvider:
             if request.status_code == 200:
                 logging.debug(f"Status shared successfully: {request.json()}")
             else:
-                logging.error(
-                    f"Failed to share status: {request.status_code} - {request.text}"
-                )
+                logging.error(f"Failed to share status: {request.status_code} - {request.text}")
         except Exception as e:
             logging.error(f"Error sharing status: {str(e)}")
 

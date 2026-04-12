@@ -66,9 +66,7 @@ class SpeakElevenLabsTTSConfig(ActionConfig):
     )
 
 
-class SpeakElevenLabsTTSConnector(
-    ActionConnector[SpeakElevenLabsTTSConfig, SpeakInput]
-):
+class SpeakElevenLabsTTSConnector(ActionConnector[SpeakElevenLabsTTSConfig, SpeakInput]):
     """
     A "Speak" connector that uses the ElevenLabs TTS Provider to perform Text-to-Speech.
     This connector is compatible with the standard SpeakInput interface.
@@ -123,12 +121,8 @@ class SpeakElevenLabsTTSConnector(
             self.session = open_zenoh_session()
             self.audio_pub = self.session.declare_publisher(self.audio_topic)
             self.session.declare_subscriber(self.audio_topic, self.zenoh_audio_message)
-            self.session.declare_subscriber(
-                self.tts_status_request_topic, self._zenoh_tts_status_request
-            )
-            self._zenoh_tts_status_response_pub = self.session.declare_publisher(
-                self.tts_status_response_topic
-            )
+            self.session.declare_subscriber(self.tts_status_request_topic, self._zenoh_tts_status_request)
+            self._zenoh_tts_status_response_pub = self.session.declare_publisher(self.tts_status_response_topic)
 
             if self.audio_pub:
                 self.audio_pub.put(self.audio_status.serialize())
@@ -139,7 +133,7 @@ class SpeakElevenLabsTTSConnector(
 
         # Initialize Eleven Labs TTS Provider
         self.tts = ElevenLabsTTSProvider(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
@@ -151,7 +145,7 @@ class SpeakElevenLabsTTSConnector(
 
         # Configure Eleven Labs TTS Provider to ensure settings are applied
         self.tts.configure(
-            url="https://api.openmind.org/api/core/elevenlabs/tts",
+            url="https://api.openmind.com/api/core/elevenlabs/tts",
             api_key=api_key,
             elevenlabs_api_key=elevenlabs_api_key,
             voice_id=voice_id,
@@ -194,12 +188,10 @@ class SpeakElevenLabsTTSConnector(
             self.silence_rate > 0
             and self.silence_counter < self.silence_rate
             and self.io_provider.llm_prompt is not None
-            and "INPUT: Voice" not in self.io_provider.llm_prompt
+            and "Voice:" not in self.io_provider.llm_prompt
         ):
             self.silence_counter += 1
-            logging.info(
-                f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}"
-            )
+            logging.info(f"Skipping TTS due to silence_rate {self.silence_rate}, counter {self.silence_counter}")
             return
 
         self.silence_counter = 0
@@ -208,10 +200,7 @@ class SpeakElevenLabsTTSConnector(
         pending_message = self.tts.create_pending_message(output_interface.action)
 
         # Store robot message to conversation history only if there was ASR input
-        if (
-            self.io_provider.llm_prompt is not None
-            and "INPUT: Voice" in self.io_provider.llm_prompt
-        ):
+        if self.io_provider.llm_prompt is not None and "Voice:" in self.io_provider.llm_prompt:
             self.conversation_provider.store_robot_message(output_interface.action)
 
         state = AudioStatus(
@@ -248,13 +237,9 @@ class SpeakElevenLabsTTSConnector(
                 header=prepare_header(tts_status.header.frame_id),
                 request_id=request_id,
                 code=1 if self.tts_enabled else 0,
-                status=String(
-                    data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")
-                ),
+                status=String(data=("TTS Enabled" if self.tts_enabled else "TTS Disabled")),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                tts_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(tts_status_response.serialize())
 
         # Enable the TTS
         if code == 1:
@@ -267,9 +252,7 @@ class SpeakElevenLabsTTSConnector(
                 code=1,
                 status=String(data="TTS Enabled"),
             )
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())
 
         # Disable the TTS
         if code == 0:
@@ -282,9 +265,7 @@ class SpeakElevenLabsTTSConnector(
                 status=String(data="TTS Disabled"),
             )
 
-            return self._zenoh_tts_status_response_pub.put(
-                ai_status_response.serialize()
-            )
+            return self._zenoh_tts_status_response_pub.put(ai_status_response.serialize())
 
     def stop(self) -> None:
         """

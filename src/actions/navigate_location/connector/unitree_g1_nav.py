@@ -59,15 +59,11 @@ class UnitreeG1NavConnector(ActionConnector[UnitreeG1NavConfig, NavigateLocation
         timeout = self.config.timeout
         refresh_interval = self.config.refresh_interval
 
-        self.location_provider = UnitreeG1LocationsProvider(
-            base_url, timeout, refresh_interval
-        )
+        self.location_provider = UnitreeG1LocationsProvider(base_url, timeout, refresh_interval)
         self.navigation_provider = UnitreeG1NavigationProvider()
         self.io_provider = IOProvider()
 
-        logging.info(
-            "[NavG1Connector] Using UnitreeG1 providers for locations and navigation."
-        )
+        logging.info("[NavG1Connector] Using UnitreeG1 providers for locations and navigation.")
 
     async def connect(self, output_interface: NavigateLocationInput) -> None:
         """
@@ -91,18 +87,13 @@ class UnitreeG1NavConnector(ActionConnector[UnitreeG1NavConfig, NavigateLocation
         ]:
             if label.startswith(prefix):
                 label = label[len(prefix) :].strip()
-                logging.info(
-                    f"Cleaned location label: removed '{prefix}' prefix -> '{label}'"
-                )
+                logging.info(f"Cleaned location label: removed '{prefix}' prefix -> '{label}'")
                 break
 
         loc = self.location_provider.get_location(label)
         if loc is None:
             locations = self.location_provider.get_all_locations()
-            locations_list = ", ".join(
-                str(v.get("name") if isinstance(v, dict) else k)
-                for k, v in locations.items()
-            )
+            locations_list = ", ".join(str(v.get("name") if isinstance(v, dict) else k) for k, v in locations.items())
             msg = (
                 f"Location '{label}' not found. Available: {locations_list}"
                 if locations_list

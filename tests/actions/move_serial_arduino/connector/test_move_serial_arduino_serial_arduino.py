@@ -35,9 +35,7 @@ class TestMoveSerialConnectorInit:
 
     def test_init_with_port(self):
         """Test initialization with port creates serial connection."""
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.serial.Serial"
-        ) as mock_serial:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.serial.Serial") as mock_serial:
             mock_serial_instance = Mock()
             mock_serial.return_value = mock_serial_instance
 
@@ -61,9 +59,7 @@ class TestMoveSerialConnectorConnect:
     @pytest.fixture
     def connector_with_serial(self):
         """Create connector with mocked serial port."""
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.serial.Serial"
-        ) as mock_serial:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.serial.Serial") as mock_serial:
             mock_serial_instance = Mock()
             mock_serial_instance.is_open = True
             mock_serial.return_value = mock_serial_instance
@@ -76,57 +72,39 @@ class TestMoveSerialConnectorConnect:
     async def test_connect_be_still_simulation(self, connector_no_serial):
         """Test be still action in simulation mode."""
         move_input = MoveInput(action="be still")  # type: ignore[arg-type]
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.logging"
-        ) as mock_logging:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.logging") as mock_logging:
             await connector_no_serial.connect(move_input)
-            mock_logging.info.assert_called_with(
-                "SerialNotOpen - Simulating transmit: actuator:0\r\n"
-            )
+            mock_logging.info.assert_called_with("SerialNotOpen - Simulating transmit: actuator:0\r\n")
 
     @pytest.mark.asyncio
     async def test_connect_small_jump_simulation(self, connector_no_serial):
         """Test small jump action in simulation mode."""
         move_input = MoveInput(action="small jump")  # type: ignore[arg-type]
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.logging"
-        ) as mock_logging:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.logging") as mock_logging:
             await connector_no_serial.connect(move_input)
-            mock_logging.info.assert_called_with(
-                "SerialNotOpen - Simulating transmit: actuator:1\r\n"
-            )
+            mock_logging.info.assert_called_with("SerialNotOpen - Simulating transmit: actuator:1\r\n")
 
     @pytest.mark.asyncio
     async def test_connect_medium_jump_simulation(self, connector_no_serial):
         """Test medium jump action in simulation mode."""
         move_input = MoveInput(action="medium jump")  # type: ignore[arg-type]
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.logging"
-        ) as mock_logging:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.logging") as mock_logging:
             await connector_no_serial.connect(move_input)
-            mock_logging.info.assert_called_with(
-                "SerialNotOpen - Simulating transmit: actuator:2\r\n"
-            )
+            mock_logging.info.assert_called_with("SerialNotOpen - Simulating transmit: actuator:2\r\n")
 
     @pytest.mark.asyncio
     async def test_connect_big_jump_simulation(self, connector_no_serial):
         """Test big jump action in simulation mode."""
         move_input = MoveInput(action="big jump")  # type: ignore[arg-type]
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.logging"
-        ) as mock_logging:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.logging") as mock_logging:
             await connector_no_serial.connect(move_input)
-            mock_logging.info.assert_called_with(
-                "SerialNotOpen - Simulating transmit: actuator:3\r\n"
-            )
+            mock_logging.info.assert_called_with("SerialNotOpen - Simulating transmit: actuator:3\r\n")
 
     @pytest.mark.asyncio
     async def test_connect_be_still_with_serial(self, connector_with_serial):
         """Test be still action with actual serial connection."""
         move_input = MoveInput(action="be still")  # type: ignore[arg-type]
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.logging"
-        ) as mock_logging:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.logging") as mock_logging:
             await connector_with_serial.connect(move_input)
             mock_logging.info.assert_called_with("SendToArduinoSerial: actuator:0\r\n")
             connector_with_serial.ser.write.assert_called_once_with(b"actuator:0\r\n")
@@ -143,9 +121,7 @@ class TestMoveSerialConnectorConnect:
     async def test_connect_unknown_action(self, connector_no_serial):
         """Test unknown action logs info and simulates."""
         move_input = MoveInput(action="unknown")  # type: ignore[arg-type]
-        with patch(
-            "actions.move_serial_arduino.connector.serial_arduino.logging"
-        ) as mock_logging:
+        with patch("actions.move_serial_arduino.connector.serial_arduino.logging") as mock_logging:
             await connector_no_serial.connect(move_input)
             mock_logging.info.assert_any_call("Other move type: unknown")
 

@@ -1,3 +1,11 @@
+from .booster_interface import (
+    BoosterApiReqMsg,
+    BoosterApiRespMsg,
+    Odometer,
+    RemoteControllerState,
+    RpcServiceRequest,
+    RpcServiceResponse,
+)
 from .geographic_msgs import GeoPoint, GeoPointStamped
 from .geometry_msgs import (
     Accel,
@@ -52,6 +60,11 @@ from .status_msgs import (
     TTSStatusResponse,
 )
 from .std_msgs import ColorRGBA, Duration, Header, String, Time, prepare_header
+from .unitree_api_msgs import Request as UnitreeRequest
+from .unitree_api_msgs import RequestHeader as UnitreeRequestHeader
+from .unitree_api_msgs import RequestIdentity as UnitreeRequestIdentity
+from .unitree_api_msgs import RequestLease as UnitreeRequestLease
+from .unitree_api_msgs import RequestPolicy as UnitreeRequestPolicy
 
 __all__ = [
     # std_msgs
@@ -61,6 +74,13 @@ __all__ = [
     "ColorRGBA",
     "String",
     "prepare_header",
+    # booster_interface
+    "Odometer",
+    "RemoteControllerState",
+    "BoosterApiReqMsg",
+    "BoosterApiRespMsg",
+    "RpcServiceRequest",
+    "RpcServiceResponse",
     # status_msgs
     "AudioStatus",
     "CameraStatus",
@@ -119,4 +139,10 @@ __all__ = [
     "LaserScan",
     "DockStatus",
     "Paths",
+    # unitree_api_msgs
+    "UnitreeRequest",
+    "UnitreeRequestHeader",
+    "UnitreeRequestIdentity",
+    "UnitreeRequestLease",
+    "UnitreeRequestPolicy",
 ]

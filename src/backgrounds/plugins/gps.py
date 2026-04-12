@@ -17,9 +17,7 @@ class GpsConfig(BackgroundConfig):
         Serial port for GPS device.
     """
 
-    serial_port: Optional[str] = Field(
-        default=None, description="Serial port for GPS device"
-    )
+    serial_port: Optional[str] = Field(default=None, description="Serial port for GPS device")
 
 
 class Gps(Background[GpsConfig]):
