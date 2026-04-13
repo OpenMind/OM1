@@ -18,7 +18,7 @@ class KnowledgeBase:
 
     def __init__(
         self,
-        knowledge_base_name: str = "demo",
+        knowledge_base_name: str = "om",
         knowledge_base_root: Optional[str | Path] = None,
         base_url: str = "http://localhost:8100",
         retriever_type: str = "faiss",
