@@ -46,19 +46,19 @@ class ARMUnitreeSDKConnector(ActionConnector[ActionConfig, ArmInput]):
 
         action_id = None
 
-        if output_interface.action == "left kiss":
+        if output_interface.action == "left_kiss":
             action_id = 12
-        elif output_interface.action == "right kiss":
+        elif output_interface.action == "right_kiss":
             action_id = 13
         elif output_interface.action == "clap":
             action_id = 17
-        elif output_interface.action == "high five":
+        elif output_interface.action == "high_five":
             action_id = 18
-        elif output_interface.action == "shake hand":
+        elif output_interface.action == "shake_hand":
             action_id = 27
         elif output_interface.action == "heart":
             action_id = 20
-        elif output_interface.action == "high wave":
+        elif output_interface.action == "high_wave":
             action_id = 26
         else:
             logging.warning(f"Unknown action: {output_interface.action}")
