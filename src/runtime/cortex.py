@@ -34,6 +34,7 @@ class ModeCortexRuntime:
     io_provider: IOProvider
     sleep_ticker_provider: SleepTickerProvider
     config_provider: ConfigProvider
+
     current_config: Optional[RuntimeConfig]
     fuser: Optional[Fuser]
     action_orchestrator: Optional[ActionOrchestrator]
@@ -68,6 +69,7 @@ class ModeCortexRuntime:
         self.io_provider = IOProvider()
         self.sleep_ticker_provider = SleepTickerProvider()
         self.config_provider = ConfigProvider()
+
         # Hot-reload configuration
         self.hot_reload = hot_reload
         self.check_interval = check_interval
@@ -589,9 +591,6 @@ class ModeCortexRuntime:
                 if self.mcp_orchestrator:
                     succeeded_calls = set()
                     original_prompt = prompt
-                    # Track OM1 action types dispatched during MCP rounds so the
-                    # final recall response doesn't re-execute the same actions.
-                    dispatched_om1_types: set = set()
 
                     for round_idx in range(self.mcp_orchestrator.max_rounds):
                         om1_actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
@@ -608,7 +607,6 @@ class ModeCortexRuntime:
 
                         if om1_actions:
                             await self.action_orchestrator.promise(om1_actions)
-                            dispatched_om1_types.update(a.type.lower() for a in om1_actions)
 
                         logging.info(
                             f"MCP round {round_idx + 1}/{self.mcp_orchestrator.max_rounds}: "
@@ -645,8 +643,6 @@ class ModeCortexRuntime:
 
                     if output is not None:
                         output.actions = self.mcp_orchestrator.extract_om1_actions(output.actions)
-                        if dispatched_om1_types:
-                            output.actions = [a for a in output.actions if a.type.lower() not in dispatched_om1_types]
 
                 if output is None:
                     logging.debug("No output from LLM after MCP processing")

@@ -19,6 +19,8 @@ class ScheduleCronJobConfig(ActionConfig):
     ----------
     schedule_file : str
         Path to the JSON file where scheduled cron jobs are persisted.
+        Defaults to ``"config/cron_job/cron.json"``.
+        Please make sure this is the same path as the schedule_file of corresponding ScheduleCronJobInput
     """
 
     schedule_file: str = Field(

@@ -111,7 +111,6 @@ class ConfigConverter:
             "action_execution_mode": raw_config.get("action_execution_mode", "concurrent"),
             "action_dependencies": raw_config.get("action_dependencies", {}),
             "mcp_servers": raw_config.get("mcp_servers", []),
-            "cron_job": raw_config.get("cron_job"),
         }
 
     @staticmethod

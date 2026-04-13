@@ -24,6 +24,7 @@ class ScheduleCronJobInputConfig(SensorConfig):
     schedule_file : str
         Path to the JSON file where scheduled cron jobs are persisted.
         Defaults to ``"config/cron_job/cron.json"``.
+        Please make sure this is the same path as the schedule_file of corresponding ScheduleCronJobJSON action
     run_previous : bool
         If True, dispatch tasks whose schedule_time predates plugin startup.
         If False, silently skip stale entries. Defaults to True.
