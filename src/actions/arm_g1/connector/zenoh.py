@@ -29,7 +29,7 @@ CUSTOM_ACTION_MAP = {
     "show_hand2": "show_hand2",
     "my_gesture": "my_gesture",
     "do_payment": "do_payment",
-    "done_payment": "done_payment",
+    "down_payment": "down_payment",
 }
 
 
@@ -96,22 +96,22 @@ class ARMZenohConnector(ActionConnector[ActionConfig, ArmInput]):
             logging.info(f"ARMZenohConnector: Published '{action}' -> action={action_name}")
 
             if action == "do_payment":
-                asyncio.create_task(self._auto_done_payment())
+                asyncio.create_task(self._auto_down_payment())
         except Exception:
             logging.exception("ARMZenohConnector: Exception in connect method")
 
-    async def _auto_done_payment(self) -> None:
+    async def _auto_down_payment(self) -> None:
         """
-        Automatically issue done_payment action after 10 seconds. This is triggered after do_payment is executed.
+        Automatically issue downpayment action after 10 seconds. This is triggered after do_payment is executed.
         """
         try:
             await asyncio.sleep(10)
 
             if self.session is None:
-                logging.error("ARMZenohConnector: No Zenoh session available for auto done_payment")
+                logging.error("ARMZenohConnector: No Zenoh session available for auto down_payment")
                 return
 
-            action_name = CUSTOM_ACTION_MAP.get("done_payment")
+            action_name = CUSTOM_ACTION_MAP.get("down_payment")
             identity = UnitreeRequestIdentity(id=0, api_id=CUSTOM_API_ID)
             header = UnitreeRequestHeader(identity=identity)
             request = UnitreeRequest(
@@ -121,9 +121,9 @@ class ARMZenohConnector(ActionConnector[ActionConfig, ArmInput]):
 
             payload = ZBytes(request.serialize())
             self.session.put(SPORT_REQUEST_TOPIC, payload)
-            logging.info("ARMZenohConnector: Auto-published 'done_payment' after 10 seconds")
+            logging.info("ARMZenohConnector: Auto-published 'down_payment' after 10 seconds")
         except Exception:
-            logging.exception("ARMZenohConnector: Exception in auto done_payment task")
+            logging.exception("ARMZenohConnector: Exception in auto down_payment task")
 
     def stop(self) -> None:
         """Close the Zenoh session."""
