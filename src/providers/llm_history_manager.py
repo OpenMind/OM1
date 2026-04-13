@@ -322,7 +322,9 @@ class LLMHistoryManager:
                             if action.type.lower() in ACTION_MAP
                         )
                     )
+
                     action_message = action_message.replace("****", self.agent_name)
+
                     self.history_manager.history.append(ChatMessage(role="assistant", content=action_message))
 
                     if (
