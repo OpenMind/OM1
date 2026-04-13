@@ -315,33 +315,21 @@ class LLMHistoryManager:
 
                 if response is not None:
 
-                    # Filter out cron-job scheduling exchanges from history so the
-                    # LLM doesn't see them on subsequent turns and re-schedule.
-                    is_cron_exchange = any(
-                        action.type.lower() == "schedule_cron_job" for action in response.actions  # type: ignore
-                    )
-
-                    if is_cron_exchange:
-                        # Remove the user input appended before the LLM call.
-                        if self.history_manager.history and self.history_manager.history[-1].role == "user":
-                            self.history_manager.history.pop()
-                        logging.debug("Filter our cronjob conversation: dropped cron-job exchange from history")
-                    else:
-                        action_message = "Given that information, **** took these actions: " + (
-                            " | ".join(
-                                ACTION_MAP[action.type.lower()].format(action.value if action.value else "")
-                                for action in response.actions  # type: ignore
-                                if action.type.lower() in ACTION_MAP
-                            )
+                    action_message = "Given that information, **** took these actions: " + (
+                        " | ".join(
+                            ACTION_MAP[action.type.lower()].format(action.value if action.value else "")
+                            for action in response.actions  # type: ignore
+                            if action.type.lower() in ACTION_MAP
                         )
-                        action_message = action_message.replace("****", self.agent_name)
-                        self.history_manager.history.append(ChatMessage(role="assistant", content=action_message))
+                    )
+                    action_message = action_message.replace("****", self.agent_name)
+                    self.history_manager.history.append(ChatMessage(role="assistant", content=action_message))
 
-                        if (
-                            self.history_manager.config.history_length > 0
-                            and len(self.history_manager.history) > self.history_manager.config.history_length
-                        ):
-                            await self.history_manager.start_summary_task(self.history_manager.history)
+                    if (
+                        self.history_manager.config.history_length > 0
+                        and len(self.history_manager.history) > self.history_manager.config.history_length
+                    ):
+                        await self.history_manager.start_summary_task(self.history_manager.history)
                 else:
                     if self.history_manager.history and self.history_manager.history[-1].role == "user":
                         logging.warning("LLM response failed, removing unpaired user message")
