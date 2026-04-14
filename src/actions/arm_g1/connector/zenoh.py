@@ -102,7 +102,7 @@ class ARMZenohConnector(ActionConnector[ActionConfig, ArmInput]):
 
     async def _auto_down_payment(self) -> None:
         """
-        Automatically issue downpayment action after 10 seconds. This is triggered after do_payment is executed.
+        Automatically issue down payment action after 10 seconds. This is triggered after do_payment is executed.
         """
         try:
             await asyncio.sleep(10)
