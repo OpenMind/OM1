@@ -91,11 +91,11 @@ async def test_fuser_with_inputs_and_actions(mock_describe):
         fuser = Fuser(config)
         result = await fuser.fuse(inputs, [])
 
-        today = datetime.now().strftime("%B %-d, %Y")
+        now = datetime.now().strftime("%B %-d, %Y %H:%M:%S")
         system_prompt = (
             "\nBASIC CONTEXT:\n"
             + config.system_prompt_base
-            + f"\n\nToday is {today}.\n"
+            + f"\n\nCurrent time is {now}.\n"
             + "\nLAWS:\n"
             + config.system_governance
             + "\n\nEXAMPLES:\n"
