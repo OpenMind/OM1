@@ -166,40 +166,33 @@ class TestARMZenohConnectorStop:
 
 
 class TestARMZenohConnectorAutoPayment:
-    """Test automatic done_payment functionality."""
+    """Test automatic down_payment functionality."""
 
     @pytest.mark.asyncio
-    async def test_do_payment_triggers_auto_done_payment(self, connector, mock_dependencies):
-        """Test that do_payment action triggers automatic done_payment after 10 seconds."""
+    async def test_do_payment_triggers_auto_down_payment(self, connector, mock_dependencies):
+        """Test that do_payment action triggers automatic down_payment after 10 seconds."""
         arm_input = ArmInput(action=ArmAction.DO_PAYMENT)
 
-        with patch.object(connector, "_auto_done_payment", new_callable=AsyncMock) as mock_auto_done:
+        with patch.object(connector, "_auto_down_payment", new_callable=AsyncMock) as mock_auto_done:
             await connector.connect(arm_input)
-
-            # Verify do_payment was published
             assert mock_dependencies["session"].put.call_count == 1
-
-            # Verify _auto_done_payment was scheduled as a task
             mock_auto_done.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_auto_done_payment_publishes_after_10_seconds(self, connector, mock_dependencies):
-        """Test that _auto_done_payment publishes done_payment after 10 seconds."""
+    async def test_auto_down_payment_publishes_after_10_seconds(self, connector, mock_dependencies):
+        """Test that _auto_down_payment publishes down_payment after 10 seconds."""
         # Mock asyncio.sleep to avoid actual delay in tests
         with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-            await connector._auto_done_payment()
+            await connector._auto_down_payment()
 
-            # Verify sleep was called with 10 seconds
             mock_sleep.assert_called_once_with(10)
-
-            # Verify done_payment was published
             mock_dependencies["session"].put.assert_called_once()
             topic = mock_dependencies["session"].put.call_args[0][0]
             assert topic == SPORT_REQUEST_TOPIC
 
     @pytest.mark.asyncio
-    async def test_auto_done_payment_no_session(self):
-        """Test _auto_done_payment handles no session gracefully."""
+    async def test_auto_down_payment_no_session(self):
+        """Test _auto_down_payment handles no session gracefully."""
         with (
             patch("actions.arm_g1.connector.zenoh.open_zenoh_session") as mock_open_session,
             patch("actions.arm_g1.connector.zenoh.logging") as mock_logging,
@@ -209,48 +202,36 @@ class TestARMZenohConnectorAutoPayment:
             config = ActionConfig()
             conn = ARMZenohConnector(config)
 
-            await conn._auto_done_payment()
+            await conn._auto_down_payment()
 
-            # Should log error about no session
-            mock_logging.error.assert_any_call("ARMZenohConnector: No Zenoh session available for auto done_payment")
+            mock_logging.error.assert_any_call("ARMZenohConnector: No Zenoh session available for auto down_payment")
 
     @pytest.mark.asyncio
-    async def test_auto_done_payment_exception_handling(self, connector):
-        """Test that exceptions in _auto_done_payment are caught and logged."""
+    async def test_auto_down_payment_exception_handling(self, connector):
+        """Test that exceptions in _auto_down_payment are caught and logged."""
         with (
             patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
             patch("actions.arm_g1.connector.zenoh.logging") as mock_logging,
         ):
-            # Make sleep raise an exception
             mock_sleep.side_effect = Exception("Unexpected error")
 
-            # Should not raise, exception is caught
-            await connector._auto_done_payment()
-
-            # Should log the exception
+            await connector._auto_down_payment()
             mock_logging.exception.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_do_payment_full_workflow(self, connector, mock_dependencies):
-        """Test complete workflow: do_payment publishes, then done_payment auto-publishes."""
+        """Test complete workflow: do_payment publishes, then down_payment auto-publishes."""
         arm_input = ArmInput(action=ArmAction.DO_PAYMENT)
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
-            # Call connect which publishes do_payment and schedules auto done_payment
             await connector.connect(arm_input)
-
-            # Verify do_payment was published
             assert mock_dependencies["session"].put.call_count == 1
-
-            # Manually call _auto_done_payment to simulate the scheduled task completing
-            await connector._auto_done_payment()
-
-            # Now done_payment should also be published (total 2 calls)
+            await connector._auto_down_payment()
             assert mock_dependencies["session"].put.call_count == 2
 
     @pytest.mark.asyncio
     async def test_other_actions_dont_trigger_auto_payment(self, connector, mock_dependencies):
-        """Test that non-payment actions don't trigger automatic done_payment."""
+        """Test that non-payment actions don't trigger automatic down_payment."""
         test_actions = [
             ArmAction.SHAKE_HAND,
             ArmAction.FACE_WAVE,
@@ -262,25 +243,20 @@ class TestARMZenohConnectorAutoPayment:
             mock_dependencies["session"].put.reset_mock()
             arm_input = ArmInput(action=action)
 
-            with patch.object(connector, "_auto_done_payment", new_callable=AsyncMock) as mock_auto_done:
+            with patch.object(connector, "_auto_down_payment", new_callable=AsyncMock) as mock_auto_done:
                 await connector.connect(arm_input)
 
-                # Verify action was published
                 mock_dependencies["session"].put.assert_called_once()
-
-                # Verify _auto_done_payment was NOT called
                 mock_auto_done.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_done_payment_action_format(self, connector, mock_dependencies):
-        """Test that done_payment action is formatted correctly."""
+    async def test_down_payment_action_format(self, connector, mock_dependencies):
+        """Test that down_payment action is formatted correctly."""
         with patch("asyncio.sleep", new_callable=AsyncMock):
-            await connector._auto_done_payment()
+            await connector._auto_down_payment()
 
-            # Get the payload that was published
             call_args = mock_dependencies["session"].put.call_args
             topic = call_args[0][0]
 
             assert topic == SPORT_REQUEST_TOPIC
-            # Payload should contain the done_payment action
             assert mock_dependencies["session"].put.called
