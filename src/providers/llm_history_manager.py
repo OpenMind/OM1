@@ -27,6 +27,7 @@ ACTION_MAP = {
     "emotion": "**** felt: {}.",
     "speak": "**** said: {}",
     "move": "**** performed this motion: {}.",
+    "schedule_cron_job": "**** registered a scheduled cron job: {}.",
 }
 
 
