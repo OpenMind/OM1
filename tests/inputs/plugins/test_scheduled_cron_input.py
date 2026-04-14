@@ -17,11 +17,6 @@ def plugin(tmp_path):
             return ScheduleCronJobInput(config)
 
 
-# ---------------------------------------------------------------------------
-# _parse_schedule_time
-# ---------------------------------------------------------------------------
-
-
 class TestParseScheduleTime:
     def test_space_with_seconds(self, plugin):
         dt = plugin._parse_schedule_time("2026-04-07 10:30:00")
@@ -46,11 +41,6 @@ class TestParseScheduleTime:
     def test_invalid_returns_none(self, plugin):
         result = plugin._parse_schedule_time("not-a-date")
         assert result is None
-
-
-# ---------------------------------------------------------------------------
-# _recurrence_delta
-# ---------------------------------------------------------------------------
 
 
 class TestRecurrenceDelta:
@@ -94,11 +84,6 @@ class TestRecurrenceDelta:
         assert plugin._recurrence_delta("fortnightly") is None
 
 
-# ---------------------------------------------------------------------------
-# _is_due
-# ---------------------------------------------------------------------------
-
-
 class TestIsDue:
     def _make_entry(self, schedule_time: str) -> dict:
         return {"schedule_time": schedule_time}
@@ -136,11 +121,6 @@ class TestIsDue:
         assert plugin._is_due(entry, now) is True
 
 
-# ---------------------------------------------------------------------------
-# _read_file / _write_all
-# ---------------------------------------------------------------------------
-
-
 class TestFileIO:
     def test_write_and_read(self, plugin, tmp_path):
         entries = [{"function": "foo", "timestamp": 1000.0}]
@@ -170,11 +150,6 @@ class TestFileIO:
         assert result == []
 
 
-# ---------------------------------------------------------------------------
-# _get_file_mtime / _reload_if_changed
-# ---------------------------------------------------------------------------
-
-
 class TestFileMtimeReload:
     def test_get_file_mtime_returns_float(self, plugin):
         mtime = plugin._get_file_mtime()
@@ -197,11 +172,6 @@ class TestFileMtimeReload:
         plugin._entries = [{"function": "cached"}]
         plugin._reload_if_changed()
         assert plugin._entries == [{"function": "cached"}]
-
-
-# ---------------------------------------------------------------------------
-# _tick — one-time entry dispatch and removal
-# ---------------------------------------------------------------------------
 
 
 class TestTick:
@@ -264,11 +234,6 @@ class TestTick:
         assert len(plugin.messages) == 2
         assert plugin.messages[0].message == "task_a"
         assert plugin.messages[1].message == "task_b"
-
-
-# ---------------------------------------------------------------------------
-# formatted_latest_buffer
-# ---------------------------------------------------------------------------
 
 
 class TestFormattedLatestBuffer:
