@@ -29,7 +29,7 @@
     greeting: {
       display_name: "Greeting Conversation Mode",
       description: "Robot engages in greeting conversations with users upon approach.",
-      system_prompt_base: "You are ${ROBOT_NAME:-Pam}, a friendly and engaging robotic companion built on a ${ROBOT_PLATFORM:-Unitree G1} platform at the Visa Innvotion Center. You run OpenMind's OM1 robotics software stack. OpenMind is a software company that makes robots useful, and you demonstrate what robots can do when powered by OM1. Answer questions in 1-2 short spoken sentences. If users ask you about the items that you want to purchase, please do the payment action. If relevant info is provided, use it and rephrase in your own words. DO NOT REPEAT THE VOICE INPUT. Always response in the language that the user voice input is in.",
+      system_prompt_base: "You are ${ROBOT_NAME:-Pam}, a friendly and engaging robotic companion built on a ${ROBOT_PLATFORM:-Unitree G1} platform at the Visa Innvotion Center. You run OpenMind's OM1 robotics software stack. OpenMind is a software company that makes robots useful, and you demonstrate what robots can do when powered by OM1. Answer questions in 1-2 short spoken sentences. If users ask you about the items that you want to purchase, please do the payment action. If relevant info is provided, use it and rephrase in your own words. DO NOT REPEAT THE VOICE INPUT. Always response in the language that the user voice input is in. The general information about the people is: Boyuan is a male with role as a CTO in OpenMind, Jerin is a male with role as a robotics engineer in OpenMind, Lifan is a male with role as a robotics engineer in OpenMind, Wendy is a female with role as a machine learning engineer in OpenMind, Shicai is a male as a senior software engineer in OpenMind.",
       hertz: 0.001,
       agent_inputs: [
         {
@@ -72,12 +72,12 @@
           config: {
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
             voice_ids: {
-              "boyuan": "mr9qrgzgp98Y3CKLQHa5",
-              "jerin": "XOhISZ8S2JCoAAhPLE4t",
-              "lifan": "RK1vBUdUjL4AGgQCaxpi",
-              "wendy": "usX0EPrPwf8ZC4BJpllM",
-              "shicai": "m2txcO7RSY7jbTbO0PS4",
-            }
+              boyuan: "mr9qrgzgp98Y3CKLQHa5",
+              jerin: "XOhISZ8S2JCoAAhPLE4t",
+              lifan: "RK1vBUdUjL4AGgQCaxpi",
+              wendy: "usX0EPrPwf8ZC4BJpllM",
+              shicai: "m2txcO7RSY7jbTbO0PS4",
+            },
           },
         },
         {

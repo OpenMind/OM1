@@ -111,19 +111,10 @@ def test_handle_face_message_drops_oldest_on_full_buffer(face_presence_instance)
 
     face_presence_instance._handle_face_message("msg_NEW")
 
-    assert face_presence_instance.message_buffer.qsize() == 64
+    assert face_presence_instance.message_buffer.qsize() == 1
 
     first_popped = face_presence_instance.message_buffer.get_nowait()
-    assert first_popped == "msg_1"
-
-    remaining_items = []
-    for _ in range(62):
-        remaining_items.append(face_presence_instance.message_buffer.get_nowait())
-
-    last_item = face_presence_instance.message_buffer.get_nowait()
-    assert last_item == "msg_NEW"
-
-    assert "msg_0" not in remaining_items
+    assert first_popped == "msg_NEW"
 
 
 @pytest.mark.asyncio

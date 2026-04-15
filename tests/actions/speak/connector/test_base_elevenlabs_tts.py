@@ -7,7 +7,8 @@ from actions.speak.connector.base_elevenlabs_tts import (
     BaseElevenLabsTTSConnector,
 )
 from actions.speak.interface import SpeakInput
-from zenoh_msgs import AudioStatus, String, TTSStatusRequest
+from zenoh_msgs import AudioStatus, TTSStatusRequest
+from zenoh_msgs.idl.std_msgs import String
 
 
 class ConcreteElevenLabsTTSConnector(BaseElevenLabsTTSConnector):

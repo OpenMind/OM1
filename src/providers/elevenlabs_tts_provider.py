@@ -183,7 +183,9 @@ class ElevenLabsTTSProvider:
         dict
             A dictionary containing the TTS request parameters.
         """
-        logging.info(f"audio_stream: {text}, voice_id: {voice_id or self._voice_id}, model_id: {self._model_id}, output_format: {self._output_format}")
+        logging.info(
+            f"audio_stream: {text}, voice_id: {voice_id or self._voice_id}, model_id: {self._model_id}, output_format: {self._output_format}"
+        )
         return {
             "text": text,
             "voice_id": voice_id or self._voice_id,
