@@ -177,7 +177,6 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(face_presence
 
     result = face_presence_instance.formatted_latest_buffer()
 
-    assert "INPUT:" in result
     assert "Face Presence Sensor" in result
     assert "present=[eve], unknown=1, ts=123460" in result
     assert len(face_presence_instance.messages) == 0

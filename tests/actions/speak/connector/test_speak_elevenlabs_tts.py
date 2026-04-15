@@ -1,11 +1,122 @@
-# from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch
 
-# import pytest
+import pytest
 
-# from actions.base import ActionConfig
-# from actions.speak.connector.elevenlabs_tts import SpeakElevenLabsTTSConnector
-# from actions.speak.interface import SpeakInput
-# from zenoh_msgs import AudioStatus
+from actions.speak.connector.elevenlabs_tts import (
+    SpeakElevenLabsTTSConfig,
+    SpeakElevenLabsTTSConnector,
+)
+from actions.speak.interface import SpeakInput
+
+
+@pytest.fixture
+def mock_config():
+    """Create a mock config with default values."""
+    config = Mock(spec=SpeakElevenLabsTTSConfig)
+    config.api_key = "test_api_key"
+    config.elevenlabs_api_key = "test_elevenlabs_key"
+    config.voice_id = "test_voice_id"
+    config.model_id = "eleven_flash_v2_5"
+    config.output_format = "pcm_16000"
+    config.silence_rate = 0
+    config.enable_tts_interrupt = False
+    return config
+
+
+@pytest.fixture
+def speak_input():
+    """Create a SpeakInput instance for testing."""
+    return SpeakInput(action="Hello, world!")
+
+
+@patch("actions.speak.connector.base_elevenlabs_tts.open_zenoh_session")
+@patch("actions.speak.connector.base_elevenlabs_tts.ElevenLabsTTSProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.IOProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.TeleopsConversationProvider")
+def test_init_with_full_config(
+    mock_conversation_provider,
+    mock_io_provider,
+    mock_tts_provider,
+    mock_open_zenoh_session,
+    mock_config,
+):
+    """Test initialization with full configuration."""
+    mock_session = Mock()
+    mock_pub = Mock()
+    mock_open_zenoh_session.return_value = mock_session
+    mock_session.declare_publisher.return_value = mock_pub
+    mock_session.declare_subscriber.return_value = Mock()
+
+    connector = SpeakElevenLabsTTSConnector(mock_config)
+
+    mock_open_zenoh_session.assert_called_once()
+    mock_tts_provider.assert_called_once_with(
+        url="https://api.openmind.com/api/core/elevenlabs/tts",
+        api_key="test_api_key",
+        elevenlabs_api_key="test_elevenlabs_key",
+        voice_id="test_voice_id",
+        model_id="eleven_flash_v2_5",
+        output_format="pcm_16000",
+        enable_tts_interrupt=False,
+    )
+
+    connector.stop()
+
+
+@patch("actions.speak.connector.base_elevenlabs_tts.open_zenoh_session")
+@patch("actions.speak.connector.base_elevenlabs_tts.ElevenLabsTTSProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.IOProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.TeleopsConversationProvider")
+@pytest.mark.asyncio
+async def test_get_voice_id_returns_config_voice(
+    mock_conversation_provider,
+    mock_io_provider,
+    mock_tts_provider,
+    mock_open_zenoh_session,
+    mock_config,
+    speak_input,
+):
+    """Test that _get_voice_id always returns the configured voice_id."""
+    connector = SpeakElevenLabsTTSConnector(mock_config)
+
+    voice_id = connector._get_voice_id(speak_input)
+
+    assert voice_id == "test_voice_id"
+
+    connector.stop()
+
+
+@patch("actions.speak.connector.base_elevenlabs_tts.open_zenoh_session")
+@patch("actions.speak.connector.base_elevenlabs_tts.ElevenLabsTTSProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.IOProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.TeleopsConversationProvider")
+@pytest.mark.asyncio
+async def test_connect_uses_config_voice_id(
+    mock_conversation_provider,
+    mock_io_provider,
+    mock_tts_provider,
+    mock_open_zenoh_session,
+    mock_config,
+    speak_input,
+):
+    """Test that connect uses the configured voice_id."""
+    mock_tts_instance = Mock()
+    mock_tts_instance.create_pending_message.return_value = {"text": "processed_message"}
+    mock_tts_provider.return_value = mock_tts_instance
+
+    mock_io_instance = Mock()
+    mock_io_instance.llm_prompt = "Some prompt"
+    mock_io_provider.return_value = mock_io_instance
+
+    connector = SpeakElevenLabsTTSConnector(mock_config)
+    connector.audio_pub = None
+
+    await connector.connect(speak_input)
+
+    # Verify that create_pending_message was called with the config voice_id
+    mock_tts_instance.create_pending_message.assert_called_once_with("Hello, world!", "test_voice_id")
+
+    connector.stop()
 
 
 # @pytest.fixture
