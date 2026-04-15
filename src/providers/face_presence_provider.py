@@ -302,8 +302,6 @@ class FacePresenceProvider:
         r.raise_for_status()
         data: Dict = r.json() or {}
 
-        logging.info("Fetched face presence data: %s", data)
-
         if self.prefer_recent:
 
             name_frames: Dict[str, int] = data.get("recent_name_frames", {}) or {}
