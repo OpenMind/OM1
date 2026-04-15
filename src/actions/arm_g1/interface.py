@@ -24,7 +24,9 @@ class ArmAction(str, Enum):
     HANDS_UP = "hands_up"
     STAND_STILL = "stand_still"
     SHOW_HAND = "show_hand"
-    # WAVE = "wave"
+    DO_PAYMENT = "do_payment"
+    DOWN_PAYMENT = "down_payment"
+    WAVE = "wave"
     # MOVE = "move"
 
 

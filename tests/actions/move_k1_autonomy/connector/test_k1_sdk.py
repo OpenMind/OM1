@@ -1,5 +1,5 @@
 from queue import Queue
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -73,11 +73,35 @@ def connector(mock_dependencies):
     Returns
     -------
     MoveBoosterZenohConnector
-        Configured connector instance.
+        Configured connector instance with _move_robot mocked to prevent warnings.
     """
     config = MoveBoosterZenohConfig()
-    connector = MoveBoosterZenohConnector(config)
-    return connector
+    connector_instance = MoveBoosterZenohConnector(config)
+
+    connector_instance._original_move_robot = connector_instance._move_robot  # type: ignore
+    connector_instance._move_robot = AsyncMock()
+
+    return connector_instance
+
+
+@pytest.fixture
+def connector_with_real_move_robot(mock_dependencies):
+    """
+    Create a MoveBoosterZenohConnector instance without mocking _move_robot.
+    Use this for tests that need to test the actual _move_robot implementation.
+
+    Parameters
+    ----------
+    mock_dependencies : dict
+        Dictionary containing mock instances.
+
+    Returns
+    -------
+    MoveBoosterZenohConnector
+        Configured connector instance with real _move_robot.
+    """
+    config = MoveBoosterZenohConfig()
+    return MoveBoosterZenohConnector(config)
 
 
 class TestMoveBoosterZenohConfig:
@@ -216,7 +240,7 @@ class TestMoveRobot:
     """Test _move_robot async method."""
 
     @pytest.mark.asyncio
-    async def test_move_robot_success(self, connector, mock_dependencies):
+    async def test_move_robot_success(self, connector_with_real_move_robot, mock_dependencies):
         """Test _move_robot sends movement command successfully."""
         mock_reply = Mock()
         mock_reply.ok = Mock()
@@ -230,7 +254,7 @@ class TestMoveRobot:
             mock_response.msg.body = ""
             mock_deserialize.return_value = mock_response
 
-            await connector._move_robot(0.1, 0.0, 0.0)
+            await connector_with_real_move_robot._move_robot(0.1, 0.0, 0.0)
 
             mock_dependencies["zenoh"].get.assert_called_once()
             args, kwargs = mock_dependencies["zenoh"].get.call_args
@@ -238,27 +262,27 @@ class TestMoveRobot:
             assert kwargs["timeout"] == 5.0
 
     @pytest.mark.asyncio
-    async def test_move_robot_no_session(self, connector, mock_dependencies):
+    async def test_move_robot_no_session(self, connector_with_real_move_robot, mock_dependencies):
         """Test _move_robot returns early when session is None."""
-        connector.session = None
+        connector_with_real_move_robot.session = None
 
-        await connector._move_robot(0.1, 0.0, 0.0)
+        await connector_with_real_move_robot._move_robot(0.1, 0.0, 0.0)
 
         mock_dependencies["zenoh"].get.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_move_robot_not_standing(self, connector, mock_dependencies):
+    async def test_move_robot_not_standing(self, connector_with_real_move_robot, mock_dependencies):
         """Test _move_robot returns early when robot is not standing."""
         mock_dependencies["odom"].position["body_attitude"] = RobotState.SITTING
 
-        await connector._move_robot(0.1, 0.0, 0.0)
+        await connector_with_real_move_robot._move_robot(0.1, 0.0, 0.0)
 
         mock_dependencies["zenoh"].get.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_move_robot_allow_without_odom(self, connector, mock_dependencies):
+    async def test_move_robot_allow_without_odom(self, connector_with_real_move_robot, mock_dependencies):
         """Test _move_robot bypasses odom check when allow_move_without_odom is True."""
-        connector.config.allow_move_without_odom = True
+        connector_with_real_move_robot.config.allow_move_without_odom = True
         mock_dependencies["odom"].position["body_attitude"] = RobotState.SITTING
 
         mock_reply = Mock()
@@ -267,12 +291,12 @@ class TestMoveRobot:
         mock_dependencies["zenoh"].get.return_value = [mock_reply]
 
         with patch("actions.move_k1_autonomy.connector.k1_sdk.RpcServiceResponse.deserialize"):
-            await connector._move_robot(0.1, 0.0, 0.0)
+            await connector_with_real_move_robot._move_robot(0.1, 0.0, 0.0)
 
             mock_dependencies["zenoh"].get.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_move_robot_service_error(self, connector, mock_dependencies):
+    async def test_move_robot_service_error(self, connector_with_real_move_robot, mock_dependencies):
         """Test _move_robot handles service errors."""
         mock_reply = Mock()
         mock_reply.ok = None
@@ -280,17 +304,17 @@ class TestMoveRobot:
         mock_dependencies["zenoh"].get.return_value = [mock_reply]
 
         with patch("actions.move_k1_autonomy.connector.k1_sdk.logging") as mock_logging:
-            await connector._move_robot(0.1, 0.0, 0.0)
+            await connector_with_real_move_robot._move_robot(0.1, 0.0, 0.0)
 
             mock_logging.error.assert_called()
 
     @pytest.mark.asyncio
-    async def test_move_robot_exception(self, connector, mock_dependencies):
+    async def test_move_robot_exception(self, connector_with_real_move_robot, mock_dependencies):
         """Test _move_robot handles exceptions during service call."""
         mock_dependencies["zenoh"].get.side_effect = Exception("Connection timeout")
 
         with patch("actions.move_k1_autonomy.connector.k1_sdk.logging") as mock_logging:
-            await connector._move_robot(0.1, 0.0, 0.0)
+            await connector_with_real_move_robot._move_robot(0.1, 0.0, 0.0)
 
             mock_logging.error.assert_called()
 

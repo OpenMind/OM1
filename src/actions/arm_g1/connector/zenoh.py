@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from typing import Optional
@@ -22,12 +23,13 @@ CUSTOM_ACTION_MAP = {
     "face_wave": "face_wave",
     "hands_up": "hands_up",
     "stand_still": "stand_still",
-    "show_hand": "show_hand",
     "wave": "wave",
-    "move": "move",
+    "show_hand": "show_hand",
     "show_hand1": "show_hand1",
     "show_hand2": "show_hand2",
     "my_gesture": "my_gesture",
+    "do_payment": "do_payment",
+    "down_payment": "down_payment",
 }
 
 
@@ -67,30 +69,61 @@ class ARMZenohConnector(ActionConnector[ActionConfig, ArmInput]):
         output_interface : ArmInput
             The output interface containing the arm action command.
         """
-        action = output_interface.action
+        try:
+            action = output_interface.action
 
-        if action == "idle":
-            return
+            if action == "idle":
+                return
 
-        if self.session is None:
-            logging.error("ARMZenohConnector: No Zenoh session available")
-            return
+            if self.session is None:
+                logging.error("ARMZenohConnector: No Zenoh session available")
+                return
 
-        action_name = CUSTOM_ACTION_MAP.get(action)
-        if action_name is None:
-            logging.warning(f"ARMZenohConnector: Unknown action '{action}'")
-            return
+            action_name = CUSTOM_ACTION_MAP.get(action)
+            if action_name is None:
+                logging.warning(f"ARMZenohConnector: Unknown action '{action}'")
+                return
 
-        identity = UnitreeRequestIdentity(id=0, api_id=CUSTOM_API_ID)
-        header = UnitreeRequestHeader(identity=identity)
-        request = UnitreeRequest(
-            header=header,
-            parameter=json.dumps({"action": action_name}),
-        )
+            identity = UnitreeRequestIdentity(id=0, api_id=CUSTOM_API_ID)
+            header = UnitreeRequestHeader(identity=identity)
+            request = UnitreeRequest(
+                header=header,
+                parameter=json.dumps({"action": action_name}),
+            )
 
-        payload = ZBytes(request.serialize())
-        self.session.put(SPORT_REQUEST_TOPIC, payload)
-        logging.info(f"ARMZenohConnector: Published '{action}' -> action={action_name}")
+            payload = ZBytes(request.serialize())
+            self.session.put(SPORT_REQUEST_TOPIC, payload)
+            logging.info(f"ARMZenohConnector: Published '{action}' -> action={action_name}")
+
+            if action == "do_payment":
+                asyncio.create_task(self._auto_down_payment())
+        except Exception:
+            logging.exception("ARMZenohConnector: Exception in connect method")
+
+    async def _auto_down_payment(self) -> None:
+        """
+        Automatically issue down payment action after 10 seconds. This is triggered after do_payment is executed.
+        """
+        try:
+            await asyncio.sleep(10)
+
+            if self.session is None:
+                logging.error("ARMZenohConnector: No Zenoh session available for auto down_payment")
+                return
+
+            action_name = CUSTOM_ACTION_MAP.get("down_payment")
+            identity = UnitreeRequestIdentity(id=0, api_id=CUSTOM_API_ID)
+            header = UnitreeRequestHeader(identity=identity)
+            request = UnitreeRequest(
+                header=header,
+                parameter=json.dumps({"action": action_name}),
+            )
+
+            payload = ZBytes(request.serialize())
+            self.session.put(SPORT_REQUEST_TOPIC, payload)
+            logging.info("ARMZenohConnector: Auto-published 'down_payment' after 10 seconds")
+        except Exception:
+            logging.exception("ARMZenohConnector: Exception in auto down_payment task")
 
     def stop(self) -> None:
         """Close the Zenoh session."""
