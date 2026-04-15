@@ -67,7 +67,7 @@ class GeminiLLM(LLM[R]):
         if not config.api_key:
             raise ValueError("config file missing api_key")
         if not config.model:
-            self._config.model = "gemini-2.5-flash"
+            self._config.model = GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW
 
         self._client = openai.AsyncOpenAI(
             base_url=config.base_url or "https://api.openmind.com/api/core/gemini",
@@ -111,7 +111,7 @@ class GeminiLLM(LLM[R]):
             formatted_messages.append({"role": "user", "content": prompt})
 
             response = await self._client.chat.completions.create(
-                model=self._config.model or "gemini-2.0-flash-exp",
+                model=self._config.model or GeminiModel.GEMINI_3_1_FLASH_LITE_PREVIEW,
                 messages=T.cast(T.Any, formatted_messages),
                 tools=T.cast(T.Any, self.function_schemas),
                 tool_choice="auto",
