@@ -61,10 +61,12 @@ class SpeakElevenLabsTTSConnector(BaseElevenLabsTTSConnector):
             ):
                 # Extract known person name from camera view message
                 # Format: "In Camera View: 1 known (boyuan) and 1 unknown face."
+                # or "In Camera View: 2 known (shicai and lifan) and 2 unknown faces."
                 input_text = face_presence_input.input
                 match = re.search(r"known \(([^)]+)\)", input_text)
                 if match:
-                    people_name = match.group(1)
+                    names_str = match.group(1)
+                    people_name = names_str.split(" and ")[0].strip()
                 else:
                     people_name = input_text
 

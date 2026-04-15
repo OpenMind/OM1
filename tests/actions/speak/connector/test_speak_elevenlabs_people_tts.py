@@ -250,6 +250,108 @@ async def test_get_voice_id_with_stale_face_presence(
 @patch("actions.speak.connector.base_elevenlabs_tts.IOProvider")
 @patch("actions.speak.connector.base_elevenlabs_tts.TeleopsConversationProvider")
 @pytest.mark.asyncio
+async def test_get_voice_id_with_single_known_face_camera_format(
+    mock_conversation_provider,
+    mock_io_provider,
+    mock_tts_provider,
+    mock_open_zenoh_session,
+    mock_config,
+    speak_input,
+):
+    """Test that _get_voice_id extracts name from camera format with single known face."""
+    mock_io_instance = Mock()
+    mock_io_instance.get_input = Mock()
+    type(mock_io_instance).tick_counter = PropertyMock(return_value=123)
+    mock_io_provider.return_value = mock_io_instance
+
+    connector = SpeakElevenLabsTTSConnector(mock_config)
+
+    mock_face_presence = Mock()
+    mock_face_presence.input = "In Camera View: 1 known (John) and 1 unknown face."
+    mock_face_presence.tick = 123
+
+    mock_io_instance.get_input.return_value = mock_face_presence
+
+    voice_id = connector._get_voice_id(speak_input)
+
+    assert voice_id == "john_voice_id"
+
+    connector.stop()
+
+
+@patch("actions.speak.connector.base_elevenlabs_tts.open_zenoh_session")
+@patch("actions.speak.connector.base_elevenlabs_tts.ElevenLabsTTSProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.IOProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.TeleopsConversationProvider")
+@pytest.mark.asyncio
+async def test_get_voice_id_with_multiple_known_faces_picks_first(
+    mock_conversation_provider,
+    mock_io_provider,
+    mock_tts_provider,
+    mock_open_zenoh_session,
+    mock_config,
+    speak_input,
+):
+    """Test that _get_voice_id picks the first name when multiple faces are detected."""
+    mock_io_instance = Mock()
+    mock_io_instance.get_input = Mock()
+    type(mock_io_instance).tick_counter = PropertyMock(return_value=123)
+    mock_io_provider.return_value = mock_io_instance
+
+    connector = SpeakElevenLabsTTSConnector(mock_config)
+
+    mock_face_presence = Mock()
+    mock_face_presence.input = "In Camera View: 2 known (John and Jane) and 2 unknown faces."
+    mock_face_presence.tick = 123
+
+    mock_io_instance.get_input.return_value = mock_face_presence
+
+    voice_id = connector._get_voice_id(speak_input)
+
+    assert voice_id == "john_voice_id"
+
+    connector.stop()
+
+
+@patch("actions.speak.connector.base_elevenlabs_tts.open_zenoh_session")
+@patch("actions.speak.connector.base_elevenlabs_tts.ElevenLabsTTSProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.IOProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.TeleopsConversationProvider")
+@pytest.mark.asyncio
+async def test_get_voice_id_with_multiple_known_faces_no_match_for_first(
+    mock_conversation_provider,
+    mock_io_provider,
+    mock_tts_provider,
+    mock_open_zenoh_session,
+    mock_config,
+    speak_input,
+):
+    """Test that _get_voice_id returns default when first name doesn't match voice_ids."""
+    mock_io_instance = Mock()
+    mock_io_instance.get_input = Mock()
+    type(mock_io_instance).tick_counter = PropertyMock(return_value=123)
+    mock_io_provider.return_value = mock_io_instance
+
+    connector = SpeakElevenLabsTTSConnector(mock_config)
+
+    mock_face_presence = Mock()
+    mock_face_presence.input = "In Camera View: 2 known (shicai and Jane) and 2 unknown faces."
+    mock_face_presence.tick = 123
+
+    mock_io_instance.get_input.return_value = mock_face_presence
+
+    voice_id = connector._get_voice_id(speak_input)
+
+    assert voice_id == "default_voice_id"
+
+    connector.stop()
+
+
+@patch("actions.speak.connector.base_elevenlabs_tts.open_zenoh_session")
+@patch("actions.speak.connector.base_elevenlabs_tts.ElevenLabsTTSProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.IOProvider")
+@patch("actions.speak.connector.base_elevenlabs_tts.TeleopsConversationProvider")
+@pytest.mark.asyncio
 async def test_connect_uses_mapped_voice_id(
     mock_conversation_provider,
     mock_io_provider,

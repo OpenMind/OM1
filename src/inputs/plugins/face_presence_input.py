@@ -31,7 +31,7 @@ class FacePresenceConfig(SensorConfig):
         default="http://127.0.0.1:6793",
         description="Base URL for the Face HTTP service",
     )
-    face_recent_sec: float = Field(default=2.0, description="Time window in seconds to consider a face present")
+    face_recent_sec: float = Field(default=1.0, description="Time window in seconds to consider a face present")
     face_poll_fps: float = Field(default=5.0, description="Polling frequency in frames per second")
 
 
