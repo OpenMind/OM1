@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional
 
 from pydantic import Field
@@ -51,14 +52,21 @@ class SpeakElevenLabsTTSConnector(BaseElevenLabsTTSConnector):
         """
         # Get people name from input if available
         people_name = None
-        if self.io_provider.get_input("FacePresenceInput") is not None:
-            face_presence_input = self.io_provider.get_input("FacePresenceInput")
+        if self.io_provider.get_input("FacePresence") is not None:
+            face_presence_input = self.io_provider.get_input("FacePresence")
             if (
                 face_presence_input
                 and face_presence_input.input
                 and face_presence_input.tick == self.io_provider.tick_counter
             ):
-                people_name = face_presence_input.input
+                # Extract known person name from camera view message
+                # Format: "In Camera View: 1 known (boyuan) and 1 unknown face."
+                input_text = face_presence_input.input
+                match = re.search(r'known \(([^)]+)\)', input_text)
+                if match:
+                    people_name = match.group(1)
+                else:
+                    people_name = input_text
 
         # Search people name in voice_ids mapping if available
         voice_ids = self.config.voice_ids
@@ -67,5 +75,4 @@ class SpeakElevenLabsTTSConnector(BaseElevenLabsTTSConnector):
             logging.info(f"Found voice_id '{voice_id}' for people '{people_name}' in voice_ids mapping")
             return voice_id
 
-        # Fall back to default voice_id
         return self.config.voice_id

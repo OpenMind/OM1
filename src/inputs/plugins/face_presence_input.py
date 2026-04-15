@@ -82,31 +82,23 @@ class FacePresence(FuserInput[FacePresenceConfig, Optional[str]]):
 
     def _handle_face_message(self, text_line: str) -> None:
         """
-        Provider callback: push a new line into the bounded queue.
-
-        Tasks
-        --------
-        - Tries a non-blocking enqueue into `self.message_buffer` (capacity=64).
-        - If the queue is full, drops one oldest item and retries once.
+        Provider callback: push a new line into the bounded queue, clearing old messages.
 
         Parameters
         ----------
         text_line : str
             A single, already formatted line (e.g., "present=[alice], unknown=0, ts=...").
         """
-        try:
-            self.message_buffer.put_nowait(text_line)
-        except Exception:
-            logging.debug("FacePresence queue full; dropping oldest message to enqueue")
+        while not self.message_buffer.empty():
             try:
                 _ = self.message_buffer.get_nowait()
             except Empty:
-                pass
-            try:
-                self.message_buffer.put_nowait(text_line)
-            except Exception:
-                logging.warning("FacePresence queue still full; dropping latest message")
-                pass
+                break
+
+        try:
+            self.message_buffer.put_nowait(text_line)
+        except Exception as e:
+            logging.warning(f"Failed to enqueue face presence message: {e}")
 
     async def _poll(self) -> Optional[str]:
         """

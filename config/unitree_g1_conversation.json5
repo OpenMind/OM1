@@ -47,6 +47,9 @@
             max_rounds: 3,
           },
         },
+        {
+          type: "FacePresence",
+        },
       ],
       cortex_llm: {
         type: "ParallelLLM",
@@ -65,9 +68,16 @@
         {
           name: "speak",
           llm_label: "speak",
-          connector: "elevenlabs_tts",
+          connector: "elevenlabs_people_tts",
           config: {
             voice_id: "${VOICE_ID:-PoHUWWWMHFrA8z7Q88pu}",
+            voice_ids: {
+              "boyuan": "mr9qrgzgp98Y3CKLQHa5",
+              "jerin": "XOhISZ8S2JCoAAhPLE4t",
+              "lifan": "RK1vBUdUjL4AGgQCaxpi",
+              "wendy": "usX0EPrPwf8ZC4BJpllM",
+              "shicai": "m2txcO7RSY7jbTbO0PS4",
+            }
           },
         },
         {

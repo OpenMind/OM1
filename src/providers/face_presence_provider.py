@@ -165,6 +165,7 @@ class FacePresenceProvider:
         self._cb_lock = threading.Lock()
         self._session = requests.Session()
         self._unknown_faces: int = 0
+        self._last_emitted_text: Optional[str] = None
 
     def set_recent_sec(self, sec: float) -> None:
         """
@@ -254,13 +255,18 @@ class FacePresenceProvider:
 
     def _emit(self, text: str) -> None:
         """
-        Deliver one formatted presence line to all subscribers.
+        Deliver one formatted presence line to all subscribers only if it has changed.
 
         Parameters
         ----------
         text : str
             A concise, human-readable snapshot (e.g., "present=[alice], unknown=0, ts=...").
         """
+        if text == self._last_emitted_text:
+            return
+
+        self._last_emitted_text = text
+
         with self._cb_lock:
             callbacks = list(self._callbacks)
         for cb in callbacks:
@@ -295,6 +301,8 @@ class FacePresenceProvider:
         r = self._session.post(url, json={"recent_sec": sec}, timeout=self.timeout_s)
         r.raise_for_status()
         data: Dict = r.json() or {}
+
+        logging.info("Fetched face presence data: %s", data)
 
         if self.prefer_recent:
 
