@@ -167,7 +167,7 @@ async def test_init_without_model():
     """When the test model is None, use the default value"""
     config = GeminiConfig(api_key="test_key", model=None)
     llm = GeminiLLM(config)
-    assert llm._config.model == "gemini-2.5-flash"
+    assert llm._config.model == "gemini-3.1-flash-lite-preview"
 
 
 @pytest.mark.asyncio
