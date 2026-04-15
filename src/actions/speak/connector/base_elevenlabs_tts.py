@@ -104,9 +104,6 @@ class BaseElevenLabsTTSConnector(ActionConnector[BaseElevenLabsTTSConfig, SpeakI
         self.silence_rate = self.config.silence_rate
         self.silence_counter = 0
 
-        # IO Provider
-        self.io_provider = IOProvider()
-
         self.audio_topic = "robot/status/audio"
         self.tts_status_request_topic = "om/tts/request"
         self.tts_status_response_topic = "om/tts/response"

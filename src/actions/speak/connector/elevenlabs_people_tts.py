@@ -17,11 +17,11 @@ class SpeakElevenLabsTTSConfig(BaseElevenLabsTTSConfig):
 
     Parameters
     ----------
-    voice_ids : Optional[dict]
+    voice_ids : Optional[dict[str, str]]
         Optional mapping of voice names to ElevenLabs voice IDs.
     """
 
-    voice_ids: Optional[dict] = Field(
+    voice_ids: Optional[dict[str, str]] = Field(
         default=None,
         description="Optional mapping of voice names to ElevenLabs voice IDs",
     )

@@ -188,7 +188,7 @@ class ElevenLabsTTSProvider:
         )
         return {
             "text": text,
-            "voice_id": voice_id or self._voice_id,
+            "voice_id": self._voice_id if voice_id is None else voice_id,
             "model_id": self._model_id,
             "output_format": self._output_format,
         }
