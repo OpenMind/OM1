@@ -134,9 +134,7 @@ async def geeting_end_hook(context: Dict[str, Any]):
         greeting_state_provider = GreetingConversationStateMachineProvider()
         if greeting_state_provider.turn_count >= greeting_state_provider.max_turn_count:
             logging.info("Greeting conversation ended due to maximum turn count.")
-            provider.add_pending_message(
-                "Thank you for chatting with me today. I hope you enjoy the rest of your day."
-            )
+            provider.add_pending_message("Thank you for chatting with me today. I hope you enjoy the rest of your day.")
         elif greeting_state_provider.turn_count > 0:
             provider.add_pending_message(
                 "It was nice talking with you! If you have any more questions, come chat with me again!"
