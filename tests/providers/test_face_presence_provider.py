@@ -180,3 +180,54 @@ def test_emit_invokes_callbacks(monkeypatch):
 
     assert got, "callback should be invoked"
     assert "In Camera View: 2 known (alice and bob) and 1 unknown face." in got[0]
+
+
+def test_emit_invokes_callbacks_even_with_identical_text(monkeypatch):
+    """
+    Regression test: ensure _emit() calls callbacks every time,
+    even when the text hasn't changed. This ensures continuous
+    refreshing of the input buffer.
+    """
+    provider = FacePresenceProvider(base_url="http://fake", recent_sec=3.0)
+    call_count = []
+
+    def cb(line: str):
+        call_count.append(line)
+
+    provider.register_message_callback(cb)
+
+    text = "In Camera View: 1 known (alice)."
+    provider._emit(text)
+    provider._emit(text)
+    provider._emit(text)
+
+    assert len(call_count) == 3, "callback should be invoked every time, even with identical text"
+    assert all(t == text for t in call_count)
+
+
+def test_emit_with_multiple_callbacks(monkeypatch):
+    """
+    Verify that all registered callbacks receive the same message,
+    even when called multiple times with identical text.
+    """
+    provider = FacePresenceProvider(base_url="http://fake", recent_sec=3.0)
+
+    calls_1 = []
+    calls_2 = []
+
+    def cb1(line: str):
+        calls_1.append(line)
+
+    def cb2(line: str):
+        calls_2.append(line)
+
+    provider.register_message_callback(cb1)
+    provider.register_message_callback(cb2)
+
+    text = "In Camera View: 1 known (bob)."
+    provider._emit(text)
+    provider._emit(text)
+
+    assert len(calls_1) == 2
+    assert len(calls_2) == 2
+    assert calls_1 == calls_2 == [text, text]

@@ -172,3 +172,43 @@ def test_formatted_latest_buffer_formats_and_clears_latest_message(face_presence
     assert "present=[eve], unknown=1, ts=123460" in result
     assert len(face_presence_instance.messages) == 0
     mock_io_provider.add_input.assert_called_once_with("FacePresence", "present=[eve], unknown=1, ts=123460", 1234.0)
+
+
+@pytest.mark.asyncio
+async def test_continuous_face_presence_updates_with_identical_messages(face_presence_instance, mock_io_provider):
+    """
+    Verify that the system can handle continuous updates of the same message, simulating a person staying in camera view, without skipping or dropping messages.
+    """
+    identical_message = "In Camera View: 1 known (alice)."
+
+    for i in range(5):
+        face_presence_instance._handle_face_message(identical_message)
+
+        raw_input = await face_presence_instance._poll()
+        assert raw_input == identical_message, f"Poll #{i+1} should return the message"
+        await face_presence_instance.raw_to_text(raw_input)
+
+        result = face_presence_instance.formatted_latest_buffer()
+        assert result is not None, f"formatted_latest_buffer() should work on iteration #{i+1}"
+        assert "Face Presence Sensor" in result
+        assert identical_message in result
+        assert len(face_presence_instance.messages) == 0
+    assert mock_io_provider.add_input.call_count == 5
+
+
+@pytest.mark.asyncio
+async def test_face_presence_buffer_cleared_and_refilled(face_presence_instance):
+    """
+    Verify that the message buffer can be cleared and refilled multiple times
+    with the same message, simulating a person staying in camera view.
+    """
+    message = "In Camera View: 1 known (bob)."
+
+    face_presence_instance._handle_face_message(message)
+    assert face_presence_instance.message_buffer.qsize() == 1
+
+    face_presence_instance._handle_face_message(message)
+    assert face_presence_instance.message_buffer.qsize() == 1, "Buffer should only have 1 message (old ones cleared)"
+
+    face_presence_instance._handle_face_message(message)
+    assert face_presence_instance.message_buffer.qsize() == 1
