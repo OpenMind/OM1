@@ -167,7 +167,7 @@ class ElevenLabsTTSProvider:
         if tts_state_callback is not None:
             self._audio_stream.set_tts_state_callback(tts_state_callback)
 
-    def create_pending_message(self, text: str) -> dict:
+    def create_pending_message(self, text: str, voice_id: Optional[str] = None) -> dict:
         """
         Create a pending message for TTS processing.
 
@@ -175,16 +175,20 @@ class ElevenLabsTTSProvider:
         ----------
         text : str
             Text to be converted to speech
+        voice_id : Optional[str]
+            Optional voice ID to override the default voice for this message
 
         Returns
         -------
         dict
             A dictionary containing the TTS request parameters.
         """
-        logging.info(f"audio_stream: {text}")
+        logging.info(
+            f"audio_stream: {text}, voice_id: {voice_id or self._voice_id}, model_id: {self._model_id}, output_format: {self._output_format}"
+        )
         return {
             "text": text,
-            "voice_id": self._voice_id,
+            "voice_id": self._voice_id if voice_id is None else voice_id,
             "model_id": self._model_id,
             "output_format": self._output_format,
         }
