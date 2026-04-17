@@ -65,6 +65,8 @@
 * [Isaac Sim](simulators/isaac-sim.md)
 * [Troubleshooting Guidelines](simulators/troubleshooting.md)
 
+## Premium Features   <a href="#premium" id="premium"></a>
+
 ## API References <a href="#api-reference" id="api-reference"></a>
 
 * [API Reference](api-reference/introduction.md)
