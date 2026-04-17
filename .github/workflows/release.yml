@@ -129,6 +129,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      deployments: write
     needs: [ build-amd64, build-arm64 ]
     environment:
       name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || github.ref == 'refs/heads/main' && 'production' || 'staging' }}
