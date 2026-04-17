@@ -2,7 +2,7 @@ name: "ECR Release Workflow"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "add-aws-ecs-release" ]
     paths-ignore:
       - "docs/**"
     tags:
