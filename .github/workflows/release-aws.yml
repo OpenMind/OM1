@@ -1,4 +1,4 @@
-name: "ECS Release Workflow"
+name: "ECR Release Workflow"
 
 on:
   push:
