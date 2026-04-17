@@ -129,7 +129,11 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      deployments: write
     needs: [ build-amd64, build-arm64 ]
+    environment:
+      name: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      url: https://gallery.ecr.aws/b8k9c8n5/openmind/om1
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
