@@ -9,7 +9,7 @@ This section describes the full autonomy architecture and deployment model for O
 ## Accessibility
 
 - OM1 is publicly accessible and open source.
-- The rest of the full autonomy stack is available as paid premium features through **Enterprise Plan Subscription**. For more details, refer [Premium Features](./developing/premium_features.md)
+- The rest of the full autonomy stack is available as paid premium features through **Enterprise Plan Subscription**. For more details, refer [Premium Features](../developing/premium_features.md)
 
 ### Platform Support
 
